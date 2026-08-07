@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
 
 from src.map3d_widget import Map3DWidget
 from src import reference_edit_flow as edit_flow
+from src import scene3d_edit_flow
 from src.scene3d_toolbar import Scene3DToolBar
 from src.branding import APP_NAME
 
@@ -137,8 +138,6 @@ class ReferenceEcosystemWindow(QWidget):
                 "window.permaResetView && window.permaResetView();"))
         self.toolbar.walk_toggled.connect(self.viewer.set_walk_mode)
         self.toolbar.identify_toggled.connect(self.viewer.set_wildlife_labels)
-        self.toolbar.creature_scale_changed.connect(
-            self.viewer.set_creature_scale)
         lay.addWidget(self.toolbar)
 
         lay.addLayout(self._build_tools())
@@ -200,8 +199,9 @@ class ReferenceEcosystemWindow(QWidget):
         self._net_btn = QPushButton("🥅 Net")
         self._net_btn.setCheckable(True)
         self._net_btn.setToolTip(
-            "Catch a creature to record it in your field guide, then let it "
-            "go. Caught counts for more than seen.")
+            "Walk up to a creature until a ring appears round it, then "
+            "click anywhere to swing. Recorded in your field guide, then "
+            "released — caught counts for more than seen.")
         self._net_btn.clicked.connect(lambda: self._set_mode("net"))
         bar.addWidget(self._net_btn)
 
@@ -241,7 +241,8 @@ class ReferenceEcosystemWindow(QWidget):
         # to say so or the click looks broken.
         bridge.out_of_reach.connect(
             lambda name: self._say.setText(
-                f"{name} is out of reach — walk closer and swing again."))
+                f"{name} is out of reach — walk closer and swing again."
+                if name else scene3d_edit_flow.MISS_HINT))
 
     # ── Community switching ─────────────────────────────────────────────────
 
@@ -311,7 +312,6 @@ class ReferenceEcosystemWindow(QWidget):
             self.viewer.set_wildlife([])
         # The magnification lives in the viewer and resets to life size on a
         # fresh page, so a remembered choice has to be re-pushed (V2.46).
-        self.viewer.set_creature_scale(Scene3DToolBar.stored_creature_scale())
         # Follow the toolbar rather than forcing walk mode on. Before V2.44
         # this line was an unconditional ``set_walk_mode(True)``, re-run on
         # every rebuild — so the user was put back on their feet after every
@@ -335,7 +335,8 @@ class ReferenceEcosystemWindow(QWidget):
     _VERBS = (
         ("plant", "_plant_btn", "Click the ground to plant."),
         ("pull", "_pull_btn", "Click a plant to pull it."),
-        ("net", "_net_btn", "Click a creature to catch it."),
+        ("net", "_net_btn",
+         "Walk up to a creature until a ring appears, then swing."),
     )
 
     def _mode(self) -> str:

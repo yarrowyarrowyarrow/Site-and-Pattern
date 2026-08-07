@@ -397,10 +397,102 @@ _SIZE_FALLBACK_M = {
 }
 
 
+#: **The visibility floor** (V2.46c), in metres.
+#:
+#: V2.46 drew every animal at life size and offered a *Creatures:* multiplier —
+#: Life size / x3 / x6 / x12 — to make the small ones findable. Both halves of
+#: that were wrong, and the author said so precisely:
+#:
+#:     *"I don't want the birds changing size to x3 or more, they look
+#:     ridiculous. The bugs are not visible unless x3, which is acceptable as a
+#:     default I think. I don't know if we need this size changing as a
+#:     changeable drop down menu."*
+#:
+#: A **global multiplier is the wrong shape** for the problem. The thing that
+#: needs help is not "creatures", it is *creatures below a few centimetres*: a
+#: goldfinch at 22 cm was always perfectly visible and x3 makes it a goose. Any
+#: flat per-taxon boost has the same fault one level down — x3 on insects puts a
+#: swallowtail at 24 cm, which is a goldfinch, and re-creates exactly the
+#: confusion being complained about.
+#:
+#: So this is not a multiplier at all. It is a statement about **the screen**:
+#: in walk mode, at a typical two-to-four metre viewing distance, one pixel is
+#: roughly four millimetres of world. Under about three centimetres an animal
+#: stops being a shape and becomes a speck, whatever it is.
+#:
+#: Applied as a *soft* floor — ``sqrt(m^2 + FLOOR^2)`` — rather than
+#: ``max(m, FLOOR)``, which matters for three reasons:
+#:
+#: * it **never shrinks** anything;
+#: * it **preserves ordering**. A hard floor collapses bee, beetle and hoverfly
+#:   to one identical size; the soft one keeps the beetle smaller than the bee
+#:   smaller than the fly, so the scene still reads as different animals;
+#: * it **decays to nothing**. The exaggeration is largest where it is needed
+#:   and vanishes where it is not — and that is the property the author actually
+#:   asked for, in one line rather than a control they have to think about.
+VISIBLE_FLOOR_M = 0.032
+
+#: Never claim a boost below this in the label — 1.05x is not worth a sentence.
+_BOOST_WORTH_SAYING = 1.15
+
+
+def size_sentence(size: dict) -> str:
+    """One honest line about how big this animal is, and whether the screen is
+    lying about it (P5 + P9).
+
+    This is what the removed dropdown was really for. A control that says
+    "x3" tells you the scene is exaggerated but not *which* animals or *by how
+    much*; a creature that says *"11 mm — shown 3x life size"* when you look at
+    it tells you exactly, only when it matters, and teaches the real number in
+    passing. An animal drawn life size says only its size.
+    """
+    try:
+        true_m = float(size.get("true_m") or size.get("m") or 0)
+        boost = float(size.get("boost") or 1.0)
+    except (TypeError, ValueError):
+        return ""
+    if true_m <= 0:
+        return ""
+    measure = (f"{true_m * 1000:.0f} mm" if true_m < 0.1
+               else f"{true_m * 100:.0f} cm")
+    if boost >= _BOOST_WORTH_SAYING:
+        return f"{measure} — shown {boost:.0f}× life size so you can see it"
+    return f"{measure} — shown life size"
+
+
+def _drawn_size(m: float) -> float:
+    """The size to *draw* an animal of real size ``m`` at. See
+    :data:`VISIBLE_FLOOR_M`.
+
+    ==============  ========  =======  ==========
+    animal          real      drawn    boost
+    ==============  ========  =======  ==========
+    ladybeetle      8 mm      33 mm    4.1x
+    leafcutter bee  11 mm     34 mm    3.1x
+    hoverfly        15 mm     35 mm    2.4x
+    a moth          40 mm     51 mm    1.3x
+    swallowtail     79 mm     85 mm    1.08x
+    chickadee       203 mm    206 mm   1.01x
+    northern flicker 500 mm   501 mm   1.002x
+    ==============  ========  =======  ==========
+
+    The birds are the point: they move by one percent, which is nothing, so
+    "don't change the birds" and "make the bugs visible" stop being in tension.
+    """
+    m = max(0.0, float(m))
+    return math.sqrt(m * m + VISIBLE_FLOOR_M * VISIBLE_FLOOR_M)
+
+
 def _size_for(row: dict, app: dict, bee_m: dict = None, lep_m: dict = None,
               bird_m: dict = None) -> dict:
-    """``{m, axis}`` — how big this animal really is, and along which model
-    axis to measure that.
+    """``{m, true_m, axis, boost}`` — how big to draw this animal, how big it
+    really is, and along which model axis to measure that.
+
+    ``m`` is the *drawn* size (the visibility floor applied); ``true_m`` is the
+    measurement. Both travel, because the viewer needs the first and the label
+    has to be able to admit the second (P9) — a creature shown at three times
+    life size must say so rather than teach somebody that a leafcutter bee is
+    the size of a walnut.
 
     Never raises and never returns zero: a creature with no morphology gets its
     kind's fallback, which is still far closer to life than the constant it
@@ -425,7 +517,15 @@ def _size_for(row: dict, app: dict, bee_m: dict = None, lep_m: dict = None,
         m = None
     if not m or m <= 0:
         m = _SIZE_FALLBACK_M.get(kind, 0.05)
-    return {"m": round(m, 4), "axis": _SIZE_AXIS.get(kind, "z")}
+    drawn = _drawn_size(m)
+    return {
+        "m": round(drawn, 4),
+        "true_m": round(m, 4),
+        "axis": _SIZE_AXIS.get(kind, "z"),
+        # 1.0 means "drawn life size" — the viewer only labels a boost above
+        # _BOOST_WORTH_SAYING, but the number itself is always here.
+        "boost": round(drawn / m, 2) if m > 0 else 1.0,
+    }
 
 
 def support_by_taxon(plant_ids: list) -> dict:
@@ -467,7 +567,25 @@ def appearance_for_fauna(fauna_id: int) -> Optional[dict]:
         morph = lep_morphology().get(fauna_id)
     else:
         morph = None
-    return _appearance_for(row, morph)
+    app = _appearance_for(row, morph)
+    if app is not None:
+        # How big the flown creature REALLY is (V2.46c / F110). The avatar in
+        # front of the fly camera was a hand-picked 0.46 scale parked 1.5 m out
+        # — roughly half a metre of butterfly against flowers that were
+        # correctly 7 cm, which is why the flora read as miniature:
+        #
+        #     *"the fly as a bee/butterfly mode will need to be altered to be
+        #     the appropriate size relative to the flora."*
+        #
+        # Under `real_size`, NOT `size` — `app["size"]` is already a relative
+        # style scalar (0.35–1.8) that the avatar builders multiply by, and
+        # quietly changing its meaning would rescale every procedural body.
+        taxon = row.get("taxon")
+        app["real_size"] = _size_for(
+            row, app,
+            bee_m=morph if taxon == "bee" else None,
+            lep_m=morph if taxon == "lepidoptera" else None)
+    return app
 
 
 def _appearance_for(row: dict, morph: dict = None) -> Optional[dict]:

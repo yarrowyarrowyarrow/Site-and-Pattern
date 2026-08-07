@@ -262,8 +262,77 @@ function ensureAvatar() {
             : makeButterflyAvatar(beeKind === 'moth', beeApp);
   beeAvatar.position.set(0, beeKind === 'bee' ? -0.42 : -0.86,
                             beeKind === 'bee' ? -1.1 : -1.5);
+  _sizeAvatarToLife();
   beeAvatarKind = sig;
   camera.add(beeAvatar);
+}
+
+// ── The pilot is the right size now (V2.46c / F110) ─────────────────────────
+//
+//     *"The fly as a bee/butterfly mode will need to be altered to be the
+//     appropriate size relative to the flora."*
+//
+// The same V2.12-constant error V2.46 fixed for the ambient creatures, still
+// sitting in the one view where it is most obvious. `makeButterflyAvatar` ends
+// `scale.setScalar(0.46)` and the result was parked 1.5 m in front of the
+// camera: about half a metre of butterfly, against coneflower heads that are
+// correctly 7 cm. Nothing about the world was wrong. The pilot was thirty times
+// too big for it, and a world seen past a thirty-times-oversized body reads as
+// a model railway.
+//
+// Both numbers now come from the animal. The distance is a MULTIPLE OF ITS OWN
+// SIZE, which is what makes this self-correcting: a hawkmoth and a sweat bee
+// end up framed the same way without a per-species table, and re-measuring a
+// species in the bench moves its avatar with it.
+const _AVATAR_STANDOFF = { bee: 2.6, butterfly: 1.0, moth: 1.1 };
+
+// …with a floor, because proportionality alone puts the smallest animals
+// through the near plane. A Western Tailed-Blue is 22.5 mm across, so a strict
+// 1.0x standoff parks its wingtips ~11 mm from the eye — 1 mm clear of a 10 mm
+// near plane, and the idle bob is bigger than that. 28 mm doubles the margin
+// and costs the tiniest leps a slightly smaller apparent size, which is honest:
+// they ARE the tiniest.
+const _AVATAR_MIN_STANDOFF = 0.028;
+
+function _sizeAvatarToLife() {
+  const size = beeApp && beeApp.real_size;
+  if (!beeAvatar || !size || !(size.true_m > 0)) return;   // older scene: leave it
+  // The avatar's own axis, same convention as the ambient creatures: a bee is
+  // measured nose-to-sting down Z, a lep across the wings on X.
+  const axis = size.axis || (beeKind === 'bee' ? 'z' : 'x');
+  beeAvatar.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(beeAvatar);
+  if (box.isEmpty()) return;
+  const s = box.getSize(new THREE.Vector3());
+  const have = axis === 'x' ? s.x : (axis === 'y' ? s.y : s.z);
+  if (!(have > 1e-6)) return;
+  // LIFE size, not the ambient creatures' floored size: you are not looking at
+  // this animal across the yard, you are it, and the whole point is the
+  // proportion between it and the flower in front of it.
+  const m = size.true_m;
+  beeAvatar.scale.multiplyScalar(m / have);
+  const stand = Math.max(_AVATAR_MIN_STANDOFF,
+                         (_AVATAR_STANDOFF[beeKind] || 1.5) * m);
+  beeAvatar.position.set(0, -0.55 * stand, -stand);
+  beeAvatar.userData.standoff = stand;
+}
+
+// A 13 mm body sitting 34 mm from the eye does not survive a 0.1 m near plane,
+// so bee mode gets its own. Restored on exit — a global change would cost the
+// orbit view depth precision it has no reason to pay for.
+//
+// **The trade, stated.** Default is 0.1/4000, a 40,000:1 depth ratio; this is
+// 0.01/2000, which is 200,000:1. On a 24-bit buffer that is real, and the place
+// it would show is shimmer on the distant ground plane, not on anything you are
+// flying past. It is the cheapest of the options (the others being a
+// logarithmic depth buffer, which is a renderer-construction decision affecting
+// every mode, or clipping `far` below the 560-unit sky halo in 01-core.js).
+const _BEE_NEAR = 0.008, _BEE_FAR = 2000;
+const _ORBIT_NEAR = 0.1, _ORBIT_FAR = 4000;
+
+function _setCameraRange(near, far) {
+  camera.near = near; camera.far = far;
+  camera.updateProjectionMatrix();
 }
 
 function disposeObject(root) {
@@ -554,11 +623,47 @@ function enterBeeMode() {
   setBeeVisionUI(true);
   if (!beeNameSprite) { beeNameSprite = makeTextSprite(); scene.add(beeNameSprite); }
   beeNameSprite.visible = false; beeNameText = '';
-  if (wildlifeGroup) wildlifeGroup.visible = false;   // focus on the flown creature
+  _setCameraRange(_BEE_NEAR, _BEE_FAR);
+  // ── You are not alone down here (V2.46c / F110) ──────────────────────────
+  //
+  //     *"I would like to see other fauna and maybe the human character
+  //     walking the scene too when in bug mode."*
+  //
+  // This line used to read `wildlifeGroup.visible = false`, with the comment
+  // *"focus on the flown creature"*. That was the right call when the ambient
+  // creatures were cat-sized and would have filled the view — and it is the
+  // wrong one now that they are honest, because a bee's-eye view of other
+  // pollinators working the same patch IS the lesson (P3, P10: the design is a
+  // network and you are inside it).
+  if (wildlifeGroup) wildlifeGroup.visible = true;
+  // And the walker, because he is the only object of KNOWN size in the whole
+  // scene — which is what makes the new proportions legible rather than merely
+  // correct. Exactly the argument behind the V2.35 scale rule.
+  _showWalkerForScale(true);
   if (spotGroup) spotGroup.visible = false;           // the spotlight is orbit/walk-only
   rebuildBeacons();
   beeSpawn();
   updateBeeHud();
+}
+
+// Stand the walk avatar in the middle of the design so a bee has something of
+// known height to be small next to. He is built lazily by walk mode, so this
+// may have to build him — and it must not disturb walk mode if that is what
+// owns him, hence the `walkMode` check on the way back out.
+function _showWalkerForScale(on) {
+  if (typeof makeWalker !== 'function') return;       // 20-walker.js absent
+  if (!on) {
+    if (walkAvatar && !walkMode) walkAvatar.visible = false;
+    return;
+  }
+  if (!walkAvatar) { walkAvatar = makeWalker(); scene.add(walkAvatar); }
+  if (walkMode) return;                               // walk mode is driving him
+  const cx = lastBounds ? (lastBounds.min_x + lastBounds.max_x) / 2 : 0;
+  const cz = lastBounds ? -(lastBounds.min_y + lastBounds.max_y) / 2 : 0;
+  walkAvatar.position.set(cx, terrainHeightAt(cx, -cz, lastTerrain), cz);
+  walkAvatar.rotation.y = 0;
+  walkAvatar.visible = true;
+  if (typeof setWalkerNet === 'function') setWalkerNet(false);
 }
 
 function exitBeeMode() {
@@ -571,7 +676,9 @@ function exitBeeMode() {
   if (beeNameSprite) beeNameSprite.visible = false;
   setBeeVisionUI(false);
   rebuildBeacons();                 // beeMode is false now → clears the beacons
+  _setCameraRange(_ORBIT_NEAR, _ORBIT_FAR);
   if (wildlifeGroup) wildlifeGroup.visible = true;   // wildlife returns in orbit
+  _showWalkerForScale(false);
   if (spotGroup) spotGroup.visible = true;           // spotlight returns too
   controls.enabled = true;
   if (lastBounds) frameCamera(lastBounds);   // back to a sensible orbit
@@ -656,7 +763,12 @@ function beeStep(t) {
     // 07-wildlife.js; it loads after this file but the call is inside the
     // frame loop, so it is defined by the time this runs.
     flapWings(beeAvatar, t);
-    beeAvatar.position.y = (beeKind === 'bee' ? -0.42 : -0.86) + Math.sin(t * 0.006) * 0.03;
+    // Bob in proportion to the animal, not by a fixed 3 cm — which on a
+    // 13 mm bee was a two-body-length pogo (V2.46c).
+    const _st = beeAvatar.userData.standoff;
+    beeAvatar.position.y = _st
+      ? -0.55 * _st + Math.sin(t * 0.006) * _st * 0.06
+      : (beeKind === 'bee' ? -0.42 : -0.86) + Math.sin(t * 0.006) * 0.03;
     beeAvatar.rotation.z = beeBank;
   }
 

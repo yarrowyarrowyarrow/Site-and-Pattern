@@ -289,10 +289,6 @@ class Map3DWidget(QWebEngineView):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""
         self.run_js(map3d_js.set_walk_mode(on))
 
-    def set_creature_scale(self, mult: float):
-        """Magnify the ambient wildlife; ``1.0`` is life size (V2.46)."""
-        self.run_js(map3d_js.set_creature_scale(mult))
-
     def set_edit_mode(self, mode: str, pick: dict = None):
         """Put the trowel in the user's hand — ``'plant'``, ``'pull'`` or
         ``''`` (V2.43). Answers on ``bridge.plant_requested`` /

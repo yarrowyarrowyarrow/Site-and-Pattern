@@ -182,8 +182,13 @@ a real character and it drives how the animal moves in the preview. See
 
 **Two more fields now change what you see** (V2.45/V2.46). `wingspan_min_mm` /
 `wingspan_max_mm` and the bees' `body_length_mm` are no longer only data: the
-viewer draws every creature at **life size** from them, so a wrong wingspan is
-now a visibly wrong animal standing next to a 1.75 m person. And
+viewer sizes every creature from them, so a wrong wingspan is now a visibly
+wrong animal standing next to a 1.75 m person — and a wrong bee is a wrong bee
+in the fly view too, where the avatar is scaled and stood off by its own
+measurement. (Anything under ~3 cm is drawn a little larger than life so it is
+not a single pixel; the animal says its real size when you hover it, and the
+lift decays to nothing by songbird scale. See `scene_wildlife.VISIBLE_FLOOR_M`.)
+And
 `flight_style` picks the *bout* — how many beats before the glide, and how long
 the glide lasts — so `gliding` really does sail and `darting` really does buzz.
 Both are the same argument as the band editor: the value is worth entering

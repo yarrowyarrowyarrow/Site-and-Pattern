@@ -61,8 +61,6 @@ _MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 #: and life size serves the third at the expense of the first two at any
 #: distance. So the exaggeration is offered as a labelled choice rather than
 #: baked into the models, and **its floor is the truth**.
-CREATURE_SCALES = [("Life size", 1.0), ("×3", 3.0), ("×6", 6.0), ("×12", 12.0)]
-CREATURE_SCALE_KEY = "viewer3d/creature_scale"
 
 #: Selectable sections. ``TIME`` and ``VIEW`` are the shared core; a caller asks
 #: for what it can honestly act on.
@@ -89,8 +87,6 @@ class Scene3DToolBar(QWidget):
     reset_view = pyqtSignal()
     walk_toggled = pyqtSignal(bool)
     identify_toggled = pyqtSignal(bool)
-    #: (multiplier) — 1.0 is life size. See CREATURE_SCALES.
-    creature_scale_changed = pyqtSignal(float)
 
     def __init__(self, parent: QWidget | None = None, *,
                  groups=ALL, year: int = 0, month: int = 6, hour: int = 13):
@@ -190,24 +186,6 @@ class Scene3DToolBar(QWidget):
         self._id_btn.toggled.connect(self.identify_toggled.emit)
         row.addWidget(self._id_btn)
 
-        # V2.46. The creatures are drawn life size now — which is correct, and
-        # means an 11 mm bee is 11 mm. This is how you get a look at one without
-        # the app quietly lying about how big it is.
-        self._scale = QComboBox()
-        for label, _mult in CREATURE_SCALES:
-            self._scale.addItem(label)
-        self._scale.setToolTip(
-            "How big the creatures are drawn.\n"
-            "Life size is the truth — every animal is scaled from its real "
-            "measured body length or wingspan, so a leafcutter bee really is "
-            "11 mm beside a 1.75 m person.\n"
-            "The magnifications are for getting a look at one; the number "
-            "says how much it is being exaggerated by.")
-        self._scale.setCurrentIndex(self.stored_creature_scale_index())
-        self._scale.currentIndexChanged.connect(self._on_creature_scale)
-        row.addWidget(self._label("Creatures:"))
-        row.addWidget(self._scale)
-
     @staticmethod
     def _label(text: str) -> QLabel:
         lab = QLabel(text)
@@ -235,11 +213,6 @@ class Scene3DToolBar(QWidget):
         QSettings().setValue(DETAIL_KEY, int(level))
         self.detail_changed.emit(int(level))
 
-    def _on_creature_scale(self, idx: int):
-        idx = max(0, min(len(CREATURE_SCALES) - 1, int(idx)))
-        QSettings().setValue(CREATURE_SCALE_KEY, idx)
-        self.creature_scale_changed.emit(CREATURE_SCALES[idx][1])
-
     def _sync_labels(self):
         if TIME not in self._groups:
             return
@@ -259,19 +232,6 @@ class Scene3DToolBar(QWidget):
         except (TypeError, ValueError):
             return 1
 
-    @staticmethod
-    def stored_creature_scale_index() -> int:
-        """The remembered magnification, clamped. Defaults to 0 — life size,
-        because the truth is the default and the exaggeration is opt-in."""
-        try:
-            return max(0, min(len(CREATURE_SCALES) - 1,
-                              int(QSettings().value(CREATURE_SCALE_KEY, 0))))
-        except (TypeError, ValueError):
-            return 0
-
-    @classmethod
-    def stored_creature_scale(cls) -> float:
-        return CREATURE_SCALES[cls.stored_creature_scale_index()][1]
 
     def year(self) -> int:
         return self._year.value() if TIME in self._groups else 0

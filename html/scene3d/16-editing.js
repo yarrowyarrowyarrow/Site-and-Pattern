@@ -138,18 +138,45 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   // every path, or the edit is silently dropped.
 
   if (_editMode === 'net') {
-    const critter = (typeof critterObjectAt === 'function')
+    // V2.46c — YOU SWING THE NET, you do not click the animal.
+    //
+    // V2.46 required a raycast hit on the creature, which meant landing the
+    // cursor on a 34 mm object crossing the yard at a metre a second:
+    //
+    //     *"Catching the bugs is impossible with the way it is set up… If I am
+    //     within range of a bug and click while holding the net, not clicking
+    //     on the bug because it is tiny and too kind of too fast moving."*
+    //
+    // So in walk mode with the net out, the click means "swing", and what it
+    // catches is whatever is in arm's reach — which is what a net does, and why
+    // people can catch insects they could never touch. `critterInReach` is
+    // also what the on-screen ring has been following, so the thing you get is
+    // the thing that was highlighted before you clicked.
+    let critter = (typeof walkerHasNet === 'function' && walkerHasNet()
+                   && typeof critterInReach === 'function')
+      ? critterInReach() : null;
+    // Out of walk mode there is no arm and no reach: the god's-eye view keeps
+    // the old aim-and-click, which is fine on a creature you can see from above.
+    const aimed = !critter && typeof critterObjectAt === 'function'
       ? critterObjectAt(e.clientX, e.clientY) : null;
+    if (!critter && aimed) {
+      const ai = aimed.userData && aimed.userData.critterInfo;
+      // With the net in hand, an aimed click at something out of reach is a
+      // MISS and has to say so — a click that silently does nothing reads as a
+      // broken button, which is half of "impossible".
+      if (typeof walkerHasNet === 'function' && walkerHasNet()) {
+        if (ai && ai.name) _bridge.outOfReach && _bridge.outOfReach(String(ai.name));
+        return;
+      }
+      critter = aimed;
+    }
     const info = critter && critter.userData && critter.userData.critterInfo;
-    if (!critter || !info || !info.name) return;
-    // V2.46: with the net in his hand, it has a REACH. A creature across the
-    // yard is not caught by clicking it — you walk over there. That is the
-    // difference between a net and a cursor, and it is the thing that makes
-    // this a game rather than a list (P11).
-    if (typeof walkerHasNet === 'function' && walkerHasNet()
-        && typeof walkerCanReach === 'function'
-        && !walkerCanReach(critter.position)) {
-      _bridge.outOfReach && _bridge.outOfReach(String(info.name));
+    if (!critter || !info || !info.name) {
+      // Nothing in reach and nothing aimed at. Say that too, rather than
+      // leaving the user to wonder whether the button works.
+      if (typeof walkerHasNet === 'function' && walkerHasNet()) {
+        _bridge.outOfReach && _bridge.outOfReach('');
+      }
       return;
     }
     const send = () => _bridge.caught(String(info.name));

@@ -60,21 +60,26 @@ class TestHowBigTheyAre(unittest.TestCase):
     assumes."""
 
     def test_the_measurements_are_real_ones(self):
+        """``true_m`` is the measurement, straight out of the morphology
+        tables. (``m`` is what gets DRAWN — the visibility floor applied — and
+        is checked separately below.)"""
         from src.scene_wildlife import _size_for
         # A leafcutter bee: 11 mm, along the body axis.
         s = _size_for({"taxon": "bee"}, {"kind": "bee"},
                       bee_m={"body_length_mm": 11.0})
-        self.assertAlmostEqual(s["m"], 0.011, places=4)
+        self.assertAlmostEqual(s["true_m"], 0.011, places=4)
         self.assertEqual(s["axis"], "z")
         # A swallowtail: the wingspan band's midpoint, across the wings.
         s = _size_for({"taxon": "lepidoptera"}, {"kind": "butterfly"},
                       lep_m={"wingspan_min_mm": 70, "wingspan_max_mm": 90})
-        self.assertAlmostEqual(s["m"], 0.080, places=4)
+        self.assertAlmostEqual(s["true_m"], 0.080, places=4)
         self.assertEqual(s["axis"], "x")
-        # A chickadee: wingspan, across the wings.
+        # A chickadee: wingspan, across the wings — and drawn at it, because
+        # a bird is already big enough to see.
         s = _size_for({"taxon": "bird"}, {"kind": "bird"},
                       bird_m={"wingspan_mm": 203})
-        self.assertAlmostEqual(s["m"], 0.203, places=4)
+        self.assertAlmostEqual(s["true_m"], 0.203, places=4)
+        self.assertAlmostEqual(s["m"], 0.203, places=2)
         self.assertEqual(s["axis"], "x")
 
     def test_no_measurement_still_gets_an_honest_size(self):
@@ -85,8 +90,8 @@ class TestHowBigTheyAre(unittest.TestCase):
         from src.scene_wildlife import _size_for, _SIZE_FALLBACK_M
         for kind, expect in _SIZE_FALLBACK_M.items():
             s = _size_for({"taxon": ""}, {"kind": kind})
-            self.assertEqual(s["m"], expect, kind)
-            self.assertGreater(s["m"], 0.0, kind)
+            self.assertEqual(s["true_m"], expect, kind)
+            self.assertGreaterEqual(s["m"], s["true_m"], kind)
             self.assertIn(s["axis"], ("x", "y", "z"), kind)
 
     def test_nothing_is_drawn_at_a_wildly_wrong_size(self):
@@ -96,8 +101,10 @@ class TestHowBigTheyAre(unittest.TestCase):
         that."""
         from src.scene_wildlife import _size_for, _SIZE_FALLBACK_M
         for kind in _SIZE_FALLBACK_M:
-            m = _size_for({"taxon": ""}, {"kind": kind})["m"]
-            self.assertTrue(0.005 <= m <= 1.5, f"{kind} at {m} m")
+            s = _size_for({"taxon": ""}, {"kind": kind})
+            for key in ("m", "true_m"):     # drawn AND real, both bounded
+                self.assertTrue(0.005 <= s[key] <= 1.5,
+                                f"{kind} {key} at {s[key]} m")
 
     def test_the_viewer_measures_the_model_instead_of_trusting_a_table(self):
         """`scaleCritterToLife` divides the wanted size by the model's OWN
@@ -111,149 +118,99 @@ class TestHowBigTheyAre(unittest.TestCase):
         self.assertIn("scaleCritterToLife(obj, spec.size)", code,
                       "rebuildWildlife no longer scales its critters")
 
-    def test_life_size_is_the_default_and_the_exaggeration_is_named(self):
-        """The magnifier is a stated exaggeration, not a vibe.
+    def test_birds_are_left_alone_and_the_small_things_are_lifted(self):
+        """The V2.46c correction, stated as the author stated it.
 
-        Three properties, all of them the difference between this control and
-        the constants it replaced: life size is first (and therefore the
-        default index), nothing offered is *below* life size, and every option
-        says by how much.
+            *"I don't want the birds changing size to x3 or more, they look
+            ridiculous. The bugs are not visible unless x3."*
+
+        Both halves at once, which is exactly what a global multiplier cannot
+        do — and what a flat per-taxon boost cannot do either, since x3 on
+        insects puts a swallowtail at 24 cm, which is a goldfinch.
         """
-        from src.scene3d_toolbar import CREATURE_SCALES
-        self.assertEqual(CREATURE_SCALES[0][1], 1.0)
-        self.assertIn("Life size", CREATURE_SCALES[0][0])
-        for label, mult in CREATURE_SCALES:
-            self.assertGreaterEqual(mult, 1.0, label)
-            if mult != 1.0:
-                self.assertIn(str(int(mult)), label,
-                              f"{label!r} does not say how much it magnifies")
+        from src.scene_wildlife import _drawn_size
+        # Too small to see: lifted into visibility.
+        for name, m, lo, hi in [("ladybeetle", 0.008, 3.0, 5.0),
+                                ("leafcutter bee", 0.011, 2.5, 3.5),
+                                ("hoverfly", 0.015, 2.0, 3.0)]:
+            boost = _drawn_size(m) / m
+            self.assertTrue(lo <= boost <= hi,
+                            f"{name}: boosted x{boost:.2f}, wanted {lo}-{hi}")
+        # Already visible: left alone. A goldfinch that grows by more than a
+        # couple of percent is the thing being complained about.
+        for name, m in [("chickadee", 0.203), ("goldfinch", 0.225),
+                        ("northern flicker", 0.500), ("a bat", 0.250)]:
+            boost = _drawn_size(m) / m
+            self.assertLess(boost, 1.03,
+                            f"{name} is being drawn x{boost:.2f} life size")
 
-    def test_both_windows_offer_the_same_magnifications(self):
-        """A second list here would be two windows that disagree about how big
-        a bee is — the exact failure the V2.44 toolbar extraction exists to
-        prevent."""
-        src = (_ROOT / "src" / "scene3d_window.py").read_text(encoding="utf-8")
-        self.assertIn("CREATURE_SCALES as _CREATURE_SCALES", src,
-                      "the 3D preview has grown its own scale list")
-        ref = (_ROOT / "src" / "reference_ecosystem_window.py").read_text(
-            encoding="utf-8")
-        self.assertIn("creature_scale_changed", ref)
+    def test_the_floor_never_shrinks_and_never_reorders(self):
+        """Two properties a hard ``max(m, FLOOR)`` would break.
 
-    def test_the_magnifier_never_shrinks_below_life_size(self):
-        """The exaggeration is a control with a number on it, and its floor is
-        the truth: 1x. A magnifier that could go below life size would be a
-        second way to get the old bug."""
-        code = _code("07-wildlife.js")
-        m = re.search(r"permaSetCreatureScale = function \(mult\) \{\s*"
-                      r"const k = Math\.max\(([\d.]+), Math\.min\(([\d.]+)",
-                      code)
-        self.assertIsNotNone(m, "permaSetCreatureScale changed shape")
-        self.assertEqual(float(m.group(1)), 1.0)
-        self.assertLessEqual(float(m.group(2)), 20.0)
-
-    def test_every_creature_a_scene_emits_carries_a_size(self):
-        """End to end, against the shipped catalogue: no creature reaches the
-        viewer without one, or the viewer falls back to the constant."""
-        from src.db.plants import init_db, get_connection
-        from src.scene_wildlife import wildlife_for_scene
-        init_db()
-        conn = get_connection()
-        ids = [r[0] for r in conn.execute(
-            "SELECT plant_id, COUNT(*) n FROM plant_fauna "
-            "GROUP BY plant_id ORDER BY n DESC LIMIT 6").fetchall()]
-        if not ids:                                # pragma: no cover
-            self.skipTest("no plant_fauna edges seeded")
-        scene = {
-            "plants": [{"plant_id": p, "id": p, "x": i * 2.0, "y": 0.0,
-                        "height_m": 1.5, "canopy_m": 1.2,
-                        "plant_type": "shrub", "common_name": f"p{i}"}
-                       for i, p in enumerate(ids)],
-            "bounds": {"min_x": -5, "max_x": 25, "min_y": -5, "max_y": 5},
-            "month": 7, "is_night": False,
-        }
-        creatures = wildlife_for_scene(scene)
-        self.assertTrue(creatures, "no wildlife for a well-connected scene")
-        for c in creatures:
-            size = c.get("size") or {}
-            self.assertTrue(0.005 <= size.get("m", 0) <= 1.5,
-                            f"{c.get('name')} at {size}")
-            self.assertIn(size.get("axis"), ("x", "y", "z"), c.get("name"))
-
-    #: Assembled extents of the shipped fauna GLBs, per build, as measured at
-    #: V2.46 — the evidence ``_SIZE_AXIS`` was chosen from.
-    #:
-    #: The lep row is the clearest case for it: X runs 1.07 (skipper) → 1.72
-    #: (swallowtail), which is exactly how those animals' *wingspans* compare,
-    #: while Z barely moves. So X is the wingspan axis.
-    _MEASURED = {
-        "bee": {"round": (1.683, 2.790), "stout": (1.715, 2.824),
-                "slender": (1.748, 2.851), "leafcutter": (1.726, 2.860)},
-        "lep": {"butterfly": (1.564, 1.420), "moth": (1.433, 1.420),
-                "skipper": (1.075, 1.420), "swallowtail": (1.722, 1.495)},
-        "bird": {"passerine": (0.540, 0.826), "woodpecker": (0.540, 0.986),
-                 "hummer": (0.540, 0.887)},
-        "fly": {"hover": (0.524, 0.357), "darner": (0.860, 0.685)},
-    }
-
-    def test_the_models_still_have_the_shape_the_axis_was_chosen_from(self):
-        """A characterisation test, and deliberately only that.
-
-        ``_SIZE_AXIS`` is a *judgment* — "a bee's length runs down Z, a
-        butterfly's wingspan across X" — read off these models. No assertion
-        can re-derive that judgment from geometry (the skipper build is longer
-        along Z than its own wingspan, and would fail a naive "the named axis
-        is the longest" rule while still being correct). What a test *can* do
-        is fail the moment the evidence changes: re-export a model at a
-        different aspect and this says so, with a pointer to re-check the
-        choice rather than silently drawing every butterfly by its body.
+        Nothing may be drawn smaller than life, and a beetle must stay smaller
+        than a bee smaller than a fly smaller than a butterfly — a hard floor
+        collapses every small creature to one identical size, so the scene
+        stops reading as different animals.
         """
-        models = _ROOT / "html" / "assets" / "models"
-        if not models.exists():                    # pragma: no cover
-            self.skipTest("model assets not present in this checkout")
-        drift = []
-        for key, builds in self._MEASURED.items():
-            glb = models / f"fauna_{key}.glb"
-            if not glb.exists():                   # pragma: no cover
-                continue
-            got = _glb_variant_extents(glb)
-            for build, (want_x, want_z) in builds.items():
-                ext = got.get(build)
-                if ext is None:
-                    drift.append(f"fauna_{key}.glb lost its '{build}' build")
-                    continue
-                for axis, want in (("x", want_x), ("z", want_z)):
-                    if abs(ext[axis] - want) > 0.02:
-                        drift.append(
-                            f"fauna_{key}.glb/{build} {axis}: {ext[axis]:.3f} "
-                            f"was {want:.3f}")
-        self.assertFalse(
-            drift,
-            "a fauna model was re-exported at a different shape — re-check "
-            "src/scene_wildlife._SIZE_AXIS against it:\n  "
-            + "\n  ".join(drift))
+        from src.scene_wildlife import _drawn_size
+        ladder = [0.004, 0.008, 0.011, 0.015, 0.040, 0.079, 0.203, 0.5, 1.2]
+        drawn = [_drawn_size(m) for m in ladder]
+        for m, d in zip(ladder, drawn):
+            self.assertGreaterEqual(d, m, f"{m} m was drawn smaller than life")
+        self.assertEqual(drawn, sorted(drawn), "the floor reordered the animals")
+        self.assertEqual(len(set(drawn)), len(drawn),
+                         "two different animals collapsed to one drawn size")
+        # And it decays: the exaggeration must vanish, not merely shrink.
+        self.assertLess(_drawn_size(2.0) / 2.0, 1.001)
 
-    def test_the_bird_is_measured_across_the_wings_not_along_the_tail(self):
-        """Birds are the case where the long axis is the WRONG one.
+    def test_the_true_measurement_travels_with_the_drawn_one(self):
+        """P9. A creature shown at three times life size has to be able to say
+        so, or the app teaches that a leafcutter bee is walnut-sized."""
+        from src.scene_wildlife import _size_for, size_sentence
+        size = _size_for({"taxon": "bee"}, {"kind": "bee"},
+                         bee_m={"body_length_mm": 11.0})
+        self.assertAlmostEqual(size["true_m"], 0.011, places=4)
+        self.assertGreater(size["m"], size["true_m"])
+        # `boost` is rounded for the wire, so compare at the precision it
+        # carries rather than to full float equality.
+        self.assertAlmostEqual(size["boost"], size["m"] / size["true_m"], places=1)
+        line = size_sentence(size)
+        self.assertIn("11 mm", line)
+        self.assertIn("3", line)
+        self.assertIn("life size", line)
+        # A bird says its size and claims no exaggeration.
+        bird = _size_for({"taxon": "bird"}, {"kind": "bird"},
+                         bird_m={"wingspan_mm": 225.0})
+        self.assertNotIn("×", size_sentence(bird).replace("life size", ""))
 
-        ``fauna_bird.glb`` is authored with a generous body-plus-tail down Z —
-        longer than the wingspan across X. Scaling by the long axis would draw
-        every songbird at its tail length, which is not a published
-        measurement and not what ``bird_morphology.wingspan_mm`` means. So this
-        pins the deliberate choice rather than letting it look like an
-        oversight somebody should "fix"."""
-        models = _ROOT / "html" / "assets" / "models"
-        glb = models / "fauna_bird.glb"
-        if not glb.exists():                       # pragma: no cover
-            self.skipTest("model assets not present in this checkout")
-        from src.scene_wildlife import _SIZE_AXIS
-        self.assertEqual(_SIZE_AXIS["bird"], "x")
-        variants = _glb_variant_extents(glb)
-        self.assertTrue(variants, "fauna_bird.glb has no measurable variants")
-        for name, ext in variants.items():
-            # The wingspan axis must at least be a real span — not a token
-            # width — even where the tail axis is longer.
-            self.assertGreater(ext["x"], ext["y"],
-                               f"{name}: X is not the span axis ({ext})")
+    def test_the_viewer_no_longer_decides_and_the_dropdown_is_gone(self):
+        """The control was removed rather than re-defaulted.
+
+            *"I don't know if we need this size changing as a changeable drop
+            down menu."*
+
+        Correct: with the floor applied per animal there is nothing left to
+        set. A leftover `permaSet*` hook the app never drives is dead code that
+        tests/test_bridge_contract already rejects once, so this checks the
+        whole path is gone, not just the combo.
+        """
+        code = _all_code()
+        self.assertNotIn("CRITTER_MAGNIFY", code,
+                         "the viewer still carries a global magnifier")
+        self.assertNotIn("permaSetCreatureScale", code)
+        for mod in ("scene3d_toolbar.py", "scene3d_window.py",
+                    "reference_ecosystem_window.py", "map3d_js.py",
+                    "map3d_widget.py"):
+            src = (_ROOT / "src" / mod).read_text(encoding="utf-8")
+            self.assertNotIn("creature_scale", src.lower(),
+                             f"{mod} still wires the removed dropdown")
+
+    def test_the_size_line_reaches_the_hover_tip(self):
+        """The label is what the dropdown was actually for, so it has to be on
+        screen — per creature, where you are already looking."""
+        self.assertIn("size: _sizeLine(spec.size)", _code("07-wildlife.js"))
+        self.assertIn("info.size", _code("01-core.js"),
+                      "the hover tip does not show how big the creature is")
 
 
 class TestFlapFlapGlide(unittest.TestCase):
@@ -407,6 +364,56 @@ class TestTheNetIsHeld(unittest.TestCase):
         edit = _code("16-editing.js")
         self.assertIn("outOfReach", edit,
                       "a swing that misses says nothing to the user")
+
+    def test_you_swing_the_net_you_do_not_click_the_animal(self):
+        """The V2.46c correction.
+
+            *"Catching the bugs is impossible with the way it is set up… If I
+            am within range of a bug and click while holding the net, not
+            clicking on the bug because it is tiny and too kind of too fast
+            moving."*
+
+        V2.46 required a raycast HIT on the creature. Making the sizes honest
+        then shrank that target fourfold — the two changes were in tension and
+        only one of them shipped. In walk mode with the net out, the click must
+        resolve through *reach*, not through the cursor.
+        """
+        code = _all_code()
+        self.assertIn("function critterInReach", code,
+                      "nothing resolves the catch by proximity")
+        edit = _code("16-editing.js")
+        self.assertIn("critterInReach()", edit,
+                      "the net click still depends on hitting the creature")
+        # And the reach path must be tried BEFORE the aimed one, or the
+        # forgiving branch is unreachable whenever the cursor happens to miss.
+        self.assertLess(edit.index("critterInReach()"),
+                        edit.index("critterObjectAt("),
+                        "the aim-and-click path still wins over reach")
+
+    def test_you_can_see_what_you_would_catch(self):
+        """The other half of "impossible": with no feedback you cannot tell
+        whether you are close enough, so a click that does nothing is
+        indistinguishable from a broken button."""
+        code = _all_code()
+        self.assertIn("function updateReachRing", code)
+        self.assertIn("updateReachRing()", _code("08-modes.js"),
+                      "the ring is never updated from the walk step")
+        self.assertIn("typeof updateReachRing === 'function'", _code("08-modes.js"),
+                      "20-walker.js loads after 08-modes.js, so this call has "
+                      "to be guarded — see TestTheRenderLoopSurvivesItself")
+
+    def test_a_swing_that_finds_nothing_still_says_so(self):
+        """An empty name means "nothing in reach at all", which is a different
+        sentence from "that one is too far" and must not be silence."""
+        edit = _code("16-editing.js")
+        self.assertIn("outOfReach('')", edit.replace('"', "'"),
+                      "a swing at empty air reports nothing to the user")
+        from src.scene3d_edit_flow import MISS_HINT
+        self.assertTrue(MISS_HINT.strip())
+        ref = (_ROOT / "src" / "reference_ecosystem_window.py").read_text(
+            encoding="utf-8")
+        self.assertIn("MISS_HINT", ref,
+                      "the sandbox window has its own wording for the miss")
 
     def test_the_bridge_carries_the_miss(self):
         """The JS calls ``bridge.outOfReach``; the slot has to exist under
@@ -576,6 +583,137 @@ def _glb_variant_extents(path: pathlib.Path) -> dict:
         out[nodes[root_i].get("name", f"node{root_i}")] = {
             "x": hi[0] - lo[0], "y": hi[1] - lo[1], "z": hi[2] - lo[2]}
     return out
+
+
+class TestBeeModeIsTheRightSizeToo(unittest.TestCase):
+    """F110 — the same scale error, in the one view where it is most obvious.
+
+        *"The fly as a bee/butterfly mode will need to be altered to be the
+        appropriate size relative to the flora. Also I would like to see other
+        fauna and maybe the human character walking the scene too when in bug
+        mode."*
+    """
+
+    def test_the_flown_creature_carries_its_real_size(self):
+        """Under ``real_size``, never ``size`` — ``app["size"]`` is already a
+        relative style scalar the avatar builders multiply by, and overloading
+        it would silently rescale every procedural body."""
+        from src.scene_wildlife import _appearance_for, _size_for
+        app = _appearance_for({"taxon": "bee", "common_name": "Leafcutter Bee",
+                               "scientific_name": "Megachile sp."},
+                              {"body_length_mm": 11.0})
+        self.assertIsNotNone(app)
+        # The style scalar is untouched and is NOT a measurement in metres.
+        self.assertGreater(app.get("size", 1), 0.2)
+        # …and the real one is a separate key.
+        size = _size_for({"taxon": "bee"}, app, bee_m={"body_length_mm": 11.0})
+        self.assertAlmostEqual(size["true_m"], 0.011, places=4)
+
+    def test_the_avatar_is_scaled_and_stood_off_by_its_own_size(self):
+        """Both numbers come from the animal, and the standoff is a MULTIPLE of
+        its size — which is what makes it self-correcting across species
+        without a per-species table."""
+        fly = _code("06-fly.js")
+        self.assertIn("function _sizeAvatarToLife", fly)
+        self.assertIn("_sizeAvatarToLife()", fly,
+                      "ensureAvatar never applies the life-size scaling")
+        self.assertIn("Box3", fly, "the avatar's scale must be MEASURED, the "
+                                   "same way the ambient creatures' is")
+        self.assertIn("_AVATAR_STANDOFF", fly)
+        # Whitespace-insensitive: this is a claim about the ARITHMETIC — the
+        # standoff is the per-kind factor times the animal's own size — not
+        # about how the line happens to be wrapped. (Pinning the formatting is
+        # what broke this test when the standoff floor was added.)
+        flat = re.sub(r"\s+", "", fly)
+        self.assertIn("_AVATAR_STANDOFF[beeKind]||1.5)*m", flat,
+                      "the standoff is not proportional to the creature")
+        self.assertIn("Math.max(_AVATAR_MIN_STANDOFF,", flat,
+                      "no floor under the standoff — the smallest leps will "
+                      "sit through the near plane")
+        # It uses LIFE size, not the ambient floor: you are the animal, and the
+        # point is its proportion to the flower in front of it.
+        self.assertIn("size.true_m", fly)
+
+    def test_a_small_avatar_gets_a_near_plane_that_can_show_it(self):
+        """A 13 mm body 34 mm from the eye does not survive a 0.1 m near plane.
+        Per-mode, and restored on exit — a global change would cost the orbit
+        view depth precision it has no reason to pay for."""
+        fly = _code("06-fly.js")
+        m = re.search(r"_BEE_NEAR = ([\d.]+), _BEE_FAR = ([\d.]+)", fly)
+        self.assertIsNotNone(m, "bee mode has no near/far of its own")
+        near, far = float(m.group(1)), float(m.group(2))
+        # Small enough for the closest standoff in the catalogue (a 9 mm bee at
+        # 2.6 body lengths is 23 mm), with room to fly right up to a petal.
+        self.assertLess(near, 0.02, "the near plane will clip the avatar")
+        self.assertGreater(near, 0.0005, "an absurdly small near plane throws "
+                                         "away depth precision for nothing")
+        # …and the depth ratio stays within an order of magnitude of default.
+        self.assertLess(far / near, 1e6)
+        self.assertIn("_setCameraRange(_ORBIT_NEAR, _ORBIT_FAR)", fly,
+                      "exitBeeMode does not restore the camera range")
+
+    def test_no_species_in_the_catalogue_clips_the_near_plane(self):
+        """The numeric check the standoff floor exists for.
+
+        Proportionality alone puts the smallest animals *through* the near
+        plane: a Western Tailed-Blue is 22.5 mm across, so a strict 1.0x
+        standoff parks its wingtips ~11 mm from the eye — 1 mm clear of a 10 mm
+        near plane, with an idle bob bigger than that. This walks the real
+        catalogue and demands a margin, rather than trusting three constants
+        that were each reasonable on their own.
+        """
+        from src.db.plants import init_db, get_connection
+        from src.scene_wildlife import appearance_for_fauna
+        init_db()
+        fly = _code("06-fly.js")
+        near = float(re.search(r"_BEE_NEAR = ([\d.]+)", fly).group(1))
+        floor = float(re.search(r"_AVATAR_MIN_STANDOFF = ([\d.]+)", fly).group(1))
+        stand = dict(re.findall(r"(\w+): ([\d.]+)",
+                                re.search(r"_AVATAR_STANDOFF = \{([^}]*)\}",
+                                          fly).group(1)))
+        rows = get_connection().execute(
+            "SELECT id, common_name FROM fauna "
+            "WHERE taxon IN ('bee', 'lepidoptera')").fetchall()
+        self.assertGreater(len(rows), 20, "no fauna to check against")
+        tightest = None
+        for fid, name in rows:
+            app = appearance_for_fauna(fid) or {}
+            size = app.get("real_size")
+            if not size:
+                continue
+            m = size["true_m"]
+            off = max(floor, float(stand.get(app.get("kind", ""), 1.5)) * m)
+            # Conservative: treat half the measured extent as body depth.
+            nearest = off - m * 0.5
+            if tightest is None or nearest < tightest[0]:
+                tightest = (nearest, name, m, off)
+        self.assertIsNotNone(tightest, "no species carried a real_size")
+        nearest, name, m, off = tightest
+        self.assertGreater(
+            nearest, near * 1.5,
+            f"{name} ({m * 1000:.1f} mm) sits {nearest * 1000:.1f} mm from a "
+            f"{near * 1000:.0f} mm near plane — its wingtips will clip")
+
+    def test_you_are_not_alone_down_there(self):
+        """`wildlifeGroup.visible = false` on entering bee mode was right when
+        the creatures were cat-sized and is wrong now they are honest."""
+        fly = _code("06-fly.js")
+        self.assertNotIn("wildlifeGroup.visible = false", fly,
+                         "bee mode still hides the other animals")
+        wild = _code("07-wildlife.js")
+        self.assertNotIn("visible = !beeMode", wild,
+                         "rebuildWildlife still hides the group in bee mode")
+
+    def test_the_walker_stands_in_for_scale(self):
+        """He is the only object of KNOWN size in the scene, which is what
+        makes the new proportions legible rather than merely correct — the same
+        argument as the V2.35 scale rule."""
+        fly = _code("06-fly.js")
+        self.assertIn("_showWalkerForScale(true)", fly)
+        self.assertIn("_showWalkerForScale(false)", fly,
+                      "the stand-in walker is never taken away again")
+        # And he must not be yanked out from under walk mode if it owns him.
+        self.assertIn("if (walkMode) return;", fly)
 
 
 class TestTheRenderLoopSurvivesItself(unittest.TestCase):

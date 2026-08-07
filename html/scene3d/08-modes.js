@@ -159,10 +159,11 @@ function setWalkHintUI(on) {
     + 'the creatures are the wildlife your plants support'
     // V2.46: the net is held, and it has a reach. Say so here, because
     // "I clicked the butterfly and nothing happened" is otherwise the
-    // first thing that happens.
+    // first thing that happens. V2.46c: and it no longer asks you to hit a
+    // 34 mm moving target — walk up, and the ringed one is the one you get.
     + (window.__permaEditVerb === 'net'
-       ? ' · 🥅 <b>net out</b> — walk within arm\'s reach of a creature, '
-         + 'then left-click it'
+       ? ' · 🥅 <b>net out</b> — walk up to a creature until a ring appears '
+         + 'round it, then left-click anywhere to swing'
        : '');
 }
 
@@ -183,6 +184,8 @@ function enterWalkMode() {
 function exitWalkMode() {
   walkKeys.clear(); walkDragging = false;
   if (walkAvatar) walkAvatar.visible = false;
+  // No arm, no reach, no ring (V2.46c).
+  if (typeof hideReachRing === 'function') hideReachRing();
   setWalkHintUI(false);
   controls.enabled = true;
   if (lastBounds) frameCamera(lastBounds); else controls.update();
@@ -232,6 +235,10 @@ function walkStep(t) {
   if (walkAvatar.userData.netArm && walkAvatar.userData.netSwing) {
     walkAvatar.userData.netArm.rotation.x += walkAvatar.userData.netSwing;
   }
+  // Ring whatever the net would catch right now (V2.46c, 20-walker.js). Guarded
+  // for load order — 20-walker.js loads after this chunk, and this runs from the
+  // animation loop. See TestTheRenderLoopSurvivesItself.
+  if (typeof updateReachRing === 'function') updateReachRing();
 
   // Follow camera: orbit behind the walker at (walkYaw, walkPitch).
   const head = walkAvatar.position.clone().add(new THREE.Vector3(0, 1.5, 0));

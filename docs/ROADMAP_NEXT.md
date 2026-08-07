@@ -819,40 +819,8 @@ the rest of it, in the order I would take it.
 ledger · F99 per-plant age + nursery stock · F100 edit animations + the net · F101
 split view · F102 one 3D toolbar · F103 flight physics · F108 life-size creatures +
 flap-flap-glide + creature collision · F109 the same three verbs in the 3D preview,
-and a net that is held and has a reach.
-
-### F110 · Bee mode at the right scale, with company — *Impact High / Effort M / Risk Med*
-
-> *"The fly as a bee/butterfly mode will need to be altered to be the appropriate
-> size relative to the flora. Also I would like to see other fauna and maybe the
-> human character walking the scene too when in bug mode."*
-
-The same error V2.46 fixed for the ambient creatures, still sitting in the
-first-person view. `makeButterflyAvatar` ends `g.scale.setScalar(0.46)` and parks
-the result 1.5 m in front of a camera with `near = 0.1` — so the body you are
-looking down at is roughly half a metre of butterfly, against flowers that are
-correctly 7 cm. Nothing about the *world* is wrong; the pilot is thirty times too
-big for it, which is why the flora reads as miniature.
-
-Three parts, and the first one is the one with teeth:
-
-* **Life-size avatar.** Scale it from the same `_size_for` measurement the ambient
-  creatures now use, and bring it proportionally closer. That forces
-  `camera.near` down to roughly 0.002–0.005, which is a **global depth-precision
-  change** — with `far = 4000` the near/far ratio goes from 40,000:1 to a million
-  to one, and z-fighting on the terrain apron is the likely price. Options are a
-  per-mode near/far pair (cheap, and bee mode has no need of a 4 km far plane) or
-  a logarithmic depth buffer. Measure before choosing.
-* **The others are still there.** `06-fly.js:557` sets
-  `wildlifeGroup.visible = false` on entering bee mode, deliberately — *"focus on
-  the flown creature"*. That was the right call when the ambient creatures were
-  cat-sized; at life size they are company rather than clutter, and a bee's-eye
-  view with other pollinators working the same patch is most of the point (P3,
-  P10 — the design is a network, and you are in it).
-* **The human, from underneath.** Show the walk avatar standing in the scene
-  while in bug mode. It is the only object of *known* size in the whole view, so
-  it is what makes the new scale legible rather than merely correct — the same
-  argument as the V2.35 scale rule, which exists for exactly this reason.
+and a net that is held and has a reach · F110 bee mode at the right scale, with
+the other animals and the walker in view.
 
 ### F107 · Hand-painted lepidoptera wings — *Impact High / Effort L / Risk Med*
 

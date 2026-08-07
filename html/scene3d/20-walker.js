@@ -140,6 +140,91 @@ function walkerCanReach(worldPos) {
   return dx * dx + dz * dz + dy * dy <= NET_REACH_M * NET_REACH_M;
 }
 
+// ── What the net would actually catch (V2.46c) ──────────────────────────────
+//
+//     *"Catching the bugs is impossible with the way it is set up, make it
+//     easier. If I am within range of a bug and click while holding the net,
+//     not clicking on the bug because it is tiny and too kind of too fast
+//     moving honestly."*
+//
+// Correct, and the shipped design was indefensible once the sizes were right.
+// V2.46 required a RAYCAST HIT on the creature — so catching a leafcutter bee
+// meant landing the cursor on a 34 mm object moving at a metre a second on a
+// wandering path. Making the creatures honestly small made that target four
+// times smaller. Two fixes that had to arrive together.
+//
+// **You swing the net, you do not click the animal.** In reach + click = catch.
+// That is also what a net IS: you sweep it through the air where the insect is,
+// which is precisely why real people can catch insects they could never touch.
+//
+// Nearest wins outright rather than nearest-to-the-cursor: aiming is the thing
+// that was impossible, so requiring even approximate aim brings the problem
+// back in a milder form. If two creatures are in arm's reach, getting the other
+// one is not a failure — that is a net.
+function critterInReach() {
+  if (!walkAvatar || typeof wildlifeCritters === 'undefined') return null;
+  let best = null, bestD = Infinity;
+  for (const c of wildlifeCritters) {
+    const o = c && c.obj;
+    const info = o && o.userData && o.userData.critterInfo;
+    if (!o || !info || !info.name || !o.visible) continue;
+    const dx = o.position.x - walkAvatar.position.x;
+    const dz = o.position.z - walkAvatar.position.z;
+    const dy = o.position.y - (walkAvatar.position.y + 1.4);
+    const d2 = dx * dx + dz * dz + dy * dy;
+    if (d2 < bestD) { bestD = d2; best = o; }
+  }
+  if (!best || bestD > NET_REACH_M * NET_REACH_M) return null;
+  return best;
+}
+
+// ── "That one." ─────────────────────────────────────────────────────────────
+//
+// The other half of "impossible": with no feedback, you cannot tell whether
+// you are close enough, so a click that does nothing is indistinguishable from
+// a broken button. A ring follows whatever `critterInReach` currently returns,
+// so the answer to *"can I catch that?"* is on screen before you try — and it
+// doubles as the thing that teaches the reach exists at all.
+let _reachRing = null, _reachOn = null;
+
+function _ensureReachRing() {
+  if (_reachRing) return _reachRing;
+  const g = new THREE.RingGeometry(0.10, 0.13, 24).rotateX(-Math.PI / 2);
+  const m = new THREE.MeshBasicMaterial({
+    color: 0xffe082, transparent: true, opacity: 0.9,
+    depthTest: false, side: THREE.DoubleSide });
+  _reachRing = new THREE.Mesh(g, m);
+  _reachRing.renderOrder = 998;
+  _reachRing.visible = false;
+  scene.add(_reachRing);
+  return _reachRing;
+}
+
+// Called every frame from walkStep. Cheap: one pass over a list that is at most
+// a couple of dozen long.
+function updateReachRing() {
+  const want = walkerHasNet() ? critterInReach() : null;
+  _reachOn = want;
+  if (!want) { if (_reachRing) _reachRing.visible = false; return; }
+  const ring = _ensureReachRing();
+  ring.visible = true;
+  // Sit it just under the creature and scale it to the creature, so it frames
+  // a bee without swallowing a bird.
+  const size = (typeof drawnSizeOf === 'function') ? drawnSizeOf(want) : 0;
+  const r = Math.max(1, (size || 0.05) * 9);
+  ring.scale.setScalar(r);
+  ring.position.set(want.position.x, want.position.y - (size || 0.03) * 1.2,
+                    want.position.z);
+  // A slow pulse — a static ring on a moving animal reads as scene furniture.
+  const k = 1 + 0.10 * Math.sin(performance.now() * 0.006);
+  ring.scale.multiplyScalar(k);
+}
+
+function hideReachRing() {
+  if (_reachRing) _reachRing.visible = false;
+  _reachOn = null;
+}
+
 // One swing of the arm the net is on. Additive: `walkStep` writes the walk
 // cycle into that pivot every frame, so the swing rides on top of it rather
 // than fighting it (which is what a direct rotation write would do).

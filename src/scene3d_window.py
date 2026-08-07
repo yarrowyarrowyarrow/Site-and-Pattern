@@ -50,8 +50,6 @@ from src.scene3d_toolbar import (
     MAX_YEAR as _MAX_YEAR,
     DETAIL_KEY as _DETAIL_KEY,
     DETAIL_LABELS as _DETAIL_LABELS,
-    CREATURE_SCALES as _CREATURE_SCALES,
-    CREATURE_SCALE_KEY as _CREATURE_SCALE_KEY,
     Scene3DToolBar,
 )
 # V2.46: plant / remove / net in the design itself. The buttons, the mode and
@@ -297,26 +295,6 @@ class Scene3DWindow(QWidget):
         self._id_btn.toggled.connect(
             lambda on: self.viewer.set_wildlife_labels(on))
 
-        # How big the creatures are drawn (V2.46). Life size is the default and
-        # the truth — every animal is scaled from its real measurement now — so
-        # this exists to get a *look* at an 11 mm bee without the app quietly
-        # lying about its size. Same list as the shared toolbar's, imported
-        # rather than restated so the two windows cannot offer different
-        # magnifications.
-        self._creature_scale = QComboBox()
-        for _label, _mult in _CREATURE_SCALES:
-            self._creature_scale.addItem(_label)
-        self._creature_scale.setToolTip(
-            "How big the creatures are drawn.\n"
-            "Life size is the truth — scaled from real measured body length "
-            "or wingspan, so a leafcutter bee really is 11 mm beside a 1.75 m "
-            "person.\nThe magnifications are for getting a look at one; the "
-            "number says how much it is being exaggerated by.")
-        self._creature_scale.setCurrentIndex(
-            Scene3DToolBar.stored_creature_scale_index())
-        self._creature_scale.currentIndexChanged.connect(
-            self._on_creature_scale)
-
         self._last_origin = None
 
         # Row 1 — the "when / how it looks" scene controls.
@@ -355,8 +333,6 @@ class Scene3DWindow(QWidget):
         bar2.addWidget(self._walk_btn)
         bar2.addWidget(self._fly_btn)
         bar2.addWidget(self._id_btn)
-        bar2.addWidget(QLabel("Creatures:"))
-        bar2.addWidget(self._creature_scale)
         bar2.addSpacing(16)
         bar2.addWidget(self._bee_btn)
         bar2.addWidget(self._bee_combo)
@@ -439,11 +415,6 @@ class Scene3DWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
-        # The magnification lives in the viewer and resets to life size on a
-        # fresh page, so a remembered choice has to be re-pushed rather than
-        # assumed (V2.46).
-        self.viewer.set_creature_scale(
-            _CREATURE_SCALES[self._creature_scale.currentIndex()][1])
         # Click-to-inspect content (V2.29): the sourced ecology behind every
         # species on screen, pushed with the scene so a click opens a card with
         # no round trip. Re-pushed each time because the growth/season sliders
@@ -557,11 +528,6 @@ class Scene3DWindow(QWidget):
     def _on_controls_changed(self, *_):
         self._update_labels()
         self._push_scene()
-
-    def _on_creature_scale(self, idx: int):
-        idx = max(0, min(len(_CREATURE_SCALES) - 1, int(idx)))
-        QSettings().setValue(_CREATURE_SCALE_KEY, idx)
-        self.viewer.set_creature_scale(_CREATURE_SCALES[idx][1])
 
     def _on_detail(self, level: int):
         """Detail combo → viewer quality. The viewer re-renders the current

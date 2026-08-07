@@ -282,7 +282,12 @@ renderer.domElement.addEventListener('pointermove', (ev) => {
       // V2.45: the wingbeat, banded and labelled with its basis. A number
       // nobody can see teaches nothing (P5), and "measured" vs "estimated" is
       // a distinction the tip has to keep (P9).
-      + (info.beat ? '<br><span style="opacity:.75">' + info.beat + '</span>' : '');
+      + (info.beat ? '<br><span style="opacity:.75">' + info.beat + '</span>' : '')
+      // V2.46c: how big it really is, and whether the screen is exaggerating.
+      // This replaced a "Creatures: x3" dropdown — a control that told you the
+      // whole scene was magnified but not which animals or by how much. Per
+      // creature, only when it matters, with the real measurement in it.
+      + (info.size ? '<br><span style="opacity:.75">' + info.size + '</span>' : '');
   } else if (hit) {
     html = hit.name || '';
   }

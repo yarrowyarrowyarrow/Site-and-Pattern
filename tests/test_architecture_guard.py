@@ -109,6 +109,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # the numbers are short and the reasoning is not, which is the right
         # ratio for a file whose job is to be argued with.
         (_SRC / "flight_model.py", 620),               # 519 now
+        # V2.46c: opted in on arrival at 907/980, the V2.41 precedent. This
+        # file does two separable jobs — deciding WHICH animals are in a scene
+        # and where (the placement half, wildlife_for_scene + _relax_spacing)
+        # and deciding what each one LOOKS like and how big it is (the
+        # appearance half, _appearance_for / _size_for / _flight_for). That is
+        # the seam when this trips; do not raise the number.
+        (_SRC / "scene_wildlife.py", 980),             # 907 now
         # V2.43: the reference window went from a read-only diorama (163
         # lines) to an editable sandbox. When this trips, the split is the
         # edit half — the bridge slots and the trowel — into its own _flow.

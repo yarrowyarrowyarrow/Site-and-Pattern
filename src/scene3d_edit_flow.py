@@ -44,6 +44,11 @@ from __future__ import annotations
 
 from typing import Optional
 
+#: What to say when a swing finds nothing at all (V2.46c).
+MISS_HINT = (
+    "Nothing in reach — walk right up to a creature until a ring appears "
+    "round it, then swing.")
+
 #: The three verbs, and the attribute each button hangs off ``win``.
 _TOOLS = (
     ("plant", "_plant_btn", "🌱 Plant",
@@ -52,8 +57,9 @@ _TOOLS = (
     ("pull", "_pull_btn", "✖ Remove",
      "Click a plant to take it out — and see what loses support."),
     ("net", "_net_btn", "🥅 Net",
-     "Catch a creature to record it in your field guide, then let it go. "
-     "Caught counts for more than seen."),
+     "Walk up to a creature until a ring appears round it, then click "
+     "anywhere to swing. Recorded in your field guide, then released — "
+     "caught counts for more than seen."),
 )
 
 
@@ -103,7 +109,7 @@ def set_mode(win, mode: str) -> None:
     elif want == "pull":
         hint = "Click a plant to remove it."
     elif want == "net":
-        hint = "Click a creature to catch it."
+        hint = "Walk up to a creature until a ring appears, then swing."
     win._edit_hint.setText(hint)
     pick = win._current_plant_pick() if want == "plant" else None
     win.viewer.set_edit_mode(want, pick)
@@ -140,7 +146,15 @@ def connect_bridge(win) -> bool:
 
 
 def on_out_of_reach(win, name: str):
-    _say(win, f"{name} is out of reach — walk closer and swing again.")
+    """A swing that caught nothing. Always says something.
+
+    An empty ``name`` means "nothing was in reach at all" rather than "that
+    particular animal was too far" — the viewer sends both, because a click
+    that silently does nothing is indistinguishable from a broken button, and
+    that was half of *"catching the bugs is impossible"*.
+    """
+    _say(win, f"{name} is out of reach — walk closer and swing again."
+         if name else MISS_HINT)
 
 
 def scene_center(win) -> Optional[tuple]:

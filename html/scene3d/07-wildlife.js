@@ -320,14 +320,30 @@ function makeCritShadow(r) {
 //
 // A bee the size of a cat, beside a 1.75 m walker. There is morphology now —
 // bee `body_length_mm`, lep wingspan, and since schema v63 bird `wingspan_mm` —
-// so `src/scene_wildlife.py` sends `size: {m, axis}` per creature and the
-// viewer stops deciding how big an animal is (P9).
+// so `src/scene_wildlife.py` sends `size: {m, true_m, axis, boost}` per creature
+// and the viewer stops deciding how big an animal is (P9).
 //
 // **Measured, not assumed.** The model is scaled by its own bounding box along
 // the named axis, so this is correct for the baked GLBs *and* the procedural
 // fallbacks without a table of per-kind fudge factors — and it stays correct if
 // somebody re-exports a model at a different size.
-let CRITTER_MAGNIFY = 1;      // 1 = life size; see permaSetCreatureScale
+//
+// ── V2.46c: `m` is the DRAWN size, and the viewer does not choose it ─────────
+//
+// V2.46 shipped a `Creatures:` multiplier — Life size / x3 / x6 / x12 — to make
+// the small ones findable. It was the wrong shape for the problem:
+//
+//     *"I don't want the birds changing size to x3 or more, they look
+//     ridiculous. The bugs are not visible unless x3... I don't know if we need
+//     this size changing as a changeable drop down menu."*
+//
+// Correct on both counts. The thing needing help is not "creatures", it is
+// creatures below a few centimetres, and a global knob cannot express that.
+// Python now applies a soft **visibility floor** per animal
+// (scene_wildlife.VISIBLE_FLOOR_M) — a bee comes up 3x, a goldfinch by 1% —
+// and sends the result as `m`, with the honest measurement alongside as
+// `true_m` for the label. There is nothing here to set, which is why the
+// dropdown is gone rather than merely re-defaulted.
 
 function _extentAlong(obj, axis) {
   obj.updateMatrixWorld(true);
@@ -343,25 +359,35 @@ function scaleCritterToLife(obj, size) {
   if (!obj || !size || !(size.m > 0)) return 1;
   const have = _extentAlong(obj, size.axis || 'z');
   if (!(have > 1e-6)) return 1;                  // no geometry to measure
-  const k = (size.m * CRITTER_MAGNIFY) / have;
+  const k = size.m / have;
   obj.scale.multiplyScalar(k);
   obj.userData.lifeSize = size;
   obj.userData.lifeScale = k;
   return k;
 }
 
-// The honest magnifier. Life size is the default and the truth; a 11 mm bee is
-// a few pixels across from three metres, which is exactly what a bee is. But
-// this window is also for teaching (P5), and "show me that bee" is a fair thing
-// to ask, so the exaggeration is a control with a NUMBER ON IT rather than a
-// lie baked into the model.
-window.permaSetCreatureScale = function (mult) {
-  const k = Math.max(1, Math.min(20, Number(mult) || 1));
-  if (k === CRITTER_MAGNIFY) return;
-  CRITTER_MAGNIFY = k;
-  rebuildWildlife();
-  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
-};
+// How big this creature is drawn, in metres — the number the shadow, the label
+// offset and the collision radius all key off. Zero for a creature from an
+// older scene with no size block, which every caller treats as "leave it".
+function drawnSizeOf(obj) {
+  const s = obj && obj.userData && obj.userData.lifeSize;
+  return (s && s.m > 0) ? s.m : 0;
+}
+
+// One line about how big it really is, for the hover tip and the dossier.
+// Mirrors src/scene_wildlife.size_sentence — an animal shown larger than life
+// has to say so, or the app teaches that a leafcutter bee is walnut-sized.
+function _sizeLine(size) {
+  if (!size) return '';
+  const trueM = Number(size.true_m || size.m || 0);
+  if (!(trueM > 0)) return '';
+  const measure = trueM < 0.1 ? Math.round(trueM * 1000) + ' mm'
+                              : Math.round(trueM * 100) + ' cm';
+  const boost = Number(size.boost || 1);
+  return boost >= 1.15
+    ? measure + ' — shown ' + Math.round(boost) + '× life size so you can see it'
+    : measure + ' — shown life size';
+}
 
 function rebuildWildlife() {
   disposeWildlife();
@@ -397,13 +423,20 @@ function rebuildWildlife() {
                                  // behaviour, which is what an undescribed
                                  // species gets.
                                  flight: (app && app.flight_style) || '',
-                                 rest: (app && app.resting_posture) || '' };
+                                 rest: (app && app.resting_posture) || '',
+                                 // How big it really is, and whether the screen
+                                 // is exaggerating (V2.46c). This is what the
+                                 // removed Creatures: dropdown was actually
+                                 // for — except it names the animal, the real
+                                 // measurement and the exact factor, only when
+                                 // there is one (P5 + P9).
+                                 size: _sizeLine(spec.size) };
     const flier = obj.userData.anim === 'flier' || obj.userData.anim === 'hover';
     // The contact shadow follows the animal's real size too — a half-metre
     // smudge under an 11 mm bee is the same mistake in a second place, and it
     // was doing most of the work of making the insects look enormous.
     const drawn = obj.userData.lifeSize
-      ? obj.userData.lifeSize.m * CRITTER_MAGNIFY : 0;
+      ? obj.userData.lifeSize.m : 0;
     const shadow = makeCritShadow(drawn > 0
       ? Math.max(0.05, Math.min(flier ? 0.5 : 0.4, drawn * 2.2))
       : (flier ? 0.5 : 0.4));
@@ -435,7 +468,11 @@ function rebuildWildlife() {
     }
     wildlifeGroup.add(obj);
   }
-  wildlifeGroup.visible = !beeMode;   // hidden while flying as one creature
+  // V2.46c (F110): the other animals stay visible in bee mode. This was
+  // `!beeMode` — right when the ambient creatures were cat-sized and would have
+  // filled a bee's view; wrong now that they are honest, because sharing a
+  // flower patch with other pollinators is the point of being down there.
+  wildlifeGroup.visible = true;
   scene.add(wildlifeGroup);
 }
 
@@ -663,7 +700,7 @@ function animateWildlife(t) {
         // Sit the label just clear of the animal, not 28 cm over a bee's head
         // pointing at empty air (V2.46).
         const clear = o.userData.lifeSize
-          ? Math.max(0.05, Math.min(0.28, o.userData.lifeSize.m * CRITTER_MAGNIFY * 1.2))
+          ? Math.max(0.05, Math.min(0.28, o.userData.lifeSize.m * 1.2))
           : 0.28;
         c.label.position.set(o.position.x, o.position.y + clear + hh * 0.7, o.position.z);
         c.label.material.opacity = Math.max(0.25, Math.min(0.95, (13 - d) / 6));
