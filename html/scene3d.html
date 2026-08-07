@@ -2,8 +2,19 @@
 <!--
   html/scene3d.html — Site & Pattern's built-in 3D design viewer (V1.62).
 
-  Self-contained three.js scene driven entirely by the desktop host through
-  three guarded hooks (all registered at module init):
+  This file is the SHELL: a canvas, the HUD/overlay DOM, and the ordered list of
+  classic scripts at the bottom. All the viewer logic lives in html/scene3d/*.js
+  and each chunk documents itself; see docs/3D_ASSETS.md and docs/3D_SPRITES.md
+  for the asset and morphology contracts.
+
+  (The 90-line V2.12/V2.13 changelog that used to live here was removed at
+  V2.46d, when this file hit its 400-line ceiling. It was a release history, not
+  a description of the shell, and every claim in it was better stated in the
+  chunk that implements it. `git log` is the changelog.)
+
+  ── The host contract ───────────────────────────────────────────────────────
+  The desktop side drives everything through guarded `window.perma*` hooks,
+  pinned by tests/test_bridge_contract.py. The core three:
 
     window.permaSetScene(scene)  — full rebuild from a Scene JSON dict
                                    (src/scene_contract.py, SCENE_VERSION 1;
@@ -15,77 +26,20 @@
                                    cosLat metric about the last scene origin
 
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
-  height → +y.
+  height → +y. Every critter model faces −Z (see critterHeading).
 
-  three.js + Spark are vendored under html/vendor/ and served over a
-  localhost http:// origin (src/web_assets.py), so the 3D view loads offline
-  and is immune to CDN outages and bundled-Chromium module-loading changes.
-  The offline/error notice now only appears if WebGL itself is unavailable or
-  the bundled assets are missing.
+  three.js + Spark are vendored under html/vendor/ and served over a localhost
+  http:// origin (src/web_assets.py), so the 3D view loads offline and is immune
+  to CDN outages. The offline notice appears only if WebGL itself is
+  unavailable or the bundled assets are missing.
 
-  Plants render as instanced procedural archetypes: trees are Da Vinci
-  branching skeletons (R^x = Σ r_i^x) merged into one BufferGeometry per
-  archetype — conifers conical/monopodial, deciduous rounded/sympodial —
-  with a vertex-colour canopy gradient and a GPU wind sway (the month drives
-  seasonal foliage colour, bare branches in winter). Shrubs are bushy merged
-  domes; herbs/vines are cones; groundcover flat discs; big plants get a soft
-  contact-shadow stamp. Hundreds of plants stay two-digit draw calls.
-  presence_opacity is encoded by fading the instance colour toward the sky
-  tint (per-instance alpha isn't a thing for InstancedMesh).
-
-  V2.12 visual pass: ACES filmic tone mapping, a gradient sky dome whose
-  colours + sun glow follow the time-of-day sun (golden light at low
-  altitudes), and a tiled procedural meadow texture on the ground. The
-  "fly as a bee" mode (F37) became a nectar run: glowing flower beacons are
-  collected on approach (sparkle burst + HUD counter, F = autopilot to the
-  nearest flower), with a properly-scaled lit bumblebee avatar.
-
-  V2.12 also added ambient wildlife + a third-person walk:
-    · permaSetWildlife(list) populates the scene with the animals the design's
-      plants support (src/scene_wildlife.py) — bees drawn per genus, butterflies/
-      moths by species colourway, birds, hover/dragon flies, beetles and small
-      mammals — each placed on/near a plant it uses and animated (fliers circle
-      their flower, birds perch, mammals hop). Shown in orbit + walk; hidden
-      while flying as one creature.
-    · permaSetWalkMode(on) is a third-person stroll: a low-poly walker with a
-      follow camera (WASD + drag-look) you steer among the wildlife.
-    · The flown avatar is now species-styled from an appearance spec passed on
-      set_bee_targets (a metallic-green sweat bee ≠ a fuzzy bumble bee).
-    · Wildlife is seasonal + diurnal (scene_wildlife gates by month + is_night):
-      day brings bees/butterflies, night swaps in moths & bats. A NIGHT render
-      (is_night from the contract) draws a deep sky, a moon + stars, dim cool
-      moonlight, and additive-glowing blooms; night critters get an emissive
-      lift so they read against the dark.
-    · permaSetPlantSpotlight(items, appearance) lights + labels the design's
-      plants a chosen creature uses, with one of it touring them.
-    · permaSetCinematic(on) is a hands-free flyover: a slow auto-orbit with a
-      breathing dolly, letterbox bars + a lower-third caption
-      (permaSetCinematicCaption), while the host steps the growth year /
-      season / time of day underneath it (scene3d_window's storyboard) — the
-      lawn-to-habitat pitch in ~60 s.
-    · V2.13 liveliness pass: flower sprites de-blob (varied per-bloom size +
-      even areal spread, per-point aSize attribute); ambient critters follow a
-      route of the plants their species uses (travel · land · dwell) with
-      per-taxon motion (butterflies flutter, birds hop perch-to-perch, mammals
-      scurry); permaSetWildlifeLabels(on) shows a "who lives here" roster +
-      distance-gated name labels over each creature.
-    · permaSetPlantSpotlight(items, app) lights a labelled glow column over each
-      plant a creature uses and tours one of that creature between them — the
-      "which of my plants help this bee?" overlay (orbit/walk).
-    · Ambient wildlife is de-clumped host-side (scene_wildlife) + grounded with
-      contact shadows; hovering a creature identifies it and the plant edge; the
-      flyer cruises slower (BEE_SPEED) and names the flower it reaches.
-
-  V2.12 also opened the fly-through to Lepidoptera and made it bloom-accurate:
-    · beeKind ∈ {bee, butterfly, moth} picks the flying avatar; butterflies/
-      moths also float low green "caterpillar nursery" markers over their
-      larval-host plants (beeHostIds; present-gated, never collectable).
-    · Nectar beacons are BLOOM-GATED (inBloomNow): a flower only beacons in
-      the months it actually blooms — the fix for nectar being collectable
-      year-round. sceneMonth tracks the pushed scene's month.
-    · permaSetBeeTour + a host-side month timer drive a hands-free seasonal
-      tour: the flyer auto-hops flower to flower while the season advances,
-      revealing the design's bloom succession across the year.
+  ── Load order is dependency order ──────────────────────────────────────────
+  The chunks are CLASSIC scripts sharing one global scope, loaded in sequence at
+  the bottom of this file. A function called from the animation loop must be
+  declared in a chunk that loads before 08-modes.js, or be reached through a
+  `typeof` guard — see 08-modes.js:_loopFault for what happens when it is not,
+  and tests/test_creature_scale.py:TestTheRenderLoopSurvivesItself, which
+  enforces it.
 -->
 <html>
 <head>
@@ -381,6 +335,10 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // held net took it past its ceiling. Nothing here is called from the
     // animation loop — see the load-order note in the file.
     'scene3d/20-walker.js',
+    // V2.46d: the procedural creature bodies, split out of 07-wildlife.js when
+    // the bird flight attitude took it past its ceiling. Nothing here is called
+    // from the animation loop — see 08-modes.js:_loopFault.
+    'scene3d/21-critters.js',
   ];
   let i = 0;
   (function next() {

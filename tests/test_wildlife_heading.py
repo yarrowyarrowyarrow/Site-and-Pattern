@@ -36,6 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _WILDLIFE = os.path.join(_ROOT, "html", "scene3d", "07-wildlife.js")
+_SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # The eight compass directions plus a few obliques, as (dx, dz) travel vectors.
 _DIRECTIONS = [
@@ -52,6 +53,21 @@ def _node():
 def _read(path):
     with open(path, "r", encoding="utf-8") as fh:
         return fh.read()
+
+
+def _read_all():
+    """Every viewer chunk, concatenated.
+
+    For claims that are about the VIEWER and not about a particular file — "the
+    bird's beak is at negative z", "the perching bird has a real wingbeat". Both
+    of those were asserted against ``07-wildlife.js`` by name and both broke
+    when the creature bodies moved to ``21-critters.js`` (V2.46d), neither
+    having found a defect. Which chunk holds a builder is housekeeping; where
+    the beak points is the contract.
+    """
+    return "\n".join(
+        _read(os.path.join(_SCENE3D, n))
+        for n in sorted(os.listdir(_SCENE3D)) if n.endswith(".js"))
 
 
 @unittest.skipIf(_node() is None, "no node binary")
@@ -123,12 +139,15 @@ class BirdFlightTest(unittest.TestCase):
     """
 
     def test_the_procedural_bird_has_a_real_wingbeat(self):
-        src = _read(_WILDLIFE)
+        # Chunk-agnostic: the builders moved to 21-critters.js at V2.46d and
+        # this failed without having found a defect. The claim is about the
+        # bird, not about which file draws it.
+        src = _read_all()
         m = re.search(r"} else \{\s*(?://[^\n]*\n\s*)*"
                       r"g\.userData\.flap = \{([^}]*)\};\s*\n\s*"
                       r"g\.userData\.anim = 'perch';", src)
         self.assertIsNotNone(
-            m, "07-wildlife.js: the perching bird's flap config moved")
+            m, "the perching bird's flap config moved")
         amp = re.search(r"amp:\s*([0-9.]+)", m.group(1))
         self.assertIsNotNone(amp, "no amp in the bird's flap config")
         self.assertGreater(
@@ -196,8 +215,12 @@ class CritterHeadingWiringTest(unittest.TestCase):
 
     def test_the_model_forward_axis_is_still_negative_z(self):
         """critterHeading encodes -Z forward. If a builder ever moves a beak to
-        +z, the helper is silently wrong, so pin the models' own convention."""
-        src = _read(_WILDLIFE)
+        +z, the helper is silently wrong, so pin the models' own convention.
+
+        Read across every chunk: which file holds a builder is housekeeping
+        (they moved to 21-critters.js at V2.46d), and where the beak points is
+        the contract."""
+        src = _read_all()
         for part in ("beak", "nose"):
             m = re.search(part + r"\.position\.set\(([^)]*)\)", src)
             self.assertIsNotNone(m, f"{part}.position.set not found")

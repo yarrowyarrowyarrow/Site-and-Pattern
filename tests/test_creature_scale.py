@@ -293,6 +293,58 @@ class TestFlapFlapGlide(unittest.TestCase):
                                      f"stroke ({base}..{base + amp})")
 
 
+class TestBirdsFlyLikeBirds(unittest.TestCase):
+    """*"The birds do not look real when they fly. They look like a perched
+    bird... the bobbing up and down in the air also looks rather
+    unrealistic."*"""
+
+    def test_the_body_pitches_with_the_flight(self):
+        """`o.rotation.x` was never touched, so a perched pose — nose up, tail
+        down — translated through the air and rose and fell inside it like a
+        lift. The pitch must be MEASURED off the animal's own vertical speed,
+        not tuned, so it cannot disagree with the physics driving the bounce."""
+        code = _code("07-wildlife.js")
+        self.assertIn("function _birdAttitude", code)
+        self.assertIn("_birdAttitude(c, o,", code,
+                      "the attitude is computed and never applied")
+        self.assertIn("Math.atan2(vy, vh)", code,
+                      "the pitch is not derived from the bird's own motion")
+        self.assertIn("_PERCH_PITCH", code,
+                      "a perched bird has no distinct pose from a flying one")
+
+    def test_a_flying_bird_uses_its_own_height_not_its_destination(self):
+        """The bug underneath the unrealistic bobbing: the travel branch climbs
+        `c.pos.y` toward the next perch and this branch then threw it away and
+        used `tgt.y`, so a bird flew the whole way at its DESTINATION's height
+        with only the bound offset moving it."""
+        code = _code("07-wildlife.js")
+        self.assertNotIn("o.position.y = tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;",
+                         code, "the flying bird is pinned to its target's height")
+        self.assertIn("flying ? c.pos.y : tgt.y", code)
+
+    def test_the_dip_is_still_derived_and_not_a_tuned_wobble(self):
+        """"Are we basing their flight path on anything?" — yes, and it has to
+        stay that way: the bound dip comes from the pause by s = 1/4 g t^2."""
+        from src.flight_model import bird_flight
+        f = bird_flight(mass_g=11.0, span_mm=203.0, style="bounding")
+        dip = f.get("bound_dip_m") or {}
+        pause = f.get("pause_s") or {}
+        self.assertGreater(dip.get("mid", 0), 0.0,
+                           "a bounding bird with no dip is a zipline")
+        # The BAND ends are what s = 1/4 g t^2 is applied to — the mid is the
+        # midpoint of the two derived dips, not the dip of the mid pause, and
+        # those are different numbers (0.248 vs 0.206 for a chickadee).
+        for end in ("lo", "hi"):
+            t = pause[end]
+            self.assertAlmostEqual(dip[end], 0.25 * 9.81 * t * t, places=2,
+                                   msg=f"the {end} dip is not derived from its "
+                                       f"own pause")
+        self.assertTrue(dip["lo"] <= dip["mid"] <= dip["hi"])
+        dip = dip["mid"]
+        # And it is a real bird's amplitude, not a cartoon's.
+        self.assertTrue(0.05 <= dip <= 0.40, f"chickadee bound dip {dip} m")
+
+
 class TestCreaturesHitThings(unittest.TestCase):
     """"The guy doesn't go through trees or buildings now but the creatures
     still do." """
@@ -382,13 +434,50 @@ class TestTheNetIsHeld(unittest.TestCase):
         self.assertIn("function critterInReach", code,
                       "nothing resolves the catch by proximity")
         edit = _code("16-editing.js")
-        self.assertIn("critterInReach()", edit,
-                      "the net click still depends on hitting the creature")
-        # And the reach path must be tried BEFORE the aimed one, or the
+        # `netTarget()` is `critterInReach()` plus the latch (V2.46d); either
+        # is a proximity resolve, and naming the specific one here is what made
+        # this test break when the latch landed without a defect behind it.
+        self.assertRegex(edit, r"(netTarget|critterInReach)\(\)",
+                         "the net click still depends on hitting the creature")
+        # And the proximity path must be tried BEFORE the aimed one, or the
         # forgiving branch is unreachable whenever the cursor happens to miss.
-        self.assertLess(edit.index("critterInReach()"),
+        self.assertLess(re.search(r"(netTarget|critterInReach)\(\)", edit).start(),
                         edit.index("critterObjectAt("),
                         "the aim-and-click path still wins over reach")
+
+    def test_the_ring_and_the_click_ask_the_same_question(self):
+        """The race that made it miss (V2.46d).
+
+            *"I caught a bird once but often the circle shows up and I click to
+            swing but I don't catch anything."*
+
+        The ring asked `critterInReach()` every frame and the click asked it
+        AGAIN — two independent queries about an animal moving at a metre or
+        two a second, a few hundred milliseconds apart. The ring must LATCH its
+        target and the click must take that one.
+        """
+        code = _all_code()
+        self.assertIn("function netTarget", code, "nothing latches the target")
+        self.assertIn("_reachOn", code)
+        # The keep radius has to be wider than the reach, or the latch adds
+        # nothing: a creature that drifted out is exactly the failing case.
+        keep = float(re.search(r"NET_KEEP_M = ([\d.]+)", code).group(1))
+        reach = float(re.search(r"NET_REACH_M = ([\d.]+)", code).group(1))
+        self.assertGreater(keep, reach,
+                           "the latch grace is not wider than the reach, so it "
+                           "cannot rescue the drift it exists for")
+
+    def test_the_net_gesture_is_looser_than_the_trowel(self):
+        """Planting is a precise act on a static point; swinging a net is not.
+        A deliberate click that took a second was being discarded in silence,
+        which looks exactly like a broken button."""
+        edit = _code("16-editing.js")
+        self.assertIn("_editMode === 'net'", edit)
+        m = re.search(r"const hold = netting \? (\d+) : (\d+);", edit)
+        self.assertIsNotNone(m, "the net no longer gets its own press window")
+        self.assertGreater(int(m.group(1)), int(m.group(2)),
+                           "the net's press window is not longer than the "
+                           "trowel's")
 
     def test_you_can_see_what_you_would_catch(self):
         """The other half of "impossible": with no feedback you cannot tell

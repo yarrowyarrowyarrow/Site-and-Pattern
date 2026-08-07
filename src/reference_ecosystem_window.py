@@ -137,6 +137,8 @@ class ReferenceEcosystemWindow(QWidget):
             lambda: self.viewer.run_js(
                 "window.permaResetView && window.permaResetView();"))
         self.toolbar.walk_toggled.connect(self.viewer.set_walk_mode)
+        # The net is the walker's tool, so its button follows him (V2.46d).
+        self.toolbar.walk_toggled.connect(self._set_net_visible)
         self.toolbar.identify_toggled.connect(self.viewer.set_wildlife_labels)
         lay.addWidget(self.toolbar)
 
@@ -154,6 +156,11 @@ class ReferenceEcosystemWindow(QWidget):
         # Still opens on your feet inside the community — that is the whole
         # point of F50 — but now the button says so and can be turned off.
         self.toolbar.set_walking(True)
+        # set_walking blocks signals (it exists to reflect state without
+        # re-emitting), so the net's visibility has to be set alongside it —
+        # this window opens IN walk mode and would otherwise start with the
+        # button hidden and no event coming to reveal it.
+        self._set_net_visible(True)
 
         self._connect_bridge()
         self._push(self._combo.currentData())
@@ -203,6 +210,8 @@ class ReferenceEcosystemWindow(QWidget):
             "click anywhere to swing. Recorded in your field guide, then "
             "released — caught counts for more than seen.")
         self._net_btn.clicked.connect(lambda: self._set_mode("net"))
+        # Hidden until walk mode — see _set_net_visible.
+        self._net_btn.setVisible(False)
         bar.addWidget(self._net_btn)
 
         reset = QPushButton("↺ Reset")
@@ -212,6 +221,22 @@ class ReferenceEcosystemWindow(QWidget):
         bar.addWidget(reset)
         bar.addStretch()
         return bar
+
+    def _set_net_visible(self, on: bool) -> None:
+        """Show the net only while he is out there to hold it (V2.46d).
+
+            *"The buttons for the human character should only be visible when
+            you enter that character mode."*
+
+        Worse than clutter: the net has a hand, an arm and a 3 m reach, so out
+        of walk mode the button offered a verb that could not work the way its
+        own tooltip described. Plant and Remove stay — clicking the ground from
+        the overview has nothing to do with the avatar.
+        """
+        self._net_btn.setVisible(bool(on))
+        if not on and self._net_btn.isChecked():
+            self._net_btn.setChecked(False)
+            self._set_mode("net")          # the button is off now, so this clears
 
     def _connect_bridge(self) -> None:
         """Wire the viewer's JS→Python channel, when there is one.

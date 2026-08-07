@@ -648,6 +648,8 @@ class Scene3DWindow(QWidget):
                 if b.isChecked():
                     b.setChecked(False)
         self.viewer.set_walk_mode(on)
+        # The net is the walker's tool, so its button follows him (V2.46d).
+        edit_flow.set_walking(self, on)
 
     # ── "Show its plants" spotlight (V2.12) ───────────────────────────────
 

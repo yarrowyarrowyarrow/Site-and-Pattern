@@ -182,6 +182,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # much as for size: nothing in here is called from the animation
         # loop, which is what the 19-roster.js split got wrong.
         (_HTML / "scene3d" / "20-walker.js", 400),     # ~159 now
+        # V2.46d: the procedural creature bodies + the kind->builder table,
+        # split out of 07-wildlife.js when the bird flight attitude took it
+        # past 800 for the second increment running. Same seam as 20-walker:
+        # this is what an animal is MADE OF, 07 is how it behaves — and
+        # nothing here is called from the animation loop.
+        (_HTML / "scene3d" / "21-critters.js", 400),   # 212 now
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.

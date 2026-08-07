@@ -81,196 +81,16 @@ function flapWings(obj, t, gain, phase, extended) {
   for (const { pivot, sign } of obj.userData.wings) pivot.rotation.z = sign * w;
 }
 
-// Bees + butterflies/moths reuse the (species-styled) avatar bodies, scaled down.
-function makeBeeCritter(app) {
-  const g = makeBeeAvatar(app); g.scale.multiplyScalar(0.85);
-  g.userData.anim = 'flier'; return g;
-}
-function makeButterflyCritter(app) {
-  const g = makeButterflyAvatar(app.kind === 'moth', app);
-  g.scale.multiplyScalar(1.15); g.userData.anim = 'flier'; return g;
-}
-
-// A perched (or hovering, for hummingbirds) low-poly bird.
-function makeBirdCritter(app) {
-  const g = new THREE.Group();
-  const body = _cmat(app.body, { flat: true }), belly = _cmat(app.belly, { flat: true });
-  const wing = _cmat(app.wing, { flat: true });
-  const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), body);
-  b.scale.set(0.85, 0.9, 1.35);
-  const bel = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), belly);
-  bel.scale.set(0.7, 0.8, 1.0); bel.position.set(0, -0.05, 0.06);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 9, 7), body);
-  head.position.set(0, 0.12, -0.16);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.03, app.hummer ? 0.22 : 0.09, 5),
-                              _cmat('#2a221a', { flat: true }));
-  beak.rotation.x = -Math.PI / 2; beak.position.set(0, 0.12, -0.28 - (app.hummer ? 0.08 : 0));
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.22), wing);
-  tail.position.set(0, 0.02, 0.28); tail.rotation.x = 0.3;
-  g.add(b, bel, head, beak, tail);
-  const wings = [];
-  const wg = new THREE.SphereGeometry(0.14, 8, 3);
-  for (const s of [-1, 1]) {
-    const pivot = new THREE.Group(); pivot.position.set(0.08 * s, 0.04, 0.02);
-    const w = new THREE.Mesh(wg, wing); w.scale.set(0.5, 0.14, 1.0);
-    w.position.set(0.12 * s, 0, 0.02); pivot.add(w); g.add(pivot);
-    wings.push({ pivot, sign: s });
-  }
-  g.userData.wings = wings;
-  if (app.hummer) {
-    g.userData.flap = { base: 0, amp: 1.1, speed: 0.4 };   // blur
-    g.userData.anim = 'hover';
-  } else {
-    // A real wingbeat: slow and deep, nothing like a bee's blur. `amp` was 0.0
-    // — the comment said "folded", but with the perch branch never calling
-    // flapWings either, it meant a bird's wings never moved at all. Both had to
-    // change. animateWildlife folds them to `base` on the perch by passing
-    // gain 0, so the settled pose the old config wanted is still there.
-    // V2.45b: matches _GLB_CRITTER.bird in 09-models.js — the two flap
-    // tables have to agree or the baked and procedural birds beat
-    // differently in the same scene.
-    g.userData.flap = { base: -0.55, amp: 1.7, speed: 0.22, hold: 0.0 };
-    g.userData.anim = 'perch';
-  }
-  g.scale.setScalar(0.9 * (app.size || 1));
-  return g;
-}
-
-// Flower fly / hover fly, or an elongate dragonfly/damselfly.
-function makeFlyCritter(app) {
-  const g = new THREE.Group();
-  const body = _cmat(app.body, { metal: !app.elongate, flat: true });
-  const wing = _wingMat(app.wing);
-  if (app.elongate) {
-    const th = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), body);
-    const abd = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.015, 0.5, 6), body);
-    abd.rotation.x = Math.PI / 2; abd.position.set(0, 0, 0.28);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6),
-                                _cmat('#20242a', { flat: true }));
-    head.position.set(0, 0, -0.1);
-    g.add(th, abd, head);
-    const wings = [];
-    for (const s of [-1, 1]) for (const z of [-0.02, 0.12]) {
-      const pivot = new THREE.Group(); pivot.position.set(0.04 * s, 0.03, z);
-      const w = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.09).rotateX(-Math.PI / 2), wing);
-      w.position.set(0.2 * s, 0, 0); pivot.add(w); g.add(pivot);
-      if (z < 0) wings.push({ pivot, sign: s });
-    }
-    g.userData.wings = wings;
-    g.userData.flap = { base: 0, amp: 0.25, speed: 0.3 };
-    g.userData.anim = 'hover';
-  } else {
-    const th = new THREE.Mesh(new THREE.SphereGeometry(0.07, 9, 7), body);
-    th.scale.set(0.9, 0.8, 1.3);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
-                                _cmat('#20242a', { flat: true }));
-    head.position.set(0, 0.01, -0.12);
-    g.add(th, head);
-    const wings = [];
-    const wg = new THREE.CircleGeometry(0.16, 10);
-    for (const s of [-1, 1]) {
-      const pivot = new THREE.Group(); pivot.position.set(0.03 * s, 0.05, 0.0);
-      const w = new THREE.Mesh(wg, wing); w.scale.set(0.55, 1, 1);
-      w.position.set(0.14 * s, 0, 0.03); w.rotation.set(-1.2, 0, 0.2 * s);
-      pivot.add(w); g.add(pivot);
-      wings.push({ pivot, sign: s });
-    }
-    g.userData.wings = wings;
-    g.userData.flap = { base: 0.1, amp: 0.8, speed: 0.5 };
-    g.userData.anim = 'flier';
-  }
-  g.scale.setScalar(0.9 * (app.size || 1));
-  return g;
-}
-
-function makeBeetleCritter(app) {
-  const g = new THREE.Group();
-  const body = _cmat(app.body, { metal: true, flat: true });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8,
-                 0, Math.PI * 2, 0, Math.PI / 2), body);
-  dome.scale.set(1, 0.7, 1.25);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
-                              _cmat('#1c1a16', { flat: true }));
-  head.position.set(0, 0.01, -0.15);
-  g.add(dome, head);
-  if (app.spots) {
-    const dot = _cmat('#1c1a16', { flat: true });
-    for (let i = 0; i < 6; i++) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), dot);
-      const a = i / 6 * Math.PI * 2;
-      s.position.set(Math.cos(a) * 0.06, 0.075, Math.sin(a) * 0.08 + 0.02);
-      g.add(s);
-    }
-  }
-  g.userData.anim = 'crawl';
-  g.scale.setScalar(1.1 * (app.size || 1));
-  return g;
-}
-
-// A flitting bat: dark body + two membranous wings that flap; flies like the
-// other fliers. (Only ever placed at night by scene_wildlife.)
-function makeBatCritter(app) {
-  const g = new THREE.Group();
-  const fur = _cmat(app.body || '#3a2f28', { flat: true });
-  const memb = new THREE.MeshStandardMaterial({ color: 0x2a2430, roughness: 0.9,
-    emissive: 0x0e0b12, emissiveIntensity: 0.5, side: THREE.DoubleSide, flatShading: true });
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), fur);
-  body.scale.set(0.8, 0.9, 1.3);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), fur);
-  head.position.set(0, 0.03, -0.1);
-  for (const s of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 4), fur);
-    ear.position.set(0.03 * s, 0.09, -0.11); g.add(ear);
-  }
-  g.add(body, head);
-  const wingShape = new THREE.Shape();
-  wingShape.moveTo(0, 0); wingShape.lineTo(0.34, 0.06);
-  wingShape.lineTo(0.32, -0.05); wingShape.lineTo(0.18, -0.08);
-  wingShape.lineTo(0.1, -0.12); wingShape.lineTo(0, 0);
-  const wingGeo = new THREE.ShapeGeometry(wingShape);
-  const wings = [];
-  for (const s of [-1, 1]) {
-    const pivot = new THREE.Group(); pivot.position.set(0.02 * s, 0.02, 0);
-    const w = new THREE.Mesh(wingGeo, memb);
-    w.scale.x = s; w.rotation.x = -Math.PI / 2;
-    pivot.add(w); g.add(pivot);
-    wings.push({ pivot, sign: s });
-  }
-  g.userData.wings = wings;
-  g.userData.flap = { base: 0, amp: 0.9, speed: 0.28 };
-  g.userData.anim = 'flier';
-  g.scale.setScalar(1.1 * (app.size || 1));
-  return g;
-}
-
-function makeMammalCritter(app) {
-  if (app.form === 'bat') return makeBatCritter(app);
-  const g = new THREE.Group();
-  const fur = _cmat(app.body, { flat: true });
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), fur);
-  body.scale.set(0.9, 0.85, 1.5);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 9, 7), fur);
-  head.position.set(0, 0.04, -0.17);
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 5), fur);
-  nose.rotation.x = -Math.PI / 2; nose.position.set(0, 0.02, -0.26);
-  g.add(body, head, nose);
-  for (const s of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.CircleGeometry(0.04, 8), fur);
-    ear.position.set(0.05 * s, 0.12, -0.14); g.add(ear);
-  }
-  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.004, 0.3, 5),
-                              _cmat('#caa0a0', { flat: true }));
-  tail.rotation.x = -1.2; tail.position.set(0, 0.02, 0.24); g.add(tail);
-  g.userData.anim = 'ground';
-  g.scale.setScalar(1.0 * (app.size || 1));
-  return g;
-}
-
-const _CRITTER_FACTORY = {
-  bee: makeBeeCritter, butterfly: makeButterflyCritter, moth: makeButterflyCritter,
-  bird: makeBirdCritter, fly: makeFlyCritter, beetle: makeBeetleCritter,
-  mammal: makeMammalCritter,
-};
+// The procedural creature BODIES — and the kind→builder table — are in
+// 21-critters.js (split out at V2.46d when this file hit its ceiling again).
+// The line the split follows is the one 20-walker.js already set: that file is
+// what an animal is MADE OF, this one is how it behaves — sized, placed,
+// moved, flapped and pitched.
+//
+// Nothing in 21-critters.js is called from the animation loop, which is the
+// property that matters (see _loopFault in 08-modes.js). `rebuildWildlife`
+// reaches the table below at RUNTIME, long after every chunk has loaded, and
+// guards for it anyway.
 
 function disposeWildlife() {
   if (!wildlifeGroup) { wildlifeCritters = []; return; }
@@ -355,11 +175,35 @@ function _extentAlong(obj, axis) {
 
 // Returns the factor applied (1 = left alone), so a caller can size a shadow
 // or a label to match.
+// ── Whose eyes are you looking through? (V2.46d) ────────────────────────────
+//
+// The visibility floor is a statement about a HUMAN's view: at two to four
+// metres a 11 mm bee is a speck, so it gets drawn at 34 mm. In bee mode that
+// premise is gone — you are an insect among insects, at insect distances — and
+// the floor becomes actively wrong:
+//
+//     *"I should be the same size as the other bugs but they are still small
+//     compared to me as a bee."*
+//
+// With the floor on, every other insect is drawn about three times its real
+// size while your own body is drawn at exactly its real size, so nothing in the
+// scene is comparable to you. Off, a bee you fly up to is the size you are.
+let CRITTER_LIFE_SIZE = false;
+
+function setCritterLifeSize(on) {
+  const want = !!on;
+  if (want === CRITTER_LIFE_SIZE) return;
+  CRITTER_LIFE_SIZE = want;
+  rebuildWildlife();
+  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
+}
+
 function scaleCritterToLife(obj, size) {
   if (!obj || !size || !(size.m > 0)) return 1;
   const have = _extentAlong(obj, size.axis || 'z');
   if (!(have > 1e-6)) return 1;                  // no geometry to measure
-  const k = size.m / have;
+  const want = (CRITTER_LIFE_SIZE && size.true_m > 0) ? size.true_m : size.m;
+  const k = want / have;
   obj.scale.multiplyScalar(k);
   obj.userData.lifeSize = size;
   obj.userData.lifeScale = k;
@@ -371,7 +215,8 @@ function scaleCritterToLife(obj, size) {
 // older scene with no size block, which every caller treats as "leave it".
 function drawnSizeOf(obj) {
   const s = obj && obj.userData && obj.userData.lifeSize;
-  return (s && s.m > 0) ? s.m : 0;
+  if (!s || !(s.m > 0)) return 0;
+  return (CRITTER_LIFE_SIZE && s.true_m > 0) ? s.true_m : s.m;
 }
 
 // One line about how big it really is, for the hover tip and the dossier.
@@ -395,7 +240,11 @@ function rebuildWildlife() {
   wildlifeGroup = new THREE.Group();
   for (const spec of WILDLIFE) {
     const app = spec.app || { kind: spec.kind };
-    const make = _CRITTER_FACTORY[spec.kind] || _CRITTER_FACTORY[app.kind];
+    // `typeof`-guarded: 21-critters.js loads after this chunk. This runs from
+    // permaSetWildlife, long after load, so the guard is belt-and-braces — but
+    // the 19-roster.js regression is what belt-and-braces is for.
+    const F = (typeof _CRITTER_FACTORY !== 'undefined') ? _CRITTER_FACTORY : {};
+    const make = F[spec.kind] || F[app.kind];
     let obj;   // Blender GLB critter first (09-models.js), procedural fallback.
     try { obj = (window.glbCritter && window.glbCritter(spec.kind, app)) || (make && make(app)); }
     catch (e) { continue; }
@@ -435,8 +284,7 @@ function rebuildWildlife() {
     // The contact shadow follows the animal's real size too — a half-metre
     // smudge under an 11 mm bee is the same mistake in a second place, and it
     // was doing most of the work of making the insects look enormous.
-    const drawn = obj.userData.lifeSize
-      ? obj.userData.lifeSize.m : 0;
+    const drawn = drawnSizeOf(obj);
     const shadow = makeCritShadow(drawn > 0
       ? Math.max(0.05, Math.min(flier ? 0.5 : 0.4, drawn * 2.2))
       : (flier ? 0.5 : 0.4));
@@ -539,6 +387,45 @@ function critterHeading(dx, dz) {
   return Math.atan2(-dx, -dz);
 }
 
+// ── A flying bird is not a perched bird moved sideways (V2.46d) ─────────────
+//
+//     *"The birds do not look real when they fly. They look like a perched
+//     bird. Are we basing their flight path on anything because the bobbing up
+//     and down in the air also looks rather unrealistic."*
+//
+// Two answers. **Yes**, the path is based on something: bounding flight — a
+// burst of beats, then wings folded and a genuinely ballistic drop, with the
+// dip derived from the pause by s = ¼gt² (src/flight_model.py). For a chickadee
+// that is a ~21 cm rise and fall, which is what a small passerine actually
+// does.
+//
+// **But nothing was pitching the bird.** `o.rotation.x` was never touched, so a
+// perched pose — nose up, tail down — translated through the air and rose and
+// fell inside it like a lift. The bobbing looked wrong because the body was not
+// answering to it: a real bird's nose drops as it falls and lifts as it climbs,
+// and that attitude is most of what "flying" looks like at a distance.
+//
+// The pitch is MEASURED off the animal's own motion (vertical speed against
+// horizontal) rather than tuned, so it cannot disagree with the physics driving
+// the bounce — and it stays right if the bout numbers ever change.
+const _PERCH_PITCH = 0.45;         // nose-up, the way a passerine sits on a twig
+const _MAX_DIVE = 0.55;            // rad; a songbird does not stoop like a falcon
+
+function _birdAttitude(c, o, flying, dt) {
+  let want = _PERCH_PITCH;
+  if (flying) {
+    const vy = c._prevY == null ? 0 : (o.position.y - c._prevY) / Math.max(1e-4, dt);
+    const vh = Math.max(0.2, c._vh || 1.0);
+    want = Math.max(-_MAX_DIVE, Math.min(_MAX_DIVE, Math.atan2(vy, vh)));
+  }
+  c._prevY = o.position.y;
+  // Ease, so a bird leaving a perch tips forward over a few frames instead of
+  // snapping flat, and flares nose-up as it settles.
+  const k = Math.min(1, dt * 6);
+  c._pitch = (c._pitch == null ? want : c._pitch + (want - c._pitch) * k);
+  o.rotation.x = c._pitch;
+}
+
 function animateWildlife(t) {
   if (!wildlifeGroup || !wildlifeGroup.visible) return;
   const dt = _wildDt(t);
@@ -573,6 +460,7 @@ function animateWildlife(t) {
         _WV.multiplyScalar(1 / flat);
         c.pos.addScaledVector(_WV, Math.min(flat, mv.spd * c.speed * dt));
         c.pos.y += (tgt.y - c.pos.y) * Math.min(1, dt * 2.2);
+        c._vh = mv.spd * c.speed;        // what _birdAttitude pitches against
         // Not through the house (V2.46). Resolved on the PATH, not on the drawn
         // position, or the bird would keep pushing into the wall and be shoved
         // back out every frame — a jitter instead of a detour.
@@ -657,8 +545,15 @@ function animateWildlife(t) {
       if (c.dwell > 0) o.rotation.z += (0 - o.rotation.z) * Math.min(1, dt * 3);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'perch') {
-      o.position.y = tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;
-      if (c.dwell > 0) o.rotation.y = ph + Math.sin(t * 0.0009 + ph) * 0.4;   // look around
+      const flying = c.dwell <= 0;
+      // **The height came from the DESTINATION, not from the flight** (V2.46d).
+      // The travel branch above climbs `c.pos.y` toward the next perch, and
+      // this line then threw that away and used `tgt.y` — so a bird was drawn
+      // at its destination's height for the whole crossing, whatever its own
+      // path was doing. The idle bob belongs to a perched bird; in the air the
+      // bound offset below is the vertical motion.
+      o.position.y = flying ? c.pos.y : tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;
+      if (!flying) o.rotation.y = ph + Math.sin(t * 0.0009 + ph) * 0.4;   // look around
       // Wings BEAT in flight and fold on the perch. This branch never called
       // flapWings at all, so every bird in the app sat with its wings locked in
       // the authored rest pose — sticking straight out sideways — and crossed
@@ -675,9 +570,10 @@ function animateWildlife(t) {
       // the burst and drops ballistically while its wings are folded. Nothing
       // else in this function made the body answer to the wings at all, which
       // is why a chickadee crossed the yard like a cable car.
-      if (c.dwell <= 0 && typeof boundOffset === 'function') {
+      if (flying && typeof boundOffset === 'function') {
         o.position.y += boundOffset(c, t);
       }
+      _birdAttitude(c, o, flying, dt);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'ground') {
       const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;
@@ -699,9 +595,8 @@ function animateWildlife(t) {
         c.label.scale.set((c.label.userData.aspect || 4) * hh, hh, 1);
         // Sit the label just clear of the animal, not 28 cm over a bee's head
         // pointing at empty air (V2.46).
-        const clear = o.userData.lifeSize
-          ? Math.max(0.05, Math.min(0.28, o.userData.lifeSize.m * 1.2))
-          : 0.28;
+        const _d = drawnSizeOf(o);
+        const clear = _d ? Math.max(0.05, Math.min(0.28, _d * 1.2)) : 0.28;
         c.label.position.set(o.position.x, o.position.y + clear + hh * 0.7, o.position.z);
         c.label.material.opacity = Math.max(0.25, Math.min(0.95, (13 - d) / 6));
       }

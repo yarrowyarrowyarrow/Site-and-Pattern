@@ -117,8 +117,16 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   // drag, no long press. Left is the PAN verb since V2.37, so an unfiltered
   // handler would plant a shrub on the tail of every camera move.
   if (e.button !== 0) return;
-  if (Math.abs(e.clientX - _eDownX) > 4 || Math.abs(e.clientY - _eDownY) > 4) return;
-  if (performance.now() - _eDownT > 700) return;
+  // The net gets a looser gesture than the trowel (V2.46d). Planting is a
+  // precise act on a static point, so 4 px and 700 ms are right for it. Swinging
+  // a net is not: you are lining up on a moving animal, the aim takes as long as
+  // it takes, and the hand drifts. A deliberate click that took a second used to
+  // be discarded in silence — which looks exactly like "the net doesn't work".
+  const netting = _editMode === 'net';
+  const slop = netting ? 12 : 4;
+  const hold = netting ? 2500 : 700;
+  if (Math.abs(e.clientX - _eDownX) > slop || Math.abs(e.clientY - _eDownY) > slop) return;
+  if (performance.now() - _eDownT > hold) return;
 
   // Report what was clicked so the discovery ledger can record it. This runs
   // whether or not editing is on: walking up to a bee and clicking it is the
@@ -152,9 +160,14 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     // people can catch insects they could never touch. `critterInReach` is
     // also what the on-screen ring has been following, so the thing you get is
     // the thing that was highlighted before you clicked.
+    // `netTarget()`, not `critterInReach()` — the ring latches its creature and
+    // the click takes THAT one. Two independent proximity queries a few hundred
+    // milliseconds apart is a race against a moving animal, and losing it is
+    // what *"the circle shows up and I click to swing but I don't catch
+    // anything"* looked like.
     let critter = (typeof walkerHasNet === 'function' && walkerHasNet()
-                   && typeof critterInReach === 'function')
-      ? critterInReach() : null;
+                   && typeof netTarget === 'function')
+      ? netTarget() : null;
     // Out of walk mode there is no arm and no reach: the god's-eye view keeps
     // the old aim-and-click, which is fine on a creature you can see from above.
     const aimed = !critter && typeof critterObjectAt === 'function'

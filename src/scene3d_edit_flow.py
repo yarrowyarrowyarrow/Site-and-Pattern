@@ -84,11 +84,34 @@ def build_tools(win):
         btn.clicked.connect(lambda _c=False, m=mode: set_mode(win, m))
         setattr(win, attr, btn)
         bar.addWidget(btn)
+    # Hidden until he is actually walking — see set_walking.
+    win._net_btn.setVisible(False)
     win._edit_hint = QLabel("")
     win._edit_hint.setStyleSheet("color: #cfe8d2; font-size: 11px;")
     bar.addWidget(win._edit_hint)
     bar.addStretch(1)
     return bar
+
+
+def set_walking(win, on: bool) -> None:
+    """Show the net only while he is out there to hold it (V2.46d).
+
+        *"The buttons for the human character should only be visible when you
+        enter that character mode."*
+
+    Right, and it was worse than clutter: the net is the WALKER's tool — it has
+    a hand, an arm and a 3 m reach — so out of walk mode the button was offering
+    a verb that could not work the way its own tooltip described. Plant and
+    Remove stay visible, because clicking the ground from the overview is a
+    perfectly good way to place a plant and has nothing to do with the avatar.
+    """
+    btn = getattr(win, "_net_btn", None)
+    if btn is None:
+        return
+    btn.setVisible(bool(on))
+    if not on and btn.isChecked():
+        btn.setChecked(False)
+        set_mode(win, "net")          # clears it, since the button is now off
 
 
 def set_mode(win, mode: str) -> None:

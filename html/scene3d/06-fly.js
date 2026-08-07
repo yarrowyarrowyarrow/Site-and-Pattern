@@ -313,21 +313,51 @@ function _sizeAvatarToLife() {
   beeAvatar.scale.multiplyScalar(m / have);
   const stand = Math.max(_AVATAR_MIN_STANDOFF,
                          (_AVATAR_STANDOFF[beeKind] || 1.5) * m);
-  beeAvatar.position.set(0, -0.55 * stand, -stand);
+  // ── Drop it from the FRUSTUM, not from a made-up fraction ─────────────────
+  //
+  //     *"The bee I am supposed to be is hardly visible."*
+  //
+  // V2.46c parked it at `y = -0.55 * standoff`. The bottom of the view at
+  // distance d is `-d * tan(fov/2)` — with the viewer's 50° fov that is
+  // -0.466d, so -0.55d put the whole animal BELOW THE SCREEN. It was not too
+  // small; it was off the bottom edge. (The pre-V2.46 numbers happened to work:
+  // -0.42/1.1 is -0.38d, inside the frustum.)
+  //
+  // Deriving it from the camera means it cannot be wrong again, and it tracks
+  // any future fov change for free.
+  beeAvatar.position.set(0, -_viewHalfHeight(stand) * 0.78, -stand);
   beeAvatar.userData.standoff = stand;
+  beeAvatar.userData.dropRatio = (_viewHalfHeight(stand) * 0.78) / stand;
+}
+
+// Half the visible height at distance `d`, in world units.
+function _viewHalfHeight(d) {
+  return d * Math.tan((camera.fov * Math.PI / 180) / 2);
 }
 
 // A 13 mm body sitting 34 mm from the eye does not survive a 0.1 m near plane,
 // so bee mode gets its own. Restored on exit — a global change would cost the
 // orbit view depth precision it has no reason to pay for.
 //
-// **The trade, stated.** Default is 0.1/4000, a 40,000:1 depth ratio; this is
-// 0.01/2000, which is 200,000:1. On a 24-bit buffer that is real, and the place
-// it would show is shimmer on the distant ground plane, not on anything you are
-// flying past. It is the cheapest of the options (the others being a
-// logarithmic depth buffer, which is a renderer-construction decision affecting
-// every mode, or clipping `far` below the 560-unit sky halo in 01-core.js).
-const _BEE_NEAR = 0.008, _BEE_FAR = 2000;
+// **ONLY `near` MOVES.** V2.46c also pulled `far` in to 2000 to claw back some
+// depth precision, and that was a plain bug with a spectacular symptom: the sky
+// is a dome of **radius 2600** (`skyDome`, 01-core.js), so a 2000 far plane
+// clips the entire sky away and leaves the void behind it —
+//
+//     *"Bee mode has a giant black blob in the background."*
+//
+// I picked a far plane without looking at what was in the scene. `far` now
+// matches the orbit view exactly, and `_SKY_RADIUS` is asserted against it in
+// tests/test_creature_scale.py so the next person to tune this has to notice.
+//
+// The remaining trade, stated honestly: 0.008/4000 is a 500,000:1 depth ratio
+// against the default 40,000:1. On a 24-bit buffer that is real and would show
+// as shimmer on distant coplanar surfaces. The alternative — a logarithmic
+// depth buffer — is a renderer-construction flag that would require every
+// custom shader in the viewer (the sky dome, plantMaterial, the wind sway) to
+// include three-js's logdepth chunks, which is a much larger change than this
+// mode deserves.
+const _BEE_NEAR = 0.008, _BEE_FAR = 4000;
 const _ORBIT_NEAR = 0.1, _ORBIT_FAR = 4000;
 
 function _setCameraRange(near, far) {
@@ -636,6 +666,9 @@ function enterBeeMode() {
   // pollinators working the same patch IS the lesson (P3, P10: the design is a
   // network and you are inside it).
   if (wildlifeGroup) wildlifeGroup.visible = true;
+  // …and at LIFE size, not the human-view visibility floor, so another bee is
+  // the size you are when you fly up to it (V2.46d).
+  if (typeof setCritterLifeSize === 'function') setCritterLifeSize(true);
   // And the walker, because he is the only object of KNOWN size in the whole
   // scene — which is what makes the new proportions legible rather than merely
   // correct. Exactly the argument behind the V2.35 scale rule.
@@ -658,8 +691,22 @@ function _showWalkerForScale(on) {
   }
   if (!walkAvatar) { walkAvatar = makeWalker(); scene.add(walkAvatar); }
   if (walkMode) return;                               // walk mode is driving him
-  const cx = lastBounds ? (lastBounds.min_x + lastBounds.max_x) / 2 : 0;
-  const cz = lastBounds ? -(lastBounds.min_y + lastBounds.max_y) / 2 : 0;
+  let cx = lastBounds ? (lastBounds.min_x + lastBounds.max_x) / 2 : 0;
+  let cz = lastBounds ? -(lastBounds.min_y + lastBounds.max_y) / 2 : 0;
+  // He was reported *"floating and in a tree"* — both halves of that were the
+  // same shortcut: dropping him at the bounding-box centre and hoping.
+  //
+  //   · IN A TREE, because the centre of a design is a perfectly ordinary place
+  //     for a tree to be. `walkObstacles` solves this and is built ONLY while
+  //     walking, so in bee mode it was an empty list — build it here.
+  //   · FLOATING, because `terrainHeightAt` is sampled at the ORIGINAL centre,
+  //     and once collision moves him the ground under him is somewhere else.
+  //     Resolve first, sample second.
+  if (typeof buildWalkObstacles === 'function') buildWalkObstacles();
+  if (typeof resolveWalkCollision === 'function') {
+    const [rx, rz] = resolveWalkCollision(cx, cz);
+    cx = rx; cz = rz;
+  }
   walkAvatar.position.set(cx, terrainHeightAt(cx, -cz, lastTerrain), cz);
   walkAvatar.rotation.y = 0;
   walkAvatar.visible = true;
@@ -678,6 +725,8 @@ function exitBeeMode() {
   rebuildBeacons();                 // beeMode is false now → clears the beacons
   _setCameraRange(_ORBIT_NEAR, _ORBIT_FAR);
   if (wildlifeGroup) wildlifeGroup.visible = true;   // wildlife returns in orbit
+  // Back to a human's eyes, so the floor comes back with them.
+  if (typeof setCritterLifeSize === 'function') setCritterLifeSize(false);
   _showWalkerForScale(false);
   if (spotGroup) spotGroup.visible = true;           // spotlight returns too
   controls.enabled = true;
@@ -764,10 +813,11 @@ function beeStep(t) {
     // frame loop, so it is defined by the time this runs.
     flapWings(beeAvatar, t);
     // Bob in proportion to the animal, not by a fixed 3 cm — which on a
-    // 13 mm bee was a two-body-length pogo (V2.46c).
+    // 13 mm bee was a two-body-length pogo (V2.46c). The rest position is the
+    // frustum-derived one from _sizeAvatarToLife, not a second copy of it.
     const _st = beeAvatar.userData.standoff;
     beeAvatar.position.y = _st
-      ? -0.55 * _st + Math.sin(t * 0.006) * _st * 0.06
+      ? -(beeAvatar.userData.dropRatio || 0.38) * _st + Math.sin(t * 0.006) * _st * 0.05
       : (beeKind === 'bee' ? -0.42 : -0.86) + Math.sin(t * 0.006) * 0.03;
     beeAvatar.rotation.z = beeBank;
   }
