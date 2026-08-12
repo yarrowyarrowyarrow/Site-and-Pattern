@@ -338,10 +338,15 @@ Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.m
 > presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the
 > first artefact the user can actually hand to the person whose agreement they need — including
 > a sidewalk camera at eye height, which is the view that decides whether a planting gets a
-> complaint or a question about where to buy the seeds. **State: partial** — the app can now
-> render and print the argument, but it does not yet critique a design for the moves that
-> decide whether it survives socially (roadmap F75), and it cannot yet put before / after /
-> in-five-years on one page (F76).
+> complaint or a question about where to buy the seeds. **Flower colour became a filter** in
+> V2.47 ([`flower_colour.py`](../src/flower_colour.py), F108) — the hex had been in the schema
+> since v31 driving the 3D florets, and none of the thirty search parameters could ask about
+> it, which meant the catalogue could answer every ecological question and not the one a
+> person asks when they are choosing a plant because they want to look at it. **State:
+> partial** — the app can now render and print the argument, but it does not yet critique a
+> design for the moves that decide whether it survives socially (roadmap F75), it cannot yet
+> put before / after / in-five-years on one page (F76), and colour is a *filter* rather than
+> an analysis: nothing yet says "your June is all yellow".
 
 ---
 

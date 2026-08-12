@@ -2344,6 +2344,7 @@ def search_plants(
     moisture: str = "",
     bloom_months: Optional[list] = None,
     fruit_months: Optional[list] = None,
+    flower_colours: Optional[list] = None,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -2352,6 +2353,10 @@ def search_plants(
     ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
     matches if its recorded window covers ANY of them. See ``_month_filter``
     below for why these are applied in Python rather than SQL.
+
+    ``flower_colours`` is a list of ``src.flower_colour`` bucket keys ("white",
+    "yellow", …); a plant matches if its hex classifies into ANY of them. Also
+    applied in Python — see ``_colour_filter``.
     """
     sql    = "SELECT * FROM plants WHERE 1=1"
     params: list = []
@@ -2611,9 +2616,36 @@ def search_plants(
         _attach_photos(result)
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
+        result = _colour_filter(result, flower_colours)
         return result
     finally:
         conn.close()
+
+
+def _colour_filter(plants: list[dict], colours) -> list[dict]:
+    """Keep plants whose flower colour classifies into any of ``colours``.
+
+    Applied in Python for the same reason as ``_month_filter``: the stored value
+    needs a *parser*, not a comparison. ``flower_color`` holds a hex, and the
+    filter is asked in colour NAMES — ``WHERE flower_color IN (…)`` could only
+    be written by enumerating the hexes each bucket happens to contain today,
+    and would stop matching the first time a seeder writes one nobody listed.
+
+    Routing through ``src.flower_colour.classify`` also means the search layer,
+    the directory facet and the static site's colour pages share one classifier,
+    so they cannot disagree about what colour a plant is — including about the
+    grasses, whose ``#cbbd80`` is the absence of a showy flower rather than a
+    colour (see that module).
+
+    A plant with no recorded colour is excluded rather than assumed, matching
+    ``_month_filter``: "we don't know what colour this flowers" is not the claim
+    "it flowers white" (P9).
+    """
+    wanted = {str(c) for c in (colours or []) if str(c).strip()}
+    if not wanted:
+        return plants
+    from src.flower_colour import classify
+    return [p for p in plants if classify(p) in wanted]
 
 
 def _month_filter(plants: list[dict], column: str, months) -> list[dict]:

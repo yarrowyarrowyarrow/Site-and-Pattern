@@ -210,6 +210,7 @@ python -m src.cli <subcommand> …      # or `permadesign <subcommand> …` once
 | `list-structures [--json]` | habitat structures |
 | `analyze <project.perma.geojson> [--json]` | habitat score of a saved project |
 | `export-catalogue <out.docx>` | plant catalogue → DOCX |
+| `build-site <dir> [--base-url --no-photos --include-notes]` | plant directory → static website (§4a) |
 | `generate <prompt> --out <project> [--lat --lng --endpoint --model]` | generate a design from a prompt via a local LLM (§4) |
 | `validate-data [--quiet --no-warnings]` | check shipped seed JSON |
 
@@ -355,6 +356,44 @@ proj.save("understory.perma.geojson")
 
 Tests inject a fake client (a canned spec), so generation is verified
 offline — see [`tests/test_llm_design.py`](../tests/test_llm_design.py).
+
+---
+
+## 4a. The catalogue as a static website (`src.static_site`)
+
+`build-site` renders the F90 plant directory as plain files — no framework, no
+build step, no CDN, no request to anything at run time.
+
+```bash
+python -m src.cli build-site public/ --base-url https://plants.example.org
+```
+
+| What it writes | Count against the shipped catalogue |
+|---|---|
+| `plants/<slug>/` | 439 species pages |
+| `wildlife/<slug>/` | 86 animals — *the plants documented to support each one* |
+| `plants/colour/<key>/` | 10 non-empty colour buckets (F108) |
+| `plants/blooming-in/<month>/` | 12 |
+| `plants/for/<role>/` | 8 ecological roles |
+| `plants/` | every species, filtered client-side over an embedded JSON index |
+| `sitemap.xml`, `robots.txt`, `assets/` | — |
+
+Two layers, both Qt-free: `src/static_site.py` builds the page model (every
+collaborator injectable, so the link graph can be asserted with no database)
+and `src/static_site_render.py` turns it into HTML. Species pages come from the
+*same* `plant_directory.species_entry` the desktop window calls, so the two
+surfaces cannot drift.
+
+**Two behaviours worth knowing before you publish:**
+
+- **Photographs are copied from the local image cache when it has them** and
+  fall back to the recorded URL when it does not; the build reports both counts.
+  A photograph with no attribution is not published at all.
+- **The free-text `notes` column is withheld by default.** Around 43 rows
+  describe traditional medicinal and plant-use practice, and publishing that to
+  the open web is out of scope for this project without free, prior and informed
+  consent (Principle 12). `--include-notes` overrides it; the structured
+  horticultural columns publish either way.
 
 ---
 

@@ -311,6 +311,8 @@ only, doesn't affect real commits.
 | `src/github_releases.py` | Qt-free GitHub Releases lookup + installer download for the frozen-build in-app updater (V1.73). |
 | `src/app_version.py` | Reads the build's `version.txt` so a frozen `.dmg`/`.exe` knows its own V-version (V1.73). |
 | `.github/workflows/release-macos.yml` | Builds the macOS DMG on a cloud Mac and publishes it to a GitHub Release on every `V*` push, feeding the in-app updater (V1.73). |
+| `src/flower_colour.py` | **Flower colour as something you can filter on (F108, V2.47).** The hex→bucket classifier behind `search_plants(flower_colours=…)`, the directory facet and the website's colour pages — one parser, so the three cannot disagree. The grasses/sedges/rushes bucket is *not* a bloom colour and is labelled so: they are wind-pollinated and `#cbbd80` is the absence of a showy flower, not an observation of one. |
+| `src/static_site.py` + `src/static_site_render.py` + `html/site/` | **The catalogue as a public website (F109, V2.47).** `python -m src.cli build-site <dir>` → 439 species pages, 86 wildlife pages ("which plants feed this animal", over the documented edges), colour/month/role hubs, client-side filtering over an embedded JSON index. Model and renderer are split so a test can assert the link graph without rendering. Every species page is the same `plant_directory.species_entry` the desktop window calls. **Notes are withheld by default (P12)** and no photo is published without its credit. |
 | `src/plant_panel.py` | Right-side plant browser + custom delegate. |
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |

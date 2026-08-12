@@ -114,8 +114,29 @@ python -m src.cli list-communities                          # seeded communities
 python -m src.cli analyze my_yard.perma.geojson             # habitat score
 python -m src.cli analyze my_yard.perma.geojson --json      # machine-readable
 python -m src.cli export-catalogue plants.docx              # plant catalogue → DOCX
+python -m src.cli build-site public/                        # catalogue → static website
 python -m src.cli validate-data                             # check seed JSON
 ```
+
+### The catalogue as a website
+
+`build-site` renders the plant directory as plain static files — a species page
+per plant, plus browse hubs by flower colour, bloom month and ecological role,
+and a page per animal listing **the plants documented to support it**. No
+framework, no build step, no CDN, no external request: it can be hosted
+anywhere or opened straight off disk.
+
+```bash
+python -m src.cli build-site public/ --base-url https://plants.example.org
+```
+
+Two things it does on purpose. Photographs are copied out of the local image
+cache where they exist and are **never published without their credit** — a
+species we cannot attribute simply shows no photo. And the free-text `notes`
+field is **withheld by default**: some entries describe traditional medicinal
+and plant-use practice, and publishing that to the open web is not ours to do
+(see Principle 12 in [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)).
+`--include-notes` overrides it.
 
 Installing the package registers a `permadesign` console script for the
 same commands:

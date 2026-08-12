@@ -39,6 +39,8 @@ from __future__ import annotations
 import datetime
 from typing import Callable, Optional
 
+from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
+
 # ── The filter vocabulary ────────────────────────────────────────────────────
 #
 # `search_plants` takes thirty parameters. The design-side browser wires
@@ -87,6 +89,13 @@ FACETS: tuple = (
             ("January", "February", "March", "April", "May", "June", "July",
              "August", "September", "October", "November", "December"), 1)
     }),
+    # V2.47. `flower_color` has held a hex since schema v31 and nothing could
+    # filter on it — the one axis a person uses when they are choosing a plant
+    # because they want to look at it (P13). The vocabulary is imported rather
+    # than restated so the desktop facet, the search layer and the static site's
+    # colour pages cannot drift; see `src.flower_colour` for why the grasses get
+    # a bucket of their own instead of being filed as yellow.
+    ("colour", "Flower colour", "flower_colours", dict(_COLOUR_LABELS)),
 )
 
 #: ``(key, label, search_plants parameter, tooltip)`` — on/off chips.
@@ -420,21 +429,57 @@ def _provenance(plant: dict) -> list[str]:
 
 
 def _ph_range(plant: dict) -> str:
-    lo, hi = plant.get("soil_ph_min"), plant.get("soil_ph_max")
+    lo = _number(plant.get("soil_ph_min"))
+    hi = _number(plant.get("soil_ph_max"))
     if lo and hi:
-        return f"pH {float(lo):g}–{float(hi):g}"
+        return f"pH {lo}–{hi}"
     if lo or hi:
-        return f"pH {float(lo or hi):g}"
+        return f"pH {lo or hi}"
     return ""
 
 
 def _zone_range(plant: dict) -> str:
-    lo, hi = plant.get("hardiness_zone_min"), plant.get("hardiness_zone_max")
-    if lo and hi and int(lo) != int(hi):
-        return f"zone {int(lo)}–{int(hi)}"
+    """The hardiness band, **keeping any uncertainty marker the data carries**.
+
+    ``hardiness_zone_min`` is not reliably numeric: one row ships ``'4?'``,
+    which is a botanist's "about 4, not verified" and is exactly the kind of
+    hedge P9 asks us to preserve rather than round off. It also used to crash
+    this function — ``int('4?')`` raised ``ValueError`` and took the whole
+    species page down with it, which is why False Box could not be opened in the
+    directory at all (found V2.47, while building the static site over the same
+    call). Rendering the mark is both the honest answer and the safe one.
+    """
+    lo = _number(plant.get("hardiness_zone_min"))
+    hi = _number(plant.get("hardiness_zone_max"))
+    if lo and hi and lo.rstrip("?") != hi.rstrip("?"):
+        return f"zone {lo}–{hi}"
     if lo or hi:
-        return f"zone {int(lo or hi)}"
+        return f"zone {lo or hi}"
     return ""
+
+
+def _number(value) -> str:
+    """A numeric field as display text, tolerating the hedges the data carries.
+
+    ``4.0`` → ``"4"``, ``"4?"`` → ``"4?"``, ``""``/``None``/unparseable →
+    ``""``. Never raises: a reference work that refuses to draw a page because
+    one field of seventy is oddly formatted is worse than one that draws the
+    other sixty-nine.
+    """
+    if value is None or value == "":
+        return ""
+    if isinstance(value, (int, float)):
+        return f"{float(value):g}"
+    text = str(value).strip()
+    try:
+        return f"{float(text):g}"
+    except ValueError:
+        pass
+    mark = "?" if text.endswith("?") else ""
+    try:
+        return f"{float(text.rstrip('?').strip()):g}{mark}"
+    except ValueError:
+        return text
 
 
 # ── What is flowering now ────────────────────────────────────────────────────

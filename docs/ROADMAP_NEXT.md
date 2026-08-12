@@ -101,6 +101,19 @@ items on the roadmap. The rest of this document sequences them and says what els
 
 ## Shipped
 
+**V2.47 — the colour axis, and the catalogue leaves the installer (F108–F109).**
+Prompted by a competitor read of [BloomsEye Studio](https://studio.bloomseye.com/)
+— a browser-based ornamental designer with a content site attached. Two of its
+advantages were real, and both were things we already had the material for.
+Plan: [`V2.47-colour-and-a-public-catalogue`](plans/V2.47-colour-and-a-public-catalogue.md).
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F108** | **Flower colour as a filter.** `flower_color` has held a hex since schema v31 (V1.90) and `search_plants`' thirty parameters included no way to ask about it — the one axis a person uses when they are choosing a plant because they want to *look* at it (P13). Eleven buckets classified from HSV, thresholds set at the gaps between the 23 hexes actually in use. **The largest bucket is not a bloom colour and says so:** all 79 `#cbbd80` rows are grasses, sedges and rushes, every one with `flower_form='plume'`, and filing wind-pollinated seed heads under "yellow" beside a black-eyed susan would be a claim the data does not make. They get a bucket named for what they are, and it stays selectable because designing for winter texture means wanting exactly that set | `src/flower_colour.py`, `_colour_filter` in `src/db/plants.py`, a `FACETS` row in `src/plant_directory.py` |
+| **F109** | **The plant directory as a public website.** F90 built the catalogue as a reference work and shipped it inside a 200 MB desktop installer. `build-site` renders the same pages as plain files: 439 species pages, 86 wildlife pages, hubs for colour / month / role, a client-side filter over an embedded JSON index, sitemap and robots. No framework, no CDN, no external request. Every species page is the *same* `species_entry` call the desktop window makes, so the two cannot drift. The two axes nobody else can publish: `/plants/colour/` (F108) and **`/wildlife/<slug>/` — which plants feed this animal**, over the 361 documented edges | `src/static_site.py` + `src/static_site_render.py` + `html/site/`, `python -m src.cli build-site` |
+| — | **P12 gate on publication.** ~43 seeded `notes` rows describe traditional medicinal and plant-use practice. Publishing that to the open web is a different act from showing it in a desktop panel — indexed, scraped, archived, effectively irrevocable — so the notes field is **withheld by default** and the About page says why. `--include-notes` exists and is the author's call, not the generator's | `_extras_section`, `--include-notes` |
+| — | **A crash the static build found.** `plant_directory._zone_range` did `int(hardiness_zone_min)`, one row ships `'4?'`, and `ValueError` took the whole species page down — False Box could not be opened in the directory *at all*, and had not been openable since F90 shipped. The `?` is a botanist's hedge and P9 says render it, so the page now reads `zone 4?–8`. Guarded by a sweep over every species rather than a case for that row | `src/plant_directory.py:_number` |
+
 **V2.33 — Theme A, the whole of it (F63–F69).** The 3D preview stopped being a
 diagram. Detail entries below are kept as the record of what was asked for; what
 was actually built, what it cost and what it left open is in

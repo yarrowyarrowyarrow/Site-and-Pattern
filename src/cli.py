@@ -173,6 +173,34 @@ def _cmd_generate(args) -> int:
     return 0
 
 
+def _cmd_build_site(args) -> int:
+    """Render the catalogue as a static website (V2.47).
+
+    The directory has been a desktop-only surface since F90 shipped it; this is
+    the same pages, as files anybody can host.
+    """
+    from src.static_site import build_model
+    from src.static_site_render import write_site
+
+    def say(msg: str) -> None:
+        print(f"  {msg}")
+
+    print("Building the catalogue model…")
+    model = build_model(progress=say)
+    print(f"Writing to {args.out} …")
+    summary = write_site(model, args.out, base_url=args.base_url,
+                         copy_photos=not args.no_photos,
+                         include_notes=args.include_notes, progress=say)
+    print(f"\n{summary['files']} files written to {summary['out_dir']}")
+    print(f"  {summary['species']} species pages, "
+          f"{summary['wildlife']} wildlife pages")
+    if summary["photos_hotlinked"]:
+        print(f"  {summary['photos_copied']} photographs copied from the local "
+              f"cache; {summary['photos_hotlinked']} still point at their "
+              f"original URLs (warm the cache to bundle them)")
+    return 0
+
+
 def _cmd_validate_data(args) -> int:
     # Wraps src.data_quality.validate_all — the same check
     # scripts/check_plant_data.py runs. Exits non-zero on errors.
@@ -285,6 +313,23 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--model", default="",
                     help="model name (default: env / config / llama3.2)")
     ge.set_defaults(func=_cmd_generate)
+
+    # build-site
+    bs = sub.add_parser("build-site",
+                        help="render the plant directory as a static website")
+    bs.add_argument("out", help="output directory (created if absent)")
+    bs.add_argument("--base-url", default="",
+                    help="public URL the site will be served from; only used "
+                         "for sitemap.xml and robots.txt")
+    bs.add_argument("--no-photos", action="store_true", dest="no_photos",
+                    help="do not copy cached photographs into the output; "
+                         "reference their original URLs instead")
+    bs.add_argument("--include-notes", action="store_true", dest="include_notes",
+                    help="publish the free-text notes field. OFF by default: "
+                         "~43 rows describe traditional medicinal and plant-use "
+                         "practice, and P12 forbids publishing that without "
+                         "free, prior and informed consent (see CLAUDE.md)")
+    bs.set_defaults(func=_cmd_build_site)
 
     # validate-data
     vd = sub.add_parser("validate-data",

@@ -91,8 +91,18 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.41 — the plant directory (F90). Opted in on arrival rather than
         # when they first hurt: a ceiling added late is a ceiling set around
         # whatever shape the file drifted into.
-        (_SRC / "plant_directory.py", 600),            # 489 now
+        (_SRC / "plant_directory.py", 600),            # 552 now
         (_SRC / "plant_directory_window.py", 640),     # 518 now
+        # V2.47 — the colour filter and the public catalogue. Opted in on
+        # arrival, the V2.41 precedent. The renderer is the largest of the three
+        # because nine page types' worth of editorial copy lives in it; what
+        # does NOT live in it any more is the stylesheet and the browse script,
+        # which were Python string constants until they put this file 190 lines
+        # over and moved to `html/site/` where they can be linted.
+        (_SRC / "flower_colour.py", 240),              # 178 now
+        (_SRC / "static_site.py", 460),                # 381 now
+        (_SRC / "static_site_render.py", 900),         # 830 now
+        (_HTML / "site" / "browse.js", 120),           # 50 now
         (_SRC / "start_screen.py", 380),               # 292 now
         (_SRC / "onboarding_flow.py", 620),            # ~551 now
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
