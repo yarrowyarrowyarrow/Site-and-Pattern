@@ -19,8 +19,12 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.43`,
-`_SCHEMA_VERSION = 63` (in `src/db/plants.py`) — v63 adds `bird_morphology`
+**Current facts (verify before quoting):** branch `V2.47`,
+`_SCHEMA_VERSION = 64` (in `src/db/plants.py`) — v64 adds
+`plants.flower_colour_source`, which records whether a species' flower colour
+was checked against its own common name or Latin epithet or is the genus-level
+default it was seeded as. Additive and empty in the migration: the version bump
+forces the reseed that carries the corrected values in. v63 adds `bird_morphology`
 (mass, wingspan and flight style for the 24 birds, feeding `src/flight_model.py`;
 child of `fauna`, so it IS wiped and re-seeded with the other attribute tables,
 unlike the v62 pair below). v62 adds `discovered_species`

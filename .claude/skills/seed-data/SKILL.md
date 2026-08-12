@@ -33,7 +33,7 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 63`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 64`.
 
 **Sourcing is enforced (V2.42).** Every `source` field in
 `plant_fauna_master.json`, `bee_attributes_master.json` and
@@ -68,6 +68,20 @@ and confidence band behind its claim. Writing a range in by hand would put an
 unsourced number in the one table whose whole purpose is that its numbers are
 sourced. A missing file is normal and means "nothing derived yet" — each species
 then keeps the tags in `plants.ecoregion`.
+
+`data/plants_master.json`'s **flower colour** is likewise authored by a script
+rather than by hand: `scripts/seed_flower_colour.py` is both the tool and the
+provenance record, and every correction in it carries its reason. Read it before
+editing a `flower_color` value. The cautionary tale is short: the column was
+seeded per GENUS, which nobody noticed while it only tinted a floret in the 3D
+preview, and the moment V2.47 made colour filterable it started answering "show
+me the blue ones" with a red columbine. Anything you change there needs
+`flower_colour_source` set alongside it, or the gate
+(`data_quality.validate_flower_colour`) will treat it as an unchecked genus
+default. A colour word in a common name is **not** sufficient evidence on its
+own: it is very often the berry, the seed head or the foliage, and the five
+species that trip that trap are listed in the script's `KEEP` table with the
+reason each one is already correct.
 
 The three `*_fallback_prairie.json` files are **offline regional approximations**
 read at runtime by nearest-centroid lookup, not reseeded into the DB. Editing
