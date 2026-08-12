@@ -386,3 +386,74 @@ class TestOneVocabularyEverywhere(unittest.TestCase):
         choices = polycultures.facet_filter_choices()["habitat"]
         for _key, name, _where in _eco.ecoregions():
             self.assertIn(name, choices)
+
+
+class TestTheEcoregionMap(unittest.TestCase):
+    """V2.48. The maps the author asked for, and the caveat that has to travel
+    with every one of them."""
+
+    def test_it_draws_every_region_in_the_vocabulary_that_has_a_polygon(self):
+        from src.ecoregion_map import region_geometry
+        from src.ecoregion import geographic_keys
+        drawn = set(region_geometry())
+        self.assertEqual(drawn, set(geographic_keys()))
+
+    def test_duplicate_entries_merge_under_one_key(self):
+        """Aspen Parkland ships as two boxes, one Alberta and one Saskatchewan.
+        A caller asking to draw aspen parkland means both."""
+        from src.ecoregion_map import region_geometry
+        self.assertGreaterEqual(len(region_geometry()["aspen_parkland"]), 2)
+
+    def test_a_highlighted_region_is_drawn_differently_from_an_absent_one(self):
+        from src.ecoregion_map import map_svg
+        plain = map_svg({})
+        marked = map_svg({"aspen_parkland": "high"})
+        self.assertNotEqual(plain, marked)
+        self.assertIn("high confidence", marked)
+        self.assertIn("not recorded", marked)
+
+    def test_confidence_changes_the_fill(self):
+        """Three occurrence records must not look like three hundred (P9)."""
+        from src.ecoregion_map import map_svg
+        high = map_svg({"aspen_parkland": "high"})
+        low = map_svg({"aspen_parkland": "low"})
+        self.assertNotEqual(high, low)
+
+    def test_every_point_lands_inside_the_viewport(self):
+        import re
+        from src.ecoregion_map import map_svg
+        svg = map_svg({}, width=400, height=300)
+        for points in re.findall(r'<polygon points="([^"]+)"', svg):
+            for pair in points.split():
+                x, y = (float(v) for v in pair.split(","))
+                self.assertTrue(0 <= x <= 400, x)
+                self.assertTrue(0 <= y <= 300, y)
+
+    def test_it_never_reaches_outside_itself(self):
+        """Self-contained SVG: no script, no external reference, no image.
+
+        The `xmlns` is a namespace identifier rather than a URL anything
+        fetches, so it is stripped before the check instead of being allowed
+        to make the check vacuous."""
+        from src.ecoregion_map import map_svg
+        svg = map_svg({"aspen_parkland": "high"}).replace(
+            'xmlns="http://www.w3.org/2000/svg"', "")
+        for forbidden in ("<script", "http://", "https://", "<image", "url("):
+            self.assertNotIn(forbidden, svg)
+
+    def test_the_caveat_says_the_outlines_are_not_boundaries(self):
+        """The polygons are hand-drawn boxes. A box without this caption is a
+        claim about a boundary."""
+        from src.ecoregion_map import CAVEAT
+        self.assertIn("Approximate extents", CAVEAT)
+        self.assertIn("not surveyed boundaries", CAVEAT)
+
+    def test_a_missing_polygon_file_degrades_to_nothing(self):
+        """A map is an illustration. Losing it must not take a page down."""
+        import src.ecoregion_map as em
+        real = em._load
+        em._load = lambda: []
+        try:
+            self.assertEqual(em.map_svg({"aspen_parkland": "high"}), "")
+        finally:
+            em._load = real

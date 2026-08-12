@@ -293,6 +293,53 @@ class TestPlantPanelSmoke(unittest.TestCase):
         # AND semantics on uses → strictly fewer than pollinator alone
         self.assertLess(expected, len(search_plants(perm_use="pollinator")))
 
+    def test_the_flower_colour_filter_narrows_and_restores(self):
+        """V2.48. The directory got a colour filter in V2.47 and the picker
+        beside the map did not, which is backwards: choosing a plant because of
+        how it will look is a placement decision, and this is the panel you
+        place from (P13).
+
+        Reported by the author, and the reason this test drives the real widget
+        rather than the query layer: a facet wired to a parameter nobody reads
+        is the exact shape of the V2.37 dead-control bugs, and only pressing the
+        control catches it.
+        """
+        from src.db.plants import search_plants
+        p = self._panel
+        # The class shares one panel and `setUp` resets only the mix, so an
+        # earlier test's type/use selections are still checked here. Clear every
+        # facet first or this measures the intersection instead of the colour.
+        for combo in (p._type_combo, p._sun_combo, p._water_combo, p._use_combo,
+                      p._rarity_combo, p._bloom_combo, p._fruit_combo,
+                      p._colour_combo):
+            self._set_checked(combo, set())
+        p._run_search()
+        every = p._results_model.rowCount()
+
+        self._set_checked(p._colour_combo, {"purple"})
+        p._run_search()
+        purple = p._results_model.rowCount()
+        self.assertEqual(purple, len(search_plants(flower_colours=["purple"])))
+        self.assertGreater(purple, 0)
+        self.assertLess(purple, every)
+
+        self._set_checked(p._colour_combo, {"purple", "yellow"})
+        p._run_search()
+        both = p._results_model.rowCount()
+        self.assertEqual(both,
+                         purple + len(search_plants(flower_colours=["yellow"])))
+
+        self._set_checked(p._colour_combo, set())
+        p._run_search()
+        self.assertEqual(p._results_model.rowCount(), every)
+
+    def test_the_colour_menu_offers_the_shared_vocabulary(self):
+        """Restating the colour list in the panel is how the panel, the
+        directory and the website come to disagree about what colour a plant
+        is."""
+        from src.flower_colour import COLOUR_LABELS
+        self.assertEqual(self._panel._colour_combo.count(), len(COLOUR_LABELS))
+
 
 if __name__ == "__main__":
     unittest.main()

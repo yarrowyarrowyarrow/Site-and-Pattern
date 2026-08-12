@@ -36,6 +36,7 @@ from src.plant_list_view import (
     _RESULTS_LIST_STYLE,
     _PLANT_MIME,
     _type_icon,
+    _colour_icon,
 )
 
 # The multi-select facet dropdown and the shared filter QSS moved to
@@ -55,6 +56,10 @@ from src.plant_facets import (      # noqa: E402  (re-export, not a use)
     _TYPE_LABELS, _DECIDUOUS_LABELS, _LIFECYCLE_LABELS, _MONTH_LABELS,
     _ECOREGION_CHOICES, _ECOREGION_DISPLAY, _AB_ECOREGION_CHOICES,
 )
+
+# Flower colour (V2.48). Imported rather than restated: the panel, the
+# directory and the website all read one vocabulary.
+from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS  # noqa: E402
 
 
 # NOTE: calendar constants, plant list-item roles, compact row geometry
@@ -341,6 +346,26 @@ class PlantPanel(QWidget):
         row4.addWidget(self._fruit_combo, 1)
         top_layout.addLayout(row4)
 
+        # Row 5 — flower colour (V2.48). The directory got this in V2.47 and the
+        # picker beside the map did not, which is backwards: choosing a plant
+        # because of how it will look is a PLACEMENT decision, and this is the
+        # panel you place from (P13). Vocabulary imported, never restated, so
+        # the panel, the directory and the website cannot disagree about what
+        # colour a plant is.
+        row5 = QHBoxLayout()
+        row5.setSpacing(4)
+        self._colour_combo = self._make_multi_combo(
+            "Any flower colour", dict(_COLOUR_LABELS), _combo_style,
+            icon_for=_colour_icon)
+        self._colour_combo.setToolTip(
+            "Show only plants flowering in any of the checked colours.\n"
+            "Grasses, sedges and rushes are grouped separately: they are\n"
+            "wind-pollinated, so what you see is the seed head rather than\n"
+            "a bloom. A plant with no recorded colour is left out rather\n"
+            "than guessed at.")
+        row5.addWidget(self._colour_combo, 1)
+        top_layout.addLayout(row5)
+
         # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
         # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
         # Host Plant / Bird Food) moved into the multi-select Use dropdown
@@ -592,6 +617,7 @@ class PlantPanel(QWidget):
                 soil_ph         = self._soil_ph,
                 bloom_months    = self._bloom_combo.checked_keys(),
                 fruit_months    = self._fruit_combo.checked_keys(),
+                flower_colours  = self._colour_combo.checked_keys(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")

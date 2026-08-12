@@ -117,6 +117,23 @@ class TestCli(unittest.TestCase):
         with self.assertRaises(SystemExit):
             _run([])
 
+    def test_build_site_writes_a_site(self):
+        """V2.48. This ran fine in a session that had already used the app and
+        died with "no such table: plants" on a checkout that had not: every
+        other subcommand goes through the facade, which seeds the DB, and this
+        one talked to `search_plants` directly. The test module redirects the
+        DB to a temp dir, so it exercises exactly that cold path."""
+        out = tempfile.mkdtemp(prefix="cli_site_")
+        code, stdout, _ = _run(["build-site", out, "--no-photos"])
+        self.assertEqual(code, 0)
+        self.assertIn("species pages", stdout)
+        root = Path(out)
+        for expected in ("index.html", "plants/index.html", "map/index.html",
+                         "wildlife/index.html", "about/index.html",
+                         "sitemap.xml", "robots.txt", "assets/site.css",
+                         "assets/browse.js"):
+            self.assertTrue((root / expected).exists(), expected)
+
     # ── generate (offline path — no LLM required) ────────────────────────────
 
     def test_generate_offline_with_goals(self):

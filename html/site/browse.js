@@ -1,50 +1,127 @@
+/* Client-side faceted search over the embedded catalogue index.
+ *
+ * The index is one row per species: {s: slug, n: searchable name, <facet key>:
+ * [values]}. Facet keys and their values come from src/site_facets.py, so this
+ * file never enumerates them; it reads whatever data-f attributes the page
+ * rendered. Adding a facet in Python therefore needs no change here.
+ *
+ * Within a facet, checked values are OR (yellow OR blue). Across facets they
+ * are AND (yellow AND blooms in June). That is what people mean by a filter
+ * panel, and it is the same logic search_plants applies on the desktop.
+ *
+ * A plant with no value for a facet matches nothing in it. That is deliberate:
+ * "we do not know when this blooms" is not "it blooms in June".
+ */
 (function () {
-  var data = JSON.parse(document.getElementById('catalogue').textContent);
+  var node = document.getElementById('catalogue');
+  if (!node) { return; }
+  var data = JSON.parse(node.textContent);
+
+  var form = document.getElementById('filters');
   var results = document.getElementById('results');
+  var noresults = document.getElementById('noresults');
   var count = document.getElementById('count');
   var q = document.getElementById('q');
-  var nativeOnly = document.getElementById('nativeonly');
-  var MONTHS = ['january','february','march','april','may','june','july',
-                'august','september','october','november','december'];
+  var clear = document.getElementById('clear');
+  var active = document.getElementById('active');
+
+  // Cards are looked up by slug, taken from the href the renderer emitted, so
+  // the two cannot drift over a path prefix.
   var cards = {};
   Array.prototype.forEach.call(results.children, function (el) {
-    cards[el.getAttribute('href')] = el;
+    var m = /plants\/([^/]+)\//.exec(el.getAttribute('href') || '');
+    if (m) { cards[m[1]] = el; }
   });
-  function chosen(name) {
-    var out = [];
-    document.querySelectorAll('input[data-f="' + name + '"]:checked')
-      .forEach(function (i) { out.push(i.value); });
+
+  function checkedBoxes() {
+    return Array.prototype.slice.call(
+      form.querySelectorAll('input[type=checkbox]:checked'));
+  }
+
+  function selection() {
+    var out = {};
+    checkedBoxes().forEach(function (box) {
+      var key = box.getAttribute('data-f');
+      (out[key] = out[key] || []).push(box.value);
+    });
     return out;
   }
+
+  function matches(row, text, sel) {
+    if (text && row.n.indexOf(text) < 0) { return false; }
+    for (var key in sel) {
+      if (!Object.prototype.hasOwnProperty.call(sel, key)) { continue; }
+      var have = row[key] || [];
+      var wanted = sel[key];
+      var hit = false;
+      for (var i = 0; i < wanted.length; i++) {
+        if (have.indexOf(wanted[i]) >= 0) { hit = true; break; }
+      }
+      if (!hit) { return false; }
+    }
+    return true;
+  }
+
+  function labelFor(box) {
+    var label = box.closest('label');
+    var span = label && label.querySelector('span:not(.dot)');
+    return span ? span.textContent : box.value;
+  }
+
+  function paintActive(boxes) {
+    active.textContent = '';
+    boxes.forEach(function (box) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = labelFor(box) + ' ×';
+      btn.title = 'Remove this filter';
+      btn.addEventListener('click', function () {
+        box.checked = false;
+        apply();
+      });
+      active.appendChild(btn);
+    });
+  }
+
+  function paintCounts() {
+    Array.prototype.forEach.call(form.querySelectorAll('.facet'),
+      function (facet) {
+        var n = facet.querySelectorAll('input:checked').length;
+        var pip = facet.querySelector('summary .on');
+        if (!pip) { return; }
+        pip.textContent = n ? String(n) : '';
+        pip.hidden = !n;
+      });
+  }
+
   function apply() {
     var text = (q.value || '').trim().toLowerCase();
-    var colours = chosen('colour'), types = chosen('type'), months = chosen('month');
-    var monthNums = months.map(function (m) { return MONTHS.indexOf(m) + 1; });
+    var sel = selection();
+    var boxes = checkedBoxes();
     var shown = 0;
-    data.forEach(function (p) {
-      var el = cards['../plants/' + p.slug + '/'] || cards['plants/' + p.slug + '/'];
-      if (!el) { return; }
-      var ok = true;
-      if (text) {
-        ok = (p.name + ' ' + p.scientific_name).toLowerCase().indexOf(text) >= 0;
-      }
-      if (ok && colours.length) { ok = colours.indexOf(p.colour) >= 0; }
-      if (ok && types.length) { ok = types.indexOf(p.type) >= 0; }
-      if (ok && monthNums.length) {
-        ok = monthNums.some(function (m) { return p.months.indexOf(m) >= 0; });
-      }
-      if (ok && nativeOnly.checked) { ok = !!p.native; }
+
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var el = cards[row.s];
+      if (!el) { continue; }
+      var ok = matches(row, text, sel);
       el.hidden = !ok;
       if (ok) { shown++; }
-    });
+    }
+
     count.textContent = shown + (shown === 1 ? ' plant' : ' plants');
+    noresults.hidden = shown !== 0;
+    clear.hidden = !boxes.length && !text;
+    paintActive(boxes);
+    paintCounts();
   }
-  document.getElementById('filters').addEventListener('input', apply);
-  document.getElementById('clear').addEventListener('click', function () {
+
+  form.addEventListener('input', apply);
+  clear.addEventListener('click', function () {
     q.value = '';
-    document.querySelectorAll('#filters input[type=checkbox]').forEach(
-      function (i) { i.checked = false; });
+    checkedBoxes().forEach(function (box) { box.checked = false; });
     apply();
   });
+
   apply();
 })();

@@ -16,6 +16,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 - **Plant community planning** — assemble layered native plant communities (overstory, understory, shrub, groundcover, herbaceous) with documented companion relationships
 - **Native habitat structures** — bee hotels, native bee logs, rock xeriscape, brush piles, snags, native lawn patches, rain gardens, bioswales, and ponds
 - **Habitat-focused plant filters** — surface keystone species, larval host plants, bird-food producers, and nesting-material plants
+- **Flower-colour filter** — eleven buckets classified from the recorded hex, with grasses and sedges grouped separately because they are wind-pollinated and have no showy flower
 - **Hedgerows** — draw layered native hedgerows for property edges and wildlife corridors
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
 - **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
@@ -120,23 +121,30 @@ python -m src.cli validate-data                             # check seed JSON
 
 ### The catalogue as a website
 
-`build-site` renders the plant directory as plain static files — a species page
-per plant, plus browse hubs by flower colour, bloom month and ecological role,
-and a page per animal listing **the plants documented to support it**. No
-framework, no build step, no CDN, no external request: it can be hosted
-anywhere or opened straight off disk.
+`build-site` renders the plant directory as plain static files: a species page
+per plant, a search page filtering on **23 axes** in the browser (colour, bloom
+month, ecoregion, sun, water, hardiness zone, height, life cycle, foliage,
+growth rate, ecological role, safety, availability and more), browse hubs per
+value, an ecoregion map, and a page per animal listing **the plants documented
+to support it**. No framework, no build step, no CDN, no external request: it
+can be hosted anywhere or opened straight off disk.
 
 ```bash
 python -m src.cli build-site public/ --base-url https://plants.example.org
 ```
 
-Two things it does on purpose. Photographs are copied out of the local image
-cache where they exist and are **never published without their credit** — a
-species we cannot attribute simply shows no photo. And the free-text `notes`
-field is **withheld by default**: some entries describe traditional medicinal
-and plant-use practice, and publishing that to the open web is not ours to do
-(see Principle 12 in [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)).
-`--include-notes` overrides it.
+Each species page carries a **range map** shaded by how much occurrence
+evidence stands behind each region. The shipped region outlines are hand-drawn
+boxes rather than surveyed boundaries, and every map says so.
+
+Three things it does on purpose. Photographs are copied out of the local image
+cache where they exist and are **never published without their credit**: a
+species we cannot attribute simply shows no photo. The free-text `notes` field
+is **withheld by default**, along with the `medicinal` use tag, because some of
+that content describes traditional plant-use practice and publishing it to the
+open web is not ours to do (see Principle 12 in
+[`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)); `--include-notes`
+overrides the first. And no em dash reaches a rendered page.
 
 Installing the package registers a `permadesign` console script for the
 same commands:

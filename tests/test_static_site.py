@@ -50,8 +50,14 @@ def _fake_plant(pid, name, sci, ptype="wildflower", colour="#f2c11e",
     return {
         "id": pid, "common_name": name, "scientific_name": sci,
         "plant_type": ptype, "flower_color": colour, "bloom_period": bloom,
-        "sun_requirement": "full_sun,partial shade", "water_needs": "low",
+        "flower_form": "cluster" if colour else "none",
+        "sun_requirement": "full_sun,partial_shade", "water_needs": "low",
         "mature_height_meters": 0.8, "native_to_alberta": 1,
+        "native_provinces": "AB,SK", "ecoregion": "aspen_parkland",
+        "perennial_or_annual": "perennial", "deciduous_evergreen": "herbaceous",
+        "growth_rate": "moderate", "years_to_maturity": 2,
+        "permaculture_uses": "pollinator", "availability_class": "garden_centre",
+        "leaf_shape": "lanceolate",
         "image_url": "https://example.org/p.jpg" if attribution else "",
         "image_attribution": attribution, "image_license": "CC BY",
         "hardiness_zone_min": 3, "hardiness_zone_max": 6,
@@ -163,15 +169,25 @@ class TestTheModelNeedsNoDatabase(unittest.TestCase):
         self.assertIn("Monarch", names)
         self.assertNotIn("Ghost Moth", names)
 
-    def test_an_empty_colour_gets_no_page(self):
-        keys = {c["key"] for c in self.model["colours"]}
-        self.assertIn("purple", keys)
-        self.assertNotIn("orange", keys)     # no orange plant in the fixture
+    def _hub(self, key):
+        return next(h for h in self.model["hubs"] if h["key"] == key)
+
+    def test_an_empty_facet_value_gets_no_page(self):
+        values = {p["value"] for p in self._hub("colour")["pages"]}
+        self.assertIn("purple", values)
+        self.assertNotIn("orange", values)   # no orange plant in the fixture
 
     def test_the_grasses_land_on_the_straw_page(self):
-        straw = next(c for c in self.model["colours"] if c["key"] == "straw")
+        straw = next(p for p in self._hub("colour")["pages"]
+                     if p["value"] == "straw")
         self.assertEqual({p["name"] for p in straw["plants"]},
                          {"Blue Grama Grass", "Bebb's Sedge"})
+
+    def test_every_hub_facet_produced_pages(self):
+        """A hub axis that generated nothing is a facet whose derivation is
+        broken, which looks identical to "the data has none of that"."""
+        got = {h["key"] for h in self.model["hubs"]}
+        self.assertEqual(got, {"type", "colour", "bloom", "ecoregion", "role"})
 
     def test_a_photo_without_attribution_is_not_offered(self):
         by_name = {e["name"]: e for e in self.model["species"]}
@@ -303,8 +319,9 @@ class TestTheRenderedSite(unittest.TestCase):
             r'<script id="catalogue" type="application/json">(.*?)</script>',
             html, re.S).group(1))
         hrefs = set(re.findall(r'<a class="card" href="([^"]+)"', html))
+        self.assertEqual(len(rows), len(_PLANTS))
         for row in rows:
-            self.assertIn(f"../plants/{row['slug']}/", hrefs)
+            self.assertIn(f"../plants/{row['s']}/", hrefs)
 
     def test_the_embedded_json_cannot_close_its_own_script_block(self):
         """The index is built from free-text database columns. A `</script>` in
@@ -315,6 +332,40 @@ class TestTheRenderedSite(unittest.TestCase):
             html, re.S).group(1)
         self.assertNotIn("<", payload)
         json.loads(payload)          # still valid JSON after the escaping
+
+    def test_no_em_dash_reaches_a_page(self):
+        """On the author's instruction, and enforced rather than remembered:
+        most of the prose here comes out of the database, where whoever wrote a
+        safety note cannot be asked to know a house style set afterwards."""
+        offenders = []
+        for page in self.out.rglob("*"):
+            if page.is_file() and page.suffix in (".html", ".css", ".js",
+                                                  ".json", ".xml", ".txt"):
+                text = page.read_text(encoding="utf-8")
+                if "—" in text:
+                    where = text.index("—")
+                    offenders.append(f"{page.relative_to(self.out)}: "
+                                     f"...{text[max(0, where - 40):where + 40]}...")
+        self.assertEqual(offenders, [])
+
+    def test_the_dash_normaliser_leaves_ranges_alone(self):
+        """An en dash joining a range is a different mark doing a different
+        job. "Jun-Jul" and "pH 5.5-7" must survive."""
+        self.assertEqual(render._nodash("Jun–Jul"), "Jun–Jul")
+        self.assertEqual(render._nodash("pH 5.5–7"), "pH 5.5–7")
+        self.assertEqual(render._nodash("a — b"), "a, b")
+        self.assertEqual(render._nodash("a—b"), "a, b")
+
+    def test_every_species_page_carries_its_range_map(self):
+        page = (self.out / "plants" / "wild-bergamot" / "index.html").read_text(
+            encoding="utf-8")
+        self.assertIn("<svg", page)
+        self.assertIn("Approximate extents", page)
+
+    def test_the_map_page_exists_and_is_linked_from_every_header(self):
+        self.assertIn("map/index.html", self.files)
+        for page in self.out.rglob("*.html"):
+            self.assertIn('href="', page.read_text(encoding="utf-8"))
 
     def test_the_sitemap_lists_only_pages_that_exist(self):
         xml = (self.out / "sitemap.xml").read_text(encoding="utf-8")

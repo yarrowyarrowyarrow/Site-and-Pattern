@@ -246,7 +246,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # flying taxon with no attributes table, which is why the viewer's wingbeats
 # were hardcoded constants. Child of `fauna`, so it is wiped and repopulated
 # with the other two attribute tables on every reseed.
-_SCHEMA_VERSION = 63
+_SCHEMA_VERSION = 64
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -599,6 +599,30 @@ def _migrate_to_v61(conn: sqlite3.Connection):
                     f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT ''")
             except sqlite3.OperationalError:
                 pass                      # column already present
+    conn.commit()
+
+
+def _migrate_to_v64(conn: sqlite3.Connection):
+    """Where a flower colour came from (V2.48).
+
+    ``flower_color`` has been on the row since v31 and was seeded at GENUS
+    level: 32 genera carried one hex across three or more species, so both
+    columbines were red and so was the yellow one. That was tolerable while the
+    hex only tinted a floret in the 3D preview; V2.47 made it a filter, and a
+    genus default answering "show me the blue ones" is a wrong answer rather
+    than a vague one.
+
+    Additive and empty, because the version bump forces a reseed and the reseed
+    is what carries the corrected values in. The column exists here so a DB that
+    upgrades without one still has somewhere honest to read from: blank means
+    "unknown provenance", which is exactly right for data that predates the
+    question.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_colour_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
     conn.commit()
 
 
@@ -1071,21 +1095,25 @@ def _seed_plant_ecoregions(conn: sqlite3.Connection) -> int:
     # A key that is not in the shipped polygon vocabulary would be invisible in
     # every filter — drop it here rather than storing a row nothing can select.
     valid = set(geographic_keys())
-    name_to_id = {
-        (row["scientific_name"] or "").strip(): row["id"]
-        for row in conn.execute(
-            "SELECT id, scientific_name FROM plants").fetchall()
-    }
+    # name -> ALL matching ids, not one. Three scientific names appear twice in
+    # the catalogue (Monarda fistulosa, Geum triflorum, Valeriana sitchensis:
+    # a native row and a garden/duplicate row), and a plain dict comprehension
+    # kept whichever came last. The other row silently lost its derived range
+    # and fell back to the unsourced `plants.ecoregion` tag, so Wild Bergamot's
+    # page said "not from occurrence records" while its twin had six of them.
+    # Found V2.48 by drawing the range maps, which made the gap visible.
+    name_to_ids: dict = {}
+    for row in conn.execute("SELECT id, scientific_name FROM plants").fetchall():
+        name_to_ids.setdefault(
+            (row["scientific_name"] or "").strip(), []).append(row["id"])
     rows = []
     for name, entries in ranges.items():
-        plant_id = name_to_id.get(name)
-        if plant_id is None:
-            continue
-        for entry in entries:
-            if entry["ecoregion"] not in valid:
-                continue
-            rows.append((plant_id, entry["ecoregion"], entry["occurrences"],
-                         entry["confidence"], source))
+        for plant_id in name_to_ids.get(name, ()):
+            for entry in entries:
+                if entry["ecoregion"] not in valid:
+                    continue
+                rows.append((plant_id, entry["ecoregion"], entry["occurrences"],
+                             entry["confidence"], source))
     if not rows:
         return 0
     conn.executemany(
@@ -1667,6 +1695,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("flower_data_citation", ""),
             p.get("leaf_data_source", ""),
             p.get("leaf_data_citation", ""),
+            p.get("flower_colour_source", ""),
         ))
 
     conn.executemany(
@@ -1693,10 +1722,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
             flowering_stems, flower_data_source, flower_data_citation,
-            leaf_data_source, leaf_data_citation)
+            leaf_data_source, leaf_data_citation, flower_colour_source)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1830,6 +1859,9 @@ def init_db() -> None:
         # tests/test_derived_edges.py:TestUpgradeFromV60.
         if current_version < 61:
             _migrate_to_v61(conn)
+
+        if current_version < 64:
+            _migrate_to_v64(conn)
 
         # Add parent_id to polycultures if missing
         try:

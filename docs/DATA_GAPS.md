@@ -11,6 +11,40 @@ the 3D fidelity work exposed.
 
 ---
 
+## Flower colour (V2.48)
+
+**Status: 36 of 395 coloured species are checkable. The other 359 are a
+genus-level guess, and now say so.**
+
+`flower_color` has been on the row since schema v31, driving the 3D viewer's
+florets. It was seeded per genus, which nothing displayed and therefore nobody
+questioned until V2.47 turned it into a filter and the author noticed the
+columbines:
+
+| | |
+|---|---|
+| Genera with 3+ species sharing exactly one hex, before the fix | **32** |
+| Rows whose common name contradicted their hex, before | **44** |
+| Species now sourced `epithet` (the Latin states the colour) | 7 |
+| Species now sourced `name` (the accepted common name states it) | 29 |
+| Species still `estimated` (genus default, marked *not verified* in the UI) | 359 |
+| Species with no recorded colour at all | 44 |
+
+**What closing this gap needs is a flora and a network**, not more code: the
+column (`flower_colour_source`), the seeder
+(`scripts/seed_flower_colour.py`), the validator
+(`data_quality.validate_flower_colour`) and the "not verified" marker on both
+the species page and the website are all in place. The gate emits one warning
+per still-uncheckable genus, so the remaining work is enumerated rather than
+estimated. Highest-value targets by species count: *Solidago* (9), *Salix* (6),
+*Festuca* (6), *Helianthus* (6), *Arnica* (6), *Ribes* (7), *Penstemon* (8).
+
+Two of those warnings are expected to stay: a genus that really is all one
+colour (the goldenrods) will keep tripping the heuristic until somebody sources
+one of its species. That is the right trade for a warning.
+
+---
+
 ## Photographs and provenance (V2.35)
 
 **Photo coverage.** `src/data_quality.py:validate_photo_coverage` counts this on

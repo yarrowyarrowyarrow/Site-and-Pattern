@@ -639,6 +639,10 @@ def validate_all() -> tuple[list[str], list[str]]:
     errors.extend(e)
     warnings.extend(w)
 
+    e, w = validate_flower_colour()
+    errors.extend(e)
+    warnings.extend(w)
+
     # Biological sourcing (V2.42). The relationships file had never been read by
     # this gate at all; plant photo credits and safety provenance were enforced
     # only by the care of whoever last edited them. docs/DATA_AUDIT.md.
@@ -649,6 +653,100 @@ def validate_all() -> tuple[list[str], list[str]]:
         e, w = validate_provenance()
         errors.extend(e)
         warnings.extend(w)
+    return errors, warnings
+
+
+def validate_flower_colour() -> tuple[list[str], list[str]]:
+    """Flower colour, checked against the two things that can contradict it
+    (schema v64, V2.48).
+
+    ``flower_color`` was seeded at GENUS level and nothing said so. It only
+    tinted a floret in the 3D preview, so nobody looked; the moment V2.47 made
+    it filterable, "show me the blue ones" started returning a red columbine.
+    Two checks, because two independent signals were available and both were
+    being ignored:
+
+    **A colour word in the species' own name that the hex contradicts** is an
+    ERROR. The name is evidence and it is right there in the same row. Species
+    where the name legitimately describes a berry, a seed head or the foliage
+    are listed in ``scripts/seed_flower_colour.py:KEEP`` with a reason and are
+    skipped here by the same list, so the audit and the fix cannot drift.
+
+    **A genus where three or more species share one hex and not one of them is
+    checkable** is a WARNING. It is not proof of an error (a goldenrod genus
+    really is all yellow) but it is exactly the shape the columbine bug had, and
+    a warning is the honest weight for a suspicion.
+    """
+    import re                                                # noqa: PLC0415
+    from collections import defaultdict                      # noqa: PLC0415
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        from src.flower_colour import classify               # noqa: PLC0415
+        sys.path.insert(0, str(DATA_DIR.parent))
+        from scripts.seed_flower_colour import KEEP          # noqa: PLC0415
+    except Exception:                                        # noqa: BLE001
+        return errors, ["flower colour: classifier unavailable, check skipped"]
+
+    name_colour = {
+        "white": "white", "ivory": "white", "cream": "cream",
+        "yellow": "yellow", "golden": "yellow", "gold": "yellow",
+        "orange": "orange", "red": "red", "scarlet": "red", "crimson": "red",
+        "pink": "pink", "magenta": "pink", "purple": "purple",
+        "violet": "purple", "lilac": "purple", "lavender": "purple",
+        "blue": "blue", "green": "green", "brown": "brown",
+    }
+    # The colour names the PLANT, not its flower: a blue grama is a grass.
+    not_the_flower = ("grama", "bluegrass", "blue grass", "bluejoint",
+                      "bluebunch", "blue-eyed grass", "goldenrod", "golden bean",
+                      "blueberry", "bluebell", "redtop", "red osier",
+                      "red-osier", "cedar", "spruce", "birch", "green ash")
+    # "Violet" is the genus Viola's own name far more often than it is a colour
+    # word, and every Viola in the catalogue is called one. Reading it as a
+    # colour flagged the yellow violet for not being purple.
+    genus_is_the_colour_word = {"Viola": "violet"}
+
+    records = _load_json_list(DATA_DIR / "plants_master.json")
+    genera: dict = defaultdict(list)
+
+    for rec in records:
+        sci = (rec.get("scientific_name") or "").strip()
+        if (rec.get("flower_color") or "").strip():
+            genera[sci.split(" ")[0]].append(rec)
+        if sci in KEEP:
+            continue
+        name = (rec.get("common_name") or "").lower()
+        if any(token in name for token in not_the_flower):
+            continue
+        got = classify(rec)
+        if not got:
+            continue
+        skip_word = genus_is_the_colour_word.get(sci.split(" ")[0])
+        for word, expect in name_colour.items():
+            if word == skip_word:
+                continue
+            if re.search(rf"\b{word}\b", name) and expect != got:
+                errors.append(
+                    f"flower colour: {sci} is filed as {got!r} but its own "
+                    f"name says {expect!r} ({rec.get('common_name')!r}) — "
+                    f"correct it in scripts/seed_flower_colour.py, or add it "
+                    f"to KEEP there with the reason the name is not about "
+                    f"the flower")
+                break
+
+    for genus, rows in sorted(genera.items()):
+        if len(rows) < 3:
+            continue
+        if len({(r.get("flower_color") or "") for r in rows}) > 1:
+            continue
+        if any((r.get("flower_colour_source") or "") in ("name", "epithet")
+               for r in rows):
+            continue
+        warnings.append(
+            f"flower colour: all {len(rows)} {genus} species share one hex and "
+            f"none is checkable — genus-level seeding is what put a red flower "
+            f"on the blue columbine")
     return errors, warnings
 
 

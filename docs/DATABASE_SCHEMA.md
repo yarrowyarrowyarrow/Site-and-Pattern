@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `59` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `64` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -208,6 +208,40 @@ auto-expires.
 On `plants(plant_type)`, `plants(zone range)`, `plants(native_to_alberta)`,
 `planting_calendar(plant_id)`, the two member junctions, and the three
 `plant_fauna` columns. See the bottom of the DDL.
+
+---
+
+### `plants.flower_colour_source` (schema v64, V2.48)
+
+Where a species' `flower_color` hex came from. One column, three values, and it
+exists because the hex was **seeded per genus** and nothing said so.
+
+```sql
+plants.flower_colour_source TEXT DEFAULT ''
+  -- 'name'      the accepted common name states it ("Yellow Columbine")
+  -- 'epithet'   the Latin states it (flavescens, candida, ochroleucus)
+  -- 'estimated' the genus default, i.e. not observed for this species
+  -- ''          no colour recorded at all
+```
+
+Measured before the fix: **32 genera had three or more species sharing exactly
+one hex**, and 44 rows disagreed with a colour word in their own common name.
+All four *Aquilegia* were red, including the blue one and the yellow one.
+
+That was survivable while the hex only tinted a floret in the 3D preview. V2.47
+made colour a *filter*, and a genus default answering "show me the blue ones" is
+a wrong answer rather than a vague one. The column is what lets the directory
+and the website print **not verified** beside 359 of the 395 coloured species
+instead of presenting a guess as an observation (P9).
+
+* **Authored by `scripts/seed_flower_colour.py`**, which is both the tool and
+  the provenance record: every correction carries its reason, and so does every
+  deliberate non-correction (red baneberry's `rubra` is the berry).
+* **Guarded by `data_quality.validate_flower_colour`** — a name/hex
+  contradiction is an error, a genus of three or more sharing one uncheckable
+  hex is a warning.
+* Additive and empty in the migration; the version bump forces the reseed that
+  carries the corrected values in.
 
 ---
 

@@ -94,15 +94,26 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "plant_directory.py", 600),            # 552 now
         (_SRC / "plant_directory_window.py", 640),     # 518 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
-        # arrival, the V2.41 precedent. The renderer is the largest of the three
-        # because nine page types' worth of editorial copy lives in it; what
-        # does NOT live in it any more is the stylesheet and the browse script,
-        # which were Python string constants until they put this file 190 lines
-        # over and moved to `html/site/` where they can be linted.
+        # arrival, the V2.41 precedent. What does NOT live in the renderer any
+        # more is the stylesheet and the browse script, which were Python
+        # string constants until they put that file 190 lines over and moved to
+        # `html/site/` where they can be linted.
+        #
+        # V2.48: the guard fired again at 974/900 when the site gained 23
+        # facets, the ecoregion maps and the richer species page. Answered with
+        # a split rather than a bigger number: `static_site_species.py` is the
+        # only page here with real internal structure, and every other page is
+        # a heading, a paragraph and a grid of cards. `browse.js` was ceilinged
+        # at 120 against a 50-line file that only had four filters; the number
+        # was set too tight for the feature that was coming, so it is reset
+        # against the finished shape rather than the first sketch.
         (_SRC / "flower_colour.py", 240),              # 178 now
-        (_SRC / "static_site.py", 460),                # 381 now
-        (_SRC / "static_site_render.py", 900),         # 830 now
-        (_HTML / "site" / "browse.js", 120),           # 50 now
+        (_SRC / "site_facets.py", 440),                # 357 now
+        (_SRC / "ecoregion_map.py", 260),              # 191 now
+        (_SRC / "static_site.py", 460),                # 378 now
+        (_SRC / "static_site_render.py", 800),         # 744 now
+        (_SRC / "static_site_species.py", 340),        # 256 now
+        (_HTML / "site" / "browse.js", 200),           # 127 now
         (_SRC / "start_screen.py", 380),               # 292 now
         (_SRC / "onboarding_flow.py", 620),            # ~551 now
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a

@@ -179,15 +179,22 @@ def _cmd_build_site(args) -> int:
     The directory has been a desktop-only surface since F90 shipped it; this is
     the same pages, as files anybody can host.
     """
+    from src.permadesign_api import _ensure_db
     from src.static_site import build_model
     from src.static_site_render import write_site
+
+    # Every other subcommand reaches the catalogue through the facade, which
+    # calls this; `build-site` talked to `search_plants` directly and so failed
+    # with "no such table: plants" on a checkout that had never launched the
+    # GUI. Idempotent, and the seed takes a second.
+    _ensure_db()
 
     def say(msg: str) -> None:
         print(f"  {msg}")
 
-    print("Building the catalogue model…")
+    print("Building the catalogue model...")
     model = build_model(progress=say)
-    print(f"Writing to {args.out} …")
+    print(f"Writing to {args.out} ...")
     summary = write_site(model, args.out, base_url=args.base_url,
                          copy_photos=not args.no_photos,
                          include_notes=args.include_notes, progress=say)

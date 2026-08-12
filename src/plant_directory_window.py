@@ -246,7 +246,7 @@ class PlantDirectoryWindow(QWidget):
             _metres(entry["spacing_m"], "apart")) if p))
         self._section("Season", " · ".join(p for p in (
             f"blooms {entry['bloom']}" if entry["bloom"] else "",
-            _colour_word(entry["bloom_color"], "flowers"),
+            _bloom_colour_line(entry),
             f"fruits {entry['fruit']}" if entry["fruit"] else "",
             _colour_word(entry["fruit_color"], "fruit")) if p))
         if entry["morphology"]:
@@ -502,6 +502,28 @@ def _conditions(entry: dict) -> str:
     if water and water != "—":
         out.append(f"{water} water")
     return " · ".join(out)
+
+
+def _bloom_colour_line(entry: dict) -> str:
+    """"Purple flowers (not verified, a genus-level estimate)" (V2.48).
+
+    The page used to print nothing here: `flower_color` is a hex, and
+    `_colour_word` below drops hex codes because a triplet on a reference page
+    is noise. It stayed empty for every one of the 395 coloured species until
+    there was a classifier to turn the hex into a word.
+
+    The provenance rides along because it is the more useful half. The colour
+    was seeded per genus, so "purple" on its own overstates what the catalogue
+    knows about this particular species.
+    """
+    label = (entry.get("bloom_colour_label") or "").strip()
+    if not label:
+        return ""
+    note = (entry.get("bloom_colour_note") or "").strip()
+    # The grasses' label is already a full phrase; "Straw or green seed heads
+    # flowers" is not a sentence.
+    head = label if entry.get("bloom_colour") == "straw" else f"{label} flowers"
+    return head + (f" ({note})" if note else "")
 
 
 def _colour_word(value: str, what: str) -> str:

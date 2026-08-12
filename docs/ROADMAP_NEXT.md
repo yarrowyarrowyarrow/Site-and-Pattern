@@ -101,6 +101,18 @@ items on the roadmap. The rest of this document sequences them and says what els
 
 ## Shipped
 
+**V2.48 — the colour was a guess, and the site only asked four questions
+(F110–F112).** Four reports on V2.47. Plan:
+[`V2.48-the-colour-was-a-guess`](plans/V2.48-the-colour-was-a-guess.md).
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F110** | **Flower colour, per species and provenanced** (schema v64). *"You have blue and yellow columbine as red."* All four *Aquilegia* carried one hex, and so did 32 other genera with three or more species: the column had always been a genus-level guess, correctly labelled `estimated` in a field nothing displayed. V2.47 did not create the error, it promoted it from a decorative tint to an answer. With no flora reachable, 36 species are corrected against evidence that travels with them (Latin epithet, accepted common name) and marked *checked*; the other 359 keep `estimated` and are now visibly *not verified*. Five audit trips are left alone **with their reasons** (red baneberry's `rubra` is the berry), because a colour word in a name usually is not about the flower. Guarded by `validate_flower_colour`: 0 errors, 21 warnings naming the remaining debt | `scripts/seed_flower_colour.py`, `flower_colour_source` at schema v64, `src/data_quality.py:validate_flower_colour` |
+| **F111** | **Colour in the plant panel.** The directory got the filter and the picker beside the map did not, which is backwards: choosing a plant because of how it will look is a placement decision. Vocabulary imported, never restated. The test drives the real widget, because a facet wired to a parameter nobody reads is the V2.37 dead-control bug | `src/plant_panel.py` row 5, `_colour_icon` in `src/plant_list_view.py` |
+| **F112** | **The website becomes searchable, and drawn.** 68 columns per species, four of them filterable. Now **23 facets** in six groups as one table driving the sidebar, the index rows and the landing pages together. Plus the ecoregion maps the author asked for: a site-wide clickable map and a per-species range map shaded by GBIF confidence band. The shipped polygons are hand-drawn boxes and every drawing says so (P9). Redesigned with real tokens and a dark theme, and **no em dashes reach a page**: normalised in `_esc`, which every string already passes through, and guarded | `src/site_facets.py`, `src/ecoregion_map.py`, `src/static_site_species.py`, `html/site/` |
+| — | **A bug the maps exposed.** `_seed_plant_ecoregions` mapped scientific name to id with a dict comprehension, and three names appear twice in the catalogue (*Monarda fistulosa*, *Geum triflorum*, *Valeriana sitchensis*). The later row won; the earlier silently lost its GBIF ranges and fell back to the unsourced column, so Wild Bergamot's page said "not from occurrence records" while its twin had six of them. 427 species with ranges becomes 430 | `src/db/plants.py:_seed_plant_ecoregions` |
+| — | **P12 again.** `medicinal` is a generic permaculture tag rather than sourced traditional knowledge, but a public indexed *medicinal native plants* landing page is the same act as publishing the traditional-use notes V2.47 withheld. Excluded from the website's role vocabulary, declared in `WITHHELD_ROLES`, tested, and stated on the About page | `src/site_facets.py` |
+
 **V2.47 — the colour axis, and the catalogue leaves the installer (F108–F109).**
 Prompted by a competitor read of [BloomsEye Studio](https://studio.bloomseye.com/)
 — a browser-based ornamental designer with a content site attached. Two of its

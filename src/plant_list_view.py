@@ -158,18 +158,34 @@ QListWidget::item:hover {
 """
 
 
-def _type_icon(plant_type: str) -> QIcon:
-    """Return a small coloured circle icon for the given plant type."""
-    color_hex = _TYPE_COLORS.get(plant_type, "#78909c")
+def _swatch_icon(color_hex: str, outline: bool = False) -> QIcon:
+    """A small filled circle. ``outline`` draws a hairline ring, which the pale
+    flower colours need or a white swatch is invisible on a light menu."""
     pix = QPixmap(14, 14)
     pix.fill(Qt.GlobalColor.transparent)
     p = QPainter(pix)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     p.setBrush(QBrush(QColor(color_hex)))
-    p.setPen(Qt.PenStyle.NoPen)
+    p.setPen(QColor(120, 120, 120) if outline else Qt.PenStyle.NoPen)
     p.drawEllipse(1, 1, 12, 12)
     p.end()
     return QIcon(pix)
+
+
+def _type_icon(plant_type: str) -> QIcon:
+    """Return a small coloured circle icon for the given plant type."""
+    return _swatch_icon(_TYPE_COLORS.get(plant_type, "#78909c"))
+
+
+def _colour_icon(colour_key: str) -> QIcon:
+    """The swatch beside a flower-colour choice (V2.48).
+
+    A colour filter whose menu is a list of words is a colour filter you have
+    to read instead of look at, which defeats the point of filtering by colour.
+    Outlined, because white and cream are otherwise invisible.
+    """
+    from src.flower_colour import COLOUR_SWATCHES          # noqa: PLC0415
+    return _swatch_icon(COLOUR_SWATCHES.get(colour_key, "#78909c"), outline=True)
 
 
 # ── Plant list item roles ─────────────────────────────────────────────────────

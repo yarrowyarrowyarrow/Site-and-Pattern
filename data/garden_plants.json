@@ -47,7 +47,8 @@
     "bark_color": "#6a5238",
     "fall_color": "#c8a83e",
     "branching": "decurrent",
-    "growth_form": ""
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Norland Apple",
@@ -97,7 +98,8 @@
     "bark_color": "#6a5238",
     "fall_color": "#c4a444",
     "branching": "decurrent",
-    "growth_form": ""
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Evans Cherry",
@@ -151,7 +153,8 @@
     "bark_color": "#7a5140",
     "fall_color": "#d4762e",
     "branching": "decurrent",
-    "growth_form": ""
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Nanking Cherry",
@@ -205,7 +208,8 @@
     "bark_color": "#8a5a3e",
     "fall_color": "#d98a3a",
     "branching": "multi_stem",
-    "growth_form": ""
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
@@ -256,6 +260,7 @@
     "bark_color": "",
     "fall_color": "",
     "branching": "",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_colour_source": "estimated"
   }
 ]

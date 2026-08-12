@@ -279,6 +279,12 @@ def species_entry(plant_id: int, *,
         "years_to_maturity": plant.get("years_to_maturity"),
         "bloom": _month_span(*_bloom_pair(plant)),
         "bloom_color": plant.get("flower_color") or "",
+        # The colour as a WORD, plus whether anyone checked it (V2.48). The hex
+        # drives the 3D bloom and is meaningless on a page, so this page used to
+        # print nothing at all for flower colour. Both halves are assembled here
+        # rather than in either surface, so the desktop page and the website say
+        # the same thing about the same plant.
+        **_bloom_colour(plant),
         "fruit": _month_span(*_fruit_pair(plant)),
         "fruit_color": plant.get("fruit_color") or "",
         "morphology": _morphology(plant),
@@ -426,6 +432,42 @@ def _provenance(plant: dict) -> list[str]:
         cite = (plant.get(cite_field) or "").strip()
         out.append(f"{what} detail: {source}" + (f" — {cite}" if cite else ""))
     return out
+
+
+#: How each provenance value reads to a person. ``estimated`` is spelled out
+#: because "the genus default" is the fact worth knowing: it is what put a red
+#: flower on the blue columbine (V2.48).
+_COLOUR_SOURCE_WORD = {
+    "name": "checked against its common name",
+    "epithet": "checked against its Latin name",
+    "estimated": "not verified, a genus-level estimate",
+}
+
+
+def _bloom_colour(plant: dict) -> dict:
+    """``{bloom_colour, bloom_colour_label, bloom_colour_note}``.
+
+    Empty strings where the catalogue records nothing, so a caller can print the
+    block or skip it without testing for a sentinel.
+    """
+    from src.flower_colour import COLOUR_LABELS, classify      # noqa: PLC0415
+    key = classify(plant)
+    if not key:
+        return {"bloom_colour": "", "bloom_colour_label": "",
+                "bloom_colour_note": ""}
+    if key == "straw":
+        # A grass is not an unverified purple. Its bucket comes from the family
+        # being wind-pollinated, which is a botanical fact rather than a guess
+        # somebody has yet to check, so the provenance wording does not apply.
+        return {"bloom_colour": key,
+                "bloom_colour_label": "Straw or green seed heads",
+                "bloom_colour_note": "wind-pollinated, so no showy flower"}
+    source = (plant.get("flower_colour_source") or "").strip()
+    return {
+        "bloom_colour": key,
+        "bloom_colour_label": COLOUR_LABELS.get(key, key),
+        "bloom_colour_note": _COLOUR_SOURCE_WORD.get(source, ""),
+    }
 
 
 def _ph_range(plant: dict) -> str:

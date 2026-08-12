@@ -245,9 +245,18 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > from `recorded` (in a table, uncited) from `derived` (computed), each derived edge carries a
 > coarse `confidence` band — never a probability — plus the genus it was expanded from, and
 > `data/sources_master.json` marks each bibliographic entry `verified`/`unverified` so the app
-> can say where a claim came from without implying anyone has checked it. **State: strong**
-> (language, and now provenance); **partial** (placement is still point-wise/deterministic once
-> generated — see roadmap F14, the establishment-likelihood band).
+> can say where a claim came from without implying anyone has checked it. **V2.48 added the
+> case study**: `flower_color` had been seeded per *genus* since v31, which was survivable while
+> it only tinted a floret and became a wrong answer the moment V2.47 made it filterable. The
+> lesson is the principle in one line, so it is worth stating plainly here: *an unmarked
+> estimate is safe exactly until something starts asking it questions.*
+> `flower_colour_source` (schema v64) now separates a colour checkable against the species' own
+> name or Latin epithet from the genus default, the species page and the website print
+> **not verified** on the 359 that are still a guess, and
+> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band
+> while captioning that the region outlines themselves are hand-drawn boxes rather than surveyed
+> boundaries. **State: strong** (language, and now provenance); **partial** (placement is still
+> point-wise/deterministic once generated — see roadmap F14, the establishment-likelihood band).
 
 ### 10. Design for relationships, not objects
 

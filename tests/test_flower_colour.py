@@ -51,12 +51,14 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     at the gaps between the 23 hexes actually in use, so the seed data is the
     only honest fixture."""
 
-    #: The distribution as measured when the filter was built. A change here is
-    #: either a data change worth noticing or a classifier regression; both
-    #: should stop the build rather than quietly re-file 79 grasses.
+    #: The distribution as measured after the V2.48 per-species correction. A
+    #: change here is either a data change worth noticing or a classifier
+    #: regression; both should stop the build rather than quietly re-file 81
+    #: grasses. (V2.47 shipped 79/77/75/61/43/26/16/8/3/2 off genus-level
+    #: seeding, which is what put a red flower on the blue columbine.)
     EXPECTED = {
-        "straw": 79, "yellow": 77, "white": 75, "purple": 61, "pink": 43,
-        "cream": 26, "blue": 16, "red": 8, "orange": 3, "brown": 2,
+        "yellow": 84, "straw": 81, "white": 73, "purple": 53, "pink": 43,
+        "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
     }
 
     def test_every_seeded_species_lands_where_it_did(self):
@@ -247,3 +249,70 @@ class TestTheZoneRangeSurvivesItsData(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTheColourReachesBothSurfaces(unittest.TestCase):
+    """V2.48. The desktop species page printed **nothing** for flower colour
+    for every one of the 395 coloured species: `flower_color` is a hex, and the
+    page's `_colour_word` helper drops hex codes because a triplet on a
+    reference page is noise. It stayed empty until there was a classifier to
+    turn the hex into a word.
+
+    Assembled in `plant_directory.species_entry` rather than in either surface,
+    so the desktop page and the website cannot say different things about the
+    same plant."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def _entry(self, common_name):
+        from src.db.plants import get_connection
+        from src.plant_directory import species_entry
+        conn = get_connection()
+        try:
+            row = conn.execute(
+                "SELECT id FROM plants WHERE common_name = ?",
+                (common_name,)).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row, common_name)
+        return species_entry(row[0])
+
+    def test_a_checked_colour_says_so(self):
+        entry = self._entry("Blue Columbine")
+        self.assertEqual(entry["bloom_colour"], "blue")
+        self.assertEqual(entry["bloom_colour_label"], "Blue")
+        self.assertIn("checked", entry["bloom_colour_note"])
+
+    def test_an_estimated_colour_says_that_instead(self):
+        entry = self._entry("Wild Bergamot")
+        self.assertEqual(entry["bloom_colour"], "purple")
+        self.assertIn("not verified", entry["bloom_colour_note"])
+
+    def test_a_grass_is_not_described_as_unverified(self):
+        """A sedge's straw bucket is a botanical fact about a wind-pollinated
+        family, not a guess somebody has yet to check."""
+        entry = self._entry("Awned Sedge")
+        self.assertEqual(entry["bloom_colour"], "straw")
+        self.assertIn("wind-pollinated", entry["bloom_colour_note"])
+        self.assertNotIn("not verified", entry["bloom_colour_note"])
+
+    def test_no_recorded_colour_yields_empty_strings(self):
+        """Empty rather than a sentinel, so a caller can print the block or
+        skip it without testing for one."""
+        entry = self._entry("Balsam Fir")
+        self.assertEqual(entry["bloom_colour"], "")
+        self.assertEqual(entry["bloom_colour_label"], "")
+        self.assertEqual(entry["bloom_colour_note"], "")
+
+    def test_every_coloured_species_now_gets_a_word(self):
+        """The bug was that this was zero."""
+        from src.db.plants import search_plants
+        from src.flower_colour import classify
+        coloured = [p for p in search_plants() if classify(p)]
+        self.assertGreater(len(coloured), 300)
+        from src.plant_directory import _bloom_colour
+        blank = [p["common_name"] for p in coloured
+                 if not _bloom_colour(p)["bloom_colour_label"]]
+        self.assertEqual(blank, [])

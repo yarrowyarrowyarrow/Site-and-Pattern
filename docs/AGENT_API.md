@@ -370,30 +370,44 @@ python -m src.cli build-site public/ --base-url https://plants.example.org
 
 | What it writes | Count against the shipped catalogue |
 |---|---|
-| `plants/<slug>/` | 439 species pages |
-| `wildlife/<slug>/` | 86 animals — *the plants documented to support each one* |
-| `plants/colour/<key>/` | 10 non-empty colour buckets (F108) |
-| `plants/blooming-in/<month>/` | 12 |
-| `plants/for/<role>/` | 8 ecological roles |
-| `plants/` | every species, filtered client-side over an embedded JSON index |
-| `sitemap.xml`, `robots.txt`, `assets/` | — |
+| `plants/<slug>/` | 439 species pages, each with a range map |
+| `wildlife/<slug>/` | 86 animals, *the plants documented to support each one* |
+| `plants/` | every species, filtered client-side across **23 axes** |
+| `plants/colour/<key>/` | colour buckets (F108) |
+| `plants/blooming-in/<month>/` | bloom months |
+| `plants/ecoregion/<region>/` | ecoregions, each with its extent drawn |
+| `plants/type/<form>/`, `plants/for/<role>/` | growth form, ecological role |
+| `map/` | the clickable ecoregion map |
+| `sitemap.xml`, `robots.txt`, `assets/` | stylesheet, filter script, JSON index |
 
-Two layers, both Qt-free: `src/static_site.py` builds the page model (every
-collaborator injectable, so the link graph can be asserted with no database)
-and `src/static_site_render.py` turns it into HTML. Species pages come from the
+**The searchable axes are one table**, `src/site_facets.py`, driving the filter
+sidebar, the values baked into each index row and the landing pages together.
+Adding a facet there adds all three. They are deliberately *not*
+`search_plants` parameters: the site filters in the browser, so an axis costs a
+derivation function rather than a thirty-first parameter on a query layer the
+desktop shares.
+
+Three layers, all Qt-free: `src/static_site.py` builds the page model (every
+collaborator injectable, so the link graph can be asserted with no database),
+`src/static_site_render.py` turns it into HTML, and `src/static_site_species.py`
+renders the one page with real internal structure. Species pages come from the
 *same* `plant_directory.species_entry` the desktop window calls, so the two
-surfaces cannot drift.
+surfaces cannot drift. Maps come from `src/ecoregion_map.py` as inline SVG.
 
 **Two behaviours worth knowing before you publish:**
 
 - **Photographs are copied from the local image cache when it has them** and
   fall back to the recorded URL when it does not; the build reports both counts.
   A photograph with no attribution is not published at all.
-- **The free-text `notes` column is withheld by default.** Around 43 rows
-  describe traditional medicinal and plant-use practice, and publishing that to
-  the open web is out of scope for this project without free, prior and informed
-  consent (Principle 12). `--include-notes` overrides it; the structured
+- **The free-text `notes` column is withheld by default**, and so is the
+  `medicinal` use tag (`site_facets.WITHHELD_ROLES`). Around 43 rows describe
+  traditional medicinal and plant-use practice, and publishing that to the open
+  web is out of scope for this project without free, prior and informed consent
+  (Principle 12). `--include-notes` overrides the notes; the structured
   horticultural columns publish either way.
+- **No em dash reaches a rendered page.** Normalised in `_esc`, guarded by
+  `tests/test_static_site.py`, because most of the prose comes out of the
+  database rather than out of this repository.
 
 ---
 

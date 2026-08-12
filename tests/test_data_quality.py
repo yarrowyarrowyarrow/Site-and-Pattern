@@ -302,5 +302,68 @@ class TestValidateFile(unittest.TestCase):
             tmp_path.unlink()
 
 
+class TestFlowerColourGate(unittest.TestCase):
+    """V2.48. The colour column was a genus-level guess and nothing checked it,
+    which is how both columbines came to be red. This gate is what stops that
+    class of error returning silently."""
+
+    def test_the_shipped_data_passes(self):
+        from src.data_quality import validate_flower_colour
+        errors, warnings = validate_flower_colour()
+        self.assertEqual(errors, [])
+        # The warnings are the honest remaining debt (genera where no species
+        # is checkable yet), not noise. If they hit zero, either somebody did
+        # the sourcing work or the check stopped working.
+        self.assertGreater(len(warnings), 0)
+
+    def test_a_name_that_contradicts_its_hex_is_an_error(self):
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        dq._load_json_list = lambda _p: [{
+            "scientific_name": "Testus blueus", "common_name": "Blue Testflower",
+            "plant_type": "wildflower", "flower_color": "#f2c11e",
+        }]
+        try:
+            errors, _ = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(len(errors), 1)
+        self.assertIn("its own name says 'blue'", errors[0])
+
+    def test_a_uniform_uncheckable_genus_is_a_warning(self):
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        dq._load_json_list = lambda _p: [
+            {"scientific_name": f"Testus sp{i}", "common_name": f"Test {i}",
+             "plant_type": "wildflower", "flower_color": "#f2c11e",
+             "flower_colour_source": "estimated"} for i in range(3)]
+        try:
+            errors, warnings = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(errors, [])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Testus", warnings[0])
+
+    def test_one_checkable_species_clears_its_genus(self):
+        """The warning means "nobody has verified any of these", so verifying
+        one is what should silence it."""
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        rows = [{"scientific_name": f"Testus sp{i}", "common_name": f"Test {i}",
+                 "plant_type": "wildflower", "flower_color": "#f2c11e",
+                 "flower_colour_source": "estimated"} for i in range(3)]
+        rows[0]["flower_colour_source"] = "epithet"
+        dq._load_json_list = lambda _p: rows
+        try:
+            _, warnings = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

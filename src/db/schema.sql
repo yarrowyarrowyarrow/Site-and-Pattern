@@ -63,6 +63,15 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Flower colour + form (schema v31, V1.90) — drives real-coloured flowers in
     -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
     flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
+    -- Where that hex came from (schema v64, V2.48). The colour was seeded at
+    -- GENUS level and nothing recorded that: 32 genera had 3+ species sharing
+    -- one hex, so both columbines were red. Once colour became filterable
+    -- (V2.47) the guess started answering questions.
+    --   name      | the accepted common name states it ("Yellow Columbine")
+    --   epithet   | the Latin states it (flavescens, candida, ochroleucus)
+    --   estimated | the genus default, i.e. not observed for this species
+    -- See scripts/seed_flower_colour.py, which is the provenance record.
+    flower_colour_source TEXT DEFAULT '',
     flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
     fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
     -- Fruit SHAPE (v49, V2.29) — the companion to fruit_color. Every fleshy
