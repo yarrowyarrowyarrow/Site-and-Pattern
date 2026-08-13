@@ -246,7 +246,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # flying taxon with no attributes table, which is why the viewer's wingbeats
 # were hardcoded constants. Child of `fauna`, so it is wiped and repopulated
 # with the other two attribute tables on every reseed.
-_SCHEMA_VERSION = 64
+_SCHEMA_VERSION = 65
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

@@ -258,15 +258,22 @@ _ROLES = {
     "windbreak": "Windbreak", "hedge": "Hedge", "groundcover": "Groundcover",
     "erosion_control": "Erosion control",
     "aquatic": "Aquatic", "riparian_filter": "Riparian filter",
-    "ornamental": "Ornamental",
+    "ornamental": "Ornamental", "medicinal": "Medicinal",
 }
 
-#: Use tags the desktop exposes and the **website does not** (P12). ``medicinal``
-#: is a generic permaculture tag rather than sourced traditional knowledge, but a
-#: public, indexed "medicinal native plants" landing page is the same act as
-#: publishing the traditional-use notes, which V2.47 decided against. Filtered
-#: out of the role vocabulary rather than silently absent: see the About page.
-WITHHELD_ROLES = ("medicinal",)
+#: Use tags the desktop exposes and the website does not.
+#:
+#: **Empty since V2.50, on the author's decision.** V2.48 withheld ``medicinal``
+#: on the reasoning that a public, indexed "medicinal native plants" page is the
+#: same act as publishing the traditional-use notes. The author has since ruled
+#: that the tag itself is a generic horticultural category rather than sourced
+#: traditional knowledge, and can be published.
+#:
+#: The mechanism stays, because the distinction it draws is still the right one
+#: and the next tag may not be so easy. **The free-text ``notes`` column remains
+#: withheld** either way: a use *category* is not the same artefact as a
+#: paragraph describing how a plant was prepared and for what (P12).
+WITHHELD_ROLES: tuple = ()
 
 
 def _ecoregion_options() -> tuple:

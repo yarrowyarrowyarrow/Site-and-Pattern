@@ -15,7 +15,7 @@ What these hold down:
     returns nothing looks exactly like "no plant has that";
   * **absence is not a value.** A plant that records nothing for an axis is left
     out of it rather than defaulted into one (P9);
-  * **the withheld role stays withheld** (P12).
+  * **the withholding mechanism still works** (P12).
 """
 
 import os
@@ -276,31 +276,47 @@ class TestOnlyNativesArePublished(unittest.TestCase):
         self.assertEqual(kept, {"Wild Bergamot"})
 
 
-class TestTheWithheldRole(unittest.TestCase):
-    """P12. The desktop exposes a ``medicinal`` use tag; a public, indexed
-    landing page listing medicinal native plants is the same act as publishing
-    the traditional-use notes, which V2.47 decided against."""
+class TestTheWithholdingMechanismStillWorks(unittest.TestCase):
+    """P12, and a decision reversed.
+
+    V2.48 kept the ``medicinal`` use tag off the public site, reasoning that a
+    public, indexed "medicinal native plants" page is the same act as publishing
+    the traditional-use notes. **The author has since ruled otherwise**: the tag
+    is a generic horticultural category rather than sourced traditional
+    knowledge, and it is published from V2.50.
+
+    The mechanism stays and is tested against a temporary value, because the
+    distinction it draws is still the right one, the next tag may not be so
+    easy, and an empty tuple proves nothing about whether the filter works.
+    What has *not* changed is the free-text ``notes`` column, which remains
+    withheld: a use category is not the same artefact as a paragraph describing
+    how a plant was prepared and for what.
+    """
 
     @classmethod
     def setUpClass(cls):
         _use_our_db()
         cls.rows = search_plants()
 
-    def test_medicinal_is_tagged_in_the_data(self):
-        """The premise of the test below. If this fails the exclusion has
-        become meaningless and the test is passing for the wrong reason."""
-        tagged = [r for r in self.rows
-                  if "medicinal" in (r.get("permaculture_uses") or "")]
+    def test_medicinal_is_published_now(self):
+        facet = FACETS_BY_KEY["role"]
+        self.assertIn("medicinal", dict(facet.options))
+        tagged = [r for r in self.rows if "medicinal" in facet.values(r)]
         self.assertGreater(len(tagged), 0)
 
-    def test_but_never_reaches_the_website_role_facet(self):
-        facet = FACETS_BY_KEY["role"]
-        self.assertNotIn("medicinal", dict(facet.options))
-        for row in self.rows:
-            self.assertNotIn("medicinal", facet.values(row))
+    def test_nothing_is_withheld_today_and_that_is_deliberate(self):
+        self.assertEqual(WITHHELD_ROLES, ())
 
-    def test_the_exclusion_is_declared_rather_than_incidental(self):
-        self.assertIn("medicinal", WITHHELD_ROLES)
+    def test_the_mechanism_still_filters_when_asked_to(self):
+        import src.site_facets as sf
+        real = sf.WITHHELD_ROLES
+        sf.WITHHELD_ROLES = ("pollinator",)
+        try:
+            values = FACETS_BY_KEY["role"].values(
+                {"permaculture_uses": "pollinator,bird_food"})
+        finally:
+            sf.WITHHELD_ROLES = real
+        self.assertEqual(values, ["bird_food"])
 
 
 if __name__ == "__main__":

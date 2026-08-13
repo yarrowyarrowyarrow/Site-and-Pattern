@@ -66,13 +66,16 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     at the gaps between the 23 hexes actually in use, so the seed data is the
     only honest fixture."""
 
+    #: V2.50: white 73 -> 72 and pink 43 -> 42, because the duplicate
+    #: *Geum triflorum* and *Valeriana sitchensis* rows were merged away.
+    #:
     #: The distribution as measured after the V2.48 per-species correction. A
     #: change here is either a data change worth noticing or a classifier
     #: regression; both should stop the build rather than quietly re-file 81
     #: grasses. (V2.47 shipped 79/77/75/61/43/26/16/8/3/2 off genus-level
     #: seeding, which is what put a red flower on the blue columbine.)
     EXPECTED = {
-        "yellow": 84, "straw": 81, "white": 73, "purple": 53, "pink": 43,
+        "yellow": 84, "straw": 81, "white": 72, "purple": 53, "pink": 42,
         "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
     }
 

@@ -20,7 +20,8 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.47`,
-`_SCHEMA_VERSION = 64` (in `src/db/plants.py`) — v64 adds
+`_SCHEMA_VERSION = 65` (in `src/db/plants.py`) — v65 is a reseed only, to
+carry the merged duplicate species rows. v64 adds
 `plants.flower_colour_source`, which records whether a species' flower colour
 was checked against its own common name or Latin epithet or is the genus-level
 default it was seeded as. Additive and empty in the migration: the version bump
