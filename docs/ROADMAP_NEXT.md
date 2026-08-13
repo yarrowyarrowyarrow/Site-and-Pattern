@@ -101,6 +101,20 @@ items on the roadmap. The rest of this document sequences them and says what els
 
 ## Shipped
 
+**V2.49 — a map of somewhere, and nine filter corrections.** Feedback on the
+V2.48 site. Plan: [`V2.49-a-map-of-somewhere`](plans/V2.49-a-map-of-somewhere.md).
+
+| What landed | Where |
+|-------------|-------|
+| **The ecoregions redrawn.** *"The map is atrocious."* Ten five-vertex placeholder rectangles became six shapes that follow real geography: the continental divide up the AB/BC border, the parkland as a crescent through Calgary, Edmonton and North Battleford, the grassland triangle split dry from moist, the boreal filling the north. Plus **provincial borders**, province codes and city dots, which is most of what makes a small map legible. Still hand-authored, still captioned as such | `scripts/draw_ecoregions.py`, `data/provinces_prairie.geojson`, `src/ecoregion_map.py` |
+| **The authoring script self-checks before it writes.** These polygons are not decoration: `lookup_ecoregions` reads them to decide what a real property gets recommended. 15 pinned city lookups, 3 outside-everything points, 2 exactly-one points, and a coverage sweep over Alberta and Saskatchewan. The sweep earned its keep on the first run by finding **a band east of Calgary belonging to no region at all**, which is what tracing adjacent regions separately does. Regions are now cut from shared boundary lines | `scripts/draw_ecoregions.py:check` |
+| **Ticking a second safety box no longer widens the result.** Reported: pet-safe 388, adding human-safe **404**. Values within a facet were ORed, which is right for colour and wrong for safety. A facet now declares `combine`; safety and role are `all`. Roles were quietly wrong the same way and had been disagreeing with `search_plants`, which has ANDed use tags since V1.85 | `Facet.combine`, `html/site/browse.js` |
+| **81 grasses stopped having showy flowers.** Same root as the colour bug: a plume is a seed head, and a wind-pollinated plant does not advertise | `site_facets._flowers` |
+| **Photograph is the first facet and has a "no photograph yet" value**, so the 111 species still missing one are a searchable worklist rather than an invisible gap | `site_facets._photo` |
+| **A native is listed under a native nursery** whatever other tier it carries: `availability_class` names the *easiest* place to find a species, and reading that as "not at the specialist grower" was false | `site_facets._availability` |
+| **Non-natives dropped, 439 to 434.** Matched against the garden file rather than the `native_to_alberta` flag, because the flag gets Stiff Goldenrod (a real SK/MB native) and the duplicate Bee Balm row backwards | `static_site.is_publishable` |
+| **Less scrolling, and the count stays put.** Facets tile two-up; the search box, the live count and the active-filter chips are a sticky head that the facet list scrolls under. Leaf shape and flower shape removed | `html/site/site.css` |
+
 **V2.48 — the colour was a guess, and the site only asked four questions
 (F110–F112).** Four reports on V2.47. Plan:
 [`V2.48-the-colour-was-a-guess`](plans/V2.48-the-colour-was-a-guess.md).

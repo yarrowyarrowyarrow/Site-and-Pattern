@@ -271,17 +271,22 @@ class TestASiteCanBeInTwo(unittest.TestCase):
     near a boundary belongs to both, and the second one is exactly the species
     list that was going missing."""
 
+    #: Nordegg / Rocky Mountain House, where the foothills genuinely run into
+    #: the parkland. V2.49 moved this point: it used to be (53.0, -114.8),
+    #: which was an overlap of the *rectangles* rather than of anything on the
+    #: ground, and the redrawn polygons put that coordinate squarely in the
+    #: parkland alone. The behaviour under test is unchanged; only the place
+    #: where two regions really do meet has moved to where it really is.
+    TRANSITION = (52.0, -115.3)
+
     def test_the_foothills_overlap_reports_both(self):
-        # The shipped aspen_parkland and subalpine_montane rectangles overlap
-        # in lng[-115, -114.5] x lat[52, 54] — the Rocky Mountain House /
-        # Nordegg transition, where parkland really does run into montane.
-        keys = _eco.lookup_ecoregions(53.0, -114.8)
+        keys = _eco.lookup_ecoregions(*self.TRANSITION)
+        self.assertIn("fescue_foothills", keys)
         self.assertIn("aspen_parkland", keys)
-        self.assertIn("subalpine_montane", keys)
 
     def test_the_singular_shim_still_answers_one(self):
-        self.assertEqual(_eco.lookup_ecoregion(53.0, -114.8),
-                         _eco.lookup_ecoregions(53.0, -114.8)[0])
+        self.assertEqual(_eco.lookup_ecoregion(*self.TRANSITION),
+                         _eco.lookup_ecoregions(*self.TRANSITION)[0])
 
     def test_an_ordinary_site_reports_exactly_one(self):
         self.assertEqual(_eco.lookup_ecoregions(53.55, -113.49),
@@ -299,12 +304,12 @@ class TestASiteCanBeInTwo(unittest.TestCase):
 
     def test_the_detection_payload_carries_every_match(self):
         from src.property_data import fetch_ecoregion
-        data = fetch_ecoregion(53.0, -114.8)
-        self.assertEqual(data["keys"], _eco.lookup_ecoregions(53.0, -114.8))
+        data = fetch_ecoregion(*self.TRANSITION)
+        self.assertEqual(data["keys"], _eco.lookup_ecoregions(*self.TRANSITION))
         self.assertEqual(data["key"], data["keys"][0])
         # The readout names both, so the user can see why two are checked.
+        self.assertIn("Fescue", data["label"])
         self.assertIn("Aspen Parkland", data["label"])
-        self.assertIn("Subalpine", data["label"])
 
     def test_no_pin_no_payload(self):
         from src.property_data import fetch_ecoregion
@@ -398,11 +403,27 @@ class TestTheEcoregionMap(unittest.TestCase):
         drawn = set(region_geometry())
         self.assertEqual(drawn, set(geographic_keys()))
 
-    def test_duplicate_entries_merge_under_one_key(self):
-        """Aspen Parkland ships as two boxes, one Alberta and one Saskatchewan.
-        A caller asking to draw aspen parkland means both."""
-        from src.ecoregion_map import region_geometry
-        self.assertGreaterEqual(len(region_geometry()["aspen_parkland"]), 2)
+    def test_several_polygons_under_one_key_merge(self):
+        """A region may be drawn as more than one polygon, and a caller asking
+        to draw it means all of them.
+
+        Asserted against a synthetic file rather than the shipped one: the
+        V2.48 version of this test read the shipped parkland's two rectangles,
+        and V2.49 redrew it as a single arc, so the test was measuring the
+        drawing rather than the merge."""
+        import src.ecoregion_map as em
+        box = lambda x: {"type": "Feature",
+                         "properties": {"key": "aspen_parkland"},
+                         "geometry": {"type": "Polygon",
+                                      "coordinates": [[[x, 0], [x + 1, 0],
+                                                       [x + 1, 1], [x, 1],
+                                                       [x, 0]]]}}
+        real = em._load
+        em._load = lambda: [box(0), box(5)]
+        try:
+            self.assertEqual(len(em.region_geometry()["aspen_parkland"]), 2)
+        finally:
+            em._load = real
 
     def test_a_highlighted_region_is_drawn_differently_from_an_absent_one(self):
         from src.ecoregion_map import map_svg

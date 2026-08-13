@@ -82,6 +82,48 @@ def slugify(text: str) -> str:
     return text or "unnamed"
 
 
+def _garden_rows() -> set:
+    """Common names from ``data/garden_plants.json``.
+
+    The design app carries a handful of cultivated fruit trees on purpose:
+    people have an apple in the yard and it casts shade whether or not it is
+    native. The public catalogue is a native-plant reference and they do not
+    belong in it.
+    """
+    import json                                              # noqa: PLC0415
+    from src.resources import resource_path                  # noqa: PLC0415
+    try:
+        with open(resource_path("data", "garden_plants.json"),
+                  encoding="utf-8") as fh:
+            return {(row.get("common_name") or "").strip()
+                    for row in (json.load(fh) or []) if row.get("common_name")}
+    except Exception:                                        # noqa: BLE001
+        return set()
+
+
+def is_publishable(plant: dict) -> bool:
+    """Does this row belong on the public native-plant catalogue?
+
+    Reported: *"I don't want any non-natives, i see the garden plants were
+    included, cherries and apples, etc. so remove those."*
+
+    Matched **by name against the garden file** rather than by the
+    ``native_to_alberta`` flag, and the difference matters twice. Stiff
+    Goldenrod is flagged non-Alberta and is a genuine Saskatchewan and Manitoba
+    prairie native that belongs here; the Bee Balm row is flagged native and is
+    a duplicate of Wild Bergamot that arrived from the garden file. A flag test
+    gets both of those backwards. Asking "did this come from the garden file"
+    asks the question that was actually meant.
+    """
+    if (plant.get("common_name") or "").strip() in _garden_rows():
+        return False
+    # Belt and braces for anything else non-native that arrives later: a plant
+    # native nowhere in the prairies is not a prairie native-plant reference's
+    # business, whichever file it came from.
+    return bool(plant.get("native_to_alberta")
+                or (plant.get("native_provinces") or "").strip())
+
+
 def hub_slug(facet_key: str, value: str, label: str = "") -> str:
     """The URL segment for one value of a hub facet.
 
@@ -148,7 +190,8 @@ def build_model(*, search_fn: Optional[Callable] = None,
             plants_for_fauna as plants_for_fauna_fn)
     say = progress or (lambda _m: None)
 
-    plants = sorted(search_fn(), key=lambda p: (p.get("common_name") or "").lower())
+    plants = [p for p in search_fn() if is_publishable(p)]
+    plants.sort(key=lambda p: (p.get("common_name") or "").lower())
     slugs = _unique_slugs(plants)
     say(f"{len(plants)} species")
 

@@ -181,14 +181,31 @@ p { margin: .7rem 0; }
 .mapfig.inline { max-width: 24rem; }
 .wide-map { padding: 1.2rem; }
 .ecomap { display: block; width: 100%; height: auto; }
+.ecomap-prov { fill: var(--card); stroke: none; }
+.ecomap-region { stroke: #8b8878; stroke-width: .5; stroke-opacity: .55; }
+.ecomap-border {
+  fill: none; stroke: #6d6a5e; stroke-width: 1.1; stroke-opacity: .85;
+  stroke-linejoin: round;
+}
+.ecomap-city { fill: #2b2d24; stroke: #fff; stroke-width: .8; }
+.ecomap-place {
+  font: 500 8.5px/1 ui-sans-serif, system-ui, sans-serif;
+  fill: #2b2d24; pointer-events: none; paint-order: stroke;
+  stroke: rgba(255,255,255,.75); stroke-width: 2.2px;
+}
+.ecomap-prov-label {
+  font: 700 13px/1 ui-sans-serif, system-ui, sans-serif;
+  fill: #6d6a5e; letter-spacing: .14em; pointer-events: none; opacity: .75;
+}
 .ecomap-label {
-  font: 600 10px/1 ui-sans-serif, system-ui, sans-serif;
-  fill: var(--muted); letter-spacing: .04em; pointer-events: none;
+  font: 600 9.5px/1 ui-sans-serif, system-ui, sans-serif;
+  fill: #4a4a42; letter-spacing: .03em; pointer-events: none;
+  paint-order: stroke; stroke: rgba(255,255,255,.7); stroke-width: 2.4px;
 }
-.ecomap-label.on { fill: var(--accent-fg); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ecomap-label.on { fill: #10130c; }
-}
+.ecomap-label.on { fill: #fff; stroke: rgba(0,0,0,.35); }
+/* The map keeps its own light palette in both themes: it is a printed figure,
+   and a dark-mode map of a light-mode place reads as a different diagram. */
+.mapfig { background: #f6f5f0; }
 .ecowrap { display: grid; gap: 1.2rem;
            grid-template-columns: minmax(14rem, 20rem) 1fr; align-items: start; }
 
@@ -295,9 +312,18 @@ ul.cols { columns: 2; column-gap: 2rem; }
   grid-template-columns: minmax(15rem, 17rem) 1fr; align-items: start;
 }
 .filters {
-  position: sticky; top: 4.4rem; max-height: calc(100vh - 6rem);
-  overflow-y: auto; padding-right: .4rem;
+  position: sticky; top: 4.4rem; max-height: calc(100vh - 5.6rem);
+  display: flex; flex-direction: column; padding-right: .3rem;
 }
+/* The count and the active filters stay put while the facet list scrolls
+   under them. Reported: "the number of plants the current selection includes
+   should be visible the entire time; currently it disappears if I scroll down
+   the characteristic list." */
+.fhead {
+  position: sticky; top: 0; z-index: 2; background: var(--bg);
+  padding-bottom: .4rem; border-bottom: 1px solid var(--line);
+}
+.fscroll { overflow-y: auto; padding-top: .5rem; }
 .fbar { display: flex; gap: .4rem; }
 .filters input[type=search] {
   flex: 1; padding: .55rem .7rem; border: 1px solid var(--line-firm);
@@ -313,19 +339,29 @@ ul.cols { columns: 2; column-gap: 2rem; }
   background: var(--card); color: var(--fg);
 }
 .filters button:hover { border-color: var(--accent); }
-.filters .count { margin: .6rem 0 .2rem; font-variant-numeric: tabular-nums; }
+.filters .count {
+  margin: .5rem 0 .3rem; font-variant-numeric: tabular-nums;
+  font-size: 1.05rem; font-weight: 600; color: var(--fg);
+}
 .active { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .5rem; }
 .active button {
   font-size: .78rem; padding: .16rem .55rem; border-radius: 2rem;
   background: var(--accent-soft); border-color: var(--accent);
 }
-.fgroup { margin-top: 1.2rem; }
-.fgroup h3 { margin: 0 0 .35rem; }
-.facet { border-bottom: 1px solid var(--line); }
+.fgroup { margin-top: .9rem; }
+.fgroup:first-child { margin-top: 0; }
+.fgroup h3 { margin: 0 0 .2rem; font-size: .72rem; }
+/* Two columns of collapsed facets, so the whole list fits a laptop screen
+   without scrolling. An open facet spans both, because its options need the
+   width. */
+.facets { display: grid; grid-template-columns: 1fr 1fr; gap: 0 .7rem; }
+.facet { border-bottom: 1px solid var(--line); min-width: 0; }
+.facet[open] { grid-column: 1 / -1; }
 .facet > summary {
-  cursor: pointer; list-style: none; padding: .42rem .1rem;
-  font-size: .92rem; display: flex; justify-content: space-between;
-  align-items: center; gap: .5rem;
+  cursor: pointer; list-style: none; padding: .3rem .1rem;
+  font-size: .86rem; display: flex; justify-content: space-between;
+  align-items: center; gap: .4rem; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
 }
 .facet > summary::-webkit-details-marker { display: none; }
 .facet > summary::after {
@@ -363,9 +399,14 @@ img { max-width: 100%; }
 
 @media (max-width: 62rem) {
   .searchlayout, .split, .ecowrap { grid-template-columns: 1fr; }
-  .filters { position: static; max-height: none; overflow: visible; }
+  .filters { position: static; max-height: none; }
+  .fscroll { overflow: visible; }
+  .facets { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
   .facet .opts { max-height: none; }
   ul.cols { columns: 1; }
+}
+@media (max-width: 40rem) {
+  .facets { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 34rem) {
   body { font-size: 16px; }

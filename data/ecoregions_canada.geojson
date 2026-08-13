@@ -1,378 +1,567 @@
 {
-  "type": "FeatureCollection",
-  "name": "Prairie ecoregions (V1.36 starter set; Saskatchewan added V2.14)",
-  "comment": "Rectangular approximations (V1.36) of the major prairie ecoregions. Each feature's key/name/where/sort ARE the app's geographic ecoregion vocabulary (V2.38) \u2014 src/ecoregion.py reads them, so adding a region means adding a polygon here and nothing else. Regenerate from the CEC Level III shapefile with scripts/prepare_ecoregions.py.",
-  "crs": "WGS84",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "boreal_mixedwood",
-        "label": "Boreal Mixedwood (north AB)",
-        "name": "Boreal Mixedwood / Plain",
-        "where": "north AB / SK",
-        "sort": 4
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -120.0,
-              54.0
-            ],
-            [
-              -110.0,
-              54.0
-            ],
-            [
-              -110.0,
-              60.0
-            ],
-            [
-              -120.0,
-              60.0
-            ],
-            [
-              -120.0,
-              54.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "aspen_parkland",
-        "label": "Aspen Parkland (central AB)",
-        "name": "Aspen Parkland",
-        "where": "central AB / SK",
-        "sort": 0
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -115.0,
-              52.0
-            ],
-            [
-              -110.0,
-              52.0
-            ],
-            [
-              -110.0,
-              54.0
-            ],
-            [
-              -115.0,
-              54.0
-            ],
-            [
-              -115.0,
-              52.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "mixedgrass_prairie",
-        "label": "Mixedgrass Prairie (south AB)",
-        "name": "Mixedgrass Prairie",
-        "where": "south AB / SK",
-        "sort": 1
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -113.5,
-              49.0
-            ],
-            [
-              -110.0,
-              49.0
-            ],
-            [
-              -110.0,
-              52.0
-            ],
-            [
-              -113.5,
-              52.0
-            ],
-            [
-              -113.5,
-              49.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "fescue_foothills",
-        "label": "Fescue / Foothills (SW AB)",
-        "name": "Fescue / Foothills",
-        "where": "SW Alberta",
-        "sort": 3
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -114.5,
-              49.0
-            ],
-            [
-              -113.5,
-              49.0
-            ],
-            [
-              -113.5,
-              52.0
-            ],
-            [
-              -114.5,
-              52.0
-            ],
-            [
-              -114.5,
-              49.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "subalpine_montane",
-        "label": "Subalpine / Montane (mountains)",
-        "name": "Subalpine / Montane",
-        "where": "the mountains",
-        "sort": 5
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -120.0,
-              49.0
-            ],
-            [
-              -114.5,
-              49.0
-            ],
-            [
-              -114.5,
-              54.0
-            ],
-            [
-              -120.0,
-              54.0
-            ],
-            [
-              -120.0,
-              49.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "mixedgrass_prairie",
-        "label": "Mixed Grassland (dry SW Saskatchewan)",
-        "name": "Mixedgrass Prairie",
-        "where": "south AB / SK",
-        "sort": 1
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -110.0,
-              49.0
-            ],
-            [
-              -106.0,
-              49.0
-            ],
-            [
-              -106.0,
-              51.0
-            ],
-            [
-              -110.0,
-              51.0
-            ],
-            [
-              -110.0,
-              49.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "moist_mixedgrass",
-        "label": "Moist Mixed Grassland (Regina / Lumsden belt)",
-        "name": "Moist Mixed Grassland",
-        "where": "Regina / Saskatoon",
-        "sort": 2
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -106.0,
-              49.0
-            ],
-            [
-              -101.4,
-              49.0
-            ],
-            [
-              -101.4,
-              51.0
-            ],
-            [
-              -106.0,
-              51.0
-            ],
-            [
-              -106.0,
-              49.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "moist_mixedgrass",
-        "label": "Moist Mixed Grassland (Saskatoon plains)",
-        "name": "Moist Mixed Grassland",
-        "where": "Regina / Saskatoon",
-        "sort": 2
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -110.0,
-              51.0
-            ],
-            [
-              -101.4,
-              51.0
-            ],
-            [
-              -101.4,
-              52.3
-            ],
-            [
-              -110.0,
-              52.3
-            ],
-            [
-              -110.0,
-              51.0
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "aspen_parkland",
-        "label": "Aspen Parkland (Battleford / central Saskatchewan)",
-        "name": "Aspen Parkland",
-        "where": "central AB / SK",
-        "sort": 0
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -110.0,
-              52.3
-            ],
-            [
-              -101.4,
-              52.3
-            ],
-            [
-              -101.4,
-              54.0
-            ],
-            [
-              -110.0,
-              54.0
-            ],
-            [
-              -110.0,
-              52.3
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "key": "boreal_mixedwood",
-        "label": "Boreal Plain (northern Saskatchewan)",
-        "name": "Boreal Mixedwood / Plain",
-        "where": "north AB / SK",
-        "sort": 4
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              -110.0,
-              54.0
-            ],
-            [
-              -101.4,
-              54.0
-            ],
-            [
-              -101.4,
-              60.0
-            ],
-            [
-              -110.0,
-              60.0
-            ],
-            [
-              -110.0,
-              54.0
-            ]
-          ]
-        ]
-      }
-    }
-  ]
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "subalpine_montane",
+    "label": "Subalpine / Montane (mountains)",
+    "name": "Subalpine / Montane",
+    "where": "the mountains",
+    "sort": 5
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -114.07,
+       49.0
+      ],
+      [
+       -114.55,
+       49.5
+      ],
+      [
+       -115.0,
+       50.0
+      ],
+      [
+       -115.45,
+       50.5
+      ],
+      [
+       -115.95,
+       51.0
+      ],
+      [
+       -116.45,
+       51.5
+      ],
+      [
+       -117.0,
+       52.0
+      ],
+      [
+       -117.65,
+       52.5
+      ],
+      [
+       -118.5,
+       53.0
+      ],
+      [
+       -119.2,
+       53.6
+      ],
+      [
+       -120.0,
+       54.0
+      ],
+      [
+       -118.95,
+       54.0
+      ],
+      [
+       -118.1,
+       53.6
+      ],
+      [
+       -117.4,
+       53.0
+      ],
+      [
+       -116.6,
+       52.5
+      ],
+      [
+       -116.0,
+       52.0
+      ],
+      [
+       -115.5,
+       51.5
+      ],
+      [
+       -115.05,
+       51.0
+      ],
+      [
+       -114.6,
+       50.5
+      ],
+      [
+       -114.2,
+       50.0
+      ],
+      [
+       -113.85,
+       49.5
+      ],
+      [
+       -113.52,
+       49.0
+      ],
+      [
+       -114.07,
+       49.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "fescue_foothills",
+    "label": "Fescue / Foothills (SW AB)",
+    "name": "Fescue / Foothills",
+    "where": "SW Alberta",
+    "sort": 3
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -113.52,
+       49.0
+      ],
+      [
+       -113.85,
+       49.5
+      ],
+      [
+       -114.2,
+       50.0
+      ],
+      [
+       -114.6,
+       50.5
+      ],
+      [
+       -115.05,
+       51.0
+      ],
+      [
+       -115.5,
+       51.5
+      ],
+      [
+       -116.0,
+       52.0
+      ],
+      [
+       -116.6,
+       52.5
+      ],
+      [
+       -117.4,
+       53.0
+      ],
+      [
+       -118.1,
+       53.6
+      ],
+      [
+       -118.95,
+       54.0
+      ],
+      [
+       -118.2,
+       54.0
+      ],
+      [
+       -117.3,
+       53.6
+      ],
+      [
+       -116.5,
+       53.0
+      ],
+      [
+       -115.55,
+       52.5
+      ],
+      [
+       -114.85,
+       52.0
+      ],
+      [
+       -114.3,
+       51.5
+      ],
+      [
+       -113.85,
+       51.0
+      ],
+      [
+       -113.45,
+       50.5
+      ],
+      [
+       -113.15,
+       50.0
+      ],
+      [
+       -112.9,
+       49.5
+      ],
+      [
+       -112.67,
+       49.0
+      ],
+      [
+       -113.52,
+       49.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "aspen_parkland",
+    "label": "Aspen Parkland (central AB / SK)",
+    "name": "Aspen Parkland",
+    "where": "central AB / SK",
+    "sort": 0
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -115.4,
+       53.35
+      ],
+      [
+       -114.2,
+       53.9
+      ],
+      [
+       -113.0,
+       54.3
+      ],
+      [
+       -111.5,
+       54.4
+      ],
+      [
+       -110.0,
+       54.3
+      ],
+      [
+       -108.7,
+       54.0
+      ],
+      [
+       -107.0,
+       53.55
+      ],
+      [
+       -105.5,
+       53.05
+      ],
+      [
+       -104.0,
+       52.55
+      ],
+      [
+       -102.5,
+       52.05
+      ],
+      [
+       -101.4,
+       51.75
+      ],
+      [
+       -101.4,
+       50.92
+      ],
+      [
+       -102.5,
+       51.27
+      ],
+      [
+       -104.0,
+       51.82
+      ],
+      [
+       -105.5,
+       52.27
+      ],
+      [
+       -107.0,
+       52.37
+      ],
+      [
+       -108.7,
+       51.77
+      ],
+      [
+       -110.0,
+       51.32
+      ],
+      [
+       -111.5,
+       51.22
+      ],
+      [
+       -113.0,
+       51.07
+      ],
+      [
+       -114.2,
+       50.87
+      ],
+      [
+       -115.4,
+       50.82
+      ],
+      [
+       -115.4,
+       53.35
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "moist_mixedgrass",
+    "label": "Moist Mixed Grassland (Regina / Saskatoon)",
+    "name": "Moist Mixed Grassland",
+    "where": "Regina / Saskatoon",
+    "sort": 2
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -106.4,
+       49.0
+      ],
+      [
+       -106.6,
+       50.3
+      ],
+      [
+       -107.1,
+       50.9
+      ],
+      [
+       -108.2,
+       51.7
+      ],
+      [
+       -108.7,
+       52.4
+      ],
+      [
+       -108.7,
+       52.13
+      ],
+      [
+       -107.0,
+       52.73
+      ],
+      [
+       -105.5,
+       52.63
+      ],
+      [
+       -104.0,
+       52.18
+      ],
+      [
+       -102.5,
+       51.63
+      ],
+      [
+       -101.4,
+       51.28
+      ],
+      [
+       -101.4,
+       49.0
+      ],
+      [
+       -106.4,
+       49.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "mixedgrass_prairie",
+    "label": "Mixedgrass Prairie (south AB / SK)",
+    "name": "Mixedgrass Prairie",
+    "where": "south AB / SK",
+    "sort": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -114.6,
+       49.0
+      ],
+      [
+       -115.4,
+       51.18
+      ],
+      [
+       -114.2,
+       51.23
+      ],
+      [
+       -113.0,
+       51.43
+      ],
+      [
+       -111.5,
+       51.58
+      ],
+      [
+       -110.0,
+       51.68
+      ],
+      [
+       -108.7,
+       52.13
+      ],
+      [
+       -107.0,
+       52.73
+      ],
+      [
+       -108.7,
+       52.4
+      ],
+      [
+       -108.2,
+       51.7
+      ],
+      [
+       -107.1,
+       50.9
+      ],
+      [
+       -106.6,
+       50.3
+      ],
+      [
+       -106.4,
+       49.0
+      ],
+      [
+       -114.6,
+       49.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "key": "boreal_mixedwood",
+    "label": "Boreal Mixedwood (north AB / SK)",
+    "name": "Boreal Mixedwood / Plain",
+    "where": "north AB / SK",
+    "sort": 4
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.0,
+       60.0
+      ],
+      [
+       -101.4,
+       60.0
+      ],
+      [
+       -101.4,
+       51.57
+      ],
+      [
+       -102.5,
+       51.87
+      ],
+      [
+       -104.0,
+       52.37
+      ],
+      [
+       -105.5,
+       52.87
+      ],
+      [
+       -107.0,
+       53.37
+      ],
+      [
+       -108.7,
+       53.82
+      ],
+      [
+       -110.0,
+       54.12
+      ],
+      [
+       -111.5,
+       54.22
+      ],
+      [
+       -113.0,
+       54.12
+      ],
+      [
+       -114.2,
+       53.72
+      ],
+      [
+       -115.4,
+       53.17
+      ],
+      [
+       -115.6,
+       52.2
+      ],
+      [
+       -116.6,
+       52.5
+      ],
+      [
+       -117.6,
+       52.95
+      ],
+      [
+       -118.8,
+       53.45
+      ],
+      [
+       -120.0,
+       53.9
+      ],
+      [
+       -120.0,
+       60.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
 }

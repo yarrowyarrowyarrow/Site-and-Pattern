@@ -89,13 +89,28 @@ def _maturity(plant: dict) -> list:
 
 
 def _flowers(plant: dict) -> list:
-    """Showy flower or not. 43 species record ``flower_form = 'none'`` and no
-    colour, which is a real botanical answer rather than a missing one: a sedge
-    flowers, it just does not advertise."""
+    """Showy flower or not.
+
+    Reported: *"showy flower seems incorrect as it includes sedges and other
+    plants I'm assuming don't have showy flowers."* It did, and for the same
+    reason the colour filter nearly filed the grasses under yellow: 81 grasses,
+    sedges and rushes carry a hex and a ``flower_form`` of ``plume``, which the
+    first version read as "has a flower, therefore showy". A wind-pollinated
+    plant has no reason to advertise and does not; the plume is a seed head.
+
+    So the wind-pollinated families are **never** showy, whatever their hex
+    says, which is exactly the rule ``src.flower_colour`` already applies. A
+    recorded ``flower_form`` of ``none`` is likewise a real botanical answer
+    rather than a missing one, and a species with neither field recorded
+    appears under neither value.
+    """
+    from src.flower_colour import WIND_POLLINATED_TYPES        # noqa: PLC0415
     form = (plant.get("flower_form") or "").strip().lower()
     colour = (plant.get("flower_color") or "").strip()
     if not form and not colour:
         return []
+    if (plant.get("plant_type") or "") in WIND_POLLINATED_TYPES:
+        return ["not-showy"]
     return ["showy"] if (colour and form != "none") else ["not-showy"]
 
 
@@ -131,12 +146,48 @@ def _ecoregions(plant: dict) -> list:
 
 
 def _photo(plant: dict) -> list:
-    return (["photo"] if (plant.get("image_url") or "").strip()
-            and (plant.get("image_attribution") or "").strip() else [])
+    """Has a credited photograph, or does not.
+
+    Both values, on request: *"it should also have an option for no photo, so
+    those can be filtered and I can easily see the ones that still need that."*
+    This is the one facet whose *absence* is the useful query, because it is a
+    worklist rather than a plant character.
+    """
+    has = ((plant.get("image_url") or "").strip()
+           and (plant.get("image_attribution") or "").strip())
+    return ["photo"] if has else ["no-photo"]
 
 
 def _edible(plant: dict) -> list:
     return ["edible"] if (plant.get("edible_parts") or "").strip() else []
+
+
+def _availability(plant: dict) -> list:
+    """Where you can buy it, corrected for how native plants are actually sold.
+
+    Reported: *"where to buy is incorrectly generous of the big box store and
+    greenhouse as they will likely have less natives. Any natives should also
+    be listed in native nursery as even if they are sold at the bigger stores
+    this does not mean the local nursery would not have it."*
+
+    Both halves are right and they are one fix. ``availability_class`` is a
+    single value naming the *easiest* place to find a species, which is a
+    reasonable thing to record and the wrong thing to filter on: it says
+    "Saskatoon berry is at the big-box store" and thereby says "Saskatoon berry
+    is not at the native nursery", which is false. A specialist grower stocks
+    the natives whether or not Canadian Tire does.
+
+    So a native plant now carries ``native_specialist`` in addition to
+    whatever tier it was assigned. The filter widens rather than moves: asking
+    for big-box still returns the big-box list.
+    """
+    tier = (plant.get("availability_class") or "").strip()
+    out = [tier] if tier else []
+    native = (plant.get("native_to_alberta")
+              or (plant.get("native_provinces") or "").strip())
+    if native and "native_specialist" not in out:
+        out.append("native_specialist")
+    return out
 
 
 def _single(column: str) -> Callable:
@@ -157,7 +208,8 @@ class Facet:
     """
 
     def __init__(self, key, label, options, derive, *, group="Plant",
-                 hub=False, hub_dir="", swatches=None, blurb="", note=""):
+                 hub=False, hub_dir="", swatches=None, blurb="", note="",
+                 combine="any"):
         self.key = key
         self.label = label
         self.options = options            # ((value, label), ...)
@@ -168,6 +220,17 @@ class Facet:
         self.swatches = swatches or {}
         self.blurb = blurb
         self.note = note
+        #: How several ticked values in THIS facet combine.
+        #:
+        #: ``any`` (the default) is what a colour or a month means: yellow OR
+        #: blue. ``all`` is what safety means, and getting that wrong was a
+        #: reported bug: ticking "no known pet toxicity" gave 388 plants and
+        #: adding "no known human toxicity" gave **404**, because the union of
+        #: two safety claims is larger than either. Somebody ticking both wants
+        #: a plant that is safe around the dog *and* the kids, so the count has
+        #: to fall. Roles are ``all`` for the same reason and to match
+        #: ``search_plants``, which has ANDed use tags since V1.85.
+        self.combine = combine
 
     def values(self, plant: dict) -> list:
         try:
@@ -212,6 +275,13 @@ def _ecoregion_options() -> tuple:
 
 
 FACETS: tuple = (
+    # First, because it is the one filter used as a worklist rather than as a
+    # plant character, and the author asked for it near the top.
+    Facet("photo", "Photograph",
+          (("photo", "Has a photograph"), ("no-photo", "No photograph yet")),
+          _photo, group="Looks",
+          note="323 of 434 species have an openly-licensed photograph we can "
+               "credit. The rest are the gap."),
     Facet("type", "Plant type", tuple(_TYPE.items()), _single("plant_type"),
           group="Plant", hub=True, hub_dir="plants/type",
           blurb="The growth form, which is the first thing that decides where "
@@ -277,16 +347,17 @@ FACETS: tuple = (
            ("decade", "6 to 15 years"), ("generation", "16 years or more")),
           _maturity, group="Plant"),
     Facet("role", "Ecological role", tuple(_ROLES.items()), _uses,
-          group="Ecology", hub=True, hub_dir="plants/for",
+          group="Ecology", hub=True, hub_dir="plants/for", combine="all",
           blurb="What the plant does, from the tags the catalogue records "
                 "against it."),
     Facet("safety", "Safety",
           (("pet-safe", "No known pet toxicity"),
            ("child-safe", "No known human toxicity"),
            ("thornless", "No thorns")),
-          _safety, group="Practical",
-          note="A denylist: a species nobody has assessed passes. Silence is "
-               "not a clearance."),
+          _safety, group="Practical", combine="all",
+          note="Ticking two narrows to plants that satisfy both. A denylist: "
+               "a species nobody has assessed passes, so silence is not a "
+               "clearance."),
     Facet("behaviour", "Spread",
           (("well-behaved", "Stays put"), ("spreads", "Spreads vigorously")),
           _behaviour, group="Practical",
@@ -296,7 +367,11 @@ FACETS: tuple = (
           (("big_box", "Big-box store"), ("garden_centre", "Garden centre"),
            ("native_specialist", "Native nursery"),
            ("seed_or_plug", "Seed or plug only"), ("rare", "Rare")),
-          _single("availability_class"), group="Practical"),
+          _availability, group="Practical",
+          note="Every plant here is a prairie native, so every one of them is "
+               "listed under a native nursery: a specialist grower stocks it "
+               "whether or not the big-box store does. The other tiers are "
+               "the useful ones, and they say where else you might find it."),
     Facet("province", "Native to",
           (("AB", "Alberta"), ("SK", "Saskatchewan"), ("MB", "Manitoba")),
           lambda p: _tokens(p, "native_provinces"), group="Site"),
@@ -304,38 +379,6 @@ FACETS: tuple = (
           group="Practical",
           note="Identification is yours to confirm. This is a catalogue, not "
                "a foraging guide."),
-    Facet("photo", "Photograph", (("photo", "Has a photograph"),), _photo,
-          group="Practical",
-          note="323 of 439 species have an openly-licensed photograph we can "
-               "credit."),
-    Facet("flowerform", "Flower shape",
-          _from_db("flower_form", {
-              "daisy": "Daisy", "spike": "Spike", "umbel": "Umbel",
-              "cluster": "Cluster", "bell": "Bell", "plume": "Plume",
-              "pea": "Pea", "rays": "Rays", "trumpet": "Trumpet",
-              "lily": "Lily", "cattail": "Cattail", "star": "Star",
-              "cross": "Cross", "globe": "Globe", "whorl": "Whorl",
-              "none": "No showy flower",
-          }),
-          _single("flower_form"), group="Looks",
-          note="Also a pollinator-access statement: which bees can physically "
-               "work the flower depends on this."),
-    Facet("leaf", "Leaf shape",
-          _from_db("leaf_shape", {
-              "linear": "Linear", "lanceolate": "Lanceolate", "ovate": "Ovate",
-              "elliptic": "Elliptic", "oblong": "Oblong", "cordate": "Cordate",
-              "obovate": "Obovate", "orbicular": "Orbicular",
-              "spatulate": "Spatulate", "needle": "Needle", "scale": "Scale",
-              "palmate": "Palmate", "pinnate": "Pinnate", "lobed": "Lobed",
-              "reniform": "Reniform", "sagittate": "Sagittate",
-              "deltoid": "Deltoid", "oblanceolate": "Oblanceolate",
-              "acicular": "Acicular", "awl": "Awl-shaped",
-              "trifoliate": "Trifoliate", "pinnatifid": "Pinnatifid",
-              "compound_pinnate": "Pinnately compound",
-              "compound_palmate": "Palmately compound",
-              "bipinnate": "Twice pinnate",
-          }),
-          _single("leaf_shape"), group="Looks"),
 )
 
 #: Sidebar panel order.

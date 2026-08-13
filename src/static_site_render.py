@@ -346,11 +346,13 @@ def render_browse(model: dict, photo_src: dict) -> str:
             note = (f'<p class="fnote">{_esc(facet.note)}</p>'
                     if facet.note else "")
             blocks.append(
-                f'<details class="facet"><summary>{_esc(facet.label)}'
+                f'<details class="facet" data-facet="{_esc(facet.key)}" '
+                f'data-combine="{_esc(facet.combine)}">'
+                f'<summary>{_esc(facet.label)}'
                 f'<span class="on" hidden></span></summary>'
                 f'{note}<div class="opts">{opts}</div></details>')
         panels.append(f'<section class="fgroup"><h3>{_esc(group)}</h3>'
-                      f'{"".join(blocks)}</section>')
+                      f'<div class="facets">{"".join(blocks)}</div></section>')
 
     body = f"""
 {_crumb([("", "Plants")], 1)}
@@ -364,14 +366,16 @@ def render_browse(model: dict, photo_src: dict) -> str:
 <div class="searchlayout">
   <form class="filters" id="filters" onsubmit="return false"
         aria-label="Filters">
-    <div class="fbar">
-      <input type="search" id="q" placeholder="Name or botanical name"
-             autocomplete="off" aria-label="Search by name">
-      <button type="button" id="clear" hidden>Clear all</button>
+    <div class="fhead">
+      <div class="fbar">
+        <input type="search" id="q" placeholder="Name or botanical name"
+               autocomplete="off" aria-label="Search by name">
+        <button type="button" id="clear" hidden>Clear</button>
+      </div>
+      <p class="count" id="count" role="status">{len(briefs)} plants</p>
+      <div id="active" class="active"></div>
     </div>
-    <p class="count" id="count" role="status">{len(briefs)} plants</p>
-    <div id="active" class="active"></div>
-    {"".join(panels)}
+    <div class="fscroll">{"".join(panels)}</div>
   </form>
 
   <div class="results">

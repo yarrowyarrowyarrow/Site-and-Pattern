@@ -5,9 +5,16 @@
  * file never enumerates them; it reads whatever data-f attributes the page
  * rendered. Adding a facet in Python therefore needs no change here.
  *
- * Within a facet, checked values are OR (yellow OR blue). Across facets they
- * are AND (yellow AND blooms in June). That is what people mean by a filter
- * panel, and it is the same logic search_plants applies on the desktop.
+ * Across facets, checked values are AND (yellow AND blooms in June). Within a
+ * facet the default is OR (yellow OR blue), but a facet may declare
+ * data-combine="all" and then its own values AND too.
+ *
+ * That second mode is not a nicety. Ticking "no known pet toxicity" gave 388
+ * plants and adding "no known human toxicity" gave 404, because the union of
+ * two safety claims is bigger than either one. Somebody ticking both wants a
+ * plant that is safe around the dog AND the kids, so the count has to fall.
+ * Ecological roles work the same way, and match what search_plants has done
+ * with use tags on the desktop since V1.85.
  *
  * A plant with no value for a facet matches nothing in it. That is deliberate:
  * "we do not know when this blooms" is not "it blooms in June".
@@ -38,6 +45,13 @@
       form.querySelectorAll('input[type=checkbox]:checked'));
   }
 
+  // data-combine lives on the <details> wrapper, so the mode travels with the
+  // facet the renderer drew rather than being restated in a list here.
+  function combineMode(key) {
+    var el = form.querySelector('[data-facet="' + key + '"]');
+    return (el && el.getAttribute('data-combine')) || 'any';
+  }
+
   function selection() {
     var out = {};
     checkedBoxes().forEach(function (box) {
@@ -53,11 +67,18 @@
       if (!Object.prototype.hasOwnProperty.call(sel, key)) { continue; }
       var have = row[key] || [];
       var wanted = sel[key];
-      var hit = false;
-      for (var i = 0; i < wanted.length; i++) {
-        if (have.indexOf(wanted[i]) >= 0) { hit = true; break; }
+      var i;
+      if (combineMode(key) === 'all') {
+        for (i = 0; i < wanted.length; i++) {
+          if (have.indexOf(wanted[i]) < 0) { return false; }
+        }
+      } else {
+        var hit = false;
+        for (i = 0; i < wanted.length; i++) {
+          if (have.indexOf(wanted[i]) >= 0) { hit = true; break; }
+        }
+        if (!hit) { return false; }
       }
-      if (!hit) { return false; }
     }
     return true;
   }

@@ -36,6 +36,7 @@ from src.db.plants import init_db, search_plants            # noqa: E402
 from src.site_facets import (                               # noqa: E402
     FACETS, FACETS_BY_KEY, GROUPS, HUB_FACETS, WITHHELD_ROLES, index_row,
 )
+from src.static_site import is_publishable                  # noqa: E402
 
 
 class TestTheFacetsAgainstTheRealCatalogue(unittest.TestCase):
@@ -112,8 +113,8 @@ class TestTheFacetsAgainstTheRealCatalogue(unittest.TestCase):
         toxic = {"toxicity_pets": "high", "toxicity_humans": "", "has_thorns": 0}
         self.assertIn("pet-safe", FACETS_BY_KEY["safety"].values(unassessed))
         self.assertNotIn("pet-safe", FACETS_BY_KEY["safety"].values(toxic))
-        self.assertIn("Silence is not a clearance",
-                      FACETS_BY_KEY["safety"].note)
+        self.assertIn("silence is not a clearance",
+                      FACETS_BY_KEY["safety"].note.lower())
 
     def test_the_ecoregion_facet_is_searchable(self):
         """The headline ask. Every geographic region must select plants."""
@@ -134,6 +135,125 @@ class TestTheFacetsAgainstTheRealCatalogue(unittest.TestCase):
         for facet in HUB_FACETS:
             self.assertTrue(facet.hub_dir, facet.key)
             self.assertNotIn(" ", facet.hub_dir)
+
+
+class TestTheReportedFilterBugs(unittest.TestCase):
+    """Four things the author found by using the filters (V2.49)."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        cls.rows = [r for r in search_plants() if is_publishable(r)]
+
+    def _count(self, key, values):
+        facet = FACETS_BY_KEY[key]
+        want = set(values)
+        n = 0
+        for row in self.rows:
+            have = set(facet.values(row))
+            hit = (want <= have) if facet.combine == "all" else bool(want & have)
+            n += 1 if hit else 0
+        return n
+
+    def test_adding_a_safety_filter_never_widens_the_result(self):
+        """The report: pet-safe gave 388 and adding human-safe gave **404**.
+        Two safety claims were being unioned, and somebody ticking both wants a
+        plant that is safe around the dog *and* the kids."""
+        self.assertEqual(FACETS_BY_KEY["safety"].combine, "all")
+        pets = self._count("safety", ["pet-safe"])
+        both = self._count("safety", ["pet-safe", "child-safe"])
+        all_three = self._count("safety", ["pet-safe", "child-safe", "thornless"])
+        self.assertLessEqual(both, pets)
+        self.assertLess(all_three, both)
+
+    def test_roles_narrow_too_and_match_the_desktop(self):
+        """``search_plants`` has ANDed use tags since V1.85; the website
+        ORed them, so the two surfaces disagreed about the same question."""
+        self.assertEqual(FACETS_BY_KEY["role"].combine, "all")
+        one = self._count("role", ["keystone_species"])
+        two = self._count("role", ["keystone_species", "host_plant"])
+        self.assertLess(two, one)
+
+    def test_a_wind_pollinated_plant_is_never_showy(self):
+        """The report: *"showy flower seems incorrect as it includes sedges."*
+        81 graminoids carry a hex and a plume, which the first cut read as a
+        showy flower."""
+        facet = FACETS_BY_KEY["flowers"]
+        wrong = [r["common_name"] for r in self.rows
+                 if r.get("plant_type") in ("grass", "sedge", "rush")
+                 and "showy" in facet.values(r)]
+        self.assertEqual(wrong, [])
+
+    def test_the_photograph_gap_is_searchable(self):
+        """Requested as a worklist: which species still need a photograph."""
+        facet = FACETS_BY_KEY["photo"]
+        self.assertEqual({v for v, _ in facet.options}, {"photo", "no-photo"})
+        have = self._count("photo", ["photo"])
+        missing = self._count("photo", ["no-photo"])
+        self.assertGreater(missing, 0)
+        self.assertEqual(have + missing, len(self.rows))
+
+    def test_the_photograph_filter_comes_first(self):
+        self.assertEqual(FACETS[0].key, "photo")
+
+    def test_a_native_is_always_available_from_a_native_nursery(self):
+        """*"Any natives should also be listed in native nursery as even if
+        they are sold at the bigger stores this does not mean the local nursery
+        would not have it."*"""
+        facet = FACETS_BY_KEY["availability"]
+        missing = [r["common_name"] for r in self.rows
+                   if "native_specialist" not in facet.values(r)]
+        self.assertEqual(missing, [])
+
+    def test_but_the_other_tiers_still_discriminate(self):
+        """Widening native_specialist must not flatten the axis: asking for
+        big-box still has to return the big-box list."""
+        big = self._count("availability", ["big_box"])
+        self.assertGreater(big, 0)
+        self.assertLess(big, len(self.rows))
+
+    def test_the_shape_facets_are_gone(self):
+        """Removed on request. Asserted so a later tidy-up does not restore
+        them from an old branch without a reason."""
+        keys = {f.key for f in FACETS}
+        self.assertNotIn("leaf", keys)
+        self.assertNotIn("flowerform", keys)
+
+
+class TestOnlyNativesArePublished(unittest.TestCase):
+    """*"I don't want any non-natives, i see the garden plants were included,
+    cherries and apples, etc. so remove those."*"""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        cls.rows = search_plants()
+
+    def test_the_garden_cultivars_are_dropped(self):
+        dropped = {r["common_name"] for r in self.rows if not is_publishable(r)}
+        self.assertEqual(dropped, {"Goodland Apple", "Norland Apple",
+                                   "Evans Cherry", "Nanking Cherry",
+                                   "Bee Balm (Wild Bergamot)"})
+
+    def test_a_non_alberta_prairie_native_is_kept(self):
+        """Stiff Goldenrod is flagged non-Alberta and is a genuine
+        Saskatchewan and Manitoba native. Filtering on the flag instead of on
+        the garden file would have thrown it out."""
+        rows = [r for r in self.rows
+                if r.get("scientific_name") == "Oligoneuron rigidum"]
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertFalse(row.get("native_to_alberta"))
+            self.assertEqual(row.get("native_provinces"), "SK,MB")
+            self.assertTrue(is_publishable(row))
+
+    def test_the_duplicate_bergamot_goes_but_the_native_one_stays(self):
+        """Both rows are Monarda fistulosa and both are flagged native; only
+        one came from the garden file."""
+        kept = {r["common_name"] for r in self.rows
+                if r.get("scientific_name") == "Monarda fistulosa"
+                and is_publishable(r)}
+        self.assertEqual(kept, {"Wild Bergamot"})
 
 
 class TestTheWithheldRole(unittest.TestCase):
