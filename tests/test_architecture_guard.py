@@ -116,7 +116,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # locate themselves on. Raised rather than split because the seam on
         # offer (loading versus drawing) would make two half-files that are
         # only ever used together.
-        (_SRC / "ecoregion_map.py", 340),              # 279 now
+        # V2.51: colour per region + the reference mode took this to 401.
+        # The split the ceiling asked for was the real one — the file draws
+        # geometry, `ecoregion_palette.py` says what a colour asserts — and
+        # the species page now imports the palette without the projector.
+        (_SRC / "ecoregion_map.py", 340),              # 315 now
+        (_SRC / "ecoregion_palette.py", 200),          # 108 now
         (_SRC / "static_site.py", 460),                # 378 now
         (_SRC / "static_site_render.py", 800),         # 744 now
         (_SRC / "static_site_species.py", 340),        # 256 now

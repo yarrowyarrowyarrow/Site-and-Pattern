@@ -23,7 +23,8 @@ from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
 
 def render_species(entry: dict, model: dict, photo_src: dict,
                    include_notes: bool = False) -> str:
-    from src.ecoregion_map import CAVEAT, map_svg               # noqa: PLC0415
+    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
+                                   map_svg, region_fill)
     from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES, classify
     depth = 2
     row = entry.get("row") or {}
@@ -66,15 +67,24 @@ def render_species(entry: dict, model: dict, photo_src: dict,
             if slug:
                 name = (f'<a href="{_up(depth)}plants/ecoregion/'
                         f'{_esc(slug)}/">{name}</a>')
+            # The swatch is what connects this line to the shape on the map,
+            # now that each region has a colour of its own. It carries the
+            # confidence band too, so it matches the fill exactly rather than
+            # being an approximation of it.
+            keyed = r.get("key") in regions
+            fill, _ = region_fill(r.get("key") or "", r.get("confidence") or "")
+            dot = (f'<span class="ecokey-sw" style="background:{fill}"></span>'
+                   if keyed else "")
+            cls = ' class="haskey"' if keyed else ""
             rows.append(
-                f'<li>{name}'
+                f'<li{cls}>{dot}{name}'
                 f'<span class="src"> {_esc(r.get("where") or "")}: '
                 f'{evidence}{conf}</span></li>')
         eco_block = f"""
 <section>
   <h2>Where it has been recorded</h2>
   <div class="ecowrap">
-    <figure class="mapfig">{map_svg(regions, width=420, height=270,
+    <figure class="mapfig">{map_svg(regions, width=420, height=frame_height(420),
                                     title=f'Range of {entry.get("name")}')}</figure>
     <div>
       <ul class="ranges">{"".join(rows)}</ul>

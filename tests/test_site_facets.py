@@ -216,21 +216,45 @@ class TestTheReportedFilterBugs(unittest.TestCase):
     def test_the_photograph_filter_comes_first(self):
         self.assertEqual(FACETS[0].key, "photo")
 
-    def test_a_native_is_always_available_from_a_native_nursery(self):
-        """*"Any natives should also be listed in native nursery as even if
-        they are sold at the bigger stores this does not mean the local nursery
-        would not have it."*"""
+    def test_a_common_plant_is_also_at_the_native_nursery(self):
+        """*"The native nursery should have the 'common plants' of the big box
+        store and greenhouse but not the plugs/seed only."*
+
+        The implication runs one way only: big-box implies greenhouse implies
+        specialist, and nothing implies big-box.
+        """
         facet = FACETS_BY_KEY["availability"]
-        missing = [r["common_name"] for r in self.rows
-                   if "native_specialist" not in facet.values(r)]
-        self.assertEqual(missing, [])
+        for row in self.rows:
+            tier = (row.get("availability_class") or "").strip()
+            values = facet.values(row)
+            if tier in ("big_box", "garden_centre"):
+                self.assertIn("native_specialist", values, row["common_name"])
+            if tier == "big_box":
+                self.assertIn("garden_centre", values, row["common_name"])
+            if tier != "big_box":
+                self.assertNotIn("big_box", values, row["common_name"])
+
+    def test_seed_only_and_rare_stay_off_the_nursery_shelf(self):
+        """The narrowing half of the same report. A reader ticking "native
+        nursery" wants to leave with a plant in a pot; a cattail plug and a
+        lady's slipper are neither of them that."""
+        facet = FACETS_BY_KEY["availability"]
+        wrong = [r["common_name"] for r in self.rows
+                 if (r.get("availability_class") or "") in ("seed_or_plug",
+                                                            "rare")
+                 and "native_specialist" in facet.values(r)]
+        self.assertEqual(wrong, [])
 
     def test_but_the_other_tiers_still_discriminate(self):
         """Widening native_specialist must not flatten the axis: asking for
-        big-box still has to return the big-box list."""
+        big-box still has to return the big-box list, and asking for the
+        nursery must not return every row in the catalogue."""
         big = self._count("availability", ["big_box"])
         self.assertGreater(big, 0)
         self.assertLess(big, len(self.rows))
+        nursery = self._count("availability", ["native_specialist"])
+        self.assertGreater(nursery, big)
+        self.assertLess(nursery, len(self.rows))
 
     def test_the_shape_facets_are_gone(self):
         """Removed on request. Asserted so a later tidy-up does not restore

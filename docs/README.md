@@ -35,6 +35,7 @@ is the map. Roughly in the order a newcomer should meet them.
 | [`AGENT_API.md`](AGENT_API.md) | The headless scripting facade, the CLI, and the MCP tools. A frozen contract. |
 | [`PROJECT_FILE_FORMAT.md`](PROJECT_FILE_FORMAT.md) | The `.perma.geojson` project file. |
 | [`BUILD.md`](BUILD.md) | Building the installers, and the release/updater chain. |
+| [`PUBLISHING_THE_SITE.md`](PUBLISHING_THE_SITE.md) | Getting the static plant directory onto the public web, free. |
 
 ## The 3D viewer
 

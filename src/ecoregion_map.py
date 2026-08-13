@@ -9,15 +9,21 @@ recorded in, with an occurrence count and a confidence band per region
 list of region names, which asks the reader to hold a map of Alberta and
 Saskatchewan in their head. A range is a *shape*; drawing it costs one SVG.
 
-**These polygons are rectangles, and the map says so.** ``ecoregions_canada.
-geojson`` holds ten hand-drawn five-vertex boxes, documented as such in
-``docs/plans/V2.38-ecoregion-runbook.md``: the real CEC Level III polygons are a
-download that has never run in a session with open egress. A box drawn without a
-caption is a claim about a boundary; the caption is what keeps it an honest
-diagram (P9). Replace the file and every map here sharpens with no code change.
+**These outlines are hand-authored, and the map says so.** They were ten
+five-vertex rectangles until V2.49 traced them against real geography
+(``scripts/draw_ecoregions.py``), and they are still a diagram: the real CEC
+Level III polygons are a download that has never run in a session with open
+egress. An outline drawn without a caption is a claim about a boundary; the
+caption (``CAVEAT``) is what keeps it honest (P9). Replace the file and every
+map here sharpens with no code change.
+
+**What a colour asserts lives next door**, in :mod:`src.ecoregion_palette`, and
+is re-exported here so a caller keeps one import for "the ecoregions, drawn".
+The short version: hue is region identity, lightness is confidence (V2.51).
 
 Output is a self-contained ``<svg>`` string: no script, no external reference,
-no dependency. Callers embed it directly.
+no dependency. Callers embed it directly. ``legend_html`` is the colour key,
+which is markup rather than SVG so it can wrap on a phone.
 """
 
 from __future__ import annotations
@@ -27,21 +33,31 @@ import json
 import math
 from typing import Optional
 
+from src.ecoregion_palette import (ABSENT_FILL, DRAW_ORDER, REGION_COLOUR,
+                                   legend_html, region_fill)
 from src.resources import resource_path
+
+#: Re-exported so callers keep one import for "the ecoregions, drawn".
+__all__ = ["CAVEAT", "REGION_COLOUR", "frame_height", "legend_html",
+           "map_svg", "region_fill", "region_geometry"]
 
 #: Lon/lat window the map draws. Slightly wider than the polygons' own bounds so
 #: nothing sits flush against the frame.
 _BOUNDS = (-121.0, 48.4, -100.4, 60.6)          # west, south, east, north
 
-#: Fills for a region the species is recorded in, by confidence band. A region
-#: derived from three records must not look like one derived from three hundred.
-_CONFIDENCE_FILL = {
-    "high":   ("#4a6b3a", 0.92),
-    "medium": ("#6f8f52", 0.72),
-    "low":    ("#9db97e", 0.52),
-    "":       ("#9db97e", 0.45),
-}
-_ABSENT_FILL = ("#d9d6cc", 0.55)
+
+def frame_height(width: int) -> int:
+    """The height that makes ``width`` fill the frame with no letterbox.
+
+    Alberta and Saskatchewan together are very nearly square once longitude is
+    compressed by cos(latitude), and the first coloured draft was asked for at
+    760x470. The projector letterboxes rather than distort, so a third of that
+    box was blank on each side and the map came out half the size of its own
+    figure. Callers ask for a width and take the height they get.
+    """
+    west, south, east, north = _BOUNDS
+    k = math.cos(math.radians((south + north) / 2.0))
+    return round(width * (north - south) / ((east - west) * k))
 
 
 def _load() -> list[dict]:
@@ -86,7 +102,7 @@ CITIES = (
 #: centroid: Alberta's centroid lands in the middle of the boreal fill, where
 #: the label fights the shading.
 PROVINCE_LABELS = (("AB", 57.6, -115.0), ("SK", 57.6, -106.0),
-                   ("BC", 55.0, -121.3), ("MB", 55.0, -100.0))
+                   ("BC", 55.0, -120.5), ("MB", 55.0, -100.9))
 
 
 def _rings(geometry: dict) -> list:
@@ -141,12 +157,18 @@ def map_svg(highlight: Optional[dict] = None, *,
             width: int = 460, height: int = 300,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
-            link_for=None) -> str:
+            link_for=None, reference: bool = False) -> str:
     """The ecoregion map as inline SVG.
 
     ``highlight`` is ``{ecoregion key: confidence band}``; regions absent from
     it are drawn in the "not recorded here" grey rather than omitted, because
     the shape of where a plant *is not* is half of what a range map says.
+
+    ``reference=True`` draws every region in its own colour at full strength
+    and claims no confidence at all. That is the mode for a navigation or key
+    map, which is about *where the regions are*, not about a species. It exists
+    because those callers used to pass a fabricated ``"medium"`` for every
+    region and got a tooltip reading "medium confidence" about nothing.
 
     ``cities`` defaults to on above 420px wide. Below that the dots collide and
     a map you cannot read is worse than one without labels.
@@ -162,7 +184,9 @@ def map_svg(highlight: Optional[dict] = None, *,
     if cities is None:
         cities = width >= 420
     project = _projector(width, height)
-    order = sorted(regions.items(), key=lambda kv: kv[0] in highlight)
+    order = sorted(regions.items(),
+                   key=lambda kv: (DRAW_ORDER.get(kv[0], 50),) if reference
+                   else (kv[0] in highlight,))
 
     from src.ecoregion import ecoregion_display              # noqa: PLC0415
 
@@ -182,14 +206,16 @@ def map_svg(highlight: Optional[dict] = None, *,
             parts.append(f'<polygon class="ecomap-prov" points="{points}"/>')
     for key, rings in order:
         band = highlight.get(key)
-        present = key in highlight
-        fill, opacity = (_CONFIDENCE_FILL.get(band or "", _CONFIDENCE_FILL[""])
-                         if present else _ABSENT_FILL)
+        present = reference or key in highlight
         name, where = ecoregion_display(key)
         tip = name + (f" ({where})" if where else "")
-        if present:
+        if reference:
+            fill, opacity = region_fill(key, "high")
+        elif present:
+            fill, opacity = region_fill(key, band or "")
             tip += f", {band} confidence" if band else ", recorded"
         else:
+            fill, opacity = ABSENT_FILL
             tip += ", not recorded"
         for ring in rings:
             points = " ".join(
@@ -228,11 +254,14 @@ def map_svg(highlight: Optional[dict] = None, *,
             if not rings:
                 continue
             ring = max(rings, key=len)
-            cx, cy = project(*_label_point(key, ring))
+            lon, lat, angle = _label_point(key, ring)
+            cx, cy = project(lon, lat)
             name, _ = ecoregion_display(key)
-            strong = key in highlight
+            strong = reference or key in highlight
+            spin = (f' transform="rotate({angle} {cx:.1f} {cy:.1f})"'
+                    if angle else "")
             parts.append(
-                f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" '
+                f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle"{spin} '
                 f'class="ecomap-label{" on" if strong else ""}">'
                 f'{html.escape(_short(name))}</text>')
 
@@ -240,16 +269,24 @@ def map_svg(highlight: Optional[dict] = None, *,
     return "".join(parts)
 
 
-#: Where each region's name sits. A centroid is the obvious choice and the
-#: wrong one for these shapes: the parkland is a crescent whose centroid falls
-#: outside it, and the montane strip's centroid lands in British Columbia.
+#: Where each region's name sits, and at what angle. A centroid is the obvious
+#: choice and the wrong one for these shapes: the parkland is a crescent whose
+#: centroid falls outside it, and the montane strip's centroid lands in British
+#: Columbia.
+#:
+#: The two western strips are about 25px wide on the reference map and the word
+#: "Foothills" is twice that, so they are set ALONG the strip instead of across
+#: it — 55 degrees, which is the bearing of the continental divide through this
+#: window. Every point here is asserted to fall inside its own polygon by
+#: ``tests/test_ecoregion.py``, because the first version of this table had
+#: "Montane" printed in British Columbia.
 _LABEL_POINT = {
-    "boreal_mixedwood": (-110.5, 57.0),
-    "aspen_parkland": (-111.5, 53.3),
-    "moist_mixedgrass": (-104.0, 50.4),
-    "mixedgrass_prairie": (-111.0, 50.1),
-    "fescue_foothills": (-114.6, 52.3),
-    "subalpine_montane": (-117.3, 53.4),
+    "boreal_mixedwood": (-110.5, 57.2, 0),
+    "aspen_parkland": (-111.5, 53.3, 0),
+    "moist_mixedgrass": (-104.6, 50.6, 0),
+    "mixedgrass_prairie": (-111.0, 50.1, 0),
+    "fescue_foothills": (-116.08, 52.40, 55),
+    "subalpine_montane": (-115.69, 51.20, 55),
 }
 
 
@@ -258,7 +295,7 @@ def _label_point(key: str, ring: list) -> tuple:
         return _LABEL_POINT[key]
     xs = [float(c[0]) for c in ring]
     ys = [float(c[1]) for c in ring]
-    return sum(xs) / len(xs), sum(ys) / len(ys)
+    return sum(xs) / len(xs), sum(ys) / len(ys), 0
 
 
 def _short(name: str) -> str:
@@ -274,6 +311,6 @@ def _short(name: str) -> str:
 
 
 #: The one sentence that has to travel with every drawing of this file.
-CAVEAT = ("Approximate extents, not surveyed boundaries: the shipped regions "
-          "are hand-drawn boxes. Occurrence counts are real; the outlines are "
-          "a diagram.")
+CAVEAT = ("Approximate extents, not surveyed boundaries: the regions are "
+          "hand-traced against the geography, not digitised from a survey. "
+          "Occurrence counts are real; the outlines are a diagram.")

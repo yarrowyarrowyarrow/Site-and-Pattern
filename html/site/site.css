@@ -181,7 +181,14 @@ p { margin: .7rem 0; }
 .mapfig.inline { max-width: 24rem; }
 .wide-map { padding: 1.2rem; }
 .ecomap { display: block; width: 100%; height: auto; }
-.ecomap-prov { fill: var(--card); stroke: none; }
+/* Alberta and Saskatchewan are nearly square, so a map that fills a wide page
+   is also about as tall as the page. Cap it and centre it: past this size the
+   drawing gains nothing, it just pushes the legend below the fold. */
+.wide-map .ecomap { max-width: 40rem; margin: 0 auto; }
+/* Neighbouring land, not a void. BC and MB are the only provinces this
+   is visible on: Alberta and Saskatchewan are covered by ecoregion
+   fills drawn over the top. */
+.ecomap-prov { fill: #e6e5dd; stroke: none; }
 .ecomap-region { stroke: #8b8878; stroke-width: .5; stroke-opacity: .55; }
 .ecomap-border {
   fill: none; stroke: #6d6a5e; stroke-width: 1.1; stroke-opacity: .85;
@@ -202,7 +209,28 @@ p { margin: .7rem 0; }
   fill: #4a4a42; letter-spacing: .03em; pointer-events: none;
   paint-order: stroke; stroke: rgba(255,255,255,.7); stroke-width: 2.4px;
 }
-.ecomap-label.on { fill: #fff; stroke: rgba(0,0,0,.35); }
+/* Region names sit on their own colour now, so the halo does the legibility
+   work and the fill only has to be dark enough to read against six hues. */
+.ecomap-label.on { fill: #23261d; stroke: rgba(255,255,255,.85);
+                   stroke-width: 2.8px; }
+
+/* The colour key. Markup rather than SVG so it wraps on a phone. */
+.ecokey {
+  display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin-top: .8rem;
+  padding-top: .7rem; border-top: 1px solid rgba(0,0,0,.09);
+}
+.ecokey-item {
+  display: inline-flex; align-items: baseline; gap: .38rem;
+  font-size: .82rem; color: #3c3f33; text-decoration: none;
+  padding: .12rem .2rem; border-radius: 5px;
+}
+a.ecokey-item:hover { background: rgba(0,0,0,.06); }
+.ecokey-item.on { font-weight: 600; }
+.ecokey-sw {
+  width: .78rem; height: .78rem; border-radius: 3px; flex: none;
+  align-self: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+}
+.ecokey-where { color: #7a7d6e; font-size: .76rem; }
 /* The map keeps its own light palette in both themes: it is a printed figure,
    and a dark-mode map of a light-mode place reads as a different diagram. */
 .mapfig { background: #f6f5f0; }
@@ -302,6 +330,11 @@ ul.ranges li::before {
   content: ""; position: absolute; left: 0; top: .62em;
   width: .4rem; height: .4rem; border-radius: 50%; background: var(--accent);
 }
+/* A region with a polygon gets its own colour instead of the generic dot, so
+   the line and the shape on the map beside it are visibly the same thing. */
+ul.ranges li.haskey { padding-left: 0; }
+ul.ranges li.haskey::before { content: none; }
+ul.ranges li.haskey .ecokey-sw { margin-right: .42rem; }
 ul.cols { columns: 2; column-gap: 2rem; }
 
 /* ── Search page ────────────────────────────────────────────────────────── */

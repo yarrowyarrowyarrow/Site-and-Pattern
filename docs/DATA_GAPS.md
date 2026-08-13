@@ -30,18 +30,52 @@ columbines:
 | Species still `estimated` (genus default, marked *not verified* in the UI) | 359 |
 | Species with no recorded colour at all | 44 |
 
-**What closing this gap needs is a flora and a network**, not more code: the
-column (`flower_colour_source`), the seeder
+The column (`flower_colour_source`), the seeder
 (`scripts/seed_flower_colour.py`), the validator
 (`data_quality.validate_flower_colour`) and the "not verified" marker on both
-the species page and the website are all in place. The gate emits one warning
-per still-uncheckable genus, so the remaining work is enumerated rather than
-estimated. Highest-value targets by species count: *Solidago* (9), *Salix* (6),
-*Festuca* (6), *Helianthus* (6), *Arnica* (6), *Ribes* (7), *Penstemon* (8).
+the species page and the website are all in place.
 
-Two of those warnings are expected to stay: a genus that really is all one
-colour (the goldenrods) will keep tripping the heuristic until somebody sources
-one of its species. That is the right trade for a warning.
+### How to move this along (V2.51)
+
+The paragraph above used to end at "what this needs is a flora and a network",
+which is true and is not a next step. Asked directly — *"how can I move this
+along, I read the data_gaps doc and wasn't sure what next steps to take"* — the
+honest answer is that **the checking does not need a flora for most of it**. It
+needs a photograph and thirty seconds, and 199 of the species already have the
+photograph.
+
+```bash
+python scripts/colour_worklist.py --sheet colour-check.html
+```
+
+That writes a contact sheet: every still-guessed species that has a credited
+photograph in the catalogue, grouped by how many siblings share its hex, worst
+group first, with the claimed colour as a swatch under each image. Open it, and
+the wrong ones are the ones where the swatch and the flower disagree. This is
+the same failure the author caught by eye in the columbines, made systematic.
+
+Then, for each one that disagreed, add a line to `CORRECTIONS` in
+`scripts/seed_flower_colour.py` with the colour and the reason, run it, and bump
+`_SCHEMA_VERSION`. `--paste` emits the blank lines to fill in; it deliberately
+does not pre-fill a colour, because a value nobody looked at is exactly what
+this backlog is made of.
+
+**The order matters and the tool encodes it.** 81 of the 357 are grasses, sedges
+and rushes and are excluded outright: they have no showy flower, so there is no
+colour to get wrong. Of the 276 left, 110 sit in one of 25 genus groups where
+three or more species carry one identical hex — those are single decisions
+applied many times, and they are where the wrong answers concentrate. A species
+holding a hex on its own was at least seen once.
+
+| Batch | Species | What it costs |
+|---|---|---|
+| The 25 shared-hex groups, photographed | ~90 | one sitting with the contact sheet |
+| The rest of the photographed backlog | ~109 | a second sitting |
+| No photograph in the catalogue | 77 | needs a flora, or a photo first |
+
+Two validator warnings are expected to stay: a genus that really is all one
+colour (the goldenrods) keeps tripping the heuristic until somebody sources one
+of its species. That is the right trade for a warning.
 
 ---
 

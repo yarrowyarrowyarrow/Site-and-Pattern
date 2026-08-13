@@ -225,7 +225,8 @@ def _grid(briefs: list, depth: int, photo_src: dict, gid: str = "") -> str:
 # ── Pages ────────────────────────────────────────────────────────────────────
 
 def render_home(model: dict, photo_src: dict) -> str:
-    from src.ecoregion_map import CAVEAT, map_svg               # noqa: PLC0415
+    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
+                                   map_svg)
     s = model["stats"]
     hubs = {h["key"]: h for h in model["hubs"]}
 
@@ -244,7 +245,7 @@ def render_home(model: dict, photo_src: dict) -> str:
     # under, and those are not always the same set.
     eco_pages = {p["value"]: p["slug"]
                  for p in hubs.get("ecoregion", {}).get("pages", [])}
-    eco = map_svg({k: "medium" for k in eco_pages}, width=520, height=330,
+    eco = map_svg(width=520, height=frame_height(520), reference=True,
                   link_for=lambda k: (f"plants/ecoregion/{eco_pages[k]}/"
                                       if k in eco_pages else ""))
 
@@ -431,12 +432,13 @@ def render_listing(page: dict, depth: int, photo_src: dict, crumb: list,
 
 
 def render_map_page(model: dict) -> str:
-    from src.ecoregion_map import CAVEAT, map_svg               # noqa: PLC0415
+    from src.ecoregion_map import (CAVEAT, frame_height,         # noqa: PLC0415
+                                   legend_html, map_svg)
     hub = {h["key"]: h for h in model["hubs"]}.get("ecoregion", {"pages": []})
     pages = {p["value"]: p["slug"] for p in hub["pages"]}
-    svg = map_svg({k: "medium" for k in pages}, width=760, height=470,
-                  link_for=lambda k: (f"../plants/ecoregion/{pages[k]}/"
-                                      if k in pages else ""))
+    link = lambda k: f"../plants/ecoregion/{pages[k]}/" if k in pages else ""
+    svg = map_svg(width=700, height=frame_height(700), reference=True,
+                  link_for=link)
     rows = "".join(
         f'<li><a href="../plants/ecoregion/{_esc(p["slug"])}/">'
         f'<strong>{_esc(p["name"])}</strong></a> '
@@ -447,7 +449,7 @@ def render_map_page(model: dict) -> str:
 <h1>The ecoregions</h1>
 <p class="lede">Alberta and Saskatchewan divided into the six regions this
 catalogue records ranges against. Click a region for its plants.</p>
-<figure class="mapfig wide-map">{svg}</figure>
+<figure class="mapfig wide-map">{svg}{legend_html(link)}</figure>
 <p class="note">{_esc(CAVEAT)}</p>
 <ul class="ranges cols">{rows}</ul>
 """
@@ -558,7 +560,7 @@ anything.</p>
   {s['species']} species have an openly-licensed photograph we can attribute.
   The rest show none.</li>
   <li><strong>The maps are diagrams.</strong> The region outlines are
-  hand-drawn boxes standing in for surveyed boundaries. The occurrence counts
+  hand-traced against the geography, not digitised from a survey. The counts
   inside them are real.</li>
 </ul>
 
@@ -682,8 +684,10 @@ def _hub_extra(hub: dict, page: dict, depth: int) -> str:
     geometry and a decorative map would be noise."""
     if hub["key"] != "ecoregion":
         return ""
-    from src.ecoregion_map import CAVEAT, map_svg               # noqa: PLC0415
-    svg = map_svg({page["value"]: "high"}, width=380, height=250,
+    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
+                                   map_svg)
+    svg = map_svg({page["value"]: "high"}, width=360,
+                  height=frame_height(360),
                   title=f'{page["name"]} extent')
     if not svg:
         return ""

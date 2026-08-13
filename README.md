@@ -133,9 +133,13 @@ can be hosted anywhere or opened straight off disk.
 python -m src.cli build-site public/ --base-url https://plants.example.org
 ```
 
-Each species page carries a **range map** shaded by how much occurrence
-evidence stands behind each region. The shipped region outlines are hand-drawn
-boxes rather than surveyed boundaries, and every map says so.
+Each species page carries a **range map**: every ecoregion in its own colour,
+lightened by how much occurrence evidence stands behind it, so the shape says
+both *where* and *how sure*. The region outlines are hand-traced rather than
+digitised from a survey, and every map says so.
+
+To put it online, see [`docs/PUBLISHING_THE_SITE.md`](docs/PUBLISHING_THE_SITE.md):
+static files host free on GitHub Pages, Netlify or Cloudflare Pages.
 
 Three things it does on purpose. Photographs are copied out of the local image
 cache where they exist and are **never published without their credit**: a

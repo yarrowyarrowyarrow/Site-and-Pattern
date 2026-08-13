@@ -440,6 +440,111 @@ class TestTheEcoregionMap(unittest.TestCase):
         low = map_svg({"aspen_parkland": "low"})
         self.assertNotEqual(high, low)
 
+
+class TestEveryRegionHasItsOwnColour(unittest.TestCase):
+    """*"I would like the different ecoregions to be represented by different
+    colours as well."* (V2.51)
+
+    The constraint that makes this more than a palette swap: the fill was
+    already carrying confidence, and confidence is not allowed to stop being
+    visible (P9). Hue took over identity, lightness took over confidence.
+    """
+
+    def _fills(self, svg: str) -> list:
+        import re
+        return re.findall(r'fill="(#[0-9a-f]{6})"', svg)
+
+    def test_the_reference_map_draws_six_different_colours(self):
+        from src.ecoregion_map import map_svg, region_geometry
+        fills = set(self._fills(map_svg(reference=True)))
+        self.assertEqual(len(fills), len(region_geometry()))
+
+    def test_every_region_in_the_vocabulary_has_a_colour_of_its_own(self):
+        from src.ecoregion_map import REGION_COLOUR, region_geometry
+        drawn = set(region_geometry())
+        self.assertTrue(drawn <= set(REGION_COLOUR), drawn - set(REGION_COLOUR))
+        self.assertEqual(len(set(REGION_COLOUR.values())), len(REGION_COLOUR))
+
+    def test_confidence_still_shows_inside_one_region_s_colour(self):
+        """The whole risk of this change: spending the fill on identity and
+        quietly dropping the confidence encoding."""
+        from src.ecoregion_map import region_fill
+        shades = [region_fill("aspen_parkland", b)[0]
+                  for b in ("high", "medium", "low")]
+        self.assertEqual(len(set(shades)), 3, shades)
+
+    def test_a_faint_region_is_still_not_the_absent_grey(self):
+        """The palest band has to stay recognisably its own hue, or "coloured
+        means recorded" stops being readable at a glance."""
+        from src.ecoregion_palette import ABSENT_FILL, region_fill
+        for key in ("mixedgrass_prairie", "aspen_parkland"):
+            fill = region_fill(key, "low")[0].lstrip("#")
+            r, g, b = (int(fill[i:i + 2], 16) for i in (0, 2, 4))
+            self.assertGreater(max(r, g, b) - min(r, g, b), 30,
+                               f"{key} low band {fill} has no chroma left")
+            self.assertNotEqual(fill, ABSENT_FILL[0].lstrip("#"))
+
+    def test_the_reference_map_claims_no_confidence(self):
+        """It is a key, not a range map. The old callers passed a fabricated
+        "medium" for every region and got a tooltip saying so."""
+        from src.ecoregion_map import map_svg
+        svg = map_svg(reference=True)
+        for phrase in ("confidence", "not recorded"):
+            self.assertNotIn(phrase, svg)
+
+    def test_the_legend_names_every_region_it_draws(self):
+        from src.ecoregion_map import legend_html, region_geometry
+        from src.ecoregion import ecoregion_display
+        key = legend_html()
+        for region in region_geometry():
+            self.assertIn(ecoregion_display(region)[0], key)
+
+    def test_the_legend_can_be_a_row_of_links(self):
+        from src.ecoregion_map import legend_html
+        linked = legend_html(lambda k: f"/plants/ecoregion/{k}/")
+        self.assertIn('href="/plants/ecoregion/aspen_parkland/"', linked)
+        self.assertNotIn("href", legend_html())
+
+    def test_every_region_name_is_printed_inside_that_region(self):
+        """The first coloured draft printed "Montane" in British Columbia:
+        the hand-placed anchor had drifted a degree east of its own strip,
+        which nothing checked because nothing had ever drawn it in colour."""
+        from src.ecoregion_map import _LABEL_POINT
+        from src.ecoregion import lookup_ecoregions
+        for key, (lon, lat, _angle) in _LABEL_POINT.items():
+            self.assertIn(key, lookup_ecoregions(lat, lon),
+                          f"{key} label at {lat},{lon} is not inside {key}")
+
+    def test_the_map_fills_its_frame(self):
+        """A 760x470 box letterboxed a near-square map into its middle third,
+        so a third of the figure was blank on each side and the drawing came
+        out half the size it should have been. ``frame_height`` is the height
+        that leaves no bars.
+
+        Asserted against the projected window rather than the polygons: the
+        window is deliberately half a degree wider than the shapes so nothing
+        sits flush against the border, and that margin is not letterboxing.
+        """
+        from src.ecoregion_map import _BOUNDS, _projector, frame_height
+        width = 600
+        height = frame_height(width)
+        project = _projector(width, height)
+        west, south, east, north = _BOUNDS
+        x0, y0 = project(west, north)
+        x1, y1 = project(east, south)
+        self.assertAlmostEqual(x0, 0, delta=0.6)
+        self.assertAlmostEqual(y0, 0, delta=0.6)
+        self.assertAlmostEqual(x1, width, delta=0.6)
+        self.assertAlmostEqual(y1, height, delta=0.6)
+
+    def test_the_old_landscape_frame_would_have_failed_that(self):
+        """Guards the guard: 600x376 is the aspect the maps shipped at, and it
+        has to be visibly wrong by this measure or the check above proves
+        nothing."""
+        from src.ecoregion_map import _BOUNDS, _projector
+        project = _projector(600, 376)
+        self.assertGreater(project(_BOUNDS[0], _BOUNDS[3])[0], 50)
+
     def test_every_point_lands_inside_the_viewport(self):
         import re
         from src.ecoregion_map import map_svg
@@ -463,7 +568,7 @@ class TestTheEcoregionMap(unittest.TestCase):
             self.assertNotIn(forbidden, svg)
 
     def test_the_caveat_says_the_outlines_are_not_boundaries(self):
-        """The polygons are hand-drawn boxes. A box without this caption is a
+        """The polygons are hand-traced. An outline without this caption is a
         claim about a boundary."""
         from src.ecoregion_map import CAVEAT
         self.assertIn("Approximate extents", CAVEAT)

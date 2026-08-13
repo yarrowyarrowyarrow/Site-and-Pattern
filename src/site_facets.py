@@ -162,31 +162,58 @@ def _edible(plant: dict) -> list:
     return ["edible"] if (plant.get("edible_parts") or "").strip() else []
 
 
+#: A plant's recorded tier, and the *other* shelves it should also appear on.
+#: Read down: if the big-box store has it, so does a greenhouse, and so does a
+#: specialist grower. The implication only runs one way, which is the whole
+#: point of the table.
+#:
+#: Everything not listed here appears under its own tier alone:
+#:
+#: * ``seed_or_plug`` — the grasses, sedges and cattails, sold as seed or as
+#:   plugs and not as a potted plant. The author's exclusion, and correct: a
+#:   reader ticking "native nursery" wants to leave with something in a pot.
+#: * ``rare`` — the lady's slipper, the gentians, the wood lily. A specialist
+#:   is the likeliest place to find one *if anyone has one*, which is not the
+#:   same as stocking it. Promising these on the nursery shelf would be the
+#:   original bug pointed the other way.
+#: * ``native_specialist`` — already the narrowest tier.
+#:
+#: This deliberately does NOT reuse ``db/nurseries.py:_AVAILABILITY_TO_SELLS``,
+#: which answers a different question: *which shops do I list for this plant*,
+#: where an extra shop costs the reader one line to skim. Here an extra plant
+#: is a wrong answer, so the two tables are allowed to differ and the reason is
+#: written down instead of the disagreement being tidied away.
+_ALSO_SOLD_BY: dict = {
+    "big_box":       ("garden_centre", "native_specialist"),
+    "garden_centre": ("native_specialist",),
+}
+
+
 def _availability(plant: dict) -> list:
     """Where you can buy it, corrected for how native plants are actually sold.
 
-    Reported: *"where to buy is incorrectly generous of the big box store and
-    greenhouse as they will likely have less natives. Any natives should also
-    be listed in native nursery as even if they are sold at the bigger stores
-    this does not mean the local nursery would not have it."*
+    Reported first as *"where to buy is incorrectly generous of the big box
+    store and greenhouse as they will likely have less natives. Any natives
+    should also be listed in native nursery"*, then narrowed: *"the native
+    nursery should have the 'common plants' of the big box store and greenhouse
+    but not the plugs/seed only"*.
 
-    Both halves are right and they are one fix. ``availability_class`` is a
-    single value naming the *easiest* place to find a species, which is a
-    reasonable thing to record and the wrong thing to filter on: it says
-    "Saskatoon berry is at the big-box store" and thereby says "Saskatoon berry
-    is not at the native nursery", which is false. A specialist grower stocks
-    the natives whether or not Canadian Tire does.
+    ``availability_class`` records a single value naming the *easiest* place to
+    find a species. That is a reasonable thing to record and the wrong thing to
+    filter on directly: it says "Saskatoon berry is at the big-box store" and
+    thereby says "Saskatoon berry is not at the native nursery", which is false.
 
-    So a native plant now carries ``native_specialist`` in addition to
-    whatever tier it was assigned. The filter widens rather than moves: asking
-    for big-box still returns the big-box list.
+    The first pass fixed that by adding ``native_specialist`` to every native,
+    which is 437 of 437 rows — a filter that matches everything is not a filter.
+    ``_ALSO_SOLD_BY`` replaces the blanket rule with the actual retail
+    implication, and the 89 seed-only and rare species stay off the nursery
+    shelf where they belong.
     """
     tier = (plant.get("availability_class") or "").strip()
-    out = [tier] if tier else []
-    native = (plant.get("native_to_alberta")
-              or (plant.get("native_provinces") or "").strip())
-    if native and "native_specialist" not in out:
-        out.append("native_specialist")
+    if not tier:
+        return []
+    out = [tier]
+    out.extend(t for t in _ALSO_SOLD_BY.get(tier, ()) if t not in out)
     return out
 
 
@@ -375,10 +402,10 @@ FACETS: tuple = (
            ("native_specialist", "Native nursery"),
            ("seed_or_plug", "Seed or plug only"), ("rare", "Rare")),
           _availability, group="Practical",
-          note="Every plant here is a prairie native, so every one of them is "
-               "listed under a native nursery: a specialist grower stocks it "
-               "whether or not the big-box store does. The other tiers are "
-               "the useful ones, and they say where else you might find it."),
+          note="Anything common enough for a big-box store or a greenhouse is "
+               "also listed under the native nursery, because a specialist "
+               "grower stocks it too. Seed-or-plug species and the rare ones "
+               "are not: those you order, or go looking for."),
     Facet("province", "Native to",
           (("AB", "Alberta"), ("SK", "Saskatchewan"), ("MB", "Manitoba")),
           lambda p: _tokens(p, "native_provinces"), group="Site"),

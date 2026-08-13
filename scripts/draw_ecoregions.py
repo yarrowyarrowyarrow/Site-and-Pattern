@@ -147,6 +147,26 @@ def _below(lats: tuple, floor: float = 49.0, west=None, east=None) -> list:
     return ring + [ring[0]]
 
 
+def _park_west() -> list:
+    """The parkland's western closure, south to north.
+
+    It used to be the meridian ``_LONS[0]`` and that left a second hole, found
+    in V2.51 by sweeping at 0.05 degrees instead of 0.2: a sliver about 0.1
+    degrees wide and 0.6 tall around Rocky Mountain House belonged to no region,
+    so a site there was told the catalogue does not reach it. The foothills'
+    eastern edge runs diagonally north-west while a meridian does not, and above
+    about 52.4 degrees the two part company.
+
+    Closing the parkland against that edge instead is both the fix and the more
+    honest line: the parkland/foothills transition really is diagonal. South of
+    where they cross, the meridian is already the westerly one and is kept.
+    """
+    lo = _line(_GRASS_TOP)[0][1] - _OVERLAP
+    hi = _line(_PARK_TOP)[0][1]
+    return [(min(_LONS[0], lon - _OVERLAP), lat)
+            for lon, lat in _offset(_FOOTHILL_WIDTH) if lo < lat < hi]
+
+
 def _parkland() -> list:
     """The aspen parkland arc: Calgary, Red Deer, Edmonton, Lloydminster,
     North Battleford, then north of Saskatoon and down toward Yorkton.
@@ -156,7 +176,7 @@ def _parkland() -> list:
     """
     north = _line(_PARK_TOP)
     south = [(lon, lat - _OVERLAP) for lon, lat in _line(_GRASS_TOP)]
-    ring = north + list(reversed(south))
+    ring = north + list(reversed(south)) + _park_west()
     return [ring + [ring[0]]]
 
 
@@ -224,8 +244,16 @@ def _saskatchewan() -> list:
 
 
 def _british_columbia() -> list:
-    """Only the sliver inside the map window, for context east of the coast."""
-    ring = [(-121.5, 49.0), (-114.07, 49.0)] + DIVIDE[1:] + [(-121.5, 60.0)]
+    """Only the sliver inside the map window, for context east of the coast.
+
+    The corner at ``(-120, 60)`` is load-bearing and was missing until V2.51.
+    Alberta's border leaves the divide at 54 degrees north and runs straight up
+    the 120th meridian; without that vertex the ring closed diagonally from
+    ``(-120, 54)`` to the top-left corner, so the strip of British Columbia
+    beside northern Alberta was drawn as a hole in the map rather than as land.
+    """
+    ring = ([(-121.5, 49.0), (-114.07, 49.0)] + DIVIDE[1:]
+            + [(-120.0, 60.0), (-121.5, 60.0)])
     return ring + [ring[0]]
 
 
@@ -310,13 +338,20 @@ def build_provinces() -> dict:
         for code, name, ring in PROVINCES]}
 
 
-def _coverage_gaps(eco, step: float = 0.2) -> list:
+def _coverage_gaps(eco, step: float = 0.05) -> list:
     """Sampled points inside Alberta or Saskatchewan that belong to no region.
 
     The first cut of these shapes left a band east of Calgary, 0.8 degrees
     tall, that no polygon covered: anyone in Strathmore would have been told
     the catalogue does not reach their site. Tracing adjacent regions
     separately is what caused it, and this is what catches it happening again.
+
+    **The step was 0.2 and that was too coarse** (V2.51). It passed clean over
+    a second hole 0.1 degrees wide near Rocky Mountain House, which only showed
+    up as a white sliver once the regions were drawn in colour. A gap narrower
+    than the sample step is invisible to a sample, and a gap is a real address
+    getting a wrong answer, so the sweep now runs at 0.05: about 82,000 points,
+    roughly ten seconds, once per redraw. Cheap for what it catches.
     """
     provinces = [f["geometry"]["coordinates"]
                  for f in build_provinces()["features"]
