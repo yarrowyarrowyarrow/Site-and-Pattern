@@ -26,13 +26,33 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_facets_test_")
+_DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
 
 import src.db.plants as _plants_mod  # noqa: E402
 
 _plants_mod._DATA_DIR = _TMP_DIR
-_plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
+_plants_mod._DB_PATH = _DB_PATH
 
 from src.db.plants import init_db, search_plants            # noqa: E402
+
+
+def _use_our_db() -> None:
+    """Re-point the DB globals at run time, not just at import time.
+
+    Every test module in the suite patches ``_plants_mod._DB_PATH`` when it is
+    imported, and the last import wins. Whichever module is imported after this
+    one therefore owns the path by the time these tests run, so a test that
+    asserts an exact set of rows reads somebody else's fixture: this module
+    failed in the full suite with ``PlantA``, ``PlantB`` and
+    ``Filterable Region Plant`` in a set that should have held five apple and
+    cherry cultivars, while passing on its own.
+
+    ``tests/test_cli.py`` hit this first and documented the fix; this is the
+    same one.
+    """
+    _plants_mod._DATA_DIR = _TMP_DIR
+    _plants_mod._DB_PATH = _DB_PATH
+    init_db()
 from src.site_facets import (                               # noqa: E402
     FACETS, FACETS_BY_KEY, GROUPS, HUB_FACETS, WITHHELD_ROLES, index_row,
 )
@@ -43,7 +63,7 @@ class TestTheFacetsAgainstTheRealCatalogue(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
         cls.rows = search_plants()
 
     def test_every_value_in_use_has_a_label(self):
@@ -142,7 +162,7 @@ class TestTheReportedFilterBugs(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
         cls.rows = [r for r in search_plants() if is_publishable(r)]
 
     def _count(self, key, values):
@@ -226,7 +246,7 @@ class TestOnlyNativesArePublished(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
         cls.rows = search_plants()
 
     def test_the_garden_cultivars_are_dropped(self):
@@ -263,7 +283,7 @@ class TestTheWithheldRole(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
         cls.rows = search_plants()
 
     def test_medicinal_is_tagged_in_the_data(self):

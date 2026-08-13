@@ -26,19 +26,34 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_colour_test_")
+_DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
 
 import src.db.plants as _plants_mod  # noqa: E402
 
 _plants_mod._DATA_DIR = _TMP_DIR
-_plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
+_plants_mod._DB_PATH = _DB_PATH
 
 from src.db.plants import init_db, search_plants          # noqa: E402
+
 from src.flower_colour import (                           # noqa: E402
     COLOUR_KEYS, COLOUR_LABELS, WIND_POLLINATED_TYPES, bucket_counts, classify,
     classify_hex, matches,
 )
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _use_our_db() -> None:
+    """Re-point the DB globals at run time, not just at import time.
+
+    The last module imported wins the global, so a test that looks a species up
+    by name can read another module's fixture and find nothing. This module was
+    passing on ordering luck; `tests/test_site_facets.py` was not, and failed in
+    the full suite while passing alone. Same fix, same reason.
+    """
+    _plants_mod._DATA_DIR = _TMP_DIR
+    _plants_mod._DB_PATH = _DB_PATH
+    init_db()
 
 
 def _seed_rows() -> list:
@@ -165,7 +180,7 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
 
     def test_search_plants_accepts_and_applies_the_filter(self):
         every = search_plants()
@@ -215,7 +230,7 @@ class TestTheZoneRangeSurvivesItsData(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
 
     def test_a_hedged_zone_renders_rather_than_raising(self):
         from src.plant_directory import _zone_range
@@ -264,7 +279,7 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        init_db()
+        _use_our_db()
 
     def _entry(self, common_name):
         from src.db.plants import get_connection
