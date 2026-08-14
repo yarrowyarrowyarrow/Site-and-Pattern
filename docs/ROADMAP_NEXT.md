@@ -10,7 +10,7 @@ shaped the way it is and what has already landed. This file is what comes next, 
 > for each: what it is, how it would be built, what it leans on. Follow the ID.
 
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F120.**
+working across both documents. **Next free ID: F121.**
 
 ### The ID ledger
 
@@ -35,6 +35,7 @@ is derived from it.
 | F111–F112 | Colour in the plant panel · the website searchable and drawn | ✅ V2.48 |
 | **F113** | Design variants + side-by-side comparison *(was F90)* | **open** |
 | **F114–F119** | Wing-pattern geometry · shrub aspect · fern density · billboard fruit · better creature models · birds/mammals off name tables | **open** — assigned V2.52 |
+| **F120** | Correct the 48 use tags the cited edges contradict | **open** — opened by V2.53 |
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
@@ -166,6 +167,22 @@ items on the roadmap. The rest of this document sequences them and says what els
 ---
 
 ## Shipped
+
+**V2.53 — the confidence block, and the absence the app could not support
+(F8, F12, F13, F14, F28).** Group A of the new backlog, on its thirteenth
+appearance as "next". Plan:
+[`V2.53-the-confidence-block`](plans/V2.53-the-confidence-block.md).
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| — | **One vocabulary, so five cards could not invent five scales.** Bands (three rungs plus `UNKNOWN`) and marks (one table over the edges layer's `documented/recorded/derived` and the seed data's `measured/flora/photo/checked/name/epithet/estimated`). Two rules are structural: **absent is not estimated** — a blank field is the app knowing it does not know, while `estimated` is a genus default that looks exactly like a measurement — and **a band needs evidence**, so `known=False` gives `UNKNOWN` rather than a middle rung. That second one is the V2.51 map bug, where a fabricated "medium confidence" was printed about regions with no data, turned into a guard. Thresholds are *not* restated here: the establishment floors belong to `ecoregion_ranges` and a test asserts they agree | `src/confidence.py` |
+| **F8** | **The audit found something worse than loose wording.** Grepping the ten prose generators for deterministic phrasing found five uses of "will", all harmless — `phenology` already says "we predict", `plant_impact` "no *documented* wildlife". The real failure: `design_critic` asserted **absences** as facts, off a score component fed by use tags — while the app holds a second, cited source that disagrees for **48 species**. 37 carry a documented `larval_host` edge and no `host_plant` tag (Chokecherry, Balsam Poplar); 11 carry a fruit/seed edge and no `bird_food` tag. The contradiction is visible inside one dictionary: `components.host.score` is tag-derived and can read 0 while `food_web.caterpillars`, two keys over and edge-derived, reads True. The critic now reports the stronger source and phrases every remaining absence as an absence of *record* | `src/design_critic.py`, `data_quality.validate_use_tags_against_edges` |
+| **F12** | **The citations reach the design side.** `src/citations.py` shipped in V2.42 and reached two screens, neither of them where a design is made. The 3D dossier card now carries a short citation per wildlife row plus a collapsible reference list, and the relationship web's summary names the works the picture rests on — a web resting on one work is a different object from one resting on six. An unattributable edge gets no citation rather than a placeholder dressed as one, and the unattributed count is reported | `src/scene_dossier.py`, `html/scene3d/10-inspect.js`, `src/relationship_graph.py` |
+| **F14** | **The card proposed a false readout and it was not built.** Bucketing `score_cell_for_plant` would have printed confidence about nothing: `build_cell_env_map` fills every unread grid with a neutral 0.5, so on a site with no DEM *every* plant bands identically. F14 reads the **georeferenced occurrence records** instead (schema v59/v60, already carrying count, confidence and source per region). Below the three-record floor an absent species and an under-collected one are indistinguishable, so both get `UNKNOWN` — never "unlikely to establish", which would steer a real planting away from a species that belongs there. The design summary takes the **weakest** well-evidenced rung, not an average | `src/establishment.py` |
+| **F13** | **Fidelity scores structure, not species.** Matching a hectare of parkland species-for-species on a front lot is neither possible nor desirable; what transfers is the shape. Per-layer presence and proportion, genus overlap as a capped bonus, `PRESENCE_FRACTION = 0.25` because four aspens is a canopy on a suburban lot. **Low is not a failure** and the blurb says so — a rain garden is deliberately unlike its reference. `LAYER_TYPES` is asserted equal to the walkable reference's, so the number and the 3D scene cannot disagree about the same design | `src/reference_fidelity.py` |
+| **F28** | **One provenance vocabulary across three surfaces.** The directory printed the raw database token — "Flower detail: estimated" — which is honest and tells a reader nothing. Both it and the bloom-colour note now render through `confidence.mark`, so the desktop directory, the website (same `species_entry`) and the dossier cannot drift the way the four edge tables did before F7 | `src/plant_directory.py` |
+| — | **Surfaced** as a "How sure are we?" block on Analysis → Habitat, refreshed from `set_placed_plants` rather than the score button — a read-out that only updates when a button is pressed is the V2.42 stale-list bug. Plus `establishment()` and `reference_fidelity()` on the frozen API contract | `src/analysis_panel.py`, `src/permadesign_api.py` |
+| — | **Left alone on purpose:** the 48 tags themselves. Correcting them moves every affected design's Habitat Value Score, which the stability rule makes a deliberate decision rather than a side effect of a wording pass. Now a tracked warning in the data gate and a backlog row (**F120**) instead of an invisible contradiction | `docs/BACKLOG.md` |
 
 ### The release ledger
 

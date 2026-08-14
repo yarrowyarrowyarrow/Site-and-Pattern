@@ -87,7 +87,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # already past the size plant_panel.py was split at (Chunk 4).
         (_SRC / "polyculture_panel.py", 2900),         # ~2527 now
         (_SRC / "site_panel.py", 2700),                # ~2240 now
-        (_SRC / "analysis_panel.py", 2450),            # ~2214 now
+        (_SRC / "analysis_panel.py", 2450),            # 2355 now — 95 LEFT
+        # V2.53 (the confidence block). Qt-free cores, so they carry their own
+        # ceilings rather than living in the panel that shows them.
+        (_SRC / "confidence.py", 400),                 # 298 now
+        (_SRC / "establishment.py", 300),              # 168 now
+        (_SRC / "reference_fidelity.py", 300),         # 185 now
         # V2.41 — the plant directory (F90). Opted in on arrival rather than
         # when they first hurt: a ceiling added late is a ceiling set around
         # whatever shape the file drifted into.
@@ -471,6 +476,8 @@ class TestAgentApiContract(unittest.TestCase):
         "phenology": ["project", "month"],              # F51 (V2.13)
         "lesson_track": ["project"],                    # F53 (V2.13)
         "reference_community": ["ecoregion"],           # F50 (V2.13)
+        "reference_fidelity": ["project", "ecoregion"],  # F13 (V2.53)
+        "establishment": ["project", "ecoregion"],      # F14 (V2.53)
         "docent_script": ["project"],                   # F52 (V2.13)
         "export_plant_catalogue_docx": ["out_path"],
     }

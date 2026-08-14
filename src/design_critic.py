@@ -33,6 +33,11 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+# The shared uncertainty vocabulary (F8). Imported rather than restated so the
+# critic, the panels and the static site all hedge the same way — the whole
+# reason the confidence block was built as one increment.
+from src.confidence import hedge_count as _hedge_count, no_record_of as _no_record_of
+
 _MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June",
                 "July", "August", "September", "October", "November",
                 "December"]
@@ -56,44 +61,80 @@ def evaluate_design(project) -> Optional[dict]:
 
 def critique_lines(habitat: dict) -> list[str]:
     """Concrete issues in a habitat-score breakdown, most impactful first.
-    Empty list = nothing worth flagging."""
+    Empty list = nothing worth flagging.
+
+    **Absences are phrased as absences of RECORD (F8, V2.53).** Three of these
+    lines used to state a fact about the yard — *"Nothing provides bird food"* —
+    from a zero in a score component that reads **use tags**. Two things make
+    that a claim the data cannot carry. The catalogue's tags are an editorial
+    judgement rather than an observation; and the app holds a *second, cited*
+    source for the same question, the ``plant_fauna`` edges, which disagrees for
+    48 species (``data_quality.validate_use_tags_against_edges`` counts them —
+    37 with a documented ``larval_host`` edge and no ``host_plant`` tag,
+    Chokecherry and Balsam Poplar among them).
+
+    So where ``food_web`` — which is edge-derived — contradicts the tag-derived
+    component, this says what is actually true rather than picking the gloomier
+    of the two numbers sitting in the same dictionary.
+    """
     out: list[str] = []
     comp = (habitat or {}).get("components", {}) or {}
+    food_web = (habitat or {}).get("food_web") or {}
 
     bloom = comp.get("bloom", {})
     gaps = bloom.get("gap_months") or []
     if gaps:
         names = ", ".join(_MONTH_NAMES[m] for m in gaps if 0 < m < 13)
         out.append(
-            f"No bloom in {names} — pollinators face a nectar gap; add "
-            f"native species flowering then.")
+            f"No bloom recorded in {names} — pollinators face a nectar gap; "
+            f"add native species flowering then.")
 
     if (comp.get("keystone", {}).get("score") or 0) == 0:
         out.append(
-            "No keystone species — keystones (willows, goldenrods, "
-            "asters…) support far more caterpillars and wildlife than "
-            "average plants.")
+            "Nothing here is tagged as a keystone species — keystones "
+            "(willows, goldenrods, asters…) support far more caterpillars and "
+            "wildlife than average plants.")
 
     if (comp.get("host", {}).get("score") or 0) == 0:
-        out.append(
-            "No butterfly/moth host plants — without host plants there "
-            "are no caterpillars, and without caterpillars few baby birds.")
+        n_cat = int(food_web.get("n_caterpillars") or 0)
+        if food_web.get("caterpillars") and n_cat:
+            # The tag says no host plants; the cited edges name the caterpillars.
+            # Report the stronger source, and name the weaker one as the gap.
+            out.append(
+                f"No plant here is tagged as a caterpillar host, yet "
+                f"{_hedge_count(n_cat, 'butterfly or moth species')} are "
+                f"recorded laying eggs on these plants — the host tags are "
+                f"behind the relationship data, so the score reads lower than "
+                f"the evidence supports.")
+        else:
+            out.append(
+                "No butterfly/moth host plants recorded — without host plants "
+                "there are no caterpillars, and without caterpillars few baby "
+                "birds.")
 
     if (comp.get("bird_food", {}).get("score") or 0) == 0:
-        out.append("Nothing provides bird food (berries/seeds).")
+        if food_web.get("birds") and int(food_web.get("n_birds") or 0):
+            out.append(
+                f"No plant here is tagged as bird food, yet "
+                f"{_hedge_count(int(food_web['n_birds']), 'bird species')} are "
+                f"recorded feeding on these plants.")
+        else:
+            out.append(_no_record_of("providing bird food (berries/seeds)")
+                       + ".")
 
     # Food-web completeness (F3): flag a *broken* Tallamy chain — one link
     # present without the other. (When both links are missing the separate
     # host / bird-food lines above already say so, so stay quiet there.)
-    food_web = (habitat or {}).get("food_web") or {}
     if food_web.get("status") == "no_birds":
         out.append(
-            "Host plants feed caterpillars, but nothing supports the birds "
-            "that should eat them; add berry/seed producers or bird habitat.")
+            "Host plants feed caterpillars here, but nothing in the design is "
+            "recorded as supporting the birds that should eat them; add "
+            "berry/seed producers or bird habitat.")
     elif food_web.get("status") == "no_hosts":
         out.append(
-            "You're feeding birds, but without host plants there are no "
-            "caterpillars (the protein nestlings need); add host plants.")
+            "You're feeding birds, but no caterpillar host plants are recorded "
+            "here — and caterpillars are the protein nestlings need; add host "
+            "plants.")
 
     layers = comp.get("layers", {}).get("present") or []
     if len(layers) <= 2:

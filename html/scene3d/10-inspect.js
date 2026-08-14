@@ -258,11 +258,28 @@ function plantCardHtml(e) {
     h += '<div class="isec">who uses it here — ' + e.users.length
       + ' documented ' + (e.users.length === 1 ? 'species' : 'species') + '</div><ul class="ilist">';
     for (const u of e.users) {
+      // F12 (V2.53): the citation rides on the row. Every one of these edges
+      // has carried a source since it was written and no screen ever showed
+      // one, so the app's most distinctive data looked like it came from
+      // nowhere. An unattributable edge simply gets no cite — never a
+      // placeholder dressed up as a reference.
       h += '<li><b>' + esc(u.name) + '</b>'
         + (u.specialist ? '<span class="chip warn">specialist</span>' : '')
-        + '<span class="how">' + esc(u.how) + ' this plant</span></li>';
+        + '<span class="how">' + esc(u.how) + ' this plant</span>'
+        + (u.source ? '<span class="cite">' + esc(u.source) + '</span>' : '')
+        + '</li>';
     }
     h += '</ul>';
+    if (e.sources && (e.sources.works || []).length) {
+      h += '<details class="isrcs"><summary>where these come from</summary><ul>';
+      for (const w of e.sources.works) h += '<li>' + esc(w) + '</li>';
+      if (e.sources.unattributed) {
+        h += '<li class="dim">' + e.sources.unattributed + ' of these '
+          + 'relationships were seeded without naming a specific work, and '
+          + 'are not yet attributable.</li>';
+      }
+      h += '</ul></details>';
+    }
   } else {
     h += '<div class="isec">no documented wildlife edges yet</div>';
   }

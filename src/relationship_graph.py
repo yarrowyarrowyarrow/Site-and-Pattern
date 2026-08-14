@@ -338,6 +338,9 @@ def build_relationship_graph(placed_plants: list, *,
             "color": meta.color, "group": meta.group,
             "strength": round(e.strength, 3),
             "evidence": e.evidence,
+            # Carried so `_works_cited` can name the works this picture rests
+            # on (F12). Not drawn — the renderer stays geometry-only.
+            "source": e.source,
             "detail": e.detail,
             "specialist": e.detail == "specialist",
             "a_lat": a["lat"], "a_lng": a["lng"],
@@ -423,7 +426,30 @@ def _stats(plant_nodes: dict, fauna_nodes: dict, edges: list,
         "documented_edges": sum(
             1 for e in edges if e["evidence"] == "documented"),
         "recorded_edges": sum(1 for e in edges if e["evidence"] == "recorded"),
+        # F12 (V2.53): which works this picture rests on. Counting the distinct
+        # sources is what turns "23 documented relationships" from a number
+        # into a claim somebody can check — and a web resting on one work is a
+        # different thing from a web resting on six.
+        "works": _works_cited(edges),
     }
+
+
+def _works_cited(edges: list) -> list[str]:
+    """Distinct real works behind the documented edges, most-cited first.
+
+    Placeholders name no work and are excluded rather than listed — the rule
+    `src.citations` enforces everywhere.
+    """
+    from src.citations import format_citation, is_placeholder  # noqa: PLC0415
+    counts: dict = {}
+    for e in edges:
+        if e.get("evidence") != "documented":
+            continue
+        for key in (k.strip() for k in (e.get("source") or "").split(",")):
+            if key and not is_placeholder(key):
+                counts[key] = counts.get(key, 0) + 1
+    return [format_citation(k, short=True)
+            for k in sorted(counts, key=lambda k: (-counts[k], k))]
 
 
 def _empty(kinds: tuple) -> dict:
@@ -474,6 +500,15 @@ def summary_lines(graph: dict) -> list[str]:
         f"{documented} documented relationship"
         f"{'' if documented == 1 else 's'}"
     ]
+    works = s.get("works") or []
+    if works:
+        # F12 (V2.53). The V2.42 audit found every one of these edges properly
+        # cited and not one citation visible anywhere; the count above was as
+        # far as the honesty went. Naming the works is what lets a reader go
+        # and check, which is the difference between provenance and a promise.
+        shown = ", ".join(works[:3])
+        more = f" and {len(works) - 3} more" if len(works) > 3 else ""
+        lines.append(f"Drawn from {shown}{more}")
     if s.get("recorded_edges"):
         lines.append(
             f"{s['recorded_edges']} further link"

@@ -148,13 +148,13 @@ were still hedging.
 ### Medium impact
 | ID | Feature | Effort | Risk | Principle |
 |----|---------|--------|------|-----------|
-| F8 | Uncertainty language pass | S | Low | P9 |
+| ✅ F8 | Uncertainty language pass — **V2.53**; the finding was an *absence* asserted off the weaker of two sources | S | Low | P9 |
 | ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
 | ✅ F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
 | ✅ F11 | Value-vs-price framing | S | Low | P6 |
-| ◐ F12 | Inline "why this matters" provenance/citations — **formatter shipped V2.42, design-side surfaces still show none** | S | Low | P7, P6 |
-| F13 | Reference-ecosystem fidelity score | S (was M) | Low | P2, P6 |
-| F14 | Establishment-likelihood band | M | Med | P9 |
+| ✅ F12 | Inline "why this matters" provenance/citations — formatter V2.42, **design-side surfaces V2.53** | S | Low | P7, P6 |
+| ✅ F13 | Reference-ecosystem fidelity score — **V2.53**, structure not species | S (was M) | Low | P2, P6 |
+| ✅ F14 | Establishment-likelihood band — **V2.53**, off occurrence records rather than the neutral placement score | M | Med | P9 |
 | F15 | Pollinator-pathway (bloom-in-space) overlay — *merge into F5* | M | Med | P5, P3 |
 | ✅ F16 | Seasonal view toggle (spring/summer/fall/winter) | M | Med | P4, P5 |
 | ✅ F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
@@ -530,8 +530,11 @@ connectivity to the design's planted areas; a new analysis layer.
 
 ## Lower impact / nice-to-have — detail
 
-- **F28 · Confidence marks on inferred fields** — *S · Low (P9)*: visibly mark inferred vs.
-  sourced values using the existing `design_goals.Goal.backed` flag pattern.
+- **✅ F28 · Confidence marks on inferred fields** — *Shipped V2.53 · was S · Low (P9)*: visibly
+  mark inferred vs. sourced values. Built as one table in `src/confidence.py` over both existing
+  vocabularies (the edges layer's and the seed data's) rather than a third one, and turning on the
+  distinction the card did not name: **absent is not estimated**. A blank field is the app knowing
+  it does not know; `estimated` is a genus default that looks exactly like a measurement.
 - **F29 · Scenario ranges on the timeline** — *M · Low (P9, P4)*: show a growth/maturity
   *band* rather than a single line, from a slow/expected/fast spread of `years_to_maturity`.
 - **F30 · Invisible-relationship legend** — *S · Low (P5, P7)* — **merge into F5**: a short primer in the

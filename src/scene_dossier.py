@@ -198,6 +198,9 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
     the names of animals this plant alone supports in the current design."""
     from src.ecological_role import ecological_role_summary   # noqa: PLC0415
 
+    from src.citations import (                              # noqa: PLC0415
+        format_sources, is_placeholder)
+
     users = []
     for r in sorted(edges, key=lambda r: (r.get("taxon") or "",
                                           r.get("common_name") or "")):
@@ -211,6 +214,13 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
             # A specialist has nowhere else to go — the single most important
             # thing the card can tell you about an edge (P3).
             "specialist": r.get("specificity") == "specialist",
+            # F12 (V2.53). Every one of these edges has carried a cited source
+            # since it was written, and the card dropped it here — so the most
+            # distinctive data in the app looked like it came from nowhere. The
+            # short form ("Acorn & Sheldon 2006") rides on the row; the full
+            # references go in `sources` below, once each.
+            "source": _short_source(r.get("source"), format_sources,
+                                    is_placeholder),
         })
 
     entry = {
@@ -240,11 +250,49 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "sourcing": _sourcing(plant),
         "notes": plant.get("notes") or "",
         "edible_parts": plant.get("edible_parts") or "",
+        # The works behind the wildlife rows above, deduped and in full (F12).
+        "sources": _source_block(edges),
     }
     photo = _photo(plant)
     if photo:
         entry["photo"] = photo
     return entry
+
+
+def _short_source(source, format_sources, is_placeholder) -> str:
+    """Author-year for one edge, or ``""`` when nothing is attributable.
+
+    A placeholder names no work, and printing it as a citation is the precise
+    failure `src.citations` exists to prevent — so it yields an empty string
+    here and the row simply carries no citation, which is honest.
+    """
+    keys = [k.strip() for k in (source or "").split(",") if k.strip()]
+    real = [k for k in keys if not is_placeholder(k)]
+    return format_sources(",".join(real), short=True) if real else ""
+
+
+def _source_block(edges: list) -> dict:
+    """``{works: [full citations], unattributed: n}`` for one plant's edges.
+
+    Mirrors ``plant_directory_window._citation_block`` deliberately: the desktop
+    directory, the 3D card and the website should not each invent their own way
+    of saying where an edge came from. The unattributed count is reported rather
+    than hidden, because "we do not know who says this" is itself information.
+    """
+    from src.citations import format_citation, is_placeholder  # noqa: PLC0415
+    works: list[str] = []
+    unattributed = 0
+    for r in edges or []:
+        for key in (k.strip() for k in (r.get("source") or "").split(",")):
+            if not key:
+                continue
+            if is_placeholder(key):
+                unattributed += 1
+                continue
+            text = format_citation(key)
+            if text and text not in works:
+                works.append(text)
+    return {"works": works, "unattributed": unattributed}
 
 
 _LEAF_SHAPE_LABEL = {

@@ -649,7 +649,8 @@ def validate_all() -> tuple[list[str], list[str]]:
     for validate_provenance in (validate_sources, validate_plant_fauna,
                                 validate_plant_images,
                                 validate_safety_provenance,
-                                validate_host_genus_coverage):
+                                validate_host_genus_coverage,
+                                validate_use_tags_against_edges):
         e, w = validate_provenance()
         errors.extend(e)
         warnings.extend(w)
@@ -1237,6 +1238,84 @@ def validate_safety_provenance() -> tuple[list[str], list[str]]:
                     f"safety: {who}: carries a toxicity rating with no "
                     "safety_source")
     return errors, []
+
+
+#: Use tags whose meaning is also asserted, independently and with a citation,
+#: by a ``plant_fauna`` relationship. When the two disagree the tag is the
+#: weaker claim: an edge names the animal and cites the work.
+_TAG_BACKED_BY_EDGE: dict[str, tuple[str, ...]] = {
+    "host_plant": ("larval_host",),
+    "bird_food": ("fruit_food", "seed_food"),
+}
+
+
+def use_tags_vs_edges() -> dict:
+    """Species whose cited edges assert a role their use tag denies.
+
+    ``{tag: [common names]}``. Read from the seed files rather than the DB so
+    the data gate can run this without a database, matching
+    :func:`photo_coverage`.
+    """
+    plants = []
+    for cat in ("plants_master.json", "garden_plants.json"):
+        plants += [r for r in json.loads(
+            (DATA_DIR / cat).read_text(encoding="utf-8"))
+            if isinstance(r, dict) and r.get("scientific_name")]
+    by_name: dict[str, dict] = {}
+    for r in plants:
+        for field in ("common_name", "scientific_name"):
+            key = (r.get(field) or "").strip().lower()
+            if key:
+                by_name.setdefault(key, r)
+
+    edges = [e for e in json.loads(
+        (DATA_DIR / "plant_fauna_master.json").read_text(encoding="utf-8"))
+        if isinstance(e, dict) and e.get("relationship")]
+
+    out: dict[str, set] = {tag: set() for tag in _TAG_BACKED_BY_EDGE}
+    for e in edges:
+        row = by_name.get((e.get("plant") or "").strip().lower())
+        if row is None:
+            continue
+        tags = {t.strip() for t in
+                (row.get("permaculture_uses") or "").split(",") if t.strip()}
+        rel = (e.get("relationship") or "").strip()
+        for tag, rels in _TAG_BACKED_BY_EDGE.items():
+            if rel in rels and tag not in tags:
+                out[tag].add(row.get("common_name")
+                             or row.get("scientific_name"))
+    return {tag: sorted(names) for tag, names in out.items() if names}
+
+
+def validate_use_tags_against_edges() -> tuple[list[str], list[str]]:
+    """Where the app's own cited data contradicts its own use tags (V2.53).
+
+    The Habitat Value Score's keystone / host / bird-food components read **use
+    tags**, and ``design_critic`` turns a zero there into a flat sentence:
+    *"No butterfly/moth host plants — without host plants there are no
+    caterpillars."* Meanwhile ``plant_fauna`` holds 116 cited ``larval_host``
+    edges. Where a species has the edge and not the tag, the app tells a user
+    their design has no host plants **while holding a sourced record that it
+    does** — and Chokecherry and Balsam Poplar are both in that set.
+
+    A warning, not an error, and deliberately: the fix is a seed-data
+    correction that moves every affected design's Habitat Value Score, which is
+    a decision to take deliberately rather than a build to break. What it must
+    not be is invisible — that is the V2.35 photo-coverage lesson applied to a
+    contradiction instead of a gap.
+    """
+    try:
+        found = use_tags_vs_edges()
+    except (FileNotFoundError, json.JSONDecodeError):
+        return [], []
+    warnings = []
+    for tag, names in sorted(found.items()):
+        rels = " / ".join(_TAG_BACKED_BY_EDGE[tag])
+        warnings.append(
+            f"use tags vs edges: {len(names)} species carry a documented "
+            f"{rels} edge but not the {tag!r} tag the score reads — "
+            f"e.g. {', '.join(names[:4])}")
+    return [], warnings
 
 
 def validate_host_genus_coverage() -> tuple[list[str], list[str]]:

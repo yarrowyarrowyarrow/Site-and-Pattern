@@ -24,6 +24,7 @@ from src.permadesign_api import (
     Project, query_plants, list_polycultures, list_structures,
     run_analysis, export_plant_catalogue_docx,
     relationship_web, plant_relationships,
+    establishment, reference_fidelity,
 )
 ```
 
@@ -110,6 +111,48 @@ Returns:
 }
 ```
 Raises `AnalysisError` if the plant DB can't be read.
+
+### How sure are we? (F13 / F14)
+
+```python
+establishment(project: Project, ecoregion: str | None = None) -> dict
+reference_fidelity(project: Project, ecoregion: str | None = None) -> dict
+```
+
+Both answer with a **band, never a percentage** — `src.confidence.Band`
+(`key`, `label`, `blurb`, `known`) — because the inputs are a curated spec and a
+catalogue with known gaps, and three significant figures over that is the false
+precision P9 forbids.
+
+`establishment` bands each placed species by its **georeferenced occurrence
+count** in `ecoregion` (schema v59/v60, which carries a count, a confidence band
+and a source per region):
+
+```jsonc
+{
+  "ecoregion": "aspen_parkland", "known": true,
+  "species": [{"plant_id": 12, "name": "Saskatoon Berry", "n": 3,
+               "occurrences": 312, "band": Band(key="high", …),
+               "source": "GBIF, retrieved 2026-08-02"}],
+  "counts": {"high": 4, "low": 1, "unknown": 2},
+  "lines": ["…", "No occurrence record in this ecoregion for 2 species …"]
+}
+```
+
+**A species with no record bands as `unknown`, never as unsuitable.** Below the
+three-record floor an absent species and an under-collected one are
+indistinguishable, and saying so is the point. `known` is `false` for the whole
+readout when the project has no site pin — there is no "somewhere" to be well
+recorded in.
+
+`reference_fidelity` compares the design's **structure** (per-layer presence and
+proportion, genus overlap as a capped bonus) against
+`reference_community(ecoregion)`, returning `{band, score, known, reference,
+layers, matched_species, missing_layers, lines}`. A low band is not a failure —
+a rain garden is deliberately unlike its reference — and `known` is `false`
+when there is nothing to compare, which is a different answer from a low score.
+
+Both raise `AnalysisError` if the plant DB can't be read.
 
 ### Relationships (F5 / F7)
 

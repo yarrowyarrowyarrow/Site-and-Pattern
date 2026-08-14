@@ -108,7 +108,11 @@ class TestCritiqueLines(unittest.TestCase):
         h = _habitat()
         h["food_web"] = {"status": "no_hosts", "complete": False,
                          "caterpillars": False, "birds": True}
-        self.assertTrue(any("without host plants" in ln
+        # V2.53 (F8): the wording moved from "without host plants there are no
+        # caterpillars" — a statement about the world — to "no caterpillar host
+        # plants are recorded here", a statement about the record. Assert the
+        # claim, not the sentence, so a future rewording does not fail this.
+        self.assertTrue(any("host plants are recorded" in ln
                             for ln in critique_lines(h)))
 
     def test_food_web_complete_not_flagged(self):

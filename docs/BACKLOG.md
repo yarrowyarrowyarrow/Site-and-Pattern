@@ -28,7 +28,8 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals: 41 code features · 6 data jobs · 4 legacy-ledger items.**
+**Totals: 37 code features · 6 data jobs · 4 legacy-ledger items.**
+*(V2.52: 41. V2.53 shipped F8, F12, F13, F14 and F28 and opened F120.)*
 
 ---
 
@@ -54,18 +55,15 @@ it — it is the context for choosing what comes next.
 
 ## A · Confidence and provenance
 
-*Five items, all cheap, one theme. The roadmap has named this as "next" and then
-not done it for twelve consecutive increments; `ROADMAP_NEXT.md` says so itself.
-Doing them together shares one audit pass and one visual vocabulary. Doing them
-apart makes each a lonely half-day.*
+> **✅ Shipped in V2.53** — F8, F12, F13, F14 and F28 together, over one shared
+> vocabulary (`src/confidence.py`). Plan:
+> [`V2.53-the-confidence-block`](plans/V2.53-the-confidence-block.md). One row
+> survives, because the increment found a contradiction it deliberately did not
+> resolve.
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
-| **F8** | **Uncertainty language pass.** Soften deterministic phrasing toward honest ranges. When this was written it meant two modules; the app now generates prose in ten — `scene_dossier`, `docent`, `lesson_track`, `planting_plan`, `conversion_plan`, `habitat_nudges`, `phenology`, `plant_impact`, `chickadee_scenario`, `relationship_graph`. Still S; the value went up a lot | S | Low | P9 |
-| **F12** | **Citations at the point of use.** ◐ **Half built.** `src/citations.py` (V2.42) formats a source key into something a reader can take to a library, and it renders on the plant-directory species page and in Help → Data Sources. It reaches **no design-side surface**: not the Analysis panel, not the relationship web, not the 3D dossier. The formatter is done; the wiring is the work | S | Low | P7, P6 |
-| **F13** | **Reference-ecosystem fidelity score.** How closely does this design match the natural community of its place? `reference_ecosystem.resolve_reference_community` already returns the target genera and per-layer counts against the live catalogue, so comparing is the whole job. Report as a band, not a point. Also the natural win condition for F105's "rebuild the parkland from memory" | S | Low | P2, P6 |
-| **F14** | **Establishment-likelihood band.** "Tends to establish well / variable / risky here" instead of point-precision placement. `placement_score.score_cell_for_plant` already returns a 0–1 site fit; bucket it into three bands. Turns generation from "here is your design" into "here is where I'm confident", which is what makes a novice willing to act | M | Med | P9 |
-| **F28** | **Confidence marks on inferred fields.** Visibly mark inferred vs. sourced. Reuse F7's `evidence` vocabulary (`documented` / `recorded` / `derived`) rather than inventing a second one | S | Low | P9 |
+| **F120** | **Correct the 48 use tags the cited edges contradict.** V2.53 measured it: **37 species carry a documented `larval_host` edge and no `host_plant` tag** (Chokecherry and Balsam Poplar among them) and 11 carry a `fruit_food`/`seed_food` edge and no `bird_food` tag. The Habitat Value Score's host and bird-food components read the *tags*, so those designs score lower than the app's own cited data supports. V2.53 stopped the prose asserting the absence and left the score alone on purpose — correcting the tags **moves every affected design's score**, which the stability rule says is a decision to take deliberately. Measured by `data_quality.validate_use_tags_against_edges`; needs a seed-data edit and a `_SCHEMA_VERSION` bump | S | Med — moves scores | P9, P3 |
 
 ---
 
@@ -255,8 +253,10 @@ The pick is the owner's. Asked for one, in order:
    ingredient is already built and nothing is blocked on data or on a decision.
    F69 shipped the print-resolution render and F77 shipped the sidewalk camera, so
    F76 is assembly. And it is the argument the app has never made.
-2. **Group A — the whole confidence block.** Cheap, one vocabulary, and F12 is
-   already half-done. This is the moment to either schedule it or explicitly demote
-   it, because the roadmap has now named it as "next" and skipped it twelve times.
-   Drifting past it a thirteenth is the worst of the three options.
-3. **Group D — F92 then F91.** The largest untouched category, and F92 is a day.
+2. **Group D — F92 then F91.** The largest untouched category, and F92 is a day.
+3. **F120**, if the score should tell the truth about chokecherry. Small, and the
+   only thing gating it is the decision to let scores move.
+
+*(Group A — the confidence block — shipped in V2.53, on its thirteenth
+appearance as "next". The pattern this file was written to expose was real, and
+it is broken.)*

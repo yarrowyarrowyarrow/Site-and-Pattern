@@ -961,6 +961,9 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown)
 
+        # ── How sure are we? (F13 + F14) — the confidence block ───────────
+        self._build_confidence_block(layout)
+
         # ── Relationship web (F5) — the design drawn as a living network ───
         self._build_relationship_web_block(layout)
 
@@ -1073,6 +1076,79 @@ class AnalysisPanel(QWidget):
         ("derived", "Inferred: plants feeding the same wildlife", False,
          ("shared_fauna",)),
     ]
+
+    def _build_confidence_block(self, layout):
+        """"How sure are we?" — the establishment and fidelity bands (F13/F14).
+
+        The Habitat Value Score is a confident-looking number out of 100, and
+        until now nothing beside it said how much of that rests on evidence.
+        These two read-outs are the counterweight, and both are **bands, never
+        percentages** — see :mod:`src.confidence`, which owns the words so the
+        two cannot end up on different scales.
+        """
+        head = QLabel("How sure are we?")
+        head.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(head)
+
+        hint = QLabel(
+            "Two questions the score itself cannot answer: has anyone actually "
+            "recorded these species growing where you are, and does the design "
+            "have the shape of the natural community for this place.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(hint)
+
+        self._confidence_text = QLabel(
+            "Calculate the Habitat Value Score to fill this in.")
+        self._confidence_text.setWordWrap(True)
+        self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
+        self._confidence_text.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; "
+            "border-radius: 4px;")
+        layout.addWidget(self._confidence_text)
+
+    def _refresh_confidence(self, placed_plants, ecoregion):
+        """Recompute both bands. Never raises — a missing band is a blank line,
+        not a broken panel."""
+        from src.confidence import UNKNOWN                   # noqa: PLC0415
+        blocks = []
+        try:
+            from src.establishment import (                  # noqa: PLC0415
+                establishment_for_design, summary_band)
+            est = establishment_for_design(placed_plants, ecoregion)
+            band = summary_band(est)
+            blocks.append(self._band_html(
+                "Recorded growing here", band, est.get("lines") or []))
+        except Exception as exc:                             # noqa: BLE001
+            blocks.append(self._band_html(
+                "Recorded growing here", UNKNOWN, [f"Unavailable: {exc}"]))
+        try:
+            from src.reference_fidelity import fidelity      # noqa: PLC0415
+            fid = fidelity(placed_plants, ecoregion)
+            blocks.append(self._band_html(
+                "Like the natural community", fid["band"],
+                fid.get("lines") or []))
+        except Exception as exc:                             # noqa: BLE001
+            blocks.append(self._band_html(
+                "Like the natural community", UNKNOWN, [f"Unavailable: {exc}"]))
+        self._confidence_text.setText("<br><br>".join(blocks))
+
+    @staticmethod
+    def _band_html(title: str, band, lines: list) -> str:
+        """One band as a heading, its label, its basis, and the detail lines.
+
+        The blurb is always shown, because a band label read without what it is
+        based on is exactly the false confidence this block exists to prevent.
+        """
+        colour = {"high": "#a5d6a7", "medium": "#ffcc80",
+                  "low": "#ef9a9a"}.get(band.key, "#90a4ae")
+        body = "".join(f"<br>{ln}" for ln in lines if ln)
+        return (f"<b>{title}:</b> <span style='color:{colour};'>"
+                f"{band.label}</span>"
+                f"<br><span style='color:#78909c;'>{band.blurb}</span>{body}")
 
     def _build_relationship_web_block(self, layout):
         """The relationship-web controls on the Habitat tab.
@@ -1684,6 +1760,32 @@ class AnalysisPanel(QWidget):
         # its list was only rebuilt when the habitat score was recalculated by
         # hand, so it drifted out of step with what was actually planted.
         self._populate_pull_combo()
+        # Same rule for the confidence bands (F13/F14) — a read-out that only
+        # updates when a button is pressed is the V2.42 stale-list bug, and
+        # both of these change the moment a species is added or removed.
+        self._refresh_confidence(self._placed_plants or [],
+                                 self._site_ecoregion())
+
+    def _site_ecoregion(self):
+        """The site's ecoregion key, cached against the pin.
+
+        ``lookup_ecoregion`` is a point-in-polygon sweep over the shipped
+        GeoJSON and this is called on every plant placement, so the answer is
+        memoised on the coordinates rather than recomputed per edit.
+        """
+        lat = getattr(self, "_sun_lat", None)
+        lng = getattr(self, "_sun_lng", None)
+        if lat is None or lng is None:
+            return None
+        if getattr(self, "_ecoregion_at", None) == (lat, lng):
+            return self._ecoregion_cache
+        try:
+            from src.ecoregion import lookup_ecoregion       # noqa: PLC0415
+            self._ecoregion_cache = lookup_ecoregion(lat, lng)
+        except Exception:                                    # noqa: BLE001
+            self._ecoregion_cache = None
+        self._ecoregion_at = (lat, lng)
+        return self._ecoregion_cache
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""

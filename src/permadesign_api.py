@@ -63,6 +63,8 @@ __all__ = [
     "phenology",
     "lesson_track",
     "reference_community",
+    "reference_fidelity",
+    "establishment",
     "docent_script",
     "export_plant_catalogue_docx",
 ]
@@ -439,6 +441,53 @@ def reference_community(ecoregion: Optional[str] = None) -> dict:
         return resolve_reference_community(ecoregion)
     except Exception as exc:      # noqa: BLE001
         raise AnalysisError(f"Reference community unavailable: {exc}") from exc
+
+
+def reference_fidelity(project: Project,
+                       ecoregion: Optional[str] = None) -> dict:
+    """How close ``project`` is to the natural community of its place (F13).
+
+    The number that goes with :func:`reference_community`'s walkable target.
+    Returns the dict from :func:`src.reference_fidelity.fidelity`: a
+    :class:`~src.confidence.Band` (never a percentage — the inputs are a curated
+    spec and a catalogue with known gaps), the per-layer ``have``/``want``
+    comparison, the reference genera the design shares, and plain lines a caller
+    can print. ``known`` is False when there is nothing to compare, which is a
+    different answer from a low score.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.reference_fidelity import fidelity
+    try:
+        return fidelity(project.placed_plants, ecoregion)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Fidelity unavailable: {exc}") from exc
+
+
+def establishment(project: Project,
+                  ecoregion: Optional[str] = None) -> dict:
+    """Has anyone actually recorded these species growing here? (F14)
+
+    Bands every placed species by its georeferenced occurrence count in
+    ``ecoregion`` — the schema-v59/v60 range data, which carries a count, a
+    confidence band and a source per (species, region). Returns the dict from
+    :func:`src.establishment.establishment_for_design`.
+
+    **A species with no record is reported as unknown, never as unsuitable.**
+    Below the three-record floor an absent species and an under-collected one
+    are indistinguishable, and saying so is the point of the band.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.establishment import establishment_for_design
+    try:
+        return establishment_for_design(project.placed_plants, ecoregion)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Establishment unavailable: {exc}") from exc
 
 
 def docent_script(project: Project) -> dict:

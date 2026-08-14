@@ -421,7 +421,15 @@ def _photos(plant: dict, photos_for: Optional[Callable]) -> list[dict]:
 def _provenance(plant: dict) -> list[str]:
     """Where the measured morphology came from. A directory that shows petal
     counts should be able to say who counted them (P9, and the V2.38 bench
-    refuses a correction that cannot)."""
+    refuses a correction that cannot).
+
+    V2.53: the raw seed word (``estimated``, ``flora``) is rendered through
+    :func:`src.confidence.mark`, so this page, the website and the 3D dossier
+    all say the same thing about the same value. It used to print the database
+    token, which is honest and unreadable — "Flower detail: estimated" does not
+    tell a reader that nobody has ever looked at that number.
+    """
+    from src.confidence import mark                          # noqa: PLC0415
     out = []
     for src_field, cite_field, what in (
             ("flower_data_source", "flower_data_citation", "Flower"),
@@ -430,18 +438,12 @@ def _provenance(plant: dict) -> list[str]:
         if not source:
             continue
         cite = (plant.get(cite_field) or "").strip()
-        out.append(f"{what} detail: {source}" + (f" — {cite}" if cite else ""))
+        m = mark(source)
+        # An unrecognised seed word still shows itself rather than vanishing
+        # behind "not recorded" — the value IS there, we just have no wording.
+        word = m.label if m.recorded else source
+        out.append(f"{what} detail: {word}" + (f" — {cite}" if cite else ""))
     return out
-
-
-#: How each provenance value reads to a person. ``estimated`` is spelled out
-#: because "the genus default" is the fact worth knowing: it is what put a red
-#: flower on the blue columbine (V2.48).
-_COLOUR_SOURCE_WORD = {
-    "name": "checked against its common name",
-    "epithet": "checked against its Latin name",
-    "estimated": "not verified, a genus-level estimate",
-}
 
 
 def _bloom_colour(plant: dict) -> dict:
@@ -462,11 +464,15 @@ def _bloom_colour(plant: dict) -> dict:
         return {"bloom_colour": key,
                 "bloom_colour_label": "Straw or green seed heads",
                 "bloom_colour_note": "wind-pollinated, so no showy flower"}
+    from src.confidence import mark                          # noqa: PLC0415
     source = (plant.get("flower_colour_source") or "").strip()
+    m = mark(source)
     return {
         "bloom_colour": key,
         "bloom_colour_label": COLOUR_LABELS.get(key, key),
-        "bloom_colour_note": _COLOUR_SOURCE_WORD.get(source, ""),
+        # No mark on a value somebody checked, and nothing at all when the
+        # column is empty — the shared rule from src.confidence.annotate.
+        "bloom_colour_note": m.label if (m.recorded and source) else "",
     }
 
 
