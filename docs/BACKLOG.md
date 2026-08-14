@@ -1,0 +1,262 @@
+# Site & Pattern — the backlog
+
+**Everything not yet built, in one place.** Written V2.52, verified against the
+codebase rather than against the previous roadmap.
+
+This file exists because the question *"what could I work on next?"* had no
+answer that could be read in one sitting. The unbuilt entries were spread across
+`ROADMAP_NEXT.md` (eight lettered themes, inside 1,052 lines that are mostly a
+shipped record), `PHILOSOPHY_ROADMAP.md` (F1–F62), `ROADMAP.md` (the legacy
+X/P/V ledger), `USER_FEEDBACK.md`, and the tails of `SPRITE_AUDIT.md` and
+`DATA_GAPS.md`. Four entries had shipped and were still listed as open; two were
+half-built with no note saying which half; one feature was described twice under
+two IDs.
+
+**How this relates to the other four documents.** This is the *index* — one line
+per thing, enough to choose from. The **reasoning** for each entry (what it is,
+how it would be built, what it leans on) stays where it was written:
+[`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) for F63 and up,
+[`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) for F1–F62. Follow the ID.
+
+**The rule that keeps this file honest: a row leaves when it ships.** The shipped
+record belongs in `ROADMAP_NEXT.md`'s Shipped section and the release plans under
+[`plans/`](plans/). If this file ever starts carrying history, it has stopped
+being useful.
+
+**Ratings.** Effort: **S** (hours to a day) · **M** (a few days) · **L** (a week
+or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
+breakage, scope creep or a hard dependency. **P** names the design principle from
+[`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
+
+**Totals: 41 code features · 6 data jobs · 4 legacy-ledger items.**
+
+---
+
+## The state of the argument
+
+The roadmap's own list of *what this app is not good at yet* has five entries.
+Since it was written, one of them has been paid down:
+
+| Weakness | State |
+|---|---|
+| "It looks like a diagram" | **Largely fixed** — V2.33/34/36 (surfaces, aspect axes, florets, seed heads, fauna morphology) |
+| "Its photographs don't show the plant" | **Unmoved.** 111 of 434 plants have none, **0 species have a habit shot**, 62 of 69 bees have none. Group C |
+| "It never argues that a native yard is beautiful" | **Unbuilt.** Group B |
+| "It has no professional workflow" | **Entirely unbuilt.** Group D |
+| "It sprawls" | **Unbuilt.** Group F |
+
+Worth stating alongside that: V2.43–V2.46 were Learn-side and 3D-creature work,
+V2.47–V2.51 were website, catalogue and data work, so **the design side proper
+has not had an increment since V2.42**. That is not an argument against any of
+it — it is the context for choosing what comes next.
+
+---
+
+## A · Confidence and provenance
+
+*Five items, all cheap, one theme. The roadmap has named this as "next" and then
+not done it for twelve consecutive increments; `ROADMAP_NEXT.md` says so itself.
+Doing them together shares one audit pass and one visual vocabulary. Doing them
+apart makes each a lonely half-day.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F8** | **Uncertainty language pass.** Soften deterministic phrasing toward honest ranges. When this was written it meant two modules; the app now generates prose in ten — `scene_dossier`, `docent`, `lesson_track`, `planting_plan`, `conversion_plan`, `habitat_nudges`, `phenology`, `plant_impact`, `chickadee_scenario`, `relationship_graph`. Still S; the value went up a lot | S | Low | P9 |
+| **F12** | **Citations at the point of use.** ◐ **Half built.** `src/citations.py` (V2.42) formats a source key into something a reader can take to a library, and it renders on the plant-directory species page and in Help → Data Sources. It reaches **no design-side surface**: not the Analysis panel, not the relationship web, not the 3D dossier. The formatter is done; the wiring is the work | S | Low | P7, P6 |
+| **F13** | **Reference-ecosystem fidelity score.** How closely does this design match the natural community of its place? `reference_ecosystem.resolve_reference_community` already returns the target genera and per-layer counts against the live catalogue, so comparing is the whole job. Report as a band, not a point. Also the natural win condition for F105's "rebuild the parkland from memory" | S | Low | P2, P6 |
+| **F14** | **Establishment-likelihood band.** "Tends to establish well / variable / risky here" instead of point-precision placement. `placement_score.score_cell_for_plant` already returns a 0–1 site fit; bucket it into three bands. Turns generation from "here is your design" into "here is where I'm confident", which is what makes a novice willing to act | M | Med | P9 |
+| **F28** | **Confidence marks on inferred fields.** Visibly mark inferred vs. sourced. Reuse F7's `evidence` vocabulary (`documented` / `recorded` / `derived`) rather than inventing a second one | S | Low | P9 |
+
+---
+
+## B · WANT and SHOW — the argument the app doesn't make
+
+*The app argues superbly that a native yard is ecologically valuable. Nobody
+converts a lawn on ecological grounds alone, and nobody's spouse, neighbour or
+HOA does. Principle 13 exists to name this; these are the two features that act
+on it. F77 (the neighbour's-eye view) already shipped in V2.33 as the `sidewalk`
+camera preset, so the camera work is done.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F76** | **Before / after / in five years.** The one image that makes people act, and every ingredient exists and has never been assembled: the user's own lawn photo (F24's site-photo underlay, or the splat backdrop), the design at **year 1**, and the design at **year 5** (F2's snapshot timeline, F69's print-resolution render). Three panels, one page, on screen and in the PDF. For the novice it is what converts a spouse; for the designer it is page one of the proposal; for P4 it is "design the trajectory" as a single artefact instead of a slider someone has to be persuaded to drag | M | Med | P4, P5, P8 |
+| **F75** | **Cues-to-care checker.** Critique the design for the moves that decide whether it survives *socially*: a mown or hard edge along the public frontage, a defined border, height graded toward the back, a visible path or entry, one showy repeat that reads as intentional, room for a sign. Extends `design_critic.critique_lines`; every input either exists already (`placement_score`'s aesthetic sub-scores, `lawn_zones` geometry, the boundary and frontage) or is a one-line geometric test | S–M | Low | P2, P13 |
+
+---
+
+## C · RECOGNISE — the photographs
+
+*Six weeks after planting, can they tell their milkweed from a weed? The
+structural work landed in V2.35/V2.36 (seven named slots, user photos that
+survive a reseed, the curation bench, the candidate picker). What is left is two
+features and one decision, and the decision gates most of the remaining data
+work — see also Group J.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F73** | **"In my yard, on this date."** Tag a user photo to a *placed plant* and a *date*, and it stops being reference material and becomes an observation. F51's phenology prompt ("we predict X in bloom around now — is it early, late, on time?") finally has somewhere to land; the old F33 observation journal is delivered with the best possible entries; and after two or three seasons the user owns their own site's bloom dates, against which the app's shipped ranges can be checked. **The `taken_on` column already exists** (`src/db/photos.py`, schema v55) — this is UI work now, not a schema bump | M | Low | P11, P4 |
+| **F74** | **The seedling sheet.** In May a first-year conversion is forty unidentifiable green rosettes and the beginner weeds their own milkweed. Mostly assembly: the `seedling` slot supplies the images, keyed to F41's numbered planting map so the sheet and the plan share one numbering, printed with the planting document. Be honest where there is no photo (P9) — which makes the gaps a visible target. **Blocked on content, not code:** essentially no species has a seedling photo yet | S–M | Low | P11, P8 |
+| — | **The bee photo-licence decision — the owner's call, not the roadmap's.** 62 of 69 bees have no photograph *because* bees are held to a stricter bar than everything else: CC0/CC-BY only, no ShareAlike (the F37 A1 decision, enforced in `data_quality.validate_fauna_images`). Options: **(a)** accept CC-BY-SA for bees as for other taxa and take on the ShareAlike obligation, **(b)** keep the bar and accept that most native bees ship without a photo, leaning on F67's models to carry the identification, **(c)** source them ourselves. Worth deciding before any curation pass, because it changes what there is to curate | — | — | — |
+
+---
+
+## D · The designer's workflow
+
+*A landscape designer using this professionally hits four walls, none of which is
+about ecology. Verified: none of these modules exists. This is the largest wholly
+untouched category on the list.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F92** | **An order file a nursery accepts.** F40 produces the buy list as text and as a PDF page. A designer needs it as **CSV/XLSX grouped by supplier** — botanical names, pot size / form, quantity, unit price range, total — the thing you attach to an email. Every field is already computed. Small, unglamorous, and it is the last centimetre between a design and a purchase order | S | Low | P8 |
+| **F91** | **Ecological substitution — "the nursery is out."** Every plant tool has "similar plants" and they all mean similar height and colour. This app can mean *ecologically equivalent*: same vegetation layer, overlapping site envelope, overlapping supported fauna via `relationships.edges_for_plant` — then report the trade honestly, which is `plant_impact` run on a swap rather than a removal. *"Chokecherry for Saskatoon: keeps 9 of 12 supported species and the food-web chain. You lose the July fruit window."* Triggered by the real moment: out of stock, or out of budget | M | Low | P3, P10 |
+| **F113** | **Design variants + side-by-side comparison.** *(Renumbered from F90 in V2.52 — F90 is the shipped plant directory.)* No designer presents one option, and the app holds exactly one project. "Duplicate as a variant", then a comparison view: habitat score, cost range, first-year and steady-state hours, food-web status, species and wildlife counts, native ratio, with the deltas named. Every number exists; holding two projects at once and diffing them is the missing part. Also on-message — presenting options with their trade-offs rather than one confident answer is P9 at the scale of a whole design | L | Med | P9, P1 |
+| **F93** | **Reusable palettes / go-to communities.** A designer repeats themselves across sites; that is craft, not laziness. Save the current selection as a named palette and apply it to a new site **with site-fit re-checking**, which is the part a human cannot do quickly and this app can. Extends `polycultures`, which already carries user-authored rows through a reseed | M | Low | P1 |
+
+---
+
+## E · The Learn side and the curriculum
+
+*V2.43 split the app into Learn and Design at boot; V2.44–V2.46 made the sandbox
+a place you can work in and gave the animals real flight. This is the rest of it.
+F85 and F106 were the same feature described twice and are merged here.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| — | **The glossary half — do this first, and separately.** About **12 of ~20 Site Info metrics have no explanation anywhere**, no tooltip, nothing. Meanwhile `src/climate.py:96 zone_description()` returns exactly the right sentence for the hardiness zone and **is called by nothing**, and `climate.py:112-124` holds an excellent plain-English account of GDD₅ that exists only as a developer comment. A Qt-free glossary module plus one `setToolTip` per metric answers the tester's actual example at a fraction of the cost of a companion, and gives the companion something to read out later. Named in the roadmap twice and skipped twice | S | Low | P5 |
+| **F104** | **Undo in the sandbox, and the graduation path.** Two gaps, and the first is the embarrassing one: **Design mode has full undo/redo and Learn mode has none** — the side built for people who do not know what they are doing yet makes every misclick permanent. Second: "take this landscape into Design", turning the fen you built into a real design at your address, which is what would make Learn *lead* somewhere instead of being a side room. Mostly a coordinate transform; the sandbox is already a real project | M | Low | P13 |
+| **F105** | **Challenges and achievements.** Briefs with win conditions over the sandbox: *"support 5 bee species on 20 m²"*, *"keep something in bloom every week April→October"*. Scored by machinery that exists — `habitat_score`, `forage_calendar`, `habitat_nudges` — with **F13** as the natural win condition for "rebuild the parkland from memory". **Bank achievements for going outside**, which is not optional: a game that rewards screen time argues against the principle the app is built on. F32 and F73 are the hooks | M | Med | P11, P13 |
+| **F85** | **The companion.** *(Absorbs F106 — the two entries proposed the same thing in the same words.)* A fauna guide (a caterpillar, a bee, a chickadee) that explains the app as you go, starting with Site Info. Reuses `onboarding.py`'s progress model, `docent.py`'s beat shape (`id + title + narration + viewer state`), `onboarding_flow.on_step_clicked`'s navigation, and `learn_state` (schema v62) for the choice. Genuinely net-new: a beginner/expert flag, any widget-anchoring concept, tour-progress persistence, **and the art — there is no caterpillar drawing in this repo in any format**. Risk on file: a helper that keeps people looking at the screen argues against P11, so it should push you outside | L | Med | P5, P13 |
+| **F107** | **Hand-painted lepidoptera wings.** *"A generic butterfly does nothing."* Half of this already exists and is worth looking at first — `scripts/tune_fauna.py` already edits wingspan, forewing/hindwing/margin colours, wing shape, pattern, resting posture and flight style, each with a drawn SVG vocabulary. What does not exist is the painting: the fauna GLBs ship with **no UVs and no textures by contract**, so the lep material needs its own path in `09-models.js`; plus a wing template to paint against, an import path (reuse `photo_import` — a specimen photographed in a yard carries that yard's coordinates), and a schema slot with `origin='seed'` vs `'user'` semantics so a reseed cannot destroy hand-painted work. Wants a conversation about the template before any code | L | Med | P13, P5 |
+| **F83** | **Know the plant, not just the design.** Plant-identification lessons: show a photograph, ask for the character, score it. **Three quarters built** — 33 botanical and 31 zoological drawn SVGs exist in `html/botany/`, served over `/api/vocab`, with a working "click the drawing that matches" interaction in the tuning bench, and `learn_panel.py` already has Field Study while `lesson_track.py` has the progress model. What is missing is content: it wants the `habit` and `leaf` photo slots filled first | M | Low | P5, P7 |
+| **F88** | **The Learn tab as a curriculum.** Four tracks: the app, design and philosophy, the flora, the fauna. `lesson_track.py` already has the shape (id / title / teaching text / live readout / status) but every step is about *the design* rather than about the app or the discipline, and progress is not persisted (`LessonTrackWidget._i` resets on every refresh — `learn_state` can now hold it). **P12 applies with force:** a "learn about native flora" track must not become a route to Indigenous plant-use knowledge by the back door, and any new learning surface must be added to the test that scans labels and headings for ethnobotanical vocabulary | L | Low | P5, P7 |
+
+---
+
+## F · Surface and sprawl
+
+*Six side tabs, roughly twenty sub-tabs, three inner tabs under Plants, ten
+buttons on the 3D toolbar. Every one was justified when it landed. Together they
+are why a novice cannot find the thing they need and a designer cannot get to a
+deliverable quickly. There is precedent for fixing this well: the Forage tab was
+retired in V2.25 once Planning → Wildlife covered the same question, and nothing
+was lost.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F89** | **The 3D preview's UX review.** Ten buttons over two rows, plus three sliders and two combos. V2.37 reordered row 2 and flipped the mouse buttons; the structural question is untouched. An honest retirement pass first | M | Med | P5 |
+| **F94** | **A task-shaped home**, or (first) **an honest tab retirement pass**. Organise by what the user is trying to do — Design · Understand · Plant · Learn — rather than by which subsystem owns the code. High risk, and it should not be attempted until the retirement pass shows what is genuinely load-bearing | L | High | P5 |
+
+---
+
+## G · Notes, and going outside
+
+*P11 (the body and the site know things the screen does not) is the principle
+this app has always been thinnest on in practice.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F32** | **Printable field-mode checklist.** A site-walk sheet through `pdf_export.py` so the user records outside and enters findings afterwards. Pairs with F6's field notes, and it is **the last unbuilt item in the ACT/OUTPUT stage** — everything else in that column shipped in V2.31 | S | Low | P11 |
+| **F86** | **Notes that add up.** *"There should be an option to make a note from any menu or on the design itself and have all these notes feed a master note doc that can use this info in a functional way rather than just a record."* There are **five** disconnected note stores today: field notes (`properties.field_notes`, a closed vocabulary of 10 prompts), map annotations (GeoJSON points, free text, no timestamp), the design journal (`properties.notes`, one flat string), photo notes (a DB column), and a display-only mirror in `planning_panel.py`. `format_field_notes()` exists and is called from nowhere; none of it reaches the PDF except the journal. **The hard half is "functional rather than just a record"** — start by asking what a note should be able to *do* (become a task, pin to a plant, date-stamp an observation) before unifying the storage | M | Med | P11, P4 |
+
+---
+
+## H · Depth and relationships
+
+*Connoisseur depth. Ranked here by cost, cheapest first, because several got much
+cheaper when F7 landed and nobody has re-read them since.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F19** | **"Why here?" — the placement rationale.** Half already built: the V2.29 click-to-learn dossier answers "what is this and what does it support" on click. The only missing piece is *why the generator put it there*, which is a few sub-score lines from `placement_score` added to a card that exists (verified absent from `scene_dossier`) | S | Low | P2, P5 |
+| **F49** | **Ornamental → native swap card.** The garden-centre moment, and the single most likely place to change a real purchase. Needs a curated `data/native_swaps_master.json` (ornamental name, the aesthetic role it plays, the native substitute keyed to a real `plants` row, the ecological gain), a table, a schema bump and a lookup module. **A 25-row starter list of the ornamentals actually sold in Alberta big-box garden centres is enough to prove it**, which is a much smaller commitment than the card implies | S–M | Med | P6, P8 |
+| **F38** | **Mycoremediation / degraded-site notes.** Well-cited restoration techniques for contaminated and compacted ground. Content, directional | S | Low | P8 |
+| **F18** | **Site-condition remediation advisor.** From measured soil and disturbance, recommend a *repair sequence* — pioneer cover → soil builders → target community. `property_data.fetch_soil` returns pH and texture; combine with the plants' pH envelopes and `succession.successional_role` | M | Med | P8, P4 |
+| **F23** | **Declarative, inspectable placement rules.** P1's honest gap: the generative rules (density per m², native-first, anti-monoculture, layer balance) exist but are constants buried in `placement_score` and `llm_design`. Lifting them into a named, documented, tweakable rule object is the difference between *claiming* generative design and showing it | M | Low | P1 |
+| **F25** | **Mycorrhizal / symbiosis edges.** Promote the facts now buried in plant `notes` (Frankia, ericoid, AMF, inoculation needs) to first-class data. **Since F7 this is no longer a subsystem** — seed a table, add a `UNION ALL` arm to the `relationship_edges` view, register an `EdgeKind`, and it appears in the relationship web, `neighbourhood()` and the scripting API for free. The remaining work is the data, which is the honest bottleneck: most of these facts are genus-level | M | Med — schema | P3 |
+| **F26** | **Successional-sequence edges.** "Pioneer A prepares the ground for climax B" as a real relationship, driving planting order and the timeline. Same discount as F25, and it is the one edge kind that is genuinely *directed* between two plants, so it exercises the `directed` flag the view already carries | M | Med — schema | P3, P4 |
+| **F29** | **Scenario ranges on the timeline.** A growth/maturity *band* rather than a single line, from a slow/expected/fast spread of `years_to_maturity` | M | Low | P9, P4 |
+| **F21** | **Ecosystem-services readout.** Carbon, stormwater retention, cooling, pollination as honest ranges beside the habitat score. **Only worth building if the ranges stay wide and loud** — otherwise it invites exactly the false precision P9 forbids | M | Med | P6, P9 |
+| **F36** | **Emergent community spacing.** Generate `polyculture_members` offsets from competition and canopy rules instead of fixed offsets. F22/F35 already give naturalistic spacing, so this is refinement | L | Med — schema | P1, P4 |
+| **F27** | **Habitat-corridor analysis.** Connect the design to adjacent natural features — relationship thinking at landscape scale. Speculative, and it needs external data | L | Med | P3 |
+
+---
+
+## I · 3D fidelity leftovers
+
+*What the sprite audit and the V2.36 fauna work left open. New IDs assigned in
+V2.52 so each has a handle.*
+
+| ID | Feature | Effort | Risk | Where it came from |
+|----|---------|--------|------|---|
+| **F114** | **Wing-pattern geometry** — eyespots and bands as procedural decals. Written and then **removed**: the marks attached to the wing pivots and positioned correctly but would not render, a coplanar-decal ordering problem that resisted polygon offset, depth-test and explicit render order inside a sensible budget. The data, the vocabulary, the drawings and the bench are all in place, so this is geometry work on a settled contract rather than a rebuild | M | Med | deferred from F84 |
+| **F115** | **Shrub aspect within a silhouette** — the within-class spread the herb and layer axes already got | M | Med — asset size | sprite audit |
+| **F116** | **Fern density** | S | Low | sprite audit |
+| **F117** | **Billboard fruit** — the last billboard in a scene that is otherwise geometry | S | Low | sprite audit |
+| **F118** | **Better creature models.** The bee is spheres plus two flat discs; the bird is spheres, a cone beak and a box tail. V2.45 made them *move* correctly, which raises rather than lowers the value of making them *look* correct. Blender work through `scripts/blender/assetlib/fauna.py`; the morphology to drive it now exists for all three flying taxa | M | Med | Theme H backlog |
+| **F119** | **Birds, mammals and other insects still resolve from name tables.** Birds render 24 species as 16 looks; F84 gave bees and lepidoptera real morphology columns and left the rest on substring matching against the common name. The schema-v58 pattern is proven and repeatable | M | Med — schema | F84 |
+
+---
+
+## J · Data work — startable today, no code required
+
+*The bottleneck on several features above is data, not engineering. These are the
+jobs that move it, with the tooling that already exists.*
+
+| Job | State, and the next step |
+|---|---|
+| **Flower colour** | 359 species still carry a genus-level guess. 81 are grasses with no bloom colour and are excluded; of the 276 left, **110 sit in 25 genus groups sharing one hex** — the columbine bug's exact shape. `python scripts/colour_worklist.py --sheet colour-check.html` writes a contact sheet of the 199 that already have a photograph, worst group first, with the claimed colour as a swatch under each image. Two sittings. The 77 with no photograph need a flora, or a photo first |
+| **Photo coverage** | **111 of 434 plants** have no photograph; **0 species have a habit shot**; 84 of 142 fauna and **62 of 69 bees** have none. The bench (`scripts/tune_morphology.py`) has the candidate picker and the slot editor. Gated on the bee-licence decision in Group C |
+| **iNaturalist observation photos** | The remaining lever for the 111 species with nothing: `/v1/observations?taxon_id=…&photo_license=…&quality_grade=research` for species whose taxon photo set is thin. Scoped in V2.36, not built |
+| **Bird morphology** | All 24 rows ship `verified = 0` — entered from published literature in a session with no network. **Wing area is null for every row**, the one bird measurement not routinely published, currently inferred from span and a per-style aspect ratio. Needs a session with egress: AVONET (Tobias et al. 2022, CC BY 4.0) and Dunning's *CRC Handbook of Avian Body Masses* |
+| **Peace River Parkland** | A missing ecoregion. Raised in V2.51 rather than taken, because adding a polygon changes what real properties get recommended |
+| **Real CEC ecoregion polygons** | The shipped outlines are hand-authored and every drawing says so (`CAVEAT`). The download is written up in [`plans/V2.38-ecoregion-runbook.md`](plans/V2.38-ecoregion-runbook.md) and needs a machine with open egress |
+
+---
+
+## K · Legacy ledger
+
+*Still marked "Planned" in [`ROADMAP.md`](ROADMAP.md), which is otherwise a
+historical document. Listed for completeness; none is ranked.*
+
+| ID | Feature | Note |
+|----|---------|---|
+| **X1** | Google Earth KML/KMZ import and export | Unranked. The scan-import and OSM pipelines cover most of what it was for |
+| **X4** | Community design sharing — export/import designs through a shared online library | Unranked. `.perma.geojson` is already a portable file; the missing part is a place to put it |
+| **V1** | Vegetation layer indicators — per-layer markers and a layer toggle | Unranked. Partly covered by the relationship web's layer filter and the 3D layer archetypes |
+| **P4 / P5** | Crop rotation tracker · input/output ("energy leak") mapping | **Retirement candidates.** Both are permaculture-era, from before the V1.x pivot to native habitat, and neither has been coherent with the product for a long time |
+
+---
+
+## L · Retired from the open lists
+
+*Carried here once, so the next reader does not go looking for them. Each was
+listed as open somewhere and is not.*
+
+| ID | Why it is closed |
+|----|---|
+| **F77** · the neighbour's-eye view | **Shipped V2.33.** `src/presentation_still.py` declares `CAMERA_PRESETS = ("overview", "orbit", "walk", "sidewalk")` and names it as F77 in a comment; the camera is in `html/scene3d/08-modes.js` |
+| **F62** · aspect axis on layer archetypes | **Shipped V2.33 as F65** (renumbered on the way in) |
+| **F60** · blade-class axis on tree archetypes | **Absorbed by F64**, shipped V2.33 |
+| **F20** · maintenance-over-time curve | Delivered in substance by **F42** — `maintenance_calendar` ships 36–76 → 18–38 → 9–19 → 6–11 hours a year, with a test that fails if the curve ever flattens. Only a chart is missing, and it belongs inside F42 rather than as its own card |
+| **F33** · seasonal observation journal | **Subsumed by F73 + F86.** A dated photograph tied to a placed plant is a better journal entry than a timestamped string, and F86 owns the unification |
+| **F15** · pollinator-pathway overlay · **F30** · invisible-relationship legend | **Merged into F5**, which shipped in V2.31 with a legend and a filter row. A month scrubber on that overlay is the remaining cheap follow-on |
+| **F31** · glossary page | **Folded into F45.** In-context definitions beat a separate page — but note the *Site Info tooltips* half in Group E is genuinely unbuilt |
+| **F34** · shearing-layers data audit | **Retired as a feature.** It is a data-quality check and belongs as an assertion in `src/data_quality.py` |
+| **F39** · sensor integration hooks | **Dropped until a user asks.** Speculative IoT, external dependency, no evidence of demand, unchanged on the list for a very long time |
+
+---
+
+## If you want a recommendation
+
+The pick is the owner's. Asked for one, in order:
+
+1. **Group B — F76 then F75.** It closes the only self-named weakness where every
+   ingredient is already built and nothing is blocked on data or on a decision.
+   F69 shipped the print-resolution render and F77 shipped the sidewalk camera, so
+   F76 is assembly. And it is the argument the app has never made.
+2. **Group A — the whole confidence block.** Cheap, one vocabulary, and F12 is
+   already half-done. This is the moment to either schedule it or explicitly demote
+   it, because the roadmap has now named it as "next" and skipped it twelve times.
+   Drifting past it a thirteenth is the worst of the three options.
+3. **Group D — F92 then F91.** The largest untouched category, and F92 is a day.

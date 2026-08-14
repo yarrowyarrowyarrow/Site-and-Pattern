@@ -29,7 +29,13 @@ feature, skim where it sits in that philosophy. The sources of truth:
 
 - [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the thirteen principles, each with a
   "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
-- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F82) organized by the
+- [`docs/BACKLOG.md`](docs/BACKLOG.md) — **everything not yet built, in one place** (V2.52). Read
+  this before re-deriving the backlog from the two roadmaps; it is the index, and it carries the
+  verified status of every open ID.
+- [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) — the live plan and the *reasoning* per feature,
+  plus the **ID ledger** (F63–F119) and the shipped record. Feature IDs have collided three times;
+  take the next free ID from that ledger, never from memory.
+- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F62) organized by the
   principle they serve, with a "Shipped" section at the top.
 - [`docs/REFERENCES.md`](docs/REFERENCES.md) — the full bibliography.
 

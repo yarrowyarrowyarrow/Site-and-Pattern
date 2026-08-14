@@ -1,6 +1,6 @@
 # What each document here is for
 
-Eighteen files is enough that "which of these matters?" is a fair question. This
+Nineteen files is enough that "which of these matters?" is a fair question. This
 is the map. Roughly in the order a newcomer should meet them.
 
 ## Start here
@@ -17,7 +17,8 @@ is the map. Roughly in the order a newcomer should meet them.
 
 | Document | What it is | Read it when |
 |---|---|---|
-| [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) | **The live plan.** F63–F82 and what comes after, grouped by theme, each with impact/effort/risk and a "how I'd build it". | Deciding what to do next. |
+| [`BACKLOG.md`](BACKLOG.md) | **Everything not yet built, in one place.** 41 features, 6 data jobs, 4 legacy items — one line each, verified against the codebase. The index; the reasoning lives in the two roadmaps. A row leaves when it ships. | Choosing what to work on. |
+| [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) | **The live plan.** F63–F119 and what comes after, grouped by theme, each with impact/effort/risk and a "how I'd build it". Also holds the **ID ledger** and the shipped record. | You picked something from the backlog and want the reasoning. |
 | [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) | Features organized by the *principle* they serve, with a Shipped section as the historical record. Long, and meant to be. | Asking "does this belong in this app?" |
 | [`ROADMAP.md`](ROADMAP.md) | The effort/impact ledger — what shipped, tier by tier. **Historical**, not live. | Archaeology. |
 | [`DATA_GAPS.md`](DATA_GAPS.md) | Seed-data debt: what the code is ready for and the catalogue is not. Photo coverage, flower-morphology provenance, the unbacked Generate-Design goals. | Wondering why a feature is a "hint" and not a filter. |

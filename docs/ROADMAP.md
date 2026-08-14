@@ -4,15 +4,25 @@ The effort/impact ledger: what has been built, tier by tier. It is the
 **historical** view — a record of what shipped and roughly what it cost.
 
 > **Looking for what is being worked on now?** That is
-> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md), which carries the live plan (F63–F82 and
-> beyond). For the philosophy-driven lens over both — features organized by the
-> principle they serve — see [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md)
-> and the founding text it derives from,
-> [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
+> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md), which carries the live plan (F63–F119 and
+> beyond). For a straight list of **everything not yet built**, see
+> [`BACKLOG.md`](BACKLOG.md). For the philosophy-driven lens over both — features
+> organized by the principle they serve — see
+> [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) and the founding text it
+> derives from, [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-The "Current Sprint" table below is from the V1.x reframe and is kept as the
-record of that pivot; everything in it is long done. It is not the current
-sprint and has not been since V1.5.
+The "Current Sprint" table below is from the V1.x reframe (**early V1.x, before
+V1.5**) and is kept as the record of that pivot; everything in it is long done.
+It is not the current sprint and has not been since V1.5. Statuses inside it were
+never updated after the pivot and should be read as historical intent, not as
+state.
+
+> **Four statuses corrected in V2.52** — the tiers below had been drifting for a
+> long time. **P1** (succession/timeline planner) and **V5** (photo overlay) read
+> "Planned" and had shipped, as the succession engine / F2 and as F24. **P4**
+> (crop rotation tracker) and **P5** (input/output "energy leak" mapping) are
+> marked as retirement candidates: both are permaculture-era, predate the V1.x
+> pivot to native habitat, and have not been coherent with the product since.
 
 ---
 
@@ -74,11 +84,11 @@ Features for long-term planning and tracking.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
+| P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Done — far past this card: `src/succession_engine.py` + the F2 snapshot timeline. Status corrected V2.52 |
 | P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
 | P3 | **Wildlife & Human Forage calendars** | Two expandable tree views — Wildlife Forage (pollinator nectar + bird food, nectar-gap flagging) and Human Forage (edible plants by harvest window). Each month expands to the individual plants providing forage. | Done |
-| P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
-| P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
+| P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | **Retirement candidate** (V2.52) — permaculture-era, predates the native-habitat pivot |
+| P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | **Retirement candidate** (V2.52) — same reason |
 | P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
 
 ---
@@ -91,7 +101,7 @@ Features for long-term planning and tracking.
 | V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Retired (V2.25 — shipped in V1.x, removed: the tile filter added no design value; the 3D preview owns seasons now) |
 | V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
 | V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
-| V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Planned |
+| V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Done — shipped as **F24** (`src/site_photo.py` + `src/site_photo_flow.py`). Status corrected V2.52 |
 
 ---
 

@@ -4,8 +4,37 @@
 principle-by-principle map and the shipped record of F1–F62 — read it for *why* the app is
 shaped the way it is and what has already landed. This file is what comes next, and why.
 
+> **Looking for a list of everything not yet built?** That is
+> [`BACKLOG.md`](BACKLOG.md) (V2.52) — one line per unbuilt item, all 41 of them, plus the
+> data jobs, in one table you can read in a sitting. **This** file carries the *reasoning*
+> for each: what it is, how it would be built, what it leans on. Follow the ID.
+
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F111.**
+working across both documents. **Next free ID: F120.**
+
+### The ID ledger
+
+Added in V2.52, because the "next free ID" has now been a sentence three times and been
+wrong twice. **A sentence nobody updates is not a ledger.** This table is; the pointer above
+is derived from it.
+
+| ID | Claimant | Status |
+|----|----------|--------|
+| F63–F69 | Surfaces · species profiles · layer aspect · seed heads · creature variety · real wind · presentation still | ✅ V2.33 |
+| F70–F72 | Photo slots · habit-first sourcing + bench · your own photos | ✅ V2.35–V2.36 |
+| F73–F77 | In my yard on this date · seedling sheet · cues-to-care · before/after/five years · neighbour's-eye view | **F73–F76 open** · F77 ✅ V2.33 |
+| F78–F82 | Herb aspect · Stylised/Balanced/Lifelike · florets · forked stems · bloom count | ✅ V2.34 |
+| F83–F84 | Know the plant (ID lessons) · fauna morphology | **F83 open** · F84 ✅ V2.36 |
+| F85–F89 | The companion · notes that add up · game-style saves · curriculum · 3D UX review | **open** except F87 ✅ V2.39. **F85 absorbs F106** |
+| F90 | Plant directory | ✅ V2.41 — **and see the collision note below** |
+| F91–F94 | Substitution · order file · palettes · task-shaped home | **open** |
+| F95 | — | **free** (skipped in V2.43) |
+| F96–F103 | Two doors · editable references · species ledger · per-plant age · edit animations + net · split view · one 3D toolbar · flight physics | ✅ V2.43–V2.45 |
+| F104–F107 | Sandbox undo + graduation · challenges · the companion *(merged into F85)* · painted lep wings | **open** |
+| F108–F110 | **Double-assigned — see below** | ✅ (both claimants) |
+| F111–F112 | Colour in the plant panel · the website searchable and drawn | ✅ V2.48 |
+| **F113** | Design variants + side-by-side comparison *(was F90)* | **open** |
+| **F114–F119** | Wing-pattern geometry · shrub aspect · fern density · billboard fruit · better creature models · birds/mammals off name tables | **open** — assigned V2.52 |
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
@@ -13,6 +42,24 @@ working across both documents. **Next free ID: F111.**
 > was a third claimant on F82. The shipped assignments are kept — they are in the commit
 > history — and the five unbuilt entries were renumbered to F90–F94. "Let's do F80" is
 > unambiguous again, which is the whole point of a stable handle.
+
+> **And it happened again, twice, and was flagged and skipped.** The V2.37 renumbering sent
+> design variants to **F90**, which V2.41 then used for the shipped plant directory — a
+> collision `docs/plans/V2.43-learn-and-design-two-doors.md` **explicitly told the next
+> session to record**, along with correcting the pointer to F95. Neither edit was made. Three
+> increments later V2.46 (life-size creatures, the three verbs and the net, bee mode at
+> scale) and V2.47–V2.48 (the colour filter, the public website, colour per species) both
+> reached for **F108, F109 and F110**, independently, because the pointer still read F111
+> after F111 and F112 had shipped.
+>
+> Resolved on the same rule V2.37 used — **a shipped assignment is kept, because it is in the
+> commit history**, so only an unbuilt claimant may be renumbered:
+>
+> - **F90 is the plant directory** (V2.41). Design variants becomes **F113**.
+> - **F108/F109/F110 each have two shipped claimants** and neither can move. They are
+>   disambiguated by release: F108/F109/F110-*V2.46* are the Learn-side 3D work, and
+>   F108/F109/F110-*V2.47/48* are the colour and website work. Ugly, and honest.
+> - The pointer is now **derived from the ledger above**, not asserted in a sentence.
 
 ---
 
@@ -66,6 +113,25 @@ An honest summary, because a roadmap that flatters the codebase is useless.
    the nursery is out, no order file a nursery would accept, no reusable palette.
 5. **It sprawls.** Six side tabs, roughly twenty sub-tabs, nine modes on the 3D toolbar.
 
+### Scored against that list — V2.52
+
+The five above were written before V2.33. Nineteen releases later, exactly one is paid down:
+
+| | State |
+|---|---|
+| 1 · looks like a diagram | **Largely fixed** — V2.33/34/36: surfaces, four aspect axes, florets, seed heads, fauna morphology |
+| 2 · photographs don't show the plant | **Unmoved.** 111 of 434 plants have none, **0 species have a habit shot**, 62 of 69 bees have none. The structure landed (F70/F71/F72); the content did not |
+| 3 · never argues it is beautiful | **Unbuilt** — F75 and F76. P13 was adopted to name the gap and nothing has been built against it except F69/F77 |
+| 4 · no professional workflow | **Entirely unbuilt** — F91, F92, F93, F113 |
+| 5 · it sprawls | **Unbuilt** — F89, F94. It has grown since: ten buttons on the 3D toolbar now, not nine |
+
+And where the effort went: **V2.43–V2.46 were Learn-side and 3D-creature work; V2.47–V2.51
+were website, catalogue and data work.** The design side proper — the thing a person uses to
+design a yard — has not had an increment since V2.42. That is not an argument against any of
+it, and the website work in particular came straight from the owner. It is the context for
+choosing what comes next, and this document has twice accused itself of exactly this drift
+without the accusation changing anything.
+
 ---
 
 ## The lens: the funnel is cleared, so what replaces it?
@@ -100,6 +166,30 @@ items on the roadmap. The rest of this document sequences them and says what els
 ---
 
 ## Shipped
+
+### The release ledger
+
+Added in V2.52. Eleven releases — **V2.37 through V2.46, and V2.50** — had shipped without
+ever reaching this section: their record lived only in `docs/plans/` and, for the Learn-side
+ones, in a prose sentence under Theme H. A "Shipped" section with holes in it is worse than
+no section, because the holes are invisible. Detail tables for the releases that already had
+one are kept below; everything else is here, one row each, with its plan.
+
+| Release | What it was | Plan |
+|---|---|---|
+| **V2.37** | The first outside tester's sixteen items; the ten cheap ones fixed. Three turned out to be features that already existed and could not be found — including **PDF export, raising `NameError` on every call for four minor versions** behind a test that skipped | [user-feedback-easy-wins](plans/V2.37-user-feedback-easy-wins.md) |
+| **V2.38** | The ecoregion rebuild: heuristic tags replaced by ranges **derived from georeferenced occurrence records**, each row carrying its count and a confidence band (schema v59/v60). Plus the plants that were flying in the air, and the sun/shade merge | [ecoregion-rebuild](plans/V2.38-ecoregion-rebuild.md) · [runbook](plans/V2.38-ecoregion-runbook.md) |
+| **V2.39** | **F87** — game-style saves: a `saves/` folder, Save that stops asking where, File → Open listing your designs. The crash-recovery autosave moved out of its `$HOME` dotfile | [game-style-saves](plans/V2.39-game-style-saves.md) |
+| **V2.40** | The start menu, in two cuts — the second moved the whole menu *ahead of* `MainWindow`, which is what the ask meant. Verifying it turned up three stacked process aborts that had been stopping the test suite from printing a summary at all | [start-menu](plans/V2.40-start-menu.md) |
+| **V2.41** | **F90** — the plant directory: the catalogue as a browsable reference work, opened from the landing page with no design in existence. Surfaced sixteen `search_plants` filters that had worked the whole time with nothing attached to them | [start-screen-and-directory](plans/V2.41-start-screen-and-directory.md) |
+| **V2.42** | The biological-data audit, and `src/citations.py`. All 361 edges were properly cited and **not one citation was visible anywhere**; coverage doubled (22.6% → 51.3%) from host records already sitting unread in the shipped attribute files; `evidence` gained its honest third state | [biological-data-review](plans/V2.42-biological-data-review.md) · [first-user-on-the-relationship-web](plans/V2.42-first-user-on-the-relationship-web.md) |
+| **V2.43** | **F96–F98** — Learn and Design as two doors, editable reference landscapes, the species-discovery ledger (schema v62) | [learn-and-design-two-doors](plans/V2.43-learn-and-design-two-doors.md) |
+| **V2.44** | **F99–F102** — per-plant age and nursery stock, the edit animations and the net, split view, one 3D toolbar | [the-sandbox-becomes-a-place-you-can-work](plans/V2.44-the-sandbox-becomes-a-place-you-can-work.md) |
+| **V2.45** | **F103** — real flight physics for birds, butterflies and bees. The wingbeat constants were not hertz *and* the body path was decoupled from the wings; birds were the only flying taxon with no morphology table at all | [wingbeats-that-come-from-the-animal](plans/V2.45-wingbeats-that-come-from-the-animal.md) |
+| **V2.46** | **F108–F110 (Learn side)** — life-size creatures, flap-flap-glide, creature collision; the same three verbs in the 3D preview and a net that is held and has a reach; bee mode at the right scale. The scale error was 6–39× | [life-size-and-a-net-in-his-hand](plans/V2.46-life-size-and-a-net-in-his-hand.md) |
+| **V2.50** | The duplicate species rows merged field by field under the author's chosen names, and the `medicinal` tag published on the author's call. **Also the branch correction** — V2.48, V2.49 and V2.50 had all been committed onto the V2.47 branch, so the release branches the in-app updater looks for did not exist | [merge-and-medicinal](plans/V2.50-merge-and-medicinal.md) |
+
+### The releases with a detail table
 
 **V2.51 — a colour per ecoregion, and a backlog you can start.** The last four
 of the author's five follow-up items. Plan:
@@ -290,17 +380,17 @@ re-opened here.
 
 **Theme C — WANT / SHOW: the argument the app doesn't make**
 
-| ID | Feature | Impact | Effort | Risk | Principle |
-|----|---------|--------|--------|------|-----------|
-| F75 | Cues-to-care checker | Med | S–M | Low | P2, (P13) |
-| F76 | Before / after / in five years | **High** | M | Med | P4, P5, P8 |
-| F77 | The neighbour's-eye view | Med | S | Low | P5, (P13) |
+| ID | Feature | Impact | Effort | Risk | Principle | Status |
+|----|---------|--------|--------|------|-----------|--------|
+| F76 | Before / after / in five years | **High** | M | Med | P4, P5, P8 | open |
+| F75 | Cues-to-care checker | Med | S–M | Low | P2, **P13** | open |
+| F77 | The neighbour's-eye view | Med | S | Low | P5, **P13** | ✅ **V2.33** — the `sidewalk` preset F69 carried in |
 
 **Theme D — the designer's workflow**
 
 | ID | Feature | Impact | Effort | Risk | Principle |
 |----|---------|--------|--------|------|-----------|
-| F90 | Design variants + side-by-side comparison | **High** | L | Med | P9, P1 |
+| F113 | Design variants + side-by-side comparison *(was F90 — renumbered V2.52)* | **High** | L | Med | P9, P1 |
 | F91 | Ecological substitution — "the nursery is out" | Med | M | Low | P3, P10 |
 | F92 | An order file a nursery accepts | Med | S | Low | P8 |
 | F93 | Reusable palettes / go-to communities | Med | M | Low | P1 |
@@ -674,11 +764,18 @@ For the novice this is what converts a spouse. For the designer it is the first 
 proposal. For P4 it is the philosophy's "design the trajectory, not the install day" made into a
 single artefact instead of a slider someone has to be persuaded to drag.
 
-### F77 · The neighbour's-eye view — *Impact Med · Effort S · Risk Low (P5, proposed P13)*
+### ✅ F77 · The neighbour's-eye view — *Shipped V2.33 · was Impact Med · Effort S · Risk Low (P5, P13)*
 
 Camera at the sidewalk, at eye height, each season. Not the designer's orbit — the view that
 actually decides whether this planting gets a complaint or a question about where to buy the seeds.
 Nearly free once F69 lands, and it is the honest test of F75's advice.
+
+**Shipped** exactly as predicted — F69 carried it in for free.
+`src/presentation_still.py` declares `CAMERA_PRESETS = ("overview", "orbit", "walk",
+"sidewalk")` and names this card in the comment above it; the camera itself is
+`html/scene3d/08-modes.js:sidewalk`, eye at 1.65 m on the boundary's near edge. It stayed
+on the open list until V2.52 purely because nobody came back and struck it off — which is
+the failure mode a status marker exists to prevent.
 
 ---
 
@@ -687,7 +784,9 @@ Nearly free once F69 lands, and it is the honest test of F75's advice.
 The app is built for the owner-occupier converting their own lawn, and does that well. A landscape
 designer using it professionally hits four walls, none of which is about ecology.
 
-### F90 · Design variants + side-by-side comparison — *Impact High · Effort L · Risk Med (P9, P1)*
+### F113 · Design variants + side-by-side comparison — *Impact High · Effort L · Risk Med (P9, P1)*
+
+*(Held **F90** until V2.52. F90 is the plant directory, shipped V2.41; see the ID ledger.)*
 
 **No designer presents one option.** The app holds exactly one project, so producing an Option A and
 an Option B means two files, two windows and a manual comparison.
@@ -781,13 +880,13 @@ product — which this roadmap has historically been short of.
 
 | ID | Feature | Impact | Effort | Risk | Principle |
 |----|---------|--------|--------|------|-----------|
-| F85 | The guide — a fauna companion that explains the app, starting with Site Info | **High** | L | Med — new UI surface | P5, P13 |
+| F85 | The guide — a fauna companion that explains the app, starting with Site Info. **Absorbs F106** (V2.52) | **High** | L | Med — new UI surface | P5, P13 |
 | F86 | Notes that add up — one store, notes from anywhere, a document that does something | Med | M | Med | P11, P4 |
 | ~~F87~~ | ~~Game-style save/load~~ — **shipped V2.39**: `user_data_dir()/saves`, Save stops asking, File → Open lists your designs (name · when · plants · species · site), and the crash-recovery autosave moved out of the `$HOME` dotfile | **High** | M | Low | P13 |
 | F88 | The Learn tab as a curriculum — the app, design, flora & fauna; gamified | Med | L | Low | P5, P7 |
 | F89 | The 3D preview's UX review — ten buttons over two rows | Med | M | Med | P5 |
 
-### F85 · The guide — *Impact High · Effort L · Risk Med (P5, P13)*
+### F85 · The guide — *Impact High · Effort L · Risk Med (P5, P13)* — **absorbs F106**
 
 *"A 'clippy' like helper (I would make it a fauna like a caterpillar or bird) that guides you
 through using the app and explains/breaks down certain things. For example Site Info is
@@ -935,7 +1034,15 @@ Also here: the ledger's `how` column records only the *first* sighting's method,
 catching something you had already glimpsed still reads as "inspected". An achievement
 tier wants that upgraded; it is a deliberate hold from V2.44, not an oversight.
 
-### F106 · The companion, and the glossary half of it — *Impact Med / Effort L / Risk Med*
+### ~~F106~~ · The companion, and the glossary half of it — **merged into F85 in V2.52**
+
+**This card and F85 are the same feature, written twice.** Both propose a fauna companion
+that explains the app; both prescribe "do the cheap glossary half first, and separately";
+both reuse `docent.py`'s beat shape; both flag the same P11 risk in the same words. Two IDs
+for one feature is the ID-collision problem wearing a different hat — it makes the backlog
+look longer than it is and splits the reasoning across two places. **F85** is the survivor
+(it is the older handle, and it is the one `USER_FEEDBACK.md` points at); the paragraphs
+below are kept here as the record and the ID is retired.
 
 Pick a native bee, butterfly or chickadee at first boot; it explains things as you go.
 Reuses `docent.py`'s beat shape and `learn_state` (schema v62) for the choice.
@@ -944,9 +1051,10 @@ problem, not a code one — budget accordingly.
 
 **Do the cheap half first and separately.** ~12 of ~20 Site Info metrics have no
 explanation anywhere, and `src/climate.py:zone_description()` returns exactly the right
-sentence and is called by nothing. A Qt-free glossary module plus one `setToolTip` per
-metric answers the tester's actual complaint at a fraction of the cost, and gives the
-companion something to read out later.
+sentence and is called by nothing — still true as of V2.52, on the third increment that has
+written it down. A Qt-free glossary module plus one `setToolTip` per metric answers the
+tester's actual complaint at a fraction of the cost, and gives the companion something to
+read out later.
 
 **Risk on file (P11):** a helper that keeps people looking at the screen argues against
 the principle. Mitigate by having it push you outside.
@@ -1010,7 +1118,7 @@ a good palate-cleanser between them — a day's work for a disproportionate gain
 P13 proposal before or during this increment, so the work has a principle to answer to.
 
 ### Increment 5 — the designer
-**F92** (order file — a day) → **F91** (substitution) → **F90** (variants) → **F93** (palettes).
+**F92** (order file — a day) → **F91** (substitution) → **F113** (variants) → **F93** (palettes).
 
 ### Then
 Theme E, or an explicit decision to demote it. Theme F's retirement pass whenever a release is

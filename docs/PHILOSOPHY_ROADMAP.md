@@ -4,7 +4,11 @@
 > carries the forward plan — the 3D-preview and photography work (F63–F74), the WANT/SHOW
 > features, the designer workflow, and a proposed thirteenth principle. **This** file remains the
 > principle-by-principle map and the shipped record of F1–F62: read it for *why* the app is shaped
-> the way it is and what has already landed. Feature IDs are one continuous sequence across both.
+> the way it is and what has already landed. Feature IDs are one continuous sequence across both,
+> and the **ID ledger** enumerating them lives at the top of `ROADMAP_NEXT.md`.
+>
+> **For a straight list of everything not yet built**, across all three documents, see
+> [`BACKLOG.md`](BACKLOG.md) (V2.52).
 
 A catalogue of what the design philosophy ([`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md))
 makes *possible*, grounded in what the codebase already does — and **ranked by impact** so
@@ -148,7 +152,7 @@ were still hedging.
 | ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
 | ✅ F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
 | ✅ F11 | Value-vs-price framing | S | Low | P6 |
-| F12 | Inline "why this matters" provenance/citations | S | Low | P7, P6 |
+| ◐ F12 | Inline "why this matters" provenance/citations — **formatter shipped V2.42, design-side surfaces still show none** | S | Low | P7, P6 |
 | F13 | Reference-ecosystem fidelity score | S (was M) | Low | P2, P6 |
 | F14 | Establishment-likelihood band | M | Med | P9 |
 | F15 | Pollinator-pathway (bloom-in-space) overlay — *merge into F5* | M | Med | P5, P3 |
@@ -156,7 +160,7 @@ were still hedging.
 | ✅ F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
 | F18 | Site-condition remediation advisor | M | Med | P8, P4 |
 | F19 | "Why here?" composition reasoning toggle | M | Low | P2, P5 |
-| F20 | Maintenance-over-time curve | S | Low | P4 |
+| ✅ F20 | Maintenance-over-time curve — **delivered in substance by F42**; only a chart is left, and it belongs inside F42 | S | Low | P4 |
 | F21 | Ecosystem-services readout | M | Med | P6, P9 |
 | ✅ F22 | Naturalistic drift placement | M | Med | P2 |
 | F23 | Declarative, inspectable placement rules | M | Low | P1 |
@@ -173,7 +177,7 @@ were still hedging.
 | F30 | Invisible-relationship legend | S | Low | P5, P7 |
 | F31 | Glossary / concept explainers | S | Low | P7, P5 |
 | F32 | Field-mode checklist (printable) | S | Low | P11 |
-| F33 | Seasonal observation journal | M | Low | P11, P4 |
+| ~~F33~~ | Seasonal observation journal — **subsumed by F73 + F86** (V2.52) | M | Low | P11, P4 |
 | F34 | Shearing-layers data audit | S | Low | P4 |
 | ✅ F35 | Self-seeding / spread simulation | M | Med | P1, P4 |
 | F36 | Emergent community spacing | L | Med | P1, P4 |
@@ -382,10 +386,23 @@ actionable nudges, `habitat_score.habitat_nudges`) → cost → **"What your spe
 (wildlife species / native species / structures the spend buys), so the cost never stands
 alone. Analysis-panel/PDF parity can follow later.
 
-### F12 · Inline "why this matters" provenance — *Impact Med · Effort S · Risk Low (P7, P6)*
+### ◐ F12 · Inline "why this matters" provenance — *Half shipped (V2.42) · Impact Med · Effort S · Risk Low (P7, P6)*
 Cite the science at the point of use (Tallamy, Xerces, McHarg), not buried. **How:** add
 short sourced one-liners next to the habitat components in `src/analysis_panel.py`
 (the keystone framing already cites Tallamy — extend the pattern to host/bird/bloom).
+
+**Shipped half (V2.42).** `src/citations.py` reads `data/sources_master.json` and formats a
+source key into a citation a reader can take to a library, with two honesty rules at the
+render layer: a `NOT_A_WORK` placeholder is never dressed up as a citation, and every entry
+currently reads `unverified` because the details were transcribed from the seed data rather
+than checked against the work. It is rendered by `plant_directory_window._citation_block`
+(the species page) and by the Help → Data Sources dialog (`data_sources_flow.py`).
+
+**Missing half, and it is the one this card was about.** No *design-side* surface shows a
+citation: not the Analysis panel, not the relationship web, not the 3D dossier card. A user
+building a design still cannot tell a sourced record from an invention without leaving for
+the directory. The formatter exists and takes a key; every `Edge` already carries `source`.
+This is wiring.
 
 ### F13 · Reference-ecosystem fidelity score — *Impact Med · Effort S (was M, cheaper since F50) · Risk Low (P2, P6)*
 Score how closely the design matches the *natural* community of its place. **How:**
@@ -445,10 +462,17 @@ down:** the V2.29 click-to-learn dossier (`src/scene_dossier.py` + `html/scene3d
 already answers "what is this and what does it support" on click — the only piece still missing
 is the *placement* rationale, which is a few sub-score lines added to a card that exists.
 
-### F20 · Maintenance-over-time curve — *Impact Med · Effort S · Risk Low (P4)*
+### ✅ F20 · Maintenance-over-time curve — *Substantially delivered by F42 (V2.31) · was Impact Med · Effort S · Risk Low (P4)*
 Show effort dropping as natives establish (brainstorm R4) across the timeline. **How:**
 plot the existing year-1-vs-year-3 effort estimate against `succession` years in the
 planning panel.
+
+**What F42 already does.** `src/maintenance_calendar.py` ships four bands aligned to
+`succession.restoration_stage`, and on the example design the work falls **36–76 → 18–38 →
+9–19 → 6–11 hours a year** — with a test asserting the curve stays monotonic, so if the
+ramp-down ever flattens the build fails. That is the claim this card wanted made, made and
+guarded. What is genuinely missing is a *drawn* curve, which is a chart inside F42's tab
+rather than a feature of its own. **Closed as a separate card in V2.52.**
 
 ### F21 · Ecosystem-services readout — *Impact Med · Effort M · Risk Med (P6, P9)*
 Carbon, stormwater retention, cooling, pollination — as honest *ranges* beside the habitat
@@ -516,9 +540,12 @@ connectivity to the design's planted areas; a new analysis layer.
   for keystone, host, succession, mycorrhiza, linked from the UI and docs.
 - **F32 · Field-mode checklist (printable)** — *S · Low (P11)*: a site-walk sheet via
   `pdf_export.py` so the user records outside, then enters findings (pairs with F6).
-- **F33 · Seasonal observation journal** — *M · Low (P11, P4)*: timestamped notes
-  ("first bloom", "snow lingered here") in the project `properties` that accrue site
-  knowledge over years.
+- **~~F33~~ · Seasonal observation journal** — **subsumed by F73 + F86 (V2.52)**: timestamped
+  notes ("first bloom", "snow lingered here") in the project `properties` that accrue site
+  knowledge over years. F73 ("in my yard, on this date") delivers this with a *dated
+  photograph tied to a placed plant*, which is a better journal entry than a string, and F86
+  owns unifying the five note stores that already exist. Building it separately would make a
+  sixth.
 - **F34 · Shearing-layers data audit** — *S · Low (P4)* — **retire as a feature; belongs in `src/data_quality.py`**: confirm every layer (tree/shrub/
   perennial/annual/soil) carries the rate-of-change fields Brand's framing needs.
 - **✅ F35 · Self-seeding / spread simulation** — *Shipped (P1, P4)*: `src/planting_spacing.py`
@@ -829,9 +856,9 @@ plant-use knowledge; Principle 12).
 | ✅ F57 | Species characters over genus tables (branching, formBias as fallback) | L | Med — authoring | P2, P9 |
 | ✅ F58 | Species leaf silhouettes in tree crowns | M | Low | P2, P5 |
 | ✅ F59 | Procedural bark/foliage surface detail | M | Low | P2, P5 |
-| ◐ F60 | Blade-class variant axis on tree archetypes (per-SPECIES crown leaves) — poplar/aspen split done, rest open | L | Med — asset size | P2, P9 |
+| ✅ F60 | Blade-class variant axis on tree archetypes (per-SPECIES crown leaves) — **absorbed by F64 and shipped V2.33**; the marker said ◐ until V2.52 | L | Med — asset size | P2, P9 |
 | ✅ F61 | Rebuild the fern, grass and pine archetypes (arc primitive) | M | Low | P2, P5 |
-| F62 | Aspect variant axis on layer archetypes (a fescue is not a wild rye) | M | Med — asset size | P2, P9 |
+| ✅ F62 | Aspect variant axis on layer archetypes (a fescue is not a wild rye) — **shipped V2.33, renumbered F65 on the way in** (`conventions.LAYER_ASPECT_CLASSES`); this row said open until V2.52 | M | Med — asset size | P2, P9 |
 
 ### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
 **Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab
@@ -1070,8 +1097,12 @@ Carrying dead cards costs review attention every time someone reads this file.
 **F25**, **F26** (now M, but connoisseur depth), **F27** (landscape-scale, external data),
 **F36** (F22/F35 already give naturalistic spacing), **F21** (ranged ecosystem-services numbers
 invite exactly the false precision P9 forbids — only worth building if the ranges stay wide and
-loud), **F62** and the open half of **F60** (3D asset-size work, and the aspect fix already took
-the deformation out).
+loud).
+
+> **Corrected V2.52.** This paragraph also deferred **F62** and "the open half of **F60**".
+> Both had already shipped when it was written: F62 landed in V2.33 renumbered as **F65**, and
+> F60 was absorbed into **F64** in the same release. Deferring work that is done is the same
+> failure as listing it as open, and it survived here for nineteen releases.
 
 ---
 
