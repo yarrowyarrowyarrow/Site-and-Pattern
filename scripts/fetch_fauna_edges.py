@@ -7,7 +7,12 @@ policy denies GBIF, iNaturalist and GloBI, so this is the half of F125 that has
 to happen on your side; ingestion, validation and seeding happen back in the
 repo from the file this writes.
 
-    python3 scripts/fetch_fauna_edges.py
+    python3 scripts/fetch_fauna_edges.py --probe    # 4 requests, ~5 seconds
+    python3 scripts/fetch_fauna_edges.py            # the real run
+
+Run ``--probe`` first. It tries a handful of query forms against one plant and
+reports which the API accepts and what columns come back, which takes seconds
+and is the difference between a good run and 437 identical failures.
 
 Stdlib only — no pip install, no API key, no account. Python 3.8+.
 
@@ -135,34 +140,126 @@ def load_catalogue() -> tuple:
 
 # ── Talking to GloBI ─────────────────────────────────────────────────────────
 
-def _get(url: str) -> dict:
+def _get(url: str, *, retries: int = _RETRIES) -> dict:
+    """GET and parse, surfacing the server's own explanation on failure.
+
+    The first version swallowed the response body, so a run that failed on every
+    single plant reported only "HTTP Error 500" — which reads like an outage and
+    was actually a malformed query. An HTTP error body from GloBI usually names
+    the offending parameter, and that is the whole diagnosis. Never discard it.
+    """
     last = None
-    for attempt in range(_RETRIES):
+    for attempt in range(retries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": _UA})
             with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as resp:
                 return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = ""
+            try:
+                body = exc.read().decode("utf-8", "replace")[:400].strip()
+            except Exception:                              # noqa: BLE001
+                pass
+            last = f"HTTP {exc.code}" + (f" — {body}" if body else "")
+            # A 4xx/5xx from a bad query will be identical every time; retrying
+            # it just wastes the user's evening.
+            if exc.code < 500:
+                break
         except Exception as exc:                           # noqa: BLE001
-            last = exc
-            # Back off and try again: a free service under load is normal, and
-            # a run that dies on the first hiccup wastes the whole session.
+            last = str(exc)
+        if attempt < retries - 1:
             time.sleep(_PAUSE_S * (attempt + 2))
-    raise RuntimeError(f"GloBI request failed after {_RETRIES} tries: {last}")
+    raise RuntimeError(f"{last}")
+
+
+#: Candidate query forms, richest first. The first version sent one hand-built
+#: query and every request 500'd — a malformed request, not an outage, and the
+#: user found that out 55 plants in. Two things almost certainly caused it: a
+#: `fields=` parameter that `/interaction` does not accept, and pipe-joining
+#: `interactionType` where GloBI wants the parameter repeated.
+#:
+#: Rather than guess again from a container that cannot reach the API, the
+#: script now probes: it tries these in order against one plant, keeps the first
+#: that answers, and says which. Richest first, because the extra parameters are
+#: filtering we want — bbox especially, since GloBI is global.
+_FORMS = (
+    ("typed+bbox", lambda taxon: [
+        ("sourceTaxon", taxon), ("type", "json"), ("limit", "500"),
+        ("bbox", _BBOX),
+    ] + [("interactionType", k) for k in _INTERACTIONS]),
+    ("typed", lambda taxon: [
+        ("sourceTaxon", taxon), ("type", "json"), ("limit", "500"),
+    ] + [("interactionType", k) for k in _INTERACTIONS]),
+    ("bbox only", lambda taxon: [
+        ("sourceTaxon", taxon), ("type", "json"), ("limit", "500"),
+        ("bbox", _BBOX),
+    ]),
+    ("minimal", lambda taxon: [
+        ("sourceTaxon", taxon), ("type", "json"),
+    ]),
+)
+
+#: Set by :func:`probe` once a working form is found.
+_FORM = None
+
+
+def _url(form_builder, taxon: str) -> str:
+    return _API + "?" + urllib.parse.urlencode(form_builder(taxon))
+
+
+def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
+    """Find a query form GloBI actually accepts. Returns its name.
+
+    Also prints the **columns** that came back, because the mapping downstream
+    depends on ``target_taxon_path`` being present — and if it is not, every
+    record would be silently dropped for having no recognisable taxon, which
+    would look exactly like "GloBI has no data for these plants".
+    """
+    global _FORM
+    # Reachability first, so "the API rejected my query" and "this machine
+    # cannot reach the host at all" are never confused — they need completely
+    # different fixes, and the first run of this script conflated them.
+    try:
+        _get("https://api.globalbioticinteractions.org/ping", retries=1)
+        if verbose:
+            print("  reachable   ✓  api.globalbioticinteractions.org answers")
+    except Exception as exc:                               # noqa: BLE001
+        if verbose:
+            print(f"  reachable   ✗  {exc}")
+            print("               → the host itself is unreachable from here "
+                  "(firewall, proxy, DNS, or offline). No query form will "
+                  "work until that is sorted.")
+
+    for name, builder in _FORMS:
+        try:
+            data = _get(_url(builder, sample), retries=1)
+        except Exception as exc:                           # noqa: BLE001
+            if verbose:
+                print(f"  {name:12s} ✗  {exc}")
+            continue
+        cols = data.get("columns") or []
+        n = len(data.get("data") or [])
+        if verbose:
+            print(f"  {name:12s} ✓  {n} records, {len(cols)} columns")
+            print(f"               columns: {', '.join(cols) or '(none)'}")
+            missing = [c for c in ("target_taxon_name", "interaction_type",
+                                   "target_taxon_path") if c not in cols]
+            if missing:
+                print(f"               ⚠ missing what the mapping needs: "
+                      f"{', '.join(missing)}")
+        _FORM = (name, builder)
+        return name
+    raise RuntimeError(
+        "No query form worked. Paste the errors above and the fetcher can be "
+        "corrected — that output is the diagnosis.")
 
 
 def fetch_for_plant(scientific_name: str) -> list:
-    """Raw GloBI rows for one plant, across every mapped interaction type."""
-    params = {
-        "sourceTaxon": scientific_name,
-        "interactionType": "|".join(_INTERACTIONS),
-        "bbox": _BBOX,
-        "includeObservations": "true",
-        "type": "json",
-        "limit": "500",
-        "fields": ("source_taxon_name,interaction_type,target_taxon_name,"
-                   "target_taxon_path,study_citation,study_source_citation"),
-    }
-    data = _get(_API + "?" + urllib.parse.urlencode(params))
+    """Raw GloBI rows for one plant, using the form :func:`probe` settled on."""
+    if _FORM is None:
+        probe(verbose=False)
+    _name, builder = _FORM
+    data = _get(_url(builder, scientific_name))
     cols = data.get("columns") or []
     return [dict(zip(cols, row)) for row in (data.get("data") or [])]
 
@@ -266,6 +363,20 @@ def _save(path: str, blob) -> None:
 
 
 def main() -> int:
+    probe_only = "--probe" in sys.argv
+
+    # Find a working query form before spending 437 requests on a broken one.
+    print("probing the GloBI API for a query form it accepts…")
+    try:
+        form = probe()
+    except Exception as exc:                               # noqa: BLE001
+        print(f"\n{exc}")
+        return 2
+    print(f"using: {form}\n")
+    if probe_only:
+        print("(--probe: stopping here)")
+        return 0
+
     plants, known_fauna, existing = load_catalogue()
     print(f"catalogue: {len(plants)} plants, {len(known_fauna)} known animals, "
           f"{len(existing)} edges already seeded")
