@@ -153,10 +153,17 @@ window.permaSetPlantSpotlight = function (items, appearance) {
 };
 
 let _spotPrevT = 0;
-function stepSpotlight(t) {
-  if (!spotGroup || !SPOT.length || !spotCritter) { _spotPrevT = t; return; }
-  const dt = _spotPrevT ? Math.min(0.05, (t - _spotPrevT) / 1000) : 0.016;
-  _spotPrevT = t;
+function stepSpotlight(tRaw) {
+  if (!spotGroup || !SPOT.length || !spotCritter) { _spotPrevT = tRaw; return; }
+  // The spotlight creature obeys the same speed control as the ambient wildlife
+  // (F121, V2.54) — it is the one creature the user has deliberately asked to
+  // look at, so it is the last one that should be exempt from "hold still".
+  // Same two-clock rule as animateWildlife: `dt` moves it, `t` beats its wings,
+  // so both are scaled or the wings run on while the body stops.
+  const raw = _spotPrevT ? Math.min(0.05, (tRaw - _spotPrevT) / 1000) : 0.016;
+  _spotPrevT = tRaw;
+  const dt = raw * (typeof wildlifeSpeed === 'function' ? wildlifeSpeed() : 1);
+  const t = _wildClock;
   const tgt = SPOT[spotIdx]._top;
   if (spotPause > 0) {
     spotPause -= dt;

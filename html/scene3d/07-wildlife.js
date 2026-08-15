@@ -426,9 +426,15 @@ function _birdAttitude(c, o, flying, dt) {
   o.rotation.x = c._pitch;
 }
 
-function animateWildlife(t) {
+function animateWildlife(tRaw) {
+  // Advance the clock BEFORE the visibility check, not after. 19-roster.js's
+  // spotlight creature reads the same clock, and it can be on screen in modes
+  // where `wildlifeGroup` is hidden — a clock that stalled here would freeze
+  // its wings in a mode where nothing is paused.
+  const dt = _wildDt(tRaw);
+  const t = _wildClock;    // creature-time; the whole body below is unchanged
+  updateWildSpeedChip();   // diffs before touching the DOM; also hides the chip
   if (!wildlifeGroup || !wildlifeGroup.visible) return;
-  const dt = _wildDt(t);
   for (const c of wildlifeCritters) {
     const o = c.obj, ph = c.wanderPh, mv = _WILD_MOVE[c.anim] || _WILD_MOVE.flier;
     const tgt = c.route[c.ri];
@@ -603,11 +609,105 @@ function animateWildlife(t) {
     }
   }
 }
+// ── The creature clock (F121, V2.54) ────────────────────────────────────────
+//
+// Design principle P5 (perception is constructed, not received) — see
+// docs/DESIGN_PHILOSOPHY.md. A chickadee that crosses the yard before you can
+// focus on it teaches nothing, however exact its wingbeat is. Being able to
+// stop one and look at it is the whole point of drawing them.
+//
+// `animateWildlife` runs on TWO clocks, and only one of them is obvious:
+//
+//   dt          → travel and the dwell countdown (position integration)
+//   absolute t  → the WINGBEAT (flapWings), the wander wobble, the bob, the
+//                 look-around, the hop, boundOffset and beatGain
+//
+// So scaling `dt` alone — the intuitive way to slow the animals down — gives
+// you a bird hovering motionless in mid-air with its wings beating at full
+// speed. Both clocks have to move together or "pause" is a physics glitch.
+//
+// Hence a wildlife-LOCAL clock, advanced here in creature-time and read by
+// `animateWildlife` in place of the raw frame timestamp. Every `t` expression
+// in the body then keeps working untouched, and one multiplier controls
+// travel, wings, bob and hop coherently.
+//
+// `_wildSpeed = 0` is the pause: there is no separate paused flag, because two
+// pieces of state that must agree are two pieces of state that can disagree.
 let _wildPrevT = 0;
+let _wildClock = 0;        // milliseconds of creature-time — the unit `t` is in
+let _wildSpeed = 1;        // 0 = paused; 0.25 / 0.5 = slow motion
 function _wildDt(t) {
-  const dt = _wildPrevT ? Math.min(0.05, (t - _wildPrevT) / 1000) : 0.016;
-  _wildPrevT = t; return dt;
+  // The 0.05 clamp predates this and is load-bearing twice over: it stops a
+  // frame hitch teleporting a creature, and it means RESUMING FROM A PAUSE
+  // cannot jump either, however long the pause was — the first frame after it
+  // advances at most 50 ms like any other stall.
+  const raw = _wildPrevT ? Math.min(0.05, (t - _wildPrevT) / 1000) : 0.016;
+  _wildPrevT = t;
+  const dt = raw * _wildSpeed;
+  _wildClock += dt * 1000;
+  return dt;
 }
+
+// Current speed, for the HUD chip that has to show it.
+function wildlifeSpeed() { return _wildSpeed; }
+function setWildlifeSpeed(mult) {
+  const m = Number(mult);
+  _wildSpeed = (isFinite(m) && m >= 0) ? m : 1;
+  if (_wildSpeed > 0) _wildLastSpeed = _wildSpeed;   // what the spacebar restores
+  updateWildSpeedChip();
+}
+
+// ── The speed chip ──────────────────────────────────────────────────────────
+//
+// Deliberately NOT an eleventh button on the 3D window's toolbar, which is
+// already eight buttons, three sliders and two combos over two rows — the
+// literal F89 complaint. It lives beside the creatures it controls, appears
+// only when there are creatures, and drives a plain JS function rather than a
+// window.perma* hook, so it costs the Python bridge nothing.
+const _WILD_SPEEDS = [[0, '❚❚', 'Paused'], [0.25, '¼×', 'Quarter speed'],
+                      [0.5, '½×', 'Half speed'], [1, '1×', 'Normal speed']];
+let _wildLastSpeed = 1;      // the step the spacebar toggles back to
+let _chipEl = null, _chipShown = null, _chipSpeed = null;
+
+function _buildWildSpeedChip(el) {
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl'; lbl.textContent = 'Creatures';
+  el.appendChild(lbl);
+  for (const [mult, face, title] of _WILD_SPEEDS) {
+    const b = document.createElement('button');
+    b.textContent = face; b.title = title; b.dataset.mult = String(mult);
+    b.addEventListener('click', () => setWildlifeSpeed(mult));
+    el.appendChild(b);
+  }
+}
+
+function updateWildSpeedChip() {
+  const el = _chipEl || (_chipEl = document.getElementById('wild-speed'));
+  if (!el) return;
+  if (!el.childElementCount) _buildWildSpeedChip(el);
+  // Called once a frame, so both halves diff before touching the DOM.
+  const show = !!(wildlifeGroup && wildlifeGroup.visible && wildlifeCritters.length);
+  if (show !== _chipShown) { el.classList.toggle('on', show); _chipShown = show; }
+  if (_wildSpeed !== _chipSpeed) {
+    _chipSpeed = _wildSpeed;
+    for (const b of el.querySelectorAll('button'))
+      b.classList.toggle('sel', Number(b.dataset.mult) === _wildSpeed);
+  }
+}
+
+// Space is the universal pause key and it is ALREADY TAKEN: _BEE_MOVE_CODES in
+// 06-fly.js binds it to "ascend" in bee mode. So it only means pause in the
+// modes where you are watching rather than flying — the same mode discipline
+// that file already sets. Without this guard, pausing would silently steal the
+// bee's up key.
+addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  if (typeof beeMode !== 'undefined' && beeMode) return;
+  if (typeof walkMode !== 'undefined' && walkMode) return;
+  if (!wildlifeGroup || !wildlifeGroup.visible || !wildlifeCritters.length) return;
+  setWildlifeSpeed(_wildSpeed > 0 ? 0 : _wildLastSpeed);
+  e.preventDefault();
+});
 
 window.permaSetWildlife = function (list, summary) {
   WILDLIFE = Array.isArray(list) ? list : [];

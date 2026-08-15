@@ -98,6 +98,31 @@
   #wild-roster .reach { margin: 2px 0 4px; padding: 4px 6px; font-size: 11.5px;
     color: #eaf6df; background: rgba(90,140,70,.28); border-radius: 5px; }
   #wild-roster .reach b { color: #ffffff; }
+  /* Creature speed (F121, V2.54): pause and slow the ambient wildlife so you
+     can actually look at one. Bottom-left, clear of the roster (top-right) and
+     the bee hint (bottom-centre). Shown only while there are creatures. */
+  #wild-speed {
+    position: absolute; left: 10px; bottom: 10px; z-index: 7; display: none;
+    font-family: system-ui, sans-serif; font-size: 12px; color: #eef4ec;
+    background: rgba(18,28,20,.86); border: 1px solid #3a5a3a;
+    border-radius: 8px; padding: 5px 7px; line-height: 1.4;
+    align-items: center; gap: 4px;
+  }
+  #wild-speed.on { display: flex; }
+  #wild-speed .lbl { color: #cfe8c8; padding: 0 4px 0 2px; }
+  #wild-speed button {
+    font: inherit; color: #d7e6d2; cursor: pointer;
+    background: rgba(90,140,70,.20); border: 1px solid #3a5a3a;
+    border-radius: 5px; padding: 2px 8px; min-width: 30px;
+  }
+  #wild-speed button:hover { background: rgba(90,140,70,.38); }
+  /* The current step has to be readable at a glance and not only on hover: a
+     silently frozen scene reads as "the app has hung" — the same misdiagnosis
+     08-modes.js records for the blank-window bug, where a correct HUD sat over
+     a dead scene and looked like a failed build. */
+  #wild-speed button.sel {
+    color: #10200f; background: #8fc47e; border-color: #b6dfa6; font-weight: 600;
+  }
   /* Cinematic flyover (V2.13): letterbox bars + a lower-third caption for the
      hands-free "watch the lawn become habitat" tour. */
   .cine-bar {
@@ -214,6 +239,7 @@
 <div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
 The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 <div id="wild-roster"></div>
+<div id="wild-speed"></div>
 <div id="bee-vision"></div>
 <div id="bee-hint"></div>
 <div id="cine-top" class="cine-bar"></div>
