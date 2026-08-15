@@ -100,6 +100,48 @@ def show_in_library(main, plant_id: int) -> None:
         main.plant_panel._search_box.setText(name)
 
 
+def substitute_species(main, plant_id: int) -> None:
+    """Context-menu 'Find a substitute…' — the nursery is out (F91).
+
+    A dialog rather than a panel block, because this is a question asked at a
+    moment ("can I swap this?") and answered once, not a standing readout. The
+    trade is shown in full: every line says what the swap keeps *and* what it
+    costs, because a substitution list that only sells the alternative is
+    asking to be trusted on a judgement it has not shown.
+    """
+    from PyQt6.QtWidgets import QMessageBox
+
+    from src import substitution
+
+    try:
+        from src.db.plants import get_plant
+        original = get_plant(plant_id) or {}
+    except Exception:      # noqa: BLE001
+        original = {}
+    name = original.get("common_name") or "this plant"
+
+    try:
+        lines = substitution.swap_lines(plant_id, limit=5)
+    except Exception:      # noqa: BLE001
+        lines = []
+
+    box = QMessageBox(main)
+    box.setWindowTitle(f"Substitutes for {name}")
+    if lines:
+        box.setText(f"<b>If you cannot get {name}:</b>")
+        box.setInformativeText("\n\n".join(f"• {ln}" for ln in lines))
+    else:
+        # Say which of the two reasons it is. "No substitutes" reads as a
+        # verdict on the plant; usually it is a gap in what we know.
+        box.setText(f"<b>No ecological substitute found for {name}.</b>")
+        box.setInformativeText(
+            "Nothing in the catalogue shares its layer, its site conditions "
+            "and enough of the wildlife it supports. That can mean the plant "
+            "is genuinely irreplaceable here — or simply that too little is "
+            "recorded about what it supports to compare it with anything.")
+    box.exec()
+
+
 def focus_community(main, name: str) -> None:
     """Click a community row: frame every placed member of that community."""
     recs = [r for r in (main._placed_plants or [])

@@ -28,28 +28,38 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals: 37 code features · 6 data jobs · 4 legacy-ledger items.**
-*(V2.52: 41. V2.53 shipped F8, F12, F13, F14 and F28 and opened F120.)*
+**Totals: 34 code features · 6 data jobs · 4 legacy-ledger items.**
+*(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
+F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57. Opened since: F120,
+F123, F124 — all three found by the increments themselves.)*
 
 ---
 
 ## The state of the argument
 
 The roadmap's own list of *what this app is not good at yet* has five entries.
-Since it was written, one of them has been paid down:
+Since it was written, **two and a half have been paid down**:
 
 | Weakness | State |
 |---|---|
 | "It looks like a diagram" | **Largely fixed** — V2.33/34/36 (surfaces, aspect axes, florets, seed heads, fauna morphology) |
 | "Its photographs don't show the plant" | **Unmoved.** 111 of 434 plants have none, **0 species have a habit shot**, 62 of 69 bees have none. Group C |
-| "It never argues that a native yard is beautiful" | **Unbuilt.** Group B |
-| "It has no professional workflow" | **Entirely unbuilt.** Group D |
+| "It never argues that a native yard is beautiful" | **Paid down** — V2.56 (F76 before/after/five years, F75 cues to care) |
+| "It has no professional workflow" | **Half built** — V2.57 (F92 the order file, F91 substitution). F113 and F93 remain |
 | "It sprawls" | **Unbuilt.** Group F |
 
-Worth stating alongside that: V2.43–V2.46 were Learn-side and 3D-creature work,
-V2.47–V2.51 were website, catalogue and data work, so **the design side proper
-has not had an increment since V2.42**. That is not an argument against any of
-it — it is the context for choosing what comes next.
+That observation had a companion, and it is worth recording that it stopped
+being true: through V2.51 the note here read *"the design side proper has not
+had an increment since V2.42."* V2.56 and V2.57 were both design-side, which is
+why two of the five moved at once.
+
+What is left is lopsided rather than long. **Photographs** are gated on a
+licensing decision only the owner can make (Group C), **sprawl** is an L-effort
+restructure (Group F), and the two remaining professional-workflow walls are
+both bigger than the two that fell. The cheap work now is not in these five at
+all — it is the three bugs the increments found while building other things
+(F120, F123, F124), each of which is small and each of which is waiting on a
+decision rather than on engineering.
 
 ---
 
@@ -63,6 +73,7 @@ it — it is the context for choosing what comes next.
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
+| **F124** | **The layer map misses 311 of 437 species, and the Habitat Value Score reads low because of it.** Found while building F91 in V2.57. `habitat_score.PLANT_TYPE_TO_LAYER` knows six `plant_type` values; the catalogue holds eleven. The five it misses — `wildflower` (**210 species, the largest group**), `grass`, `sedge`, `rush`, `aquatic`, `fern` — map to no layer, so the vegetation-layer component counts them as nothing. **Measured: a 12-plant prairie meadow of wildflowers, grasses and sedges scores 0 of 15 on layer diversity**, which is this app's own central use case scoring zero on a component it plainly satisfies. Adding one shrub and one tree takes it to 6. The fix is a few dictionary rows; what makes it the author's call is that it **raises the score of every affected design**, which the headline-stability rule reserves to you. F91 works around it with its own complete map (`substitution.SUBSTITUTION_GROUPS`) rather than widening the canonical one as a side effect | S | Med — raises scores | P6, P2 |
 | **F120** | **Correct the 48 use tags the cited edges contradict.** V2.53 measured it: **37 species carry a documented `larval_host` edge and no `host_plant` tag** (Chokecherry and Balsam Poplar among them) and 11 carry a `fruit_food`/`seed_food` edge and no `bird_food` tag. The Habitat Value Score's host and bird-food components read the *tags*, so those designs score lower than the app's own cited data supports. V2.53 stopped the prose asserting the absence and left the score alone on purpose — correcting the tags **moves every affected design's score**, which the stability rule says is a decision to take deliberately. Measured by `data_quality.validate_use_tags_against_edges`; needs a seed-data edit and a `_SCHEMA_VERSION` bump | S | Med — moves scores | P9, P3 |
 
 ---
@@ -105,13 +116,15 @@ work — see also Group J.*
 ## D · The designer's workflow
 
 *A landscape designer using this professionally hits four walls, none of which is
-about ecology. Verified: none of these modules exists. This is the largest wholly
-untouched category on the list.*
+about ecology.*
+
+**✅ F92 and F91 shipped in V2.57** — the order file a nursery accepts, and
+ecological substitution when the nursery is out. Plan:
+[`V2.57-the-last-centimetre`](plans/V2.57-the-last-centimetre.md). Two walls
+left, and both are larger than the two that fell.
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
-| **F92** | **An order file a nursery accepts.** F40 produces the buy list as text and as a PDF page. A designer needs it as **CSV/XLSX grouped by supplier** — botanical names, pot size / form, quantity, unit price range, total — the thing you attach to an email. Every field is already computed. Small, unglamorous, and it is the last centimetre between a design and a purchase order | S | Low | P8 |
-| **F91** | **Ecological substitution — "the nursery is out."** Every plant tool has "similar plants" and they all mean similar height and colour. This app can mean *ecologically equivalent*: same vegetation layer, overlapping site envelope, overlapping supported fauna via `relationships.edges_for_plant` — then report the trade honestly, which is `plant_impact` run on a swap rather than a removal. *"Chokecherry for Saskatoon: keeps 9 of 12 supported species and the food-web chain. You lose the July fruit window."* Triggered by the real moment: out of stock, or out of budget | M | Low | P3, P10 |
 | **F113** | **Design variants + side-by-side comparison.** *(Renumbered from F90 in V2.52 — F90 is the shipped plant directory.)* No designer presents one option, and the app holds exactly one project. "Duplicate as a variant", then a comparison view: habitat score, cost range, first-year and steady-state hours, food-web status, species and wildlife counts, native ratio, with the deltas named. Every number exists; holding two projects at once and diffing them is the missing part. Also on-message — presenting options with their trade-offs rather than one confident answer is P9 at the scale of a whole design | L | Med | P9, P1 |
 | **F93** | **Reusable palettes / go-to communities.** A designer repeats themselves across sites; that is craft, not laziness. Save the current selection as a named palette and apply it to a new site **with site-fit re-checking**, which is the part a human cannot do quickly and this app can. Extends `polycultures`, which already carries user-authored rows through a reseed | M | Low | P1 |
 
@@ -251,14 +264,17 @@ listed as open somewhere and is not.*
 
 The pick is the owner's. Asked for one, in order:
 
-1. **Group B — F76 then F75.** It closes the only self-named weakness where every
-   ingredient is already built and nothing is blocked on data or on a decision.
-   F69 shipped the print-resolution render and F77 shipped the sidewalk camera, so
-   F76 is assembly. And it is the argument the app has never made.
-2. **Group D — F92 then F91.** The largest untouched category, and F92 is a day.
-3. **F120**, if the score should tell the truth about chokecherry. Small, and the
-   only thing gating it is the decision to let scores move.
+1. **F124 then F120 — make the score tell the truth.** Both are small, both are
+   measured, and both are gated only on your decision to let scores move. F124
+   is the starker of the two: the app's central use case, a prairie meadow,
+   scores **zero** on a component it obviously satisfies.
+2. **Group D — F113 (design variants) or F93 (reusable palettes).** Two walls of
+   the professional workflow are down; these are the two left, and both are
+   bigger than what shipped.
+3. **Group F — the sprawl.** Named as a weakness, and the 3D toolbar's size
+   ceiling has now shaped three increments running, which is the guard telling
+   you something the backlog already says.
 
-*(Group A — the confidence block — shipped in V2.53, on its thirteenth
-appearance as "next". The pattern this file was written to expose was real, and
-it is broken.)*
+*(Group A's confidence block shipped in V2.53, Group B in V2.56, and half of
+Group D and Group E besides. The pattern this file was written to expose —
+"next" meaning "not this time, again" — is broken.)*

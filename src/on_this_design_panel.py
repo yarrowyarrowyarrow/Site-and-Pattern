@@ -50,6 +50,7 @@ class OnThisDesignPanel(QWidget):
     species_select_requested = pyqtSignal(int)           # ctx: select on map
     species_remove_requested = pyqtSignal(int)           # ctx: remove all (confirmed downstream)
     species_show_in_library_requested = pyqtSignal(int)  # ctx: Plant Library
+    species_substitute_requested = pyqtSignal(int)       # ctx: the nursery is out (F91)
     community_focus_requested = pyqtSignal(str)          # click → zoom to members
     open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
     open_planning_requested = pyqtSignal()               # Stats: cost → Planning
@@ -201,6 +202,10 @@ class OnThisDesignPanel(QWidget):
         act_select = menu.addAction("Select on map")
         act_library = menu.addAction("Show in Plant Library")
         menu.addSeparator()
+        # F91. Placed next to Remove because it belongs to the same moment: you
+        # are about to lose this plant — the nursery is out, or it is over
+        # budget — and the question is what to put there instead.
+        act_sub = menu.addAction("Find a substitute…")
         act_remove = menu.addAction("Remove all from design…")
         chosen = menu.exec(self._plants_list.mapToGlobal(pos))
         if chosen is act_focus:
@@ -209,6 +214,8 @@ class OnThisDesignPanel(QWidget):
             self.species_select_requested.emit(pid)
         elif chosen is act_library:
             self.species_show_in_library_requested.emit(pid)
+        elif chosen is act_sub:
+            self.species_substitute_requested.emit(pid)
         elif chosen is act_remove:
             self.species_remove_requested.emit(pid)
 

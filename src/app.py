@@ -514,6 +514,16 @@ class MainWindow(QMainWindow):
             "north arrow")
         act_pdf.triggered.connect(self._on_export_pdf)
 
+        # F92 — the order file. The PDF is what a client reads; this is what a
+        # nursery is sent. Beside Export PDF because it is the same act (getting
+        # the design out of the app) aimed at a different reader.
+        act_order = file_menu.addAction("Export &order file (CSV)…")
+        act_order.setStatusTip(
+            "Export the buy list as a spreadsheet grouped by where you can get "
+            "each plant — botanical names, quantities and price ranges, "
+            "numbered to match the planting map")
+        act_order.triggered.connect(self._on_export_order_file)
+
         file_menu.addSeparator()
 
         act_exit = file_menu.addAction("E&xit")
@@ -1000,6 +1010,8 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.remove_species(self, pid))
         self.on_this_design.species_show_in_library_requested.connect(
             lambda pid: _drf.show_in_library(self, pid))
+        self.on_this_design.species_substitute_requested.connect(
+            lambda pid: _drf.substitute_species(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
         # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
@@ -2028,6 +2040,11 @@ class MainWindow(QMainWindow):
     # ── Undo / Redo ────────────────────────────────────────────────────────
 
     # ── PDF export (V3) ────────────────────────────────────────────────────
+
+    def _on_export_order_file(self):
+        """F92 — shim → order_file_flow; see src/order_file_flow.py."""
+        from src import order_file_flow
+        return order_file_flow.on_export_order_file(self)
 
     def _on_export_pdf(self):
         path, _ = QFileDialog.getSaveFileName(
