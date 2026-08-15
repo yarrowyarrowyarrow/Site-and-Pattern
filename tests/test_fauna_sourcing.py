@@ -36,9 +36,20 @@ _fetch = _load("fetch_fauna_edges")
 _ingest = _load("ingest_fauna_edges")
 
 
-def _row(name, interaction, path, citation="A study 2020"):
+def _row(name, interaction, path, citation="A study 2020", life_stage=""):
+    """One GloBI row in the shape the live API actually returns.
+
+    `study_title` and `target_specimen_life_stage` are the real column names,
+    confirmed by running `--probe` against the API. The first version of this
+    fixture used `study_citation`, which does not exist — **the same wrong guess
+    the code made**, so the test passed while both were wrong and every fetched
+    edge would have arrived uncited and been binned by the ingest gate. A
+    fixture invented from the same assumption as the code under test proves
+    nothing; only the live probe settled it.
+    """
     return {"target_taxon_name": name, "interaction_type": interaction,
-            "target_taxon_path": path, "study_citation": citation}
+            "target_taxon_path": path, "study_title": citation,
+            "target_specimen_life_stage": life_stage}
 
 
 _BEE = "Animalia | Arthropoda | Insecta | Hymenoptera | Apidae"
@@ -62,7 +73,22 @@ class TestTheFetcherMapsConservatively(unittest.TestCase):
                          {"nectar", "pollen"})
 
     def test_a_caterpillar_eating_is_a_larval_host(self):
-        edges = self._edges([_row("Danaus plexippus", "eatenBy", _LEP)])
+        edges = self._edges([_row("Danaus plexippus", "eatenBy", _LEP,
+                                  life_stage="larva")])
+        self.assertEqual(edges[0]["relationship"], "larval_host")
+
+    def test_an_adult_lepidopteran_eating_is_nectar_not_a_larval_host(self):
+        """Adults have no chewing mouthparts. Filing an adult nectar record as
+        a larval host would claim the plant feeds caterpillars it may never
+        host — and the life stage is right there in the response."""
+        edges = self._edges([_row("Vanessa cardui", "eatenBy", _LEP,
+                                  life_stage="adult")])
+        self.assertEqual(edges[0]["relationship"], "nectar")
+
+    def test_an_unrecorded_life_stage_stays_with_the_conservative_reading(self):
+        """Most 'eats' records on a plant are herbivory, so an unstated stage
+        keeps the larval-host reading rather than inventing certainty."""
+        edges = self._edges([_row("Papilio machaon", "eatenBy", _LEP)])
         self.assertEqual(edges[0]["relationship"], "larval_host")
 
     def test_a_bird_eating_is_fruit_forage(self):
@@ -114,6 +140,8 @@ class TestTheFetcherMapsConservatively(unittest.TestCase):
         self.assertEqual(new[0]["scientific_name"], "Bombus huntii")
 
     def test_the_reporting_study_travels_with_the_edge(self):
+        """Reads `study_title` — see _row. This assertion failing is what
+        caught the wrong column name."""
         edges = self._edges([_row("Bombus huntii", "flowersVisitedBy", _BEE,
                                   citation="Cariveau et al. 2016")])
         self.assertIn("Cariveau", edges[0]["_citation"])

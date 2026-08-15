@@ -219,16 +219,25 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
     # Reachability first, so "the API rejected my query" and "this machine
     # cannot reach the host at all" are never confused — they need completely
     # different fixes, and the first run of this script conflated them.
+    # NB: this deliberately does NOT json-parse. The first version called _get
+    # here, which does, and GloBI's /ping answers in plain text — so a perfectly
+    # reachable host reported "unreachable: Expecting value: line 1 column 1"
+    # directly above a query form that had just succeeded. A diagnostic that
+    # contradicts the result printed under it is worse than no diagnostic.
     try:
-        _get("https://api.globalbioticinteractions.org/ping", retries=1)
+        req = urllib.request.Request(
+            "https://api.globalbioticinteractions.org/ping",
+            headers={"User-Agent": _UA})
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as resp:
+            ok = resp.status < 400
         if verbose:
-            print("  reachable   ✓  api.globalbioticinteractions.org answers")
+            print(f"  reachable   {'✓' if ok else '✗'}  "
+                  f"api.globalbioticinteractions.org answers")
     except Exception as exc:                               # noqa: BLE001
         if verbose:
-            print(f"  reachable   ✗  {exc}")
-            print("               → the host itself is unreachable from here "
-                  "(firewall, proxy, DNS, or offline). No query form will "
-                  "work until that is sorted.")
+            print(f"  reachable   ?  {exc}")
+            print("               → could not confirm; the form probe below "
+                  "is the real answer.")
 
     for name, builder in _FORMS:
         try:
@@ -254,14 +263,33 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
         "corrected — that output is the diagnosis.")
 
 
+#: Records per request, and how many pages to walk before giving up on one
+#: plant. The probe came back with *exactly* 500 rows for Monarda fistulosa —
+#: which is the page size, i.e. the answer was truncated and there was more.
+#: A well-studied plant silently losing records would look like a thin
+#: catalogue, which is the very thing this whole exercise is meant to fix.
+_PAGE = 500
+_MAX_PAGES = 12
+
+
 def fetch_for_plant(scientific_name: str) -> list:
-    """Raw GloBI rows for one plant, using the form :func:`probe` settled on."""
+    """Every GloBI row for one plant, following pagination to the end."""
     if _FORM is None:
         probe(verbose=False)
     _name, builder = _FORM
-    data = _get(_url(builder, scientific_name))
-    cols = data.get("columns") or []
-    return [dict(zip(cols, row)) for row in (data.get("data") or [])]
+    out: list = []
+    for page in range(_MAX_PAGES):
+        params = builder(scientific_name)
+        params = [(k, v) for k, v in params if k != "limit"]
+        params += [("limit", str(_PAGE)), ("offset", str(page * _PAGE))]
+        data = _get(_API + "?" + urllib.parse.urlencode(params))
+        cols = data.get("columns") or []
+        rows = data.get("data") or []
+        out.extend(dict(zip(cols, r)) for r in rows)
+        if len(rows) < _PAGE:
+            break
+        time.sleep(_PAUSE_S)       # another page is another request
+    return out
 
 
 # ── Turning a GloBI row into one of our edges ────────────────────────────────
@@ -275,7 +303,14 @@ def _taxon_for(path: str) -> str:
     return ""
 
 
-def _relationship_for(interaction: str, taxon: str) -> str:
+#: GloBI `target_specimen_life_stage` values that mean "not yet an adult".
+#: Present in the response (confirmed by --probe), and decisive: a caterpillar
+#: eating a leaf is a larval host record, an adult on a flower is nectar.
+_IMMATURE = ("larva", "caterpillar", "nymph", "instar", "juvenile", "pupa")
+
+
+def _relationship_for(interaction: str, taxon: str,
+                      life_stage: str = "") -> str:
     """Our seven-value relationship, or ``""`` when it cannot be mapped.
 
     ``eatenBy`` is the ambiguous one, and it is resolved only where the eater
@@ -298,6 +333,13 @@ def _relationship_for(interaction: str, taxon: str) -> str:
         if taxon == "bird":
             return "fruit_food"
         if taxon == "lepidoptera":
+            # An ADULT lepidopteran "eating" a plant is nectaring, not
+            # herbivory — adult butterflies and moths have no chewing
+            # mouthparts. Recording that as a larval host would claim the plant
+            # feeds caterpillars it may never host.
+            stage = (life_stage or "").strip().lower()
+            if stage and not any(w in stage for w in _IMMATURE):
+                return "nectar"
             return "larval_host"
     return ""
 
@@ -315,15 +357,21 @@ def to_edges(plant: dict, rows: list, known_fauna: set,
         if not taxon:
             continue
         rel = _relationship_for(
-            (row.get("interaction_type") or "").strip(), taxon)
+            (row.get("interaction_type") or "").strip(), taxon,
+            row.get("target_specimen_life_stage") or "")
         if not rel:
             continue
         key = (plant["common_name"].lower(), target.lower(), rel)
         if key in existing or key in seen:
             continue
         seen.add(key)
-        citation = (row.get("study_citation")
-                    or row.get("study_source_citation") or "").strip()
+        # `study_title`, confirmed by --probe against the live API. The first
+        # version read `study_citation`/`study_source_citation`, neither of
+        # which `/interaction` returns — so every edge would have carried an
+        # empty citation and been rejected wholesale by the ingester's
+        # no-reporting-study gate. 500 records a plant, all silently binned,
+        # looking exactly like "GloBI has nothing for these species".
+        citation = (row.get("study_title") or "").strip()
         edges.append({
             "plant": plant["common_name"],
             "plant_scientific": plant["scientific_name"],
