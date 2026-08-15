@@ -26,6 +26,92 @@ and the scene is already showing the result.
 from __future__ import annotations
 
 
+def build_tools(win):
+    """The palette bar: what to plant, the verbs, and the two ways out.
+
+    Moved here from ``reference_ecosystem_window`` in V2.55. The window was at
+    450 lines against a 450-line ceiling with nowhere to put an Undo button, and
+    its guard comment's named seam had already been taken by the V2.44 split. So
+    the seam this time is the obvious remaining one: **the module that owns what
+    the buttons do now owns what they look like.**
+
+    Qt is imported inside the function, like every other import in this file, so
+    the module stays importable without PyQt6 — several tests read it as source
+    and one imports it.
+    """
+    from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QPushButton
+
+    bar = QHBoxLayout()
+    bar.setContentsMargins(8, 0, 8, 4)
+    bar.addWidget(win._label("Plant:"))
+
+    win._species = QComboBox()
+    win._species.setMinimumWidth(220)
+    win._species.setToolTip(
+        "The species of this community. Deliberately not the whole "
+        "catalogue — a wild community is a set of plants that belong "
+        "together.")
+    bar.addWidget(win._species)
+
+    win._plant_btn = QPushButton("🌱 Plant")
+    win._plant_btn.setCheckable(True)
+    win._plant_btn.setToolTip("Click the ground to place the species above.")
+    win._plant_btn.clicked.connect(lambda: win._set_mode("plant"))
+    bar.addWidget(win._plant_btn)
+
+    win._pull_btn = QPushButton("✖ Pull")
+    win._pull_btn.setCheckable(True)
+    win._pull_btn.setToolTip(
+        "Click a plant to remove it — and see what loses support.")
+    win._pull_btn.clicked.connect(lambda: win._set_mode("pull"))
+    bar.addWidget(win._pull_btn)
+
+    # The net (V2.44). Catch, look at, release — the creature is put back
+    # when the animation finishes, which is both real field practice and
+    # the only version of this that does not teach a child to take
+    # pollinators out of a habitat (P11).
+    win._net_btn = QPushButton("🥅 Net")
+    win._net_btn.setCheckable(True)
+    win._net_btn.setToolTip(
+        "Walk up to a creature until a ring appears round it, then "
+        "click anywhere to swing. Recorded in your field guide, then "
+        "released — caught counts for more than seen.")
+    win._net_btn.clicked.connect(lambda: win._set_mode("net"))
+    # Hidden until walk mode — see _set_net_visible.
+    win._net_btn.setVisible(False)
+    bar.addWidget(win._net_btn)
+
+    # Undo (F104, V2.55) sits beside Reset because Reset is the thing people
+    # most need saving from. Disabled until there is something to reverse, so
+    # it never offers an action that would do nothing.
+    win._undo_btn = QPushButton("↶ Undo")
+    win._undo_btn.setEnabled(False)
+    win._undo_btn.setToolTip(
+        "Step back through your changes to this landscape.")
+    win._undo_btn.clicked.connect(lambda: on_undo(win))
+    bar.addWidget(win._undo_btn)
+
+    reset = QPushButton("↺ Reset")
+    reset.setToolTip("Throw away your changes and restore the wild "
+                     "community as it ships. Undo can bring them back.")
+    reset.clicked.connect(lambda: on_reset(win))
+    bar.addWidget(reset)
+
+    bar.addStretch()
+
+    # The way out (F104). Past the stretch, apart from the edit verbs, because
+    # it is a different kind of act: it leaves Learn mode, which nothing else
+    # on this bar does.
+    from src.graduation_flow import on_graduate
+    win._graduate_btn = QPushButton("🎓 Take into Design")
+    win._graduate_btn.setToolTip(
+        "Move this landscape to your own address and open it as a real "
+        "design you can keep working on. Your sandbox stays as it is.")
+    win._graduate_btn.clicked.connect(lambda: on_graduate(win))
+    bar.addWidget(win._graduate_btn)
+    return bar
+
+
 def on_plant_requested(win, x: float, y: float,
                         plant_id: int, common_name: str):
     from src.reference_edit import plant_at, plant_consequence
@@ -34,6 +120,7 @@ def on_plant_requested(win, x: float, y: float,
     if not pid or not win._project:
         return
     name = common_name or (pick or {}).get("common_name") or "plant"
+    _remember(win, f"planting the {name}")
     try:
         record = plant_at(win._project, pid, name, win._center, x, y,
                           planted_year=win._year)
@@ -43,6 +130,7 @@ def on_plant_requested(win, x: float, y: float,
     record_seen_plant(win, pid)
     save(win)
     win._render()
+    _refresh_undo(win)
 
 
 def on_pull_requested(win, x: float, y: float):
@@ -58,6 +146,7 @@ def on_pull_requested(win, x: float, y: float):
     # simulates the pull itself and returns None for a plant already gone.
     placed = ProjectStore(win._project).placed_plants
     line = pull_consequence(placed, target["plant_id"])
+    _remember(win, f"pulling the {target.get('common_name', 'plant')}")
     removed = pull_at(win._project, target["plant_id"],
                       target["lat"], target["lng"],
                       feature_id=target.get("feature_id", ""))
@@ -66,13 +155,64 @@ def on_pull_requested(win, x: float, y: float):
     win._say.setText(line or f"Pulled {target.get('common_name', 'it')}.")
     save(win)
     win._render()
+    _refresh_undo(win)
 
 
 def on_reset(win):
     from src.reference_edit import reset_sandbox
+    # Reset is undoable, and that is the point rather than a nicety: throwing
+    # away every edit you have made was one click with nothing behind it.
+    _remember(win, "the reset")
     reset_sandbox(win._community)
     win._push(win._community)
-    win._say.setText("Back to the community as it ships.")
+    win._say.setText("Back to the community as it ships. Undo brings it back.")
+    _refresh_undo(win)
+
+
+# ── Undo (F104, V2.55) ───────────────────────────────────────────────────────
+#
+# The Learn side had none while Design had a full stack — the side built for
+# people who do not know what they are doing yet was the side where every
+# misclick was permanent. The stack itself is Qt-free in src/sandbox_undo.py;
+# these are the three lines of glue around it.
+
+def _remember(win, label: str = "") -> None:
+    """Snapshot the landscape as it is now, before the caller changes it."""
+    try:
+        from src.sandbox_undo import history_for
+        history_for(win).record(win._project, label)
+    except Exception:      # noqa: BLE001
+        pass               # never let bookkeeping break the edit itself
+
+
+def _refresh_undo(win) -> None:
+    """Enable/disable the Undo button and say what it would reverse."""
+    btn = getattr(win, "_undo_btn", None)
+    if btn is None:
+        return
+    from src.sandbox_undo import history_for
+    hist = history_for(win)
+    btn.setEnabled(hist.can_undo())
+    nxt = hist.next_label()
+    btn.setToolTip(f"Undo {nxt}." if nxt
+                   else "Step back through your changes to this landscape.")
+
+
+def on_undo(win):
+    """Step one change back."""
+    from src.sandbox_undo import history_for
+    if not win._project:
+        return
+    hist = history_for(win)
+    label = hist.next_label()
+    if not hist.undo(win._project):
+        win._say.setText("Nothing left to undo.")
+        _refresh_undo(win)
+        return
+    save(win)
+    win._render()
+    win._say.setText(f"Undid {label}." if label else "Stepped back.")
+    _refresh_undo(win)
 
 
 def save(win):

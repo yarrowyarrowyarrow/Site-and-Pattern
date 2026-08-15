@@ -39,7 +39,7 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget,
 )
 
 from src.map3d_widget import Map3DWidget
@@ -173,54 +173,13 @@ class ReferenceEcosystemWindow(QWidget):
         return lab
 
     def _build_tools(self) -> QHBoxLayout:
-        """The palette bar: what to plant, and the two verbs."""
-        bar = QHBoxLayout()
-        bar.setContentsMargins(8, 0, 8, 4)
-        bar.addWidget(self._label("Plant:"))
+        """The palette bar — built by ``reference_edit_flow.build_tools``.
 
-        self._species = QComboBox()
-        self._species.setMinimumWidth(220)
-        self._species.setToolTip(
-            "The species of this community. Deliberately not the whole "
-            "catalogue — a wild community is a set of plants that belong "
-            "together.")
-        bar.addWidget(self._species)
-
-        self._plant_btn = QPushButton("🌱 Plant")
-        self._plant_btn.setCheckable(True)
-        self._plant_btn.setToolTip("Click the ground to place the species above.")
-        self._plant_btn.clicked.connect(lambda: self._set_mode("plant"))
-        bar.addWidget(self._plant_btn)
-
-        self._pull_btn = QPushButton("✖ Pull")
-        self._pull_btn.setCheckable(True)
-        self._pull_btn.setToolTip(
-            "Click a plant to remove it — and see what loses support.")
-        self._pull_btn.clicked.connect(lambda: self._set_mode("pull"))
-        bar.addWidget(self._pull_btn)
-
-        # The net (V2.44). Catch, look at, release — the creature is put back
-        # when the animation finishes, which is both real field practice and
-        # the only version of this that does not teach a child to take
-        # pollinators out of a habitat (P11).
-        self._net_btn = QPushButton("🥅 Net")
-        self._net_btn.setCheckable(True)
-        self._net_btn.setToolTip(
-            "Walk up to a creature until a ring appears round it, then "
-            "click anywhere to swing. Recorded in your field guide, then "
-            "released — caught counts for more than seen.")
-        self._net_btn.clicked.connect(lambda: self._set_mode("net"))
-        # Hidden until walk mode — see _set_net_visible.
-        self._net_btn.setVisible(False)
-        bar.addWidget(self._net_btn)
-
-        reset = QPushButton("↺ Reset")
-        reset.setToolTip("Throw away your changes and restore the wild "
-                         "community as it ships.")
-        reset.clicked.connect(lambda: edit_flow.on_reset(self))
-        bar.addWidget(reset)
-        bar.addStretch()
-        return bar
+        The bar moved out in V2.55 (F104): this file was at its 450-line
+        ceiling with nowhere to put an Undo button, and the module that owns
+        what these buttons *do* is the right place for what they look like.
+        """
+        return edit_flow.build_tools(self)
 
     def _set_net_visible(self, on: bool) -> None:
         """Show the net only while he is out there to hold it (V2.46d).
@@ -444,6 +403,11 @@ def open_reference_ecosystem(main, ecoregion: Optional[str] = None):
     if win is None:
         win = ReferenceEcosystemWindow(ecoregion=ecoregion, center=center)
         main._reference_window = win
+    # The way back into Design (F104, V2.55). The window is otherwise entirely
+    # Learn-side and holds no reference to the design app; graduation needs one
+    # to read the property pin off and to raise. Set on every open, not just on
+    # construction, so a window built before this existed still gets it.
+    win._main = main
     win.show()
     win.raise_()
     win.activateWindow()

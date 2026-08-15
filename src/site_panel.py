@@ -29,7 +29,29 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QProgressBar, QTabWidget, QTextEdit,
 )
 
-from src import ui_style
+from src import glossary, ui_style
+
+
+def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
+    """Put the glossary's explanation of ``key`` on a Site Info row (F122).
+
+    On **both** widgets, which is the whole point. Every tooltip this panel had
+    before V2.55 was attached to the *value* label, so hovering "Zone:" — the
+    word a beginner is actually stuck on — showed nothing at all, while hovering
+    the number beside it explained itself. ``addRow("Zone:", w)`` builds that
+    caption implicitly and ``labelForField`` is how you get it back.
+
+    Silently does nothing for an unknown key: a missing tooltip is a gap, a
+    traceback while building the panel is an outage. ``tests/test_glossary.py``
+    is what makes sure no key is missing.
+    """
+    text = glossary.explain(key, **ctx)
+    if not text:
+        return
+    value.setToolTip(text)
+    caption = form.labelForField(value)
+    if caption is not None:
+        caption.setToolTip(text)
 
 
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
@@ -496,29 +518,17 @@ class SitePanel(QWidget):
         self._lbl_hard_src = QLabel("")
         self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_hard_src.setWordWrap(True)
+        # Tooltips for these rows come from src/glossary.py via _explain()
+        # below, not from inline strings here (V2.55). Three of them used to be
+        # written out at this spot; the glossary is now the single source, so
+        # the panel and the companion that will read these out later cannot
+        # drift into saying two different things about one number.
         self._lbl_gdd   = QLabel("—")
         self._lbl_gdd.setStyleSheet("color: #c8e6c9;")
-        self._lbl_gdd.setToolTip(
-            "Growing-degree days (base 5 °C) — cumulative summer warmth "
-            "across the growing season. The single best predictor of "
-            "whether a plant has enough heat to flower, fruit, and reach "
-            "maturity at this location."
-        )
         self._lbl_frost = QLabel("—")
         self._lbl_frost.setStyleSheet("color: #c8e6c9;")
-        self._lbl_frost.setToolTip(
-            "Average last spring frost → first fall frost, computed "
-            "from the last 5 years of daily temperatures."
-        )
         self._lbl_ecoregion = QLabel("—")
         self._lbl_ecoregion.setStyleSheet("color: #c8e6c9;")
-        self._lbl_ecoregion.setToolTip(
-            "Auto-detected from the property's latitude and longitude. "
-            "The plant filter's ecoregion dropdown pre-populates from "
-            "this value, so the suggestions you see are filtered to "
-            "species native to your area. You can still override the "
-            "filter manually."
-        )
         # Ecoregion → community library cross-link (V2.13): once a region is
         # detected, jump to the Plant Communities tab with the Habitat filter
         # pre-set — from "where am I" straight to "what belongs here" (P2/P8).
@@ -545,6 +555,16 @@ class SitePanel(QWidget):
         hl.addRow("Frost window:",        self._lbl_frost)
         hl.addRow("Ecoregion:",           self._lbl_ecoregion)
         hl.addRow("",                     self._btn_browse_comms)
+        # After addRow, always: labelForField only resolves once the row exists.
+        # The zone gets its base explanation here and a refreshed one naming the
+        # measured zone in _on_hardiness — set once at build time it would go
+        # stale, which reads as working while naming the wrong winter.
+        _explain(hl, self._lbl_zone,      glossary.ZONE)
+        _explain(hl, self._lbl_hard_src,  glossary.HARDINESS_SOURCE)
+        _explain(hl, self._lbl_gdd,       glossary.GDD)
+        _explain(hl, self._lbl_frost,     glossary.FROST_WINDOW)
+        _explain(hl, self._lbl_ecoregion, glossary.ECOREGION)
+        self._hard_form = hl
         layout.addWidget(self._hard_box)
 
         # ── Climate context (V2.13) ──────────────────────────────────
@@ -558,14 +578,8 @@ class SitePanel(QWidget):
         self._lbl_info_elev.setStyleSheet("color: #c8e6c9;")
         self._lbl_info_aspect = QLabel("—")
         self._lbl_info_aspect.setStyleSheet("color: #c8e6c9;")
-        self._lbl_info_aspect.setToolTip(
-            "Which way the ground faces. South-facing slopes run warmer and "
-            "drier; north-facing stay cooler and hold snow longer.")
         self._lbl_info_wind = QLabel("—")
         self._lbl_info_wind.setStyleSheet("color: #c8e6c9;")
-        self._lbl_info_wind.setToolTip(
-            "Annual prevailing direction from hourly ERA5 history "
-            "(cached offline). Full seasonal wind rose: Analysis → Wind.")
         self._lbl_wind_hint = QLabel("")
         self._lbl_wind_hint.setWordWrap(True)
         self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
@@ -574,6 +588,9 @@ class SitePanel(QWidget):
         cl.addRow("Aspect:",          self._lbl_info_aspect)
         cl.addRow("Prevailing wind:", self._lbl_info_wind)
         cl.addRow("",                 self._lbl_wind_hint)
+        _explain(cl, self._lbl_info_elev,   glossary.ELEVATION)
+        _explain(cl, self._lbl_info_aspect, glossary.ASPECT)
+        _explain(cl, self._lbl_info_wind,   glossary.PREVAILING_WIND)
         layout.addWidget(self._climate_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -609,6 +626,11 @@ class SitePanel(QWidget):
         rl.addRow("Snow → melt:",  self._lbl_rain_snow)
         rl.addRow("",             self._lbl_rain_note)
         rl.addRow("Source:",      self._lbl_rain_src)
+        _explain(rl, self._lbl_rain_annual,  glossary.RAIN_ANNUAL)
+        _explain(rl, self._lbl_rain_monthly, glossary.RAIN_MONTHLY)
+        _explain(rl, self._lbl_rain_growing, glossary.RAIN_GROWING)
+        _explain(rl, self._lbl_rain_snow,    glossary.RAIN_SNOW)
+        _explain(rl, self._lbl_rain_src,     glossary.RAIN_SOURCE)
         layout.addWidget(self._rain_box)
 
         # ── Winter cover & survival (snow as insulation) ─────────────
@@ -625,6 +647,8 @@ class SitePanel(QWidget):
         wl.addRow("Snow cover:", self._lbl_winter_cover)
         wl.addRow("Thaw stress:", self._lbl_winter_thaw)
         wl.addRow("", self._lbl_winter_notes)
+        _explain(wl, self._lbl_winter_cover, glossary.SNOW_COVER)
+        _explain(wl, self._lbl_winter_thaw,  glossary.THAW_STRESS)
         self._winter_box.setVisible(False)   # shown once metrics arrive
         layout.addWidget(self._winter_box)
 
@@ -644,6 +668,11 @@ class SitePanel(QWidget):
         sl.addRow("Sand/Silt/Clay:", self._lbl_soil_mix)
         sl.addRow("Reported depth:", self._lbl_soil_depth)
         sl.addRow("Source:",        self._lbl_soil_src)
+        _explain(sl, self._lbl_soil_ph,      glossary.SOIL_PH)
+        _explain(sl, self._lbl_soil_texture, glossary.SOIL_TEXTURE)
+        _explain(sl, self._lbl_soil_mix,     glossary.SOIL_MIX)
+        _explain(sl, self._lbl_soil_depth,   glossary.SOIL_DEPTH)
+        _explain(sl, self._lbl_soil_src,     glossary.SOIL_SOURCE)
 
         # One-time offline soil pack (Gridded Soil Landscapes of Canada): real
         # per-location soil offline, instead of the regional approximation that
@@ -1360,6 +1389,11 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+        # Re-explain the zone now that we know which one it is (F122, V2.55).
+        # This is the row whose explanation depends on the measured value, so it
+        # is refreshed here rather than left at the generic text set at build
+        # time — and it is the call site climate.zone_description() never had.
+        _explain(self._hard_form, self._lbl_zone, glossary.ZONE, zone=zone)
 
     def _on_ecoregion(self, data):
         """Surface the auto-detected ecoregion(s) in the readout and push them

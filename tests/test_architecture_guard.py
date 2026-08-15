@@ -161,7 +161,15 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.44: the edit half, extracted when the toolbar and the net took the
         # window past 450. The ceiling comment above had named this exact seam
         # in advance, which is the guard working as intended.
-        (_SRC / "reference_edit_flow.py", 260),        # 142 now
+        #
+        # V2.55: raised 260 → 320. F104 needed an Undo button and the window was
+        # at 450 of 450, so the *bar* moved in here — the module that owns what
+        # the buttons do now owns what they look like, and the window dropped to
+        # ~409. The graduation half went to its own core+_flow pair
+        # (graduation.py / graduation_flow.py) rather than landing here too.
+        # When this trips, the next seam is the bar: build_tools() is a third of
+        # the file and is presentation, not handling.
+        (_SRC / "reference_edit_flow.py", 320),        # 282 now
         (_SRC / "scene3d_toolbar.py", 340),            # 259 now
         (_SRC / "controllers" / "split_view.py", 320),  # 253 now
         # V2.46: plant / remove / net in the *design*, not just the sandbox.

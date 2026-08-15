@@ -10,7 +10,7 @@ shaped the way it is and what has already landed. This file is what comes next, 
 > for each: what it is, how it would be built, what it leans on. Follow the ID.
 
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F122.**
+working across both documents. **Next free ID: F123.**
 
 ### The ID ledger
 
@@ -30,13 +30,15 @@ is derived from it.
 | F91–F94 | Substitution · order file · palettes · task-shaped home | **open** |
 | F95 | — | **free** (skipped in V2.43) |
 | F96–F103 | Two doors · editable references · species ledger · per-plant age · edit animations + net · split view · one 3D toolbar · flight physics | ✅ V2.43–V2.45 |
-| F104–F107 | Sandbox undo + graduation · challenges · the companion *(merged into F85)* · painted lep wings | **open** |
+| **F104** | Sandbox undo + the graduation path into Design | ✅ V2.55 |
+| F105–F107 | Challenges · the companion *(merged into F85)* · painted lep wings | **open** |
 | F108–F110 | **Double-assigned — see below** | ✅ (both claimants) |
 | F111–F112 | Colour in the plant panel · the website searchable and drawn | ✅ V2.48 |
 | **F113** | Design variants + side-by-side comparison *(was F90)* | **open** |
 | **F114–F119** | Wing-pattern geometry · shrub aspect · fern density · billboard fruit · better creature models · birds/mammals off name tables | **open** — assigned V2.52 |
 | **F120** | Correct the 48 use tags the cited edges contradict | **open** — opened by V2.53 |
 | **F121** | Pause and slow the ambient wildlife in the 3D preview | ✅ V2.54 |
+| **F122** | The Site Info glossary — every metric explains itself | ✅ V2.55 (was the unnumbered "glossary half" in Group E) |
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
@@ -195,6 +197,7 @@ one are kept below; everything else is here, one row each, with its plan.
 
 | Release | What it was | Plan |
 |---|---|---|
+| **V2.55** | **F122 + F104** — Group E's two buildable rows, sharing a theme: the side of the app built for people who do not know what they are doing yet explained nothing and forgave nothing. **F122**: twenty Site Info metrics, **fifteen** of which explained themselves nowhere — worse than the backlog's "~12" — while `climate.zone_description()` had returned exactly the right sentence for years with no caller and the best account of GDD₅ in the repo was a developer comment. Now one Qt-free `glossary.py`, wired onto **both** the value and the **caption**, which is the half that was always missing: every tooltip the panel already had sat on the value, so hovering the word you are actually stuck on showed nothing. The zone's is refreshed where the value is measured, because set once at build time it would name the wrong winter. **F104**: the sandbox had no undo while Design had a full stack — `scene3d_edit_flow`'s own comparison table said `undo: none` — and **Reset is undoable too**, which is the point rather than a nicety. Plus the graduation path, which turned out to be nearly free: `main.py` already builds MainWindow in Learn mode and never shows it, *"so that stepping into Design later is instant"*. The window was at 450 of 450 lines, so the edit bar moved into `reference_edit_flow` — the module that owns what the buttons do now owns what they look like | [say-what-the-number-means](plans/V2.55-say-what-the-number-means.md) |
 | **V2.54** | **F121** — pause and slow the ambient wildlife (Paused · ¼× · ½× · 1×), so a creature can be held still and looked at. V2.45b had answered *"the birds move too fast for me to see what they are doing"* by halving every bird's speed permanently, a compromise the source itself flags as "not a claim about airspeed"; this is the instrument that was missing. The trap: `animateWildlife` runs on **two** clocks — `dt` for travel, **absolute `t` for the wingbeat** (plus bob, wobble, hop, `beatGain`) — so scaling `dt` alone gives a bird hovering motionless with its wings at full speed. One wildlife-local clock now feeds both. Space was already "ascend" in bee mode, so the shortcut stands down in first-person; and the control is a HUD chip, not an eleventh button on the toolbar that *is* F89 | [hold-still](plans/V2.54-hold-still.md) |
 | **V2.37** | The first outside tester's sixteen items; the ten cheap ones fixed. Three turned out to be features that already existed and could not be found — including **PDF export, raising `NameError` on every call for four minor versions** behind a test that skipped | [user-feedback-easy-wins](plans/V2.37-user-feedback-easy-wins.md) |
 | **V2.38** | The ecoregion rebuild: heuristic tags replaced by ranges **derived from georeferenced occurrence records**, each row carrying its count and a confidence band (schema v59/v60). Plus the plants that were flying in the air, and the sun/shade merge | [ecoregion-rebuild](plans/V2.38-ecoregion-rebuild.md) · [runbook](plans/V2.38-ecoregion-runbook.md) |
