@@ -39,3 +39,11 @@ Thumbs.db
 
 # Autosave
 *.perma.geojson.bak
+
+# F125 fauna sourcing (V2.58). The fetcher's resume file holds a second copy of
+# every edge plus the done-list, so committing it doubles the data for nothing —
+# it exists only so a Ctrl-C can pick up where it stopped. The two OUTPUT files
+# beside it (fauna_edges_candidates.json, fauna_new_species.json) ARE committed:
+# they are the evidence a seeded edge is real, and the ingester reads them.
+data/fetched/_checkpoint.json
+data/fetched/*.tmp
