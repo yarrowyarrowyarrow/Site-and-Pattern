@@ -374,6 +374,19 @@ def compute_habitat_score(
             _n = len(fauna_supported_by_plants(scored_ids, taxon=_taxon))
             if _n:
                 fauna_by_taxon[_taxon] = _n
+        # How many of THIS design's species the catalogue has any wildlife
+        # record for (V2.58). Without this the panels cannot tell "these plants
+        # support nothing" from "we have not recorded what they support" — and
+        # a user who places 16 natives and is shown no animals reasonably
+        # concludes the app is broken. It is the catalogue that is thin: 99 of
+        # 437 species carry an edge.
+        if scored_ids:
+            _marks = ",".join("?" * len(scored_ids))
+            n_with_records = connection.execute(
+                f"SELECT COUNT(DISTINCT plant_id) FROM plant_fauna "
+                f"WHERE plant_id IN ({_marks})", scored_ids).fetchone()[0]
+        else:
+            n_with_records = 0
     except Exception as exc:
         raise HabitatScoreError(str(exc)) from exc
     finally:
@@ -452,11 +465,42 @@ def compute_habitat_score(
     # gathered: caterpillars come from larval-host lepidoptera (relationship
     # data) or the host_plant tag; birds from the bird fauna they support or
     # the bird_food tag. Reported beside the score, never added to it.
+    #
+    # **V2.58 — this used to assert a complete web off the TAGS.** ``has_birds``
+    # read ``n_birds > 0 or bool(bird_species)``, and ``bird_species`` is the
+    # list of plants carrying the ``bird_food`` *tag*. So a design with a tagged
+    # plant and no bird record at all reported ``birds: True, n_birds: 0,
+    # complete: True``, and the Analysis panel printed "supports caterpillars
+    # and the birds that eat them" about a design the app held no bird records
+    # for. A user placed sixteen natives, was shown no animals, and reasonably
+    # concluded something had broken.
+    #
+    # This is the V2.53 contradiction running the other way. That increment
+    # fixed the case where the tags DENY what the edges document; the case where
+    # the tags CLAIM what the edges do not record was left, and design_critic's
+    # docstring still describes this dict as "edge-derived", which it was not.
+    #
+    # Both sources are kept — a tag is a real editorial signal — but they are
+    # now reported apart, and **"complete" means documented**, because that is
+    # the word doing the persuading.
     n_birds = fauna_by_taxon.get("bird", 0)
-    has_caterpillars = n_lepidoptera_supported > 0 or bool(host_species)
-    has_birds = n_birds > 0 or bool(bird_species)
-    if has_caterpillars and has_birds:
+    birds_documented = n_birds > 0
+    cats_documented = n_lepidoptera_supported > 0
+    birds_claimed = bool(bird_species)
+    cats_claimed = bool(host_species)
+    has_birds = birds_documented or birds_claimed
+    has_caterpillars = cats_documented or cats_claimed
+
+    def _evidence(documented: bool, claimed: bool) -> str:
+        if documented:
+            return "documented"
+        return "tag_only" if claimed else "none"
+
+    if birds_documented and cats_documented:
         food_web_status = "complete"
+    elif has_birds and has_caterpillars:
+        # Both links are asserted by tags and neither is backed by a record.
+        food_web_status = "unverified"
     elif has_caterpillars:
         food_web_status = "no_birds"
     elif has_birds:
@@ -466,10 +510,15 @@ def compute_habitat_score(
     food_web = {
         "caterpillars": has_caterpillars,
         "n_caterpillars": n_lepidoptera_supported,
+        "caterpillars_evidence": _evidence(cats_documented, cats_claimed),
         "birds": has_birds,
         "n_birds": n_birds,
-        "complete": has_caterpillars and has_birds,
+        "birds_evidence": _evidence(birds_documented, birds_claimed),
+        "complete": birds_documented and cats_documented,
         "status": food_web_status,
+        # Coverage, so a thin catalogue never again reads as an empty ecology.
+        "species_with_records": n_with_records,
+        "species_scored": n_species,
     }
 
     return HabitatScore(

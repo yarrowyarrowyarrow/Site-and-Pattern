@@ -113,6 +113,9 @@ class ReferenceEcosystemWindow(QWidget):
         self._combo.currentIndexChanged.connect(self._on_pick)
         bar.addWidget(self._combo)
         bar.addStretch()
+        # The way out, up here where there is room (V2.58) — see
+        # reference_edit_flow.build_graduate_button for why it moved.
+        bar.addWidget(edit_flow.build_graduate_button(self))
         lay.addLayout(bar)
 
         self._desc = QLabel("")

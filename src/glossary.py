@@ -204,6 +204,41 @@ def term(key: str) -> str:
     return entry.term if entry else ""
 
 
+#: Characters per line in a tooltip. A tooltip is read in one glance, and a
+#: 180-character single line makes the eye travel the whole screen and lose the
+#: line it was on — the V2.58 report. Roughly 58 characters is a comfortable
+#: measure, and it keeps the box narrow enough to sit beside what it describes.
+WRAP_COLS = 58
+
+
+def tooltip_html(key: str, *, zone: Optional[int] = None) -> str:
+    """The explanation as a narrow, titled, readable tooltip.
+
+    Rich text on purpose, for two reasons that are both bugs otherwise:
+
+    * **Width.** Plain text with no newlines renders as one enormous line.
+      Wrapping is done here rather than left to Qt because Qt's own tooltip
+      wrapping only kicks in past a width that is already too wide to scan.
+    * **Colour.** The value labels on the Site panel set ``color:`` in their
+      stylesheet, and that cascades into the tooltip — which is why hovering a
+      *value* produced pale green text on a pale background while hovering the
+      *caption* was perfectly legible. Stating the colours explicitly here stops
+      the cascade reaching the text.
+    """
+    import textwrap
+
+    entry = GLOSSARY.get(key)
+    if entry is None:
+        return ""
+    body = explain(key, zone=zone)
+    paras = [p.strip() for p in body.split("\n\n") if p.strip()]
+    wrapped = "<br><br>".join(
+        "<br>".join(textwrap.wrap(p, WRAP_COLS)) for p in paras)
+    return (
+        f"<div style='color:#10200f;'>"
+        f"<b style='color:#10200f;'>{entry.term}</b><br>{wrapped}</div>")
+
+
 def explain(key: str, *, zone: Optional[int] = None) -> str:
     """The explanation for ``key``, or ``""`` for an unknown key.
 

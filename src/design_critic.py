@@ -73,13 +73,40 @@ def critique_lines(habitat: dict) -> list[str]:
     37 with a documented ``larval_host`` edge and no ``host_plant`` tag,
     Chokecherry and Balsam Poplar among them).
 
-    So where ``food_web`` — which is edge-derived — contradicts the tag-derived
-    component, this says what is actually true rather than picking the gloomier
-    of the two numbers sitting in the same dictionary.
+    So where ``food_web`` contradicts the tag-derived component, this says what
+    is actually true rather than picking the gloomier of the two numbers sitting
+    in the same dictionary.
+
+    **Correction (V2.58).** This paragraph used to call ``food_web``
+    "edge-derived". It was not: ``has_birds`` fell back to the ``bird_food``
+    tag, so the dict could report ``birds: True`` beside ``n_birds: 0`` and call
+    the web complete. The lines below were already written defensively — each
+    checks the bool *and* the count — so the prose escaped, but the premise was
+    wrong and the status field was not so lucky. ``food_web`` now carries
+    ``birds_evidence`` / ``caterpillars_evidence``, and ``complete`` means
+    documented.
     """
     out: list[str] = []
     comp = (habitat or {}).get("components", {}) or {}
     food_web = (habitat or {}).get("food_web") or {}
+
+    # Coverage first, because it reframes everything under it: a design whose
+    # species are simply unrecorded should not read as a design that supports
+    # nothing (V2.58).
+    _scored = int(food_web.get("species_scored") or 0)
+    _known = int(food_web.get("species_with_records") or 0)
+    if _scored and _known == 0:
+        out.append(
+            f"No wildlife records exist for any of these {_scored} species. "
+            f"That is a gap in the catalogue, not a verdict on the planting — "
+            f"the app holds relationship data for 99 of 437 plants, and these "
+            f"are among the rest.")
+    elif _scored and _known < _scored:
+        out.append(
+            f"Wildlife records exist for {_known} of these {_scored} species. "
+            f"The other {_scored - _known} are not recorded as supporting "
+            f"nothing — they are simply not recorded yet, so anything below "
+            f"counts only what is known.")
 
     bloom = comp.get("bloom", {})
     gaps = bloom.get("gap_months") or []

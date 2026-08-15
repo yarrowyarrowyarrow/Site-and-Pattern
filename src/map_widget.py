@@ -87,6 +87,7 @@ class MapBridge(QObject):
 
     # A plant marker was clicked
     plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
+    plant_substitute_requested = pyqtSignal(int)   # plantId — "the nursery is out" (F91)
 
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
@@ -239,6 +240,16 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_marker_clicked.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(int)
+    def onPlantSubstituteRequested(self, plant_id: int):
+        """Right-click a plant on the map → find an ecological substitute.
+
+        Added in V2.58: the feature already existed on the On This Design
+        species list, where — as the author put it — 99% of users will never
+        find it. The map is where you are looking at the plant you cannot get.
+        """
+        self.plant_substitute_requested.emit(plant_id)
 
     @pyqtSlot(str, int, float, float)
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):

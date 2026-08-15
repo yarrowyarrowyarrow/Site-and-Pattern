@@ -1012,6 +1012,11 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.show_in_library(self, pid))
         self.on_this_design.species_substitute_requested.connect(
             lambda pid: _drf.substitute_species(self, pid))
+        # …and from the map itself (V2.58). The species list is where this
+        # lived and, as the author put it, 99% of users will never find it
+        # there; the map is where you are looking at the plant you cannot get.
+        self.map_widget.bridge.plant_substitute_requested.connect(
+            lambda pid: _drf.substitute_species(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
         # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).

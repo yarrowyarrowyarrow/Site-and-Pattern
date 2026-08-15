@@ -46,6 +46,18 @@ def _panel_source():
         return fh.read()
 
 
+def _unwrap(html: str) -> str:
+    """Tooltip rich text back to one line.
+
+    V2.58 wraps tooltips at ~58 characters and titles them, so a sentence that
+    is one string in the glossary is several `<br>`-joined lines on screen.
+    Substring assertions have to compare against the unwrapped text or they
+    fail on the line break rather than on anything real.
+    """
+    import re as _re
+    return _re.sub(r"<[^>]+>", " ", html).replace("  ", " ").strip()
+
+
 def _qt_available():
     try:
         from PyQt6.QtWidgets import QApplication  # noqa: F401
@@ -187,7 +199,7 @@ class TestTheTooltipsReallyLand(unittest.TestCase):
         for attr, _form, key in self._ROWS:
             with self.subTest(row=attr):
                 widget = getattr(self._panel, attr)
-                self.assertEqual(widget.toolTip(), glossary.explain(key))
+                self.assertEqual(widget.toolTip(), glossary.tooltip_html(key))
 
     def test_the_caption_carries_it_too(self):
         """The whole point of F122. Hovering the word you do not understand is
@@ -200,7 +212,7 @@ class TestTheTooltipsReallyLand(unittest.TestCase):
                     caption, f"{attr} has no caption widget — labelForField "
                              f"returned None, so the row was never added")
                 self.assertEqual(
-                    caption.toolTip(), glossary.explain(key),
+                    caption.toolTip(), glossary.tooltip_html(key),
                     f"the caption beside {attr} explains nothing")
 
     def test_the_zone_tooltip_updates_with_the_measured_zone(self):
@@ -211,9 +223,9 @@ class TestTheTooltipsReallyLand(unittest.TestCase):
         self._panel._on_hardiness({"zone": 4, "source": "test"})
         after = self._panel._lbl_zone.toolTip()
         self.assertNotEqual(before, after, "the zone tooltip did not refresh")
-        self.assertIn(zone_description(4), after)
+        self.assertIn(zone_description(4), _unwrap(after))
         caption = self._panel._hard_form.labelForField(self._panel._lbl_zone)
-        self.assertIn(zone_description(4), caption.toolTip(),
+        self.assertIn(zone_description(4), _unwrap(caption.toolTip()),
                       "the value refreshed but the caption went stale")
 
 

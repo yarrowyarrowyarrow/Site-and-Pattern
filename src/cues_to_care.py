@@ -126,16 +126,33 @@ def _lawn_zone_labels() -> set:
 
 # ── The frontage assumption ──────────────────────────────────────────────────
 
-#: Said out loud wherever the assumption is used. See the module docstring.
+#: The wording used when nothing better is known. Kept as a module constant
+#: because tests and the panel both reference it.
 FRONTAGE_NOTE = ("assuming the street is on the south side, as the "
                  "sidewalk view does")
 
 
-def frontage_is_assumed() -> bool:
-    """Always true today. A function rather than a constant so the day a real
-    frontage exists — declared by the user or read from road data — there is one
-    place to change and the callers already ask."""
-    return True
+def frontage_for(project: dict):
+    """Where the street is, measured from road data when the project has it.
+
+    **V2.58.** This used to be a hard-coded assumption with a function that
+    returned ``True`` for "still assumed". It now defers to
+    :mod:`src.frontage`, which reads OSM street centrelines stored on the
+    project and falls back to the same south-edge guess when there are none.
+
+    The important part is unchanged: whichever it is, the caller prints
+    ``.note``, so a measurement and a guess never read the same.
+    """
+    from src import frontage
+    try:
+        return frontage.frontage_for_project(project or {})
+    except Exception:                                      # noqa: BLE001
+        return frontage.ASSUMED
+
+
+def frontage_is_assumed(project: Optional[dict] = None) -> bool:
+    """Whether the frontage is still a guess rather than a measurement."""
+    return not frontage_for(project or {}).measured
 
 
 # ── The six cues ─────────────────────────────────────────────────────────────
@@ -152,9 +169,10 @@ def _cue_mown_edge(project: dict) -> Cue:
                    "There is a mown or managed strip — the strongest single "
                    "signal that the planting behind it is intended.")
     return Cue(MOWN_EDGE, False,
-               f"No mown or managed strip along the frontage ({FRONTAGE_NOTE}). "
-               f"A mown metre at the front is the cheapest way to make "
-               f"everything behind it read as deliberate.")
+               f"No mown or managed strip along the frontage "
+               f"({frontage_for(project).note}). A mown metre at the front is "
+               f"the cheapest way to make everything behind it read as "
+               f"deliberate.")
 
 
 def _cue_crisp_border(project: dict) -> Cue:

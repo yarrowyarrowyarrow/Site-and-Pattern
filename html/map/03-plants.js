@@ -135,7 +135,14 @@
           action: function() { deletePlantGroup(pd.groupId); }
         });
       }
-
+      // "The nursery is out" (F91, V2.58) — above Remove, being the
+      // alternative TO removing. File is AT its ceiling: extract
+      // showPlantContextMenu before adding anything else here.
+      if (pd.plantId) {
+        items.push({ label: 'Find a substitute…', action: function() {
+          if (bridge) bridge.onPlantSubstituteRequested(pd.plantId); } });
+        items.push('sep');
+      }
       items.push({
         label: 'Remove this plant',
         action: function() { _removeSinglePlantMarker(pd.markerId); }

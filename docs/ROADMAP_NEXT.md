@@ -10,7 +10,7 @@ shaped the way it is and what has already landed. This file is what comes next, 
 > for each: what it is, how it would be built, what it leans on. Follow the ID.
 
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F125.**
+working across both documents. **Next free ID: F127.**
 
 ### The ID ledger
 
@@ -42,6 +42,8 @@ is derived from it.
 | **F122** | The Site Info glossary — every metric explains itself | ✅ V2.55 (was the unnumbered "glossary half" in Group E) |
 | **F123** | The presentation still never reaches the PDF — `still_pixmap` is never passed | **open** — found by V2.56 |
 | **F124** | `PLANT_TYPE_TO_LAYER` misses 311 of 437 species; a prairie meadow scores 0 of 15 on layer diversity | **open** — found by V2.57 |
+| **F125** | Wildlife records for the 338 species that have none — needs egress | **open** — opened by V2.58 |
+| **F126** | Rethink the "convince someone" artefact; F76's three panels were judged weaker than the idea sounded | **open** — opened by V2.58 |
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused

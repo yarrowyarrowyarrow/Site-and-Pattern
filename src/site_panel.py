@@ -31,6 +31,14 @@ from PyQt6.QtWidgets import (
 
 from src import glossary, ui_style
 
+#: Appended to each explained widget's stylesheet so the widget's own `color:`
+#: cannot reach its tooltip. Light card, dark text, a little padding — legible
+#: whichever half of the row you happen to hover (V2.58).
+_TOOLTIP_CSS = (
+    " QToolTip { color: #10200f; background-color: #f2f7ef;"
+    " border: 1px solid #6c8f6c; border-radius: 4px; padding: 6px 8px;"
+    " font-size: 11px; font-weight: normal; }")
+
 
 def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
     """Put the glossary's explanation of ``key`` on a Site Info row (F122).
@@ -45,13 +53,21 @@ def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
     traceback while building the panel is an outage. ``tests/test_glossary.py``
     is what makes sure no key is missing.
     """
-    text = glossary.explain(key, **ctx)
+    text = glossary.tooltip_html(key, **ctx)
     if not text:
         return
     value.setToolTip(text)
     caption = form.labelForField(value)
     if caption is not None:
         caption.setToolTip(text)
+    # Block the stylesheet cascade (V2.58). These value labels set `color:` for
+    # their own text, and Qt lets that reach the QToolTip child — which is why
+    # hovering a value gave pale green on pale grey while hovering its caption
+    # was fine. Naming QToolTip explicitly on the same widget stops it.
+    for w in (value, caption):
+        if w is None:
+            continue
+        w.setStyleSheet((w.styleSheet() or "") + _TOOLTIP_CSS)
 
 
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects

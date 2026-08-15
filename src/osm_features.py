@@ -58,7 +58,16 @@ def _bbox_str(bbox: dict) -> str:
     return f"{bbox['south']},{bbox['west']},{bbox['north']},{bbox['east']}"
 
 
-def _query(bbox: dict, include_trees: bool, include_buildings: bool) -> str:
+#: Which OSM ``highway`` values count as "a street this property fronts onto"
+#: (V2.58). Footpaths, cycleways and driveways are excluded on purpose: the
+#: question cues-to-care asks is which edge the *public* sees from the road, and
+#: a back-lane cycle path is not that.
+ROAD_HIGHWAYS = ("motorway", "trunk", "primary", "secondary", "tertiary",
+                 "unclassified", "residential", "living_street", "service")
+
+
+def _query(bbox: dict, include_trees: bool, include_buildings: bool,
+           include_roads: bool = False) -> str:
     # Both ways AND relations: large complexes (apartment blocks with
     # courtyards) are often mapped as multipolygon relations, which a
     # way-only query never returns (V2.13).
@@ -69,6 +78,10 @@ def _query(bbox: dict, include_trees: bool, include_buildings: bool) -> str:
         parts.append(f'relation["building"]({b});')
     if include_trees:
         parts.append(f'node["natural"="tree"]({b});')
+    if include_roads:
+        # One regex arm rather than nine, so the query stays short enough for
+        # the Overpass GET fallback.
+        parts.append(f'way["highway"~"^({"|".join(ROAD_HIGHWAYS)})$"]({b});')
     return f"[out:json][timeout:25];({''.join(parts)});out geom;"
 
 
@@ -138,6 +151,19 @@ def _ring_lnglat(geometry: list) -> Optional[list]:
     return ring
 
 
+def _line_lnglat(geometry: list) -> list:
+    """Open polyline of ``[lng, lat]`` pairs from an Overpass ``geom`` way.
+
+    Separate from :func:`_ring_lnglat` because that one is built for building
+    footprints: it demands three distinct vertices and **closes** the ring. Both
+    are wrong for a street — a two-node way is a perfectly good road segment and
+    would be dropped, and closing the line invents a segment back to the start
+    that the frontage would then measure a distance to.
+    """
+    return [[float(g["lon"]), float(g["lat"])] for g in geometry or []
+            if "lat" in g and "lon" in g]
+
+
 def ring_centroid(ring_lnglat: list) -> Optional[tuple]:
     """``(lat, lng)`` centroid of a ring of ``[lng, lat]`` pairs, or ``None``
     for a degenerate ring (<3 distinct vertices)."""
@@ -200,6 +226,13 @@ def parse_elements(data: Optional[dict]) -> list[dict]:
             out.append({"kind": "tree", "lat": float(lat), "lng": float(lng),
                         "height_m": _parse_height(tags, _DEFAULT_TREE_HEIGHT_M),
                         "radius_m": radius})
+        elif etype == "way" and tags.get("highway") in ROAD_HIGHWAYS:
+            line = _line_lnglat(el.get("geometry", []) or [])
+            if len(line) < 2:
+                continue
+            out.append({"kind": "road", "line": line,
+                        "name": tags.get("name") or "",
+                        "highway": tags.get("highway") or ""})
         elif etype == "way" and tags.get("building"):
             ring = _ring_lnglat(el.get("geometry", []) or [])
             if ring is None:
@@ -242,22 +275,38 @@ def parse_elements(data: Optional[dict]) -> list[dict]:
     return out
 
 
+def fetch_roads(bbox: dict) -> Optional[list]:
+    """Street centrelines in ``bbox``, or ``None`` when the fetch failed.
+
+    Added V2.58 so the frontage can be *measured* rather than assumed. Same
+    None-on-failure contract as :func:`fetch_existing_features`, and for the
+    same reason: a failed request rendered as "no roads" would silently send
+    the caller back to the south-edge guess while looking like an answer.
+    """
+    data = _fetch_overpass(_query(bbox, False, False, include_roads=True))
+    if data is None:
+        return None
+    return [f for f in parse_elements(data) if f["kind"] == "road"]
+
+
 def fetch_existing_features(bbox: dict, *, trees: bool = True,
-                            buildings: bool = True) -> Optional[dict]:
+                            buildings: bool = True,
+                            roads: bool = True) -> Optional[dict]:
     """Fetch existing trees and/or buildings in ``bbox`` from OSM. Returns
     ``{"trees": [...], "buildings": [...]}``, or **None when the network
     fetch failed** (timeout / rate-limit / server busy, after retry + mirror).
     A None must be reported as a failure — for years a failed request was
     silently rendered as "Found 0 buildings", which is a lie (V2.13)."""
-    if not (trees or buildings):
-        return {"trees": [], "buildings": []}
-    data = _fetch_overpass(_query(bbox, trees, buildings))
+    if not (trees or buildings or roads):
+        return {"trees": [], "buildings": [], "roads": []}
+    data = _fetch_overpass(_query(bbox, trees, buildings, roads))
     if data is None:
         return None
     feats = parse_elements(data)
     return {
         "trees": [f for f in feats if f["kind"] == "tree"],
         "buildings": [f for f in feats if f["kind"] == "building"],
+        "roads": [f for f in feats if f["kind"] == "road"],
     }
 
 
@@ -584,6 +633,16 @@ def import_osm_result(res: Optional[dict], project_dict: dict, *,
     feats = list(res.get("buildings", [])) + list(res.get("trees", []))
     kept, n_inside, n_neigh = filter_to_boundary(feats, boundary, margin_m)
     added = add_features_to_project(kept, project_dict)
+    # Streets (V2.58). NOT boundary-filtered and NOT counted in `added`: a road
+    # is useful precisely because it is *outside* the property, and counting it
+    # as an imported feature would inflate "found 12 buildings" with things the
+    # user never asked to place. Stored so src.frontage can measure which edge
+    # faces the street instead of assuming south.
+    try:
+        from src.frontage import store_roads
+        store_roads(project_dict, res.get("roads") or [])
+    except Exception:      # noqa: BLE001 — never fail an import over this
+        pass
     msg = f"Found {len(feats)} nearby; "
     if boundary and len(boundary) >= 3:
         msg += (f"kept {len(kept)} ({n_inside} inside your boundary + "

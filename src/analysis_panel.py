@@ -1919,6 +1919,13 @@ class AnalysisPanel(QWidget):
             _food_web_msg = {
                 "complete": "Food web   supports caterpillars and the "
                             "birds that eat them",
+                # V2.58: this state used to be reported as "complete". Both
+                # links come from use TAGS with no wildlife record behind
+                # either, and saying "supports the birds that eat them" about a
+                # design we hold no bird records for is a claim the data cannot
+                # carry.
+                "unverified": "Food web   the plant tags suggest hosts and "
+                              "bird food, but no wildlife records back it yet",
                 "no_birds": "Food web   caterpillars, but no bird support "
                             "yet; add berry/seed plants",
                 "no_hosts": "Food web   birds, but no host plants yet; "
@@ -1928,6 +1935,16 @@ class AnalysisPanel(QWidget):
             _fw_line = _food_web_msg.get(food_web.get("status"))
             if _fw_line:
                 lines.append(_fw_line)
+            # Coverage (V2.58). Absence of data must never read as absence of
+            # relationships — the failure that made 16 native plants look like
+            # a broken app rather than a thin catalogue.
+            _scored = int(food_web.get("species_scored") or 0)
+            _known = int(food_web.get("species_with_records") or 0)
+            if _scored and _known < _scored:
+                lines.append(
+                    f"  Wildlife records exist for {_known} of your {_scored} "
+                    f"species — the other {_scored - _known} are not known to "
+                    f"support nothing, they are simply not recorded yet.")
         if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]

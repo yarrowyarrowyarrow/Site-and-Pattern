@@ -87,7 +87,7 @@ def build_tools(win):
     win._undo_btn = QPushButton("↶ Undo")
     win._undo_btn.setEnabled(False)
     win._undo_btn.setToolTip(
-        "Step back through your changes to this landscape.")
+        "Nothing to undo yet — plant or pull something first")
     win._undo_btn.clicked.connect(lambda: on_undo(win))
     bar.addWidget(win._undo_btn)
 
@@ -98,18 +98,30 @@ def build_tools(win):
     bar.addWidget(reset)
 
     bar.addStretch()
+    return bar
 
-    # The way out (F104). Past the stretch, apart from the edit verbs, because
-    # it is a different kind of act: it leaves Learn mode, which nothing else
-    # on this bar does.
+
+def build_graduate_button(win):
+    """The way out of Learn mode (F104), as its own widget.
+
+    **Moved to the top bar in V2.58**, off the end of the tool bar. Two reasons,
+    and the first is that a user could not find it: past a stretch, behind a
+    220px species combo and four buttons, it was pushed off the right edge on
+    any window narrower than the layout's natural width, and a control you
+    cannot see is a control that does not exist. The second is that it belongs
+    apart on merit — every other button on that bar edits the landscape; this
+    one leaves the mode.
+    """
+    from PyQt6.QtWidgets import QPushButton
+
     from src.graduation_flow import on_graduate
+
     win._graduate_btn = QPushButton("🎓 Take into Design")
     win._graduate_btn.setToolTip(
         "Move this landscape to your own address and open it as a real "
         "design you can keep working on. Your sandbox stays as it is.")
     win._graduate_btn.clicked.connect(lambda: on_graduate(win))
-    bar.addWidget(win._graduate_btn)
-    return bar
+    return win._graduate_btn
 
 
 def on_plant_requested(win, x: float, y: float,
@@ -186,16 +198,27 @@ def _remember(win, label: str = "") -> None:
 
 
 def _refresh_undo(win) -> None:
-    """Enable/disable the Undo button and say what it would reverse."""
+    """Enable/disable the Undo button and say what it would reverse.
+
+    The tooltip names the *actual* last action ("Undo planting the Wild Rose"),
+    and when there is nothing to reverse it says so rather than describing the
+    button in the abstract — V2.58 feedback. A generic description on a disabled
+    control tells the reader nothing they cannot already see.
+    """
     btn = getattr(win, "_undo_btn", None)
     if btn is None:
         return
     from src.sandbox_undo import history_for
     hist = history_for(win)
-    btn.setEnabled(hist.can_undo())
+    can = hist.can_undo()
+    btn.setEnabled(can)
     nxt = hist.next_label()
-    btn.setToolTip(f"Undo {nxt}." if nxt
-                   else "Step back through your changes to this landscape.")
+    if can and nxt:
+        btn.setToolTip(f"Undo {nxt}")
+    elif can:
+        btn.setToolTip("Undo your last change")
+    else:
+        btn.setToolTip("Nothing to undo yet — plant or pull something first")
 
 
 def on_undo(win):
