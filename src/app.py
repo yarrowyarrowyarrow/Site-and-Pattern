@@ -2067,7 +2067,14 @@ class MainWindow(QMainWindow):
 
             notes = self.planning_panel.get_notes()
 
-            export_pdf(path, self._project, enriched, structs, notes, pixmap)
+            # Before / after / in five years (F76), if the 3D window has
+            # rendered it. Passed through rather than re-rendered here: export
+            # is synchronous and the viewer's capture is a chain of callbacks.
+            ba_panels, ba_caption = getattr(self, "_before_after", (None, ""))
+
+            export_pdf(path, self._project, enriched, structs, notes, pixmap,
+                       before_after=ba_panels,
+                       before_after_caption=ba_caption)
             self.statusBar().showMessage(f"PDF exported: {path}", 3000)
         except Exception as exc:
             QMessageBox.critical(self, "PDF Export Failed", str(exc))
@@ -2171,6 +2178,17 @@ class MainWindow(QMainWindow):
             from src.lawn_zones import conversion_summary
             _conv = conversion_summary(self._project.get("features", []))
             self.on_this_design.set_lawn_conversion(_conv)
+            # Cues to care (F75, P13) — whether the planting will be read as
+            # tended. Computed here because it needs the whole project (drawn
+            # shapes, structures, boundary), not just the placed plants; the
+            # panel is handed finished lines like the lawn tally above.
+            try:
+                from src import cues_to_care
+                self.on_this_design.set_cues_to_care(
+                    cues_to_care.cue_lines(self._project),
+                    cues_to_care.tally(self._project))
+            except Exception:      # noqa: BLE001
+                self.on_this_design.set_cues_to_care([])
             # Same summary grounds the Habitat tab's lawn-equivalent
             # counterfactual (F10) and the phased conversion plan (F17).
             self.analysis_panel.set_lawn_conversion(_conv)

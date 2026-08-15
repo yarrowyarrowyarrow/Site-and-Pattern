@@ -148,6 +148,11 @@ class OnThisDesignPanel(QWidget):
         self._habitat_value = None
         # Lawn-conversion zone summary (N2) — set via set_lawn_conversion.
         self._lawn_conversion: dict | None = None
+        # Cues-to-care findings (F75) — set via set_cues_to_care. Whether the
+        # planting reads as tended, which is what decides if it is still here
+        # in three years (P13).
+        self._cues_lines: list = []
+        self._cues_tally = None
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -288,6 +293,17 @@ class OnThisDesignPanel(QWidget):
         self._lawn_conversion = summary or None
         self._refresh_stats(self._latest_enriched)
 
+    def set_cues_to_care(self, lines, tally=None):
+        """Store the cues-to-care findings (F75) and refresh the Stats tab.
+
+        Computed in ``app.py`` from the project and passed in as lines, like the
+        lawn tally and the cost breakdown — the panel stays presentation-only
+        and never reaches for the project itself.
+        """
+        self._cues_lines = list(lines or [])
+        self._cues_tally = tally
+        self._refresh_stats(self._latest_enriched)
+
     def _value_block_html(self) -> str:
         """The habitat-value half of value-vs-price (F11, P6): what the design is
         worth, shown directly above the cost so the two read together."""
@@ -370,6 +386,38 @@ class OnThisDesignPanel(QWidget):
         return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
                 "What your spend creates: " + ", ".join(creates) + ".</p>")
 
+    def _cues_block_html(self) -> str:
+        """Will the neighbours read it as cared for? (F75, P13.)
+
+        The sibling of "Where to grow next": that block asks whether the design
+        works ecologically, this one asks whether it survives *socially*, which
+        is what actually decides whether it is still there in three years. A
+        native planting is rarely removed for failing ecologically — it is
+        removed because it read as neglect.
+
+        Only absences and the sign prompt are listed. Reciting the cues that are
+        already present would bury the one thing worth changing.
+        """
+        if not self._cues_lines:
+            return ""
+        tally = self._cues_tally
+        if tally and tally[1] and tally[0] == tally[1]:
+            head = ("<p><b>How it will be read</b><br>"
+                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    f"All {tally[1]} cues to care are here — this will read as "
+                    "tended.</span>")
+        else:
+            sub = (f" <span style='color:#78909c;font-size:10px;'>"
+                   f"({tally[0]} of {tally[1]} cues present)</span>"
+                   if tally and tally[1] else "")
+            head = f"<p><b>How it will be read</b>{sub}"
+        items = "".join(
+            f"<li style='margin-bottom:3px;'>{line}</li>"
+            for line in self._cues_lines)
+        return (head +
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                f"{items}</ul></p>")
+
     def _lawn_block_html(self) -> str:
         s = self._lawn_conversion
         if not s or s.get("total_zone_m2", 0) <= 0:
@@ -447,13 +495,16 @@ class OnThisDesignPanel(QWidget):
     def _refresh_stats(self, enriched: list[dict]):
         value_html = self._value_block_html()
         nudges_html = self._nudges_block_html()
+        # Directly after the ecological gaps, because they are the two halves of
+        # the same question — will this design work, and will it be allowed to.
+        cues_html = self._cues_block_html()
         cost_html = self._cost_block_html()
         framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
             self._stats_text.setHtml(
-                body + lawn_html + value_html + nudges_html
+                body + lawn_html + value_html + nudges_html + cues_html
                 + cost_html + framing_html)
             return
         from src.db.plants import get_plant
@@ -527,6 +578,7 @@ class OnThisDesignPanel(QWidget):
         rows.append(lawn_html)
         rows.append(value_html)
         rows.append(nudges_html)
+        rows.append(cues_html)
         rows.append(cost_html)
         rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))

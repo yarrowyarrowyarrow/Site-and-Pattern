@@ -219,6 +219,14 @@ class Scene3DWindow(QWidget):
             "viewpoint, and save an image for a proposal or a printout")
         self._still_btn.clicked.connect(self._on_presentation_still)
 
+        # Before / after / in five years (F76) — the argument a single still
+        # cannot make, because a planting is judged on what it becomes.
+        self._ba_btn = QPushButton("⏳ Before / after…")
+        self._ba_btn.setToolTip(
+            "Render your yard now, at year 1 and at year 5 as one page — "
+            "included in the next PDF you export")
+        self._ba_btn.clicked.connect(self._on_before_after)
+
         # "Fly as a pollinator" — first-person fly-through (F37 increment 2; V2.12
         # adds butterflies & moths). Pick a native bee, butterfly or moth, then
         # drop into a low fly camera: its adult nectar plants are glowing beacons
@@ -316,6 +324,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
         bar.addWidget(self._still_btn)
+        bar.addWidget(self._ba_btn)
 
         # Row 2 — how you move through the scene first, then whose eyes you
         # borrow. The old order led with "Creature: [combo]", so the strip
@@ -488,6 +497,11 @@ class Scene3DWindow(QWidget):
         if not path:
             return
         self._render_still(spec, path)
+
+    def _on_before_after(self):
+        """Before / after / in five years (F76) — see before_after_flow."""
+        from src import before_after_flow
+        return before_after_flow.on_before_after(self)
 
     def _render_still(self, spec, path):
         """Set the scene to the still's moment, then capture it.

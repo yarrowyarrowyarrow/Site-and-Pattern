@@ -71,14 +71,18 @@ it — it is the context for choosing what comes next.
 
 *The app argues superbly that a native yard is ecologically valuable. Nobody
 converts a lawn on ecological grounds alone, and nobody's spouse, neighbour or
-HOA does. Principle 13 exists to name this; these are the two features that act
-on it. F77 (the neighbour's-eye view) already shipped in V2.33 as the `sidewalk`
-camera preset, so the camera work is done.*
+HOA does. Principle 13 exists to name this.*
+
+**✅ F76 and F75 shipped in V2.56** — before / after / in five years as one page,
+and the cues-to-care checker. Plan:
+[`V2.56-the-argument-never-made`](plans/V2.56-the-argument-never-made.md).
+F77 (the neighbour's-eye view) shipped in V2.33 as the `sidewalk` camera preset.
+One row survives, and it is a bug the increment found rather than a feature it
+declined to build.
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
-| **F76** | **Before / after / in five years.** The one image that makes people act, and every ingredient exists and has never been assembled: the user's own lawn photo (F24's site-photo underlay, or the splat backdrop), the design at **year 1**, and the design at **year 5** (F2's snapshot timeline, F69's print-resolution render). Three panels, one page, on screen and in the PDF. For the novice it is what converts a spouse; for the designer it is page one of the proposal; for P4 it is "design the trajectory" as a single artefact instead of a slider someone has to be persuaded to drag | M | Med | P4, P5, P8 |
-| **F75** | **Cues-to-care checker.** Critique the design for the moves that decide whether it survives *socially*: a mown or hard edge along the public frontage, a defined border, height graded toward the back, a visible path or entry, one showy repeat that reads as intentional, room for a sign. Extends `design_critic.critique_lines`; every input either exists already (`placement_score`'s aesthetic sub-scores, `lawn_zones` geometry, the boundary and frontage) or is a one-line geometric test | S–M | Low | P2, P13 |
+| **F123** | **The presentation still never reaches the PDF.** Found while wiring F76 in V2.56. `pdf_export.export_pdf` takes `still_pixmap` and `_draw_presentation_still` draws a full page from it — and `app.py`'s `_on_export_pdf` calls `export_pdf(path, project, enriched, structs, notes, pixmap)` and **never passes it**, so F69's page has been unreachable from the app's own Export PDF since it shipped. The 3D window can save a still to a PNG but does not retain the pixmap, so the fix is a small design decision (retain it, or let the export offer a still picker) rather than a one-line wiring change — which is why V2.56 reported it instead of taking it | S | Low | P13 |
 
 ---
 

@@ -50,6 +50,8 @@ def export_pdf(
     map_pixmap=None,
     still_pixmap=None,
     still_caption: str = "",
+    before_after=None,
+    before_after_caption: str = "",
 ) -> None:
     """
     Export the current design to a PDF file.
@@ -74,6 +76,13 @@ def export_pdf(
         so a caller that has no still simply omits the page.
     still_caption : str
         Caption for that still.
+    before_after : list[tuple] or None
+        ``[(title, pixmap, caption), …]`` — the before / year 1 / year 5 panels
+        (F76), rendered by the 3D window and passed in for the same reason
+        ``still_pixmap`` is. None or fewer than two panels omits the page: one
+        panel is not a comparison.
+    before_after_caption : str
+        The line under the row of panels.
     """
     printer = QPrinter(QPrinter.PrinterMode.HighResolution)
     printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
@@ -153,6 +162,18 @@ def export_pdf(
             printer.newPage()
             _draw_presentation_still(painter, w, h, dpi_scale, still_pixmap,
                                      still_caption)
+
+        # ── Before / after / in five years (F76) ──────────────────────────
+        # Directly after the single still, because it makes the argument the
+        # still cannot: a planting is judged on what it becomes, and one image
+        # of the finished thing does not show the journey to it (P4). Same
+        # pass-the-pixmap contract as above and for the same reason.
+        panels = [p for p in (before_after or [])
+                  if p and p[1] is not None and not p[1].isNull()]
+        if len(panels) >= 2:
+            printer.newPage()
+            _draw_before_after(painter, w, h, dpi_scale, panels,
+                               before_after_caption)
 
         # ── Page 2: Site prep (F43) ───────────────────────────────────────
         # Ahead of the buy list on purpose: this is the work that happens
@@ -671,6 +692,80 @@ def _draw_presentation_still(painter, w, h, s, pixmap, caption):
             painter.drawText(QRectF(0, y, w, 14 * s),
                              Qt.AlignmentFlag.AlignLeft, line)
             y += 13 * s
+
+
+def before_after_layout(w: float, h: float, s: float, n: int) -> dict:
+    """Where the panels go. Split out and Qt-free so the geometry is testable.
+
+    A row of ``n`` panels across the page with a gutter between them, each
+    captioned underneath. Returns the column width, the image box height and the
+    x of each column. The arithmetic is here rather than inline because the
+    failure it prevents — panels running off the bottom of the page, or
+    overlapping once a caption wraps — is invisible until someone prints it.
+    """
+    n = max(1, int(n))
+    gutter = 10.0 * s
+    top = 48.0 * s                      # below _page_title
+    caption_h = 46.0 * s                # title line + up to three caption lines
+    footer_h = 34.0 * s                 # the page caption under the row
+    col_w = (w - gutter * (n - 1)) / n
+    avail_h = h - top - caption_h - footer_h
+    # Keep each panel in a sane aspect even on a wide page: never taller than
+    # the column is wide, so three panels stay a row of landscape stills.
+    img_h = max(0.0, min(avail_h, col_w * 0.75))
+    return {
+        "top": top, "col_w": col_w, "img_h": img_h, "gutter": gutter,
+        "caption_h": caption_h, "footer_h": footer_h,
+        "xs": [i * (col_w + gutter) for i in range(n)],
+    }
+
+
+def _draw_before_after(painter, w, h, s, panels, caption: str) -> None:
+    """Before / year 1 / year 5, side by side on one page (F76).
+
+    The argument this page makes is P4's: a native planting is judged on what it
+    becomes, not on the day it goes in. Three panels in a row make that in a
+    form somebody can be handed, which a year slider cannot.
+    """
+    _page_title(painter, w, s, "Before, and in five years",
+                caption.split(".")[0][:90] if caption else "")
+    lay = before_after_layout(w, h, s, len(panels))
+    y = lay["top"]
+
+    for i, (title, pixmap, cap) in enumerate(panels):
+        x = lay["xs"][i]
+        scaled = pixmap.scaled(
+            int(lay["col_w"]), int(lay["img_h"]),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation)
+        # Centre each image in its column so panels of differing aspect — a
+        # phone photo beside a 16:10 render — still line up as a row.
+        painter.drawPixmap(int(x + (lay["col_w"] - scaled.width()) / 2),
+                           int(y), scaled)
+        ty = y + lay["img_h"] + 6 * s
+        painter.setPen(QPen(QColor("#1b3a1b")))
+        painter.setFont(_font(10 * s, bold=True))
+        painter.drawText(QRectF(x, ty, lay["col_w"], 14 * s),
+                         Qt.AlignmentFlag.AlignLeft, title)
+        ty += 14 * s
+        painter.setPen(QPen(QColor("#37474f")))
+        painter.setFont(_font(8 * s))
+        # Wrapped to the COLUMN, not the page — the single-still page can wrap
+        # to 105 characters because it owns the full width; a third of a page
+        # cannot, and unwrapped text here would run under the next panel.
+        for line in _wrap(cap, max(18, int(34 * (lay["col_w"] / (w / 3)))))[:3]:
+            painter.drawText(QRectF(x, ty, lay["col_w"], 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            ty += 11 * s
+
+    if caption:
+        fy = h - lay["footer_h"] + 6 * s
+        painter.setPen(QPen(QColor("#37474f")))
+        painter.setFont(_font(9 * s))
+        for line in _wrap(caption, 105)[:2]:
+            painter.drawText(QRectF(0, fy, w, 13 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            fy += 12 * s
 
 
 def _draw_missing_map_note(painter, w, h, s, project) -> None:
