@@ -96,11 +96,19 @@ def critique_lines(habitat: dict) -> list[str]:
     _scored = int(food_web.get("species_scored") or 0)
     _known = int(food_web.get("species_with_records") or 0)
     if _scored and _known == 0:
+        # Counted, not quoted (V2.59). This sentence used to carry a literal
+        # "99 of 437", which F125's sourcing falsified in the same commit that
+        # made it much better news.
+        _cat_known = int(food_web.get("catalogue_with_records") or 0)
+        _cat_total = int(food_web.get("catalogue_species") or 0)
+        _held = (f"the app holds relationship data for {_cat_known} of "
+                 f"{_cat_total} plants, and these are among the rest"
+                 if _cat_known and _cat_total
+                 else "the catalogue does not cover every species yet")
         out.append(
             f"No wildlife records exist for any of these {_scored} species. "
             f"That is a gap in the catalogue, not a verdict on the planting — "
-            f"the app holds relationship data for 99 of 437 plants, and these "
-            f"are among the rest.")
+            f"{_held}.")
     elif _scored and _known < _scored:
         out.append(
             f"Wildlife records exist for {_known} of these {_scored} species. "
@@ -140,14 +148,26 @@ def critique_lines(habitat: dict) -> list[str]:
                 "birds.")
 
     if (comp.get("bird_food", {}).get("score") or 0) == 0:
-        if food_web.get("birds") and int(food_web.get("n_birds") or 0):
+        # Counts the birds FED here, not every bird recorded (V2.59). This line
+        # exists because the bird-food tag is missing, and a hummingbird at a
+        # flower is not the berries and seeds the tag is about — quoting the
+        # larger number under this sentence would overstate it. The nectar
+        # visitors are still reported, one line down.
+        n_forage = int(food_web.get("n_birds_forage") or 0)
+        n_nectar = int(food_web.get("n_birds") or 0) - n_forage
+        if food_web.get("birds") and n_forage:
             out.append(
                 f"No plant here is tagged as bird food, yet "
-                f"{_hedge_count(int(food_web['n_birds']), 'bird species')} are "
+                f"{_hedge_count(n_forage, 'bird species')} are "
                 f"recorded feeding on these plants.")
         else:
             out.append(_no_record_of("providing bird food (berries/seeds)")
                        + ".")
+        if n_nectar > 0:
+            out.append(
+                f"{_hedge_count(n_nectar, 'bird species')} are recorded at the "
+                f"flowers here — nectar, not the berries and seeds that carry a "
+                f"bird through winter.")
 
     # Food-web completeness (F3): flag a *broken* Tallamy chain — one link
     # present without the other. (When both links are missing the separate

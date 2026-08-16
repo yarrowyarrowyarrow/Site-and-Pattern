@@ -374,12 +374,24 @@ def compute_habitat_score(
             _n = len(fauna_supported_by_plants(scored_ids, taxon=_taxon))
             if _n:
                 fauna_by_taxon[_taxon] = _n
+        # Birds the design actually FEEDS or shelters, as distinct from birds
+        # recorded visiting a flower (V2.59). A hummingbird at a milkweed is a
+        # true record and a bird supported by the planting — but it is not the
+        # bird half of the Tallamy chain, which is about berries, seeds and
+        # the insects a bird carries to its nestlings. See the food-web block
+        # below for why the difference has to be kept.
+        _birds_nectaring = set()
+        for _rel in ("nectar", "pollen"):
+            _birds_nectaring |= fauna_supported_by_plants(
+                scored_ids, taxon="bird", relationship=_rel)
+        n_birds_forage = len(
+            fauna_supported_by_plants(scored_ids, taxon="bird")
+            - _birds_nectaring)
         # How many of THIS design's species the catalogue has any wildlife
         # record for (V2.58). Without this the panels cannot tell "these plants
         # support nothing" from "we have not recorded what they support" — and
         # a user who places 16 natives and is shown no animals reasonably
-        # concludes the app is broken. It is the catalogue that is thin: 99 of
-        # 437 species carry an edge.
+        # concludes the app is broken.
         if scored_ids:
             _marks = ",".join("?" * len(scored_ids))
             n_with_records = connection.execute(
@@ -387,6 +399,15 @@ def compute_habitat_score(
                 f"WHERE plant_id IN ({_marks})", scored_ids).fetchone()[0]
         else:
             n_with_records = 0
+        # And how thin the catalogue is overall, so the panel can say so
+        # without hardcoding it (V2.59). It was hardcoded — "relationship data
+        # for 99 of 437 plants" — and F125's sourcing made that sentence false
+        # in the same commit that made it much better news. Two counts are
+        # cheaper than a number that goes stale silently.
+        catalogue_species = connection.execute(
+            "SELECT COUNT(*) FROM plants").fetchone()[0]
+        catalogue_with_records = connection.execute(
+            "SELECT COUNT(DISTINCT plant_id) FROM plant_fauna").fetchone()[0]
     except Exception as exc:
         raise HabitatScoreError(str(exc)) from exc
     finally:
@@ -483,8 +504,18 @@ def compute_habitat_score(
     # Both sources are kept — a tag is a real editorial signal — but they are
     # now reported apart, and **"complete" means documented**, because that is
     # the word doing the persuading.
+    #
+    # **V2.59 — and a nectaring bird does not close the chain.** The bird half
+    # counted any bird edge at all, including `nectar`. F125's sourcing put a
+    # Ruby-throated Hummingbird on Showy Milkweed — a true record — and a
+    # milkweed-only design promptly reported a complete food web. It is the
+    # worst possible example: monarchs are the textbook aposematic caterpillar
+    # that birds learn *not* to eat. Every line this status drives talks about
+    # berries, seeds and the protein nestlings need, so the count behind it now
+    # excludes flower visits. `n_birds` still reports every bird supported —
+    # the hummingbird is not deleted, it is just not evidence of a food chain.
     n_birds = fauna_by_taxon.get("bird", 0)
-    birds_documented = n_birds > 0
+    birds_documented = n_birds_forage > 0
     cats_documented = n_lepidoptera_supported > 0
     birds_claimed = bool(bird_species)
     cats_claimed = bool(host_species)
@@ -513,12 +544,18 @@ def compute_habitat_score(
         "caterpillars_evidence": _evidence(cats_documented, cats_claimed),
         "birds": has_birds,
         "n_birds": n_birds,
+        # Of those, the ones fed or sheltered rather than nectared (V2.59).
+        # `n_birds - n_birds_forage` is the flower-visitor count, so a panel
+        # can say both things without a second query.
+        "n_birds_forage": n_birds_forage,
         "birds_evidence": _evidence(birds_documented, birds_claimed),
         "complete": birds_documented and cats_documented,
         "status": food_web_status,
         # Coverage, so a thin catalogue never again reads as an empty ecology.
         "species_with_records": n_with_records,
         "species_scored": n_species,
+        "catalogue_with_records": catalogue_with_records,
+        "catalogue_species": catalogue_species,
     }
 
     return HabitatScore(

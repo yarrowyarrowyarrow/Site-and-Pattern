@@ -6,11 +6,18 @@ Design principle P3 (relationships matter more than components) and P9
 — see docs/DESIGN_PHILOSOPHY.md.
 
 THE PROBLEM (measured in docs/DATA_AUDIT.md §6). The 361 documented plant↔fauna
-edges reach 99 of 439 plants — 22.6% — and leave 56 animals connected to nothing.
-Every relationship feature in the app (habitat score, food-web score, specialist
-spotlight, the relationship web) therefore runs on a three-quarters-empty graph,
-and reports a plant as ecologically inert when the truth is that nobody has
-written its edges yet. That is a false negative dressed as a fact.
+edges reached 99 of 439 plants — 22.6% — and left 56 animals connected to
+nothing. Every relationship feature in the app (habitat score, food-web score,
+specialist spotlight, the relationship web) therefore ran on a
+three-quarters-empty graph, and reported a plant as ecologically inert when the
+truth was that nobody had written its edges yet. That is a false negative
+dressed as a fact.
+
+**V2.59 shrank the hole rather than closing it.** F125's GloBI sourcing took
+documented coverage to 2,800 edges over 271 of 437 species, so this module is no
+longer carrying most of the graph — but 166 species still have no documented
+edge, and every argument below still applies to them. Real sourcing is *meant*
+to shrink what this layer fills; when it covers everything, delete this file.
 
 THE MATERIAL. The shipped attribute files already carry genus-level host records
 the graph never read: ``floral_host_genera`` on 69 bees, ``nectar_flower_genera``

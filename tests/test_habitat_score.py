@@ -214,6 +214,32 @@ class TestComputeHabitatScoreSeeded(unittest.TestCase):
         self.assertFalse(fw["complete"])
         self.assertEqual(fw["status"], "no_birds")
 
+    def test_a_bird_at_the_flowers_does_not_close_the_chain(self):
+        """The V2.59 guard, and the reason the test above still passes.
+
+        F125's sourcing put a documented Ruby-throated Hummingbird nectar
+        record on Showy Milkweed, and the food-web check counted *any* bird
+        edge — so a milkweed-only design started reporting a complete food
+        web. Milkweed is the worst case it could have picked: monarchs are the
+        textbook caterpillar birds learn not to eat. Every line the status
+        drives is about berries, seeds and nestling protein, so the count
+        behind it excludes flower visits. The hummingbird is still reported;
+        it is just not evidence of a food chain.
+        """
+        pid = self._pid("Showy Milkweed")
+        fw = compute_habitat_score([{"plant_id": pid}], []).food_web
+        self.assertGreater(fw["n_birds"], 0, "the nectar record is still there")
+        self.assertEqual(fw["n_birds_forage"], 0)
+        self.assertEqual(fw["birds_evidence"], "none")
+
+    def test_a_bird_that_is_fed_does_close_the_chain(self):
+        """The other half — the distinction must not simply refuse all birds."""
+        pid = self._pid("Saskatoon Berry")
+        self.assertIsNotNone(pid)
+        fw = compute_habitat_score([{"plant_id": pid}], []).food_web
+        self.assertGreater(fw["n_birds_forage"], 0)
+        self.assertEqual(fw["birds_evidence"], "documented")
+
     def test_aspen_food_web_complete(self):
         # Aspen hosts many lepidoptera and supports birds → the chain closes.
         pid = self._pid("Trembling Aspen")

@@ -247,7 +247,8 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
                 print(f"  {name:12s} ✗  {exc}")
             continue
         cols = data.get("columns") or []
-        n = len(data.get("data") or [])
+        rows = data.get("data") or []
+        n = len(rows)
         if verbose:
             print(f"  {name:12s} ✓  {n} records, {len(cols)} columns")
             print(f"               columns: {', '.join(cols) or '(none)'}")
@@ -256,6 +257,22 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
             if missing:
                 print(f"               ⚠ missing what the mapping needs: "
                       f"{', '.join(missing)}")
+            # VALUES, not just column names (V2.58f). The first probe printed
+            # the header and stopped, so `study_title` looked available — and
+            # the real run produced 14,111 edges with an empty citation on
+            # every one, which the ingest gate then rejected wholesale. A
+            # column that exists and a column that is populated are different
+            # facts, and only the second one matters.
+            for key in ("study_title", "target_specimen_life_stage"):
+                if key not in cols:
+                    print(f"               {key}: COLUMN ABSENT")
+                    continue
+                idx = cols.index(key)
+                vals = [r[idx] for r in rows[:400]
+                        if idx < len(r) and str(r[idx] or "").strip()]
+                pct = (100 * len(vals) // max(1, min(len(rows), 400)))
+                sample = str(vals[0])[:70] if vals else "(all empty)"
+                print(f"               {key}: {pct}% populated — {sample}")
         _FORM = (name, builder)
         return name
     raise RuntimeError(

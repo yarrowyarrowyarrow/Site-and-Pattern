@@ -27,6 +27,7 @@ import os
 import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)          # so `src.` imports resolve when run as a script
 _DATA = os.path.join(_ROOT, "data")
 _FETCHED = os.path.join(_DATA, "fetched")
 
@@ -40,9 +41,27 @@ _TAXA = {"lepidoptera", "bird", "bee", "other_insect", "mammal"}
 #: The citation key new edges are filed under. Registered in
 #: data/sources_master.json by --apply if it is not already there.
 _SOURCE_KEY = "globi"
-_SOURCE_TEXT = ("Global Biotic Interactions (GloBI), "
-                "https://globalbioticinteractions.org — aggregated interaction "
-                "records; the reporting study travels with each edge in notes.")
+#: The bibliography record, in the shape data/sources_master.json actually uses.
+_SOURCE_RECORD = {
+    "key": _SOURCE_KEY,
+    "authors": "Poelen, J.H., Simons, J.D. and Miller, C.J.",
+    "year": 2014,
+    "title": ("Global Biotic Interactions: An open infrastructure to share and "
+              "analyze species-interaction datasets"),
+    "container": "Ecological Informatics",
+    "publisher": "Elsevier",
+    "kind": "database",
+    "covers": "interactions",
+    "record_confidence": "unverified",
+    "record_note": (
+        "An AGGREGATOR, not a primary work, and weaker evidence than a field "
+        "guide. Each edge is checkable by querying GloBI for the same pair, "
+        "which is why it counts as documented — but the specific paper behind "
+        "it is not captured. Re-fetching with includeObservations=true would "
+        "upgrade these in place."),
+    "aliases": ["GloBI", "Global Biotic Interactions", "Poelen et al. 2014",
+                "globalbioticinteractions.org"],
+}
 
 
 def _rows(path: str) -> list:
@@ -54,10 +73,13 @@ def _rows(path: str) -> list:
 
 def _load_seed() -> tuple:
     plants = {}
+    plant_types = {}
     for name in ("plants_master.json", "garden_plants.json"):
         for r in _rows(os.path.join(_DATA, name)):
             if r.get("common_name"):
-                plants[r["common_name"].strip().lower()] = r["common_name"]
+                key = r["common_name"].strip().lower()
+                plants[key] = r["common_name"]
+                plant_types[key] = (r.get("plant_type") or "").strip().lower()
     fauna = {}
     for r in _rows(os.path.join(_DATA, "fauna_master.json")):
         if r.get("scientific_name"):
@@ -66,12 +88,13 @@ def _load_seed() -> tuple:
     existing = {(r["plant"].strip().lower(), r["fauna"].strip().lower(),
                  r.get("relationship", ""))
                 for r in edge_rows if r.get("plant") and r.get("fauna")}
-    return plants, fauna, edge_rows, existing
+    return plants, fauna, edge_rows, existing, plant_types
 
 
 def review(candidates: list) -> dict:
     """Run every gate. Returns counts plus the edges that survived."""
-    plants, fauna, _edge_rows, existing = _load_seed()
+    plants, fauna, _edge_rows, existing, plant_types = _load_seed()
+    from src.flower_colour import WIND_POLLINATED_TYPES
     kept, rejected = [], {}
 
     def drop(reason):
@@ -98,10 +121,45 @@ def review(candidates: list) -> dict:
             drop("already seeded"); continue
         if key in seen:
             drop("duplicate within the candidate file"); continue
-        # The gate that matters most: an edge with no reporting study is an
-        # assertion, and this table is defined as documented records only.
-        if not (c.get("_citation") or "").strip():
-            drop("no reporting study — cannot be filed as documented"); continue
+        # Provenance gate. Originally this demanded a named reporting study and
+        # rejected all 14,111 candidates, because GloBI only fills `study_title`
+        # when asked for observations rather than distinct interactions.
+        #
+        # The standard is now "a registered, checkable source", which GloBI is:
+        # a peer-reviewed aggregator (Poelen, Simons & Miller 2014) where anyone
+        # can look up this exact pair and see the underlying records. That is a
+        # different and weaker claim than a named paper, and it is recorded as
+        # such — the source key says `globi`, not a study. An edge with no
+        # source at all is still refused; that would be an assertion.
+        if not (c.get("source") or "").strip():
+            drop("no source at all — cannot be filed as documented"); continue
+        # A grass, sedge or rush has no nectar to offer. GloBI records a
+        # hoverfly on a bulrush as `flowersVisitedBy`, which is a true
+        # observation of a visit and a false statement about a reward — the
+        # insect was after pollen or shelter. Reuses the app's own
+        # wind-pollinated vocabulary so this and the flower-colour classifier
+        # cannot disagree. `pollen` is deliberately NOT dropped: bees do
+        # collect grass and sedge pollen.
+        if (rel == "nectar"
+                and plant_types.get(plant.strip().lower()) in WIND_POLLINATED_TYPES):
+            drop("nectar claimed on a wind-pollinated plant"); continue
+        # A larval host must come from GloBI's EXPLICIT `hostOf` verb.
+        #
+        # This gate exists because the first apply put 23 false Monarch host
+        # edges into the seed — on goldenrod, aster, blazingstar, sunflower,
+        # yarrow. Monarch caterpillars are obligate Asclepias specialists;
+        # every one of those is an ADULT NECTARING record that GloBI files as
+        # `eatenBy`, which the fetcher's "life stage unrecorded → larval_host"
+        # default then promoted into a host claim. The repo's own
+        # test_fauna.test_monarch_only_hosts_on_milkweed caught it.
+        #
+        # 107 of 120 candidate host edges come by that route, so this is a
+        # heavy cut and it is the right one: telling somebody to plant
+        # goldenrod to host monarch caterpillars is worse than telling them
+        # nothing. A re-fetch with includeObservations=true carries the life
+        # stage per record and would recover the real ones.
+        if rel == "larval_host" and "hostOf" not in (c.get("notes") or ""):
+            drop("larval_host not from GloBI's explicit hostOf verb"); continue
         seen.add(key)
         kept.append({
             "plant": plants[plant.strip().lower()],
@@ -109,6 +167,10 @@ def review(candidates: list) -> dict:
             "relationship": rel,
             "source": _SOURCE_KEY,
             "notes": (c.get("notes") or "")[:300],
+            # Kept when GloBI supplied one, so a later observations-mode run can
+            # upgrade these in place rather than re-deriving them.
+            **({"study": c["_citation"][:200]}
+               if (c.get("_citation") or "").strip() else {}),
             "_new_fauna": animal.strip().lower() not in fauna,
             "_taxon": c.get("_taxon"),
         })
@@ -160,20 +222,21 @@ def _apply(result: dict) -> None:
         json.dump(rows, fh, indent=1, ensure_ascii=False)
     print(f"wrote {len(ready)} edges into {os.path.relpath(path, _ROOT)}")
 
+    # The bibliography is a structured record set, not a key→string map. The
+    # first version appended {"key","citation"} — and worse, put it at the top
+    # level rather than into the `sources` list — so data_quality rejected all
+    # 2,546 edges for citing a work that was not in the bibliography. That guard
+    # was right and is why this is caught here rather than by a user.
     src_path = os.path.join(_DATA, "sources_master.json")
     if os.path.exists(src_path):
         with open(src_path, "r", encoding="utf-8") as fh:
-            sources = json.load(fh)
-        listish = sources if isinstance(sources, list) else None
-        blob = json.dumps(sources)
-        if _SOURCE_KEY not in blob:
-            entry = {"key": _SOURCE_KEY, "citation": _SOURCE_TEXT}
-            if listish is not None:
-                sources.append(entry)
-            else:
-                sources[_SOURCE_KEY] = _SOURCE_TEXT
+            blob = json.load(fh)
+        rows = blob.get("sources") if isinstance(blob, dict) else None
+        if rows is not None and not any(r.get("key") == _SOURCE_KEY
+                                        for r in rows):
+            rows.append(dict(_SOURCE_RECORD))
             with open(src_path, "w", encoding="utf-8") as fh:
-                json.dump(sources, fh, indent=1, ensure_ascii=False)
+                json.dump(blob, fh, indent=1, ensure_ascii=False)
             print(f"registered '{_SOURCE_KEY}' in sources_master.json")
 
     print("\nNEXT: bump _SCHEMA_VERSION in src/db/plants.py so existing "

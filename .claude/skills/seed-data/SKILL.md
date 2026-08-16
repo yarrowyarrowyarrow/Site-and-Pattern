@@ -33,7 +33,7 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 65`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 66`.
 
 **Sourcing is enforced (V2.42).** Every `source` field in
 `plant_fauna_master.json`, `bee_attributes_master.json` and
@@ -45,6 +45,14 @@ against the catalogues, fails `validate_plant_fauna`; the seeder used to drop
 unresolvable names silently. Do not invent bibliographic detail to satisfy the
 gate: entries carry `record_confidence: unverified` precisely so nobody has to.
 
+`sources_master.json` is **an object with a `sources` list of records**, not a
+key→citation map. A new work is a dict appended to that list carrying at least
+`key`, `authors`, `year`, `title`, `kind`, `covers` and `record_confidence` — see
+`_SOURCE_RECORD` in `scripts/ingest_fauna_edges.py` for a filled-in example.
+V2.59 added `globi` as a top-level `{key, citation}` pair instead and every one
+of its 2,439 new edges was rejected for citing a work that was not in the
+bibliography. `validate_plant_fauna` was right; read the file before appending.
+
 ## Which file flows into which table
 
 | File | Rows | Loaded by (`src/db/plants.py`) | Table(s) |
@@ -52,7 +60,7 @@ gate: entries carry `record_confidence: unverified` precisely so nobody has to.
 | `data/plants_master.json` | 434 native plants | `_seed_from_master_json` → `_seed_from_json_file` | `plants`, `planting_calendar` (from `cal_*`), `plant_uses` (from `permaculture_uses`) |
 | `data/garden_plants.json` | 5 cultivated garden plants | `_seed_from_json_file` | same as above; skips names already present |
 | `data/fauna_master.json` | 142 fauna | `_seed_fauna` (phase 1) | `fauna` |
-| `data/plant_fauna_master.json` | 361 links (+ metadata records) | `_seed_fauna` (phase 2) | `plant_fauna` |
+| `data/plant_fauna_master.json` | 2,800 links (+ metadata records) | `_seed_fauna` (phase 2) | `plant_fauna` |
 | `data/bee_attributes_master.json` | 69 bees | `_seed_bee_attributes` | `bee_attributes` (keyed to `fauna.id`) |
 | `data/lepidoptera_attributes_master.json` | 31 species | `_seed_lepidoptera_attributes` | `lepidoptera_attributes` (keyed to `fauna.id`) |
 | `data/nurseries_master.json` | 13 suppliers (object w/ `nurseries` list) | `_seed_nurseries` | `nurseries` |

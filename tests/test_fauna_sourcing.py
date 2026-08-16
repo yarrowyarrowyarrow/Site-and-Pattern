@@ -166,19 +166,46 @@ class TestTheIngestGates(unittest.TestCase):
     def _c(self, **kw):
         base = {"plant": "Wild Bergamot", "fauna": "Newus specius",
                 "relationship": "nectar", "_taxon": "bee",
-                "_citation": "A study", "notes": "n"}
+                "source": "globi", "_citation": "A study", "notes": "n"}
         base.update(kw)
         return base
 
     def test_a_clean_candidate_survives(self):
         self.assertEqual(len(self._review([self._c()])["kept"]), 1)
 
-    def test_an_edge_with_no_study_is_refused(self):
-        """This table is defined as documented records. An edge with no
-        reporting study is an assertion wearing the word 'documented'."""
-        out = self._review([self._c(_citation="")])
+    def test_an_edge_with_no_source_is_refused(self):
+        """The provenance standard, as revised in V2.59.
+
+        It originally demanded a named reporting study and rejected all 14,111
+        candidates, because GloBI only fills `study_title` when asked for
+        observations rather than distinct interactions. The bar is now "a
+        registered, checkable source" — GloBI qualifies, an empty string does
+        not. That is a real weakening and it is recorded as one, in the
+        bibliography record and in the source key itself.
+        """
+        out = self._review([self._c(source="")])
         self.assertEqual(out["kept"], [])
-        self.assertTrue(any("reporting study" in r for r in out["rejected"]))
+        self.assertTrue(any("no source" in r for r in out["rejected"]))
+
+    def test_an_edge_with_a_source_but_no_named_study_is_accepted(self):
+        """The 2,546 edges F125 actually shipped are exactly this shape."""
+        self.assertEqual(len(self._review([self._c(_citation="")])["kept"]), 1)
+
+    def test_nectar_is_refused_on_a_wind_pollinated_plant(self):
+        """A grass, sedge or rush has no nectar. GloBI recording a hoverfly on
+        a bulrush is a true observation of a visit and a false statement about
+        a reward. Reuses the app's own wind-pollinated vocabulary so this and
+        the flower-colour classifier cannot disagree."""
+        out = self._review([self._c(plant="Big Bluestem", relationship="nectar")])
+        self.assertEqual(out["kept"], [])
+        self.assertTrue(any("wind-pollinated" in r for r in out["rejected"]))
+
+    def test_pollen_is_still_allowed_on_a_grass(self):
+        """Bees genuinely collect grass and sedge pollen — dropping that too
+        would trade one wrong claim for a missing true one."""
+        out = self._review([self._c(plant="Big Bluestem", relationship="pollen",
+                                    fauna="Newus specius")])
+        self.assertEqual(len(out["kept"]), 1)
 
     def test_a_relationship_outside_the_schema_is_refused(self):
         out = self._review([self._c(relationship="grazing")])

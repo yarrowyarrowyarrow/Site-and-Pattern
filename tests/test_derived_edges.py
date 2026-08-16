@@ -236,8 +236,17 @@ class TestSeededDerivedEdges(unittest.TestCase):
             conn.close()
 
     def test_coverage_actually_improved(self):
-        """The whole point. Documented edges reach ~23% of the catalogue; with
-        derived edges it should be nearer half."""
+        """The whole point: the derived layer reaches species the documented
+        records do not, and every documented species stays reachable.
+
+        This used to pin documented coverage *below* 30% ("reaches ~23% of the
+        catalogue") and derived above 40%. V2.59's sourcing took documented to
+        62%, so the first assertion failed — the feature working, read as a
+        regression. An absolute ceiling on how much evidence the catalogue is
+        allowed to hold was the wrong shape for this test: real sourcing is
+        supposed to shrink the gap the derived layer fills, and one day should
+        close it. What must hold is the ordering, not the numbers.
+        """
         conn = self._conn()
         try:
             total = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
@@ -246,7 +255,9 @@ class TestSeededDerivedEdges(unittest.TestCase):
             withderived = conn.execute(
                 "SELECT COUNT(DISTINCT a_id) FROM relationship_edges "
                 "WHERE b_type='fauna'").fetchone()[0]
-            self.assertLess(documented / total, 0.30)
+            self.assertGreater(withderived, documented,
+                               "derived edges should reach species the "
+                               "documented records miss")
             self.assertGreater(withderived / total, 0.40)
         finally:
             conn.close()

@@ -1,186 +1,204 @@
 {
-  "_comment": "Canonical bibliographic registry for the biological data (V2.42). Every `source` string in plant_fauna_master.json, bee_attributes_master.json and lepidoptera_attributes_master.json resolves to a key here, so the app can render a real citation instead of a shorthand and a reader can go and check the claim. Keys are stable identifiers, never displayed.",
-  "_honesty": "`record_confidence` describes THIS BIBLIOGRAPHIC ENTRY, not the ecological claims that cite it. 'verified' = the author/title/year/publisher below have been checked against the work or a library catalogue. 'unverified' = transcribed from the shorthand citation already in the seed data and NOT yet checked; the work is real and the citation is genuine, but a detail here (an edition year, a publisher) may be wrong. Per P9 we ship the distinction rather than a uniform-looking table that hides it. Do not promote an entry to 'verified' without actually checking it.",
-  "_p9": "Nothing in this file certifies an ecological claim. It makes each claim traceable to a work a reader can obtain. Whether that work supports the specific edge citing it is a separate question, unanswerable from inside this repository - see docs/DATA_AUDIT.md section 7.",
-  "sources": [
-    {
-      "key": "acorn_sheldon_butterflies_ab",
-      "authors": "Acorn, J. and Sheldon, I.",
-      "year": 2006,
-      "title": "Butterflies of Alberta",
-      "publisher": "Lone Pine Publishing",
-      "place": "Edmonton, Alberta",
-      "kind": "field_guide",
-      "covers": "lepidoptera",
-      "record_confidence": "unverified",
-      "record_note": "Year as cited in the seed data. Lone Pine has issued this title in more than one printing; the edition actually consulted is not recorded.",
-      "aliases": [
-        "Acorn & Sheldon 2006",
-        "Acorn & Sheldon 2006, Butterflies of Alberta"
-      ]
-    },
-    {
-      "key": "acorn_bugs_ab",
-      "authors": "Acorn, J.",
-      "year": null,
-      "title": "Bugs of Alberta",
-      "publisher": "Lone Pine Publishing",
-      "place": "Edmonton, Alberta",
-      "kind": "field_guide",
-      "covers": "insects_general",
-      "record_confidence": "unverified",
-      "record_note": "No year given in the seed citation and none assumed here rather than guess one.",
-      "aliases": [
-        "Acorn, Bugs of Alberta"
-      ]
-    },
-    {
-      "key": "pohl_et_al_2018_checklist",
-      "authors": "Pohl, G.R., Landry, J.-F., Schmidt, B.C., Lafontaine, J.D., Troubridge, J.T., Macaulay, A.D., van Nieukerken, E.J., deWaard, J.R., Dombroskie, J.J., Klymko, J., Nazari, V. and Stead, K.",
-      "year": 2018,
-      "title": "Annotated Checklist of the Moths and Butterflies (Lepidoptera) of Canada and Alaska",
-      "publisher": "Pensoft Publishers",
-      "series": "Pensoft Series Faunistica",
-      "kind": "checklist",
-      "covers": "lepidoptera",
-      "record_confidence": "unverified",
-      "record_note": "Author list transcribed from the published work; not checked against the title page.",
-      "aliases": [
-        "Pohl et al. 2018",
-        "Pohl et al. 2018 (Moths of Alberta)"
-      ]
-    },
-    {
-      "key": "cornell_birds_of_the_world",
-      "authors": "Cornell Lab of Ornithology",
-      "year": null,
-      "title": "Birds of the World",
-      "publisher": "Cornell Lab of Ornithology",
-      "url": "https://birdsoftheworld.org/",
-      "kind": "database",
-      "covers": "birds",
-      "record_confidence": "unverified",
-      "record_note": "A continuously revised subscription database, not a fixed edition. A citation to it should carry an access date and a species account; neither is recorded in the current seed data.",
-      "aliases": [
-        "Birds of the World",
-        "Cornell Birds of the World"
-      ]
-    },
-    {
-      "key": "wilson_carril_2015_bees",
-      "authors": "Wilson, J.S. and Carril, O.M.",
-      "year": 2015,
-      "title": "The Bees in Your Backyard: A Guide to North America's Bees",
-      "publisher": "Princeton University Press",
-      "kind": "field_guide",
-      "covers": "bees",
-      "record_confidence": "unverified",
-      "record_note": "Widely held title; publisher and year transcribed from the seed citation and general knowledge, not from the book.",
-      "aliases": [
-        "Wilson & Carril 2015"
-      ]
-    },
-    {
-      "key": "packer_bees_of_canada",
-      "authors": "Packer, L.",
-      "year": null,
-      "title": "Bees of Canada",
-      "kind": "database",
-      "covers": "bees",
-      "record_confidence": "unverified",
-      "record_note": "The seed citation gives author and short title only. This most likely refers to the Bees of Canada project associated with the Packer Lab (York University), but the specific work - database, key, or publication - is NOT established. Highest-priority entry to resolve.",
-      "aliases": [
-        "Packer, Bees of Canada"
-      ]
-    },
-    {
-      "key": "pattie_fisher_mammals_ab",
-      "authors": "Pattie, D. and Fisher, C.",
-      "year": null,
-      "title": "Mammals of Alberta",
-      "publisher": "Lone Pine Publishing",
-      "place": "Edmonton, Alberta",
-      "kind": "field_guide",
-      "covers": "mammals",
-      "record_confidence": "unverified",
-      "record_note": "Year not given in the seed citation.",
-      "aliases": [
-        "Pattie & Fisher, Mammals of Alberta"
-      ]
-    },
-    {
-      "key": "sheffield_et_al_2014_grasslands",
-      "authors": "Sheffield, C.S., Frier, S.D. and Dumesh, S.",
-      "year": 2014,
-      "title": "The bees (Hymenoptera: Apoidea, Apiformes) of the Prairies Ecozone, with comparisons to other grasslands of Canada",
-      "container": "Arthropods of Canadian Grasslands",
-      "publisher": "Biological Survey of Canada",
-      "kind": "chapter",
-      "covers": "bees",
-      "record_confidence": "unverified",
-      "record_note": "Cited in bee_attributes_master.json's source string for nesting and floral-host attributes.",
-      "aliases": [
-        "Sheffield, Frier & Dumesh 2014",
-        "Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands)"
-      ]
-    },
-    {
-      "key": "anbc_alberta_native_bees",
-      "authors": "Alberta Native Bee Council",
-      "year": null,
-      "title": "Alberta native bee compilation",
-      "kind": "organisation_compilation",
-      "covers": "bees",
-      "record_confidence": "unverified",
-      "record_note": "Named in the bee attribute file's source string. Not a single citable publication; treat as an organisational data source pending a specific reference. The bee attribute file originally carried all three works in one free-text string; it now cites them as a comma-separated key list (this key, sheffield_et_al_2014_grasslands, wilson_carril_2015_bees).",
-      "aliases": [
-        "Alberta Native Bee Council",
-        "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges)."
-      ]
-    },
-    {
-      "key": "bird_et_al_1995_ab_butterflies",
-      "authors": "Bird, C.D., Hilchie, G.J., Kondla, N.G., Pike, E.M. and Sperling, F.A.H.",
-      "year": 1995,
-      "title": "Alberta Butterflies",
-      "publisher": "Provincial Museum of Alberta",
-      "place": "Edmonton, Alberta",
-      "kind": "monograph",
-      "covers": "lepidoptera",
-      "record_confidence": "unverified",
-      "record_note": "Cited by one record in lepidoptera_attributes_master.json.",
-      "aliases": [
-        "Bird et al. 1995"
-      ]
-    },
-    {
-      "key": "unattributed_prairie_pollination",
-      "authors": "",
-      "year": null,
-      "title": "Unattributed prairie-composite pollination literature",
-      "kind": "NOT_A_WORK",
-      "covers": "pollination",
-      "record_confidence": "unverified",
-      "record_note": "THIS IS NOT A CITATION AND MUST NOT BE RENDERED AS ONE. The 16 edges carrying this key were seeded with the source string 'Prairie-composite pollination literature; Acorn & Sheldon 2006', whose first half names no work. The Acorn & Sheldon half is real and is why these edges are not simply wrong, but the original author cited two things and only one of them can be checked - so promoting these edges to the Acorn & Sheldon key would assert a coverage that was never claimed. They are parked here instead, visible and countable, until somebody re-sources them. Doing so is the single highest-value citation task in the repository.",
-      "aliases": [
-        "Prairie-composite pollination literature; Acorn & Sheldon 2006",
-        "Prairie-composite pollination literature"
-      ]
-    },
-    {
-      "key": "pohl_et_al_2010",
-      "authors": "Pohl, G.R., Anweiler, G.G., Schmidt, B.C. and Kondla, N.G.",
-      "year": 2010,
-      "title": "An annotated list of the Lepidoptera of Alberta, Canada",
-      "container": "ZooKeys",
-      "kind": "journal_article",
-      "covers": "lepidoptera",
-      "record_confidence": "unverified",
-      "record_note": "Cited by lepidoptera_attributes_master.json. Volume and page range not recorded.",
-      "aliases": [
-        "Pohl et al. 2010",
-        "Acorn & Sheldon 2006; Pohl et al. 2010"
-      ]
-    }
-  ]
+ "_comment": "Canonical bibliographic registry for the biological data (V2.42). Every `source` string in plant_fauna_master.json, bee_attributes_master.json and lepidoptera_attributes_master.json resolves to a key here, so the app can render a real citation instead of a shorthand and a reader can go and check the claim. Keys are stable identifiers, never displayed.",
+ "_honesty": "`record_confidence` describes THIS BIBLIOGRAPHIC ENTRY, not the ecological claims that cite it. 'verified' = the author/title/year/publisher below have been checked against the work or a library catalogue. 'unverified' = transcribed from the shorthand citation already in the seed data and NOT yet checked; the work is real and the citation is genuine, but a detail here (an edition year, a publisher) may be wrong. Per P9 we ship the distinction rather than a uniform-looking table that hides it. Do not promote an entry to 'verified' without actually checking it.",
+ "_p9": "Nothing in this file certifies an ecological claim. It makes each claim traceable to a work a reader can obtain. Whether that work supports the specific edge citing it is a separate question, unanswerable from inside this repository - see docs/DATA_AUDIT.md section 7.",
+ "sources": [
+  {
+   "key": "acorn_sheldon_butterflies_ab",
+   "authors": "Acorn, J. and Sheldon, I.",
+   "year": 2006,
+   "title": "Butterflies of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Year as cited in the seed data. Lone Pine has issued this title in more than one printing; the edition actually consulted is not recorded.",
+   "aliases": [
+    "Acorn & Sheldon 2006",
+    "Acorn & Sheldon 2006, Butterflies of Alberta"
+   ]
+  },
+  {
+   "key": "acorn_bugs_ab",
+   "authors": "Acorn, J.",
+   "year": null,
+   "title": "Bugs of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "insects_general",
+   "record_confidence": "unverified",
+   "record_note": "No year given in the seed citation and none assumed here rather than guess one.",
+   "aliases": [
+    "Acorn, Bugs of Alberta"
+   ]
+  },
+  {
+   "key": "pohl_et_al_2018_checklist",
+   "authors": "Pohl, G.R., Landry, J.-F., Schmidt, B.C., Lafontaine, J.D., Troubridge, J.T., Macaulay, A.D., van Nieukerken, E.J., deWaard, J.R., Dombroskie, J.J., Klymko, J., Nazari, V. and Stead, K.",
+   "year": 2018,
+   "title": "Annotated Checklist of the Moths and Butterflies (Lepidoptera) of Canada and Alaska",
+   "publisher": "Pensoft Publishers",
+   "series": "Pensoft Series Faunistica",
+   "kind": "checklist",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Author list transcribed from the published work; not checked against the title page.",
+   "aliases": [
+    "Pohl et al. 2018",
+    "Pohl et al. 2018 (Moths of Alberta)"
+   ]
+  },
+  {
+   "key": "cornell_birds_of_the_world",
+   "authors": "Cornell Lab of Ornithology",
+   "year": null,
+   "title": "Birds of the World",
+   "publisher": "Cornell Lab of Ornithology",
+   "url": "https://birdsoftheworld.org/",
+   "kind": "database",
+   "covers": "birds",
+   "record_confidence": "unverified",
+   "record_note": "A continuously revised subscription database, not a fixed edition. A citation to it should carry an access date and a species account; neither is recorded in the current seed data.",
+   "aliases": [
+    "Birds of the World",
+    "Cornell Birds of the World"
+   ]
+  },
+  {
+   "key": "wilson_carril_2015_bees",
+   "authors": "Wilson, J.S. and Carril, O.M.",
+   "year": 2015,
+   "title": "The Bees in Your Backyard: A Guide to North America's Bees",
+   "publisher": "Princeton University Press",
+   "kind": "field_guide",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Widely held title; publisher and year transcribed from the seed citation and general knowledge, not from the book.",
+   "aliases": [
+    "Wilson & Carril 2015"
+   ]
+  },
+  {
+   "key": "packer_bees_of_canada",
+   "authors": "Packer, L.",
+   "year": null,
+   "title": "Bees of Canada",
+   "kind": "database",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "The seed citation gives author and short title only. This most likely refers to the Bees of Canada project associated with the Packer Lab (York University), but the specific work - database, key, or publication - is NOT established. Highest-priority entry to resolve.",
+   "aliases": [
+    "Packer, Bees of Canada"
+   ]
+  },
+  {
+   "key": "pattie_fisher_mammals_ab",
+   "authors": "Pattie, D. and Fisher, C.",
+   "year": null,
+   "title": "Mammals of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "mammals",
+   "record_confidence": "unverified",
+   "record_note": "Year not given in the seed citation.",
+   "aliases": [
+    "Pattie & Fisher, Mammals of Alberta"
+   ]
+  },
+  {
+   "key": "sheffield_et_al_2014_grasslands",
+   "authors": "Sheffield, C.S., Frier, S.D. and Dumesh, S.",
+   "year": 2014,
+   "title": "The bees (Hymenoptera: Apoidea, Apiformes) of the Prairies Ecozone, with comparisons to other grasslands of Canada",
+   "container": "Arthropods of Canadian Grasslands",
+   "publisher": "Biological Survey of Canada",
+   "kind": "chapter",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Cited in bee_attributes_master.json's source string for nesting and floral-host attributes.",
+   "aliases": [
+    "Sheffield, Frier & Dumesh 2014",
+    "Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands)"
+   ]
+  },
+  {
+   "key": "anbc_alberta_native_bees",
+   "authors": "Alberta Native Bee Council",
+   "year": null,
+   "title": "Alberta native bee compilation",
+   "kind": "organisation_compilation",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Named in the bee attribute file's source string. Not a single citable publication; treat as an organisational data source pending a specific reference. The bee attribute file originally carried all three works in one free-text string; it now cites them as a comma-separated key list (this key, sheffield_et_al_2014_grasslands, wilson_carril_2015_bees).",
+   "aliases": [
+    "Alberta Native Bee Council",
+    "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges)."
+   ]
+  },
+  {
+   "key": "bird_et_al_1995_ab_butterflies",
+   "authors": "Bird, C.D., Hilchie, G.J., Kondla, N.G., Pike, E.M. and Sperling, F.A.H.",
+   "year": 1995,
+   "title": "Alberta Butterflies",
+   "publisher": "Provincial Museum of Alberta",
+   "place": "Edmonton, Alberta",
+   "kind": "monograph",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Cited by one record in lepidoptera_attributes_master.json.",
+   "aliases": [
+    "Bird et al. 1995"
+   ]
+  },
+  {
+   "key": "unattributed_prairie_pollination",
+   "authors": "",
+   "year": null,
+   "title": "Unattributed prairie-composite pollination literature",
+   "kind": "NOT_A_WORK",
+   "covers": "pollination",
+   "record_confidence": "unverified",
+   "record_note": "THIS IS NOT A CITATION AND MUST NOT BE RENDERED AS ONE. The 16 edges carrying this key were seeded with the source string 'Prairie-composite pollination literature; Acorn & Sheldon 2006', whose first half names no work. The Acorn & Sheldon half is real and is why these edges are not simply wrong, but the original author cited two things and only one of them can be checked - so promoting these edges to the Acorn & Sheldon key would assert a coverage that was never claimed. They are parked here instead, visible and countable, until somebody re-sources them. Doing so is the single highest-value citation task in the repository.",
+   "aliases": [
+    "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "Prairie-composite pollination literature"
+   ]
+  },
+  {
+   "key": "pohl_et_al_2010",
+   "authors": "Pohl, G.R., Anweiler, G.G., Schmidt, B.C. and Kondla, N.G.",
+   "year": 2010,
+   "title": "An annotated list of the Lepidoptera of Alberta, Canada",
+   "container": "ZooKeys",
+   "kind": "journal_article",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Cited by lepidoptera_attributes_master.json. Volume and page range not recorded.",
+   "aliases": [
+    "Pohl et al. 2010",
+    "Acorn & Sheldon 2006; Pohl et al. 2010"
+   ]
+  },
+  {
+   "key": "globi",
+   "authors": "Poelen, J.H., Simons, J.D. and Miller, C.J.",
+   "year": 2014,
+   "title": "Global Biotic Interactions: An open infrastructure to share and analyze species-interaction datasets",
+   "container": "Ecological Informatics",
+   "publisher": "Elsevier",
+   "kind": "database",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "An AGGREGATOR, not a primary work, and the edges filed under it are weaker evidence than the field guides above. GloBI collates interaction records from hundreds of datasets; the 2,546 edges added in V2.59 were fetched from its /interaction endpoint, which returns distinct interactions WITHOUT the reporting study. Each is independently checkable by querying GloBI for the same pair, which is why it qualifies as documented — but the specific paper behind each record is not yet captured. Re-fetching with includeObservations=true would upgrade these in place; tracked as F125b.",
+   "aliases": [
+    "GloBI",
+    "Global Biotic Interactions",
+    "Poelen et al. 2014",
+    "globalbioticinteractions.org"
+   ]
+  }
+ ]
 }

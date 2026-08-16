@@ -246,7 +246,16 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # flying taxon with no attributes table, which is why the viewer's wingbeats
 # were hardcoded constants. Child of `fauna`, so it is wiped and repopulated
 # with the other two attribute tables on every reseed.
-_SCHEMA_VERSION = 65
+# v66 (V2.59): no DDL change — a seed-data bump for F125. 2,439 plant↔animal
+# edges sourced from GloBI take documented coverage from 99 of 437 species to
+# 271 of 437. The bump exists so existing installs actually reseed and see
+# them; without it the new rows sit in the JSON and reach nobody, which is the
+# reseed-that-never-fired failure this file's own notes warn about.
+# (An earlier pass wrote 2,546 and 320 of 437. The difference is the
+# larval-host gate: 107 adult-nectaring records had been promoted into host
+# claims, including 23 that put Monarch caterpillars on goldenrod. Fewer,
+# correct edges.)
+_SCHEMA_VERSION = 66
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

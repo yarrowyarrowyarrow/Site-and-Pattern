@@ -28,10 +28,12 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals: 34 code features · 6 data jobs · 4 legacy-ledger items.**
+**Totals: 34 code features · 7 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
-F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57. Opened since: F120,
-F123, F124 — all three found by the increments themselves.)*
+F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59.
+Opened since: F120, F123, F124 — all three found by the increments themselves —
+plus F126 from author feedback, and F127/F128, which are the two halves of F125
+that its own gates refused to guess at.)*
 
 ---
 
@@ -221,7 +223,8 @@ jobs that move it, with the tooling that already exists.*
 | **Flower colour** | 359 species still carry a genus-level guess. 81 are grasses with no bloom colour and are excluded; of the 276 left, **110 sit in 25 genus groups sharing one hex** — the columbine bug's exact shape. `python scripts/colour_worklist.py --sheet colour-check.html` writes a contact sheet of the 199 that already have a photograph, worst group first, with the claimed colour as a swatch under each image. Two sittings. The 77 with no photograph need a flora, or a photo first |
 | **Photo coverage** | **111 of 434 plants** have no photograph; **0 species have a habit shot**; 84 of 142 fauna and **62 of 69 bees** have none. The bench (`scripts/tune_morphology.py`) has the candidate picker and the slot editor. Gated on the bee-licence decision in Group C |
 | **iNaturalist observation photos** | The remaining lever for the 111 species with nothing: `/v1/observations?taxon_id=…&photo_license=…&quality_grade=research` for species whose taxon photo set is thin. Scoped in V2.36, not built |
-| **Wildlife records for the other 338 species** | **The largest data gap in the app, and the one users notice.** `plant_fauna` holds 361 edges covering **99 of 437 plants**; the other 338 have none, so a design of sixteen perfectly good natives shows no animals at all. V2.58 made the app say this out loud instead of implying the planting supports nothing, but the fix is sourced data: GBIF occurrence-based associations, iNaturalist observation fields, and the HOSTS lepidoptera database. Needs a session with working egress. Genus-level inference was measured as an alternative and rescues only 59 of the 338 (23% → 36%), so it is not a substitute | **F125** |
+| **Curate the 2,872 held animals** | ✅ **F125 shipped in V2.59** — the sourcing ran, and `plant_fauna` went from 361 edges over 99 of 437 plants to **2,800 over 271**. What is left is the *other* half of the same GloBI pull: **10,937 further edges, blocked on 2,872 animals the catalogue does not hold**. An interaction record supplies a Latin binomial and nothing else; a `fauna` row needs a common name, a taxon and an Alberta/prairie nativity call, and all three appear in the UI. Author's scope: butterflies/moths, bees, beetles, flies, birds and mammals, each verified native. Everything needed is already in the repo — `data/fetched/fauna_new_species.json` lists them with their taxon paths and edge counts, and `scripts/ingest_fauna_edges.py --apply` writes them the moment their `fauna` rows exist | **F127** |
+| **Per-study citations for the GloBI edges** | All 2,439 new edges cite `globi` — a registered, checkable aggregator, and a weaker claim than a named paper, recorded as such in the bibliography's `record_note`. GloBI only fills `study_title` when queried with `includeObservations=true`, which also carries the **life stage** — the field whose absence forced `larval_host` down to the explicit `hostOf` verb, dropping 107 of 120 candidate host edges. One re-fetch upgrades the citations in place *and* recovers the real host records among those 107. Needs egress | **F128** |
 | **Bird morphology** | All 24 rows ship `verified = 0` — entered from published literature in a session with no network. **Wing area is null for every row**, the one bird measurement not routinely published, currently inferred from span and a per-style aspect ratio. Needs a session with egress: AVONET (Tobias et al. 2022, CC BY 4.0) and Dunning's *CRC Handbook of Avian Body Masses* |
 | **Peace River Parkland** | A missing ecoregion. Raised in V2.51 rather than taken, because adding a polygon changes what real properties get recommended |
 | **Real CEC ecoregion polygons** | The shipped outlines are hand-authored and every drawing says so (`CAVEAT`). The download is written up in [`plans/V2.38-ecoregion-runbook.md`](plans/V2.38-ecoregion-runbook.md) and needs a machine with open egress |
