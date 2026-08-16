@@ -420,6 +420,34 @@ class TestObservationMode(unittest.TestCase):
             params = dict(builder("Monarda fistulosa"))
             self.assertEqual(params.get("includeObservations"), "true", name)
 
+    def test_a_mistyped_flag_is_an_error_not_a_different_run(self):
+        """`--observations` typed with a space became `--` and `observations`,
+        neither of which matched the old `in sys.argv` check — so a run meant
+        to fetch citations silently ran the DEFAULT mode, resumed the old
+        checkpoint, and two hours later rewrote the identical uncited file.
+
+        The mode a long unattended run is in must never be decided by a
+        substring test. argparse rejects what it does not recognise.
+        """
+        import contextlib
+        import io
+        parser = _fetch.build_parser()
+        for argv in (["--", "observations"], ["-observations"],
+                     ["--observations=yes"], ["observations"]):
+            with self.assertRaises(SystemExit, msg=argv), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                parser.parse_args(argv)
+
+    def test_the_flag_actually_sets_the_mode(self):
+        """The other half. A parser that rejects everything would pass the
+        test above and be useless."""
+        parser = _fetch.build_parser()
+        self.assertTrue(parser.parse_args(["--observations"]).observations)
+        self.assertFalse(parser.parse_args([]).observations)
+        # argparse accepts unambiguous prefixes, which is a help rather than a
+        # hazard — `--obs` can only mean one thing here.
+        self.assertTrue(parser.parse_args(["--obs"]).observations)
+
     def test_the_default_forms_still_do_not(self):
         """Observation mode multiplies the row count several times over. It
         must be opted into, not inherited."""

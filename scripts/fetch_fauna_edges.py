@@ -7,8 +7,15 @@ policy denies GBIF, iNaturalist and GloBI, so this is the half of F125 that has
 to happen on your side; ingestion, validation and seeding happen back in the
 repo from the file this writes.
 
-    python3 scripts/fetch_fauna_edges.py --probe    # 4 requests, ~5 seconds
-    python3 scripts/fetch_fauna_edges.py            # the real run
+    python3 scripts/fetch_fauna_edges.py --probe                 # seconds
+    python3 scripts/fetch_fauna_edges.py                         # the real run
+    python3 scripts/fetch_fauna_edges.py --observations --probe  # F128 probe
+    python3 scripts/fetch_fauna_edges.py --observations          # F128 run
+
+**Mind the flag.** `--observations` typed with a space — `-- observations` —
+used to run the DEFAULT mode silently, resume the old checkpoint and rewrite
+the identical uncited file two hours later. Arguments go through argparse now,
+so a typo is an error rather than a different run.
 
 Run ``--probe`` first. It tries a handful of query forms against one plant and
 reports which the API accepts and what columns come back, which takes seconds
@@ -48,6 +55,7 @@ minutes, most of it waiting politely.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -501,14 +509,40 @@ def _save(path: str, blob) -> None:
     os.replace(tmp, path)          # atomic: a Ctrl-C never leaves half a file
 
 
+def build_parser() -> "argparse.ArgumentParser":
+    """The CLI, as its own function so a test can drive it without fetching.
+
+    Separate from ``main`` deliberately: asserting that a bad flag is refused
+    means parsing a *good* one too, and calling ``main`` to do that would start
+    a two-hour network run inside the test suite.
+    """
+    ap = argparse.ArgumentParser(
+        description="Fetch plant↔animal records from GloBI (F125/F128).")
+    ap.add_argument("--probe", action="store_true",
+                    help="try a few query forms against one plant and report "
+                         "which the API accepts and what it populates")
+    ap.add_argument("--observations", action="store_true",
+                    help="includeObservations=true — the only mode that "
+                         "carries a study title and a life stage (F128)")
+    return ap
+
+
 def main() -> int:
-    probe_only = "--probe" in sys.argv
+    # argparse, not `in sys.argv` (V2.61b). The raw check silently ran the
+    # WRONG MODE: `--observations` typed with a space became two arguments,
+    # `--` and `observations`, neither of which matched — so a run intended to
+    # fetch citations quietly re-ran the default mode, resumed the old
+    # checkpoint, and rewrote the identical 14,111-edge file two hours later
+    # with `study_title` empty on every row. An unknown argument must be an
+    # error, and argparse makes it one.
+    args = build_parser().parse_args()
+    probe_only = args.probe
     # F128. One observation row per *record* rather than per distinct
     # interaction, which is the only mode that carries a study, a life stage
     # and a body part. Several times as many rows, so it gets more pages and a
     # separate output file — the distinct-interaction candidates stay on disk
     # until the observation run has actually been ingested.
-    observations = "--observations" in sys.argv
+    observations = args.observations
 
     # Find a working query form before spending 437 requests on a broken one.
     print(f"probing the GloBI API for a query form it accepts"

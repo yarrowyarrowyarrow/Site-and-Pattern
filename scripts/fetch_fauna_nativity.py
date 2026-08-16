@@ -23,21 +23,37 @@ gives a count of georeferenced records, and the count travels with the claim so
 "three records" and "three thousand" stay visibly different statements (P9).
 
 **OCCURRENCE IS NOT NATIVITY, and this file must never pretend otherwise.**
-A European Starling has tens of thousands of Alberta records and is introduced.
-A Drone Fly is abundant here and came from Europe. So the run also asks GBIF
-for its ``establishmentMeans`` facet, and the ingest gate treats
-*introduced* / *invasive* / *managed* as disqualifying however many records
-back them. Where GBIF says nothing — which is most of the time — the honest
-output is "occurs here, origin unstated", and the ingester requires a human
-verdict for anything it cannot rule in.
+A European Starling has 267,995 Alberta records and is introduced. That is not
+a hypothetical — it is the probe result that killed the first design.
 
-What one request buys
+So the two questions have two sources:
+
+* **present?** — occurrence counts inside each province box. Solid: the probe
+  gave a monarch 370/596 and a Sonoran desert quail 0/0.
+* **introduced?** — GBIF's *checklist distributions*, not its occurrence
+  records. ``facet=establishmentMeans`` on occurrences returns **nothing at
+  all**, on any species tried, so it can never separate the two however many
+  records there are. ``/species/match`` → ``/species/{key}/distributions``
+  reads the per-country rows contributed by checklist datasets, **GRIIS** among
+  them, and there the starling and the honeybee both come back ``INTRODUCED``.
+
+The dead facet is still requested and still reported, purely so a future GBIF
+change becomes visible rather than silently ignored.
+
+Where the checklists say nothing — which will be most species, since they
+cover vertebrates and known invasives far better than solitary bees — the
+output is ``origin: unstated``: occurs here, origin unrecorded. The ingest gate
+accepts those above the record floor, and that is an **inference, not a
+measurement**; ``scripts/ingest_fauna_edges.py:nativity_verdict`` carries the
+reasoning.
+
+What the requests buy
 ---------------------
-``limit=0`` returns the match count without any records, and
-``facet=establishmentMeans`` rides along free. So this is **one request per
-species per province**, not a paged harvest: ~6,100 requests at a polite
-1/second, a little under two hours. The ecoregion seeder pages through every
-record and took far longer; counting does not need the records.
+``limit=0`` returns the match count without any records, so presence is two
+requests per species rather than a paged harvest. The checklist lookup is two
+more and runs **only** where there are AB/SK records to justify it — a species
+with none is refused on the count alone. The ecoregion seeder pages through
+every record and took far longer; counting does not need the records.
 
 The province boxes, and where they lie
 --------------------------------------
@@ -324,8 +340,9 @@ def main() -> int:
         with open(_OUT, "r", encoding="utf-8") as fh:
             have = json.load(fh)
     todo = [t for t in todo if t["scientific_name"] not in have]
-    print(f"{len(todo)} animals to check "
-          f"({len(have)} already done) — 2 requests each, ~1/second")
+    print(f"{len(todo)} animals to check ({len(have)} already done) — two "
+          f"occurrence requests each, plus two more for the checklist lookup "
+          f"where there are AB/SK records to justify it, at ~1/second")
 
     failed = []
     for i, t in enumerate(todo, 1):
