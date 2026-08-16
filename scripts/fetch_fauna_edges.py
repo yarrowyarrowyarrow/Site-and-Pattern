@@ -630,9 +630,17 @@ def main() -> int:
             print("  ⚠ NO citations came back. Do not ingest this — the run "
                   "bought nothing. Send the --probe output instead.")
     print("=" * 62)
+    # Name the files rather than saying "those two" — observation mode writes
+    # only one, and a sign-off that miscounts its own output is the kind of
+    # small wrongness that makes a person doubt the numbers above it.
+    written = (["fauna_edges_observations.json"] if observations
+               else ["fauna_edges_candidates.json", "fauna_new_species.json"])
     print(f"\nwritten to {_OUT_DIR}/")
-    print("Commit those two files (or send them over) and the ingest side "
-          "takes it from there.")
+    for name in written:
+        print(f"  {name}")
+    print(f"\n  git add " + " ".join(f"data/fetched/{n}" for n in written))
+    print("  git commit -m \"fauna fetch results\"")
+    print("  git pull --rebase --autostash && git push")
     return 0
 
 
