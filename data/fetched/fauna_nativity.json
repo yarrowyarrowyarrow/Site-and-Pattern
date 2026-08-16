@@ -81,15 +81,18 @@
  },
  "Acanthis flammea": {
   "ab_records": 58828,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "AU",
+   "BE",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 12542,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Acanthocephala terminalis": {
   "ab_records": 0,
@@ -273,15 +276,14 @@
  },
  "Acmaeodera pulchella": {
   "ab_records": 2,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 21,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Acmaeodera tubulus": {
   "ab_records": 0,
@@ -485,15 +487,20 @@
  },
  "Adalia bipunctata": {
   "ab_records": 1929,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "JP",
+   "NZ",
+   "SE",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 450,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Adejeania vexatrix": {
   "ab_records": 25,
@@ -547,6 +554,14 @@
  },
  "Adelges abietis": {
   "ab_records": 2,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "FR",
+   "GB",
+   "NL",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -559,15 +574,34 @@
  },
  "Adelges cooleyi": {
   "ab_records": 244,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AT",
+   "AU",
+   "BE",
+   "CH",
+   "CZ",
+   "DE",
+   "DK",
+   "FR",
+   "GB",
+   "HU",
+   "IE",
+   "IT",
+   "NL",
+   "PL",
+   "PT",
+   "RO",
+   "SE",
+   "SK",
+   "UA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 76,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Adelges lariciatus": {
   "ab_records": 125,
@@ -581,18 +615,36 @@
  },
  "Adelges laricis": {
   "ab_records": 1,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "EE",
+   "ES",
+   "FR",
+   "GB",
+   "IE",
+   "NL",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Adelges piceae": {
   "ab_records": 29,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "CL",
+   "FR",
+   "GB",
+   "NL",
+   "PT",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -615,27 +667,27 @@
  },
  "Adelphocoris lineolatus": {
   "ab_records": 211,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 73,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Adelphocoris rapidus": {
   "ab_records": 70,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 9,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Adontomerus amygdali": {
   "ab_records": 0,
@@ -779,15 +831,19 @@
  },
  "Agelaius phoeniceus": {
   "ab_records": 311109,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 64655,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Ageniella accepta": {
   "ab_records": 6,
@@ -851,27 +907,32 @@
  },
  "Agrilus anxius": {
   "ab_records": 17,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "NO",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 14,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Agrilus cyanescens": {
   "ab_records": 3,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "CH",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Agrilus difficilis": {
   "ab_records": 0,
@@ -945,13 +1006,17 @@
  },
  "Agrotis ipsilon": {
   "ab_records": 17,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE",
-   "UNCERTAIN"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "NZ",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 9,
   "taxon": "lepidoptera",
@@ -979,15 +1044,14 @@
  },
  "Albuna pyramidalis": {
   "ab_records": 326,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 57,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Alcathoe caudata": {
   "ab_records": 0,
@@ -1101,6 +1165,10 @@
  },
  "Amblyptilia pica": {
   "ab_records": 155,
+  "checklist_countries": [
+   "CA",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -1373,15 +1441,17 @@
  },
  "Anas clypeata": {
   "ab_records": 130915,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 32216,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Anas fulvigula": {
   "ab_records": 0,
@@ -2865,6 +2935,54 @@
  },
  "Anser caerulescens": {
   "ab_records": 23334,
+  "checklist_countries": [
+   "AE",
+   "AR",
+   "AT",
+   "BE",
+   "BS",
+   "BZ",
+   "CA",
+   "CH",
+   "CL",
+   "CN",
+   "CO",
+   "CU",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GR",
+   "GT",
+   "HN",
+   "HU",
+   "IE",
+   "IS",
+   "IT",
+   "JP",
+   "KR",
+   "LU",
+   "LV",
+   "MM",
+   "MX",
+   "NG",
+   "NL",
+   "NO",
+   "NZ",
+   "PL",
+   "PT",
+   "RO",
+   "RU",
+   "SE",
+   "SK",
+   "SV",
+   "UA",
+   "US"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -2887,15 +3005,14 @@
  },
  "Anthaxia inornata": {
   "ab_records": 269,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 69,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Antheraea polyphemus": {
   "ab_records": 846,
@@ -2999,12 +3116,16 @@
  },
  "Anthidium manicatum": {
   "ab_records": 109,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "PT",
+   "SE",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "bee",
@@ -3052,15 +3173,14 @@
  },
  "Anthocharis julia": {
   "ab_records": 942,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Anthocharis midea": {
   "ab_records": 0,
@@ -3074,15 +3194,14 @@
  },
  "Anthocharis sara": {
   "ab_records": 433,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Anthomyiidae sp.": {
   "ab_records": 0,
@@ -3326,15 +3445,19 @@
  },
  "Anthrenus museorum": {
   "ab_records": 35,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "CH",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 13,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Anthrenus scrophulariae": {
   "ab_records": 11,
@@ -3348,15 +3471,24 @@
  },
  "Anthrenus verbasci": {
   "ab_records": 33,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "CH",
+   "CN",
+   "CY",
+   "DK",
+   "IE",
+   "NO",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 7,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Antispila aurirubra": {
   "ab_records": 1,
@@ -3450,15 +3582,23 @@
  },
  "Aphis nerii": {
   "ab_records": 27,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "CY",
+   "FR",
+   "GB",
+   "NL",
+   "PL",
+   "PT"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Apiomerus montanus": {
   "ab_records": 0,
@@ -3482,15 +3622,44 @@
  },
  "Apis mellifera": {
   "ab_records": 3671,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AF",
+   "AR",
+   "AU",
+   "AW",
+   "BE",
+   "BO",
+   "BR",
+   "CK",
+   "CO",
+   "CR",
+   "CW",
+   "DK",
+   "EC",
+   "FR",
+   "GY",
+   "JP",
+   "MM",
+   "MX",
+   "MZ",
+   "NP",
+   "NZ",
+   "PE",
+   "PT",
+   "PY",
+   "SE",
+   "TT",
+   "US",
+   "VE",
+   "YT"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 451,
   "taxon": "bee",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Apodemia mormo": {
   "ab_records": 0,
@@ -4314,15 +4483,14 @@
  },
  "Battus philenor": {
   "ab_records": 0,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "SK",
   "sk_records": 1,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Battus philenor hirsuta": {
   "ab_records": 0,
@@ -5196,15 +5364,16 @@
  },
  "Bombus terricola": {
   "ab_records": 777,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 610,
   "taxon": "bee",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Bombus vagans": {
   "ab_records": 2805,
@@ -5288,27 +5457,34 @@
  },
  "Bombycilla cedrorum": {
   "ab_records": 160990,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 25691,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Bombycilla garrulus": {
   "ab_records": 61718,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 8056,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Bombylius atriceps": {
   "ab_records": 0,
@@ -5382,12 +5558,10 @@
  },
  "Bonasa umbellus": {
   "ab_records": 40557,
-  "establishment_means": [
-   "INTRODUCED",
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5090,
   "taxon": "bird",
@@ -5685,15 +5859,22 @@
  },
  "Bubo virginianus": {
   "ab_records": 45898,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "FR",
+   "GB",
+   "NL",
+   "PF",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 8454,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Bucculatrix staintonella": {
   "ab_records": 0,
@@ -5717,15 +5898,14 @@
  },
  "Buprestis nutalli": {
   "ab_records": 55,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Burnsius albezens": {
   "ab_records": 0,
@@ -5759,15 +5939,19 @@
  },
  "Buteo jamaicensis": {
   "ab_records": 183930,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 21415,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Byturus unicolor": {
   "ab_records": 24,
@@ -5931,27 +6115,37 @@
  },
  "Calliphora vicina": {
   "ab_records": 2,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GS",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Calliphora vomitoria": {
   "ab_records": 61,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "IS",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Callirhytis glandulus": {
   "ab_records": 0,
@@ -6185,6 +6379,11 @@
  },
  "Calophasia lunula": {
   "ab_records": 239,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -6197,15 +6396,14 @@
  },
  "Calophya triozomima": {
   "ab_records": 1,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Calopteron reticulatum": {
   "ab_records": 0,
@@ -6869,15 +7067,17 @@
  },
  "Chaitophorus populifolii": {
   "ab_records": 448,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "DE",
+   "RS"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 2153,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Chalcosyrphus chalybeus": {
   "ab_records": 0,
@@ -7051,15 +7251,20 @@
  },
  "Chionaspis pinifoliae": {
   "ab_records": 10,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL",
+   "NO"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Chionodes viduella": {
   "ab_records": 21,
@@ -7323,15 +7528,18 @@
  },
  "Chrysis ignita": {
   "ab_records": 1,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Chrysis iris": {
   "ab_records": 44,
@@ -7625,16 +7833,23 @@
  },
  "Coccinella septempunctata": {
   "ab_records": 4530,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "CO",
+   "EG",
+   "SE",
+   "US"
+  ],
   "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+   "INTRODUCED"
   ],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "introduced",
   "provinces": "AB,SK",
   "sk_records": 1027,
   "taxon": "other_insect",
-  "verdict": "review"
+  "verdict": "reject"
  },
  "Coccinella transversoguttata": {
   "ab_records": 448,
@@ -7998,15 +8213,19 @@
  },
  "Colaptes auratus": {
   "ab_records": 445642,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 34249,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Colaspis brunnea": {
   "ab_records": 0,
@@ -8040,6 +8259,11 @@
  },
  "Coleophora deauratella": {
   "ab_records": 42,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -8742,15 +8966,17 @@
  },
  "Copromyza equina": {
   "ab_records": 1,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Coptotriche aenea": {
   "ab_records": 0,
@@ -8844,27 +9070,25 @@
  },
  "Corythucha cydoniae": {
   "ab_records": 32,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 16,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Corythucha morrilli": {
   "ab_records": 21,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Cosmopepla lintneriana": {
   "ab_records": 693,
@@ -9238,15 +9462,19 @@
  },
  "Cyanocitta cristata": {
   "ab_records": 186852,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 30671,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Cyclochila australasiae": {
   "ab_records": 0,
@@ -9350,15 +9578,22 @@
  },
  "Danaus plexippus": {
   "ab_records": 370,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "AU",
+   "BE",
+   "DK",
+   "ES",
+   "PT",
+   "SE",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 596,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Danaus plexippus plexippus": {
   "ab_records": 3,
@@ -9512,6 +9747,10 @@
  },
  "Dejongia lobidactylus": {
   "ab_records": 47,
+  "checklist_countries": [
+   "CA",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -9774,39 +10013,36 @@
  },
  "Dicerca divaricata": {
   "ab_records": 0,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "SK",
   "sk_records": 42,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dicerca tenebrica": {
   "ab_records": 136,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 57,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dicerca tenebrosa": {
   "ab_records": 16,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 22,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dichagyris reliqua": {
   "ab_records": 0,
@@ -10250,27 +10486,25 @@
  },
  "Dryobates pubescens": {
   "ab_records": 258077,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 34709,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dryocopus pileatus": {
   "ab_records": 80348,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 3882,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dufourea marginata": {
   "ab_records": 0,
@@ -10304,18 +10538,35 @@
  },
  "Dumetella carolinensis": {
   "ab_records": 73240,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 15842,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Dysdera crocata": {
   "ab_records": 2,
+  "checklist_countries": [
+   "AT",
+   "AU",
+   "BE",
+   "CA",
+   "CZ",
+   "DE",
+   "DK",
+   "ES",
+   "FR",
+   "GB",
+   "NL",
+   "PT",
+   "SK",
+   "ZA"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -10438,15 +10689,18 @@
  },
  "Ectemnius lapidarius": {
   "ab_records": 30,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 9,
   "taxon": "bee",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Ectemnius maculosus": {
   "ab_records": 17,
@@ -10490,15 +10744,14 @@
  },
  "Ectoedemia populella": {
   "ab_records": 12,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Ectropis crepuscularia": {
   "ab_records": 213,
@@ -10592,6 +10845,72 @@
  },
  "Emmelina monodactyla": {
   "ab_records": 63,
+  "checklist_countries": [
+   "AD",
+   "AE",
+   "AF",
+   "AL",
+   "AM",
+   "AT",
+   "AX",
+   "AZ",
+   "BA",
+   "BE",
+   "BG",
+   "BY",
+   "CA",
+   "CH",
+   "CN",
+   "CR",
+   "CY",
+   "CZ",
+   "DE",
+   "DK",
+   "DZ",
+   "EE",
+   "EG",
+   "ES",
+   "ET",
+   "FI",
+   "FR",
+   "GB",
+   "GE",
+   "GR",
+   "HR",
+   "HU",
+   "IE",
+   "IL",
+   "IN",
+   "IQ",
+   "IR",
+   "IS",
+   "IT",
+   "JM",
+   "JO",
+   "KE",
+   "KG",
+   "KR",
+   "KZ",
+   "LB",
+   "LI",
+   "LT",
+   "LU",
+   "LV",
+   "LY",
+   "MA",
+   "MD",
+   "ME",
+   "MK",
+   "MN",
+   "MT",
+   "MX",
+   "NL",
+   "NO",
+   "PH",
+   "PK",
+   "PL",
+   "PT"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -10604,16 +10923,24 @@
  },
  "Empidonax alnorum": {
   "ab_records": 18413,
+  "checklist_countries": [
+   "BO",
+   "CA",
+   "CO",
+   "EC",
+   "PE",
+   "US",
+   "VE"
+  ],
   "establishment_means": [
-   "INTRODUCED",
-   "native"
+   "INTRODUCED"
   ],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "introduced",
   "provinces": "AB,SK",
   "sk_records": 3976,
   "taxon": "bird",
-  "verdict": "review"
+  "verdict": "reject"
  },
  "Empis distans": {
   "ab_records": 0,
@@ -10707,6 +11034,11 @@
  },
  "Enoplognatha ovata": {
   "ab_records": 66,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -11109,27 +11441,35 @@
  },
  "Eptesicus fuscus": {
   "ab_records": 129,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "EC",
+   "MX",
+   "US",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 111,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Epuraea aestiva": {
   "ab_records": 6,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Epuraea truncatella": {
   "ab_records": 170,
@@ -11223,15 +11563,14 @@
  },
  "Eriophyes emarginatae": {
   "ab_records": 145,
-  "establishment_means": [
-   "INTRODUCED"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 7,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Eriophyes laevis": {
   "ab_records": 2,
@@ -11255,15 +11594,18 @@
  },
  "Eristalinus aeneus": {
   "ab_records": 25,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Eristalis anthophorina": {
   "ab_records": 80,
@@ -11277,15 +11619,18 @@
  },
  "Eristalis arbustorum": {
   "ab_records": 107,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Eristalis basilaris": {
   "ab_records": 0,
@@ -11359,12 +11704,15 @@
  },
  "Eristalis tenax": {
   "ab_records": 1829,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 149,
   "taxon": "other_insect",
@@ -12002,15 +12350,18 @@
  },
  "Eumerus strigatus": {
   "ab_records": 40,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 6,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Euodynerus annulatus": {
   "ab_records": 24,
@@ -12594,15 +12945,14 @@
  },
  "Eusphalerum pothos": {
   "ab_records": 220,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 34,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Euthochtha galeator": {
   "ab_records": 0,
@@ -12866,27 +13216,39 @@
  },
  "Falco columbarius": {
   "ab_records": 78591,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "ES",
+   "SE",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 21137,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Falco sparverius": {
   "ab_records": 58695,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "CO",
+   "FR",
+   "GB",
+   "NL",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 6738,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Falsomordellistena pubescens": {
   "ab_records": 0,
@@ -12980,6 +13342,11 @@
  },
  "Fenusa dohrnii": {
   "ab_records": 27,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -13092,12 +13459,10 @@
  },
  "Frankliniella tritici": {
   "ab_records": 906,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 154,
   "taxon": "other_insect",
@@ -13175,6 +13540,10 @@
  },
  "Geina tenuidactylus": {
   "ab_records": 34,
+  "checklist_countries": [
+   "CA",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -13197,15 +13566,16 @@
  },
  "Geothlypis trichas": {
   "ab_records": 75262,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 13981,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Geraeus picumnus": {
   "ab_records": 0,
@@ -13289,6 +13659,47 @@
  },
  "Gillmeria pallidactyla": {
   "ab_records": 100,
+  "checklist_countries": [
+   "AM",
+   "AT",
+   "BE",
+   "BG",
+   "BR",
+   "CA",
+   "CH",
+   "CN",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GE",
+   "GR",
+   "HU",
+   "IE",
+   "IR",
+   "IT",
+   "JP",
+   "KG",
+   "KR",
+   "KZ",
+   "LT",
+   "LU",
+   "LV",
+   "NL",
+   "NO",
+   "PL",
+   "RS",
+   "RU",
+   "SE",
+   "SK",
+   "TM",
+   "US",
+   "UZ"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -13411,6 +13822,10 @@
  },
  "Gnorimoschema octomaculella": {
   "ab_records": 39,
+  "checklist_countries": [
+   "CA",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -13553,15 +13968,14 @@
  },
  "Grus canadensis": {
   "ab_records": 20574,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 10573,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Gyranusoidea advena": {
   "ab_records": 0,
@@ -13665,15 +14079,14 @@
  },
  "Haemorhous purpureus": {
   "ab_records": 21329,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 7655,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Halictus confusus": {
   "ab_records": 265,
@@ -13787,6 +14200,20 @@
  },
  "Halyomorpha halys": {
   "ab_records": 60,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "CH",
+   "DE",
+   "FR",
+   "GB",
+   "GE",
+   "LI",
+   "MD",
+   "NO",
+   "SE",
+   "SI"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -13869,6 +14296,66 @@
  },
  "Harmonia axyridis": {
   "ab_records": 1246,
+  "checklist_countries": [
+   "AL",
+   "AR",
+   "AT",
+   "BA",
+   "BE",
+   "BG",
+   "BR",
+   "BY",
+   "CA",
+   "CH",
+   "CL",
+   "CN",
+   "CO",
+   "CR",
+   "CZ",
+   "DE",
+   "DK",
+   "EC",
+   "EG",
+   "ES",
+   "FR",
+   "GB",
+   "GE",
+   "GR",
+   "HR",
+   "HU",
+   "IE",
+   "IL",
+   "IT",
+   "JP",
+   "KE",
+   "LI",
+   "LU",
+   "LV",
+   "MD",
+   "MK",
+   "MX",
+   "NL",
+   "NO",
+   "NP",
+   "PE",
+   "PL",
+   "PT",
+   "PY",
+   "RO",
+   "RS",
+   "RU",
+   "SE",
+   "SI",
+   "SK",
+   "SZ",
+   "TR",
+   "TW",
+   "UA",
+   "US",
+   "UY",
+   "VE",
+   "ZA"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -15161,15 +15648,52 @@
  },
  "Hyphantria cunea": {
   "ab_records": 229,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AL",
+   "AT",
+   "AZ",
+   "BA",
+   "BE",
+   "BG",
+   "CH",
+   "CN",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FR",
+   "GB",
+   "GE",
+   "GR",
+   "HR",
+   "HU",
+   "IR",
+   "IT",
+   "JP",
+   "KR",
+   "KZ",
+   "LT",
+   "LU",
+   "MD",
+   "MK",
+   "MN",
+   "NL",
+   "NO",
+   "PL",
+   "RO",
+   "RU",
+   "SI",
+   "SK",
+   "TR"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 151,
   "taxon": "lepidoptera",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Hypocritanus fascipennis": {
   "ab_records": 2,
@@ -15323,9 +15847,42 @@
  },
  "Icterus galbula": {
   "ab_records": 27445,
+  "checklist_countries": [
+   "AG",
+   "BB",
+   "BE",
+   "BR",
+   "BS",
+   "BZ",
+   "CA",
+   "CO",
+   "CR",
+   "CU",
+   "DM",
+   "DO",
+   "EC",
+   "FR",
+   "GB",
+   "GD",
+   "GT",
+   "HN",
+   "HT",
+   "JM",
+   "KN",
+   "LC",
+   "MX",
+   "NI",
+   "NL",
+   "PA",
+   "SE",
+   "SV",
+   "TT",
+   "US",
+   "VC",
+   "VE"
+  ],
   "establishment_means": [
-   "NATIVE",
-   "native"
+   "NATIVE"
   ],
   "in_catalogue": true,
   "origin": "native",
@@ -15446,6 +16003,9 @@
  },
  "Isodontia elegans": {
   "ab_records": 64,
+  "checklist_countries": [
+   "CA"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -15480,6 +16040,10 @@
  },
  "Isophrictis similiella": {
   "ab_records": 0,
+  "checklist_countries": [
+   "CA",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -15552,15 +16116,21 @@
  },
  "Junco hyemalis": {
   "ab_records": 239136,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "GI",
+   "NL",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 36345,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Junonia coenia": {
   "ab_records": 1,
@@ -15664,27 +16234,29 @@
  },
  "Lagopus lagopus": {
   "ab_records": 288,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 368,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lagopus leucura": {
   "ab_records": 1955,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lagopus muta": {
   "ab_records": 3,
@@ -16818,15 +17390,17 @@
  },
  "Lasionycteris noctivagans": {
   "ab_records": 96,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "MX",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 75,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lasioptera spiraeafolia": {
   "ab_records": 0,
@@ -16870,6 +17444,11 @@
  },
  "Lateroligia ophiogramma": {
   "ab_records": 51,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -16902,15 +17481,16 @@
  },
  "Lebia viridis": {
   "ab_records": 74,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "JP"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 12,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Leionotus scrophulariae": {
   "ab_records": 0,
@@ -16934,15 +17514,14 @@
  },
  "Leiothlypis celata": {
   "ab_records": 47891,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 10008,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lembeja paradoxa": {
   "ab_records": 0,
@@ -16976,12 +17555,16 @@
  },
  "Lepidosaphes ulmi": {
   "ab_records": 12,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "CY",
+   "JP",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
@@ -16989,15 +17572,58 @@
  },
  "Leptinotarsa decemlineata": {
   "ab_records": 39,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AD",
+   "AL",
+   "AT",
+   "BA",
+   "BE",
+   "BG",
+   "BY",
+   "CH",
+   "CN",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GR",
+   "HR",
+   "HU",
+   "IE",
+   "IQ",
+   "IT",
+   "LI",
+   "LT",
+   "LU",
+   "LV",
+   "MD",
+   "MK",
+   "MN",
+   "NL",
+   "NO",
+   "PL",
+   "PT",
+   "RO",
+   "RU",
+   "SE",
+   "SI",
+   "SK",
+   "TJ",
+   "TM",
+   "TR",
+   "UA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 66,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Leptoglossus phyllopus": {
   "ab_records": 0,
@@ -17011,15 +17637,19 @@
  },
  "Leptometopa latipes": {
   "ab_records": 6,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "BR",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Leptopa vittata": {
   "ab_records": 0,
@@ -17153,15 +17783,14 @@
  },
  "Leuconotopicus villosus": {
   "ab_records": 120432,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 19663,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Leucophenga varia": {
   "ab_records": 0,
@@ -17205,6 +17834,14 @@
  },
  "Leucospis affinis": {
   "ab_records": 7,
+  "checklist_countries": [
+   "BR",
+   "CA",
+   "CU",
+   "MX",
+   "SV",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -17717,39 +18354,43 @@
  },
  "Lopidea instabilis": {
   "ab_records": 17,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 6,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Loxia curvirostra": {
   "ab_records": 37939,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "ES",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 2042,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Loxia leucoptera": {
   "ab_records": 27937,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 4035,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Loxostege munroealis": {
   "ab_records": 0,
@@ -17793,15 +18434,21 @@
  },
  "Lucilia sericata": {
   "ab_records": 483,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "ES",
+   "FK",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 139,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Lucilia silvarum": {
   "ab_records": 39,
@@ -17955,15 +18602,14 @@
  },
  "Lygus lineolaris": {
   "ab_records": 245,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 78,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lygus pratensis": {
   "ab_records": 0,
@@ -17977,15 +18623,14 @@
  },
  "Lygus rufidorsus": {
   "ab_records": 1,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 17,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Lymantria dispar": {
   "ab_records": 0,
@@ -18199,15 +18844,18 @@
  },
  "Malachius aeneus": {
   "ab_records": 563,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "CH",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 101,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Malacosoma americana": {
   "ab_records": 1,
@@ -18291,15 +18939,14 @@
  },
  "Marmara oregonensis": {
   "ab_records": 12,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Mecaphesa asperata": {
   "ab_records": 6,
@@ -18383,15 +19030,19 @@
  },
  "Megachile centuncularis": {
   "ab_records": 1,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5,
   "taxon": "bee",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Megachile coquilletti": {
   "ab_records": 0,
@@ -18915,15 +19566,18 @@
  },
  "Melanostoma mellina": {
   "ab_records": 200,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 13,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Melanostoma mellinum": {
   "ab_records": 0,
@@ -19387,15 +20041,20 @@
  },
  "Melospiza melodia": {
   "ab_records": 279862,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 30937,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Melozone crissalis": {
   "ab_records": 0,
@@ -19509,6 +20168,11 @@
  },
  "Metallus lanceolatus": {
   "ab_records": 3,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -19641,15 +20305,16 @@
  },
  "Microtus pennsylvanicus": {
   "ab_records": 5152,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 12668,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Milesia virginiensis": {
   "ab_records": 0,
@@ -19933,15 +20598,20 @@
  },
  "Muscina stabulans": {
   "ab_records": 3,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "CR",
+   "NZ",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 7,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Mydas clavatus": {
   "ab_records": 0,
@@ -20045,15 +20715,16 @@
  },
  "Myotis lucifugus": {
   "ab_records": 391,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 118,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Myrsidea borneoensis": {
   "ab_records": 0,
@@ -20077,15 +20748,26 @@
  },
  "Mythimna unipuncta": {
   "ab_records": 31,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "CY",
+   "FR",
+   "GB",
+   "ML",
+   "NE",
+   "NL",
+   "PT",
+   "SE",
+   "SN",
+   "TG"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 167,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Myzinum quinquecincta": {
   "ab_records": 0,
@@ -20199,6 +20881,33 @@
  },
  "Nemorimyza posticata": {
   "ab_records": 14,
+  "checklist_countries": [
+   "AT",
+   "BE",
+   "CA",
+   "CH",
+   "CN",
+   "CR",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "HU",
+   "IE",
+   "IT",
+   "JP",
+   "LT",
+   "NL",
+   "NO",
+   "PL",
+   "SE",
+   "US",
+   "VE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -20391,15 +21100,14 @@
  },
  "Neurocolpus nubilus": {
   "ab_records": 1,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 12,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Neuroterus floccosus": {
   "ab_records": 1,
@@ -20443,15 +21151,14 @@
  },
  "Nitops pallipennis": {
   "ab_records": 4,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 32,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Noctua acadiensis": {
   "ab_records": 0,
@@ -20465,16 +21172,21 @@
  },
  "Noctua pronuba": {
   "ab_records": 414,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "PT",
+   "SE"
+  ],
   "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+   "INTRODUCED"
   ],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "introduced",
   "provinces": "AB,SK",
   "sk_records": 28,
   "taxon": "lepidoptera",
-  "verdict": "review"
+  "verdict": "reject"
  },
  "Nomada (Nomada) sp. 1": {
   "ab_records": 0,
@@ -21228,15 +21940,14 @@
  },
  "Oiceoptoma noveboracense": {
   "ab_records": 52,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 40,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Okanagana bella": {
   "ab_records": 9,
@@ -21950,6 +22661,13 @@
  },
  "Ostrinia nubilalis": {
   "ab_records": 4,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "DK",
+   "PL",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -22654,15 +23372,14 @@
  },
  "Paranthrene robiniae": {
   "ab_records": 35,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Paraphidippus aurantius": {
   "ab_records": 0,
@@ -22776,27 +23493,25 @@
  },
  "Parnassius clodius": {
   "ab_records": 274,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Parnassius smintheus": {
   "ab_records": 3882,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Parrhasius m-album": {
   "ab_records": 0,
@@ -22910,15 +23625,14 @@
  },
  "Pennisetia marginatum": {
   "ab_records": 59,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 6,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Pentaria trifasciata": {
   "ab_records": 110,
@@ -23142,12 +23856,15 @@
  },
  "Peridroma saucia": {
   "ab_records": 40,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "JP",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 81,
   "taxon": "lepidoptera",
@@ -23175,15 +23892,14 @@
  },
  "Perisoreus canadensis": {
   "ab_records": 46270,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5990,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Perithemis lais": {
   "ab_records": 0,
@@ -23207,15 +23923,16 @@
  },
  "Peromyscus maniculatus": {
   "ab_records": 9217,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 41448,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Petrophila bifascialis": {
   "ab_records": 0,
@@ -23289,15 +24006,18 @@
  },
  "Phalangium opilio": {
   "ab_records": 1140,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 298,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Phaneroptera nana": {
   "ab_records": 0,
@@ -23371,16 +24091,20 @@
  },
  "Phidippus audax": {
   "ab_records": 182,
+  "checklist_countries": [
+   "CA",
+   "PT",
+   "SE"
+  ],
   "establishment_means": [
-   "INTRODUCED",
    "UNCERTAIN"
   ],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Phidippus johnsoni": {
   "ab_records": 739,
@@ -23406,15 +24130,14 @@
  },
  "Philaenus spumarius": {
   "ab_records": 544,
-  "establishment_means": [
-   "INTRODUCED"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 15,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Philanthus bilunatus": {
   "ab_records": 17,
@@ -23698,15 +24421,14 @@
  },
  "Phyllocnistis populiella": {
   "ab_records": 2795,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 101,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Phyllocoptes didelphis": {
   "ab_records": 0,
@@ -23750,27 +24472,30 @@
  },
  "Phyllonorycter anderidae": {
   "ab_records": 10,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Phyllonorycter apparella": {
   "ab_records": 47,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Phyllonorycter crataegella": {
   "ab_records": 0,
@@ -23784,27 +24509,25 @@
  },
  "Phyllonorycter ledella": {
   "ab_records": 61,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 2,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Phyllonorycter nipigon": {
   "ab_records": 13,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 3,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Phyllopalpus pulchellus": {
   "ab_records": 0,
@@ -23978,15 +24701,14 @@
  },
  "Pica hudsonia": {
   "ab_records": 571081,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 84242,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Picoides dorsalis bacatus": {
   "ab_records": 0,
@@ -24000,15 +24722,14 @@
  },
  "Picoides pubescens": {
   "ab_records": 258077,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 34709,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Pidonia ruficollis": {
   "ab_records": 0,
@@ -24082,6 +24803,16 @@
  },
  "Pieris rapae": {
   "ab_records": 5866,
+  "checklist_countries": [
+   "AU",
+   "BE",
+   "CA",
+   "CH",
+   "JP",
+   "PT",
+   "SE",
+   "US"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -24134,15 +24865,17 @@
  },
  "Pinicola enucleator": {
   "ab_records": 37154,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5173,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Pipilo maculatus": {
   "ab_records": 63964,
@@ -24186,18 +24919,26 @@
  },
  "Piranga ludoviciana": {
   "ab_records": 50510,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 625,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Piranga olivacea": {
   "ab_records": 32,
+  "checklist_countries": [
+   "BO",
+   "CA",
+   "CO",
+   "EC",
+   "PE",
+   "US",
+   "VE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -24210,15 +24951,20 @@
  },
  "Piranga rubra": {
   "ab_records": 77,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BO",
+   "GY",
+   "MX",
+   "US",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 55,
   "taxon": "bird",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Pisaurina mira": {
   "ab_records": 0,
@@ -24252,15 +24998,14 @@
  },
  "Plagiognathus obscurus": {
   "ab_records": 39,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Plateumaris nitida": {
   "ab_records": 13,
@@ -24304,15 +25049,14 @@
  },
  "Platycheirus rosarum": {
   "ab_records": 10,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Platycheirus stegnus": {
   "ab_records": 4,
@@ -24426,13 +25170,59 @@
  },
  "Plutella xylostella": {
   "ab_records": 967,
+  "checklist_countries": [
+   "AE",
+   "AR",
+   "AU",
+   "BB",
+   "BE",
+   "BO",
+   "BZ",
+   "CA",
+   "CL",
+   "CN",
+   "CO",
+   "CR",
+   "CU",
+   "DK",
+   "DM",
+   "DO",
+   "ES",
+   "FI",
+   "FJ",
+   "GB",
+   "GT",
+   "IN",
+   "IS",
+   "JM",
+   "JP",
+   "KZ",
+   "LY",
+   "MA",
+   "MX",
+   "NC",
+   "NO",
+   "NZ",
+   "PE",
+   "PG",
+   "PH",
+   "PL",
+   "PT",
+   "PY",
+   "RU",
+   "SC",
+   "SE",
+   "UA",
+   "US",
+   "UY",
+   "VE",
+   "ZA"
+  ],
   "establishment_means": [
-   "INTRODUCED",
-   "NATIVE",
    "UNCERTAIN"
   ],
   "in_catalogue": false,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 181,
   "taxon": "lepidoptera",
@@ -24510,27 +25300,45 @@
  },
  "Podisus maculiventris": {
   "ab_records": 11,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BA",
+   "BE",
+   "BG",
+   "DE",
+   "DK",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GR",
+   "HR",
+   "IT",
+   "MD",
+   "MK",
+   "NL",
+   "PL",
+   "RO",
+   "RU",
+   "UA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Podosesia syringae": {
   "ab_records": 6,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 19,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Poecilanthrax arethusa": {
   "ab_records": 0,
@@ -24574,15 +25382,14 @@
  },
  "Poecile atricapillus": {
   "ab_records": 589199,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 88771,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Poecile rufescens": {
   "ab_records": 15756,
@@ -24596,15 +25403,14 @@
  },
  "Poecilocapsus lineatus": {
   "ab_records": 0,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "SK",
   "sk_records": 2,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Poecilognathus sulphureus": {
   "ab_records": 19,
@@ -24848,15 +25654,18 @@
  },
  "Pollenia rudis": {
   "ab_records": 41,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "IS",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 4,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Polybia occidentalis": {
   "ab_records": 0,
@@ -25030,15 +25839,19 @@
  },
  "Popillia japonica": {
   "ab_records": 1,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "CH",
+   "CN",
+   "IT",
+   "PT"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Prenolepis imparis": {
   "ab_records": 0,
@@ -25542,15 +26355,14 @@
  },
  "Psylla floccosa": {
   "ab_records": 0,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "SK",
   "sk_records": 1,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Psyllaephagus hebbalensis": {
   "ab_records": 0,
@@ -25874,15 +26686,17 @@
  },
  "Quiscalus quiscula": {
   "ab_records": 61563,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "GB"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 48879,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Rabdophaga rigidae": {
   "ab_records": 18,
@@ -26316,15 +27130,25 @@
  },
  "Rhopalosiphum padi": {
   "ab_records": 252,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AU",
+   "BE",
+   "BR",
+   "FR",
+   "GS",
+   "JP",
+   "NZ",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 42,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Rhopalum pedicellatum": {
   "ab_records": 1,
@@ -26708,27 +27532,46 @@
  },
  "Scathophaga stercoraria": {
   "ab_records": 537,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 143,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sceliphron caementarium": {
   "ab_records": 211,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AT",
+   "BE",
+   "CK",
+   "DE",
+   "ES",
+   "FR",
+   "GB",
+   "HR",
+   "IT",
+   "JP",
+   "LU",
+   "NL",
+   "PT",
+   "RO",
+   "SI",
+   "UA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 49,
   "taxon": "bee",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Scelolyperus varipes": {
   "ab_records": 2,
@@ -26992,15 +27835,14 @@
  },
  "Selasphorus calliope": {
   "ab_records": 25977,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 3,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Selasphorus platycercus": {
   "ab_records": 3,
@@ -27014,15 +27856,14 @@
  },
  "Selasphorus rufus": {
   "ab_records": 44149,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 33,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Selasphorus sasin": {
   "ab_records": 0,
@@ -27136,39 +27977,42 @@
  },
  "Setophaga coronata": {
   "ab_records": 196810,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 25609,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Setophaga magnolia": {
   "ab_records": 9983,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 3129,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Setophaga petechia": {
   "ab_records": 163452,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 40098,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sibovia occatoria": {
   "ab_records": 0,
@@ -27222,39 +28066,40 @@
  },
  "Sitona hispidulus": {
   "ab_records": 12,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "JP",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 10,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Sitta canadensis": {
   "ab_records": 308744,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 52401,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sitta carolinensis": {
   "ab_records": 136357,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 16715,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sitta pygmaea": {
   "ab_records": 27938,
@@ -27288,15 +28133,16 @@
  },
  "Sorex cinereus": {
   "ab_records": 656,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 262,
   "taxon": "mammal",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Spallanzania hesperidarum": {
   "ab_records": 2,
@@ -27680,6 +28526,16 @@
  },
  "Sphex ichneumoneus": {
   "ab_records": 164,
+  "checklist_countries": [
+   "AR",
+   "BR",
+   "CA",
+   "CO",
+   "CR",
+   "MX",
+   "PE",
+   "US"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -27722,39 +28578,36 @@
  },
  "Sphyrapicus nuchalis": {
   "ab_records": 28912,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 783,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sphyrapicus ruber": {
   "ab_records": 110,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Sphyrapicus varius": {
   "ab_records": 21752,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 7787,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Spicauda procne": {
   "ab_records": 0,
@@ -27838,15 +28691,14 @@
  },
  "Spinus pinus": {
   "ab_records": 188848,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 14215,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Spinus psaltria": {
   "ab_records": 362,
@@ -27860,15 +28712,16 @@
  },
  "Spinus tristis": {
   "ab_records": 178770,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 37398,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Spissistilus festinus": {
   "ab_records": 0,
@@ -28162,15 +29015,14 @@
  },
  "Stigmella populetorum": {
   "ab_records": 31,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 5,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Stigmella prunifoliella": {
   "ab_records": 0,
@@ -28204,15 +29056,20 @@
  },
  "Stomoxys calcitrans": {
   "ab_records": 33,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "AE",
+   "BE",
+   "CR",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 92,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Stonemyia rasa": {
   "ab_records": 0,
@@ -28436,6 +29293,142 @@
  },
  "Sturnus vulgaris": {
   "ab_records": 267995,
+  "checklist_countries": [
+   "AD",
+   "AE",
+   "AF",
+   "AG",
+   "AL",
+   "AM",
+   "AR",
+   "AT",
+   "AU",
+   "AZ",
+   "BA",
+   "BB",
+   "BD",
+   "BE",
+   "BG",
+   "BH",
+   "BM",
+   "BN",
+   "BO",
+   "BS",
+   "BT",
+   "BW",
+   "BY",
+   "BZ",
+   "CA",
+   "CH",
+   "CN",
+   "CR",
+   "CU",
+   "CY",
+   "CZ",
+   "DE",
+   "DK",
+   "DM",
+   "DO",
+   "EE",
+   "EG",
+   "ES",
+   "FI",
+   "FJ",
+   "FM",
+   "FR",
+   "GB",
+   "GD",
+   "GE",
+   "GR",
+   "GT",
+   "HN",
+   "HR",
+   "HT",
+   "HU",
+   "ID",
+   "IE",
+   "IL",
+   "IN",
+   "IQ",
+   "IR",
+   "IS",
+   "IT",
+   "JM",
+   "JO",
+   "JP",
+   "KG",
+   "KH",
+   "KI",
+   "KN",
+   "KP",
+   "KR",
+   "KW",
+   "KZ",
+   "LA",
+   "LB",
+   "LC",
+   "LI",
+   "LK",
+   "LS",
+   "LT",
+   "LU",
+   "LV",
+   "MD",
+   "ME",
+   "MH",
+   "MK",
+   "MM",
+   "MN",
+   "MT",
+   "MV",
+   "MX",
+   "MY",
+   "NA",
+   "NI",
+   "NO",
+   "NP",
+   "NR",
+   "NZ",
+   "OM",
+   "PA",
+   "PG",
+   "PH",
+   "PK",
+   "PL",
+   "PT",
+   "PW",
+   "QA",
+   "RO",
+   "RS",
+   "RU",
+   "SA",
+   "SB",
+   "SE",
+   "SG",
+   "SI",
+   "SK",
+   "SM",
+   "SV",
+   "SY",
+   "TH",
+   "TJ",
+   "TL",
+   "TM",
+   "TO",
+   "TR",
+   "TT",
+   "TV",
+   "UA",
+   "US",
+   "UY",
+   "UZ",
+   "VC",
+   "VN",
+   "VU",
+   "WS",
+   "YE",
+   "ZA"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -28578,75 +29571,69 @@
  },
  "Synanthedon albicornis": {
   "ab_records": 5,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon bibionipennis": {
   "ab_records": 56,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 10,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon exitiosa": {
   "ab_records": 7,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon pictipes": {
   "ab_records": 22,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 2,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon polygoni": {
   "ab_records": 39,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB",
   "sk_records": 0,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon scitula": {
   "ab_records": 0,
-  "establishment_means": [
-   "NATIVE"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "SK",
   "sk_records": 1,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Synanthedon sigmoidea": {
   "ab_records": 0,
@@ -28720,15 +29707,18 @@
  },
  "Syritta pipiens": {
   "ab_records": 404,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 70,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Syrphus knabi": {
   "ab_records": 0,
@@ -28762,15 +29752,18 @@
  },
  "Syrphus ribesii": {
   "ab_records": 123,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 48,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Syrphus torvus": {
   "ab_records": 44,
@@ -29064,15 +30057,19 @@
  },
  "Tetragnatha extensa": {
   "ab_records": 140,
-  "establishment_means": [
-   "INTRODUCED"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE",
+   "US"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "introduced",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 53,
   "taxon": "other_insect",
-  "verdict": "reject"
+  "verdict": "review"
  },
  "Tetraloniella albata": {
   "ab_records": 0,
@@ -29306,6 +30303,14 @@
  },
  "Thymelicus lineola": {
   "ab_records": 3003,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "CH",
+   "JP",
+   "SE",
+   "US"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -29528,15 +30533,14 @@
  },
  "Toxostoma rufum": {
   "ab_records": 6315,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 13656,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Trachysida aspera": {
   "ab_records": 75,
@@ -30030,15 +31034,20 @@
  },
  "Turdus migratorius": {
   "ab_records": 529315,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 92909,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Turdus philomelos": {
   "ab_records": 0,
@@ -30142,6 +31151,24 @@
  },
  "Tyrannus tyrannus": {
   "ab_records": 84371,
+  "checklist_countries": [
+   "AR",
+   "AW",
+   "BO",
+   "BR",
+   "BS",
+   "BZ",
+   "CA",
+   "CL",
+   "CO",
+   "CR",
+   "CU",
+   "CW",
+   "EC",
+   "SV",
+   "US",
+   "VE"
+  ],
   "establishment_means": [
    "NATIVE"
   ],
@@ -30154,6 +31181,12 @@
  },
  "Tyria jacobaeae": {
   "ab_records": 1,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "FK",
+   "SE"
+  ],
   "establishment_means": [
    "INTRODUCED"
   ],
@@ -30286,15 +31319,20 @@
  },
  "Vanessa atalanta": {
   "ab_records": 809,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE",
+   "US",
+   "VE"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 490,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Vanessa atalanta rubria": {
   "ab_records": 23,
@@ -30308,12 +31346,17 @@
  },
  "Vanessa cardui": {
   "ab_records": 1576,
-  "establishment_means": [
-   "INTRODUCED",
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "PT",
+   "SE",
+   "US",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "conflicted",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 436,
   "taxon": "lepidoptera",
@@ -30401,15 +31444,27 @@
  },
  "Vespula germanica": {
   "ab_records": 90,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "AR",
+   "AU",
+   "BE",
+   "BO",
+   "CL",
+   "CY",
+   "FR",
+   "IS",
+   "NZ",
+   "PT",
+   "SE",
+   "ZA"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 80,
   "taxon": "other_insect",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Vespula maculifrons": {
   "ab_records": 0,
@@ -30493,15 +31548,14 @@
  },
  "Vireo gilvus": {
   "ab_records": 79630,
-  "establishment_means": [
-   "native"
-  ],
+  "checklist_countries": [],
+  "establishment_means": [],
   "in_catalogue": true,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 12340,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Vireo griseus": {
   "ab_records": 12,
@@ -30515,16 +31569,21 @@
  },
  "Vireo olivaceus": {
   "ab_records": 59273,
+  "checklist_countries": [
+   "BE",
+   "CA",
+   "US",
+   "VE"
+  ],
   "establishment_means": [
-   "INTRODUCED",
-   "native"
+   "INTRODUCED"
   ],
   "in_catalogue": true,
-  "origin": "conflicted",
+  "origin": "introduced",
   "provinces": "AB,SK",
   "sk_records": 13571,
   "taxon": "bird",
-  "verdict": "review"
+  "verdict": "reject"
  },
  "Volucella bombylans": {
   "ab_records": 19,
@@ -30598,15 +31657,18 @@
  },
  "Xestia c-nigrum": {
   "ab_records": 249,
-  "establishment_means": [
-   "NATIVE"
+  "checklist_countries": [
+   "BE",
+   "PT",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 24,
   "taxon": "lepidoptera",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Xestia normaniana": {
   "ab_records": 62,
@@ -31020,27 +32082,36 @@
  },
  "Zonotrichia albicollis": {
   "ab_records": 104500,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL",
+   "SE"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 26905,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Zonotrichia leucophrys": {
   "ab_records": 100704,
-  "establishment_means": [
-   "native"
+  "checklist_countries": [
+   "BE",
+   "FR",
+   "GB",
+   "NL"
   ],
+  "establishment_means": [],
   "in_catalogue": false,
-  "origin": "native",
+  "origin": "unstated",
   "provinces": "AB,SK",
   "sk_records": 15867,
   "taxon": "bird",
-  "verdict": "accept"
+  "verdict": "review"
  },
  "Zygoneura calthella": {
   "ab_records": 0,

@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "scientific_name": "Astragalus laxmannii",
+    "slot": "habit",
+    "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/526467990/medium.jpg",
+    "attribution": "no rights reserved, uploaded by Kallum McDonald",
+    "license": "cc0",
+    "source": "inaturalist",
+    "taken_on": "",
+    "rank": 0,
+    "notes": ""
+  },
+  {
+    "scientific_name": "Helianthus annuus",
+    "slot": "flower",
+    "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/352091460/medium.jpg",
+    "attribution": "(c) \nKENPEI, some rights reserved (CC BY)",
+    "license": "cc-by",
+    "source": "inaturalist",
+    "taken_on": "",
+    "rank": 0,
+    "notes": ""
+  }
+]
