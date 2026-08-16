@@ -222,20 +222,34 @@ def establishment_from_checklists(mod, name: str, throttle) -> list:
     except mod.FetchFailed:
         return []
     out = set()
+    seen_countries = set()
     for row in d.get("results") or []:
-        # Canada only. A species introduced to New Zealand and native here is
-        # native here, and the row carries the country that judged it.
-        country = (row.get("country") or row.get("countryCode") or "")
-        if country and "CANADA" not in country.upper() and country != "CA":
-            continue
         val = (row.get("establishmentMeans") or "").strip()
-        if val:
-            out.add(val)
+        if not val:
+            continue
+        country = (row.get("country") or row.get("countryCode") or "").strip()
+        if country:
+            seen_countries.add(country)
+        # **Canada only, strictly.** The first version skipped a row only when
+        # it named a country that was not Canada — so every row with no country
+        # field passed, and most of them have none. The result was "introduced
+        # SOMEWHERE IN THE WORLD" read as "introduced to Canada", and the 2026
+        # run duly flagged the Snow Goose (native to arctic Canada, feral in
+        # Europe) and the Summer Tanager (introduced nowhere) as introduced,
+        # while Ruffed Grouse, Alder Flycatcher and Red-eyed Vireo all came
+        # back "conflicted".
+        #
+        # A row that does not say Canada is not evidence about Canada. Dropping
+        # it may leave a species `unstated`, and unstated is the honest answer
+        # when no checklist has judged it here.
+        if "CANADA" not in country.upper() and country.upper() != "CA":
+            continue
+        out.add(val)
     # Deduplicated: distributions come from many checklist datasets and the
     # probe returned `['NATIVE'] * 9` for one monarch. Nine copies of a word
     # is not nine pieces of evidence, and 3,065 species of it would bloat the
     # file for nothing.
-    return sorted(out)
+    return sorted(out), sorted(seen_countries)
 
 
 def assess(ab: int, sk: int, means: list) -> dict:
@@ -284,6 +298,50 @@ def _save(blob) -> None:
     os.replace(tmp, _OUT)          # atomic: a Ctrl-C never leaves half a file
 
 
+def _recheck_origin(mod, throttle, have: dict) -> int:
+    """Re-run only the checklist half, only where the answer can change."""
+    todo = sorted(k for k, v in have.items()
+                  if v.get("origin") != "unstated")
+    print(f"re-checking {len(todo)} species whose origin is not already "
+          f"`unstated` (of {len(have)}) — 2 requests each\n")
+    changed = []
+    for i, name in enumerate(todo, 1):
+        row = have[name]
+        try:
+            means, countries = establishment_from_checklists(mod, name,
+                                                             throttle)
+        except mod.FetchFailed as exc:
+            print(f"[{i}/{len(todo)}] {name}: FAILED ({exc}) — left as-is")
+            continue
+        new = assess(int(row.get("ab_records") or 0),
+                     int(row.get("sk_records") or 0), means)
+        if new["origin"] != row.get("origin"):
+            changed.append((name, row.get("origin"), new["origin"]))
+            print(f"[{i}/{len(todo)}] {name}: {row.get('origin')} → "
+                  f"{new['origin']}  {means or '(no Canada row)'}")
+        new["checklist_countries"] = countries
+        new["taxon"] = row.get("taxon", "")
+        new["in_catalogue"] = row.get("in_catalogue", False)
+        have[name] = new
+        if i % 25 == 0:
+            _save(have)
+        throttle.wait()
+    _save(have)
+
+    import collections
+    print("\n" + "=" * 62)
+    print(f"  {len(changed)} origins changed")
+    for v in ("accept", "review", "reject"):
+        print(f"  {v:8s} {sum(1 for r in have.values() if r['verdict'] == v):5d}")
+    print(f"  still introduced: "
+          f"{sum(1 for r in have.values() if r['origin'] == 'introduced')}")
+    print(f"  still conflicted: "
+          f"{sum(1 for r in have.values() if r['origin'] == 'conflicted')}")
+    print("=" * 62)
+    print("\nCommit the file again; the ingest side takes it from there.")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="AB/SK occurrence per animal.")
     ap.add_argument("--probe", action="store_true",
@@ -291,6 +349,9 @@ def main() -> int:
     ap.add_argument("--held", action="store_true",
                     help="only the held animals, not the catalogue's own")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--recheck-origin", action="store_true",
+                    help="redo only the checklist half, for species whose "
+                         "origin is not already `unstated`")
     args = ap.parse_args()
 
     mod = _seeder()
@@ -311,8 +372,9 @@ def main() -> int:
                 throttle.wait()
                 sk, _ = count_in_box(mod, name, PROVINCE_BOXES["SK"], throttle)
                 throttle.wait()
-                checklist = (establishment_from_checklists(mod, name, throttle)
-                             if ab + sk else [])
+                checklist, countries = (
+                    establishment_from_checklists(mod, name, throttle)
+                    if ab + sk else ([], []))
             except Exception as exc:                       # noqa: BLE001
                 print(f"  {name:24s} FAILED — {exc}")
                 continue
@@ -320,7 +382,9 @@ def main() -> int:
             print(f"  {name:24s} AB={ab:<7d} SK={sk:<7d} "
                   f"{a['verdict']:7s} {a['origin']:11s}")
             print(f"  {'':24s} occurrence facet: {facet or '(none — expected)'}")
-            print(f"  {'':24s} checklists:       {checklist or '(none)'}")
+            print(f"  {'':24s} checklists (CA):  {checklist or '(none)'}")
+            print(f"  {'':24s} countries seen:   "
+                  f"{', '.join(countries[:8]) or '(none named)'}")
             print(f"  {'':24s} expected: {expect}")
             throttle.wait()
         print("\nThe two introduced species are the test. The occurrence "
@@ -332,13 +396,23 @@ def main() -> int:
               "different source. Say so before starting the real run.")
         return 0
 
-    todo = targets(held_only=args.held)
-    if args.limit:
-        todo = todo[:args.limit]
     have = {}
     if os.path.exists(_OUT):
         with open(_OUT, "r", encoding="utf-8") as fh:
             have = json.load(fh)
+
+    if args.recheck_origin:
+        # The cheap repair. The first run's Canada filter was a no-op, so
+        # `origin` read "introduced somewhere on Earth" — Snow Goose and
+        # Summer Tanager among the casualties. A stricter filter can only
+        # REMOVE checklist values, so a species already `unstated` cannot
+        # change and does not need re-asking. That turns a three-hour refetch
+        # into a few minutes over the couple of hundred that can move.
+        return _recheck_origin(mod, throttle, have)
+
+    todo = targets(held_only=args.held)
+    if args.limit:
+        todo = todo[:args.limit]
     todo = [t for t in todo if t["scientific_name"] not in have]
     print(f"{len(todo)} animals to check ({len(have)} already done) — two "
           f"occurrence requests each, plus two more for the checklist lookup "
@@ -356,10 +430,12 @@ def main() -> int:
             # records is rejected on the count alone, and two more requests
             # would buy an answer that changes nothing — which matters when
             # there are 3,065 of them.
+            countries = []
             if ab + sk:
                 throttle.wait()
-                means_sk = list(means_sk) + establishment_from_checklists(
+                extra, countries = establishment_from_checklists(
                     mod, name, throttle)
+                means_sk = list(means_sk) + extra
         except mod.FetchFailed as exc:
             # NOT recorded as absent. It is left out of the file entirely so a
             # re-run picks it up, and the run says so at the end.
@@ -367,6 +443,10 @@ def main() -> int:
             print(f"[{i}/{len(todo)}] {name}: FAILED ({exc}) — will retry")
             continue
         row = assess(ab, sk, sorted(set(means) | set(means_sk)))
+        # Kept for diagnosis, not for the verdict. The first run's Canada
+        # filter was a no-op and nobody could tell from the output; with this
+        # you can see at a glance whether GBIF named a country at all.
+        row["checklist_countries"] = countries
         row["taxon"] = t["taxon"]
         row["in_catalogue"] = t["in_catalogue"]
         have[name] = row

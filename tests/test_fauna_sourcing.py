@@ -626,6 +626,31 @@ class TestTheNativityGate(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("disagree", why)
 
+    def test_only_a_canada_row_can_judge_a_canada_question(self):
+        """The bug the 3,064-species run exposed.
+
+        The filter skipped a row only when it *named* a country that was not
+        Canada — so every row with no country field passed, and most have
+        none. `introduced somewhere on Earth` became `introduced to Canada`,
+        and the run flagged the Snow Goose (native to arctic Canada, feral in
+        Europe) and the Summer Tanager (introduced nowhere at all), while
+        Ruffed Grouse, Alder Flycatcher and Red-eyed Vireo came back
+        conflicted.
+        """
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        # The skip must be unconditional on the country NOT being Canada,
+        # not conditional on a country being present at all.
+        self.assertNotIn("if country and", src)
+        self.assertIn('if "CANADA" not in country.upper()', src)
+
+    def test_the_checklist_lookup_reports_the_countries_it_saw(self):
+        """Nobody could tell the filter was a no-op from the output. The
+        countries travel now, for diagnosis rather than for the verdict."""
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        self.assertIn("seen_countries", src)
+
     def test_a_well_recorded_species_passes(self):
         ok, _ = _ingest.nativity_verdict(
             {"ab_records": 400, "sk_records": 120, "origin": "unstated"})
