@@ -199,6 +199,54 @@ _FORMS = (
     ]),
 )
 
+#: Observation mode (F128, V2.61). The same queries with
+#: ``includeObservations=true``, which is the switch that changes what a row
+#: *is*: one row per observed record rather than one per distinct interaction.
+#:
+#: That costs more rows and buys the three fields V2.59 wanted and could not
+#: have. **The citation**, because GloBI only fills `study_title` in this mode —
+#: which is why all 2,439 shipped edges cite the aggregator rather than a paper.
+#: **The life stage**, which is what forced `larval_host` down to the explicit
+#: `hostOf` verb and cost 700 candidate host records. And **the body part**,
+#: which is the difference between a crossbill eating a cone and a sapsucker
+#: drilling a trunk — the distinction that dropped every sapsucker edge in
+#: V2.60.
+_OBS_FORMS = tuple(
+    (f"{name} +obs",
+     (lambda b: (lambda taxon: b(taxon) + [("includeObservations", "true")]))(
+         builder))
+    for name, builder in _FORMS
+)
+
+#: Column names this script reads, each as a list of plausible spellings.
+#:
+#: **Written as aliases on purpose.** V2.59 hard-coded `study_citation`, which
+#: does not exist — GloBI returns `study_title` — and the test fixture repeated
+#: the same guess, so the suite passed while every fetched edge arrived
+#: uncited. Nobody here can reach the API to check, so the code reads whichever
+#: spelling turns up and the probe reports which ones are real. A wrong guess
+#: now degrades to a missing field instead of a silent wholesale rejection.
+_ALIASES = {
+    "citation": ("study_citation", "study_source_citation", "study_title",
+                 "study_url", "study_doi"),
+    "life_stage": ("target_specimen_life_stage",
+                   "source_specimen_life_stage"),
+    "body_part": ("target_specimen_body_part_name",
+                  "target_specimen_body_part",
+                  "source_specimen_body_part_name",
+                  "source_specimen_body_part"),
+}
+
+
+def _pick(row: dict, field: str) -> str:
+    """First populated alias for ``field``, or ``""``."""
+    for key in _ALIASES[field]:
+        val = str(row.get(key) or "").strip()
+        if val:
+            return val
+    return ""
+
+
 #: Set by :func:`probe` once a working form is found.
 _FORM = None
 
@@ -207,7 +255,8 @@ def _url(form_builder, taxon: str) -> str:
     return _API + "?" + urllib.parse.urlencode(form_builder(taxon))
 
 
-def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
+def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True,
+          observations: bool = False) -> str:
     """Find a query form GloBI actually accepts. Returns its name.
 
     Also prints the **columns** that came back, because the mapping downstream
@@ -239,7 +288,7 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
             print("               → could not confirm; the form probe below "
                   "is the real answer.")
 
-    for name, builder in _FORMS:
+    for name, builder in (_OBS_FORMS if observations else _FORMS):
         try:
             data = _get(_url(builder, sample), retries=1)
         except Exception as exc:                           # noqa: BLE001
@@ -263,16 +312,27 @@ def probe(sample: str = "Monarda fistulosa", *, verbose: bool = True) -> str:
             # every one, which the ingest gate then rejected wholesale. A
             # column that exists and a column that is populated are different
             # facts, and only the second one matters.
-            for key in ("study_title", "target_specimen_life_stage"):
-                if key not in cols:
-                    print(f"               {key}: COLUMN ABSENT")
-                    continue
-                idx = cols.index(key)
-                vals = [r[idx] for r in rows[:400]
-                        if idx < len(r) and str(r[idx] or "").strip()]
-                pct = (100 * len(vals) // max(1, min(len(rows), 400)))
-                sample = str(vals[0])[:70] if vals else "(all empty)"
-                print(f"               {key}: {pct}% populated — {sample}")
+            # Every alias, not one guessed name (V2.61). The three fields this
+            # script reads each have several plausible spellings and nobody
+            # here can reach the API to find out which is real, so the probe
+            # reports the lot and the run uses whichever is populated.
+            for field, keys in _ALIASES.items():
+                print(f"               {field}:")
+                any_live = False
+                for key in keys:
+                    if key not in cols:
+                        print(f"                 {key}: ABSENT")
+                        continue
+                    idx = cols.index(key)
+                    vals = [r[idx] for r in rows[:400]
+                            if idx < len(r) and str(r[idx] or "").strip()]
+                    pct = (100 * len(vals) // max(1, min(len(rows), 400)))
+                    sample = str(vals[0])[:60] if vals else "(all empty)"
+                    print(f"                 {key}: {pct}% — {sample}")
+                    any_live = any_live or bool(vals)
+                if not any_live:
+                    print(f"                 ⚠ no spelling of `{field}` is "
+                          f"populated in this mode")
         _FORM = (name, builder)
         return name
     raise RuntimeError(
@@ -289,13 +349,14 @@ _PAGE = 500
 _MAX_PAGES = 12
 
 
-def fetch_for_plant(scientific_name: str) -> list:
+def fetch_for_plant(scientific_name: str, *, max_pages: int = 0) -> list:
     """Every GloBI row for one plant, following pagination to the end."""
     if _FORM is None:
         probe(verbose=False)
+    max_pages = max_pages or _MAX_PAGES
     _name, builder = _FORM
     out: list = []
-    for page in range(_MAX_PAGES):
+    for page in range(max_pages):
         params = builder(scientific_name)
         params = [(k, v) for k, v in params if k != "limit"]
         params += [("limit", str(_PAGE)), ("offset", str(page * _PAGE))]
@@ -373,22 +434,21 @@ def to_edges(plant: dict, rows: list, known_fauna: set,
         taxon = _taxon_for(row.get("target_taxon_path") or "")
         if not taxon:
             continue
+        life_stage = _pick(row, "life_stage")
+        body_part = _pick(row, "body_part")
         rel = _relationship_for(
-            (row.get("interaction_type") or "").strip(), taxon,
-            row.get("target_specimen_life_stage") or "")
+            (row.get("interaction_type") or "").strip(), taxon, life_stage)
         if not rel:
             continue
         key = (plant["common_name"].lower(), target.lower(), rel)
         if key in existing or key in seen:
             continue
         seen.add(key)
-        # `study_title`, confirmed by --probe against the live API. The first
-        # version read `study_citation`/`study_source_citation`, neither of
-        # which `/interaction` returns — so every edge would have carried an
-        # empty citation and been rejected wholesale by the ingester's
-        # no-reporting-study gate. 500 records a plant, all silently binned,
-        # looking exactly like "GloBI has nothing for these species".
-        citation = (row.get("study_title") or "").strip()
+        # Read through the alias table rather than one hard-coded name — see
+        # `_ALIASES` for why. In observation mode this is a real paper; in the
+        # default distinct-interaction mode it is usually blank, which is the
+        # whole reason F128 exists.
+        citation = _pick(row, "citation")
         edges.append({
             "plant": plant["common_name"],
             "plant_scientific": plant["scientific_name"],
@@ -398,6 +458,13 @@ def to_edges(plant: dict, rows: list, known_fauna: set,
             "notes": f"GloBI {row.get('interaction_type', '')}"
                      + (f" — {citation[:200]}" if citation else ""),
             "_citation": citation,
+            # Both carried through for the ingester to gate on (V2.61). The
+            # life stage is what separates a caterpillar chewing a leaf from an
+            # adult sipping at a flower; the body part is what separates a
+            # crossbill on a cone from a sapsucker on a trunk. V2.60 had to
+            # drop 700 host records and every sapsucker edge for want of them.
+            "_life_stage": life_stage,
+            "_body_part": body_part,
             "_taxon": taxon,
             "_known_fauna": target.lower() in known_fauna,
         })
@@ -429,24 +496,43 @@ def _save(path: str, blob) -> None:
 
 def main() -> int:
     probe_only = "--probe" in sys.argv
+    # F128. One observation row per *record* rather than per distinct
+    # interaction, which is the only mode that carries a study, a life stage
+    # and a body part. Several times as many rows, so it gets more pages and a
+    # separate output file — the distinct-interaction candidates stay on disk
+    # until the observation run has actually been ingested.
+    observations = "--observations" in sys.argv
 
     # Find a working query form before spending 437 requests on a broken one.
-    print("probing the GloBI API for a query form it accepts…")
+    print(f"probing the GloBI API for a query form it accepts"
+          f"{' (observation mode)' if observations else ''}…")
     try:
-        form = probe()
+        form = probe(observations=observations)
     except Exception as exc:                               # noqa: BLE001
         print(f"\n{exc}")
         return 2
     print(f"using: {form}\n")
     if probe_only:
         print("(--probe: stopping here)")
+        if observations:
+            print("Read the `citation` / `life_stage` / `body_part` blocks "
+                  "above before starting the real run — if none of the "
+                  "spellings is populated, the run is not worth making.")
         return 0
 
     plants, known_fauna, existing = load_catalogue()
     print(f"catalogue: {len(plants)} plants, {len(known_fauna)} known animals, "
           f"{len(existing)} edges already seeded")
+    if observations:
+        # Every pair is refetched, including ones already in the seed file:
+        # the point is to attach a citation to edges that already exist, so
+        # skipping them would defeat the exercise.
+        existing = set()
+        print("observation mode: already-seeded pairs are re-fetched too, "
+              "because attaching their citation is the whole job")
 
-    ckpt_path = os.path.join(_OUT_DIR, "_checkpoint.json")
+    ckpt_path = os.path.join(
+        _OUT_DIR, "_checkpoint_obs.json" if observations else "_checkpoint.json")
     ckpt = _load_checkpoint(ckpt_path)
     done = set(ckpt["done"])
     if done:
@@ -456,7 +542,8 @@ def main() -> int:
     for i, plant in enumerate(todo, 1):
         label = f"[{i}/{len(todo)}] {plant['common_name']}"
         try:
-            rows = fetch_for_plant(plant["scientific_name"])
+            rows = fetch_for_plant(plant["scientific_name"],
+                                   max_pages=40 if observations else 0)
         except Exception as exc:                           # noqa: BLE001
             print(f"{label}: FAILED ({exc}) — will retry on the next run")
             continue
@@ -474,9 +561,12 @@ def main() -> int:
     for s in ckpt["new_species"]:
         uniq.setdefault(s["scientific_name"], s)
 
-    _save(os.path.join(_OUT_DIR, "fauna_edges_candidates.json"), ckpt["edges"])
-    _save(os.path.join(_OUT_DIR, "fauna_new_species.json"),
-          sorted(uniq.values(), key=lambda s: s["scientific_name"]))
+    _save(os.path.join(_OUT_DIR,
+                       "fauna_edges_observations.json" if observations
+                       else "fauna_edges_candidates.json"), ckpt["edges"])
+    if not observations:
+        _save(os.path.join(_OUT_DIR, "fauna_new_species.json"),
+              sorted(uniq.values(), key=lambda s: s["scientific_name"]))
 
     known_edges = [e for e in ckpt["edges"] if e["_known_fauna"]]
     print("\n" + "=" * 62)
@@ -486,6 +576,18 @@ def main() -> int:
     print(f"  {len(uniq)} distinct new animals")
     print(f"  plants covered: "
           f"{len({e['plant'] for e in ckpt['edges']})} of {len(plants)}")
+    if observations:
+        cited = sum(1 for e in ckpt["edges"] if (e.get("_citation") or "").strip())
+        staged = sum(1 for e in ckpt["edges"] if (e.get("_life_stage") or "").strip())
+        parted = sum(1 for e in ckpt["edges"] if (e.get("_body_part") or "").strip())
+        n = max(1, len(ckpt["edges"]))
+        print(f"  --- the three fields this mode exists for ---")
+        print(f"  citation:   {cited:6d}  ({100*cited//n}%)")
+        print(f"  life stage: {staged:6d}  ({100*staged//n}%)")
+        print(f"  body part:  {parted:6d}  ({100*parted//n}%)")
+        if not cited:
+            print("  ⚠ NO citations came back. Do not ingest this — the run "
+                  "bought nothing. Send the --probe output instead.")
     print("=" * 62)
     print(f"\nwritten to {_OUT_DIR}/")
     print("Commit those two files (or send them over) and the ingest side "

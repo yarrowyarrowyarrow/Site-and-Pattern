@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -149,11 +150,68 @@ def route_bird(rel: str, feeds: set, plant_has_fruit: bool) -> str:
     return rel
 
 
+def _occurrence_floor() -> int:
+    """Minimum georeferenced records inside AB or SK before presence counts.
+
+    **Imported, not chosen.** `ecoregion_ranges.MIN_RECORDS` already decides
+    how many occurrences make a claim for this catalogue, and the repo's rule
+    is that a module does not own a threshold another module already owns —
+    `src/confidence.py` says so and a test asserts it. Picking a second number
+    here would mean a species could be "present enough" for one feature and
+    not the other, which is the kind of disagreement nobody finds for a year.
+
+    Not zero either way: one misidentified or mis-georeferenced record is
+    exactly how a desert quail ends up in a prairie catalogue.
+    """
+    from src.ecoregion_ranges import MIN_RECORDS
+    return MIN_RECORDS
+
+
+def _nativity() -> dict:
+    """``scientific_name → assessment`` from the GBIF occurrence fetch, if run.
+
+    Absent file means the gate stands down rather than rejecting everything:
+    the fetch needs egress and this repo cannot make it. A missing measurement
+    is not evidence of absence (P9), so it degrades to the V2.60 behaviour —
+    curated animals pass, uncurated ones do not — instead of silently binning
+    the catalogue.
+    """
+    path = os.path.join(_FETCHED, "fauna_nativity.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def nativity_verdict(row: dict) -> tuple:
+    """``(ok, reason)`` for one animal's occurrence assessment.
+
+    Three ways to fail, reported apart because they mean different things:
+    it is **introduced** (a positive finding), it has **no records here** (a
+    real absence, given the fetch succeeded), or it is **below the floor**
+    (present, but on evidence too thin to seed a claim on).
+    """
+    if not row:
+        return False, "no AB/SK occurrence data (nativity fetch not run)"
+    if row.get("origin") == "introduced":
+        return False, "introduced to AB/SK, not native"
+    ab = int(row.get("ab_records") or 0)
+    sk = int(row.get("sk_records") or 0)
+    if ab + sk == 0:
+        return False, "no georeferenced records in AB or SK"
+    floor = _occurrence_floor()
+    if max(ab, sk) < floor:
+        return False, (f"under {floor} records in AB or SK — present, but "
+                       f"too thin to seed on")
+    return True, ""
+
+
 def review(candidates: list) -> dict:
     """Run every gate. Returns counts plus the edges that survived."""
     plants, fauna, _edge_rows, existing, plant_types, has_fruit = _load_seed()
     from src.flower_colour import WIND_POLLINATED_TYPES
     bird_feeds, synonyms, bird_verdicts = _bird_feeds()
+    nativity = _nativity()
     kept, rejected = [], {}
 
     def drop(reason):
@@ -241,6 +299,16 @@ def review(candidates: list) -> dict:
         # stage per record and would recover the real ones.
         if rel == "larval_host" and "hostOf" not in (c.get("notes") or ""):
             drop("larval_host not from GloBI's explicit hostOf verb"); continue
+        # AB/SK nativity (V2.61). Only for animals the catalogue does NOT
+        # already hold: the existing rows had their nativity decided when they
+        # were authored, and re-litigating that from occurrence counts would
+        # quietly overrule a human on evidence that cannot tell native from
+        # merely present. New animals have no such decision behind them, so
+        # they need one, and GBIF is the only thing that scales to 2,898.
+        if nativity and animal.strip().lower() not in fauna:
+            ok, why = nativity_verdict(nativity.get(animal))
+            if not ok:
+                drop(why); continue
         seen.add(key)
         kept.append({
             "plant": plants[plant.strip().lower()],
@@ -324,6 +392,117 @@ def _apply(result: dict) -> None:
           "installs reseed, then run the suite.")
 
 
+_YEAR_RE = re.compile(r"\b(1[6-9]\d\d|20[0-4]\d)\b")
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def study_record(title: str) -> dict:
+    """A GloBI study title turned into a bibliography record.
+
+    ``sources_master.json`` holds structured records — authors, year, title,
+    kind — and GloBI hands over one free-text string. So this parses what it
+    can and **says that it parsed it**: `record_confidence: unverified` and a
+    note naming the provenance, because a machine-split author field is not a
+    transcription from the work.
+
+    That is still a real improvement on `globi`. The reader gets a named study
+    they can look up, instead of "an aggregator has a record somewhere".
+    """
+    title = " ".join((title or "").split())
+    year_match = _YEAR_RE.search(title)
+    year = int(year_match.group(1)) if year_match else None
+    authors = ""
+    if year_match and year_match.start() > 0:
+        # Everything before the year is conventionally the author list.
+        authors = title[:year_match.start()].strip(" .,;")
+    slug = _SLUG_RE.sub("_", title.lower()).strip("_")[:60].strip("_")
+    return {
+        "key": f"globi_{slug}" if slug else _SOURCE_KEY,
+        "authors": authors,
+        "year": year,
+        "title": title,
+        "kind": "study",
+        "covers": "interactions",
+        "record_confidence": "unverified",
+        "record_note": (
+            "Parsed from the study title GloBI reports for this record, not "
+            "transcribed from the work itself: the author and year fields are "
+            "a split on the first four-digit year and may be wrong even where "
+            "the title is right. Verifiable by querying GloBI for the same "
+            "species pair."),
+        "aliases": [title] if title else [],
+    }
+
+
+def upgrade_citations(obs_rows: list, write: bool = False) -> dict:
+    """Attach a named study to edges currently citing the aggregator (F128).
+
+    The 2,439 edges F125 shipped all cite `globi`, because GloBI only fills
+    `study_title` when asked for observations rather than distinct
+    interactions. This reads an observation-mode fetch and upgrades them in
+    place: same edges, better provenance.
+
+    Matched on ``(plant, fauna, relationship)``. An observation row that
+    matches nothing is ignored rather than added — adding edges is
+    ``--apply``'s job and it has gates this does not.
+    """
+    plants, _fauna, edge_rows, _existing, _types, _fruit = _load_seed()
+    best: dict = {}
+    for r in obs_rows:
+        cit = (r.get("_citation") or "").strip()
+        if not cit or not r.get("plant") or not r.get("fauna"):
+            continue
+        key = (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+               r.get("relationship", ""))
+        # Longest title wins: GloBI's shorter forms are usually a dataset name
+        # where the longer one is the paper.
+        if len(cit) > len(best.get(key, "")):
+            best[key] = cit
+
+    studies: dict = {}
+    upgraded, already, unmatched = 0, 0, 0
+    for row in edge_rows:
+        if not row.get("plant"):
+            continue
+        if row.get("source") != _SOURCE_KEY:
+            already += 1        # a hand-authored citation is already better
+            continue
+        key = (row["plant"].strip().lower(), row["fauna"].strip().lower(),
+               row.get("relationship", ""))
+        cit = best.get(key)
+        if not cit:
+            unmatched += 1
+            continue
+        rec = study_record(cit)
+        studies.setdefault(rec["key"], rec)
+        row["source"] = rec["key"]
+        row["notes"] = (row.get("notes") or "").split(" — ")[0]
+        upgraded += 1
+
+    print(f"  {upgraded} edges gained a named study")
+    print(f"  {unmatched} still cite the aggregator (no observation matched)")
+    print(f"  {already} already had a hand-authored citation, untouched")
+    print(f"  {len(studies)} distinct studies would be registered")
+    if write and upgraded:
+        src_path = os.path.join(_DATA, "sources_master.json")
+        with open(src_path, "r", encoding="utf-8") as fh:
+            blob = json.load(fh)
+        have = {s.get("key") for s in blob["sources"]}
+        blob["sources"].extend(r for k, r in sorted(studies.items())
+                               if k not in have)
+        with open(src_path, "w", encoding="utf-8") as fh:
+            json.dump(blob, fh, indent=1, ensure_ascii=False)
+        path = os.path.join(_DATA, "plant_fauna_master.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(edge_rows, fh, indent=1, ensure_ascii=False)
+        print(f"\nwrote {os.path.relpath(path, _ROOT)} and registered "
+              f"{len(studies)} studies")
+    elif not write:
+        print("\n(report only — add --apply to write)")
+    return {"upgraded": upgraded, "unmatched": unmatched,
+            "studies": studies}
+
+
 def refit(write: bool = False) -> dict:
     """Re-run the current gates over edges a PREVIOUS run already wrote.
 
@@ -404,12 +583,28 @@ def main() -> int:
                     help="write the ready edges into the seed files")
     ap.add_argument("--refit", action="store_true",
                     help="re-run the current gates over already-written edges")
+    ap.add_argument("--citations", action="store_true",
+                    help="upgrade `globi` edges to named studies from an "
+                         "observation-mode fetch (F128)")
     ap.add_argument("--file", default=os.path.join(
         _FETCHED, "fauna_edges_candidates.json"))
     args = ap.parse_args()
 
     if args.refit:
         refit(write=args.apply)
+        return 0
+
+    if args.citations:
+        obs = os.path.join(_FETCHED, "fauna_edges_observations.json")
+        if not os.path.exists(obs):
+            print(f"no observation file at {obs}\nRun\n"
+                  f"    python3 scripts/fetch_fauna_edges.py --observations\n"
+                  f"on a machine with internet first.")
+            return 1
+        with open(obs, "r", encoding="utf-8") as fh:
+            rows = json.load(fh)
+        print(f"upgrading citations from {len(rows)} observation records\n")
+        upgrade_citations(rows, write=args.apply)
         return 0
 
     if not os.path.exists(args.file):

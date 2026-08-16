@@ -411,6 +411,271 @@ class TestTheAppliedEdgesSurviveTheirOwnGates(unittest.TestCase):
         self.assertEqual(bad, [], f"fruit claimed on fruitless plants: {bad}")
 
 
+class TestObservationMode(unittest.TestCase):
+    """F128, V2.61. The mode that carries a study, a life stage and a body
+    part — the three fields V2.59 wanted and could not have."""
+
+    def test_the_observation_forms_ask_for_observations(self):
+        for name, builder in _fetch._OBS_FORMS:
+            params = dict(builder("Monarda fistulosa"))
+            self.assertEqual(params.get("includeObservations"), "true", name)
+
+    def test_the_default_forms_still_do_not(self):
+        """Observation mode multiplies the row count several times over. It
+        must be opted into, not inherited."""
+        for name, builder in _fetch._FORMS:
+            self.assertNotIn("includeObservations",
+                             dict(builder("Monarda fistulosa")), name)
+
+    def test_a_column_is_read_through_its_aliases(self):
+        """V2.59 hard-coded `study_citation`, which does not exist, and the
+        fixture repeated the guess so the suite passed while both were wrong.
+        Nobody here can reach the API, so the code reads whichever spelling
+        turns up and `--probe` reports which ones are real."""
+        self.assertEqual(
+            _fetch._pick({"study_title": "Robertson 1929"}, "citation"),
+            "Robertson 1929")
+        self.assertEqual(
+            _fetch._pick({"target_specimen_body_part_name": "seed"},
+                         "body_part"), "seed")
+        self.assertEqual(_fetch._pick({}, "citation"), "")
+
+    def test_an_empty_alias_falls_through_to_the_next(self):
+        """A column that exists and a column that is populated are different
+        facts — the distinction that cost 14,111 edges."""
+        self.assertEqual(
+            _fetch._pick({"study_citation": "  ", "study_title": "Smith 2011"},
+                         "citation"), "Smith 2011")
+
+    def test_life_stage_and_body_part_travel_with_the_edge(self):
+        plant = {"common_name": "Test Plant", "scientific_name": "T. plantus"}
+        row = _row("Bombus huntii", "flowersVisitedBy", _BEE)
+        row["target_specimen_body_part_name"] = "flower"
+        row["target_specimen_life_stage"] = "adult"
+        edges, _ = _fetch.to_edges(plant, [row], set(), set())
+        self.assertEqual(edges[0]["_body_part"], "flower")
+        self.assertEqual(edges[0]["_life_stage"], "adult")
+
+
+class TestCitationUpgrade(unittest.TestCase):
+    """Turning `globi` into a named study — what "proper citations" means."""
+
+    def test_a_title_with_a_year_splits_into_authors_and_year(self):
+        r = _ingest.study_record("Robertson C 1929 Flowers and insects")
+        self.assertEqual(r["year"], 1929)
+        self.assertEqual(r["authors"], "Robertson C")
+        self.assertTrue(r["key"].startswith("globi_"))
+
+    def test_a_title_with_no_year_still_makes_a_record(self):
+        """GloBI study titles are free text, not structured bibliography. A
+        dataset name is still a better citation than 'an aggregator has it'."""
+        r = _ingest.study_record("A dataset of pollinator visits")
+        self.assertIsNone(r["year"])
+        self.assertEqual(r["authors"], "")
+        self.assertEqual(r["title"], "A dataset of pollinator visits")
+
+    def test_the_record_admits_it_was_parsed_not_transcribed(self):
+        """A machine-split author field is not a reading of the work, and the
+        bibliography has a field for saying so."""
+        r = _ingest.study_record("Cariveau DP 2016 The allometry of proboscis")
+        self.assertEqual(r["record_confidence"], "unverified")
+        self.assertIn("Parsed from the study title", r["record_note"])
+
+    def test_the_key_is_stable_for_the_same_title(self):
+        a = _ingest.study_record("Robertson C 1929 Flowers and insects")
+        b = _ingest.study_record("Robertson  C  1929  Flowers and insects")
+        self.assertEqual(a["key"], b["key"])
+
+    def test_the_record_has_every_field_the_bibliography_requires(self):
+        import json
+        with open(os.path.join(_ROOT, "data", "sources_master.json"),
+                  encoding="utf-8") as fh:
+            existing = json.load(fh)["sources"]
+        required = set(existing[0]) & {"key", "authors", "year", "title",
+                                       "kind", "covers", "record_confidence"}
+        r = _ingest.study_record("Robertson C 1929 Flowers")
+        self.assertEqual(required - set(r), set())
+
+
+class TestTheNativityGate(unittest.TestCase):
+    """"Only flora and fauna native to AB and SK", made checkable.
+
+    The catalogue asserts nativity as a boolean nobody sourced: 142 of 167
+    fauna rows carry `ab_native = 1` and no province data at all. This gate
+    replaces the assertion with a count, for the animals that do not yet have
+    a human verdict behind them.
+    """
+
+    def setUp(self):
+        self.mod = _load("fetch_fauna_nativity")
+
+    def test_introduced_is_refused_however_many_records(self):
+        """The whole reason occurrence cannot stand in for nativity. A
+        European Starling has tens of thousands of Alberta records."""
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 90000, "sk_records": 40000, "origin": "introduced"})
+        self.assertFalse(ok)
+        self.assertIn("introduced", why)
+
+    def test_no_records_here_is_refused(self):
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 0, "sk_records": 0, "origin": "unstated"})
+        self.assertFalse(ok)
+        self.assertIn("no georeferenced records", why)
+
+    def test_a_handful_of_records_is_refused_as_too_thin(self):
+        """Present and *established here* are different claims, and one
+        mis-georeferenced record is how a desert quail gets in."""
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 1, "sk_records": 0, "origin": "unstated"})
+        self.assertFalse(ok)
+        self.assertIn("too thin", why)
+
+    def test_a_well_recorded_species_passes(self):
+        ok, _ = _ingest.nativity_verdict(
+            {"ab_records": 400, "sk_records": 120, "origin": "unstated"})
+        self.assertTrue(ok)
+
+    def test_the_floor_is_the_one_the_catalogue_already_uses(self):
+        """A module does not own a threshold another module already owns. If
+        these drift, a species is 'present enough' for one feature and not the
+        other, and nobody finds it for a year."""
+        from src.ecoregion_ranges import MIN_RECORDS
+        self.assertEqual(_ingest._occurrence_floor(), MIN_RECORDS)
+
+    def test_a_missing_fetch_stands_the_gate_down_rather_than_binning_all(self):
+        """The fetch needs egress this repo does not have. A missing
+        measurement is not evidence of absence (P9) — with no file the gate
+        must fall back to V2.60 behaviour, not reject the catalogue."""
+        self.assertEqual(_ingest._nativity(), {})
+        out = _ingest.review([{
+            "plant": "Wild Bergamot", "fauna": "Newus specius",
+            "relationship": "nectar", "_taxon": "bee", "source": "globi",
+            "notes": "GloBI flowersVisitedBy"}])
+        self.assertEqual(len(out["kept"]), 1, out["rejected"])
+
+    def test_the_gate_actually_fires_when_the_fetch_has_run(self):
+        """The one that matters, and the one nothing else here can prove.
+
+        Every other test above exercises `nativity_verdict` in isolation.
+        This drives the real `review()` with a real nativity file on disk, so
+        a gate that is written but never wired — which is exactly how V2.59
+        shipped `fruit_food` on conifers — cannot pass.
+        """
+        import json
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.copy2(path, backup)
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump({
+                    "Goodus specius": {"ab_records": 400, "sk_records": 90,
+                                       "origin": "unstated"},
+                    "Alienus specius": {"ab_records": 0, "sk_records": 0,
+                                        "origin": "unstated"},
+                    "Introducus specius": {"ab_records": 5000,
+                                           "sk_records": 900,
+                                           "origin": "introduced"},
+                }, fh)
+            cands = [
+                {"plant": "Wild Bergamot", "fauna": name,
+                 "relationship": "nectar", "_taxon": "bee", "source": "globi",
+                 "notes": "GloBI flowersVisitedBy"}
+                for name in ("Goodus specius", "Alienus specius",
+                             "Introducus specius", "Unmeasured specius")
+            ]
+            out = _ingest.review(cands)
+            self.assertEqual([k["fauna"] for k in out["kept"]],
+                             ["Goodus specius"])
+            reasons = " ".join(out["rejected"])
+            for expect in ("no georeferenced records", "introduced",
+                           "nativity fetch not run"):
+                self.assertIn(expect, reasons)
+        finally:
+            os.remove(path)
+            if existed:
+                shutil.move(backup, path)
+
+    def test_an_animal_already_in_the_catalogue_is_not_re_litigated(self):
+        """Its nativity was decided when the row was authored. Overruling a
+        human on occurrence counts — which cannot tell native from merely
+        present — would be the gate exceeding what it can measure."""
+        import json
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.copy2(path, backup)
+        try:
+            # Deliberately damning data for a species the catalogue holds.
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump({"Bombus huntii": {"ab_records": 0, "sk_records": 0,
+                                             "origin": "introduced"}}, fh)
+            out = _ingest.review([{
+                "plant": "Showy Milkweed", "fauna": "Bombus huntii",
+                "relationship": "pollen", "_taxon": "bee", "source": "globi",
+                "notes": "GloBI pollinatedBy"}])
+            self.assertEqual(len(out["kept"]), 1, out["rejected"])
+        finally:
+            os.remove(path)
+            if existed:
+                shutil.move(backup, path)
+
+    def test_the_province_boxes_hold_the_cities_they_should(self):
+        """Both provinces are surveyed rectangles, which is why a box works at
+        all. Pinned against real coordinates so a typo in a bound is caught."""
+        inside = {
+            "AB": [("Edmonton", 53.55, -113.49), ("Calgary", 51.05, -114.07),
+                   ("Fort McMurray", 56.73, -111.38)],
+            "SK": [("Regina", 50.45, -104.62), ("Saskatoon", 52.13, -106.67),
+                   ("Prince Albert", 53.20, -105.75)],
+        }
+        for code, cities in inside.items():
+            lo_lat, hi_lat, lo_lng, hi_lng = self.mod.PROVINCE_BOXES[code]
+            for name, lat, lng in cities:
+                self.assertTrue(lo_lat <= lat <= hi_lat and
+                                lo_lng <= lng <= hi_lng,
+                                f"{name} should be inside {code}")
+
+    def test_the_boxes_exclude_the_neighbours(self):
+        outside = [("Vancouver", 49.28, -123.12), ("Winnipeg", 49.90, -97.14),
+                   ("Toronto", 43.65, -79.38)]
+        for code in ("AB", "SK"):
+            lo_lat, hi_lat, lo_lng, hi_lng = self.mod.PROVINCE_BOXES[code]
+            for name, lat, lng in outside:
+                self.assertFalse(lo_lat <= lat <= hi_lat and
+                                 lo_lng <= lng <= hi_lng,
+                                 f"{name} must not be inside {code}")
+
+    def test_the_two_boxes_meet_at_the_shared_meridian(self):
+        """AB's east edge and SK's west edge are the same line, 110°W. A gap
+        would lose every record on the border; an overlap would double-count."""
+        self.assertEqual(self.mod.PROVINCE_BOXES["AB"][3],
+                         self.mod.PROVINCE_BOXES["SK"][2])
+
+    def test_assess_keeps_presence_and_origin_apart(self):
+        """Occurrence is not nativity, and the output must never collapse the
+        two. `origin: unstated` is the common case and is not a claim of
+        nativeness (P9 — absent is not estimated)."""
+        a = self.mod.assess(200, 30, [])
+        self.assertEqual(a["provinces"], "AB,SK")
+        self.assertEqual(a["origin"], "unstated")
+        self.assertEqual(a["verdict"], "review")
+
+    def test_a_disqualifying_establishment_value_is_matched_loosely(self):
+        """GBIF carries both the Darwin Core vocabulary and publisher free
+        text, so 'INTRODUCED', 'introduced', and 'Introduced (naturalised)'
+        all have to land the same way."""
+        for value in ("INTRODUCED", "introduced", "Introduced (naturalised)",
+                      "INVASIVE", "MANAGED"):
+            self.assertEqual(self.mod.assess(500, 10, [value])["verdict"],
+                             "reject", value)
+
+
 class TestTheFetcherReadsTheRealCatalogue(unittest.TestCase):
     def test_it_finds_the_plants_fauna_and_existing_edges(self):
         plants, fauna, existing = _fetch.load_catalogue()
