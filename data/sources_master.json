@@ -199,6 +199,444 @@
     "Poelen et al. 2014",
     "globalbioticinteractions.org"
    ]
+  },
+  {
+   "key": "globi_bascompte_barrett_s_c_h_and_k_helenurm_1987_the_reproductive",
+   "authors": "bascompte:Barrett, S. C. H., and K. Helenurm",
+   "year": 1987,
+   "title": "bascompte:Barrett, S. C. H., and K. Helenurm. 1987. The Reproductive-Biology of Boreal Forest Herbs.1. Breeding Systems and Pollination. Canadian Journal of Botany 65:2036-2046.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Barrett, S. C. H., and K. Helenurm. 1987. The Reproductive-Biology of Boreal Forest Herbs.1. Breeding Systems and Pollination. Canadian Journal of Botany 65:2036-2046."
+   ]
+  },
+  {
+   "key": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
+   "authors": "bascompte:Clements, R. E., and F. L. Long",
+   "year": 1923,
+   "title": "bascompte:Clements, R. E., and F. L. Long. 1923, Experimental pollination. An outline of the ecology of flowers and insects. Washington, D.C., USA, Carnegie Institute of Washington.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Clements, R. E., and F. L. Long. 1923, Experimental pollination. An outline of the ecology of flowers and insects. Washington, D.C., USA, Carnegie Institute of Washington."
+   ]
+  },
+  {
+   "key": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
+   "authors": "bascompte:Robertson, C",
+   "year": 1929,
+   "title": "bascompte:Robertson, C. 1929. Flowers and insects: lists of visitors to four hundred and fifty-three flowers. Carlinville, IL, USA, C. Robertson.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Robertson, C. 1929. Flowers and insects: lists of visitors to four hundred and fifty-three flowers. Carlinville, IL, USA, C. Robertson."
+   ]
+  },
+  {
+   "key": "globi_bascompte_small_e_1976_insect_pollinators_of_the_mer_bleue_p",
+   "authors": "bascompte:Small, E",
+   "year": 1976,
+   "title": "bascompte:Small, E. 1976. Insect pollinators of the Mer Bleue peat bog of Ottawa. Canadian Field Naturalist 90:22-28.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Small, E. 1976. Insect pollinators of the Mer Bleue peat bog of Ottawa. Canadian Field Naturalist 90:22-28."
+   ]
+  },
+  {
+   "key": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
+   "authors": "Clint Otto, Russ Bryant, and Ned H. Euliss Jr",
+   "year": 2020,
+   "title": "Clint Otto, Russ Bryant, and Ned H. Euliss Jr., 2020, The U.S. Geological Survey Pollinator Library Dataset: U.S. Geological Survey. https://doi.org/10.5066/P9DSS3VL. Accessed at <https://www.sciencebase.gov/catalog/file/get/5f076d2082ce21d4c3fb7426?f=__disk__c5%2F05%2Fa4%2Fc505a40f8b320c4d1444ba286d4e7ec1143390a9> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Clint Otto, Russ Bryant, and Ned H. Euliss Jr., 2020, The U.S. Geological Survey Pollinator Library Dataset: U.S. Geological Survey. https://doi.org/10.5066/P9DSS3VL. Accessed at <https://www.sciencebase.gov/catalog/file/get/5f076d2082ce21d4c3fb7426?f=__disk__c5%2F05%2Fa4%2Fc505a40f8b320c4d1444ba286d4e7ec1143390a9> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_dorey_j_b_fischer_e_e_chesshire_p_r_et_al_a_globally_synthes",
+   "authors": "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (",
+   "year": 2023,
+   "title": "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (2023). https://doi.org/10.1038/s41597-023-02626-w. Accessed at <https://github.com/globalbioticinteractions/dorey2023/archive/ee2f9f138a5c4464fc8edc69c39507d20fe4a0f4.zip> on 01 Aug 2026.2014.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (2023). https://doi.org/10.1038/s41597-023-02626-w. Accessed at <https://github.com/globalbioticinteractions/dorey2023/archive/ee2f9f138a5c4464fc8edc69c39507d20fe4a0f4.zip> on 01 Aug 2026.2014."
+   ]
+  },
+  {
+   "key": "globi_ecdysis_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from ecdysis.org",
+   "url": "https://ecdysis.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "ecdysis.org"
+   ]
+  },
+  {
+   "key": "globi_fricke_e_c_svenning_j_accelerating_homogenization_of_the_glo",
+   "authors": "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (",
+   "year": 2020,
+   "title": "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (2020). https://doi.org/10.1038/s41586-020-2640-y. Accessed at <https://github.com/globalbioticinteractions/fricke2020/archive/a104a34d91a6267efdc0660ff45ca7783cfc8b20.zip> on 01 Aug 2026.Prather 2000",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (2020). https://doi.org/10.1038/s41586-020-2640-y. Accessed at <https://github.com/globalbioticinteractions/fricke2020/archive/a104a34d91a6267efdc0660ff45ca7783cfc8b20.zip> on 01 Aug 2026.Prather 2000"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_03fec74b695e4de5",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 03fec74b-695e-4de5-bbe6-ae735fe4ab31",
+   "url": "https://www.gbif.org/dataset/03fec74b-695e-4de5-bbe6-ae735fe4ab31",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "03fec74b-695e-4de5-bbe6-ae735fe4ab31"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_26255917adf24cc3",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 26255917-adf2-4cc3-853e-94dd1bc27b8d",
+   "url": "https://www.gbif.org/dataset/26255917-adf2-4cc3-853e-94dd1bc27b8d",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "26255917-adf2-4cc3-853e-94dd1bc27b8d"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_58d3f1699b2945b6",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 58d3f169-9b29-45b6-afd4-bc5ad6a13b0e",
+   "url": "https://www.gbif.org/dataset/58d3f169-9b29-45b6-afd4-bc5ad6a13b0e",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "58d3f169-9b29-45b6-afd4-bc5ad6a13b0e"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_9c3f2c7779804e76",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 9c3f2c77-7980-4e76-86a9-525221c85074",
+   "url": "https://www.gbif.org/dataset/9c3f2c77-7980-4e76-86a9-525221c85074",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "9c3f2c77-7980-4e76-86a9-525221c85074"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_acf0d7d1d84c4148",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset acf0d7d1-d84c-4148-a208-2882fee74aab",
+   "url": "https://www.gbif.org/dataset/acf0d7d1-d84c-4148-a208-2882fee74aab",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "acf0d7d1-d84c-4148-a208-2882fee74aab"
+   ]
+  },
+  {
+   "key": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
+   "authors": "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth",
+   "year": 2022,
+   "title": "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth, 2022, \"A dataset for pollinator diversity and their interactions with plants in the Pacific NorthWest\", https://doi.org/10.5683/SP3/WTEZNH, Borealis, V1. Accessed at <https://github.com/globalbioticinteractions/guzman2022/archive/e24f70b4a435156264c45a853b4a58687df4cdfc.zip> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth, 2022, \"A dataset for pollinator diversity and their interactions with plants in the Pacific NorthWest\", https://doi.org/10.5683/SP3/WTEZNH, Borealis, V1. Accessed at <https://github.com/globalbioticinteractions/guzman2022/archive/e24f70b4a435156264c45a853b4a58687df4cdfc.zip> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasemcgowan_j_d_1973_fall_and_winter_foo",
+   "authors": "hurlbertlab/dietdatabaseMcGowan, J. D",
+   "year": 1973,
+   "title": "hurlbertlab/dietdatabaseMcGowan, J. D. 1973. Fall and Winter Foods of Ruffed Grouse in Interior Alaska. The Auk 90: 636-640.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseMcGowan, J. D. 1973. Fall and Winter Foods of Ruffed Grouse in Interior Alaska. The Auk 90: 636-640."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasetheberge_j_b_and_g_c_west_1973_signi",
+   "authors": "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West",
+   "year": 1973,
+   "title": "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West. 1973. Significance of Brooding to the Energy Demands of Alaskan Rock Ptarmigan Chicks. The Arctic Journal of the Arctic Institude of North America 26: 138-148.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West. 1973. Significance of Brooding to the Energy Demands of Alaskan Rock Ptarmigan Chicks. The Arctic Journal of the Arctic Institude of North America 26: 138-148."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabaseweeden_r_b_1967_seasonal_and_geograp",
+   "authors": "hurlbertlab/dietdatabaseWeeden, R. B",
+   "year": 1967,
+   "title": "hurlbertlab/dietdatabaseWeeden, R. B. 1967. Seasonal and geographic variation in the foods of adult White-tailed Ptarmigan. Condor 69:303-309.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseWeeden, R. B. 1967. Seasonal and geographic variation in the foods of adult White-tailed Ptarmigan. Condor 69:303-309."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasewest_g_c_and_m_s_meng_1966_nutrition",
+   "authors": "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng",
+   "year": 1966,
+   "title": "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng. 1966. Nutrition of Willow Ptarmigan in northern Alaska. Auk 83:603-615.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng. 1966. Nutrition of Willow Ptarmigan in northern Alaska. Auk 83:603-615."
+   ]
+  },
+  {
+   "key": "globi_inaturalist_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from iNaturalist.org",
+   "url": "https://iNaturalist.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "iNaturalist.org"
+   ]
+  },
+  {
+   "key": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
+   "authors": "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol",
+   "year": 2020,
+   "title": "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol. 2020; 00: 1– 14. https://doi.org/10.1111/1365-2745.13530 . Accessed at <https://github.com/globalbioticinteractions/lamanna2020/archive/f8f0791ae6261bf65eee5156413c5c3a370a4359.zip> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol. 2020; 00: 1– 14. https://doi.org/10.1111/1365-2745.13530 . Accessed at <https://github.com/globalbioticinteractions/lamanna2020/archive/f8f0791ae6261bf65eee5156413c5c3a370a4359.zip> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_millerse_pollination_collectionalarc_n_r_waser_n_m_and_oller",
+   "authors": "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J",
+   "year": 2008,
+   "title": "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J., 2008. Year‐to‐year variation in the topology of a plant–pollinator interaction network. Oikos, 117(12), pp.1796-1807.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J., 2008. Year‐to‐year variation in the topology of a plant–pollinator interaction network. Oikos, 117(12), pp.1796-1807."
+   ]
+  },
+  {
+   "key": "globi_millerse_pollination_collectionbauer_p_j_1983_bumblebee_poll",
+   "authors": "millerse/Pollination-CollectionBauer, P.J",
+   "year": 1983,
+   "title": "millerse/Pollination-CollectionBauer, P.J., 1983. Bumblebee pollination relationships on the Beartooth Plateau tundra of southern Montana. American Journal of Botany, pp.134-144.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "millerse/Pollination-CollectionBauer, P.J., 1983. Bumblebee pollination relationships on the Beartooth Plateau tundra of southern Montana. American Journal of Botany, pp.134-144."
+   ]
+  },
+  {
+   "key": "globi_scan_bugs_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from scan-bugs.org",
+   "url": "https://scan-bugs.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "scan-bugs.org"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1156633",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1156633 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1156633"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165816",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165816 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165816"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175960",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175960 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175960"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176085",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176085 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176085"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176555",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176555 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176555"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176566",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176566 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176566"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176699",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176699 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176699"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176785",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176785 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176785"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176844",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176844 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176844"
+   ]
+  },
+  {
+   "key": "globi_www_bumblebeewatch_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from www.bumblebeewatch.org",
+   "url": "https://www.bumblebeewatch.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "www.bumblebeewatch.org"
+   ]
   }
  ]
 }

@@ -31,10 +31,10 @@ breakage, scope creep or a hard dependency. **P** names the design principle fro
 **Totals: 34 code features · 7 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
-and F127a in V2.60. Opened since: F120, F123, F124 — all three found by the
-increments themselves — plus F126 from author feedback, F127/F128, which are
-the two halves of F125 that its own gates refused to guess at, and F129, which
-F124 exposed the moment it was fixed.)*
+and F127a in V2.60, F128 in V2.62. Opened since: F120, F123, F124 — all three
+found by the increments themselves — plus F126 from author feedback,
+F127/F128, which are the two halves of F125 that its own gates refused to
+guess at, and F129, which F124 exposed the moment it was fixed.)*
 
 ---
 
@@ -46,7 +46,7 @@ Since it was written, **two and a half have been paid down**:
 | Weakness | State |
 |---|---|
 | "It looks like a diagram" | **Largely fixed** — V2.33/34/36 (surfaces, aspect axes, florets, seed heads, fauna morphology) |
-| "Its photographs don't show the plant" | **Unmoved.** 111 of 434 plants have none, **0 species have a habit shot**, 62 of 69 bees have none. Group C |
+| "Its photographs don't show the plant" | **Barely moved.** 111 of 434 plants have none and 62 of 69 bees have none — but `plant_photos.json` shipped as a literal `[]` until V2.62, and **the first habit shot in the catalogue is now in it**. Group C |
 | "It never argues that a native yard is beautiful" | **Paid down** — V2.56 (F76 before/after/five years, F75 cues to care) |
 | "It has no professional workflow" | **Half built** — V2.57 (F92 the order file, F91 substitution). F113 and F93 remain |
 | "It sprawls" | **Unbuilt.** Group F |
@@ -227,8 +227,8 @@ jobs that move it, with the tooling that already exists.*
 | **Flower colour** | 359 species still carry a genus-level guess. 81 are grasses with no bloom colour and are excluded; of the 276 left, **110 sit in 25 genus groups sharing one hex** — the columbine bug's exact shape. `python scripts/colour_worklist.py --sheet colour-check.html` writes a contact sheet of the 199 that already have a photograph, worst group first, with the claimed colour as a swatch under each image. Two sittings. The 77 with no photograph need a flora, or a photo first |
 | **Photo coverage** | **111 of 434 plants** have no photograph; **0 species have a habit shot**; 84 of 142 fauna and **62 of 69 bees** have none. The bench (`scripts/tune_morphology.py`) has the candidate picker and the slot editor. Gated on the bee-licence decision in Group C |
 | **iNaturalist observation photos** | The remaining lever for the 111 species with nothing: `/v1/observations?taxon_id=…&photo_license=…&quality_grade=research` for species whose taxon photo set is thin. Scoped in V2.36, not built |
-| **Curate the 2,898 held animals** | ✅ **F125 shipped in V2.59** (361 edges over 99 of 437 plants → 2,813 over 275) and **F127a in V2.60** did the 67 birds by hand. The remaining 2,856 bees, moths and other insects cannot be done that way, and **V2.61 shipped the gate that makes them tractable**: GBIF occurrence counts inside Alberta and Saskatchewan, one request per species per province, refusing anything introduced or below the catalogue's own record floor. Two things still stand between here and the edges — the fetch needs egress ([runbook](plans/V2.61-runbook.md)), and `fauna.common_name` is `NOT NULL` while most of these insects have no common name in any language, which is a UI decision rather than a data one | **F127** |
-| **Per-study citations for the GloBI edges** | **Machinery shipped in V2.61; the fetch is yours to run** — see [the runbook](plans/V2.61-runbook.md). `fetch_fauna_edges.py --observations` carries the study title, the life stage and the body part; `ingest_fauna_edges.py --citations` turns each distinct study into a real `sources_master.json` record and upgrades the edges in place. Probe first: if GloBI does not populate a citation in observation mode, the run buys nothing and the probe says so. Also recovers the 700 refused `larval_host` records and the dropped sapsucker edges | **F128** |
+| **Name the 1,194 held animals** | The nativity gate shipped in V2.61 and the introduced review in V2.62, so the queue is down from 2,898 animals to **1,194**, holding **6,231 edges**. **The blocker is no longer nativity — it is naming.** `fauna.common_name` is `NOT NULL` and most of these are solitary bees and micromoths with no common name in any language. Three routes, and the choice changes what the app looks like so it is the owner's: fall back to the scientific name (honest, ugly, unblocks everything), generate a descriptive name (readable, but invention), or admit only species that already have one (smallest and safest). This is the last thing between here and 6,231 new edges | **F127** |
+| **The last 46 uncited edges** | ✅ **F128 shipped in V2.62** — 2,406 of 2,452 GloBI edges now cite a named study, specimen collection or GBIF dataset, and the bibliography grew from 13 works to 46. The 46 that remain matched no observation record and no further fetch will change that; they still cite the aggregator, honestly. **Body part came back 0% across all 13,665 records**, so the sapsucker and mammal-browse edges V2.60 dropped are not recoverable from `/interaction` in any mode — a closed door rather than an open task. Life stage came back at 41%, which is a real shot at the 700 refused `larval_host` records and is not yet taken | **F128** |
 | **Bird morphology** | All 24 rows ship `verified = 0` — entered from published literature in a session with no network. **Wing area is null for every row**, the one bird measurement not routinely published, currently inferred from span and a per-style aspect ratio. Needs a session with egress: AVONET (Tobias et al. 2022, CC BY 4.0) and Dunning's *CRC Handbook of Avian Body Masses* |
 | **Peace River Parkland** | A missing ecoregion. Raised in V2.51 rather than taken, because adding a polygon changes what real properties get recommended |
 | **Real CEC ecoregion polygons** | The shipped outlines are hand-authored and every drawing says so (`CAVEAT`). The download is written up in [`plans/V2.38-ecoregion-runbook.md`](plans/V2.38-ecoregion-runbook.md) and needs a machine with open egress |

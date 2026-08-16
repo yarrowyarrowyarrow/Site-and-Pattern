@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+from typing import Optional
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)          # so `src.` imports resolve when run as a script
@@ -183,7 +184,25 @@ def _nativity() -> dict:
         return json.load(fh)
 
 
-def nativity_verdict(row: dict) -> tuple:
+def _reviewed_origin() -> tuple:
+    """``(refuse, corrected)`` from the hand-reviewed introduced list.
+
+    GBIF's `origin` is a **candidate list, not a verdict** — see
+    `scripts/curate_introduced.py` for the two failed attempts to make it one.
+    24 species out of 3,064 is small enough to read, and reading them found
+    that 19 were right and every clear false positive was a bird.
+    """
+    import importlib.util
+    path = os.path.join(_ROOT, "scripts", "curate_introduced.py")
+    spec = importlib.util.spec_from_file_location("curate_introduced", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.verdicts(), mod.overrides()
+
+
+def nativity_verdict(row: dict, name: str = "",
+                     refuse: Optional[dict] = None,
+                     corrected: Optional[dict] = None) -> tuple:
     """``(ok, reason)`` for one animal's occurrence assessment.
 
     Three ways to fail, reported apart because they mean different things:
@@ -191,17 +210,30 @@ def nativity_verdict(row: dict) -> tuple:
     real absence, given the fetch succeeded), or it is **below the floor**
     (present, but on evidence too thin to seed a claim on).
     """
+    refuse = refuse if refuse is not None else {}
+    corrected = corrected if corrected is not None else {}
+    # The hand-reviewed verdict comes FIRST and beats GBIF in both directions.
+    # A person read all 24 candidates; GBIF's aggregate contradicts itself.
+    if name and name in refuse:
+        return False, "reviewed as introduced to Canada (curate_introduced)"
+    if name and name in corrected:
+        pass                    # GBIF was wrong; fall through to the counts
+    elif not row:
+        return False, "no AB/SK occurrence data (nativity fetch not run)"
+    elif row.get("origin") == "introduced":
+        # Unreviewed, and GBIF says introduced. Refused — but the reason names
+        # where to go, because if this fires the species is new since the
+        # review rather than genuinely undecidable.
+        return False, ("flagged introduced by GBIF and not yet reviewed "
+                       "(add it to curate_introduced)")
+    elif row.get("origin") == "conflicted":
+        # One GBIF checklist says native to Canada, another says introduced.
+        # Kept as its own reason rather than folded into the line above: a
+        # source contradicting itself is different information from a source
+        # making a claim, and this gate cannot adjudicate between checklists.
+        return False, "checklists disagree on whether it is native here"
     if not row:
         return False, "no AB/SK occurrence data (nativity fetch not run)"
-    if row.get("origin") == "introduced":
-        return False, "introduced to AB/SK, not native"
-    if row.get("origin") == "conflicted":
-        # One GBIF checklist says native to Canada, another says introduced.
-        # Refused rather than resolved: this gate cannot adjudicate between
-        # two checklists, and letting the disagreement through would put a
-        # contested species in a catalogue whose whole point is documented
-        # claims.
-        return False, "checklists disagree on whether it is native here"
     ab = int(row.get("ab_records") or 0)
     sk = int(row.get("sk_records") or 0)
     if ab + sk == 0:
@@ -234,6 +266,7 @@ def review(candidates: list) -> dict:
     from src.flower_colour import WIND_POLLINATED_TYPES
     bird_feeds, synonyms, bird_verdicts = _bird_feeds()
     nativity = _nativity()
+    refuse_origin, corrected_origin = _reviewed_origin()
     kept, rejected = [], {}
 
     def drop(reason):
@@ -328,7 +361,8 @@ def review(candidates: list) -> dict:
         # merely present. New animals have no such decision behind them, so
         # they need one, and GBIF is the only thing that scales to 2,898.
         if nativity and animal.strip().lower() not in fauna:
-            ok, why = nativity_verdict(nativity.get(animal))
+            ok, why = nativity_verdict(nativity.get(animal), animal,
+                                       refuse_origin, corrected_origin)
             if not ok:
                 drop(why); continue
         seen.add(key)
@@ -416,6 +450,8 @@ def _apply(result: dict) -> None:
 
 _YEAR_RE = re.compile(r"\b(1[6-9]\d\d|20[0-4]\d)\b")
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
 def study_record(title: str) -> dict:
@@ -442,9 +478,68 @@ def study_record(title: str) -> dict:
     identifier anybody can read.
     """
     title = " ".join((title or "").split())
+    if _UUID_RE.match(title):
+        # A bare GBIF dataset key. Ten of the 129 non-URL citations in the
+        # real fetch are these, and a UUID is not a citation — but it does
+        # identify one dataset exactly, and gbif.org/dataset/<key> resolves.
+        # Named for what it is rather than dressed up as a title.
+        return {
+            "key": f"globi_gbif_dataset_{title.replace('-', '')[:16]}",
+            "authors": "",
+            "year": None,
+            "title": f"GBIF dataset {title}",
+            "url": f"https://www.gbif.org/dataset/{title}",
+            "kind": "dataset",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "GloBI reported only the dataset key for this record, with no "
+                "title. The key resolves at gbif.org and names the dataset "
+                "exactly; who published it and when are not captured here."),
+            "aliases": [title],
+        }
+    if title.lower().startswith("urn:catalog:"):
+        # `urn:catalog:USDA-ARS:BBSL:1176785` — a specimen catalogue number,
+        # the same kind of thing as the portal URLs below and in need of the
+        # same collapsing. Left alone it made **one bibliography entry per
+        # pinned beetle**, nine of them from a single bee collection, each
+        # demanding an author it can never have.
+        parts = title.split(":")
+        collection = ":".join(parts[2:4]) if len(parts) >= 4 else "unknown"
+        slug = _SLUG_RE.sub("_", collection.lower()).strip("_")[:40]
+        return {
+            "key": f"globi_specimen_{slug}" if slug else _SOURCE_KEY,
+            "authors": "",
+            "year": None,
+            "title": f"Specimen records from the {collection} collection",
+            "kind": "specimen_record",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "GloBI reported a specimen catalogue number rather than a "
+                "publication. This entry names the collection; the individual "
+                "specimen is identified by the catalogue number in the edge's "
+                "own record and reachable by querying GloBI for the same "
+                "species pair."),
+            "aliases": [collection],
+        }
     if title.lower().startswith(("http://", "https://")):
-        host = title.split("//", 1)[-1].split("/", 1)[0].split(":")[0]
-        slug = _SLUG_RE.sub("_", host.lower()).strip("_")
+        # First whitespace token only. GloBI has at least one record whose
+        # "citation" is a URL prefix glued to a prose blurb —
+        # `http://iNaturalist.org is a place where you can record what you see
+        # in nature, …` — and taking everything up to the next slash made the
+        # whole sentence the hostname, then the bibliography key. A hostname
+        # has no spaces.
+        tail = title.split("//", 1)[-1] if "//" in title else ""
+        parts = tail.split("/", 1)[0].split(":")[0].split()
+        host = parts[0] if parts else ""
+        if "." not in host:
+            host = ""
+        slug = _SLUG_RE.sub("_", host.lower()).strip("_")[:48].strip("_")
+        if not slug:
+            # A URL we cannot read a host out of is not better provenance than
+            # the aggregator; say so rather than invent a key.
+            return dict(_SOURCE_RECORD)
         return {
             "key": f"globi_{slug}" if slug else _SOURCE_KEY,
             "authors": "",

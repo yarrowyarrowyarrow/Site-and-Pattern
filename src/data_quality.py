@@ -1066,7 +1066,15 @@ def validate_sources() -> tuple[list[str], list[str]]:
         # authors by definition; requiring them would force somebody to invent
         # one, which is the failure this whole file exists to prevent. It is
         # surfaced as a warning below instead of being quietly exempted.
-        is_work = (rec.get("kind") or "").strip() != "NOT_A_WORK"
+        #
+        # `specimen_record` and `dataset` joined it in V2.62 for the same
+        # reason, from the other direction: F128's citation upgrade registers
+        # the museum collection portals and GBIF dataset keys that GloBI
+        # reports instead of a paper. A pinned beetle in the USDA-ARS
+        # collection has a collector, a locality and a date, and no author —
+        # demanding one would mean writing a name nobody wrote.
+        _AUTHORLESS = {"NOT_A_WORK", "specimen_record", "dataset"}
+        is_work = (rec.get("kind") or "").strip() not in _AUTHORLESS
         required = ("authors", "title") if is_work else ("title",)
         for field in required:
             if not (rec.get(field) or "").strip():

@@ -826,6 +826,99 @@ class TestTheNativityGate(unittest.TestCase):
                              "reject", value)
 
 
+class TestTheIntroducedReview(unittest.TestCase):
+    """V2.62. GBIF's `origin` is a candidate list, not a verdict.
+
+    Two attempts to make it one both failed: the occurrence facet returns
+    nothing at all, and the checklist distributions contradict themselves —
+    strict filtering fixed the Summer Tanager, made the Red-eyed Vireo worse,
+    and lost *Apis mellifera*, the most obviously introduced insect there is.
+    24 candidates out of 3,064 is small enough to read instead.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_introduced")
+
+    def test_every_gbif_flagged_species_has_a_verdict(self):
+        """A candidate the table forgets falls through to the unreviewed
+        branch, which refuses it — safe, but silently, and silence is how a
+        native species disappears from the catalogue."""
+        import json
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        if not os.path.exists(path):
+            self.skipTest("nativity fetch not present")
+        with open(path, encoding="utf-8") as fh:
+            flagged = {k for k, v in json.load(fh).items()
+                       if v.get("origin") == "introduced"}
+        self.assertEqual(sorted(flagged - set(self.mod.INTRODUCED)), [])
+
+    def test_the_verdicts_are_the_three_defined_ones(self):
+        for name, row in self.mod.INTRODUCED.items():
+            self.assertIn(row[0], ("introduced", "native", "unsure"), name)
+
+    def test_unsure_fails_closed(self):
+        """A catalogue whose whole claim is that its species belong here must
+        refuse a species nobody can place, not admit it."""
+        unsure = [n for n, (v, _) in self.mod.INTRODUCED.items()
+                  if v == "unsure"]
+        self.assertTrue(unsure, "the table should keep at least one honest "
+                                "'I cannot call this'")
+        for n in unsure:
+            self.assertIn(n, self.mod.verdicts())
+
+    def test_the_known_introductions_are_refused(self):
+        for n in ("Sturnus vulgaris", "Pieris rapae", "Harmonia axyridis",
+                  "Coccinella septempunctata", "Thymelicus lineola",
+                  "Ostrinia nubilalis", "Noctua pronuba"):
+            self.assertIn(n, self.mod.verdicts(), n)
+
+    def test_the_gbif_false_positives_are_corrected(self):
+        """Every clear one is a bird. A Snow Goose breeds in the Canadian
+        Arctic in millions; the INTRODUCED rows are European feral birds."""
+        for n in ("Anser caerulescens", "Empidonax alnorum",
+                  "Vireo olivaceus", "Piranga olivacea"):
+            self.assertIn(n, self.mod.overrides(), n)
+            self.assertNotIn(n, self.mod.verdicts(), n)
+
+    def test_every_row_carries_a_reason(self):
+        """The table is a set of unsourced calls. It earns its place by being
+        arguable line by line."""
+        for name, (_v, reason) in self.mod.INTRODUCED.items():
+            self.assertGreater(len(reason), 40, name)
+
+    def test_the_review_beats_gbif_in_both_directions(self):
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 9, "sk_records": 9, "origin": "introduced"},
+            "Sturnus vulgaris", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("reviewed as introduced", why)
+        ok, _ = _ingest.nativity_verdict(
+            {"ab_records": 23334, "sk_records": 16102, "origin": "introduced"},
+            "Anser caerulescens", refuse, corrected)
+        self.assertTrue(ok, "a reviewed native must survive GBIF's error")
+
+    def test_a_newly_flagged_species_is_refused_and_named(self):
+        """The fail-safe. A species GBIF starts calling introduced after this
+        review is refused, and the reason says where to go and fix it."""
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 900, "sk_records": 40, "origin": "introduced"},
+            "Newus specius", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("curate_introduced", why)
+
+    def test_a_corrected_species_still_needs_records_here(self):
+        """Correcting GBIF's origin is not a free pass through the rest of
+        the gate."""
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 0, "sk_records": 0, "origin": "introduced"},
+            "Anser caerulescens", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("no georeferenced records", why)
+
+
 class TestTheFetcherReadsTheRealCatalogue(unittest.TestCase):
     def test_it_finds_the_plants_fauna_and_existing_edges(self):
         plants, fauna, existing = _fetch.load_catalogue()

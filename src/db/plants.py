@@ -263,7 +263,15 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # goldfinch on Black-eyed Susan, a redpoll on Paper Birch) and 14 nectar claims
 # on birds that do not nectar. Re-derivable via
 # `ingest_fauna_edges.py --refit`.
-_SCHEMA_VERSION = 67
+# v68 (V2.62): no DDL change — a seed-data bump for two photographs. They are
+# the first rows `data/plant_photos.json` has ever carried: it shipped as a
+# literal `[]`, so photo coverage in the app came entirely from `image_url`.
+# One of them is a HABIT shot of Astragalus laxmannii, and the backlog records
+# that zero species had one. Without this bump both sit in the JSON and reach
+# nobody, which is the reseed-that-never-fired failure this file's notes warn
+# about — and it would be an odd one to hit on the file whose whole point is
+# being seen.
+_SCHEMA_VERSION = 68
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

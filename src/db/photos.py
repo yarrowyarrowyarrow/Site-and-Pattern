@@ -113,6 +113,13 @@ def add_photo(scientific_name: str, slot: str, url: str, *,
     url = (url or "").strip()
     if not sci or not url or slot not in PHOTO_SLOTS:
         return 0
+    # Collapse whitespace in the credit (V2.62). iNaturalist attribution
+    # strings arrive with embedded newlines — one real import produced
+    # "(c) \nKENPEI, some rights reserved (CC BY)" — and a credit is a single
+    # line wherever it is shown, so a stray break renders as a broken caption
+    # under somebody's photograph.
+    attribution = " ".join((attribution or "").split())
+    notes = " ".join((notes or "").split())
     conn = get_connection()
     try:
         cur = conn.execute(
