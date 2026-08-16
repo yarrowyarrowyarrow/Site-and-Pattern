@@ -42,6 +42,17 @@ from typing import Optional
 
 
 # Canonical layer names paired with the plant_types that fulfil them.
+#
+# **F124, V2.60 — this used to know six plant_types and the catalogue holds
+# eleven.** The five it missed were `wildflower` (210 species, the largest
+# group in the catalogue by a factor of four), `grass` (53), `sedge` (20),
+# `aquatic` (19), `rush` (8) and `fern` (1): **311 of 437 species mapped to no
+# layer at all**, so the vegetation-layer component counted them as nothing. A
+# twelve-plant prairie meadow of wildflowers, grasses and sedges scored **0 of
+# 15** on layer diversity — this app's own central use case scoring zero on a
+# component it plainly satisfies. Found while building F91 in V2.57, held for
+# the author because the fix RAISES the score of every affected design, which
+# the headline-stability rule reserves to them.
 PLANT_TYPE_TO_LAYER: dict[str, str] = {
     "tree":        "overstory",
     "shrub":       "shrub",
@@ -49,11 +60,59 @@ PLANT_TYPE_TO_LAYER: dict[str, str] = {
     "groundcover": "groundcover",
     "vine":        "vine",
     "root":        "herbaceous",
+    # The five that were missing. All herbaceous by habit — but see
+    # `layer_for_plant`, which reads height, because filing all 292 of them
+    # under one layer would take the prairie meadow from 0 of 15 to 3 of 15
+    # and call that fixed.
+    "wildflower":  "herbaceous",
+    "grass":       "herbaceous",
+    "sedge":       "herbaceous",
+    "rush":        "herbaceous",
+    "fern":        "herbaceous",
+    "aquatic":     "herbaceous",
 }
 
 CANONICAL_LAYERS: frozenset[str] = frozenset(
     {"overstory", "shrub", "herbaceous", "groundcover", "vine"}
 )
+
+#: Plant types whose layer depends on how tall the species actually gets.
+#: A 0.05 m moss phlox and a 2 m big bluestem are both `wildflower`/`grass` by
+#: type and are not the same layer of vegetation by any reading.
+_HEIGHT_SENSITIVE: frozenset[str] = frozenset(
+    {"wildflower", "grass", "sedge", "rush", "fern", "aquatic", "herb", "root"}
+)
+
+#: Where the groundcover layer stops. Not chosen: **read off the catalogue's
+#: own `groundcover` type**, where 26 of 30 species come in under 0.30 m and
+#: the tallest is 0.60. Using the boundary the data already draws keeps this
+#: from becoming one more arbitrary constant.
+_GROUNDCOVER_MAX_M = 0.30
+
+
+def layer_for_plant(plant_type: str, height_m: Optional[float] = None) -> str:
+    """The vegetation layer a species occupies, or ``""`` if it has none.
+
+    Type alone answers it for trees, shrubs and vines. For the herbaceous
+    group it does not: `wildflower` spans 0.05 m to 3.00 m in this catalogue,
+    and calling all 210 of them one layer measures nothing.
+
+    **What this deliberately does not do** is re-file the types that already
+    had a layer. Eleven of the 56 shrubs come in under a metre and are
+    arguably groundcover; a creeping juniper certainly is. Acting on that
+    would *lower* scores, which is the opposite of the change that was
+    approved, so it is left alone and recorded in the plan instead.
+    """
+    layer = PLANT_TYPE_TO_LAYER.get((plant_type or "").strip().lower(), "")
+    if not layer or plant_type not in _HEIGHT_SENSITIVE:
+        return layer
+    try:
+        h = float(height_m)
+    except (TypeError, ValueError):
+        # No height recorded — keep the type's answer rather than guessing
+        # short. Absent is not zero (P9).
+        return layer
+    return "groundcover" if h < _GROUNDCOVER_MAX_M else layer
 
 # Structure ids that contribute to habitat value (Water + Habitat
 # categories from src/db/structures.py).
@@ -354,7 +413,7 @@ def compute_habitat_score(
         plant_ids = list({p["plant_id"] for p in placed_plants})
         for pid in plant_ids:
             row = connection.execute(
-                "SELECT id, common_name, plant_type, "
+                "SELECT id, common_name, plant_type, mature_height_meters, "
                 "       native_to_alberta, bloom_period "
                 "FROM plants WHERE id = ?",
                 (pid,)
@@ -451,7 +510,8 @@ def compute_habitat_score(
     # ── 5. Vegetation layer diversity (15 pts, 3 pts per layer) ───────
     layers_present: set[str] = set()
     for r in plant_rows.values():
-        layer = PLANT_TYPE_TO_LAYER.get(r.get("plant_type", ""))
+        layer = layer_for_plant(r.get("plant_type", ""),
+                                r.get("mature_height_meters"))
         if layer:
             layers_present.add(layer)
     layers_canonical = layers_present & CANONICAL_LAYERS

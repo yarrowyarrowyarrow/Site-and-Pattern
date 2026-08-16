@@ -255,7 +255,15 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # larval-host gate: 107 adult-nectaring records had been promoted into host
 # claims, including 23 that put Monarch caterpillars on goldenrod. Fewer,
 # correct edges.)
-_SCHEMA_VERSION = 66
+# v67 (V2.60): no DDL change — a seed-data bump for F127a. 37 more birds in
+# `fauna` (24 → 61), all curated for Alberta/prairie nativity one at a time in
+# scripts/curate_birds.py, and their edges routed on what each species actually
+# eats. Also a REPAIR of v66's data: GloBI's `eatenBy` is not `fruit_food`, and
+# reading it that way had put 20 fruit claims on plants that bear no fruit (a
+# goldfinch on Black-eyed Susan, a redpoll on Paper Birch) and 14 nectar claims
+# on birds that do not nectar. Re-derivable via
+# `ingest_fauna_edges.py --refit`.
+_SCHEMA_VERSION = 67
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

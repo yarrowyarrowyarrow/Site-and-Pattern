@@ -253,6 +253,142 @@ class TestTheIngestGates(unittest.TestCase):
         self.assertEqual(os.path.getmtime(path), before)
 
 
+class TestTheBirdRouting(unittest.TestCase):
+    """V2.60. GloBI's `eatenBy` is not `fruit_food`, and V2.59 read it that way.
+
+    Of the 33 plants that ended up carrying a bird `fruit_food` edge, **ten
+    bear no fruit at all** — Lodgepole Pine, White Spruce, Tamarack, Paper
+    Birch, Trembling Aspen, Balsam Poplar and four composites. A crossbill on a
+    tamarack eats seeds; a sapsucker on a birch drinks sap, which the schema
+    cannot express. And GloBI filed three `flowersVisitedBy` records for a
+    White-crowned Sparrow, which does not nectar.
+
+    Same failure as the Monarch bug: an unspecific verb read as a specific
+    claim. Same answer: refuse what the record cannot support.
+    """
+
+    def test_a_frugivore_on_a_fruiting_plant_keeps_fruit_food(self):
+        self.assertEqual(
+            _ingest.route_bird("fruit_food", {"fruit"}, True), "fruit_food")
+
+    def test_a_frugivore_on_a_fruitless_plant_does_not_claim_fruit(self):
+        """The bug, in one line. A waxwing 'eating' a spruce is not eating
+        fruit, because a spruce has none."""
+        self.assertEqual(_ingest.route_bird("fruit_food", {"fruit"}, False), "")
+
+    def test_a_granivore_becomes_seed_food(self):
+        """The recovery, not just the refusal. A White-winged Crossbill on a
+        tamarack is a real and useful relationship — it is `seed_food`."""
+        self.assertEqual(
+            _ingest.route_bird("fruit_food", {"seeds"}, False), "seed_food")
+
+    def test_a_sapsucker_is_dropped_rather_than_forced(self):
+        """Sap has no slot in the seven relationships. Dropped as mammal
+        browse was, and recoverable from an observations-mode re-fetch."""
+        self.assertEqual(_ingest.route_bird("fruit_food", {"sap"}, False), "")
+        self.assertEqual(_ingest.route_bird("fruit_food", {"sap"}, True), "")
+
+    def test_only_a_nectarivore_nectars(self):
+        self.assertEqual(_ingest.route_bird("nectar", {"nectar"}, False),
+                         "nectar")
+        self.assertEqual(_ingest.route_bird("nectar", {"seeds"}, False), "")
+
+    def test_a_bird_that_takes_nothing_from_plants_yields_nothing(self):
+        """An empty feeds set is a decision, not a gap: a Red-tailed Hawk eats
+        no plant, so every plant record for one is a food-web artifact."""
+        self.assertEqual(_ingest.route_bird("fruit_food", set(), True), "")
+        self.assertEqual(_ingest.route_bird("nectar", set(), True), "")
+
+
+class TestTheBirdCuration(unittest.TestCase):
+    """The 67 birds F125 held, decided one at a time. Every verdict is an
+    unsourced call — the same footing as the 142 fauna rows already shipped —
+    which is why it is a diffable table and why these guard its shape."""
+
+    def setUp(self):
+        self.mod = _load("curate_birds")
+
+    def test_every_held_bird_has_a_verdict(self):
+        """A bird the table forgets is silently dropped by the ingest gate,
+        which reads as 'no records' rather than 'nobody looked'."""
+        self.assertEqual(self.mod.curate()["missing"], [])
+
+    def test_the_verdicts_are_the_three_defined_ones(self):
+        for name, row in self.mod.BIRDS.items():
+            self.assertIn(row[0], ("include", "hold", "reject"), name)
+
+    def test_ab_native_is_derived_from_the_province_list(self):
+        """Two fields that could disagree, so only one is authored."""
+        for r in self.mod.curate()["include"]:
+            self.assertEqual(r["ab_native"],
+                             1 if "AB" in r["native_provinces"].split(",")
+                             else 0, r["scientific_name"])
+
+    def test_introduced_species_are_rejected(self):
+        """The European Starling genuinely eats chokecherry. It must still not
+        become a row: this app recommends plants FOR the animals it lists."""
+        for name in ("Sturnus vulgaris", "Myiopsitta monachus",
+                     "Turdus philomelos"):
+            self.assertEqual(self.mod.BIRDS[name][0], "reject", name)
+
+    def test_the_feeds_vocabulary_is_closed(self):
+        allowed = {"fruit", "seeds", "nectar", "buds", "sap", "insects"}
+        for name, feeds in self.mod.feeds_map().items():
+            self.assertTrue(feeds <= allowed, f"{name}: {feeds - allowed}")
+
+    def test_the_gate_covers_the_birds_already_in_the_catalogue(self):
+        """Leaving them out is not neutral — the first run of this gate binned
+        62 existing edges belonging to the 24 hand-curated species."""
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        seeded = {r["scientific_name"] for r in rows
+                  if isinstance(r, dict) and r.get("taxon") == "bird"}
+        judged = set(self.mod.feeds_map())
+        self.assertEqual(seeded - judged, set())
+
+    def test_a_deprecated_name_resolves_onto_the_catalogue_row(self):
+        """`Picoides pubescens` is the Downy Woodpecker under its old genus and
+        the catalogue already holds it as `Dryobates pubescens`. Without the
+        synonym it would have been written as a second Downy Woodpecker."""
+        self.assertEqual(self.mod.SYNONYMS["Picoides pubescens"],
+                         "Dryobates pubescens")
+        self.assertNotIn("Picoides pubescens", self.mod.BIRDS)
+
+
+class TestTheAppliedEdgesSurviveTheirOwnGates(unittest.TestCase):
+    """The property `--refit` exists to keep true: a gate added after an
+    `--apply` must not leave contradicting rows behind in the seed file."""
+
+    def test_no_bird_claims_fruit_on_a_plant_that_bears_none(self):
+        import json
+        data = os.path.join(_ROOT, "data")
+
+        def rows(name):
+            with open(os.path.join(data, name), encoding="utf-8") as fh:
+                blob = json.load(fh)
+            return blob if isinstance(blob, list) else next(
+                v for v in blob.values() if isinstance(v, list))
+
+        fauna = {r["scientific_name"].strip().lower(): r
+                 for r in rows("fauna_master.json") if isinstance(r, dict)}
+        fruiting = set()
+        for name in ("plants_master.json", "garden_plants.json"):
+            for p in rows(name):
+                if p.get("common_name") and (
+                        (p.get("fruit_period") or "").strip()
+                        or (p.get("fruit_form") or "").strip()):
+                    fruiting.add(p["common_name"].strip().lower())
+        bad = [
+            (e["plant"], e["fauna"]) for e in rows("plant_fauna_master.json")
+            if e.get("plant") and e.get("relationship") == "fruit_food"
+            and fauna.get(e["fauna"].strip().lower(), {}).get("taxon") == "bird"
+            and e["plant"].strip().lower() not in fruiting
+        ]
+        self.assertEqual(bad, [], f"fruit claimed on fruitless plants: {bad}")
+
+
 class TestTheFetcherReadsTheRealCatalogue(unittest.TestCase):
     def test_it_finds_the_plants_fauna_and_existing_edges(self):
         plants, fauna, existing = _fetch.load_catalogue()

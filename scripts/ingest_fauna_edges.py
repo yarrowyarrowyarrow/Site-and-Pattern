@@ -74,12 +74,16 @@ def _rows(path: str) -> list:
 def _load_seed() -> tuple:
     plants = {}
     plant_types = {}
+    has_fruit = set()
     for name in ("plants_master.json", "garden_plants.json"):
         for r in _rows(os.path.join(_DATA, name)):
             if r.get("common_name"):
                 key = r["common_name"].strip().lower()
                 plants[key] = r["common_name"]
                 plant_types[key] = (r.get("plant_type") or "").strip().lower()
+                if (r.get("fruit_period") or "").strip() or \
+                        (r.get("fruit_form") or "").strip():
+                    has_fruit.add(key)
     fauna = {}
     for r in _rows(os.path.join(_DATA, "fauna_master.json")):
         if r.get("scientific_name"):
@@ -88,13 +92,68 @@ def _load_seed() -> tuple:
     existing = {(r["plant"].strip().lower(), r["fauna"].strip().lower(),
                  r.get("relationship", ""))
                 for r in edge_rows if r.get("plant") and r.get("fauna")}
-    return plants, fauna, edge_rows, existing, plant_types
+    return plants, fauna, edge_rows, existing, plant_types, has_fruit
+
+
+def _bird_feeds() -> dict:
+    """``scientific_name → set(feeds)`` from the curation table (F127a).
+
+    Imported rather than restated so the nativity call and the feeding guild
+    stay in one place. A bird that is not in the table has no entry, and
+    ``_route_bird`` drops its edges — which is deliberate: an animal nobody has
+    decided about must not arrive through a relationship record.
+    """
+    import importlib.util
+    path = os.path.join(_ROOT, "scripts", "curate_birds.py")
+    spec = importlib.util.spec_from_file_location("curate_birds", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    verdicts = {name: row[0] for name, row in mod.BIRDS.items()}
+    return mod.feeds_map(), dict(mod.SYNONYMS), verdicts
+
+
+def route_bird(rel: str, feeds: set, plant_has_fruit: bool) -> str:
+    """The relationship a bird record actually supports, or ``""`` to drop it.
+
+    **GloBI's ``eatenBy`` is not ``fruit_food``, and the fetcher assumed it
+    was.** Of the 33 plants carrying a bird ``fruit_food`` edge, ten bear no
+    fruit at all — Lodgepole Pine, White Spruce, Tamarack, Paper Birch,
+    Trembling Aspen, Balsam Poplar, and four composites. A crossbill on a
+    tamarack is eating seeds; a sapsucker on a birch is drinking sap, which the
+    schema cannot express at all.
+
+    And in the other direction, GloBI filed three ``flowersVisitedBy`` records
+    for a White-crowned Sparrow. Sparrows do not nectar; the bird was at the
+    flower gleaning insects.
+
+    This is the Monarch bug again — an unspecific verb read as a specific
+    claim — so it gets the same answer: refuse what the record cannot support
+    rather than route it to the nearest available word.
+    """
+    if not feeds:
+        return ""
+    if rel in ("nectar", "pollen"):
+        # Only a nectarivore nectars. Everything else at a flower is after
+        # insects, and a visit is not a reward.
+        return rel if "nectar" in feeds else ""
+    if rel == "fruit_food":
+        if "fruit" in feeds and plant_has_fruit:
+            return "fruit_food"
+        if "seeds" in feeds:
+            return "seed_food"
+        # Sap, buds and pure insectivory have no slot in the seven
+        # relationships. Dropped rather than forced, exactly as mammal browse
+        # was — and recoverable, since F128's observations re-fetch carries the
+        # body part eaten.
+        return ""
+    return rel
 
 
 def review(candidates: list) -> dict:
     """Run every gate. Returns counts plus the edges that survived."""
-    plants, fauna, _edge_rows, existing, plant_types = _load_seed()
+    plants, fauna, _edge_rows, existing, plant_types, has_fruit = _load_seed()
     from src.flower_colour import WIND_POLLINATED_TYPES
+    bird_feeds, synonyms, bird_verdicts = _bird_feeds()
     kept, rejected = [], {}
 
     def drop(reason):
@@ -105,6 +164,11 @@ def review(candidates: list) -> dict:
         plant = (c.get("plant") or "").strip()
         animal = (c.get("fauna") or "").strip()
         rel = (c.get("relationship") or "").strip()
+        # Resolve deprecated names onto the row the catalogue actually keys on
+        # BEFORE anything else looks at the animal — otherwise `Picoides
+        # pubescens` reads as a new species and gets written as a second Downy
+        # Woodpecker beside `Dryobates pubescens`.
+        animal = synonyms.get(animal, animal)
 
         if not plant or not animal or not rel:
             drop("incomplete record"); continue
@@ -116,6 +180,23 @@ def review(candidates: list) -> dict:
             drop("plant is not in this catalogue"); continue
         if " " not in animal:
             drop("animal is genus-level, not a species"); continue
+        # Birds get re-read against what the species actually eats (F127a).
+        # This runs BEFORE the key is built, because it can change the
+        # relationship — a crossbill's `fruit_food` on a tamarack becomes
+        # `seed_food`, and that is a different edge.
+        if (c.get("_taxon") or "") == "bird":
+            routed = route_bird(rel, bird_feeds.get(animal, set()),
+                                plant.strip().lower() in has_fruit)
+            if not routed:
+                if animal in bird_feeds:
+                    drop("bird record the species' diet does not support")
+                elif animal in bird_verdicts:
+                    drop(f"bird {bird_verdicts[animal]} by curation "
+                         f"(not an Alberta/prairie species)")
+                else:
+                    drop("bird has not been assessed (F127a)")
+                continue
+            rel = routed
         key = (plant.lower(), animal.lower(), rel)
         if key in existing:
             drop("already seeded"); continue
@@ -243,13 +324,81 @@ def _apply(result: dict) -> None:
           "installs reseed, then run the suite.")
 
 
+def refit(write: bool = False) -> dict:
+    """Re-run the current gates over edges a PREVIOUS run already wrote.
+
+    A gate added after an ``--apply`` does not retroactively clean what that
+    apply let through, and the bird routing was added exactly one increment
+    late: V2.59 wrote 15 ``fruit_food`` edges on plants that bear no fruit —
+    a goldfinch on Black-eyed Susan, a redpoll on Paper Birch, a chickadee on
+    goldenrod. Every one is a seed record wearing the wrong word.
+
+    So the applied data has to stay re-derivable. Only ``source == globi`` rows
+    are touched; hand-authored edges are somebody's reading of a book and are
+    not this script's to revise.
+    """
+    plants, fauna, edge_rows, _existing, plant_types, has_fruit = _load_seed()
+    bird_feeds, synonyms, _verdicts = _bird_feeds()
+    taxon_of = {k: (v.get("taxon") or "") for k, v in fauna.items()}
+
+    changed, removed, kept = [], [], 0
+    out, seen = [], set()
+    for r in edge_rows:
+        if not r.get("plant") or r.get("source") != _SOURCE_KEY:
+            out.append(r)
+            continue
+        animal = synonyms.get(r["fauna"].strip(), r["fauna"].strip())
+        if taxon_of.get(animal.lower()) != "bird":
+            out.append(r)
+            continue
+        routed = route_bird(r["relationship"],
+                            bird_feeds.get(animal, set()),
+                            r["plant"].strip().lower() in has_fruit)
+        if not routed:
+            removed.append((r["plant"], animal, r["relationship"]))
+            continue
+        key = (r["plant"].strip().lower(), animal.lower(), routed)
+        if key in seen:
+            removed.append((r["plant"], animal,
+                            f"{r['relationship']}→{routed} (duplicate)"))
+            continue
+        seen.add(key)
+        if routed != r["relationship"]:
+            changed.append((r["plant"], animal, r["relationship"], routed))
+            r = dict(r, relationship=routed, fauna=animal)
+        else:
+            kept += 1
+        out.append(r)
+
+    print(f"refit over {len(edge_rows)} rows: {kept} bird edges unchanged, "
+          f"{len(changed)} re-routed, {len(removed)} removed")
+    for p, a, old, new in changed:
+        print(f"  {old:11s} → {new:11s}  {p} / {a}")
+    for p, a, why in removed:
+        print(f"  REMOVED ({why:22s})  {p} / {a}")
+    if write and (changed or removed):
+        path = os.path.join(_DATA, "plant_fauna_master.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, indent=1, ensure_ascii=False)
+        print(f"\nrewrote {os.path.relpath(path, _ROOT)}")
+    elif not write:
+        print("\n(report only — add --apply to write)")
+    return {"changed": changed, "removed": removed, "kept": kept}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--apply", action="store_true",
                     help="write the ready edges into the seed files")
+    ap.add_argument("--refit", action="store_true",
+                    help="re-run the current gates over already-written edges")
     ap.add_argument("--file", default=os.path.join(
         _FETCHED, "fauna_edges_candidates.json"))
     args = ap.parse_args()
+
+    if args.refit:
+        refit(write=args.apply)
+        return 0
 
     if not os.path.exists(args.file):
         print(f"no candidate file at {args.file}\n"

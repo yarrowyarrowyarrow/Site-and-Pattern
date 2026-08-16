@@ -213,9 +213,16 @@ class TestTheSentence(unittest.TestCase):
 
 
 class TestTheGroupMapCoversTheCatalogue(unittest.TestCase):
-    """habitat_score.PLANT_TYPE_TO_LAYER knows six plant_types; the catalogue
-    holds eleven, and the five it misses are 311 of 437 species. Using it here
-    would leave substitution dead for most of the app — see F124."""
+    """When F91 was built, `habitat_score.PLANT_TYPE_TO_LAYER` knew six
+    plant_types out of the catalogue's eleven — the five it missed being 311 of
+    437 species — so using it here would have left substitution dead for most
+    of the app. That gap was F124 and is fixed in V2.60.
+
+    The map below stays separate anyway, for the reason stated at
+    `SUBSTITUTION_GROUPS`: a *layer* answers "what stratum does this occupy"
+    and a *substitution group* answers "what could stand in for this", and
+    those are different questions. Grass and wildflower are both herbaceous;
+    swapping a bunchgrass for a coneflower is not a substitution."""
 
     def test_every_catalogue_plant_type_has_a_group(self):
         """Read from the shipped seed JSON, not the database.

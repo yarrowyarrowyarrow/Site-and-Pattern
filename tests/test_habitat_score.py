@@ -30,6 +30,7 @@ from src.habitat_score import (  # noqa: E402
     HabitatScore,
     HabitatScoreError,
     CANONICAL_LAYERS,
+    layer_for_plant,
     HABITAT_STRUCTURE_IDS,
 )
 
@@ -114,6 +115,69 @@ class TestComputeHabitatScoreSeeded(unittest.TestCase):
             self.assertIn(layer, CANONICAL_LAYERS)
         # 3 pts per layer, capped at 5 layers (15 pts).
         self.assertAlmostEqual(r.score_layers, min(len(r.layers_present), 5) * 3)
+
+    def test_every_catalogue_plant_type_reaches_a_layer(self):
+        """F124's guard. The map knew six of the catalogue's eleven types, so
+        311 of 437 species — `wildflower` alone is 210 — counted as no
+        vegetation layer at all, and a prairie meadow scored 0 of 15 on a
+        component it plainly satisfies."""
+        from src.db.plants import get_connection
+        conn = get_connection()
+        try:
+            types = [r[0] for r in conn.execute(
+                "SELECT DISTINCT plant_type FROM plants "
+                "WHERE plant_type IS NOT NULL AND plant_type != ''")]
+        finally:
+            conn.close()
+        self.assertGreater(len(types), 6, "seed the DB before asserting this")
+        unmapped = [t for t in types if not layer_for_plant(t, 1.0)]
+        self.assertEqual(unmapped, [], f"plant types with no layer: {unmapped}")
+
+    def test_height_decides_the_layer_within_the_herbaceous_group(self):
+        """`wildflower` spans 0.05 m to 3.00 m in this catalogue. Filing all
+        210 under one layer would have taken the prairie meadow from 0 of 15 to
+        3 of 15 and called it fixed."""
+        self.assertEqual(layer_for_plant("wildflower", 0.05), "groundcover")
+        self.assertEqual(layer_for_plant("wildflower", 1.50), "herbaceous")
+        self.assertEqual(layer_for_plant("grass", 1.80), "herbaceous")
+        self.assertEqual(layer_for_plant("grass", 0.10), "groundcover")
+
+    def test_a_missing_height_keeps_the_type_answer(self):
+        """Absent is not zero (P9) — an unrecorded height must not quietly
+        file a species as groundcover."""
+        self.assertEqual(layer_for_plant("wildflower", None), "herbaceous")
+        self.assertEqual(layer_for_plant("wildflower", ""), "herbaceous")
+
+    def test_height_does_not_refile_the_types_that_already_had_a_layer(self):
+        """Eleven of the 56 shrubs are under a metre and a creeping juniper is
+        arguably groundcover — but acting on that would LOWER scores, which is
+        the opposite of the change that was approved. Left alone deliberately.
+        """
+        self.assertEqual(layer_for_plant("shrub", 0.30), "shrub")
+        self.assertEqual(layer_for_plant("tree", 4.0), "overstory")
+        self.assertEqual(layer_for_plant("groundcover", 0.60), "groundcover")
+
+    def test_a_prairie_meadow_no_longer_scores_zero_on_layers(self):
+        """The measurement that made F124 worth taking. Before: 0 of 15."""
+        conn_ids = []
+        from src.db.plants import get_connection
+        conn = get_connection()
+        try:
+            for sql in (
+                "SELECT id FROM plants WHERE plant_type IN "
+                "('wildflower','grass','sedge') AND mature_height_meters >= 0.5"
+                " LIMIT 10",
+                "SELECT id FROM plants WHERE plant_type = 'wildflower' AND "
+                "mature_height_meters < 0.3 LIMIT 2",
+            ):
+                conn_ids += [r[0] for r in conn.execute(sql)]
+        finally:
+            conn.close()
+        self.assertGreaterEqual(len(conn_ids), 6)
+        r = compute_habitat_score([{"plant_id": i} for i in conn_ids], [])
+        self.assertEqual(sorted(r.layers_present),
+                         ["groundcover", "herbaceous"])
+        self.assertEqual(r.score_layers, 6)
 
     def test_structures_score(self):
         # Two recognised habitat structures + one bogus → 2 distinct types.

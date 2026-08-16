@@ -19,11 +19,13 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.59`,
-`_SCHEMA_VERSION = 66` (in `src/db/plants.py`) — v66 is a reseed only, to carry
-the 2,439 GloBI-sourced plant↔animal edges (F125), which take documented fauna
-coverage from 99 of 437 species to 271. v65 is also a reseed only, to
-carry the merged duplicate species rows. v64 adds
+**Current facts (verify before quoting):** branch `V2.60`,
+`_SCHEMA_VERSION = 67` (in `src/db/plants.py`) — v67 is a reseed only: 37 more
+curated birds (F127a) plus a repair of v66's bird edges, which had read GloBI's
+`eatenBy` as `fruit_food` and so claimed fruit on plants that bear none. v66 is
+a reseed only too, carrying the 2,439 GloBI-sourced plant↔animal edges (F125)
+that took documented fauna coverage from 99 of 437 species to 271. v65 is also
+a reseed only, to carry the merged duplicate species rows. v64 adds
 `plants.flower_colour_source`, which records whether a species' flower colour
 was checked against its own common name or Latin epithet or is the genus-level
 default it was seeded as. Additive and empty in the migration: the version bump

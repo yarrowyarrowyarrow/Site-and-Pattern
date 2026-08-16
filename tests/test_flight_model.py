@@ -355,9 +355,17 @@ class TestTheDataFile(unittest.TestCase):
 
     def test_masses_and_spans_are_plausible(self):
         """A decimal-point slip is the likeliest data error and the hardest to
-        see: a 110 g chickadee would look fine in a table."""
+        see: a 110 g chickadee would look fine in a table.
+
+        The ceiling was 2,500 g, which was every bird in the catalogue when the
+        table held 24 passerines and raptors. V2.60's curation added a Snow
+        Goose (2.7 kg) and a Sandhill Crane (4.5 kg), both genuinely that
+        heavy. Raised to 6 kg rather than removed: a ×10 slip on any bird under
+        600 g — which is 47 of the 49 rows — still trips it, so the guard keeps
+        doing the job it was written for.
+        """
         for r in self._rows():
-            self.assertTrue(2.0 <= r["mass_g"] <= 2500.0, r)
+            self.assertTrue(2.0 <= r["mass_g"] <= 6000.0, r)
             self.assertTrue(80.0 <= r["wingspan_mm"] <= 2000.0, r)
             # Bigger birds have bigger wings. Rough, but it catches a swap.
             self.assertGreater(r["wingspan_mm"], r["mass_g"] ** 0.33 * 40, r)

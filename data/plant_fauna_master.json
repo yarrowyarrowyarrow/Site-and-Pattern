@@ -3190,13 +3190,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Big Sagebrush",
-  "fauna": "Junco hyemalis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Birch-leaved Spirea",
   "fauna": "Bombus perplexus",
   "relationship": "nectar",
@@ -3479,7 +3472,7 @@
  {
   "plant": "Black-eyed Susan",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -4249,23 +4242,9 @@
  {
   "plant": "Canada Goldenrod",
   "fauna": "Poecile atricapillus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Canada Goldenrod",
-  "fauna": "Junco hyemalis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Canada Goldenrod",
-  "fauna": "Poecile atricapillus",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
  },
  {
   "plant": "Canada Goldenrod",
@@ -4290,15 +4269,8 @@
  },
  {
   "plant": "Canada Goldenrod",
-  "fauna": "Bombycilla cedrorum",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Canada Goldenrod",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -4508,20 +4480,6 @@
  {
   "plant": "Chokecherry",
   "fauna": "Colletes inaequalis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Chokecherry",
-  "fauna": "Turdus migratorius",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Chokecherry",
-  "fauna": "Bombycilla cedrorum",
   "relationship": "nectar",
   "source": "globi",
   "notes": "GloBI flowersVisitedBy"
@@ -5005,7 +4963,7 @@
  {
   "plant": "Common Sunflower",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -5067,13 +5025,6 @@
  },
  {
   "plant": "Common Sunflower",
-  "fauna": "Spinus tristis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
   "fauna": "Bombus flavidus",
   "relationship": "nectar",
   "source": "globi",
@@ -5082,7 +5033,7 @@
  {
   "plant": "Common Sunflower",
   "fauna": "Spinus pinus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -5102,13 +5053,6 @@
  },
  {
   "plant": "Common Sunflower",
-  "fauna": "Archilochus colubris",
-  "relationship": "fruit_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
   "fauna": "Cyanocitta cristata",
   "relationship": "fruit_food",
   "source": "globi",
@@ -5117,7 +5061,7 @@
  {
   "plant": "Common Sunflower",
   "fauna": "Poecile atricapillus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -5515,13 +5459,6 @@
  },
  {
   "plant": "Eastern Red Columbine",
-  "fauna": "Archilochus colubris",
-  "relationship": "fruit_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Eastern Red Columbine",
   "fauna": "Bombus vagans",
   "relationship": "nectar",
   "source": "globi",
@@ -5676,13 +5613,6 @@
  },
  {
   "plant": "Evening Primrose",
-  "fauna": "Spinus tristis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Evening Primrose",
   "fauna": "Bombus fervidus",
   "relationship": "nectar",
   "source": "globi",
@@ -5698,7 +5628,7 @@
  {
   "plant": "Evening Primrose",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -5729,13 +5659,6 @@
   "relationship": "nectar",
   "source": "globi",
   "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Evening Primrose",
-  "fauna": "Archilochus colubris",
-  "relationship": "fruit_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
  },
  {
   "plant": "False Solomon's Seal",
@@ -6719,13 +6642,6 @@
  },
  {
   "plant": "Giant Hyssop",
-  "fauna": "Spinus tristis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Hyssop",
   "fauna": "Aglais milberti",
   "relationship": "nectar",
   "source": "globi",
@@ -7630,7 +7546,7 @@
  {
   "plant": "Jerusalem Artichoke",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -7784,7 +7700,7 @@
  {
   "plant": "Joe-Pye Weed",
   "fauna": "Junco hyemalis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -9807,21 +9723,21 @@
  {
   "plant": "Paper Birch",
   "fauna": "Acanthis flammea",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
  {
   "plant": "Paper Birch",
   "fauna": "Bonasa umbellus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
  {
   "plant": "Paper Birch",
   "fauna": "Colaptes auratus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -11910,13 +11826,6 @@
   "relationship": "nectar",
   "source": "globi",
   "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Red Columbine",
-  "fauna": "Archilochus colubris",
-  "relationship": "fruit_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
  },
  {
   "plant": "Red Columbine",
@@ -15148,7 +15057,7 @@
  {
   "plant": "Switchgrass",
   "fauna": "Melospiza melodia",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -15498,14 +15407,14 @@
  {
   "plant": "Thinleaf Alder",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
  {
   "plant": "Thinleaf Alder",
   "fauna": "Spinus pinus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -15532,27 +15441,6 @@
  },
  {
   "plant": "Trembling Aspen",
-  "fauna": "Turdus migratorius",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Trembling Aspen",
-  "fauna": "Poecile atricapillus",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Trembling Aspen",
-  "fauna": "Bombycilla cedrorum",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Trembling Aspen",
   "fauna": "Bombus terricola",
   "relationship": "nectar",
   "source": "globi",
@@ -15561,7 +15449,7 @@
  {
   "plant": "Trembling Aspen",
   "fauna": "Bonasa umbellus",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -16359,7 +16247,7 @@
  {
   "plant": "White Spruce",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -16646,14 +16534,7 @@
  {
   "plant": "Wild Bergamot",
   "fauna": "Spinus tristis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -18508,7 +18389,7 @@
  {
   "plant": "Yellow Avens",
   "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -19635,14 +19516,7 @@
  {
   "plant": "Bee Balm (Wild Bergamot)",
   "fauna": "Spinus tristis",
-  "relationship": "nectar",
-  "source": "globi",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Spinus tristis",
-  "relationship": "fruit_food",
+  "relationship": "seed_food",
   "source": "globi",
   "notes": "GloBI eatenBy"
  },
@@ -19687,5 +19561,250 @@
   "relationship": "larval_host",
   "source": "globi",
   "notes": "GloBI hostOf"
+ },
+ {
+  "plant": "Alpine Bistort",
+  "fauna": "Lagopus muta",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Alpine Bistort",
+  "fauna": "Lagopus leucura",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Bearberry",
+  "fauna": "Lagopus lagopus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Black Hawthorn",
+  "fauna": "Piranga ludoviciana",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Bog Blueberry",
+  "fauna": "Lagopus lagopus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Bog Blueberry",
+  "fauna": "Lagopus muta",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Broad-leaved Arrowhead",
+  "fauna": "Grus canadensis",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Vireo gilvus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Vireo olivaceus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Tyrannus tyrannus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Icterus galbula",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Toxostoma rufum",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Dryobates pubescens",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Quiscalus quiscula",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Dumetella carolinensis",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Haemorhous purpureus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Snowberry",
+  "fauna": "Selasphorus calliope",
+  "relationship": "pollen",
+  "source": "globi",
+  "notes": "GloBI pollinatedBy"
+ },
+ {
+  "plant": "Common Snowberry",
+  "fauna": "Setophaga coronata",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Snowberry",
+  "fauna": "Pipilo maculatus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Pheucticus melanocephalus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Haemorhous mexicanus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Agelaius phoeniceus",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Sitta carolinensis",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Zenaida macroura",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Dwarf Birch",
+  "fauna": "Lagopus lagopus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Dwarf Birch",
+  "fauna": "Lagopus leucura",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Paintbrush",
+  "fauna": "Selasphorus calliope",
+  "relationship": "nectar",
+  "source": "globi",
+  "notes": "GloBI flowersVisitedBy"
+ },
+ {
+  "plant": "Red Osier Dogwood",
+  "fauna": "Tyrannus tyrannus",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Saltgrass",
+  "fauna": "Anas clypeata",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Saltgrass",
+  "fauna": "Anser caerulescens",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Tamarack",
+  "fauna": "Loxia leucoptera",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Three-square Rush",
+  "fauna": "Anser caerulescens",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "White Camas",
+  "fauna": "Lagopus leucura",
+  "relationship": "fruit_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "White Spruce",
+  "fauna": "Loxia curvirostra",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "White Spruce",
+  "fauna": "Loxia leucoptera",
+  "relationship": "seed_food",
+  "source": "globi",
+  "notes": "GloBI eatenBy"
  }
 ]
