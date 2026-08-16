@@ -195,6 +195,13 @@ def nativity_verdict(row: dict) -> tuple:
         return False, "no AB/SK occurrence data (nativity fetch not run)"
     if row.get("origin") == "introduced":
         return False, "introduced to AB/SK, not native"
+    if row.get("origin") == "conflicted":
+        # One GBIF checklist says native to Canada, another says introduced.
+        # Refused rather than resolved: this gate cannot adjudicate between
+        # two checklists, and letting the disagreement through would put a
+        # contested species in a catalogue whose whole point is documented
+        # claims.
+        return False, "checklists disagree on whether it is native here"
     ab = int(row.get("ab_records") or 0)
     sk = int(row.get("sk_records") or 0)
     if ab + sk == 0:
@@ -203,6 +210,21 @@ def nativity_verdict(row: dict) -> tuple:
     if max(ab, sk) < floor:
         return False, (f"under {floor} records in AB or SK — present, but "
                        f"too thin to seed on")
+    # Everything below here is `origin: unstated` with real records behind it,
+    # and it will be the large majority — GBIF's checklists cover vertebrates
+    # and known invasives far better than they cover solitary bees.
+    #
+    # **Accepting it is an inference, not a measurement, and this is the
+    # sentence that says so.** The reasoning: introduced species are the ones
+    # people build registers about, so absence from GRIIS, given substantial
+    # AB/SK records, is weak evidence of belonging here. Weak, not strong —
+    # it will let through the occasional unrecorded introduction.
+    #
+    # The alternative was refusing every `unstated` species, which would
+    # almost certainly reject the entire insect queue and make the whole
+    # exercise pointless. `origin` travels with the row either way, so the app
+    # can always say "present here; origin unrecorded" rather than implying a
+    # nativity check that did not happen.
     return True, ""
 
 

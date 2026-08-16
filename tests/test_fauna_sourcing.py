@@ -559,6 +559,45 @@ class TestTheNativityGate(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("too thin", why)
 
+    def test_the_four_probe_species_land_where_the_live_run_put_them(self):
+        """Pinned against the real 2026-08-16 probe output, so the checklist
+        path cannot regress into the occurrence-facet dead end it replaced.
+
+        The starling is the one that matters: 267,995 Alberta records, and
+        `reject` is still the right answer. Occurrence proves presence and
+        says nothing whatever about belonging.
+        """
+        cases = [
+            ("Danaus plexippus",   370, 596, ["NATIVE"],     "accept"),
+            ("Callipepla gambelii",  0,   0, [],             "reject"),
+            ("Sturnus vulgaris", 267995, 15778, ["INTRODUCED"], "reject"),
+            ("Apis mellifera",    3671, 451, ["INTRODUCED"], "reject"),
+        ]
+        for name, ab, sk, means, expected in cases:
+            self.assertEqual(self.mod.assess(ab, sk, means)["verdict"],
+                             expected, name)
+
+    def test_checklist_values_are_deduplicated(self):
+        """The probe returned `['NATIVE'] * 9` for one monarch — nine
+        checklists agreeing, not nine pieces of evidence. Multiplied by 3,065
+        species it is just file bloat."""
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        self.assertIn("sorted(out)", src)
+        self.assertIn("out = set()", src)
+
+    def test_disagreeing_checklists_go_to_a_human(self):
+        """One checklist saying native and another saying introduced is a
+        real disagreement between sources. The first cut resolved it silently
+        by whichever test fired first."""
+        a = self.mod.assess(500, 200, ["NATIVE", "INTRODUCED"])
+        self.assertEqual(a["origin"], "conflicted")
+        self.assertEqual(a["verdict"], "review")
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 500, "sk_records": 200, "origin": "conflicted"})
+        self.assertFalse(ok)
+        self.assertIn("disagree", why)
+
     def test_a_well_recorded_species_passes(self):
         ok, _ = _ingest.nativity_verdict(
             {"ab_records": 400, "sk_records": 120, "origin": "unstated"})

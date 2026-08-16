@@ -205,7 +205,7 @@ def establishment_from_checklists(mod, name: str, throttle) -> list:
                           30.0, throttle)
     except mod.FetchFailed:
         return []
-    out = []
+    out = set()
     for row in d.get("results") or []:
         # Canada only. A species introduced to New Zealand and native here is
         # native here, and the row carries the country that judged it.
@@ -214,8 +214,12 @@ def establishment_from_checklists(mod, name: str, throttle) -> list:
             continue
         val = (row.get("establishmentMeans") or "").strip()
         if val:
-            out.append(val)
-    return out
+            out.add(val)
+    # Deduplicated: distributions come from many checklist datasets and the
+    # probe returned `['NATIVE'] * 9` for one monarch. Nine copies of a word
+    # is not nine pieces of evidence, and 3,065 species of it would bloat the
+    # file for nothing.
+    return sorted(out)
 
 
 def assess(ab: int, sk: int, means: list) -> dict:
@@ -236,11 +240,18 @@ def assess(ab: int, sk: int, means: list) -> dict:
     provinces = ",".join(p for p, n in (("AB", ab), ("SK", sk)) if n > 0)
     blob = " ".join(means).lower()
     disqualified = any(w in blob for w in DISQUALIFYING)
-    if disqualified:
+    says_native = any("native" in m.lower() for m in means)
+    if disqualified and says_native:
+        # A checklist calls it native to Canada and another calls it
+        # introduced. That is a real disagreement between sources, not a
+        # value to resolve by picking the one that fires first — which is
+        # what the first cut did, silently. It goes to a human.
+        origin, verdict = "conflicted", "review"
+    elif disqualified:
         origin, verdict = "introduced", "reject"
     elif not provinces:
         origin, verdict = "unstated", "reject"
-    elif any("native" in m.lower() for m in means):
+    elif says_native:
         origin, verdict = "native", "accept"
     else:
         origin, verdict = "unstated", "review"
