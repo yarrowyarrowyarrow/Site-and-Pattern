@@ -4269,13 +4269,6 @@
  },
  {
   "plant": "Canada Goldenrod",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Canada Goldenrod",
   "fauna": "Bombus perplexus",
   "relationship": "nectar",
   "source": "globi",
@@ -4959,13 +4952,6 @@
   "relationship": "nectar",
   "source": "globi",
   "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
  },
  {
   "plant": "Common Sunflower",
@@ -9719,20 +9705,6 @@
   "relationship": "nectar",
   "source": "globi",
   "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Paper Birch",
-  "fauna": "Acanthis flammea",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Paper Birch",
-  "fauna": "Bonasa umbellus",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
  },
  {
   "plant": "Paper Birch",

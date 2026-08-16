@@ -345,6 +345,18 @@ def refit(write: bool = False) -> dict:
     out, seen = [], set()
     for r in edge_rows:
         if not r.get("plant") or r.get("source") != _SOURCE_KEY:
+            # Pass-through rows still claim their key. The first version only
+            # tracked the rows it rewrote, and a re-route can land on top of a
+            # HAND-AUTHORED edge: `Common Sunflower / Spinus tristis` was
+            # already asserted with a Cornell citation, and the goldfinch's
+            # GloBI `fruit_food` became a second `seed_food` beside it. Four
+            # pairs like that survived. The better-cited row is the one to
+            # keep, so claiming the key here also decides that correctly —
+            # a `globi` duplicate of a real citation is pure noise.
+            if r.get("plant") and r.get("fauna"):
+                seen.add((r["plant"].strip().lower(),
+                          r["fauna"].strip().lower(),
+                          r.get("relationship", "")))
             out.append(r)
             continue
         animal = synonyms.get(r["fauna"].strip(), r["fauna"].strip())

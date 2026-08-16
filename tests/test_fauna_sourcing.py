@@ -361,6 +361,28 @@ class TestTheAppliedEdgesSurviveTheirOwnGates(unittest.TestCase):
     """The property `--refit` exists to keep true: a gate added after an
     `--apply` must not leave contradicting rows behind in the seed file."""
 
+    def test_no_edge_is_stated_twice(self):
+        """A `--refit` re-route can land on top of an edge that already exists.
+
+        The first version tracked only the rows it rewrote, so when the
+        goldfinch's GloBI `fruit_food` on Common Sunflower became `seed_food`
+        it landed beside a **hand-authored, Cornell-cited** `seed_food` row and
+        both survived. Four pairs like that. The DB dedupes on insert, so
+        nothing broke visibly — which is exactly why it needs a test: a `globi`
+        duplicate shadowing a real citation is the kind of rot that is only
+        ever found by counting.
+        """
+        import collections
+        import json
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = [r for r in json.load(fh) if r.get("plant")]
+        counts = collections.Counter(
+            (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+             r.get("relationship", "")) for r in rows)
+        dupes = [k for k, v in counts.items() if v > 1]
+        self.assertEqual(dupes, [], f"edges stated twice: {dupes}")
+
     def test_no_bird_claims_fruit_on_a_plant_that_bears_none(self):
         import json
         data = os.path.join(_ROOT, "data")
