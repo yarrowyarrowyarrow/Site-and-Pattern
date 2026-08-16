@@ -166,6 +166,58 @@ def count_in_box(mod, name: str, box: tuple, throttle) -> tuple:
     return count, means
 
 
+GBIF_MATCH = "https://api.gbif.org/v1/species/match"
+GBIF_SPECIES = "https://api.gbif.org/v1/species"
+
+
+def establishment_from_checklists(mod, name: str, throttle) -> list:
+    """``establishmentMeans`` for Canada, from GBIF's species checklists.
+
+    **The occurrence facet does not work and this replaces it.** The V2.61
+    probe asked GBIF for `facet=establishmentMeans` on three species and got
+    *no facet at all* on any of them — including *Sturnus vulgaris*, which has
+    267,995 Alberta records and is the textbook introduced bird. Occurrence
+    records simply do not carry the field in practice, so faceting them can
+    never separate introduced from native, however many records there are.
+
+    Checklists do carry it. ``/species/match`` resolves a name to a backbone
+    key and ``/species/{key}/distributions`` returns per-country rows
+    contributed by checklist datasets — GRIIS, the Global Register of
+    Introduced and Invasive Species, among them. That is the register built
+    for this exact question.
+
+    Two extra requests, so it runs **only for species that already have AB or
+    SK records**: one with none is rejected on the occurrence count alone and
+    asking further would be spending the author's evening on an answer that
+    changes nothing.
+    """
+    try:
+        m = mod._get_json(f"{GBIF_MATCH}?{urlencode({'name': name})}",
+                          30.0, throttle)
+    except mod.FetchFailed:
+        return []
+    key = m.get("usageKey") or m.get("speciesKey")
+    if not key:
+        return []
+    throttle.wait()
+    try:
+        d = mod._get_json(f"{GBIF_SPECIES}/{key}/distributions?limit=200",
+                          30.0, throttle)
+    except mod.FetchFailed:
+        return []
+    out = []
+    for row in d.get("results") or []:
+        # Canada only. A species introduced to New Zealand and native here is
+        # native here, and the row carries the country that judged it.
+        country = (row.get("country") or row.get("countryCode") or "")
+        if country and "CANADA" not in country.upper() and country != "CA":
+            continue
+        val = (row.get("establishmentMeans") or "").strip()
+        if val:
+            out.append(val)
+    return out
+
+
 def assess(ab: int, sk: int, means: list) -> dict:
     """Turn counts into a verdict, saying which parts are measured.
 
@@ -224,22 +276,33 @@ def main() -> int:
         # BEFORE two hours are spent on a full run.
         for name, expect in (("Danaus plexippus", "present in AB"),
                              ("Callipepla gambelii", "absent — desert quail"),
-                             ("Sturnus vulgaris", "present but INTRODUCED")):
+                             ("Sturnus vulgaris", "present but INTRODUCED"),
+                             ("Apis mellifera", "present but INTRODUCED")):
             try:
-                ab, means = count_in_box(mod, name, PROVINCE_BOXES["AB"],
+                ab, facet = count_in_box(mod, name, PROVINCE_BOXES["AB"],
                                          throttle)
+                throttle.wait()
                 sk, _ = count_in_box(mod, name, PROVINCE_BOXES["SK"], throttle)
+                throttle.wait()
+                checklist = (establishment_from_checklists(mod, name, throttle)
+                             if ab + sk else [])
             except Exception as exc:                       # noqa: BLE001
                 print(f"  {name:24s} FAILED — {exc}")
                 continue
-            a = assess(ab, sk, means)
+            a = assess(ab, sk, facet + checklist)
             print(f"  {name:24s} AB={ab:<7d} SK={sk:<7d} "
-                  f"{a['verdict']:7s} {a['origin']:11s} {means or '(no facet)'}")
+                  f"{a['verdict']:7s} {a['origin']:11s}")
+            print(f"  {'':24s} occurrence facet: {facet or '(none — expected)'}")
+            print(f"  {'':24s} checklists:       {checklist or '(none)'}")
             print(f"  {'':24s} expected: {expect}")
             throttle.wait()
-        print("\nIf Sturnus vulgaris does not come back 'reject/introduced', "
-              "GBIF is not populating establishmentMeans for these taxa — say "
-              "so before starting the real run.")
+        print("\nThe two introduced species are the test. The occurrence "
+              "facet is known dead — V2.61's probe got no facet at all, on a "
+              "starling with 267,995 Alberta records — so the `checklists` "
+              "line is the one that has to work.")
+        print("If BOTH starling and honeybee show an empty checklist line, "
+              "GBIF cannot tell us what is introduced and the gate needs a "
+              "different source. Say so before starting the real run.")
         return 0
 
     todo = targets(held_only=args.held)
@@ -261,6 +324,14 @@ def main() -> int:
             throttle.wait()
             sk, means_sk = count_in_box(mod, name, PROVINCE_BOXES["SK"],
                                         throttle)
+            # Only for species that are actually here. One with no AB/SK
+            # records is rejected on the count alone, and two more requests
+            # would buy an answer that changes nothing — which matters when
+            # there are 3,065 of them.
+            if ab + sk:
+                throttle.wait()
+                means_sk = list(means_sk) + establishment_from_checklists(
+                    mod, name, throttle)
         except mod.FetchFailed as exc:
             # NOT recorded as absent. It is left out of the file entirely so a
             # re-run picks it up, and the run says so at the end.

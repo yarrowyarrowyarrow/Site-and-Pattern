@@ -397,18 +397,50 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def study_record(title: str) -> dict:
-    """A GloBI study title turned into a bibliography record.
+    """A GloBI ``study_title`` turned into a bibliography record.
 
     ``sources_master.json`` holds structured records — authors, year, title,
-    kind — and GloBI hands over one free-text string. So this parses what it
-    can and **says that it parsed it**: `record_confidence: unverified` and a
-    note naming the provenance, because a machine-split author field is not a
-    transcription from the work.
+    kind — and GloBI hands over one free-text string, so this parses what it
+    can and **says that it parsed it**.
 
-    That is still a real improvement on `globi`. The reader gets a named study
-    they can look up, instead of "an aggregator has a record somewhere".
+    **Two shapes, because the live probe showed two.** `study_title` came back
+    100% populated, which is the good news, and the first value sampled was
+    ``https://scan-bugs.org/portal/collections/individual/index…`` — a
+    specimen record in the Symbiota Collections of Arthropods Network, not a
+    paper. Much of GloBI is museum-collection aggregation, so a large share of
+    these will be URLs.
+
+    A URL is still a real citation: it names one identifiable record a person
+    can open, which is strictly more than `globi` said. But it is a *specimen
+    record*, not a study, and calling it one would be the same category error
+    this pipeline keeps having to undo. So it gets `kind: specimen_record`,
+    the host as its title, and the URL where a URL belongs — and slugging the
+    whole thing into a key is skipped, because
+    ``globi_https_scan_bugs_org_443_portal_collections_individual`` is not an
+    identifier anybody can read.
     """
     title = " ".join((title or "").split())
+    if title.lower().startswith(("http://", "https://")):
+        host = title.split("//", 1)[-1].split("/", 1)[0].split(":")[0]
+        slug = _SLUG_RE.sub("_", host.lower()).strip("_")
+        return {
+            "key": f"globi_{slug}" if slug else _SOURCE_KEY,
+            "authors": "",
+            "year": None,
+            "title": f"Specimen records from {host}",
+            "url": f"https://{host}/",
+            "kind": "specimen_record",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "A collection portal, not a published work. GloBI reports a "
+                "per-specimen URL for records aggregated from museum "
+                "collections; this entry names the collection, and the "
+                "individual record is reachable by querying GloBI for the "
+                "same species pair. Weaker than a paper and stronger than "
+                "citing the aggregator."),
+            "aliases": [host],
+        }
     year_match = _YEAR_RE.search(title)
     year = int(year_match.group(1)) if year_match else None
     authors = ""

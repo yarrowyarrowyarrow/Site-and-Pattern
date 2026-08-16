@@ -466,6 +466,34 @@ class TestCitationUpgrade(unittest.TestCase):
         self.assertEqual(r["authors"], "Robertson C")
         self.assertTrue(r["key"].startswith("globi_"))
 
+    def test_a_specimen_url_is_filed_as_one_not_as_a_study(self):
+        """What the live probe actually returned. `study_title` is 100%
+        populated and the first value sampled was
+        `https://scan-bugs.org/portal/collections/individual/index…` — a
+        museum specimen record, because much of GloBI is collection
+        aggregation rather than literature.
+
+        It is a real citation: one identifiable record a person can open,
+        strictly more than `globi` said. It is not a study, and filing it as
+        one would be the same category error this pipeline keeps undoing.
+        """
+        r = _ingest.study_record(
+            "https://scan-bugs.org:443/portal/collections/individual/index.php"
+            "?occid=12345678")
+        self.assertEqual(r["kind"], "specimen_record")
+        self.assertEqual(r["key"], "globi_scan_bugs_org")
+        self.assertIn("scan-bugs.org", r["title"])
+        self.assertIsNone(r["year"])
+        self.assertNotIn("occid", r["key"],
+                         "the per-record id must not end up in the key")
+
+    def test_every_record_from_one_portal_shares_one_key(self):
+        """Otherwise the bibliography grows one entry per specimen — tens of
+        thousands of them — and stops being a bibliography."""
+        a = _ingest.study_record("https://scan-bugs.org/portal/x?occid=1")
+        b = _ingest.study_record("https://scan-bugs.org/portal/y?occid=999")
+        self.assertEqual(a["key"], b["key"])
+
     def test_a_title_with_no_year_still_makes_a_record(self):
         """GloBI study titles are free text, not structured bibliography. A
         dataset name is still a better citation than 'an aggregator has it'."""

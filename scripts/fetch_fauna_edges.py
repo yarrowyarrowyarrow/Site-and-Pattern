@@ -203,14 +203,21 @@ _FORMS = (
 #: ``includeObservations=true``, which is the switch that changes what a row
 #: *is*: one row per observed record rather than one per distinct interaction.
 #:
-#: That costs more rows and buys the three fields V2.59 wanted and could not
-#: have. **The citation**, because GloBI only fills `study_title` in this mode —
-#: which is why all 2,439 shipped edges cite the aggregator rather than a paper.
-#: **The life stage**, which is what forced `larval_host` down to the explicit
-#: `hostOf` verb and cost 700 candidate host records. And **the body part**,
-#: which is the difference between a crossbill eating a cone and a sapsucker
-#: drilling a trunk — the distinction that dropped every sapsucker edge in
-#: V2.60.
+#: **What the live probe actually found (V2.61), against three hopes:**
+#:
+#: * ``study_title`` — **100% populated.** The win. All 2,439 shipped edges
+#:   cite the aggregator only because the default mode leaves this empty.
+#:   Note the *value*: the first one sampled was a scan-bugs.org specimen URL,
+#:   not a paper, so much of this is museum-collection provenance rather than
+#:   literature. Still a specific, openable record.
+#: * ``target_specimen_life_stage`` — **6%.** Thin. Of the 700 `larval_host`
+#:   records refused for want of a life stage, only a few dozen become
+#:   resolvable.
+#: * body part — **absent under every spelling.** ``/interaction`` does not
+#:   return it in any mode. The hope of recovering the sapsucker and mammal
+#:   browse records this way is **dead**, not deferred; it would need a
+#:   different endpoint or a different source. Recorded here so nobody spends
+#:   another evening on it.
 _OBS_FORMS = tuple(
     (f"{name} +obs",
      (lambda b: (lambda taxon: b(taxon) + [("includeObservations", "true")]))(
