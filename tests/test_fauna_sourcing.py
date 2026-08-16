@@ -160,6 +160,26 @@ class TestTheIngestGates(unittest.TestCase):
     """Report first, apply second. Each gate reports a count, so a run says what
     was thrown away and why."""
 
+    def setUp(self):
+        """Give the synthetic animals a clean bill of nativity.
+
+        These tests each exercise ONE gate, and once the real
+        `fauna_nativity.json` landed in the repo every one of them started
+        failing on a different gate — `Newus specius` is not in GBIF, so the
+        AB/SK check refused it before the gate under test ever ran. That is
+        the nativity gate working; it is also a test asserting the wrong
+        thing. Stubbing it here keeps each test about its own subject, and
+        `TestTheNativityGate` covers the real one.
+        """
+        self._real_nativity = _ingest._nativity
+        _ingest._nativity = lambda: {
+            name: {"ab_records": 500, "sk_records": 200, "origin": "native"}
+            for name in ("Newus specius", "Bombus", "Otherus specius")
+        }
+
+    def tearDown(self):
+        _ingest._nativity = self._real_nativity
+
     def _review(self, candidates):
         return _ingest.review(candidates)
 
@@ -667,12 +687,22 @@ class TestTheNativityGate(unittest.TestCase):
         """The fetch needs egress this repo does not have. A missing
         measurement is not evidence of absence (P9) — with no file the gate
         must fall back to V2.60 behaviour, not reject the catalogue."""
-        self.assertEqual(_ingest._nativity(), {})
-        out = _ingest.review([{
-            "plant": "Wild Bergamot", "fauna": "Newus specius",
-            "relationship": "nectar", "_taxon": "bee", "source": "globi",
-            "notes": "GloBI flowersVisitedBy"}])
-        self.assertEqual(len(out["kept"]), 1, out["rejected"])
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.move(path, backup)
+        try:
+            self.assertEqual(_ingest._nativity(), {})
+            out = _ingest.review([{
+                "plant": "Wild Bergamot", "fauna": "Newus specius",
+                "relationship": "nectar", "_taxon": "bee", "source": "globi",
+                "notes": "GloBI flowersVisitedBy"}])
+            self.assertEqual(len(out["kept"]), 1, out["rejected"])
+        finally:
+            if existed:
+                shutil.move(backup, path)
 
     def test_the_gate_actually_fires_when_the_fetch_has_run(self):
         """The one that matters, and the one nothing else here can prove.
