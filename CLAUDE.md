@@ -178,6 +178,42 @@ Keep it to the things a person can actually see. Internal refactors, schema
 bumps and guard tests do not need a click path — say in one line what would
 have broken if it went wrong, and move on.
 
+## Explain every command you hand over (ADOPTED V2.61)
+
+**The owner of this repo is learning the tooling by using it.** So a command
+is never handed over bare. Whenever you give a shell command to run — git,
+a fetch script, a one-liner probe — say **what it does, why that one, and what
+its output will mean** before they run it, in a sentence or two each.
+
+This is not padding. It has already paid for itself three times in one week:
+
+- `--observations` typed as `-- observations` silently ran a *different mode*
+  for two hours and produced an identical uncited file, because nobody had
+  explained that the space made it two arguments.
+- `git pull` alone could not fetch a new release branch, which is not obvious
+  and cost a round trip to discover.
+- A `git diff --stat` reading `24 insertions, 1 deletion` was unreadable
+  without knowing the tracked file was a single `[]` line — and that one fact
+  turned "some noise in a data file" into "those are photos you imported,
+  keep them".
+
+What to cover, briefly:
+
+1. **What it does**, in plain words — not the man page, the intent.
+2. **Why this command and not the obvious one.** `git pull --rebase` rather
+   than `git pull` is a choice with a reason; say the reason.
+3. **How to read the output.** What the numbers mean, and which one is the
+   number that matters.
+4. **What failure looks like**, when a wrong-but-plausible outcome exists —
+   the run that appears to work and did not.
+5. **Anything destructive, flagged before the command**, never after.
+   `git restore` discards work with no undo; `--force` and `reset --hard`
+   likewise. If a safe alternative exists (`git stash` over `git restore`),
+   lead with it and explain the difference.
+
+Prefer explaining a real command they are about to run over teaching git in
+the abstract. The concrete case is what sticks.
+
 ## Running tests
 
 ```bash
