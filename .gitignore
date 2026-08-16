@@ -46,4 +46,5 @@ Thumbs.db
 # beside it (fauna_edges_candidates.json, fauna_new_species.json) ARE committed:
 # they are the evidence a seeded edge is real, and the ingester reads them.
 data/fetched/_checkpoint.json
+data/fetched/_checkpoint_obs.json
 data/fetched/*.tmp
