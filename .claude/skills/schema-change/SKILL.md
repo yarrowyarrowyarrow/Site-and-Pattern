@@ -19,9 +19,11 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.63`,
-`_SCHEMA_VERSION = 69` (in `src/db/plants.py`) — v69 is a reseed only: 159
-curated animals and 2,639 edges (F127). v68 is a reseed only too, for the
+**Current facts (verify before quoting):** branch `V2.64`,
+`_SCHEMA_VERSION = 70` (in `src/db/plants.py`) — v70 is a reseed only: the
+980-species tail of the same F127 review, 820 more animals and 2,227 more
+edges. v69 is a reseed only too: the first 159 curated animals and 2,639
+edges (F127). v68 is a reseed only as well, for the
 first two rows `data/plant_photos.json` has ever carried. v67 is a reseed
 only as well: 37 more
 curated birds (F127a) plus a repair of v66's bird edges, which had read GloBI's

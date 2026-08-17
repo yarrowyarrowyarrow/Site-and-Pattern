@@ -1028,13 +1028,20 @@ class TestTheTop200Review(unittest.TestCase):
                 1 if "AB" in row["native_provinces"].split(",") else 0, name)
 
     def test_the_reviewed_animals_are_all_in_the_catalogue_now(self):
-        """The review is only worth anything if it was applied."""
+        """The review is only worth anything if it was applied.
+
+        Except for the animals whose every edge is dropped downstream —
+        see `writable` and V2.64. Those are admitted and deliberately not
+        written, so the assertion is "admitted AND connected", not
+        "admitted".
+        """
         import json
         with open(os.path.join(_ROOT, "data", "fauna_master.json"),
                   encoding="utf-8") as fh:
             have = {r["scientific_name"] for r in json.load(fh)
                     if isinstance(r, dict) and r.get("scientific_name")}
-        missing = sorted(set(self.mod.verdicts()) - have)
+        connected, _orphans = self.mod.writable()
+        missing = sorted(set(connected) - have)
         self.assertEqual(missing, [], f"reviewed but never written: {missing}")
 
     def test_no_rejected_animal_reached_the_catalogue(self):
@@ -1064,3 +1071,220 @@ class TestTheTop200Review(unittest.TestCase):
         introduced — the moment the first 159 landed."""
         self.assertEqual(len(self.mod.REVIEWED), 200)
         self.assertEqual(len(set(self.mod.REVIEWED)), 200)
+
+
+class TestTheTailReview(unittest.TestCase):
+    """F130 / V2.64 — the 980 species the top-200 review left held.
+
+    A different problem from V2.63 and the tests reflect that. The top 200
+    was a shortlist of well-known pollinators; the tail is 457 singletons,
+    nearly a quarter of them larval-host records, and it is where the
+    introduced species turned out to be hiding — carpet beetles, cluster
+    flies, the Meadow Spittlebug, two deliberate biocontrol releases and a
+    Chinese Mantis sold as a garden beneficial.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_new_fauna")
+
+    # ── The pin ──────────────────────────────────────────────────────────
+    def test_the_tail_list_is_pinned_and_disjoint(self):
+        """`REVIEWED` is a slice and pinning it stopped a sliding window.
+        This one is not a slice, and is pinned for the other reason: a
+        re-fetch must not deliver new species already marked as read."""
+        self.assertEqual(len(self.mod.REVIEWED_TAIL), 980)
+        self.assertEqual(len(set(self.mod.REVIEWED_TAIL)), 980)
+        self.assertEqual(
+            set(self.mod.REVIEWED) & set(self.mod.REVIEWED_TAIL), set())
+
+    def test_every_tail_species_actually_got_a_verdict(self):
+        gaps = [n for n in self.mod.REVIEWED_TAIL
+                if self.mod.verdict_for(n)[1].startswith("not reviewed")]
+        self.assertEqual(gaps, [], f"pinned as read but undecided: {gaps}")
+
+    def test_nothing_the_tail_refused_reached_the_catalogue(self):
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        leaked = sorted(n for n in self.mod.REVIEWED_TAIL
+                        if self.mod.verdict_for(n)[0] != "include"
+                        and n in have)
+        self.assertEqual(leaked, [], f"held or rejected, yet written: {leaked}")
+
+    # ── The two structural exclusions ────────────────────────────────────
+    def test_birds_are_decided_in_one_place_only(self):
+        """`curate_birds.py` owns birds and the ingest gate reads it. Two
+        tables that can disagree about the same animal is worse than one, so
+        no bird is in this file's pin and none comes out of `verdicts`."""
+        birds = _load("curate_birds")
+        for name in self.mod.REVIEWED_TAIL:
+            self.assertNotIn(name, birds.BIRDS,
+                             f"{name} is decided in curate_birds too")
+        rows = self.mod.verdicts()
+        self.assertEqual([n for n, r in rows.items() if r["taxon"] == "bird"],
+                         [])
+
+    def test_a_trinomial_is_refused_even_inside_an_included_genus(self):
+        """The rule sits ABOVE the genus lookup on purpose. Most of these
+        subspecies belong to genera the review admits, so a genus rule would
+        wave them straight in — and a subspecies row resolves against nothing
+        because the catalogue keys fauna on binomials."""
+        self.assertEqual(
+            self.mod.verdict_for("Satyrium titus mopsus")[0], "reject")
+        self.assertEqual(self.mod.verdict_for("Satyrium titus")[0], "include")
+        for name in ("Hesperia comma colorado", "Danaus plexippus plexippus",
+                     "Hoplitis albifrons argentifrons"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    # ── What the tail turned up that the top 200 could not ───────────────
+    def test_the_introduced_species_the_tail_surfaced_are_refused(self):
+        for name in ("Anthrenus verbasci", "Anthrenus scrophulariae",
+                     "Pollenia rudis", "Stomoxys calcitrans",
+                     "Philaenus spumarius", "Plutella xylostella",
+                     "Tenodera sinensis", "Otiorhynchus ovatus",
+                     "Sitona hispidulus", "Phyllobius oblongus",
+                     "Lepidosaphes ulmi", "Rhopalosiphum padi",
+                     "Rhyparochromus vulgaris", "Eumerus strigatus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_deliberate_biocontrol_releases_are_refused(self):
+        """Established, effective, and not prairie wildlife."""
+        for name in ("Larinus obtusus", "Urophora quadrifasciata",
+                     "Coccinella septempunctata"):
+            v, why = self.mod.verdict_for(name)
+            self.assertEqual(v, "reject", name)
+            self.assertIn("biocontrol", why.lower(), name)
+
+    def test_a_genus_that_splits_gets_read_species_by_species(self):
+        """A blanket rule either loses the natives or admits the imports."""
+        for native, introduced in (
+                ("Adelphocoris rapidus", "Adelphocoris lineolatus"),
+                ("Coccinella trifasciata", "Coccinella septempunctata"),
+                ("Agrilus anxius", "Agrilus cyanescens"),
+                ("Choreutis diana", "Choreutis pariana")):
+            self.assertEqual(self.mod.verdict_for(native)[0], "include",
+                             native)
+            self.assertEqual(self.mod.verdict_for(introduced)[0], "reject",
+                             introduced)
+
+    def test_a_superseded_name_does_not_become_a_second_row(self):
+        """One animal, two names. The `Picoides pubescens` failure again —
+        this time three flies and a beetle deep in the tail, where nobody
+        would have noticed the duplicate."""
+        for current, superseded in (
+                ("Platycheirus rosarum", "Pyrophaena rosarum"),
+                ("Lepturobosca chrysocoma", "Cosmosalia chrysocoma")):
+            self.assertEqual(self.mod.verdict_for(current)[0], "include",
+                             current)
+            self.assertNotEqual(self.mod.verdict_for(superseded)[0],
+                                "include", superseded)
+        # Held rather than rejected, because the animal itself is fine.
+        self.assertEqual(
+            self.mod.verdict_for("Phalaenophana pyramusalis")[0], "include")
+        self.assertEqual(
+            self.mod.verdict_for("Phaeolita pyramusalis")[0], "hold")
+
+    def test_a_visit_is_not_a_reward(self):
+        """The sparrow problem from V2.60, in three more shapes. GloBI files
+        `flowersVisitedBy` for an ambush bug, a crab spider, a robber fly and
+        a darner — true about where the animal was, false about what the
+        plant gave it."""
+        for name in ("Phymata americana", "Misumena vatia",
+                     "Laphria fernaldi", "Apiomerus spissipes",
+                     "Podisus maculiventris", "Sympetrum vicinum",
+                     "Aeshna umbrosa", "Enallagma civile"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "hold", name)
+
+    def test_no_arachnid_is_filed_as_an_insect(self):
+        """Two reasons, either sufficient: they are predators on flowers, and
+        `other_insect` is a false statement about a spider in a field the app
+        prints beside the animal's name."""
+        for name in ("Phidippus audax", "Xysticus punctatus",
+                     "Tetragnatha extensa", "Phalangium opilio",
+                     "Eriophyes emarginatae", "Aculus tetanothrix"):
+            self.assertNotEqual(self.mod.verdict_for(name)[0], "include", name)
+        self.assertEqual(
+            [n for n in self.mod.verdicts()
+             if n.split()[0] in ("Phidippus", "Xysticus", "Misumena",
+                                 "Phalangium", "Eriophyes")], [])
+
+    # ── The rows that come with the animals ──────────────────────────────
+    def test_every_admitted_lepidopteran_has_an_explicit_kind(self):
+        """`lep_attributes` falls back to butterfly/day for an unknown genus,
+        which is a safe default and a silent one — it would file 138 moths as
+        butterflies without failing anything. The table must be complete, not
+        merely defaulted."""
+        rows = self.mod.verdicts()
+        missing = sorted({n.split()[0] for n, r in rows.items()
+                          if r["taxon"] == "lepidoptera"}
+                         - set(self.mod.LEP_KIND))
+        self.assertEqual(missing, [], f"no kind for: {missing}")
+
+    def test_flight_season_is_unknown_rather_than_invented(self):
+        for row in self.mod.lep_attributes():
+            self.assertEqual(row["flight_season"], "unknown")
+            self.assertIn(row["kind"], ("butterfly", "moth", "skipper"))
+            self.assertIn(row["activity"], ("day", "night"))
+
+    def test_the_attribute_rows_were_actually_written(self):
+        """For every lepidopteran that got a fauna row. The 18 admitted but
+        unconnected ones (see `writable`) get neither, which is the point."""
+        import json
+        path = os.path.join(_ROOT, "data",
+                            "lepidoptera_attributes_master.json")
+        with open(path, encoding="utf-8") as fh:
+            have = {r.get("scientific_name") for r in json.load(fh)}
+        connected = set(self.mod.writable()[0])
+        missing = sorted(r["scientific_name"] for r in self.mod.lep_attributes()
+                         if r["scientific_name"] in connected
+                         and r["scientific_name"] not in have)
+        self.assertEqual(missing, [], f"written but unattributed: {missing}")
+
+    def test_a_common_name_is_only_written_for_an_admitted_animal(self):
+        """A name in the table for something the review refused is a name
+        written for nothing, and it hides a verdict that changed."""
+        rows = self.mod.verdicts()
+        orphans = sorted(k for k in self.mod.COMMON_NAMES if k not in rows)
+        self.assertEqual(orphans, [], f"named but not admitted: {orphans}")
+
+    # ── The orphan filter ────────────────────────────────────────────────
+    def test_an_animal_with_no_surviving_edge_is_not_written(self):
+        """The first tail apply wrote 20 animals connected to nothing.
+
+        They were admitted honestly — native, in range, real. Their edges
+        then died downstream, almost all of them at the larval-host gate:
+        adult nectaring records GloBI files as `eatenBy`, which the fetcher's
+        life-stage default had promoted into host claims. The gate is right
+        and the consequence is a moth with nothing left, which is not a
+        catalogue entry.
+        """
+        import json
+        _connected, orphans = self.mod.writable()
+        self.assertTrue(orphans, "the filter should have something to filter")
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        self.assertEqual(sorted(set(orphans) & have), [])
+
+    def test_an_orphan_gets_no_attribute_row_either(self):
+        """An unwritten animal with a `lepidoptera_attributes` row is an
+        attribute keyed on a species the catalogue does not hold."""
+        import json
+        _connected, orphans = self.mod.writable()
+        path = os.path.join(_ROOT, "data",
+                            "lepidoptera_attributes_master.json")
+        with open(path, encoding="utf-8") as fh:
+            have = {r.get("scientific_name") for r in json.load(fh)}
+        self.assertEqual(sorted(set(orphans) & have), [])
+
+    def test_already_seeded_animals_count_as_connected(self):
+        """On a re-run every candidate edge is dropped as "already seeded",
+        so an animal that HAS edges looks exactly like one that never got
+        any. Getting this wrong would stop re-applying the review from ever
+        working twice."""
+        connected, orphans = self.mod.writable()
+        self.assertIn("Bombus kirbiellus", connected)
+        self.assertNotIn("Bombus kirbiellus", orphans)

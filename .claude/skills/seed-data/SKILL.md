@@ -33,7 +33,7 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 69`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 70`.
 
 **Sourcing is enforced (V2.42).** Every `source` field in
 `plant_fauna_master.json`, `bee_attributes_master.json` and
@@ -57,12 +57,12 @@ bibliography. `validate_plant_fauna` was right; read the file before appending.
 
 | File | Rows | Loaded by (`src/db/plants.py`) | Table(s) |
 |---|---|---|---|
-| `data/plants_master.json` | 434 native plants | `_seed_from_master_json` → `_seed_from_json_file` | `plants`, `planting_calendar` (from `cal_*`), `plant_uses` (from `permaculture_uses`) |
+| `data/plants_master.json` | 432 native plants | `_seed_from_master_json` → `_seed_from_json_file` | `plants`, `planting_calendar` (from `cal_*`), `plant_uses` (from `permaculture_uses`) |
 | `data/garden_plants.json` | 5 cultivated garden plants | `_seed_from_json_file` | same as above; skips names already present |
-| `data/fauna_master.json` | 179 fauna | `_seed_fauna` (phase 1) | `fauna` |
-| `data/plant_fauna_master.json` | 2,817 links (+ metadata records) | `_seed_fauna` (phase 2) | `plant_fauna` |
+| `data/fauna_master.json` | 1147 fauna | `_seed_fauna` (phase 1) | `fauna` |
+| `data/plant_fauna_master.json` | 7,714 links (+ metadata records) | `_seed_fauna` (phase 2) | `plant_fauna` |
 | `data/bee_attributes_master.json` | 69 bees | `_seed_bee_attributes` | `bee_attributes` (keyed to `fauna.id`) |
-| `data/lepidoptera_attributes_master.json` | 31 species | `_seed_lepidoptera_attributes` | `lepidoptera_attributes` (keyed to `fauna.id`) |
+| `data/lepidoptera_attributes_master.json` | 337 species | `_seed_lepidoptera_attributes` | `lepidoptera_attributes` (keyed to `fauna.id`) |
 | `data/nurseries_master.json` | 13 suppliers (object w/ `nurseries` list) | `_seed_nurseries` | `nurseries` |
 | `data/plant_ecoregions.json` | **optional** — absent until the GBIF derivation has been run | `_seed_plant_ecoregions` | `plant_ecoregions` (keyed by scientific name in the file, resolved to ids at seed time) |
 | `data/rainfall_fallback_prairie.json` | 12 EC normals | `property_data._climate_normal_rainfall` (NOT reseeded) | none — read directly |

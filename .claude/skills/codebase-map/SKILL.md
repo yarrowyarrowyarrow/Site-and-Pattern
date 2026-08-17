@@ -61,7 +61,7 @@ inventory: [reference.md](reference.md).
 
 | Path | What |
 |---|---|
-| `src/db/plants.py` | Connection, `_SCHEMA_VERSION` (currently 45), migration/reseed logic, `search_plants`, climate/wind caches. |
+| `src/db/plants.py` | Connection, `_SCHEMA_VERSION` (currently 70), migration/reseed logic, `search_plants`, climate/wind caches. |
 | `src/db/schema.sql` | Authoritative DDL, loaded on every `init_db`. |
 | `src/db/seed_data.py` | Seeds the catalogue from `data/*.json`. |
 | `src/db/polycultures.py`, `src/db/recipes.py` | Spatial plant communities + ratio-only recipes. |

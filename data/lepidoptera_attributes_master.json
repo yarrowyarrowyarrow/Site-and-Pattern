@@ -1196,5 +1196,2345 @@
   "source": "globi",
   "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py; flight season not recorded, so the warm-season default applies.",
   "overwintering_stage": "unknown"
+ },
+ {
+  "scientific_name": "Acleris celiana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acleris cornana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta fragilis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta impleta",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta impressa",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta oblinita",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta radcliffei",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Acronicta vulpina",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Adela septentrionella",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Agriades aquilo",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Agriphila ruricolellus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Agrotis ipsilon",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Agrotis venerabilis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Albuna pyramidalis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Amblyptilia pica",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Amphipoea americana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Anania funebris",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Anania tertialis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Anarta nigrolunata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Androloma maccullochii",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Anthocharis julia",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Apamea inordinata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Apamea unanimis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Argynnis hydaspe",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Argynnis idalia",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Argynnis mormonia",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Autographa californica",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Boloria astarte",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Boloria epithore",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Boloria frigga",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Caenurgina crassiuscula",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Caenurgina erechtea",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys affinis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys augustinus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys dumetorum",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys eryphon",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys polios",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys sheridanii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Callophrys spinetorum",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Carterocephalus skada",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Catocala concumbens",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Cercyonis oetus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Cercyonis sthenele",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Charadra deridens",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chionodes viduella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chlorochlamys chloroleucaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chlosyne acastus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chlosyne gorgone",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chlosyne harrisii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chlosyne palla",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Choreutis diana",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Choristoneura fumiferana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Choristoneura pinus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Choristoneura rosaceana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Chrysoteuchia topiarius",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Cingilia catenaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Cladara limitaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Clemensia albata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Coenophila opacifrons",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Colias christina",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Colias hecla",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Colias nastes",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Colias palaeno",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Crambodes talidiformis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Crambus girardellus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Crambus unistriatellus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Cycnia tenera",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Danaus gilippus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Dargida diffusa",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Datana perspicua",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Dejongia lobidactylus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Diachrysia aereoides",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Diploschizia impigritella",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Drasteria hudsonica",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Drasteria petricola",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Dysstroma citrata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Ectoedemia populella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Ectropis crepuscularia",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Elophila icciusalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Emmelina monodactyla",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Enargia fausta",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Eosphoropteryx thyatyroides",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Epiblema scudderiana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Epirrhoe alternata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erebia discoidalis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erebia epipsodea",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erebia vidleri",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis afranius",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis brizo",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis icelus",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis juvenalis",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis pacuvius",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis persius",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Erynnis propertius",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Estigmene acrea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euchlaena marginaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euchloe ausonides",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euchloe creusa",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euchloe olympia",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Eucirroedia pampina",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euclidia ardita",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euclidia cuspidea",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphilotes battoides",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphydryas chalcedona",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphydryas colon",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphydryas editha",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphydryas gillettii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euphyia intermediata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euplexia benesimilis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Eupsilia tristigmata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Eusarca confusaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euxoa auxiliaris",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euxoa catenula",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Euxoa detersa",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Evergestis pallidata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Feralia comstocki",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Fumibotys fumalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Geina tenuidactylus",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Gesneria centuriella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Gillmeria pallidactyla",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Glaucopsyche piasus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Gnophaela clappiana",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Gnophaela latipennis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Gnorimoschema octomaculella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Graphiphora augur",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Heliothis phloxiphaga",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hemaris gracilis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hemaris thetis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hemileuca nevadensis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Herpetogramma abdominalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Herpetogramma aquilonalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Herpetogramma pertextalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Herpetogramma thestealis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hesperia dacotae",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hesperia juba",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hesperia uncas",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Homoeosoma electella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hydria undulata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hyles gallii",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hypena humuli",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hypena scabra",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Hyphantria cunea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lacinipolia olivacea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lacinipolia renigera",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Leucoptera pachystimella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Limenitis lorquini",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lithophane bethunei",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lithophane fagina",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lobophora nivigerata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lomographa semiclarata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lomographa vestaliata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lycaena cupreus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Lycaena heteronea",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Macaria truncataria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Malacosoma disstria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Marmara oregonensis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Melanchra assimilis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Mesoleuca gratulata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Mesoleuca ruficillata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Mompha raschkiella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Mompha unifasciella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Neophasia menapia",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Nephelodes minians",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Nomophila nearctica",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Nycteola cinereana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Oarisma garita",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Oeneis chryxus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Oeneis melissa",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Oeneis uhleri",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Orgyia leucostigma",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Orthosia hibisci",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Palthis angulalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Paraclemensia acerifoliella",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Paraleucoptera albella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Paranthrene robiniae",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Parnassius clodius",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Parnassius smintheus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pennisetia marginatum",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phalaenophana pyramusalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pholisora catullus",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyciodes batesii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyciodes pulchella",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyllocnistis populiella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyllonorycter anderidae",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyllonorycter apparella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyllonorycter ledella",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Phyllonorycter nipigon",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pieris angelika",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pieris marginalis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pieris napi",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Plebejus anna",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Plebejus idas",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Plebejus saepiolus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Podosesia syringae",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polia purpurissata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia faunus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia gracilis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia interrogationis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia progne",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia satyrus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Polygonia zephyrus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Ponometia candefacta",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Prochoerodes lineola",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pseudanarta flava",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pseudohermonassa bicarnea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pyrausta subsequalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pyrgus centaureae",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Pyrgus ruralis",
+  "kind": "skipper",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Renia flavipunctalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Rheumaptera hastata",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Rivula propinqualis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium acadica",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium behrii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium calanus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium californica",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium edwardsii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium liparops",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium saepium",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Satyrium sylvinus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Saucrobotys futilalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Schinia florida",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Schinia gaurae",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Schinia persimilis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Schinia walsinghami",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Schizura concinna",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Scoliopteryx libatrix",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Scopula junctaria",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Semioscopis inornata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Speyeria adiaste",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Speyeria callippe",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Speyeria edwardsii",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Speyeria hesperis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Speyeria zerene",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Spilosoma virginica",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Stigmella populetorum",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Sunira bicolorago",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synanthedon albicornis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synanthedon bibionipennis",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synanthedon exitiosa",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synanthedon pictipes",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synanthedon polygoni",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Synchlora aerata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Syngrapha epigaea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tetracis cachexiata",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea dione",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea dorcas",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea editha",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea heteronea",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea mariposa",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea nivalis",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Tharsalea rubidus",
+  "kind": "butterfly",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Trichodezia albovittata",
+  "kind": "moth",
+  "activity": "day",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Udea rubigalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Xestia c-nigrum",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Xestia normaniana",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Xestia smithii",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Xylena curvimacula",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Zale minerea",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Zanclognatha jacchusalis",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
+ },
+ {
+  "scientific_name": "Zelleria haimbachi",
+  "kind": "moth",
+  "activity": "night",
+  "flight_season": "unknown",
+  "overwintering_stage": "unknown",
+  "source": "globi",
+  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
  }
 ]

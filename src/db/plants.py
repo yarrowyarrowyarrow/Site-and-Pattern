@@ -272,12 +272,25 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # about — and it would be an odd one to hit on the file whose whole point is
 # being seen.
 # v69 (V2.63): no DDL change — a seed-data bump for F127. 159 curated animals
-# and 2,639 edges, taking documented coverage from 275 of 437 species to over
-# 400. The review is `scripts/curate_new_fauna.py`, and it exists because the
-# occurrence gate alone let *Apis mellifera* through at the top of the list
-# with 133 edges. Species with no accepted English name keep their binomial as
-# `common_name`, which for a solitary bee is the name.
-_SCHEMA_VERSION = 69
+# and 2,639 edges, taking plants with a wildlife record from 275 of 437 to 293.
+# (The comment shipped here said "over 400", which was never true of any count
+# in that increment; corrected in v70.) The review is
+# `scripts/curate_new_fauna.py`, and it exists because the occurrence gate
+# alone let *Apis mellifera* through at the top of the list with 133 edges.
+# Species with no accepted English name keep their binomial as `common_name`,
+# which for a solitary bee is the name.
+#
+# v70 (V2.64): no DDL change — the rest of F127. The 980-species tail of the
+# same held queue, read the same way: 838 more animals (327 → 1,165), 2,227
+# more edges (5,488 → 7,714), and plants with a wildlife record 293 → 302 of
+# 437. 278 new `lepidoptera_attributes` rows come with it, because a new
+# lepidopteran with no `kind` sorts nowhere in the scene or the habitat panel.
+#
+# Two things in the tail are refused structurally rather than one at a time:
+# **birds**, which `scripts/curate_birds.py` owns and which would otherwise be
+# decided by two tables that can disagree, and **trinomials**, which cannot be
+# rows because the catalogue keys fauna on binomials.
+_SCHEMA_VERSION = 70
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

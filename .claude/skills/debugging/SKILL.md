@@ -37,7 +37,7 @@ Two distinct causes:
 
 `init_db()` only reseeds when it decides `needs_reseed` — which is
 `count < 100` **or** `current_version < _SCHEMA_VERSION`. So editing seed
-JSON without bumping `_SCHEMA_VERSION` (`src/db/plants.py`, currently 45)
+JSON without bumping `_SCHEMA_VERSION` (`src/db/plants.py`, currently 70)
 means existing installs keep the old rows: the version check is the *only*
 trigger that fires the reseed on a populated DB. This is the #1 "my data
 change didn't show up" cause. See the `schema-change` and `seed-data`
