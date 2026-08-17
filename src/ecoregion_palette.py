@@ -26,28 +26,67 @@ import html
 #: map of the prairies uses: mountains violet, foothills olive, boreal
 #: green-teal, parkland yellow-green, grassland gold warming to amber as it
 #: gets wetter.
+#:
+#: **Lightness carries woody cover** (V2.66). The V2.51 set varied in hue alone
+#: and three of its six colours were greens sitting within OKLab ΔE 8 of each
+#: other — indistinguishable under deuteranopia, and only barely distinguishable
+#: with full colour vision. Spreading them across OKLCH lightness 0.47 to 0.90
+#: fixes that and says something true while doing it: the dark end is closed
+#: forest, the middle is savanna, the pale end is open grassland. A reader who
+#: cannot separate the hues still reads the north-south gradient.
 REGION_COLOUR: dict = {
-    "subalpine_montane":  "#8b79b8",   # violet, the Rockies
-    "fescue_foothills":   "#6f8f3f",   # olive, the fescue foothills
-    "boreal_mixedwood":   "#3f8f75",   # green-teal, the boreal
-    "aspen_parkland":     "#b3cc6b",   # yellow-green, the parkland arc
-    "moist_mixedgrass":   "#d9a94e",   # amber, the moist grassland
-    "mixedgrass_prairie": "#e3c96a",   # gold, the dry grassland
+    "subalpine_montane":  "#7c5ea6",   # violet, the Rockies
+    "fescue_foothills":   "#8a8b3c",   # olive, the fescue foothills
+    "boreal_mixedwood":   "#2f6b52",   # dark green, the boreal
+    "aspen_parkland":     "#a9c26a",   # yellow-green, the parkland arc
+    "moist_mixedgrass":   "#d99a4e",   # amber, the moist grassland
+    "mixedgrass_prairie": "#eeddab",   # pale gold, the dry grassland
 }
 _FALLBACK_COLOUR = "#7f8f6a"
 
+#: Regions drawn with a diagonal hatch **as well as** their colour.
+#:
+#: Hue and lightness cannot separate every pair that shares a border. Aspen
+#: Parkland is yellow-green and the Moist Mixed Grassland it borders for eight
+#: hundred kilometres is amber; green against orange is the red-green confusion
+#: axis, and under deuteranopia the two collapse to ΔE 4.3 no matter how the
+#: lightness is arranged. Every attempt to fix it with colour alone either broke
+#: the convention (a cyan boreal, a magenta Rockies) or pushed the parkland into
+#: the foothills olive instead — the conflict moved, it did not go away.
+#:
+#: So the pair that colour cannot carry gets a second channel. The rule, which
+#: ``tests/test_ecoregion.py`` enforces against whatever polygons are shipped:
+#: **every pair of ecoregions that shares a border must reach CVD ΔE 8, or one
+#: of the two must be hatched.** That generalises — when the ELC polygons land
+#: with their dozen-odd regions, the test says which ones need a hatch rather
+#: than leaving it to somebody's eye.
+HATCHED: frozenset = frozenset({"moist_mixedgrass"})
+
 #: How far toward white each confidence band is mixed. A region derived from
 #: three records must not look like one derived from three hundred; it must
-#: still be recognisably its own colour, which is why ``low`` stops at 0.55
-#: rather than fading out.
-_BAND_MIX = {"high": 0.0, "medium": 0.3, "low": 0.55, "": 0.42}
-_BAND_OPACITY = {"high": 0.95, "medium": 0.88, "low": 0.8, "": 0.8}
+#: still be recognisably its own colour, which is why ``low`` stops well short
+#: of fading out.
+#:
+#: The mix is gentler than it was before V2.66 and opacity does more of the
+#: work, because the palette now runs up to OKLCH lightness 0.90 at the dry
+#: grassland. Mixing *that* 55% toward white left a fill one step off the paper,
+#: which reads as "not recorded" — the opposite of what it means.
+#: ``tests/test_ecoregion.py`` pins the floor: every band of every region stays
+#: a measurable distance from ``ABSENT_FILL``.
+_BAND_MIX = {"high": 0.0, "medium": 0.22, "low": 0.30, "": 0.26}
+_BAND_OPACITY = {"high": 0.95, "medium": 0.84, "low": 0.68, "": 0.72}
 
-#: Not recorded here. Deliberately a neutral grey with almost no chroma, so
-#: "coloured means recorded" reads without hovering. The palest fill in the
-#: palette is the low-confidence dry grassland at ``#f2e7bc``, which is
-#: unmistakably yellow beside this.
-ABSENT_FILL = ("#cfd0ca", 0.5)
+#: Not recorded here. Deliberately a near-neutral grey, so "coloured means
+#: recorded" reads without hovering.
+#:
+#: Re-stepped cooler and darker in V2.66. The old ``#cfd0ca`` was a light warm
+#: grey chosen against a palette whose palest member was a mid gold; once the
+#: dry grassland moved to a pale gold at OKLCH lightness 0.90, the two came
+#: within OKLab deltaE 7.4 of each other and a region with three occurrence
+#: records looked like a region with none. Both channels now separate them: this
+#: is three and a half times less chromatic than the least chromatic fill, and
+#: ``tests/test_ecoregion.py`` holds both the distance and the chroma ratio.
+ABSENT_FILL = ("#babac4", 0.5)
 
 #: Painter's order for the reference map: broadest first, so the narrow western
 #: strips land on top of the boreal wedge instead of under it. Only consulted
@@ -79,6 +118,53 @@ def region_fill(key: str, band: str = "high") -> tuple:
     return mix_to_white(base, _BAND_MIX[band]), _BAND_OPACITY[band]
 
 
+#: Geometry of the hatch, in user units. Kept here beside the colours because
+#: the hatch is part of what a region *looks like*, not part of projecting it.
+HATCH_ID = "ecomap-hatch"
+HATCH_SIZE = 5
+
+
+def hatch_defs() -> str:
+    """The ``<defs>`` block defining one diagonal-hatch pattern per hatched
+    region, or ``""`` when nothing is hatched.
+
+    One pattern per region rather than one shared pattern: the strokes are
+    tinted from the region's own colour, so a hatch never introduces a colour
+    the legend does not account for.
+    """
+    if not HATCHED:
+        return ""
+    patterns = []
+    for key in sorted(HATCHED):
+        stroke = mix_to_black(REGION_COLOUR.get(key, _FALLBACK_COLOUR), 0.35)
+        patterns.append(
+            f'<pattern id="{HATCH_ID}-{key}" width="{HATCH_SIZE}" '
+            f'height="{HATCH_SIZE}" patternUnits="userSpaceOnUse" '
+            f'patternTransform="rotate(45)">'
+            f'<line x1="0" y1="0" x2="0" y2="{HATCH_SIZE}" '
+            f'stroke="{stroke}" stroke-width="1.1" stroke-opacity="0.55"/>'
+            f"</pattern>")
+    return "<defs>" + "".join(patterns) + "</defs>"
+
+
+def hatch_url(key: str) -> str:
+    """``url(#…)`` for a hatched region, or ``""`` for every other region."""
+    return f"url(#{HATCH_ID}-{key})" if key in HATCHED else ""
+
+
+def mix_to_black(hexcolour: str, amount: float) -> str:
+    """``hexcolour`` darkened toward black by ``amount`` (0..1)."""
+    value = (hexcolour or "").lstrip("#")
+    if len(value) != 6:
+        return hexcolour
+    try:
+        parts = [int(value[i:i + 2], 16) for i in (0, 2, 4)]
+    except ValueError:
+        return hexcolour
+    keep = 1.0 - max(0.0, min(1.0, amount))
+    return "#" + "".join(f"{round(c * keep):02x}" for c in parts)
+
+
 def legend_html(link_for=None, *, active: str = "") -> str:
     """The colour key, as HTML rather than SVG.
 
@@ -93,7 +179,16 @@ def legend_html(link_for=None, *, active: str = "") -> str:
     for key in sorted(region_geometry(), key=lambda k: DRAW_ORDER.get(k, 50)):
         fill, _ = region_fill(key, "high")
         name, where = ecoregion_display(key)
-        label = (f'<span class="ecokey-sw" style="background:{fill}"></span>'
+        # The swatch is generated from the same REGION_COLOUR entry and the same
+        # HATCHED set as the polygon, so a legend that disagrees with the map is
+        # not a thing that can happen by editing one of them. The previous
+        # rebuild attempt shipped a legend with two of its colours swapped.
+        swatch = fill
+        if key in HATCHED:
+            stroke = mix_to_black(REGION_COLOUR.get(key, _FALLBACK_COLOUR), 0.35)
+            swatch = (f"repeating-linear-gradient(45deg,{fill},{fill} 2px,"
+                      f"{stroke} 2px,{stroke} 3px)")
+        label = (f'<span class="ecokey-sw" style="background:{swatch}"></span>'
                  f'<span class="ecokey-name">{html.escape(name)}</span>'
                  + (f'<span class="ecokey-where">{html.escape(where)}</span>'
                     if where else ""))

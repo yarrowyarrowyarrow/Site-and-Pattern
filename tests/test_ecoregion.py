@@ -15,6 +15,7 @@ expect some of these assertions to need adjustment for boundary cases
 like Calgary (which sits at the prairie-foothills transition).
 """
 
+import math
 import os
 import sys
 import unittest
@@ -524,18 +525,31 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
         Asserted against the projected window rather than the polygons: the
         window is deliberately half a degree wider than the shapes so nothing
         sits flush against the border, and that margin is not letterboxing.
+
+        Measured over the window's whole *edge*, not its four corners. Under
+        the equal-area conic V2.66 moved to, the corners are not the extremes:
+        the cone curves, so the northern edge bows upward and its midpoint sits
+        higher in the frame than either north corner. Checking the corners
+        alone would report a letterbox that is not there, and would miss a real
+        one along the top.
         """
         from src.ecoregion_map import _BOUNDS, _projector, frame_height
         width = 600
         height = frame_height(width)
         project = _projector(width, height)
         west, south, east, north = _BOUNDS
-        x0, y0 = project(west, north)
-        x1, y1 = project(east, south)
-        self.assertAlmostEqual(x0, 0, delta=0.6)
-        self.assertAlmostEqual(y0, 0, delta=0.6)
-        self.assertAlmostEqual(x1, width, delta=0.6)
-        self.assertAlmostEqual(y1, height, delta=0.6)
+        xs, ys = [], []
+        for i in range(201):
+            f = i / 200.0
+            lon, lat = west + (east - west) * f, south + (north - south) * f
+            for point in ((lon, south), (lon, north), (west, lat), (east, lat)):
+                x, y = project(*point)
+                xs.append(x)
+                ys.append(y)
+        self.assertAlmostEqual(min(xs), 0, delta=0.6)
+        self.assertAlmostEqual(min(ys), 0, delta=0.6)
+        self.assertAlmostEqual(max(xs), width, delta=0.6)
+        self.assertAlmostEqual(max(ys), height, delta=0.6)
 
     def test_the_old_landscape_frame_would_have_failed_that(self):
         """Guards the guard: 600x376 is the aspect the maps shipped at, and it
@@ -560,12 +574,24 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
 
         The `xmlns` is a namespace identifier rather than a URL anything
         fetches, so it is stripped before the check instead of being allowed
-        to make the check vacuous."""
+        to make the check vacuous.
+
+        ``url(#id)`` is allowed and ``url(`` anything else is not. V2.66 gave
+        the map a hatch pattern and a clip path, both of which are referenced
+        the only way SVG can reference them: by fragment, into the same
+        document. That fetches nothing. Forbidding the whole `url(` token would
+        have meant either dropping the colour-vision safeguard or weakening the
+        rule that actually matters, which is that a species page must not make
+        a network request to draw a map."""
+        import re
         from src.ecoregion_map import map_svg
         svg = map_svg({"aspen_parkland": "high"}).replace(
             'xmlns="http://www.w3.org/2000/svg"', "")
-        for forbidden in ("<script", "http://", "https://", "<image", "url("):
+        for forbidden in ("<script", "http://", "https://", "<image"):
             self.assertNotIn(forbidden, svg)
+        for ref in re.findall(r"url\(([^)]*)\)", svg):
+            self.assertTrue(ref.startswith("#"),
+                            f"url({ref}) leaves the document")
 
     def test_the_caveat_says_the_outlines_are_not_boundaries(self):
         """The polygons are hand-traced. An outline without this caption is a
@@ -583,3 +609,181 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
             self.assertEqual(em.map_svg({"aspen_parkland": "high"}), "")
         finally:
             em._load = real
+
+
+# ── Colour-vision safety ───────────────────────────────────────────────────
+#
+# The V2.51 palette varied in hue alone. Three of its six colours were greens
+# within OKLab deltaE 8 of one another, which is indistinguishable under
+# deuteranopia and close to it with full colour vision. Nothing caught that,
+# because "are these colours far enough apart" had never been written down as
+# something a test could answer. It is computable, so it is computed here.
+#
+# The maths is the standard one: sRGB to linear, linear to OKLab, Euclidean
+# distance times 100, with Machado et al.'s colour-vision-deficiency matrices
+# applied first. Reimplemented rather than imported because the app ships no
+# colour-science dependency and this is thirty lines.
+
+_MACHADO = {
+    "protan": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216),
+               (-0.003882, -0.048116, 1.051998)),
+    "deutan": ((0.367322, 0.860646, -0.227968), (0.280085, 0.672501, 0.047413),
+               (-0.011820, 0.042940, 0.968881)),
+    "tritan": ((1.255528, -0.076749, -0.178779), (-0.078411, 0.930809, 0.147602),
+               (0.004733, 0.691367, 0.303900)),
+}
+
+
+def _linear(hexcolour):
+    value = hexcolour.lstrip("#")
+    out = []
+    for i in (0, 2, 4):
+        c = int(value[i:i + 2], 16) / 255.0
+        out.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
+    return out
+
+
+def _oklab(rgb):
+    r, g, b = rgb
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+
+
+def _simulate(rgb, kind):
+    matrix = _MACHADO[kind]
+    return [min(1.0, max(0.0, sum(matrix[row][i] * rgb[i] for i in range(3))))
+            for row in range(3)]
+
+
+def _delta_e(one, two, kind=None):
+    a = _oklab(_simulate(_linear(one), kind) if kind else _linear(one))
+    b = _oklab(_simulate(_linear(two), kind) if kind else _linear(two))
+    return 100.0 * math.dist(a, b)
+
+
+def _worst_cvd(one, two):
+    return min(_delta_e(one, two, k) for k in _MACHADO)
+
+
+def _adjacent_pairs():
+    """Region pairs that share ground, from the shipped polygons.
+
+    Pure-Python on purpose: the app has no shapely. The shipped polygons
+    deliberately overlap by a fraction of a degree at their shared edges (so a
+    site near a boundary reports both regions), which means "do these two
+    share ground" is answerable by asking whether any vertex of one falls
+    inside the other.
+    """
+    from src.geometry import point_in_polygon
+    from src.ecoregion_map import _load, _rings
+
+    shapes = {}
+    for feature in _load():
+        key = ((feature.get("properties") or {}).get("key") or "").strip()
+        if key:
+            shapes.setdefault(key, []).extend(
+                _rings(feature.get("geometry") or {}))
+    pairs = set()
+    keys = sorted(shapes)
+    for i, one in enumerate(keys):
+        for two in keys[i + 1:]:
+            hit = any(point_in_polygon(lat, lon, [ring])
+                      for ring in shapes[two]
+                      for lon, lat in shapes[one][0]) or \
+                  any(point_in_polygon(lat, lon, [ring])
+                      for ring in shapes[one]
+                      for lon, lat in shapes[two][0])
+            if hit:
+                pairs.add((one, two))
+    return sorted(pairs)
+
+
+class TestColoursSurviveColourBlindness(unittest.TestCase):
+    """The rule: two ecoregions that share a border must be tellable apart.
+
+    Enforced against whatever polygons are shipped, so when the real ELC
+    polygons land with their dozen-odd regions this test names the pairs that
+    need attention instead of leaving it to somebody's eye.
+    """
+
+    #: OKLab deltaE x100. The documented floor for categorical fills under
+    #: simulated colour-vision deficiency, legal at this value only when a
+    #: second channel carries the same distinction.
+    FLOOR = 8.0
+
+    def test_the_polygons_do_produce_adjacent_pairs(self):
+        """Guards the guard. If the adjacency finder returned nothing, every
+        assertion below would pass while checking nothing at all."""
+        self.assertGreaterEqual(len(_adjacent_pairs()), 6)
+
+    def test_bordering_regions_separate_by_colour_or_by_hatch(self):
+        from src.ecoregion_palette import HATCHED, region_fill
+        for one, two in _adjacent_pairs():
+            gap = _worst_cvd(region_fill(one, "high")[0],
+                             region_fill(two, "high")[0])
+            if gap >= self.FLOOR:
+                continue
+            self.assertTrue(
+                one in HATCHED or two in HATCHED,
+                f"{one} and {two} share a border, are only deltaE {gap:.1f} "
+                f"apart under colour-vision deficiency, and neither is "
+                f"hatched. Re-step one of the two colours in REGION_COLOUR, "
+                f"or add one of them to HATCHED.")
+
+    def test_no_region_is_hatched_without_needing_it(self):
+        """A hatch is visual noise; it has to be earned. If a colour change
+        makes one unnecessary, this says so rather than letting it linger."""
+        from src.ecoregion_palette import HATCHED, region_fill
+        needed = set()
+        for one, two in _adjacent_pairs():
+            if _worst_cvd(region_fill(one, "high")[0],
+                          region_fill(two, "high")[0]) < self.FLOOR:
+                needed.update({one, two})
+        for key in HATCHED:
+            self.assertIn(key, needed,
+                          f"{key} is hatched but every region it borders is "
+                          f"already far enough away in colour.")
+
+    def test_the_palette_varies_in_lightness_not_only_hue(self):
+        """The specific V2.51 defect: six colours, one lightness band, three
+        of them green."""
+        from src.ecoregion_palette import REGION_COLOUR
+        lightness = [_oklab(_linear(c))[0] for c in REGION_COLOUR.values()]
+        self.assertGreater(max(lightness) - min(lightness), 0.30)
+
+    def test_every_confidence_band_still_reads_as_recorded(self):
+        """Lightness carries confidence as well as identity, and the two
+        channels compete. A low-confidence fill that has faded to within a
+        whisker of the "not recorded here" grey has stopped saying what it
+        means: the reader sees absence where the data says presence."""
+        from src.ecoregion_palette import ABSENT_FILL, REGION_COLOUR, region_fill
+        for key in REGION_COLOUR:
+            for band in ("high", "medium", "low", ""):
+                fill = region_fill(key, band)[0]
+                gap = _delta_e(fill, ABSENT_FILL[0])
+                self.assertGreater(
+                    gap, 9.5,
+                    f"{key} at {band or 'unstated'} confidence is only "
+                    f"deltaE {gap:.1f} from the not-recorded grey.")
+
+    def test_not_recorded_reads_as_grey_beside_every_fill(self):
+        """The distance above is one channel; this is the other, and it is the
+        one a reader actually uses. "Coloured means recorded" works because the
+        absent fill has almost no chroma and every region fill has some."""
+        from src.ecoregion_palette import ABSENT_FILL, REGION_COLOUR, region_fill
+
+        def chroma(hexcolour):
+            _, a, b = _oklab(_linear(hexcolour))
+            return math.hypot(a, b)
+
+        neutral = chroma(ABSENT_FILL[0])
+        for key in REGION_COLOUR:
+            for band in ("high", "medium", "low", ""):
+                self.assertGreater(
+                    chroma(region_fill(key, band)[0]), neutral * 2.5,
+                    f"{key} at {band or 'unstated'} confidence is barely more "
+                    f"chromatic than the not-recorded grey.")

@@ -31,14 +31,19 @@ from __future__ import annotations
 import html
 import json
 import math
+from functools import lru_cache
 from typing import Optional
 
-from src.ecoregion_palette import (ABSENT_FILL, DRAW_ORDER, REGION_COLOUR,
+from src.ecoregion_basemap import (SUBJECT_CLIP_ID, cities_svg, land_svg,
+                                   provinces_svg, subject_clip_defs,
+                                   water_svg)
+from src.ecoregion_palette import (ABSENT_FILL, DRAW_ORDER, HATCHED,
+                                   REGION_COLOUR, hatch_defs, hatch_url,
                                    legend_html, region_fill)
 from src.resources import resource_path
 
 #: Re-exported so callers keep one import for "the ecoregions, drawn".
-__all__ = ["CAVEAT", "REGION_COLOUR", "frame_height", "legend_html",
+__all__ = ["CAVEAT", "HATCHED", "REGION_COLOUR", "frame_height", "legend_html",
            "map_svg", "region_fill", "region_geometry"]
 
 #: Lon/lat window the map draws. Slightly wider than the polygons' own bounds so
@@ -46,18 +51,74 @@ __all__ = ["CAVEAT", "REGION_COLOUR", "frame_height", "legend_html",
 _BOUNDS = (-121.0, 48.4, -100.4, 60.6)          # west, south, east, north
 
 
+#: Albers Equal Area Conic: standard parallels 50 and 58 north, central meridian
+#: 110.5 west — the middle of this window.
+#:
+#: **Why a real projection replaced the cosine factor in V2.66.** The old
+#: projector was plate carree with longitude scaled by cos(mean latitude) — one
+#: number for the whole map. Across twelve degrees of latitude that number is
+#: wrong at both ends: it over-widens the 49th parallel and pinches the 60th, so
+#: the grassland looked bigger than it is and the boreal smaller. On a map whose
+#: entire job is "how much ground does each ecoregion cover", areas that are not
+#: comparable is the one defect that cannot be styled around. Albers is
+#: equal-area by construction.
+#:
+#: **Why not ESRI:102001 verbatim**, which is what the GeoPackage
+#: ``tools/ecoregions`` exports is written in. Canada Albers puts its central
+#: meridian at 96 west, to keep the whole country upright. Fourteen degrees west
+#: of that, the cone has turned far enough that Alberta and Saskatchewan arrive
+#: visibly rotated — the first render of this projector came out tilted about
+#: twelve degrees clockwise, with the 60th parallel running downhill across the
+#: frame. Re-centring the same projection on this window is the standard fix and
+#: costs nothing: it is still Albers, still equal-area, and areas still compare.
+#: The exported data keeps ESRI:102001 because that is the number other tools
+#: expect; only the *drawing* is re-centred.
+_ALBERS = (50.0, 58.0, 54.0, -110.5)    # lat1, lat2, lat0, lon0
+
+
+def _albers(lon: float, lat: float) -> tuple:
+    """Albers forward. Returns unscaled (x, y) on the unit sphere, y northward."""
+    lat1, lat2, lat0, lon0 = _ALBERS
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    n = (math.sin(p1) + math.sin(p2)) / 2.0
+    c = math.cos(p1) ** 2 + 2.0 * n * math.sin(p1)
+    rho0 = math.sqrt(c - 2.0 * n * math.sin(math.radians(lat0))) / n
+    rho = math.sqrt(max(0.0, c - 2.0 * n * math.sin(math.radians(lat)))) / n
+    theta = n * math.radians(lon - lon0)
+    return rho * math.sin(theta), rho0 - rho * math.cos(theta)
+
+
+@lru_cache(maxsize=1)
+def _extent() -> tuple:
+    """The projected bounding box of the map window.
+
+    Sampled around the window's edge rather than taken from its four corners: a
+    conic curves, so the northern edge bows and its midpoint is the highest
+    point on the map, not either corner.
+    """
+    west, south, east, north = _BOUNDS
+    steps = 60
+    xs, ys = [], []
+    for i in range(steps + 1):
+        f = i / steps
+        lon = west + (east - west) * f
+        lat = south + (north - south) * f
+        for point in ((lon, south), (lon, north), (west, lat), (east, lat)):
+            x, y = _albers(*point)
+            xs.append(x)
+            ys.append(y)
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 def frame_height(width: int) -> int:
     """The height that makes ``width`` fill the frame with no letterbox.
 
-    Alberta and Saskatchewan together are very nearly square once longitude is
-    compressed by cos(latitude), and the first coloured draft was asked for at
-    760x470. The projector letterboxes rather than distort, so a third of that
-    box was blank on each side and the map came out half the size of its own
-    figure. Callers ask for a width and take the height they get.
+    The projector letterboxes rather than distort, so a caller that picks its
+    own height gets blank bands and a map half the size of its own figure.
+    Callers ask for a width and take the height they get.
     """
-    west, south, east, north = _BOUNDS
-    k = math.cos(math.radians((south + north) / 2.0))
-    return round(width * (north - south) / ((east - west) * k))
+    x0, y0, x1, y1 = _extent()
+    return round(width * (y1 - y0) / (x1 - x0))
 
 
 def _load() -> list[dict]:
@@ -67,42 +128,6 @@ def _load() -> list[dict]:
             return (json.load(fh) or {}).get("features", []) or []
     except Exception:                                        # noqa: BLE001
         return []
-
-
-def _load_provinces() -> list[dict]:
-    """Provincial outlines, for drawing only.
-
-    Never read by ``src.ecoregion``'s lookup. Borders are most of what made the
-    reference map legible: without them a reader has no idea which part of the
-    country they are looking at, which was the single biggest thing wrong with
-    the first version of this drawing.
-    """
-    try:
-        with open(resource_path("data", "provinces_prairie.geojson"),
-                  encoding="utf-8") as fh:
-            return (json.load(fh) or {}).get("features", []) or []
-    except Exception:                                        # noqa: BLE001
-        return []
-
-
-#: Drawn as a dot and a label when the map is big enough to carry them.
-#: Orientation is most of what a reader needs from a small map.
-CITIES = (
-    ("Edmonton", 53.5461, -113.4938),
-    ("Calgary", 51.0447, -114.0719),
-    ("Fort McMurray", 56.7264, -111.3803),
-    ("Grande Prairie", 55.1707, -118.7947),
-    ("Lethbridge", 49.6956, -112.8451),
-    ("Saskatoon", 52.1332, -106.6700),
-    ("Regina", 50.4452, -104.6189),
-    ("Prince Albert", 53.2033, -105.7531),
-)
-
-#: Where each province's two-letter code sits. Placed by hand rather than at a
-#: centroid: Alberta's centroid lands in the middle of the boreal fill, where
-#: the label fights the shading.
-PROVINCE_LABELS = (("AB", 57.6, -115.0), ("SK", 57.6, -106.0),
-                   ("BC", 55.0, -120.5), ("MB", 55.0, -100.9))
 
 
 def _rings(geometry: dict) -> list:
@@ -116,24 +141,17 @@ def _rings(geometry: dict) -> list:
 
 
 def _projector(width: float, height: float):
-    """Equirectangular, with longitude compressed by cos(mean latitude).
-
-    At this scale a plate-carree map of the prairies is visibly stretched
-    east-west; one cosine factor is the whole correction and keeps the drawing
-    honest about proportions without pulling in a projection library.
-    """
-    west, south, east, north = _BOUNDS
-    k = math.cos(math.radians((south + north) / 2.0))
-    span_x = (east - west) * k
-    span_y = north - south
+    """lon/lat -> SVG user units, equal-area conic, centred and letterboxed."""
+    x0, y0, x1, y1 = _extent()
+    span_x, span_y = x1 - x0, y1 - y0
     scale = min(width / span_x, height / span_y)
     pad_x = (width - span_x * scale) / 2.0
     pad_y = (height - span_y * scale) / 2.0
 
     def project(lon: float, lat: float) -> tuple:
-        x = pad_x + (lon - west) * k * scale
-        y = pad_y + (north - lat) * scale
-        return x, y
+        x, y = _albers(lon, lat)
+        # SVG y grows downward; the projection's grows north.
+        return pad_x + (x - x0) * scale, pad_y + (y1 - y) * scale
 
     return project
 
@@ -194,16 +212,18 @@ def map_svg(highlight: Optional[dict] = None, *,
         f'<svg class="ecomap" viewBox="0 0 {width} {height}" '
         f'width="100%" height="auto" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" '
-        f'aria-label="{html.escape(title or "Ecoregion map")}">'
+        f'aria-label="{html.escape(title or "Ecoregion map")}">',
+        hatch_defs(),
+        subject_clip_defs(project),
     ]
-    # Provinces first, as a plain wash under the ecoregion fills: they are the
-    # frame, not the subject.
-    for feature in _load_provinces():
-        for ring in _rings(feature.get("geometry") or {}):
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
-            parts.append(f'<polygon class="ecomap-prov" points="{points}"/>')
+    # Neighbours first and in grey — they are context, and without them the two
+    # provinces read as a shape floating in space rather than part of a
+    # continent. Then Alberta and Saskatchewan as the wash the fills sit on.
+    parts += land_svg(project)
+    parts += provinces_svg(project, subject_only=False, css="ecomap-context")
+    parts += provinces_svg(project, subject_only=True, css="ecomap-prov")
+    # Everything thematic is clipped to the two provinces the layer speaks for.
+    parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">')
     for key, rings in order:
         band = highlight.get(key)
         present = reference or key in highlight
@@ -217,6 +237,7 @@ def map_svg(highlight: Optional[dict] = None, *,
         else:
             fill, opacity = ABSENT_FILL
             tip += ", not recorded"
+        hatch = hatch_url(key) if (reference or present) else ""
         for ring in rings:
             points = " ".join(
                 f"{x:.1f},{y:.1f}" for x, y in
@@ -224,30 +245,26 @@ def map_svg(highlight: Optional[dict] = None, *,
             shape = (f'<polygon class="ecomap-region" points="{points}" '
                      f'fill="{fill}" fill-opacity="{opacity}">'
                      f'<title>{html.escape(tip)}</title></polygon>')
+            if hatch:
+                # A second polygon over the first rather than a pattern *as* the
+                # fill: the flat colour has to stay underneath so the region
+                # keeps its identity for a reader who sees colour fine and is
+                # only helped, not replaced, by the texture.
+                shape += (f'<polygon class="ecomap-hatch" points="{points}" '
+                          f'fill="{hatch}"/>')
             href = link_for(key) if link_for else ""
             if href:
                 shape = f'<a href="{html.escape(href)}">{shape}</a>'
             parts.append(shape)
 
-    # Provincial borders again, on top, so a boundary reads through the fills.
-    for feature in _load_provinces():
-        for ring in _rings(feature.get("geometry") or {}):
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
-            parts.append(f'<polygon class="ecomap-border" points="{points}"/>')
+    parts.append("</g>")
+    # Water over the fills — a river that vanishes under a polygon is worse than
+    # no river — then borders on top so a boundary reads through everything.
+    parts += water_svg(project)
+    parts += provinces_svg(project, subject_only=True, css="ecomap-border")
 
     if cities:
-        for name, lat, lon in CITIES:
-            x, y = project(lon, lat)
-            parts.append(f'<circle class="ecomap-city" cx="{x:.1f}" '
-                         f'cy="{y:.1f}" r="2.2"/>')
-            parts.append(f'<text class="ecomap-place" x="{x + 4:.1f}" '
-                         f'y="{y + 3:.1f}">{html.escape(name)}</text>')
-        for code, lat, lon in PROVINCE_LABELS:
-            x, y = project(lon, lat)
-            parts.append(f'<text class="ecomap-prov-label" x="{x:.1f}" '
-                         f'y="{y:.1f}" text-anchor="middle">{code}</text>')
+        parts += cities_svg(project)
 
     if labels:
         for key, rings in regions.items():

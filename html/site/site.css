@@ -185,11 +185,29 @@ p { margin: .7rem 0; }
    is also about as tall as the page. Cap it and centre it: past this size the
    drawing gains nothing, it just pushes the legend below the fold. */
 .wide-map .ecomap { max-width: 40rem; margin: 0 auto; }
-/* Neighbouring land, not a void. BC and MB are the only provinces this
-   is visible on: Alberta and Saskatchewan are covered by ecoregion
-   fills drawn over the top. */
-.ecomap-prov { fill: #e6e5dd; stroke: none; }
+/* Neighbouring land, in grey and a shade darker than the subject provinces, so
+   BC / MT / NT / MB read as "context, not classified" rather than as a seventh
+   ecoregion. Before V2.66 they were absent and the two provinces floated. */
+.ecomap-context { fill: #d7d6cd; stroke: #c6c5bb; stroke-width: .4; }
+/* Every province and state in the window, unioned, painted first. Catches the
+   hairline gaps that independent simplification leaves on shared borders. */
+.ecomap-land { fill: #d7d6cd; stroke: none; }
+/* Alberta and Saskatchewan: the wash the ecoregion fills sit on. Visible only
+   where a fill does not reach, which is now a real question rather than a
+   rhetorical one: the fills come from data with gaps in it. */
+.ecomap-prov { fill: #eceada; stroke: none; }
 .ecomap-region { stroke: #8b8878; stroke-width: .5; stroke-opacity: .55; }
+/* Water, drawn over the fills. A river that disappears under a polygon is
+   worse than no river: it reads as a rendering bug rather than a boundary. */
+.ecomap-lake { fill: #b9cfdd; stroke: #93b3c6; stroke-width: .4; }
+.ecomap-river {
+  stroke: #93b3c6; stroke-width: .9; stroke-opacity: .9;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+/* The hatch is the second channel for regions whose colour alone does not
+   separate from a neighbour under colour-vision deficiency. It never replaces
+   the fill; it sits over it. See src/ecoregion_palette.py:HATCHED. */
+.ecomap-hatch { stroke: none; pointer-events: none; }
 .ecomap-border {
   fill: none; stroke: #6d6a5e; stroke-width: 1.1; stroke-opacity: .85;
   stroke-linejoin: round;
@@ -200,9 +218,12 @@ p { margin: .7rem 0; }
   fill: #2b2d24; pointer-events: none; paint-order: stroke;
   stroke: rgba(255,255,255,.75); stroke-width: 2.2px;
 }
+/* The province codes sit on the boreal fill, which is dark. They carry the
+   same halo the city labels do, or AB and SK disappear into the green. */
 .ecomap-prov-label {
   font: 700 13px/1 ui-sans-serif, system-ui, sans-serif;
-  fill: #6d6a5e; letter-spacing: .14em; pointer-events: none; opacity: .75;
+  fill: #5c5a4f; letter-spacing: .14em; pointer-events: none; opacity: .9;
+  paint-order: stroke; stroke: rgba(255,255,255,.6); stroke-width: 3px;
 }
 .ecomap-label {
   font: 600 9.5px/1 ui-sans-serif, system-ui, sans-serif;

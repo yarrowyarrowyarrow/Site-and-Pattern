@@ -125,8 +125,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # The split the ceiling asked for was the real one — the file draws
         # geometry, `ecoregion_palette.py` says what a colour asserts — and
         # the species page now imports the palette without the projector.
-        (_SRC / "ecoregion_map.py", 340),              # 315 now
-        (_SRC / "ecoregion_palette.py", 200),          # 108 now
+        # V2.66: the map gained a real projection and a real basemap. The
+        # basemap went to `ecoregion_basemap.py` rather than into the ceiling,
+        # on the same seam every atlas has: this file draws the subject, that
+        # one draws the ground under it.
+        (_SRC / "ecoregion_map.py", 340),              # 333 now
+        (_SRC / "ecoregion_basemap.py", 260),          # 210 now
+        # V2.66 took this to exactly 200 adding the hatch. Raised to 260 so the
+        # next edit is not forced to be a split; the seam here is thin and
+        # splitting "what a colour asserts" again would make two half-files.
+        (_SRC / "ecoregion_palette.py", 260),          # 200 now
         (_SRC / "static_site.py", 460),                # 378 now
         (_SRC / "static_site_render.py", 800),         # 744 now
         (_SRC / "static_site_species.py", 340),        # 256 now

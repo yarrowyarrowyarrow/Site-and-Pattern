@@ -40,6 +40,13 @@ Thumbs.db
 # Autosave
 *.perma.geojson.bak
 
+# Ecoregion pipeline (tools/ecoregions) — downloaded source datasets and
+# full-resolution intermediates. 50-150 MB of Natural Earth / ELC / Alberta
+# source data plus the working GeoPackages; regenerate with `python -m
+# tools.ecoregions.run`. The *shipped* outputs under data/ are tracked.
+tools/ecoregions/data/
+tools/ecoregions/out/
+
 # F125 fauna sourcing (V2.58). The fetcher's resume file holds a second copy of
 # every edge plus the done-list, so committing it doubles the data for nothing —
 # it exists only so a Ctrl-C can pick up where it stopped. The two OUTPUT files
