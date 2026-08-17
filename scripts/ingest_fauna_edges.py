@@ -40,6 +40,18 @@ _RELATIONSHIPS = {"larval_host", "nectar", "pollen", "seed_food",
                   "fruit_food", "nesting", "cover"}
 _TAXA = {"lepidoptera", "bird", "bee", "other_insect", "mammal"}
 
+#: Life-stage strings that mean "the immature animal was on this plant" (F131).
+#: An egg counts: a female choosing where to oviposit IS the host claim, and it
+#: is the same claim a field guide makes. A PUPA deliberately does not — larvae
+#: of many species wander off the host to pupate, so a pupa on a stem is
+#: evidence of a stem, not of a diet.
+_LARVAL_STAGES = {"larva", "larvae", "caterpillar", "nymph", "egg", "eggs"}
+#: ...and the ones that mean the opposite. GloBI writes several spellings.
+#: A bare "a" appears 12 times and is NOT read as adult — it is unexplained,
+#: and guessing would be exactly the shortcut this whole file exists to refuse.
+_ADULT_STAGES = {"adult", "adults", "adult(s)", "imago",
+                 "post-juvenile adult stage"}
+
 #: The citation key new edges are filed under. Registered in
 #: data/sources_master.json by --apply if it is not already there.
 _SOURCE_KEY = "globi"
@@ -149,6 +161,67 @@ def route_bird(rel: str, feeds: set, plant_has_fruit: bool) -> str:
         # body part eaten.
         return ""
     return rel
+
+
+def _life_stages(path: str = "") -> dict:
+    """``(plant, fauna, relationship) → set(life stages)`` from an observations
+    fetch (F131).
+
+    Returns ``{}`` when the file is absent, and every caller treats that as "no
+    evidence" rather than an error — the ingester has to keep working on a
+    checkout that only has the candidates file.
+    """
+    path = path or os.path.join(_FETCHED, "fauna_edges_observations.json")
+    if not os.path.exists(path):
+        return {}
+    stages: dict = {}
+    for r in _rows(path):
+        stage = (r.get("_life_stage") or "").strip().lower()
+        if not stage or not r.get("plant") or not r.get("fauna"):
+            continue
+        key = (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+               r.get("relationship", ""))
+        stages.setdefault(key, set()).add(stage)
+    return stages
+
+
+def route_life_stage(rel: str, notes: str, stages: set, taxon: str) -> tuple:
+    """Re-read a host claim against the life stage actually observed (F131).
+
+    Returns ``(relationship, host_is_evidenced)``.
+
+    The ``hostOf`` gate below refuses 700 candidate ``larval_host`` edges
+    because GloBI filed them under the unspecific ``eatenBy``, and that gate is
+    right: it is what stopped 23 false Monarch host edges reaching the seed.
+    But "unspecific verb" is not the same as "false", and the observations
+    fetch carries the one field that can tell them apart. Of the 700, **44
+    have an observed larva on that exact plant** — Hoary Elfin on Bearberry,
+    Freija Fritillary on Bog Cranberry, Tiger Swallowtail on Chokecherry — all
+    real host records the verb alone could not vouch for.
+
+    The reverse direction is narrower than it looks. An ``adult`` record means
+    the animal was not breeding there, but it does not automatically mean
+    nectar: an adult beetle on a leaf is *chewing it*, and rerouting that to
+    ``nectar`` would be the Monarch bug wearing a different hat. So the reroute
+    is allowed for Lepidoptera only, where the adult has no mandibles for
+    foliage and a flower visit is a nectar visit. Both cases it currently moves
+    are *Hemaris thysbe* on bergamot, which is a hummingbird moth doing exactly
+    that.
+
+    Anything else — no observation row, a stage nobody wrote down, a bare
+    ``"a"`` — comes back unchanged and unevidenced, and stays refused.
+    """
+    if rel != "larval_host":
+        return rel, False
+    if "hostOf" in (notes or ""):
+        return rel, True            # explicit verb; the life stage adds nothing
+    if not stages:
+        return rel, False
+    if stages & _LARVAL_STAGES:
+        return "larval_host", True
+    if stages & _ADULT_STAGES and taxon == "lepidoptera":
+        return "nectar", False
+    return rel, False
 
 
 def _occurrence_floor() -> int:
@@ -265,6 +338,7 @@ def review(candidates: list) -> dict:
     plants, fauna, _edge_rows, existing, plant_types, has_fruit = _load_seed()
     from src.flower_colour import WIND_POLLINATED_TYPES
     bird_feeds, synonyms, bird_verdicts = _bird_feeds()
+    life_stages = _life_stages()
     nativity = _nativity()
     refuse_origin, corrected_origin = _reviewed_origin()
     kept, rejected = [], {}
@@ -281,6 +355,7 @@ def review(candidates: list) -> dict:
         # BEFORE anything else looks at the animal — otherwise `Picoides
         # pubescens` reads as a new species and gets written as a second Downy
         # Woodpecker beside `Dryobates pubescens`.
+        raw_animal = animal     # the name the observations file is keyed by
         animal = synonyms.get(animal, animal)
 
         if not plant or not animal or not rel:
@@ -310,6 +385,14 @@ def review(candidates: list) -> dict:
                     drop("bird has not been assessed (F127a)")
                 continue
             rel = routed
+        # A host claim gets re-read against the life stage actually observed
+        # (F131). Also before the key, and for the same reason: an adult
+        # record becomes a different edge, not a dropped one.
+        stages = (life_stages.get((plant.lower(), raw_animal.lower(), rel))
+                  or life_stages.get((plant.lower(), animal.lower(), rel))
+                  or set())
+        rel, host_evidenced = route_life_stage(
+            rel, c.get("notes"), stages, (c.get("_taxon") or ""))
         key = (plant.lower(), animal.lower(), rel)
         if key in existing:
             drop("already seeded"); continue
@@ -350,10 +433,16 @@ def review(candidates: list) -> dict:
         # 107 of 120 candidate host edges come by that route, so this is a
         # heavy cut and it is the right one: telling somebody to plant
         # goldenrod to host monarch caterpillars is worse than telling them
-        # nothing. A re-fetch with includeObservations=true carries the life
-        # stage per record and would recover the real ones.
-        if rel == "larval_host" and "hostOf" not in (c.get("notes") or ""):
-            drop("larval_host not from GloBI's explicit hostOf verb"); continue
+        # nothing.
+        #
+        # V2.65 (F131): the re-fetch happened, so this no longer rests on the
+        # verb alone — `route_life_stage` above sets `host_evidenced` when an
+        # immature stage was actually observed on this plant, which recovers 44
+        # genuine hosts. Everything still unevidenced is refused exactly as
+        # before, monarchs included.
+        if rel == "larval_host" and not host_evidenced:
+            drop("larval_host with neither a hostOf verb nor an observed "
+                 "immature stage"); continue
         # AB/SK nativity (V2.61). Only for animals the catalogue does NOT
         # already hold: the existing rows had their nativity decided when they
         # were authored, and re-litigating that from occurrence counts would

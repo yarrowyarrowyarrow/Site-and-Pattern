@@ -320,6 +320,122 @@ class TestTheBirdRouting(unittest.TestCase):
         self.assertEqual(_ingest.route_bird("nectar", set(), True), "")
 
 
+class TestTheLifeStageRecovery(unittest.TestCase):
+    """V2.65 (F131). The `hostOf` gate refuses 700 candidate host edges because
+    GloBI filed them under the unspecific `eatenBy`, and that gate is what
+    stopped 23 false Monarch hosts reaching the seed. But *unspecific* is not
+    *false*, and the observations fetch carries the field that separates them.
+
+    44 of the 700 have an observed larva on that exact plant. The ones that
+    reached the catalogue are checkable against any field guide: *Schinia
+    florida* is an obligate *Oenothera* specialist, *Cycnia tenera* is the
+    Dogbane Tiger Moth, *Chlosyne harrisii* hosts on flat-topped white aster.
+
+    These pin the rule, not the count — the count moves with the fetch.
+    """
+
+    def test_an_observed_larva_evidences_a_host(self):
+        """The recovery. `eatenBy` plus a caterpillar on the plant is a host
+        record, whatever verb the aggregator happened to file it under."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"larva"}, "lepidoptera"),
+            ("larval_host", True))
+
+    def test_an_egg_counts_as_a_host_claim(self):
+        """A female choosing where to oviposit is making the host claim
+        herself, and it is the same claim a field guide makes."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"egg"}, "lepidoptera"),
+            ("larval_host", True))
+
+    def test_a_pupa_alone_does_not_evidence_a_host(self):
+        """Larvae of many species wander off the host to pupate, so a pupa on a
+        stem is evidence of a stem and not of a diet. This costs one real edge
+        (a bagworm on chokecherry) and keeps the rule honest."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"pupa"}, "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_adult_lepidopteran_reroutes_to_nectar(self):
+        """The other direction. An adult butterfly at a flower is nectaring —
+        this is the Monarch-on-goldenrod record, correctly filed at last."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"adult"}, "lepidoptera"),
+            ("nectar", False))
+
+    def test_an_adult_beetle_is_not_rerouted_to_nectar(self):
+        """The Monarch bug in a new costume, refused. An adult beetle on a leaf
+        is *chewing it*; calling that nectar would invent a reward from a
+        record that describes damage. Refused rather than routed."""
+        rel, ok = _ingest.route_life_stage(
+            "larval_host", "GloBI eatenBy", {"adult"}, "other_insect")
+        self.assertEqual((rel, ok), ("larval_host", False))
+
+    def test_an_unrecorded_stage_stays_refused(self):
+        """59% of observation rows have no life stage. Absent is not adult and
+        it is not larval — it comes back untouched and the gate refuses it."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     set(), "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_unexplained_stage_string_is_not_guessed(self):
+        """A bare 'a' appears 12 times in the fetch. It is probably 'adult'.
+        'Probably' is not the standard this file is held to."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"a"}, "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_explicit_hostof_needs_no_life_stage(self):
+        """The 716 edges that always passed still pass, with no observation
+        row and no stage — the verb was explicit to begin with."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI hostOf",
+                                     set(), "lepidoptera"),
+            ("larval_host", True))
+
+    def test_other_relationships_are_untouched(self):
+        """This gate only ever speaks about host claims. A nectar edge must
+        pass through it unchanged, and must not come out `host_evidenced`."""
+        for rel in ("nectar", "pollen", "seed_food", "fruit_food"):
+            self.assertEqual(
+                _ingest.route_life_stage(rel, "GloBI eatenBy",
+                                         {"larva"}, "lepidoptera"),
+                (rel, False), rel)
+
+    def test_the_recovered_hosts_are_in_the_seed(self):
+        """The specialists, end to end. If a reseed or a re-run drops these,
+        the recovery silently unshipped."""
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        hosts = {(r["plant"], r["fauna"]) for r in rows
+                 if r.get("relationship") == "larval_host"}
+        for pair in (("Evening Primrose", "Schinia florida"),
+                     ("Spreading Dogbane", "Cycnia tenera"),
+                     ("Flat-topped White Aster", "Chlosyne harrisii"),
+                     ("Slender Nettle", "Polygonia interrogationis")):
+            self.assertIn(pair, hosts)
+
+    def test_the_recovery_added_no_monarch_host(self):
+        """The gate this one relaxes is the Monarch gate. Nothing it recovered
+        may put a Monarch on anything that is not a milkweed — `test_fauna`
+        asserts the same thing against the database, this asserts it against
+        the file, and both should have to fail before it ships."""
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        for r in rows:
+            if (r.get("fauna") == "Danaus plexippus"
+                    and r.get("relationship") == "larval_host"):
+                self.assertIn("milkweed", r["plant"].lower(), r["plant"])
+
+
 class TestTheBirdCuration(unittest.TestCase):
     """The 67 birds F125 held, decided one at a time. Every verdict is an
     unsourced call — the same footing as the 142 fauna rows already shipped —

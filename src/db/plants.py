@@ -290,7 +290,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # **birds**, which `scripts/curate_birds.py` owns and which would otherwise be
 # decided by two tables that can disagree, and **trinomials**, which cannot be
 # rows because the catalogue keys fauna on binomials.
-_SCHEMA_VERSION = 70
+_SCHEMA_VERSION = 71
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

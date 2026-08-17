@@ -54085,5 +54085,187 @@
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Orthosia hibisci",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Limenitis arthemis",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Lophocampa maculata",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Vanessa cardui",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Spilosoma virginica",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Common Sunflower",
+  "fauna": "Estigmene acrea",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Evening Primrose",
+  "fauna": "Schinia florida",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Evening Primrose",
+  "fauna": "Hyles lineata",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Flat-topped White Aster",
+  "fauna": "Chlosyne harrisii",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Fragrant Sumac",
+  "fauna": "Hyphantria cunea",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Plains Wormwood",
+  "fauna": "Spilosoma virginica",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Red Osier Dogwood",
+  "fauna": "Lophocampa maculata",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Slender Nettle",
+  "fauna": "Polygonia interrogationis",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Spreading Dogbane",
+  "fauna": "Cycnia tenera",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Thinleaf Alder",
+  "fauna": "Lophocampa maculata",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Balsam Poplar",
+  "fauna": "Acronicta insita",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Bog Cranberry",
+  "fauna": "Boloria freija",
+  "relationship": "larval_host",
+  "source": "globi_scan_bugs_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Bur Oak",
+  "fauna": "Halysidota tessellaris",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Paonias myops",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Acronicta hasta",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Chokecherry",
+  "fauna": "Archips cerasivorana",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Flat-topped Goldenrod",
+  "fauna": "Cucullia convexipennis",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Gray Goldenrod",
+  "fauna": "Cucullia convexipennis",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Green Alder",
+  "fauna": "Malacosoma californica",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Paper Birch",
+  "fauna": "Ceratomia undulosa",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Shrubby Cinquefoil",
+  "fauna": "Malacosoma californica",
+  "relationship": "larval_host",
+  "source": "globi_inaturalist_org",
+  "notes": "GloBI eatenBy"
  }
 ]

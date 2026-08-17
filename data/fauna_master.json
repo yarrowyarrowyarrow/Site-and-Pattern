@@ -11659,5 +11659,95 @@
   "range_notes": "Blister beetles whose larvae develop in solitary bee nests — native.",
   "icon": "🪲",
   "description": "Blister beetles whose larvae develop in solitary bee nests — native."
+ },
+ {
+  "scientific_name": "Acronicta hasta",
+  "common_name": "Acronicta hasta",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Dagger moths — native woody-plant feeders, well represented in the boreal and parkland.",
+  "icon": "🦋",
+  "description": "Dagger moths — native woody-plant feeders, well represented in the boreal and parkland."
+ },
+ {
+  "scientific_name": "Acronicta insita",
+  "common_name": "Acronicta insita",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Dagger moths — native woody-plant feeders, well represented in the boreal and parkland.",
+  "icon": "🦋",
+  "description": "Dagger moths — native woody-plant feeders, well represented in the boreal and parkland."
+ },
+ {
+  "scientific_name": "Archips cerasivorana",
+  "common_name": "Uglynest Caterpillar",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Uglynest Caterpillar and relatives — native chokecherry feeders.",
+  "icon": "🦋",
+  "description": "Uglynest Caterpillar and relatives — native chokecherry feeders."
+ },
+ {
+  "scientific_name": "Boloria freija",
+  "common_name": "Boloria freija",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Lesser fritillaries, boreal and alpine.",
+  "icon": "🦋",
+  "description": "Lesser fritillaries, boreal and alpine."
+ },
+ {
+  "scientific_name": "Ceratomia undulosa",
+  "common_name": "Waved Sphinx",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Waved Sphinx, native on ash.",
+  "icon": "🦋",
+  "description": "Waved Sphinx, native on ash."
+ },
+ {
+  "scientific_name": "Cucullia convexipennis",
+  "common_name": "Cucullia convexipennis",
+  "taxon": "lepidoptera",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Hooded owlets, native composite feeders.",
+  "icon": "🦋",
+  "description": "Hooded owlets, native composite feeders."
+ },
+ {
+  "scientific_name": "Halysidota tessellaris",
+  "common_name": "Banded Tussock Moth",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Banded tussock moths, native.",
+  "icon": "🦋",
+  "description": "Banded tussock moths, native."
+ },
+ {
+  "scientific_name": "Malacosoma californica",
+  "common_name": "Western Tent Caterpillar",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Tent caterpillars. californica and disstria are Alberta's; the eastern americana is refused below.",
+  "icon": "🦋",
+  "description": "Tent caterpillars. californica and disstria are Alberta's; the eastern americana is refused below."
+ },
+ {
+  "scientific_name": "Paonias myops",
+  "common_name": "Paonias myops",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Eyed sphinxes, native on willow and poplar.",
+  "icon": "🦋",
+  "description": "Eyed sphinxes, native on willow and poplar."
  }
 ]
