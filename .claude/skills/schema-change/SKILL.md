@@ -19,8 +19,11 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.64`,
-`_SCHEMA_VERSION = 70` (in `src/db/plants.py`) — v70 is a reseed only: the
+**Current facts (verify before quoting):** branch `V2.65`,
+`_SCHEMA_VERSION = 71` (in `src/db/plants.py`) — v71 is a reseed only: 26
+recovered `larval_host` edges and the 9 animals they connect (F131), plus 80
+species gaining a `host_plant` or `bird_food` use tag the cited edges already
+justified (F120). v70 is a reseed only too: the
 980-species tail of the same F127 review, 820 more animals and 2,227 more
 edges. v69 is a reseed only too: the first 159 curated animals and 2,639
 edges (F127). v68 is a reseed only as well, for the
