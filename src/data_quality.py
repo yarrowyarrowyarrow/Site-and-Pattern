@@ -1251,9 +1251,24 @@ def validate_safety_provenance() -> tuple[list[str], list[str]]:
 #: Use tags whose meaning is also asserted, independently and with a citation,
 #: by a ``plant_fauna`` relationship. When the two disagree the tag is the
 #: weaker claim: an edge names the animal and cites the work.
-_TAG_BACKED_BY_EDGE: dict[str, tuple[str, ...]] = {
-    "host_plant": ("larval_host",),
-    "bird_food": ("fruit_food", "seed_food"),
+#:
+#: ``{tag: (relationships that back it, the taxon that has to be at the far
+#: end)}``. **The taxon half is load-bearing** (V2.65). Both tags mean something
+#: narrower than their relationship does, and reading the relationship alone
+#: gets the meaning wrong in both directions:
+#:
+#: - ``host_plant`` drives `design_critic`'s *"No butterfly/moth host plants"*
+#:   line, but 107 of 346 ``larval_host`` edges are bees, aphids, horntails and
+#:   gall midges. A gall midge developing in a hawthorn is a true larval host
+#:   record and says nothing whatever about caterpillars.
+#: - ``bird_food`` is backed by three ``seed_food`` edges whose animal is a
+#:   *deer mouse*.
+#:
+#: Same failure the Monarch, `eatenBy` and nectaring-sparrow bugs all were — an
+#: unspecific record read as a specific claim — so it gets the same answer.
+_TAG_BACKED_BY_EDGE: dict[str, tuple[tuple[str, ...], str]] = {
+    "host_plant": (("larval_host",), "lepidoptera"),
+    "bird_food": (("fruit_food", "seed_food"), "bird"),
 }
 
 
@@ -1279,6 +1294,11 @@ def use_tags_vs_edges() -> dict:
     edges = [e for e in json.loads(
         (DATA_DIR / "plant_fauna_master.json").read_text(encoding="utf-8"))
         if isinstance(e, dict) and e.get("relationship")]
+    taxon_of = {
+        r["scientific_name"]: (r.get("taxon") or "")
+        for r in json.loads(
+            (DATA_DIR / "fauna_master.json").read_text(encoding="utf-8"))
+        if isinstance(r, dict) and r.get("scientific_name")}
 
     out: dict[str, set] = {tag: set() for tag in _TAG_BACKED_BY_EDGE}
     for e in edges:
@@ -1288,8 +1308,9 @@ def use_tags_vs_edges() -> dict:
         tags = {t.strip() for t in
                 (row.get("permaculture_uses") or "").split(",") if t.strip()}
         rel = (e.get("relationship") or "").strip()
-        for tag, rels in _TAG_BACKED_BY_EDGE.items():
-            if rel in rels and tag not in tags:
+        taxon = taxon_of.get((e.get("fauna") or "").strip(), "")
+        for tag, (rels, want) in _TAG_BACKED_BY_EDGE.items():
+            if rel in rels and taxon == want and tag not in tags:
                 out[tag].add(row.get("common_name")
                              or row.get("scientific_name"))
     return {tag: sorted(names) for tag, names in out.items() if names}
@@ -1318,11 +1339,11 @@ def validate_use_tags_against_edges() -> tuple[list[str], list[str]]:
         return [], []
     warnings = []
     for tag, names in sorted(found.items()):
-        rels = " / ".join(_TAG_BACKED_BY_EDGE[tag])
+        rels, want = _TAG_BACKED_BY_EDGE[tag]
         warnings.append(
             f"use tags vs edges: {len(names)} species carry a documented "
-            f"{rels} edge but not the {tag!r} tag the score reads — "
-            f"e.g. {', '.join(names[:4])}")
+            f"{' / '.join(rels)} edge to a {want} but not the {tag!r} tag "
+            f"the score reads — e.g. {', '.join(names[:4])}")
     return [], warnings
 
 
