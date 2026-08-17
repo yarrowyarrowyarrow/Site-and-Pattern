@@ -118,12 +118,21 @@ def format_citation(source: str, *, short: bool = False) -> str:
         return _short_authors(authors) or title or s
 
     bits = []
-    if authors:
-        bits.append(f"{authors} ({year})" if year else authors)
-    elif year:
-        bits.append(str(year))
-    if title:
+    # **Do not restate an author the title already carries** (V2.65). 17 of the
+    # 114 records were parsed out of a GloBI study title, so `authors` is a
+    # prefix of `title` rather than a separate field, and printing both gave
+    # "Robertson, C (1929). Robertson, C. 1929. Flowers and insects: …". That
+    # was invisible while the bibliography was unpublished and is the first
+    # thing a reader sees now that it is on the About page.
+    if authors and _title_restates(authors, title, year):
         bits.append(title)
+    else:
+        if authors:
+            bits.append(f"{authors} ({year})" if year else authors)
+        elif year:
+            bits.append(str(year))
+        if title:
+            bits.append(title)
     container = (rec.get("container") or "").strip()
     if container:
         bits.append(f"in {container}")
@@ -135,6 +144,30 @@ def format_citation(source: str, *, short: bool = False) -> str:
     if url:
         bits.append(url)
     return ". ".join(b.rstrip(".") for b in bits if b) + "."
+
+
+def _title_restates(authors: str, title: str, year=None) -> bool:
+    """True when the title already opens with the author string.
+
+    Compared on letters only, because the two differ in punctuation exactly
+    where they were split: `authors` is "Dorey, J.B., Fischer, E.E." and the
+    title runs "Dorey, J.B., Fischer, E.E. A globally synthesised…". A prefix
+    test on the raw strings misses those; on letters alone it catches them.
+
+    Two ways to be sure, because one alone is not enough. If the title
+    continues with the year, it is the "Authors. Year. Title." shape and there
+    is no doubt — that is what catches *Small, E. 1976*, whose author string is
+    six letters long. Failing that, fall back to length: a title that happens
+    to begin with eight or more of the author's own letters by coincidence is
+    not a case worth protecting against, while a short one might be (author
+    "Li", title "Lichens of Alberta").
+    """
+    def letters(s):
+        return "".join(ch for ch in s.lower() if ch.isalnum())
+    a, t = letters(authors), letters(title)
+    if not a or not t.startswith(a):
+        return False
+    return t[len(a):].startswith(str(year)) if year else len(a) >= 8
 
 
 def _short_authors(authors: str) -> str:

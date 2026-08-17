@@ -16,6 +16,7 @@ markup have exactly one definition each.
 
 from __future__ import annotations
 
+from src import citations
 from src.static_site import _first_photo, hub_slug, species_ecoregions
 from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
                                     _swatch, _up)
@@ -222,8 +223,21 @@ def _wildlife_section(entry: dict, model: dict, depth: int) -> str:
                          f"{label}</a>")
             star = ('<span class="star" title="Specialist: has nowhere else to '
                     'go">&#9733;</span>') if item.get("specialist") else ""
-            src = (f'<span class="src">{_esc(item.get("source"))}</span>'
-                   if item.get("source") else "")
+            # A source KEY is not a citation (V2.65). This printed the raw
+            # database slug — `globi_www_bumblebeewatch_org` — on 290 species
+            # pages, next to prose promising "a documented record with a
+            # source". The bibliography that would make it readable has been
+            # sitting in `src.citations` since V2.42 and grew to 114 works in
+            # V2.62; the website was the one surface never wired to it.
+            # Short form inline, full reference in the tooltip, and an
+            # unregistered key falls back to itself rather than vanishing.
+            src = ""
+            if item.get("source"):
+                key = item["source"]
+                src = (f'<span class="src" '
+                       f'title="{_esc(citations.format_citation(key))}">'
+                       f'{_esc(citations.format_citation(key, short=True))}'
+                       f'</span>')
             items.append(f"<li>{label} {star}{src}</li>")
         blocks.append(f'<h3>{_esc(group.get("how"))}</h3>'
                       f'<ul class="animals">{"".join(items)}</ul>')

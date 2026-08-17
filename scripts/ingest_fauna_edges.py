@@ -537,6 +537,9 @@ def _apply(result: dict) -> None:
           "installs reseed, then run the suite.")
 
 
+#: A leading `word:` database namespace on a GloBI study title. Bare lowercase
+#: only, and no spaces, so a real title with a colon in it is left alone.
+_NAMESPACE_RE = re.compile(r"^[a-z][a-z0-9_-]{2,}:(?!//)\s*")
 _YEAR_RE = re.compile(r"\b(1[6-9]\d\d|20[0-4]\d)\b")
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _UUID_RE = re.compile(
@@ -647,6 +650,14 @@ def study_record(title: str) -> dict:
                 "citing the aggregator."),
             "aliases": [host],
         }
+    # GloBI namespaces some study titles by the database they came from —
+    # `bascompte:Robertson, C. 1929. Flowers and insects…` is the Bascompte
+    # web-of-life collection. The prefix is a namespace, not part of anybody's
+    # name, and left on it became the author's surname in five bibliography
+    # records. Only stripped when the prefix is a bare lowercase word, so a
+    # real title containing a colon ("Flowers and insects: lists of visitors")
+    # is untouched.
+    title = _NAMESPACE_RE.sub("", title, count=1)
     year_match = _YEAR_RE.search(title)
     year = int(year_match.group(1)) if year_match else None
     authors = ""

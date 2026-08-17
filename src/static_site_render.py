@@ -519,81 +519,6 @@ def render_wildlife(animal: dict, photo_src: dict) -> str:
                  body, depth, wide=True)
 
 
-def render_about(model: dict) -> str:
-    s = model["stats"]
-    body = f"""
-{_crumb([("", "About")], 1)}
-<h1>About this catalogue</h1>
-<p class="lede">{s['species']} plants, {s['animals']} animals with documented
-plant relationships, {s['edges']} relationships between them, and
-{s['facets']} searchable fields. Built for Alberta and the Canadian
-prairies.</p>
-
-<h2>What it is</h2>
-<p>This is the reference half of <a
-href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">Site and
-Pattern</a>, a desktop application for designing landscapes with native plants:
-lawn-to-habitat conversion, pollinator gardens and ecological restoration. The
-application does the site analysis, the design and the planting plan. These
-pages are its catalogue, published so you can read it without installing
-anything.</p>
-
-<h2>What it is honest about</h2>
-<ul>
-  <li><strong>Unknowns stay unknown.</strong> A species with no recorded bloom
-  window appears under no month. A plant with no recorded flower colour appears
-  under no colour. Absence of a record is never rendered as a fact.</li>
-  <li><strong>Evidence travels with the claim.</strong> Recorded ranges carry
-  their occurrence counts and a confidence band. A region derived from three
-  records is not presented like one derived from three hundred.</li>
-  <li><strong>Flower colour says whether it was checked.</strong> The colour was
-  originally seeded per genus, which put a red flower on the blue columbine.
-  {s['verified_colour']} species now carry a colour checkable against their own
-  common name or Latin epithet and are marked <em>checked</em>; the rest are
-  marked <em>not verified</em> rather than quietly presented as observed.</li>
-  <li><strong>Relationships are documented, not inferred.</strong> Every animal
-  listed on a plant page comes from a sourced record.</li>
-  <li><strong>Grasses and sedges are not yellow.</strong> They are
-  wind-pollinated and have no showy flower, so they get a bucket that says
-  so.</li>
-  <li><strong>Photographs are credited or absent.</strong> {s['with_photo']} of
-  {s['species']} species have an openly-licensed photograph we can attribute.
-  The rest show none.</li>
-  <li><strong>The maps are diagrams.</strong> The region outlines are
-  hand-traced against the geography, not digitised from a survey. The counts
-  inside them are real.</li>
-</ul>
-
-<h2>What it does not contain</h2>
-<p>No Indigenous ecological knowledge, plant-use tradition, land-management
-practice or design framework appears in this catalogue, and none should be
-inferred from it. That knowledge is held by the communities it belongs to and is
-theirs to share on their own terms, through relationship rather than
-extraction.</p>
-<p>Two things follow from that and are worth stating plainly, because both are
-deliberate omissions rather than gaps. The underlying dataset has a free-text
-notes field in which some entries describe traditional medicinal use; it is
-<strong>withheld from these pages</strong>. The dataset also tags some species
-with a generic <em>medicinal</em> use category; that tag is <strong>not
-published or searchable here</strong> either. Putting a public, indexed index of
-medicinal native plants on the web would operationalize knowledge that was never
-ours to publish. The horticultural facts those notes also carried, such as how a
-plant spreads, whether it is toxic and where to buy it, are recorded in
-structured fields and do appear.</p>
-
-<h2>Corrections</h2>
-<p>Errors and photograph credit problems can be reported as issues on the
-<a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">project
-repository</a>. If a photograph of yours is here and the credit is wrong, or you
-would rather it were not here at all, it will be fixed or removed.</p>
-
-<p class="src">Catalogue built {_esc(model["built"])}.</p>
-"""
-    return _page("About the Site and Pattern plant catalogue",
-                 "How this catalogue is sourced, what it is honest about, and "
-                 "what it deliberately does not contain.", body, 1)
-
-
 # ── Writing it out ───────────────────────────────────────────────────────────
 
 def write_site(model: dict, out_dir: str, *,
@@ -609,7 +534,10 @@ def write_site(model: dict, out_dir: str, *,
     """
     # Imported here, not at module scope: static_site_species imports the shell
     # and the shared pieces back from this module, so a top-level import would
-    # be a cycle. The species page is the only page that needed splitting out.
+    # be a cycle. Two pages needed splitting out: the species page, and (V2.65)
+    # the About page, once publishing the 114-work bibliography took this
+    # module past its 800-line ceiling.
+    from src.static_site_about import render_about           # noqa: PLC0415
     from src.static_site_species import render_species       # noqa: PLC0415
 
     say = progress or (lambda _m: None)

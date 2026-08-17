@@ -12,6 +12,7 @@ checked one.
 """
 
 import json
+import re
 import os
 import sys
 import unittest
@@ -137,6 +138,79 @@ class TestHonestyRules(unittest.TestCase):
                 self.assertNotIn("isbn", {k.lower() for k in rec},
                                  f"{rec['key']} claims an ISBN it has not "
                                  "verified")
+
+
+class TestTheTitleIsNotPrintedTwice(unittest.TestCase):
+    """V2.65. 17 of the 114 records were parsed out of a GloBI study title, so
+    `authors` is a *prefix of* `title` rather than a separate field. Printing
+    both gave "Robertson, C (1929). Robertson, C. 1929. Flowers and insects…".
+
+    Harmless while the bibliography was unpublished; the first thing a reader
+    sees now that it is on the website's About page.
+    """
+
+    def test_the_classic_author_year_title_shape_prints_once(self):
+        self.assertTrue(C._title_restates(
+            "Robertson, C", "Robertson, C. 1929. Flowers and insects.", 1929))
+
+    def test_a_short_author_is_caught_when_the_year_follows(self):
+        """`Small, E` is six letters — under the length rule on its own. The
+        year immediately after it is what makes the restatement certain."""
+        self.assertTrue(C._title_restates(
+            "Small, E", "Small, E. 1976. Insect pollinators of Mer Bleue.", 1976))
+
+    def test_a_short_author_alone_is_not_enough(self):
+        """"Li" opening "Lichens of Alberta" is a coincidence, not a
+        restatement, and dropping the year over it would lose real data."""
+        self.assertFalse(C._title_restates("Li", "Lichens of Alberta", None))
+
+    def test_a_separate_author_and_title_are_both_kept(self):
+        self.assertFalse(C._title_restates(
+            "Acorn, J. and Sheldon, I.", "Butterflies of Alberta", 2006))
+        out = C.format_citation("acorn_sheldon_butterflies_ab")
+        self.assertIn("Acorn, J. and Sheldon, I. (2006)", out)
+        self.assertIn("Butterflies of Alberta", out)
+
+    def test_no_shipped_record_prints_its_author_twice(self):
+        """Over the real bibliography, which is the only test that would have
+        caught this. One exception: an institutional author who is also the
+        publisher ("Cornell Lab of Ornithology") is correct citation practice,
+        not the parsing bug."""
+        doubled = []
+        for rec in C.all_sources():
+            authors = (rec.get("authors") or "").strip()
+            if len(authors) < 10 or authors == (rec.get("publisher") or "").strip():
+                continue
+            if C.format_citation(rec["key"]).count(authors[:18]) > 1:
+                doubled.append(rec["key"])
+        self.assertEqual(doubled, [])
+
+
+class TestNoDatabaseNamespaceReachesAnAuthor(unittest.TestCase):
+    """V2.65. GloBI namespaces some study titles by the collection they came
+    from — `bascompte:Robertson, C. 1929. …` is the Bascompte web-of-life
+    database. Left on, the prefix became the author's surname in five records
+    and was published as one."""
+
+    def test_no_author_field_carries_a_namespace(self):
+        offenders = [r["key"] for r in C.all_sources()
+                     if ":" in (r.get("authors") or "")[:20]]
+        self.assertEqual(offenders, [], f"namespace in an author: {offenders}")
+
+    def test_no_title_field_carries_a_namespace(self):
+        offenders = [r["key"] for r in C.all_sources()
+                     if re.match(r"^[a-z][a-z0-9_-]{2,}:(?!//)", r.get("title") or "")]
+        self.assertEqual(offenders, [], f"namespace in a title: {offenders}")
+
+    def test_the_keys_were_left_alone(self):
+        """The repair fixed display fields only. Keys are slugged from the
+        ORIGINAL title and every edge in the seed points at them, so rewriting
+        one would orphan its edges — the reason this looks half-done."""
+        self.assertTrue(any("bascompte" in r["key"] for r in C.all_sources()))
+
+    def test_every_repaired_record_still_resolves(self):
+        for rec in C.all_sources():
+            self.assertIsNotNone(C.resolve(rec["key"]), rec["key"])
 
 
 if __name__ == "__main__":

@@ -243,6 +243,34 @@ class TestTheRenderedSite(unittest.TestCase):
         expected = static_site.expected_paths(self.model)
         self.assertEqual(expected - self.files, set())
 
+    def test_a_species_page_cites_a_work_not_a_database_key(self):
+        """V2.65. Every relationship carries a source, and the site printed the
+        raw slug — `globi_www_bumblebeewatch_org` — on 290 species pages, under
+        prose promising "a documented record with a source". `src.citations`
+        has held the bibliography since V2.42 and the website was the one
+        surface never wired to it."""
+        leaked = []
+        for page in (self.out / "plants").rglob("index.html"):
+            body = page.read_text(encoding="utf-8")
+            for m in re.finditer(r'class="src"[^>]*>([^<]+)<', body):
+                text = m.group(1).strip()
+                if re.fullmatch(r"[a-z0-9]+(_[a-z0-9]+){2,}", text):
+                    leaked.append(f"{page.parent.name}: {text}")
+        self.assertEqual(leaked[:5], [], f"{len(leaked)} raw source keys shown")
+
+    def test_the_about_page_publishes_the_bibliography(self):
+        """A citation the reader cannot look up is decoration. The works are
+        listed, and `citations.disclaimer()` travels with them because these
+        details were transcribed from source records rather than checked
+        against the works themselves."""
+        from src import citations
+        page = (self.out / "about" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("Where this data came from", page)
+        self.assertIn("not been checked", page)
+        for key in ("acorn_sheldon_butterflies_ab", "globi"):
+            head = citations.format_citation(key).split(".")[0]
+            self.assertIn(head, page, key)
+
     def test_the_file_index_is_url_shaped_not_os_shaped(self):
         """Guards the `.as_posix()` in setUpClass, which is invisible on Linux.
 
