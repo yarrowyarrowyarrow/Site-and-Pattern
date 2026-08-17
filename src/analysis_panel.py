@@ -1766,6 +1766,35 @@ class AnalysisPanel(QWidget):
         self._refresh_confidence(self._placed_plants or [],
                                  self._site_ecoregion())
 
+    @staticmethod
+    def _layer_lines(result) -> list:
+        """The vegetation-layer rows, which say what they were scored against.
+
+        F129 (V2.65) re-bases this component onto the reference community's own
+        layers where one is known, so the denominator is no longer a fixed 5.
+        The row has to name the basis: a user who sees 15/15 for three layers
+        needs to know it was three layers *their grassland actually has*, and
+        not a bug.
+        """
+        if result.layer_basis and result.layer_detail:
+            detail = result.layer_detail
+            filled = sum(1 for d in detail.values() if d.get("present"))
+            thin = sorted(k for k, d in detail.items()
+                          if not d.get("present") and d.get("have"))
+            absent = sorted(k for k, d in detail.items()
+                            if not d.get("present") and not d.get("have"))
+            rows = [f"Vegetation layers  {filled:4d}/{len(detail)}   "
+                    f"{result.score_layers:4.1f} / 15",
+                    f"  (vs {result.layer_basis})"]
+            if thin:
+                rows.append(f"  thin: {', '.join(thin)}")
+            if absent:
+                rows.append(f"  absent: {', '.join(absent)}")
+            return rows
+        return [f"Vegetation layers  {len(result.layers_present):4d}/5   "
+                f"{result.score_layers:4.1f} / 15",
+                f"  ({', '.join(result.layers_present) or '—'})"]
+
     def _site_ecoregion(self):
         """The site's ecoregion key, cached against the pin.
 
@@ -1828,7 +1857,12 @@ class AnalysisPanel(QWidget):
         # The panel keeps all the rendering below.
         from src.habitat_score import compute_habitat_score, HabitatScoreError
         try:
-            result = compute_habitat_score(self._placed_plants, self._structures)
+            # The ecoregion re-bases the layer component onto the reference
+            # community's own layers (F129) — a prairie planting is no longer
+            # marked against a forest-garden stack it was never going to fill.
+            result = compute_habitat_score(
+                self._placed_plants, self._structures,
+                ecoregion=self._site_ecoregion())
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
@@ -1887,8 +1921,7 @@ class AnalysisPanel(QWidget):
             f"Host plants        {len(result.host_species):4d}     {result.score_host:4.1f} / 10",
             f"Bird-food species  {len(result.bird_species):4d}     {result.score_bird:4.1f} / 10",
             "",
-            f"Vegetation layers  {len(result.layers_present):4d}/5   {result.score_layers:4.1f} / 15",
-            f"  ({', '.join(result.layers_present) or '—'})",
+            *self._layer_lines(result),
             "",
             f"Habitat structures {len(result.habitat_struct_types):4d}     {result.score_structs:4.1f} / 10",
             f"  ({', '.join(result.habitat_struct_types) or '—'})",

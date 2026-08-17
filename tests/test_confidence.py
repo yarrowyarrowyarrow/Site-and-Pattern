@@ -311,21 +311,27 @@ class TestTheCriticStoppedAssertingAbsences(unittest.TestCase):
 
 class TestTheDataGateSeesTheContradiction(unittest.TestCase):
 
-    def test_it_counts_tags_that_disagree_with_cited_edges(self):
-        """This is the finding F8 rests on, so it is asserted rather than
-        described: the shipped data really does contain the contradiction."""
-        from src.data_quality import use_tags_vs_edges
-        found = use_tags_vs_edges()
-        self.assertIn("host_plant", found)
-        self.assertGreater(len(found["host_plant"]), 0)
+    def test_the_contradiction_is_closed(self):
+        """**These two used to assert the contradiction was present.** V2.53
+        found it, measured it at 48 species, and deliberately left it: the fix
+        moves every affected design's Habitat Value Score, which the
+        headline-stability rule reserves to the author. F120 took that decision
+        in V2.65, so the assertion inverts — the gate must now find nothing.
 
-    def test_it_reports_as_a_warning_not_an_error(self):
-        """The fix moves every affected design's score, so it is a decision to
-        take deliberately — not a build to break."""
+        Kept rather than deleted, and kept in this file, because the thing
+        worth guarding is that tags and cited edges *agree*. A future seed
+        edit that reintroduces the gap fails here."""
+        from src.data_quality import use_tags_vs_edges
+        self.assertEqual(use_tags_vs_edges(), {})
+
+    def test_it_would_still_report_as_a_warning_not_an_error(self):
+        """The severity is the part that has not changed. Were the gap to come
+        back it is a warning: a seed correction that moves scores is a decision
+        to take deliberately, never a build to break."""
         from src.data_quality import validate_use_tags_against_edges
         errors, warnings = validate_use_tags_against_edges()
         self.assertEqual(errors, [])
-        self.assertTrue(warnings)
+        self.assertEqual(warnings, [])
 
 
 class TestCitationsReachTheDesignSurfaces(unittest.TestCase):

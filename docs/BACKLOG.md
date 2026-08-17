@@ -28,13 +28,15 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals: 34 code features · 7 data jobs · 4 legacy-ledger items.**
+**Totals: 32 code features · 7 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
-and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64. Opened since: F120, F123, F124 — all three
-found by the increments themselves — plus F126 from author feedback,
-F127/F128, which are the two halves of F125 that its own gates refused to
-guess at, and F129, which F124 exposed the moment it was fixed.)*
+and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
+V2.65**. Opened since: F120, F123, F124 — all three found by the increments
+themselves — plus F126 from author feedback, F127/F128, which are the two
+halves of F125 that its own gates refused to guess at, F129, which F124
+exposed the moment it was fixed, and F131, which F128's own re-fetch made
+possible two increments after it landed.)*
 
 ---
 
@@ -60,11 +62,12 @@ What is left is lopsided rather than long. **Photographs** are gated on a
 licensing decision only the owner can make (Group C), **sprawl** is an L-effort
 restructure (Group F), and the two remaining professional-workflow walls are
 both bigger than the two that fell. The cheap work now is not in these five at
-all — it is the bugs the increments keep finding while building other things
-(F120, F123, and now F129), each of which is small and each of which is waiting
-on a decision rather than on engineering. F124 was one of those and shipped in
-V2.60; fixing it produced F129, which is the pattern: the measured bugs are a
-renewable resource, because measuring one exposes the next.
+all — it is the bugs the increments keep finding while building other things,
+each of which is small and each of which is waiting on a decision rather than
+on engineering. F124 shipped in V2.60 and produced F129; F129 and F120 both
+shipped in V2.65 and F120 produced its own correction (the taxon requirement)
+before it landed. **F123 is what is left of that seam.** The measured bugs are
+a renewable resource, because measuring one exposes the next.
 
 ---
 
@@ -79,8 +82,8 @@ renewable resource, because measuring one exposes the next.
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
 | ~~**F124**~~ | ✅ **Shipped in V2.60.** The layer map knew six of the catalogue's eleven `plant_type` values, so 311 of 437 species — `wildflower` alone is 210 — occupied no vegetation layer and a prairie meadow scored 0 of 15. Now complete and **height-aware**, because filing all 292 herbaceous-group species under one layer would have reached 3 of 15 and called it fixed; the 0.30 m groundcover boundary is read off the catalogue's own `groundcover` type. The meadow reaches 6 of 15. **The residual is bigger than the fix and is now F129** | S | Done | P6, P2 |
-| **F129** | **The vegetation-layer component is forest-shaped, so a prairie cannot score well on it.** Exposed by fixing F124 in V2.60. `CANONICAL_LAYERS` is overstory / shrub / herbaceous / groundcover / vine — the permaculture **forest-garden** stack. A prairie genuinely occupies two of those, so even with every plant type correctly mapped, a grassland design is capped at **6 of 15** while a woodland-edge design reaches 15. The component is measuring *how much like a forest garden is this* and reporting the answer as habitat value, in an app for prairie conversion whose own reference communities are grasslands. Options are a grassland-aware layer set (litter / short / mid / tall / emergent), scoring layers against the *reference community* the design is aiming at rather than one universal stack, or accepting it and saying so in the panel. **Moves scores, and changes what the score means**, so it is the owner's call twice over | M | Med — moves scores | P6, P2, P9 |
-| **F120** | **Correct the 48 use tags the cited edges contradict.** V2.53 measured it: **37 species carry a documented `larval_host` edge and no `host_plant` tag** (Chokecherry and Balsam Poplar among them) and 11 carry a `fruit_food`/`seed_food` edge and no `bird_food` tag. The Habitat Value Score's host and bird-food components read the *tags*, so those designs score lower than the app's own cited data supports. V2.53 stopped the prose asserting the absence and left the score alone on purpose — correcting the tags **moves every affected design's score**, which the stability rule says is a decision to take deliberately. Measured by `data_quality.validate_use_tags_against_edges`; needs a seed-data edit and a `_SCHEMA_VERSION` bump | S | Med — moves scores | P9, P3 |
+| ~~**F129**~~ | ✅ **Shipped in V2.65.** The layer component's denominator is now the **reference community's own layers**, not the five-layer forest-garden stack. `reference_ecosystem`'s specs were already honest (Mixedgrass Prairie and Wet Meadow declare no canopy genera) and `reference_fidelity` already dropped zero-count layers, so the fix reuses that judgement rather than copying it — a test reads the source to prove it. A prairie planting on prairie: 6.0 → **10.0 / 15**. The same planting in Aspen Parkland **drops to 3.8**, which is the point: a measurement that could only raise the number would be a compliment. The 12 callers that pass no ecoregion are unmoved, and the panel row names its basis | M | Done | P6, P2, P9 |
+| ~~**F120**~~ | ✅ **Shipped in V2.65.** 117 contradictions by the time it was taken. The first pass proposed 101 species and was wrong: reading the relationship alone let a bumblebee, a grasshopper, a gall midge, a horntail and a **deer mouse** vote. 107 of 346 `larval_host` edges are not lepidoptera, and `host_plant` is what drives design_critic's butterfly/moth line — so `_TAG_BACKED_BY_EDGE` now names the taxon that has to be at the far end, and the gate and the fixer read the one table. **80 real corrections**: `host_plant` 30 → 95, `bird_food` 78 → 104, worked example **+7 points**. Additive only — absence of an edge is absence of evidence (P9) | S | Done | P9, P3 |
 
 ---
 
@@ -272,13 +275,11 @@ listed as open somewhere and is not.*
 
 The pick is the owner's. Asked for one, in order:
 
-1. **F129 then F120 — finish making the score tell the truth.** F124 shipped in
-   V2.60 and immediately exposed the larger question underneath it: the five
-   vegetation layers are the permaculture *forest-garden* stack, so a prairie
-   is capped at 6 of 15 by a component that is really measuring how
-   woodland-like a design is. In an app for grassland conversion that is worth
-   deciding rather than inheriting. F120 is the same shape and still measured
-   and waiting.
+1. **F123 — the presentation still never reaches the PDF.** The last of the
+   measured-bug seam: F120 and F129 both shipped in V2.65, so the score now
+   tells the truth about hosts, bird food and structure. F123 is a wire that
+   was never connected — `still_pixmap` is computed and never passed — which
+   makes it the cheapest remaining thing that a user can see.
 2. **Group D — F113 (design variants) or F93 (reusable palettes).** Two walls of
    the professional workflow are down; these are the two left, and both are
    bigger than what shipped.

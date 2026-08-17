@@ -190,7 +190,12 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > (`src/chickadee_scenario.py`, roadmap F47), which converts the abstract food-web score into
 > the one number people feel — whether the design's host plants could raise a chickadee brood
 > (the 6,000–9,000 caterpillars of Tallamy & Shropshire 2009), reported as an honest range.
-> **State: strong.**
+> A legible number still has to be a number about the right thing: until V2.65 the
+> vegetation-layer component scored every design against the permaculture *forest-garden* stack,
+> so a complete prairie planting was capped at 6 of 15 by a metric that was really measuring how
+> woodland-like it was. F129 re-bases it on the layers the site's own reference community has —
+> and the same planting scores *lower* in Aspen Parkland than on prairie, because there it really
+> is missing a canopy. **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 
@@ -255,8 +260,15 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > **not verified** on the 359 that are still a guess, and
 > [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band
 > while captioning that the region outlines themselves are hand-drawn boxes rather than surveyed
-> boundaries. **State: strong** (language, and now provenance); **partial** (placement is still
-> point-wise/deterministic once generated — see roadmap F14, the establishment-likelihood band).
+> boundaries.
+> V2.65 added the other half of the same discipline — *not claiming less than the evidence
+> supports*. The Habitat Value Score read use tags while the citations lived in edges, so the app
+> held a sourced larval-host record for Chokecherry and told the user their chokecherry planting
+> had no host plants (F120); and the ingest gate refused 700 host records for coming from a vague
+> verb when the observations file could name the life stage on 44 of them (F131). Both fixes are
+> bounded the same way: a taxon has to be right at the far end, an unrecorded stage stays
+> unrecorded, and **additive only** — absence of an edge is absence of evidence, never evidence of
+> absence. **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects
 

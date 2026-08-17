@@ -337,5 +337,121 @@ class TestComputeHabitatScoreSeeded(unittest.TestCase):
         self.assertEqual(r.n_total_plants, 2)
 
 
+class TestLayersScoredAgainstTheReference(unittest.TestCase):
+    """F129, V2.65. `CANONICAL_LAYERS` is the permaculture *forest-garden*
+    stack — overstory / shrub / herbaceous / groundcover / vine. A prairie
+    genuinely occupies two or three of those, so even after F124 fixed the
+    plant-type map, a correct and complete grassland planting was capped at
+    6 of 15 while a woodland-edge design reached 15. The component measured
+    how woodland-like a design was and reported it as habitat value, in an
+    app for prairie conversion.
+
+    Now the denominator is the layers the *reference community* actually has.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        conn = get_connection()
+        def ids(names):
+            out = []
+            for n in names:
+                row = conn.execute(
+                    "SELECT id FROM plants WHERE common_name=?", (n,)).fetchone()
+                if row:
+                    out.append({"plant_id": row[0]})
+            return out
+        cls.grassland = ids(["Big Bluestem", "Blue Grama Grass",
+                             "Prairie Crocus", "Common Yarrow",
+                             "Wild Bergamot", "Black-eyed Susan",
+                             "Purple Prairie Clover", "Canada Goldenrod",
+                             "Smooth Aster", "Prairie Sage"])
+        conn.close()
+
+    def test_without_an_ecoregion_nothing_changes(self):
+        """Twelve callers pass no ecoregion and none of their scores may move.
+        The universal stack stays the default, and says so."""
+        r = compute_habitat_score(self.grassland, [])
+        self.assertEqual(r.layer_basis, "")
+        self.assertEqual(r.layer_detail, {})
+        self.assertEqual(r.score_layers,
+                         min(len(r.layers_present), 5) * 3)
+
+    def test_a_grassland_scores_higher_against_a_grassland(self):
+        """The fix, in one assertion. Mixedgrass Prairie declares no canopy
+        genera at all, so a treeless design is no longer marked down for a
+        layer its reference does not have either."""
+        universal = compute_habitat_score(self.grassland, [])
+        prairie = compute_habitat_score(self.grassland, [],
+                                        ecoregion="mixedgrass_prairie")
+        self.assertGreater(prairie.score_layers, universal.score_layers)
+        self.assertEqual(prairie.layer_basis, "Mixedgrass Prairie")
+
+    def test_the_same_grassland_scores_lower_against_a_woodland(self):
+        """**The change is honest, not generous.** A grassland planted in
+        Aspen Parkland really is missing the canopy and the shrub ring that
+        belong there, and re-basing has to be able to say so — otherwise it is
+        not a measurement, it is a compliment."""
+        universal = compute_habitat_score(self.grassland, [])
+        parkland = compute_habitat_score(self.grassland, [],
+                                         ecoregion="aspen_parkland")
+        self.assertLess(parkland.score_layers, universal.score_layers)
+
+    def test_the_component_never_exceeds_its_maximum(self):
+        for eco in (None, "mixedgrass_prairie", "aspen_parkland",
+                    "boreal_mixedwood", "wet_meadow"):
+            r = compute_habitat_score(self.grassland, [], ecoregion=eco)
+            self.assertGreaterEqual(r.score_layers, 0.0, eco)
+            self.assertLessEqual(r.score_layers, 15.0, eco)
+            self.assertEqual(r.total, int(round(
+                r.score_native + r.score_keystone + r.score_host + r.score_bird
+                + r.score_layers + r.score_structs + r.score_bloom)), eco)
+
+    def test_no_ecoregion_is_the_case_that_falls_back(self):
+        """No reference resolved is a catalogue gap, not a design failure, and
+        scoring 0 would report the one as the other (P9). `None` is that case:
+        no pin, or a lookup that found nothing."""
+        r = compute_habitat_score(self.grassland, [], ecoregion=None)
+        self.assertEqual(r.layer_basis, "")
+        self.assertEqual(r.score_layers,
+                         compute_habitat_score(self.grassland, []).score_layers)
+
+    def test_an_unknown_key_inherits_the_resolver_default_and_names_it(self):
+        """An unrecognised *string* is not the same as no ecoregion.
+        `reference_ecosystem.reference_community` has always fallen back to a
+        default community for an unknown key, and the fidelity band one row up
+        in the same panel already scores against it. Re-deriving that decision
+        here would make the two disagree about one design — so this inherits
+        it, and the reported basis names whatever it actually compared
+        against, which is the part that keeps it honest."""
+        r = compute_habitat_score(self.grassland, [], ecoregion="atlantis")
+        from src.reference_ecosystem import reference_community
+        self.assertEqual(r.layer_basis, reference_community("atlantis")["name"])
+
+    def test_the_basis_travels_into_the_api_dict(self):
+        """A number whose denominator changed has to carry its denominator, or
+        a reader cannot tell 15/15 from a bug."""
+        d = compute_habitat_score(
+            self.grassland, [], ecoregion="mixedgrass_prairie").as_dict()
+        layers = d["components"]["layers"]
+        self.assertEqual(layers["basis"], "Mixedgrass Prairie")
+        self.assertTrue(layers["detail"])
+        for entry in layers["detail"].values():
+            self.assertIn("have", entry)
+            self.assertIn("want", entry)
+            self.assertIn("present", entry)
+
+    def test_it_reuses_the_fidelity_layer_judgement_rather_than_copying_it(self):
+        """The presence fraction and the half credit for 'thin' live in
+        `reference_fidelity`, one row above this in the same panel. A second
+        copy would drift, and the two would disagree about one design."""
+        import inspect
+
+        from src import habitat_score as hs
+        src = inspect.getsource(hs._reference_layer_score)
+        self.assertIn("from src.reference_fidelity import fidelity", src)
+        self.assertNotIn("PRESENCE_FRACTION", src)
+
+
 if __name__ == "__main__":
     unittest.main()
