@@ -228,17 +228,39 @@ class TestTheRenderedSite(unittest.TestCase):
         cls.summary = render.write_site(cls.model, str(cls.out),
                                         base_url="https://example.org",
                                         copy_photos=False)
-        cls.files = {str(p.relative_to(cls.out))
+        # `.as_posix()`, not `str()` — **this set is compared against URLs.**
+        # `expected_paths` builds "plants/<slug>/index.html" with forward
+        # slashes, and the dead-link check resolves hrefs with `posixpath`.
+        # `str(Path)` uses the NATIVE separator, so on Windows every entry here
+        # came out "plants\\<slug>\\index.html" and matched nothing: four tests
+        # failed at once, reporting 249 dead links on a site whose links are
+        # fine. The generator was never wrong — only this comparison was, and
+        # it passed on Linux for the accidental reason that os.sep == "/".
+        cls.files = {p.relative_to(cls.out).as_posix()
                      for p in cls.out.rglob("*") if p.is_file()}
 
     def test_it_wrote_every_page_the_model_promised(self):
         expected = static_site.expected_paths(self.model)
         self.assertEqual(expected - self.files, set())
 
+    def test_the_file_index_is_url_shaped_not_os_shaped(self):
+        """Guards the `.as_posix()` in setUpClass, which is invisible on Linux.
+
+        This set is compared against hrefs and against `expected_paths`, both
+        of which are URLs. Built with `str(Path)` it picks up the platform
+        separator, and on Windows four tests then fail together and report 249
+        dead links on a site that has none — a failure that reads like a broken
+        generator rather than a broken comparison. Trivially true on Linux;
+        it exists to fail on Windows the moment someone writes `str()` again.
+        """
+        offenders = sorted(f for f in self.files if "\\" in f)
+        self.assertEqual(offenders, [], f"OS separators in a URL set: {offenders}")
+
     def test_every_internal_link_resolves(self):
         dead = []
         for page in self.out.rglob("*.html"):
-            base = str(page.parent.relative_to(self.out))
+            # Feeds `posixpath.join` below, so it has to be posix here too.
+            base = page.parent.relative_to(self.out).as_posix()
             for link in _LINK.findall(page.read_text(encoding="utf-8")):
                 if link.startswith(("http://", "https://", "#", "mailto:",
                                     "data:")):
