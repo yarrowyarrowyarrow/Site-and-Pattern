@@ -19,10 +19,11 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.62`,
-`_SCHEMA_VERSION = 68` (in `src/db/plants.py`) — v68 is a reseed only, for the
+**Current facts (verify before quoting):** branch `V2.63`,
+`_SCHEMA_VERSION = 69` (in `src/db/plants.py`) — v69 is a reseed only: 159
+curated animals and 2,639 edges (F127). v68 is a reseed only too, for the
 first two rows `data/plant_photos.json` has ever carried. v67 is a reseed
-only too: 37 more
+only as well: 37 more
 curated birds (F127a) plus a repair of v66's bird edges, which had read GloBI's
 `eatenBy` as `fruit_food` and so claimed fruit on plants that bear none. v66 is
 a reseed only too, carrying the 2,439 GloBI-sourced plant↔animal edges (F125)

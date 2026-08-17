@@ -271,7 +271,13 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # nobody, which is the reseed-that-never-fired failure this file's notes warn
 # about — and it would be an odd one to hit on the file whose whole point is
 # being seen.
-_SCHEMA_VERSION = 68
+# v69 (V2.63): no DDL change — a seed-data bump for F127. 159 curated animals
+# and 2,639 edges, taking documented coverage from 275 of 437 species to over
+# 400. The review is `scripts/curate_new_fauna.py`, and it exists because the
+# occurrence gate alone let *Apis mellifera* through at the top of the list
+# with 133 edges. Species with no accepted English name keep their binomial as
+# `common_name`, which for a solitary bee is the name.
+_SCHEMA_VERSION = 69
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

@@ -212,9 +212,16 @@ class TestSceneWildlife(unittest.TestCase):
                     self.assertRegex(v, _HEX, f"{c['name']} {k}={v}")
 
     def test_no_bats(self):
-        # Bats are nocturnal → skipped by day (they'd be a mammal 'bat' form).
+        """Bats are nocturnal, so none should appear in a daytime scene.
+
+        Matched on the creature's FORM, not on the substring "bat" in its
+        name. The substring version passed for years and then failed on
+        *Ancistrocerus adia**bat**us*, a potter wasp — which is the whole
+        argument against testing a taxonomic claim with `in`.
+        """
         for c in self.crit:
-            self.assertNotIn("bat", c["name"].lower())
+            self.assertNotEqual(c.get("app", {}).get("build"), "bat", c["name"])
+            self.assertNotEqual(c.get("kind"), "bat", c["name"])
 
     def test_empty_scene(self):
         self.assertEqual(W.wildlife_for_scene({"plants": []}), [])
@@ -252,7 +259,9 @@ class TestSeasonalDiel(unittest.TestCase):
     def test_bats_only_at_night(self):
         day = W.wildlife_for_scene(self._scene(7, False))
         night = W.wildlife_for_scene(self._scene(7, True))
-        self.assertFalse(any("bat" in c["name"].lower() for c in day))
+        # Form, not name substring — see test_no_bats.
+        self.assertFalse(any(c.get("app", {}).get("build") == "bat"
+                             or c.get("kind") == "bat" for c in day))
         # Bats appear at night if any host plant supports one.
         # (Not asserting presence — depends on the sampled plant set — only that
         #  they never appear by day.)
@@ -265,6 +274,9 @@ class TestSeasonalDiel(unittest.TestCase):
         winter_kinds = {c["kind"] for c in winter}
         self.assertNotIn("bee", winter_kinds)
         self.assertNotIn("butterfly", winter_kinds)
+        # V2.63: a bee with NO recorded flight season used to read as "no
+        # seasonal gate" and fly in January. Most of the catalogue has no
+        # attributes row, so this is the common case, not the rare one.
 
 
 class TestSupportSummary(unittest.TestCase):

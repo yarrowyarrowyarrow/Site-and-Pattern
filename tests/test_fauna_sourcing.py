@@ -930,3 +930,137 @@ class TestTheFetcherReadsTheRealCatalogue(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTheTop200Review(unittest.TestCase):
+    """F127, V2.63. The occurrence gate cleared 1,252 animals and the top of
+    that list was still wrong — *Apis mellifera* at number one with 133 edges.
+
+    The honeybee is the instructive case: V2.62's review only saw species GBIF
+    *flagged*, and after the strict Canada filter this one read `unstated`, so
+    it was never a candidate. Occurrence counts cannot separate "native here"
+    from "GBIF holds records here for some reason", and a Central Asian
+    bumblebee with 1,125 Saskatchewan records is the proof.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_new_fauna")
+
+    def test_the_honeybee_is_refused(self):
+        """The species this whole review exists for."""
+        self.assertEqual(self.mod.verdict_for("Apis mellifera")[0], "reject")
+        self.assertNotIn("Apis mellifera", self.mod.verdicts())
+
+    def test_the_out_of_range_bumblebees_are_refused(self):
+        for name in ("Bombus impatiens", "Bombus vosnesenskii",
+                     "Bombus prshewalskyi", "Bombus bimaculatus",
+                     "Bombus vandykei", "Bombus hypnorum",
+                     "Bombus auricomus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_the_alberta_bumblebees_are_kept(self):
+        """A genus rule that rejected everything would pass the test above and
+        be useless."""
+        for name in ("Bombus kirbiellus", "Bombus vancouverensis"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "include", name)
+
+    def test_a_species_override_beats_its_genus_rule(self):
+        """`Andrena` is included wholesale; `Anthidium manicatum` is refused
+        even though wool carder bees are otherwise an included genus."""
+        self.assertEqual(self.mod.verdict_for("Andrena vicina")[0], "include")
+        self.assertEqual(
+            self.mod.verdict_for("Anthidium manicatum")[0], "reject")
+        self.assertEqual(self.mod.verdict_for("Polistes fuscatus")[0],
+                         "include")
+        self.assertEqual(self.mod.verdict_for("Polistes dominula")[0],
+                         "reject")
+
+    def test_trinomials_are_refused(self):
+        """The catalogue keys fauna on binomials. A subspecies row would not
+        resolve against anything — the `Picoides pubescens` lesson from
+        V2.60, arriving five more times."""
+        for name in ("Bombus vancouverensis nearcticus",
+                     "Papilio polyxenes asterius",
+                     "Vanessa atalanta rubria",
+                     "Limenitis arthemis arthemis",
+                     "Danaus plexippus plexippus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_anything_unreviewed_is_held_not_admitted(self):
+        """The 1,052-species tail. Its edges are probably fine, and 'probably
+        fine' is not what this catalogue claims about a documented edge."""
+        v, reason = self.mod.verdict_for("Totallus unknownus")
+        self.assertEqual(v, "hold")
+        self.assertIn("not reviewed", reason)
+
+    def test_a_species_with_no_english_name_keeps_its_binomial(self):
+        """The author's call, and the honest one: for a solitary bee the
+        binomial IS the name. Inventing 'Milwaukee Mining Bee' would be
+        writing a name nobody wrote."""
+        rows = self.mod.verdicts()
+        andrena = [r for k, r in rows.items() if k.startswith("Andrena ")]
+        self.assertTrue(andrena, "the review should include some Andrena")
+        for r in andrena:
+            self.assertEqual(r["common_name"], r["scientific_name"])
+
+    def test_species_with_a_real_english_name_use_it(self):
+        rows = self.mod.verdicts()
+        if "Strymon melinus" in rows:
+            self.assertEqual(rows["Strymon melinus"]["common_name"],
+                             "Gray Hairstreak")
+
+    def test_every_written_row_has_what_the_schema_demands(self):
+        import json
+        with open(os.path.join(_ROOT, "src", "db", "schema.sql"),
+                  encoding="utf-8") as fh:
+            sql = fh.read()
+        for name, row in self.mod.verdicts().items():
+            for field in ("scientific_name", "common_name", "taxon"):
+                self.assertTrue((row.get(field) or "").strip(),
+                                f"{name}: empty {field}")
+            self.assertIn(f"'{row['taxon']}'", sql, name)
+            self.assertIn(row["ab_native"], (0, 1), name)
+
+    def test_ab_native_is_derived_from_the_province_list(self):
+        for name, row in self.mod.verdicts().items():
+            self.assertEqual(
+                row["ab_native"],
+                1 if "AB" in row["native_provinces"].split(",") else 0, name)
+
+    def test_the_reviewed_animals_are_all_in_the_catalogue_now(self):
+        """The review is only worth anything if it was applied."""
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        missing = sorted(set(self.mod.verdicts()) - have)
+        self.assertEqual(missing, [], f"reviewed but never written: {missing}")
+
+    def test_no_rejected_animal_reached_the_catalogue(self):
+        """The point of the exercise, asserted against the shipped file."""
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        rejected = {n for n, (v, _) in self.mod.SPECIES.items()
+                    if v == "reject"}
+        self.assertEqual(sorted(rejected & have), [])
+
+    def test_every_reviewed_species_actually_got_a_verdict(self):
+        """The pin's job. Before it, `Polistes fuscatus` fell through to
+        "not reviewed" because the genus rule was never written — silently
+        held, inside a list whose whole claim is that it was read."""
+        gaps = [n for n in self.mod.REVIEWED
+                if n not in self.mod.SPECIES
+                and n.split()[0] not in self.mod.GENUS]
+        self.assertEqual(gaps, [], f"reviewed but undecided: {gaps}")
+
+    def test_the_reviewed_list_is_pinned_not_recomputed(self):
+        """Recomputing "top 200 not yet in the catalogue" slides the window
+        every time rows are written. It pulled in 42 unread species —
+        *Megachile rotundata* and *Vespula germanica* among them, both
+        introduced — the moment the first 159 landed."""
+        self.assertEqual(len(self.mod.REVIEWED), 200)
+        self.assertEqual(len(set(self.mod.REVIEWED)), 200)

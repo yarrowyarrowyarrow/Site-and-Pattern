@@ -1859,5 +1859,1605 @@
   "range_notes": "Open country and towns across the settled prairies.",
   "icon": "🐦",
   "description": "Open country and towns across the settled prairies."
+ },
+ {
+  "scientific_name": "Agapostemon splendens",
+  "common_name": "Agapostemon splendens",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Metallic green sweat bees, prairie-typical.",
+  "icon": "🐝",
+  "description": "Metallic green sweat bees, prairie-typical."
+ },
+ {
+  "scientific_name": "Agapostemon texanus",
+  "common_name": "Agapostemon texanus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Metallic green sweat bees, prairie-typical.",
+  "icon": "🐝",
+  "description": "Metallic green sweat bees, prairie-typical."
+ },
+ {
+  "scientific_name": "Alypia octomaculata",
+  "common_name": "Eight-spotted Forester",
+  "taxon": "lepidoptera",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Eight-spotted Forester — day-flying, on wild grape and fireweed.",
+  "icon": "🦋",
+  "description": "Eight-spotted Forester — day-flying, on wild grape and fireweed."
+ },
+ {
+  "scientific_name": "Anagrapha falcifera",
+  "common_name": "Celery Looper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Celery Looper — native and widespread.",
+  "icon": "🦋",
+  "description": "Celery Looper — native and widespread."
+ },
+ {
+  "scientific_name": "Ancistrocerus adiabatus",
+  "common_name": "Ancistrocerus adiabatus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Potter wasps, widespread.",
+  "icon": "🪲",
+  "description": "Potter wasps, widespread."
+ },
+ {
+  "scientific_name": "Ancistrocerus catskill",
+  "common_name": "Ancistrocerus catskill",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Potter wasps, widespread.",
+  "icon": "🪲",
+  "description": "Potter wasps, widespread."
+ },
+ {
+  "scientific_name": "Andrena amphibola",
+  "common_name": "Andrena amphibola",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena angustitarsata",
+  "common_name": "Andrena angustitarsata",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena candida",
+  "common_name": "Andrena candida",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena carlini",
+  "common_name": "Andrena carlini",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena crataegi",
+  "common_name": "Andrena crataegi",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena hirticincta",
+  "common_name": "Andrena hirticincta",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena lupinorum",
+  "common_name": "Andrena lupinorum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena milwaukeensis",
+  "common_name": "Andrena milwaukeensis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena miranda",
+  "common_name": "Andrena miranda",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena miserabilis",
+  "common_name": "Andrena miserabilis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena nigrocaerulea",
+  "common_name": "Andrena nigrocaerulea",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena nivalis",
+  "common_name": "Andrena nivalis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena pallidifovea",
+  "common_name": "Andrena pallidifovea",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena prunorum",
+  "common_name": "Andrena prunorum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena salicifloris",
+  "common_name": "Andrena salicifloris",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena scurra",
+  "common_name": "Andrena scurra",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena thaspii",
+  "common_name": "Andrena thaspii",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Andrena vicina",
+  "common_name": "Andrena vicina",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
+  "icon": "🐝",
+  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
+ },
+ {
+  "scientific_name": "Argynnis aphrodite",
+  "common_name": "Aphrodite Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Aphrodite Fritillary — prairie and parkland.",
+  "icon": "🦋",
+  "description": "Aphrodite Fritillary — prairie and parkland."
+ },
+ {
+  "scientific_name": "Augochlorella aurata",
+  "common_name": "Augochlorella aurata",
+  "taxon": "bee",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Metallic green sweat bees reaching the prairies.",
+  "icon": "🐝",
+  "description": "Metallic green sweat bees reaching the prairies."
+ },
+ {
+  "scientific_name": "Autographa precationis",
+  "common_name": "Autographa precationis",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Common Looper — native.",
+  "icon": "🦋",
+  "description": "Common Looper — native."
+ },
+ {
+  "scientific_name": "Batyle suturalis",
+  "common_name": "Batyle suturalis",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Flower longhorns, western.",
+  "icon": "🪲",
+  "description": "Flower longhorns, western."
+ },
+ {
+  "scientific_name": "Bembix americana",
+  "common_name": "American Sand Wasp",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sand wasps, native to prairie sand country.",
+  "icon": "🐝",
+  "description": "Sand wasps, native to prairie sand country."
+ },
+ {
+  "scientific_name": "Bibio albipennis",
+  "common_name": "Bibio albipennis",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "March flies, widespread.",
+  "icon": "🪲",
+  "description": "March flies, widespread."
+ },
+ {
+  "scientific_name": "Boloria bellona",
+  "common_name": "Meadow Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Meadow Fritillary — widespread in damp meadows.",
+  "icon": "🦋",
+  "description": "Meadow Fritillary — widespread in damp meadows."
+ },
+ {
+  "scientific_name": "Boloria chariclea",
+  "common_name": "Arctic Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Arctic Fritillary — northern and alpine.",
+  "icon": "🦋",
+  "description": "Arctic Fritillary — northern and alpine."
+ },
+ {
+  "scientific_name": "Bombus kirbiellus",
+  "common_name": "High Country Bumble Bee",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "High-alpine bumblebee of the Rockies; a genuine Alberta species above treeline.",
+  "icon": "🐝",
+  "description": "High-alpine bumblebee of the Rockies; a genuine Alberta species above treeline."
+ },
+ {
+  "scientific_name": "Bombus vancouverensis",
+  "common_name": "Vancouver Bumble Bee",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Western bumblebee of the mountains and foothills, reaching Alberta.",
+  "icon": "🐝",
+  "description": "Western bumblebee of the mountains and foothills, reaching Alberta."
+ },
+ {
+  "scientific_name": "Bombylius major",
+  "common_name": "Large Bee Fly",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Bee flies. B. major is Holarctic and native here as well as in Europe.",
+  "icon": "🪲",
+  "description": "Bee flies. B. major is Holarctic and native here as well as in Europe."
+ },
+ {
+  "scientific_name": "Burnsius communis",
+  "common_name": "Common Checkered-Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Common Checkered-Skipper — reaches the southern prairies.",
+  "icon": "🦋",
+  "description": "Common Checkered-Skipper — reaches the southern prairies."
+ },
+ {
+  "scientific_name": "Callophrys niphon",
+  "common_name": "Eastern Pine Elfin",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Eastern Pine Elfin — boreal pine.",
+  "icon": "🦋",
+  "description": "Eastern Pine Elfin — boreal pine."
+ },
+ {
+  "scientific_name": "Carterocephalus mandan",
+  "common_name": "Arctic Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Arctic Skipper — boreal, present across northern Alberta.",
+  "icon": "🦋",
+  "description": "Arctic Skipper — boreal, present across northern Alberta."
+ },
+ {
+  "scientific_name": "Celastrina lucia",
+  "common_name": "Northern Azure",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Northern Azure — boreal and parkland.",
+  "icon": "🦋",
+  "description": "Northern Azure — boreal and parkland."
+ },
+ {
+  "scientific_name": "Celastrina neglecta",
+  "common_name": "Summer Azure",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Summer Azure — widespread.",
+  "icon": "🦋",
+  "description": "Summer Azure — widespread."
+ },
+ {
+  "scientific_name": "Ceratina calcarata",
+  "common_name": "Ceratina calcarata",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Small carpenter bees, common in stem nests.",
+  "icon": "🐝",
+  "description": "Small carpenter bees, common in stem nests."
+ },
+ {
+  "scientific_name": "Cisseps fulvicollis",
+  "common_name": "Yellow-collared Scape Moth",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Yellow-collared Scape Moth — widespread day-flying moth.",
+  "icon": "🦋",
+  "description": "Yellow-collared Scape Moth — widespread day-flying moth."
+ },
+ {
+  "scientific_name": "Coelioxys rufitarsis",
+  "common_name": "Coelioxys rufitarsis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Cuckoo bees of Megachile — present wherever their hosts are.",
+  "icon": "🐝",
+  "description": "Cuckoo bees of Megachile — present wherever their hosts are."
+ },
+ {
+  "scientific_name": "Colias eurytheme",
+  "common_name": "Orange Sulphur",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Orange Sulphur — abundant across the prairies.",
+  "icon": "🦋",
+  "description": "Orange Sulphur — abundant across the prairies."
+ },
+ {
+  "scientific_name": "Colias interior",
+  "common_name": "Pink-edged Sulphur",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Pink-edged Sulphur — boreal, blueberry feeder.",
+  "icon": "🦋",
+  "description": "Pink-edged Sulphur — boreal, blueberry feeder."
+ },
+ {
+  "scientific_name": "Colletes fulgidus",
+  "common_name": "Colletes fulgidus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Cellophane bees, widespread.",
+  "icon": "🐝",
+  "description": "Cellophane bees, widespread."
+ },
+ {
+  "scientific_name": "Colletes kincaidii",
+  "common_name": "Colletes kincaidii",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Cellophane bees, widespread.",
+  "icon": "🐝",
+  "description": "Cellophane bees, widespread."
+ },
+ {
+  "scientific_name": "Ctenucha virginica",
+  "common_name": "Virginia Ctenucha",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Virginia Ctenucha — grassland day-flier.",
+  "icon": "🦋",
+  "description": "Virginia Ctenucha — grassland day-flier."
+ },
+ {
+  "scientific_name": "Cupido comyntas",
+  "common_name": "Eastern Tailed-Blue",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Eastern Tailed-Blue — reaches the prairies.",
+  "icon": "🦋",
+  "description": "Eastern Tailed-Blue — reaches the prairies."
+ },
+ {
+  "scientific_name": "Diabrotica undecimpunctata",
+  "common_name": "Spotted Cucumber Beetle",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Cucumber beetles. Native to North America, though the species here is an agricultural pest as well as a flower visitor.",
+  "icon": "🪲",
+  "description": "Cucumber beetles. Native to North America, though the species here is an agricultural pest as well as a flower visitor."
+ },
+ {
+  "scientific_name": "Dianthidium subparvum",
+  "common_name": "Dianthidium subparvum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Pebble bees, western and dry-country.",
+  "icon": "🐝",
+  "description": "Pebble bees, western and dry-country."
+ },
+ {
+  "scientific_name": "Dolichovespula arctica",
+  "common_name": "Arctic Yellowjacket",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Aerial yellowjackets, native and conspicuous across the prairies.",
+  "icon": "🪲",
+  "description": "Aerial yellowjackets, native and conspicuous across the prairies."
+ },
+ {
+  "scientific_name": "Dolichovespula arenaria",
+  "common_name": "Aerial Yellowjacket",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Aerial yellowjackets, native and conspicuous across the prairies.",
+  "icon": "🪲",
+  "description": "Aerial yellowjackets, native and conspicuous across the prairies."
+ },
+ {
+  "scientific_name": "Dolichovespula maculata",
+  "common_name": "Bald-faced Hornet",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Aerial yellowjackets, native and conspicuous across the prairies.",
+  "icon": "🪲",
+  "description": "Aerial yellowjackets, native and conspicuous across the prairies."
+ },
+ {
+  "scientific_name": "Epalpus signifer",
+  "common_name": "Epalpus signifer",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Tachinid flies, native.",
+  "icon": "🪲",
+  "description": "Tachinid flies, native."
+ },
+ {
+  "scientific_name": "Epistrophe emarginata",
+  "common_name": "Epistrophe emarginata",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic."
+ },
+ {
+  "scientific_name": "Epistrophe grossulariae",
+  "common_name": "Epistrophe grossulariae",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic."
+ },
+ {
+  "scientific_name": "Eristalis dimidiata",
+  "common_name": "Black-shouldered Drone Fly",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue.",
+  "icon": "🪲",
+  "description": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue."
+ },
+ {
+  "scientific_name": "Eristalis flavipes",
+  "common_name": "Eristalis flavipes",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue.",
+  "icon": "🪲",
+  "description": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue."
+ },
+ {
+  "scientific_name": "Eristalis hirta",
+  "common_name": "Eristalis hirta",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue.",
+  "icon": "🪲",
+  "description": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue."
+ },
+ {
+  "scientific_name": "Eristalis stipator",
+  "common_name": "Eristalis stipator",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue.",
+  "icon": "🪲",
+  "description": "Drone flies. Mostly Holarctic natives — but see E. arbustorum below, and E. tenax is already flagged introduced in the catalogue."
+ },
+ {
+  "scientific_name": "Eucera edwardsii",
+  "common_name": "Eucera edwardsii",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Long-horned bees, widespread.",
+  "icon": "🐝",
+  "description": "Long-horned bees, widespread."
+ },
+ {
+  "scientific_name": "Euodynerus foraminatus",
+  "common_name": "Euodynerus foraminatus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mason wasps, widespread.",
+  "icon": "🪲",
+  "description": "Mason wasps, widespread."
+ },
+ {
+  "scientific_name": "Eupeodes americanus",
+  "common_name": "Eupeodes americanus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic and common.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic and common."
+ },
+ {
+  "scientific_name": "Eupeodes volucris",
+  "common_name": "Eupeodes volucris",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic and common.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic and common."
+ },
+ {
+  "scientific_name": "Euphydryas anicia",
+  "common_name": "Anicia Checkerspot",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Anicia Checkerspot — western montane.",
+  "icon": "🦋",
+  "description": "Anicia Checkerspot — western montane."
+ },
+ {
+  "scientific_name": "Euptoieta claudia",
+  "common_name": "Variegated Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Variegated Fritillary — a regular southern migrant.",
+  "icon": "🦋",
+  "description": "Variegated Fritillary — a regular southern migrant."
+ },
+ {
+  "scientific_name": "Evodinus monticola",
+  "common_name": "Evodinus monticola",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Flower longhorns, boreal and montane.",
+  "icon": "🪲",
+  "description": "Flower longhorns, boreal and montane."
+ },
+ {
+  "scientific_name": "Feltia herilis",
+  "common_name": "Feltia herilis",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "A native cutworm moth; adults nectar.",
+  "icon": "🦋",
+  "description": "A native cutworm moth; adults nectar."
+ },
+ {
+  "scientific_name": "Feltia jaculifera",
+  "common_name": "Dingy Cutworm",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Dingy Cutworm — native, adults nectar heavily on late composites.",
+  "icon": "🦋",
+  "description": "Dingy Cutworm — native, adults nectar heavily on late composites."
+ },
+ {
+  "scientific_name": "Gnophaela vermiculata",
+  "common_name": "Police Car Moth",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Police Car Moth — a western day-flier, conspicuous in Alberta foothills.",
+  "icon": "🦋",
+  "description": "Police Car Moth — a western day-flier, conspicuous in Alberta foothills."
+ },
+ {
+  "scientific_name": "Halictus confusus",
+  "common_name": "Halictus confusus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees, widespread across the prairies.",
+  "icon": "🐝",
+  "description": "Sweat bees, widespread across the prairies."
+ },
+ {
+  "scientific_name": "Halictus farinosus",
+  "common_name": "Halictus farinosus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees, widespread across the prairies.",
+  "icon": "🐝",
+  "description": "Sweat bees, widespread across the prairies."
+ },
+ {
+  "scientific_name": "Halictus ligatus",
+  "common_name": "Halictus ligatus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees, widespread across the prairies.",
+  "icon": "🐝",
+  "description": "Sweat bees, widespread across the prairies."
+ },
+ {
+  "scientific_name": "Halictus tripartitus",
+  "common_name": "Halictus tripartitus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees, widespread across the prairies.",
+  "icon": "🐝",
+  "description": "Sweat bees, widespread across the prairies."
+ },
+ {
+  "scientific_name": "Helophilus fasciatus",
+  "common_name": "Helophilus fasciatus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Marsh hoverflies, wetland-typical here.",
+  "icon": "🪲",
+  "description": "Marsh hoverflies, wetland-typical here."
+ },
+ {
+  "scientific_name": "Helophilus latifrons",
+  "common_name": "Helophilus latifrons",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Marsh hoverflies, wetland-typical here.",
+  "icon": "🪲",
+  "description": "Marsh hoverflies, wetland-typical here."
+ },
+ {
+  "scientific_name": "Heriades carinata",
+  "common_name": "Heriades carinata",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Resin bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Resin bees, small and widespread."
+ },
+ {
+  "scientific_name": "Heriades cressoni",
+  "common_name": "Heriades cressoni",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Resin bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Resin bees, small and widespread."
+ },
+ {
+  "scientific_name": "Hoplitis albifrons",
+  "common_name": "Hoplitis albifrons",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Small mason bees, western and northern.",
+  "icon": "🐝",
+  "description": "Small mason bees, western and northern."
+ },
+ {
+  "scientific_name": "Hoplitis fulgida",
+  "common_name": "Hoplitis fulgida",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Small mason bees, western and northern.",
+  "icon": "🐝",
+  "description": "Small mason bees, western and northern."
+ },
+ {
+  "scientific_name": "Hoplitis hypocrita",
+  "common_name": "Hoplitis hypocrita",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Small mason bees, western and northern.",
+  "icon": "🐝",
+  "description": "Small mason bees, western and northern."
+ },
+ {
+  "scientific_name": "Hoplitis producta",
+  "common_name": "Hoplitis producta",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Small mason bees, western and northern.",
+  "icon": "🐝",
+  "description": "Small mason bees, western and northern."
+ },
+ {
+  "scientific_name": "Hylaeus annulatus",
+  "common_name": "Hylaeus annulatus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Masked bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Masked bees, small and widespread."
+ },
+ {
+  "scientific_name": "Hylaeus basalis",
+  "common_name": "Hylaeus basalis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Masked bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Masked bees, small and widespread."
+ },
+ {
+  "scientific_name": "Hylaeus mesillae",
+  "common_name": "Hylaeus mesillae",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Masked bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Masked bees, small and widespread."
+ },
+ {
+  "scientific_name": "Hylaeus modestus",
+  "common_name": "Hylaeus modestus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Masked bees, small and widespread.",
+  "icon": "🐝",
+  "description": "Masked bees, small and widespread."
+ },
+ {
+  "scientific_name": "Icaricia icarioides",
+  "common_name": "Boisduval's Blue",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Boisduval's Blue — western, lupine feeder.",
+  "icon": "🦋",
+  "description": "Boisduval's Blue — western, lupine feeder."
+ },
+ {
+  "scientific_name": "Icaricia saepiolus",
+  "common_name": "Greenish Blue",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Greenish Blue — western, clover feeder.",
+  "icon": "🦋",
+  "description": "Greenish Blue — western, clover feeder."
+ },
+ {
+  "scientific_name": "Lasioglossum albipenne",
+  "common_name": "Lasioglossum albipenne",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum cressonii",
+  "common_name": "Lasioglossum cressonii",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum incompletum",
+  "common_name": "Lasioglossum incompletum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum inconditum",
+  "common_name": "Lasioglossum inconditum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum knereri",
+  "common_name": "Lasioglossum knereri",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum marinense",
+  "common_name": "Lasioglossum marinense",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum nevadense",
+  "common_name": "Lasioglossum nevadense",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum nigroviride",
+  "common_name": "Lasioglossum nigroviride",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum pruinosum",
+  "common_name": "Lasioglossum pruinosum",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum ruidosense",
+  "common_name": "Lasioglossum ruidosense",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Lasioglossum sisymbrii",
+  "common_name": "Lasioglossum sisymbrii",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Sweat bees. Abundant and diverse here.",
+  "icon": "🐝",
+  "description": "Sweat bees. Abundant and diverse here."
+ },
+ {
+  "scientific_name": "Limenitis archippus",
+  "common_name": "Viceroy",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Viceroy — willow feeder, common in prairie riparian.",
+  "icon": "🦋",
+  "description": "Viceroy — willow feeder, common in prairie riparian."
+ },
+ {
+  "scientific_name": "Lon hobomok",
+  "common_name": "Hobomok Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hobomok Skipper — boreal and parkland.",
+  "icon": "🦋",
+  "description": "Hobomok Skipper — boreal and parkland."
+ },
+ {
+  "scientific_name": "Lycomorpha pholus",
+  "common_name": "Black-and-yellow Lichen Moth",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Black-and-yellow Lichen Moth.",
+  "icon": "🦋",
+  "description": "Black-and-yellow Lichen Moth."
+ },
+ {
+  "scientific_name": "Lygus lineolaris",
+  "common_name": "Tarnished Plant Bug",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Plant bugs, native and abundant in prairie vegetation.",
+  "icon": "🪲",
+  "description": "Plant bugs, native and abundant in prairie vegetation."
+ },
+ {
+  "scientific_name": "Megachile frigida",
+  "common_name": "Megachile frigida",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Megachile latimanus",
+  "common_name": "Megachile latimanus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Megachile melanophaea",
+  "common_name": "Megachile melanophaea",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Megachile onobrychidis",
+  "common_name": "Megachile onobrychidis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Megachile perihirta",
+  "common_name": "Megachile perihirta",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Megachile pugnata",
+  "common_name": "Megachile pugnata",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Leafcutter bees, native and common.",
+  "icon": "🐝",
+  "description": "Leafcutter bees, native and common."
+ },
+ {
+  "scientific_name": "Melissodes bimaculatus",
+  "common_name": "Melissodes bimaculatus",
+  "taxon": "bee",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Long-horned bees, late-summer composite specialists across the grasslands.",
+  "icon": "🐝",
+  "description": "Long-horned bees, late-summer composite specialists across the grasslands."
+ },
+ {
+  "scientific_name": "Melissodes druriellus",
+  "common_name": "Melissodes druriellus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Long-horned bees, late-summer composite specialists across the grasslands.",
+  "icon": "🐝",
+  "description": "Long-horned bees, late-summer composite specialists across the grasslands."
+ },
+ {
+  "scientific_name": "Melissodes microstictus",
+  "common_name": "Melissodes microstictus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Long-horned bees, late-summer composite specialists across the grasslands.",
+  "icon": "🐝",
+  "description": "Long-horned bees, late-summer composite specialists across the grasslands."
+ },
+ {
+  "scientific_name": "Melissodes trinodis",
+  "common_name": "Melissodes trinodis",
+  "taxon": "bee",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Long-horned bees, late-summer composite specialists across the grasslands.",
+  "icon": "🐝",
+  "description": "Long-horned bees, late-summer composite specialists across the grasslands."
+ },
+ {
+  "scientific_name": "Ochlodes sylvanoides",
+  "common_name": "Woodland Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Woodland Skipper — western.",
+  "icon": "🦋",
+  "description": "Woodland Skipper — western."
+ },
+ {
+  "scientific_name": "Osmia albolateralis",
+  "common_name": "Osmia albolateralis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia bucephala",
+  "common_name": "Osmia bucephala",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia californica",
+  "common_name": "Osmia californica",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia coloradensis",
+  "common_name": "Osmia coloradensis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia densa",
+  "common_name": "Osmia densa",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia juxta",
+  "common_name": "Osmia juxta",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia montana",
+  "common_name": "Osmia montana",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia pentstemonis",
+  "common_name": "Osmia pentstemonis",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia pusilla",
+  "common_name": "Osmia pusilla",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia trevoris",
+  "common_name": "Osmia trevoris",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Osmia tristella",
+  "common_name": "Osmia tristella",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mason bees. Well represented in AB, especially the foothills.",
+  "icon": "🐝",
+  "description": "Mason bees. Well represented in AB, especially the foothills."
+ },
+ {
+  "scientific_name": "Papilio eurymedon",
+  "common_name": "Pale Swallowtail",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Pale Swallowtail — western, reaching the Alberta foothills.",
+  "icon": "🦋",
+  "description": "Pale Swallowtail — western, reaching the Alberta foothills."
+ },
+ {
+  "scientific_name": "Papilio polyxenes",
+  "common_name": "Black Swallowtail",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Black Swallowtail — reaches the prairies; larvae on native umbellifers.",
+  "icon": "🦋",
+  "description": "Black Swallowtail — reaches the prairies; larvae on native umbellifers."
+ },
+ {
+  "scientific_name": "Papilio zelicaon",
+  "common_name": "Anise Swallowtail",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Anise Swallowtail — western, present in southern Alberta.",
+  "icon": "🦋",
+  "description": "Anise Swallowtail — western, present in southern Alberta."
+ },
+ {
+  "scientific_name": "Philanthus gibbosus",
+  "common_name": "Philanthus gibbosus",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Beewolves, sand-country natives.",
+  "icon": "🐝",
+  "description": "Beewolves, sand-country natives."
+ },
+ {
+  "scientific_name": "Philanthus ventilabris",
+  "common_name": "Philanthus ventilabris",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Beewolves, sand-country natives.",
+  "icon": "🐝",
+  "description": "Beewolves, sand-country natives."
+ },
+ {
+  "scientific_name": "Phyciodes mylitta",
+  "common_name": "Mylitta Crescent",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Mylitta Crescent — western, thistle feeder.",
+  "icon": "🦋",
+  "description": "Mylitta Crescent — western, thistle feeder."
+ },
+ {
+  "scientific_name": "Phyciodes tharos",
+  "common_name": "Pearl Crescent",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Pearl Crescent — widespread, aster specialist.",
+  "icon": "🦋",
+  "description": "Pearl Crescent — widespread, aster specialist."
+ },
+ {
+  "scientific_name": "Physocephala furcillata",
+  "common_name": "Physocephala furcillata",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Thick-headed flies, native parasitoids of bees.",
+  "icon": "🪲",
+  "description": "Thick-headed flies, native parasitoids of bees."
+ },
+ {
+  "scientific_name": "Physocephala tibialis",
+  "common_name": "Physocephala tibialis",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Thick-headed flies, native parasitoids of bees.",
+  "icon": "🪲",
+  "description": "Thick-headed flies, native parasitoids of bees."
+ },
+ {
+  "scientific_name": "Pieris oleracea",
+  "common_name": "Mustard White",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Mustard White — a NATIVE Pieris, not to be confused with the introduced P. rapae.",
+  "icon": "🦋",
+  "description": "Mustard White — a NATIVE Pieris, not to be confused with the introduced P. rapae."
+ },
+ {
+  "scientific_name": "Polites peckius",
+  "common_name": "Peck's Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Peck's Skipper — grassland, widespread.",
+  "icon": "🦋",
+  "description": "Peck's Skipper — grassland, widespread."
+ },
+ {
+  "scientific_name": "Polites themistocles",
+  "common_name": "Tawny-edged Skipper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Tawny-edged Skipper — grassland.",
+  "icon": "🦋",
+  "description": "Tawny-edged Skipper — grassland."
+ },
+ {
+  "scientific_name": "Pontia occidentalis",
+  "common_name": "Western White",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Western White — montane and prairie.",
+  "icon": "🦋",
+  "description": "Western White — montane and prairie."
+ },
+ {
+  "scientific_name": "Pontia protodice",
+  "common_name": "Checkered White",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Checkered White — southern prairies.",
+  "icon": "🦋",
+  "description": "Checkered White — southern prairies."
+ },
+ {
+  "scientific_name": "Pyrausta orphisalis",
+  "common_name": "Pyrausta orphisalis",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "A native pyralid of mints.",
+  "icon": "🦋",
+  "description": "A native pyralid of mints."
+ },
+ {
+  "scientific_name": "Satyrium titus",
+  "common_name": "Coral Hairstreak",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Coral Hairstreak — chokecherry and plum thickets.",
+  "icon": "🦋",
+  "description": "Coral Hairstreak — chokecherry and plum thickets."
+ },
+ {
+  "scientific_name": "Schinia arcigera",
+  "common_name": "Arcigera Flower Moth",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Arcigera Flower Moth — aster specialist.",
+  "icon": "🦋",
+  "description": "Arcigera Flower Moth — aster specialist."
+ },
+ {
+  "scientific_name": "Speyeria atlantis",
+  "common_name": "Atlantis Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Atlantis Fritillary — boreal and montane, common in Alberta.",
+  "icon": "🦋",
+  "description": "Atlantis Fritillary — boreal and montane, common in Alberta."
+ },
+ {
+  "scientific_name": "Speyeria cybele",
+  "common_name": "Great Spangled Fritillary",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Great Spangled Fritillary — widespread, violet feeder.",
+  "icon": "🦋",
+  "description": "Great Spangled Fritillary — widespread, violet feeder."
+ },
+ {
+  "scientific_name": "Sphaerophoria contigua",
+  "common_name": "Sphaerophoria contigua",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, widespread.",
+  "icon": "🪲",
+  "description": "Hoverflies, widespread."
+ },
+ {
+  "scientific_name": "Sphex ichneumoneus",
+  "common_name": "Great Golden Digger Wasp",
+  "taxon": "bee",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced.",
+  "icon": "🐝",
+  "description": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced."
+ },
+ {
+  "scientific_name": "Strymon melinus",
+  "common_name": "Gray Hairstreak",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Gray Hairstreak — one of the most widespread butterflies in North America.",
+  "icon": "🦋",
+  "description": "Gray Hairstreak — one of the most widespread butterflies in North America."
+ },
+ {
+  "scientific_name": "Syrphus opinator",
+  "common_name": "Syrphus opinator",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB",
+  "range_notes": "Hoverflies, Holarctic and common.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic and common."
+ },
+ {
+  "scientific_name": "Syrphus rectus",
+  "common_name": "Syrphus rectus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic and common.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic and common."
+ },
+ {
+  "scientific_name": "Syrphus torvus",
+  "common_name": "Syrphus torvus",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Hoverflies, Holarctic and common.",
+  "icon": "🪲",
+  "description": "Hoverflies, Holarctic and common."
+ },
+ {
+  "scientific_name": "Tharsalea helloides",
+  "common_name": "Purplish Copper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Purplish Copper — common in damp prairie.",
+  "icon": "🦋",
+  "description": "Purplish Copper — common in damp prairie."
+ },
+ {
+  "scientific_name": "Tharsalea hyllus",
+  "common_name": "Bronze Copper",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Bronze Copper — wetland margins.",
+  "icon": "🦋",
+  "description": "Bronze Copper — wetland margins."
+ },
+ {
+  "scientific_name": "Toxomerus geminatus",
+  "common_name": "Eastern Calligrapher",
+  "taxon": "other_insect",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Hoverflies. Eastern-centred but reaching the prairies and expanding.",
+  "icon": "🪲",
+  "description": "Hoverflies. Eastern-centred but reaching the prairies and expanding."
+ },
+ {
+  "scientific_name": "Trichiotinus assimilis",
+  "common_name": "Trichiotinus assimilis",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Flower scarabs, widespread.",
+  "icon": "🪲",
+  "description": "Flower scarabs, widespread."
+ },
+ {
+  "scientific_name": "Trichodes ornatus",
+  "common_name": "Ornate Checkered Beetle",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Checkered beetles, western and native.",
+  "icon": "🪲",
+  "description": "Checkered beetles, western and native."
+ },
+ {
+  "scientific_name": "Vanessa virginiensis",
+  "common_name": "American Lady",
+  "taxon": "lepidoptera",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "American Lady — a regular migrant to the prairies, breeding on pussytoes.",
+  "icon": "🦋",
+  "description": "American Lady — a regular migrant to the prairies, breeding on pussytoes."
+ },
+ {
+  "scientific_name": "Vespula consobrina",
+  "common_name": "Vespula consobrina",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Ground yellowjackets, native.",
+  "icon": "🪲",
+  "description": "Ground yellowjackets, native."
+ },
+ {
+  "scientific_name": "Vespula maculifrons",
+  "common_name": "Vespula maculifrons",
+  "taxon": "other_insect",
+  "ab_native": 0,
+  "native_provinces": "SK",
+  "range_notes": "Ground yellowjackets, native.",
+  "icon": "🪲",
+  "description": "Ground yellowjackets, native."
+ },
+ {
+  "scientific_name": "Polistes fuscatus",
+  "common_name": "Northern Paper Wasp",
+  "taxon": "other_insect",
+  "ab_native": 1,
+  "native_provinces": "AB,SK",
+  "range_notes": "Paper wasps. P. fuscatus is the native northern one; the European P. dominula is refused below.",
+  "icon": "🪲",
+  "description": "Paper wasps. P. fuscatus is the native northern one; the European P. dominula is refused below."
  }
 ]

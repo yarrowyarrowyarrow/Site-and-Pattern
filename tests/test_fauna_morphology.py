@@ -132,17 +132,41 @@ class TestVocabulariesAgree(unittest.TestCase):
                          "fauna.js band palette has drifted from data_quality")
 
 
+def _described(path):
+    """Records that actually carry morphology.
+
+    A row can exist for its `kind` alone — F127 added 46 such leps — and the
+    3D scene falls back to `scene_wildlife`'s genus tables for those. The
+    morphology guards below apply to what has been described, not to what
+    exists.
+    """
+    return [r for r in _records(path)
+            if (r.get("morph_data_source") or "").strip()]
+
+
 class TestSeededData(unittest.TestCase):
-    def test_every_bee_and_lep_is_described(self):
-        for path, n in ((_BEES, 69), (_LEPS, 31)):
-            recs = _records(path)
-            self.assertEqual(len(recs), n)
+    def test_the_described_roster_only_ever_grows(self):
+        """Morphology is OPTIONAL and has a documented fallback.
+
+        `src/scene_wildlife.py` says so at the top: appearance is data since
+        schema v58, and its genus/name tables are "the fallback for a species
+        nobody has described". So a lep row without a wingspan renders — it
+        just renders generically.
+
+        This used to pin 69 bees and 31 leps, the exact roster the bench was
+        written against. F127 added 46 leps with a `kind` and no morphology,
+        which is the intended shape and made an equality assertion fail. The
+        invariant that matters is that the described set never SHRINKS —
+        losing a description is rot; not having one yet is a backlog.
+        """
+        self.assertGreaterEqual(len(_described(_BEES)), 69)
+        self.assertGreaterEqual(len(_described(_LEPS)), 31)
 
     def test_band_patterns_are_well_formed(self):
         from src.data_quality import (BAND_COLOURS,          # noqa: PLC0415
                                       BAND_SEGMENTS_MAX,
                                       band_pattern_tokens)
-        for r in _records(_BEES):
+        for r in _described(_BEES):
             toks = band_pattern_tokens(r.get("band_pattern"))
             self.assertTrue(toks, f"{r['scientific_name']}: no band pattern")
             self.assertLessEqual(len(toks), BAND_SEGMENTS_MAX)
@@ -151,7 +175,10 @@ class TestSeededData(unittest.TestCase):
                               f"{r['scientific_name']}: bad band colour {t!r}")
 
     def test_wingspans_are_ranges_the_right_way_round(self):
-        for r in _records(_LEPS):
+        """Only for rows that HAVE a wingspan — see
+        test_the_described_roster_only_ever_grows. A row with none renders
+        from the fallback tables; a row with a backwards one is a bug."""
+        for r in _described(_LEPS):
             lo, hi = r.get("wingspan_min_mm"), r.get("wingspan_max_mm")
             self.assertIsNotNone(lo, f"{r['scientific_name']}: no wingspan")
             self.assertLessEqual(lo, hi, f"{r['scientific_name']}: backwards")
@@ -162,7 +189,7 @@ class TestSeededData(unittest.TestCase):
         the bench — in which case the citation must be there too, which
         validate_fauna_morphology enforces."""
         for path in (_BEES, _LEPS):
-            for r in _records(path):
+            for r in _described(path):
                 src = (r.get("morph_data_source") or "").lower()
                 self.assertIn(src, ("estimated", "photo", "flora", "measured"))
                 if src != "estimated":
@@ -250,10 +277,30 @@ class TestCommittedDiagrams(unittest.TestCase):
 
 class TestBench(unittest.TestCase):
     def test_it_edits_both_taxa_and_nothing_else(self):
+        """The bench covers every bee and lepidopteran in the catalogue.
+
+        The count was pinned at 100 — the 69 bees and 31 leps that existed
+        when the bench was written — and F127's 159 curated animals took it to
+        225. A hard-coded total is a claim about the catalogue's size, which
+        is not what this test is for; the invariant is that the bench edits
+        those two taxa and nothing else, and that it edits ALL of them.
+        """
+        import json                                          # noqa: PLC0415
         import tune_fauna as bench                           # noqa: PLC0415
         rows = bench._species_list()
-        self.assertEqual(len(rows), 100)
         self.assertEqual({r["taxon"] for r in rows}, {"bee", "lepidoptera"})
+        # Counted from the shipped JSON, not the DB: this module redirects the
+        # database to an empty temp dir, so a query here raises "no such table"
+        # rather than measuring anything.
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            expected = sum(1 for r in json.load(fh)
+                           if isinstance(r, dict)
+                           and r.get("taxon") in ("bee", "lepidoptera"))
+        self.assertEqual(len(rows), expected,
+                         "the bench must reach every bee and lep, not a "
+                         "snapshot of how many there once were")
 
     def test_vocabularies_come_from_the_gate(self):
         import tune_fauna as bench                           # noqa: PLC0415

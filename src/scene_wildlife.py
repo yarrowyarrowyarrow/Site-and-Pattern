@@ -641,11 +641,19 @@ def _season_months(taxon: str, fid: int,
                    bee_seasons: dict, lep_seasons: dict) -> frozenset:
     """The months (1-12) this creature is out; empty = no seasonal gate."""
     from src.habitat_score import parse_month_range
+    # An UNRECORDED flight season falls back to the warm months, not to "no
+    # gate" (V2.63). Only 69 bees and 31 lepidoptera have an attributes row, so
+    # `bee_seasons.get(fid)` is empty for most of the catalogue — and empty
+    # used to mean unrestricted, which put a solitary bee in an Alberta yard in
+    # January. F127's 159 new animals made that visible by arriving without
+    # attribute rows; the bug was always there, waiting for a bee nobody had
+    # measured. Absence of a season is not evidence of a winter flier (P9).
     if taxon == "bee":
-        return frozenset(parse_month_range(bee_seasons.get(fid) or ""))
+        return (frozenset(parse_month_range(bee_seasons.get(fid) or ""))
+                or _WARM_MONTHS)
     if taxon == "lepidoptera":
         _act, season = lep_seasons.get(fid, (None, None))
-        return frozenset(parse_month_range(season or ""))
+        return frozenset(parse_month_range(season or "")) or _WARM_MONTHS
     if taxon in ("other_insect", "mammal"):
         return _WARM_MONTHS
     return frozenset()                        # birds: year-round
