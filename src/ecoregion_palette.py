@@ -233,12 +233,12 @@ def legend_html(link_for=None, *, active: str = "") -> str:
 #: were tried first and three of the six came out inseparable; Okabe-Ito is the
 #: standard set built for this and it keeps the convention where it matters.
 ECOZONE_COLOUR: dict = {
-    "Prairies":           "#e69f00",   # gold
-    "Boreal Plains":      "#009e73",   # green
-    "Taiga Plains":       "#6fc5aa",   # the same green, further north
-    "Boreal Shield":      "#0072b2",   # blue, Precambrian bedrock
-    "Taiga Shield":       "#6fa9cf",   # the same blue, further north
-    "Montane Cordillera": "#cc79a7",   # red-violet, the mountains
+    "Prairies":           "#dcb13e",   # gold, open grassland, the palest
+    "Boreal Plains":      "#235b1d",   # dark green, closed forest, the darkest
+    "Taiga Plains":       "#55cfb3",   # the plains further north, paler
+    "Boreal Shield":      "#3a91b2",   # blue, Precambrian bedrock and lakes
+    "Taiga Shield":       "#7fd5f1",   # the shield further north, paler
+    "Montane Cordillera": "#8b489a",   # violet, the mountains
 }
 
 #: Which ecozone each ecoregion belongs to, from the harmonized build of
@@ -278,11 +278,28 @@ ECOZONE_OF: dict = {
     "Western Continental Ranges": "Montane Cordillera",
 }
 
-#: How far the within-ecozone steps spread, total, toward white and black.
-#: Deliberately narrow. The step separates neighbours enough to see a boundary;
-#: it must not travel far enough to read as a different system, which would
-#: undo the whole point of the hierarchy.
-_STEP_SPREAD = 0.30
+#: How far the within-ecozone steps spread, either side of the ecozone hue.
+#:
+#: **Six hundredths, and that is a ceiling rather than a preference.** The first
+#: real run measured it: at 0.06 every pair of ecoregions that shares a border
+#: and belongs to *different* ecozones clears colour-vision deltaE 10.3. At 0.10
+#: the Taiga Plains steps reach far enough to collide with Boreal Shield (6.6);
+#: at 0.14 they take Boreal Plains and Boreal Shield down with them (7.1). The
+#: step cannot be widened without breaking a boundary somebody will actually
+#: look at.
+#:
+#: So within one ecozone the fills are nearly uniform, and that is the deliberate
+#: half of the trade rather than an oversight: **hue is the system, the label is
+#: the unit.** Two adjacent Boreal Plains ecoregions are told apart by the
+#: boundary stroke and their names, which is what published ELC maps do at this
+#: scale, and `tools/ecoregions/validate.py` exempts same-ecozone pairs from the
+#: colour floor for exactly this reason rather than by looking the other way.
+#:
+#: This applies to the printed map. It does **not** cost the app anything today:
+#: the website still draws the six-key placeholder vocabulary above, where Mixed
+#: Grassland and Moist Mixed Grassland are separate colours, and that is the
+#: distinction that decides which grasses get recommended.
+_STEP_SPREAD = 0.06
 
 
 def elc_fill(ecoregion: str, ecozone: str = "") -> str:

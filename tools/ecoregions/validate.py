@@ -216,7 +216,8 @@ def _check_colour_separation(regions, result: Result) -> None:
 
     _sys.path.insert(0, str(REPO))
     from src.colour_distance import worst_cvd_delta_e            # noqa: PLC0415
-    from src.ecoregion_palette import HATCHED, elc_fill          # noqa: PLC0415
+    from src.ecoregion_palette import (HATCHED, elc_fill,        # noqa: PLC0415
+                                       elc_zone_of)
 
     metric = regions.to_crs(CRS_PROJECTED)
     by_name: dict = {}
@@ -224,13 +225,21 @@ def _check_colour_separation(regions, result: Result) -> None:
         by_name[str(name)] = group.geometry.union_all()
 
     names = sorted(by_name)
-    touching, thin = [], []
+    touching, thin, same_zone = [], [], []
     for i, one in enumerate(names):
         for two in names[i + 1:]:
             shared = by_name[one].intersection(by_name[two].buffer(50))
             if shared.is_empty or shared.area < 1e5:      # under 0.1 km2
                 continue
             touching.append((one, two))
+            # Two ecoregions in the SAME ecozone share a hue on purpose - that
+            # is the hierarchy the palette encodes, and the step between them
+            # cannot be widened without breaking a cross-ecozone boundary that
+            # matters more (measured: 0.06 holds everything, 0.10 does not).
+            # Inside one system the boundary stroke and the label do the work.
+            if elc_zone_of(one) and elc_zone_of(one) == elc_zone_of(two):
+                same_zone.append((one, two))
+                continue
             gap = worst_cvd_delta_e(elc_fill(one), elc_fill(two))
             if gap < _CVD_FLOOR and one not in HATCHED and two not in HATCHED:
                 thin.append((one, two, gap))
@@ -240,8 +249,9 @@ def _check_colour_separation(regions, result: Result) -> None:
                "no two ecoregions were found to share a border, so the colour "
                "check below proves nothing")
     result.add(not thin,
-               f"bordering ecoregions separate by colour or hatch "
-               f"({len(touching)} shared borders)",
+               f"bordering ecoregions in different ecozones separate by colour "
+               f"or hatch ({len(touching)} shared borders, {len(same_zone)} of "
+               f"them inside one ecozone)",
                "" if not thin else
                "\n".join(f"{a} / {b}: deltaE {g:.1f} under colour-vision "
                           f"deficiency, neither hatched" for a, b, g in thin) +
