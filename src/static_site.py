@@ -150,9 +150,29 @@ def _unique_slugs(rows: list, key: str = "common_name") -> dict:
 
     Two species sharing a common name is not hypothetical in a regional flora
     ("Stiff Goldenrod" is in this catalogue twice), and a static site resolves a
-    collision by silently overwriting the earlier file. Suffixing by id keeps
-    both pages and keeps the URL stable across rebuilds: a slug that renumbered
-    when a row was added would break every inbound link.
+    collision by silently overwriting the earlier file. So a collision has to be
+    broken by something, and **what it is broken by decides whether the URL
+    survives a reseed.**
+
+    THE BUG THIS FIXES
+    ---------------------------------------------------------------------------
+    This used to suffix with the row id, and said so in a docstring claiming the
+    result "keeps the URL stable across rebuilds ... a slug that renumbered when
+    a row was added would break every inbound link". The reasoning was right and
+    the field was wrong: **row ids are not stable across a reseed.** CLAUDE.md
+    says so in three places, `src/db/photos.py` keys photographs on
+    `scientific_name` precisely to avoid it, and `_remap_user_polyculture_plants`
+    exists to repair the damage inside the database.
+
+    It went unnoticed because the id only appears in a *collided* slug, which is
+    a handful of pages. The V2.68 publish is what exposed it: two
+    `stiff-goldenrod-###` pages and two `aphrodite-fritillary-####` pages
+    changed URL between one publish and the next, silently retiring four live
+    addresses. On a public catalogue that is a link rot generator running once
+    per data change.
+
+    Scientific name is the stable key, so it is the one used. `Stiff Goldenrod`
+    becomes `stiff-goldenrod-oligoneuron-rigidum` and stays there.
     """
     seen: dict = {}
     for row in rows:
@@ -162,8 +182,22 @@ def _unique_slugs(rows: list, key: str = "common_name") -> dict:
         if len(group) == 1:
             out[group[0]["id"]] = slug
             continue
-        for row in sorted(group, key=lambda r: int(r.get("id") or 0)):
-            out[row["id"]] = f"{slug}-{int(row['id'])}"
+        by_sci: dict = {}
+        for row in group:
+            by_sci.setdefault(slugify(row.get("scientific_name") or ""),
+                              []).append(row)
+        for sci, tied in sorted(by_sci.items()):
+            if len(tied) == 1 and sci and sci != "unnamed":
+                out[tied[0]["id"]] = f"{slug}-{sci}"
+                continue
+            # Same common name AND same scientific name: nothing distinguishes
+            # them, so the ordinal is the best available and the real fix is
+            # upstream — two rows this alike are a duplicate to merge, not a
+            # pair of pages to name. `data_quality` is where that belongs.
+            for n, row in enumerate(
+                    sorted(tied, key=lambda r: int(r.get("id") or 0)), 1):
+                stem = f"{slug}-{sci}" if sci and sci != "unnamed" else slug
+                out[row["id"]] = f"{stem}-{n}"
     return out
 
 

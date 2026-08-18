@@ -207,15 +207,54 @@ class TestSlugify(unittest.TestCase):
         self.assertEqual(static_site.slugify(""), "unnamed")
         self.assertEqual(static_site.slugify("×××"), "unnamed")
 
-    def test_colliding_names_keep_separate_stable_urls(self):
-        rows = [{"id": 7, "common_name": "Wild Rose"},
-                {"id": 3, "common_name": "Wild Rose"},
-                {"id": 9, "common_name": "Yarrow"}]
-        slugs = static_site._unique_slugs(rows)
+    #: Two species sharing a common name, plus one that does not. The ids are
+    #: deliberately out of order — a reseed does not preserve them.
+    _ROWS = [{"id": 7, "common_name": "Wild Rose",
+              "scientific_name": "Rosa acicularis"},
+             {"id": 3, "common_name": "Wild Rose",
+              "scientific_name": "Rosa woodsii"},
+             {"id": 9, "common_name": "Yarrow",
+              "scientific_name": "Achillea millefolium"}]
+
+    def test_colliding_names_get_separate_urls(self):
+        slugs = static_site._unique_slugs(self._ROWS)
         self.assertEqual(len(set(slugs.values())), 3)
         self.assertEqual(slugs[9], "yarrow")
-        self.assertEqual(slugs[3], "wild-rose-3")
-        self.assertEqual(slugs[7], "wild-rose-7")
+        self.assertEqual(slugs[3], "wild-rose-rosa-woodsii")
+        self.assertEqual(slugs[7], "wild-rose-rosa-acicularis")
+
+    def test_a_url_survives_a_reseed(self):
+        """**The invariant this function exists for**, and the one its previous
+        version got backwards while claiming otherwise.
+
+        Row ids are not stable across a reseed — CLAUDE.md says so three times
+        and `src/db/photos.py` keys on `scientific_name` to avoid it. Suffixing
+        a collided slug with the id therefore renamed pages on a data change:
+        the V2.68 publish silently retired four live URLs that way.
+
+        So the test renumbers every row, as a reseed does, and asserts the URLs
+        do not move."""
+        before = static_site._unique_slugs(self._ROWS)
+        reseeded = [dict(r, id=r["id"] * 1000 + 5) for r in self._ROWS]
+        after = static_site._unique_slugs(reseeded)
+        self.assertEqual(sorted(before.values()), sorted(after.values()),
+                         "renumbering the rows changed a public URL")
+        for row, reborn in zip(self._ROWS, reseeded):
+            self.assertEqual(before[row["id"]], after[reborn["id"]],
+                             f"{row['common_name']} moved")
+
+    def test_a_true_duplicate_still_gets_two_pages(self):
+        """Same common name AND same scientific name: nothing distinguishes
+        them, so an ordinal is the best available and neither page may silently
+        overwrite the other. The real fix is upstream — that is a row to merge."""
+        rows = [{"id": 2, "common_name": "Twinflower",
+                 "scientific_name": "Linnaea borealis"},
+                {"id": 1, "common_name": "Twinflower",
+                 "scientific_name": "Linnaea borealis"}]
+        slugs = static_site._unique_slugs(rows)
+        self.assertEqual(len(set(slugs.values())), 2)
+        self.assertTrue(all(s.startswith("twinflower-linnaea-borealis")
+                            for s in slugs.values()), slugs)
 
 
 class TestTheRenderedSite(unittest.TestCase):
