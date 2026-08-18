@@ -94,11 +94,33 @@ def _repair(gdf, label: str):
         print(f"  {label}: {count} of {len(gdf)} geometries were invalid, "
               f"repaired with make_valid")
         gdf = gdf.copy()
-        gdf.loc[broken, "geometry"] = gdf.loc[broken, "geometry"].apply(make_valid)
-        # make_valid can turn a polygon into a collection; keep the areal parts.
+        gdf.loc[broken, "geometry"] = (
+            gdf.loc[broken, "geometry"].apply(make_valid).apply(_areal_parts))
         gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()]
-        gdf = gdf[gdf.geometry.geom_type.isin(("Polygon", "MultiPolygon"))]
     return gdf
+
+
+def _areal_parts(geom):
+    """The polygonal parts of a repaired geometry, or ``None``.
+
+    ``make_valid`` on a ring that touches itself returns a GeometryCollection:
+    the polygons, plus the zero-width lines where the ring pinched. The first
+    version of this filtered rows by ``geom_type`` and so **dropped the entire
+    region** whenever that happened — a whole ecoregion silently leaving the
+    layer to fix a defect a few metres wide. Keep the area, discard the threads.
+    """
+    from shapely.ops import unary_union
+
+    if geom is None or geom.is_empty:
+        return geom
+    if geom.geom_type in ("Polygon", "MultiPolygon"):
+        return geom
+    if geom.geom_type == "GeometryCollection":
+        parts = [g for g in geom.geoms
+                 if g.geom_type in ("Polygon", "MultiPolygon")]
+        if parts:
+            return unary_union(parts)
+    return None
 
 
 def _resolve(gdf, wanted: str, source_label: str) -> str:
@@ -340,6 +362,15 @@ def run() -> int:
     regions = _attach_ecozone(regions)
     regions, walk = _attach_alberta(regions)
 
+    # Repair the output as well as the inputs. Clipping to a provincial
+    # boundary and then dissolving the pieces can pinch a ring against the clip
+    # line: the first run came back with Northern Alberta Uplands
+    # self-intersecting at 60.0002652782795 north, which is the Alberta / NWT
+    # border to four decimal places. That is an artefact of this module's own
+    # overlay, not a defect in anything AAFC published, so it is ours to clean
+    # up - and it is still printed rather than done quietly, because a run that
+    # repairs its own output every time is telling you something.
+    regions = _repair(regions, "harmonized output")
     regions = regions.set_crs(CRS_WGS84, allow_override=True)
     regions.to_file(GPKG, layer="ecoregions", driver="GPKG")
     walk.to_csv(CROSSWALK, index=False)
