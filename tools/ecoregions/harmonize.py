@@ -74,6 +74,33 @@ FIELDS = {
 }
 
 
+def _repair(gdf, label: str):
+    """Make every geometry valid, reporting how many needed it.
+
+    Published national layers routinely contain self-intersecting rings — this
+    repository's own placeholder ecoregion file has two — and every overlay in
+    this module raises ``GEOSException: side location conflict`` the moment one
+    reaches it. The repair is standard and lossless at this scale, but it is
+    *reported* rather than done quietly: a source that arrives with broken
+    topology is a fact about the source, and stage 4 asserts validity on the
+    output, so silently fixing it on the way in would hide the thing the check
+    is looking for.
+    """
+    from shapely.validation import make_valid
+
+    broken = ~gdf.geometry.is_valid
+    count = int(broken.sum())
+    if count:
+        print(f"  {label}: {count} of {len(gdf)} geometries were invalid, "
+              f"repaired with make_valid")
+        gdf = gdf.copy()
+        gdf.loc[broken, "geometry"] = gdf.loc[broken, "geometry"].apply(make_valid)
+        # make_valid can turn a polygon into a collection; keep the areal parts.
+        gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()]
+        gdf = gdf[gdf.geometry.geom_type.isin(("Polygon", "MultiPolygon"))]
+    return gdf
+
+
 def _resolve(gdf, wanted: str, source_label: str) -> str:
     """The real column for ``wanted``, or a hard stop naming what is there.
 
@@ -126,7 +153,7 @@ def _load_elc():
     gdf = gpd.read_file(path)
     if gdf.crs is None:
         raise SystemExit(f"{path.name} has no CRS. Refusing to assume one.")
-    return gdf.to_crs(CRS_WGS84)
+    return _repair(gdf.to_crs(CRS_WGS84), "ELC ecoregions")
 
 
 def _attach_ecozone(regions):
@@ -145,7 +172,7 @@ def _attach_ecozone(regions):
         print("  ecozone file absent; ecozone column will be blank")
         regions["ecozone"] = ""
         return regions
-    zones = gpd.read_file(path).to_crs(CRS_WGS84)
+    zones = _repair(gpd.read_file(path).to_crs(CRS_WGS84), "ELC ecozones")
     zone_name = _resolve(zones, FIELDS["elc_ecozone_name"], "ELC ecozone")
     zones = zones[[zone_name, "geometry"]].rename(
         columns={zone_name: "ecozone"})
@@ -213,7 +240,7 @@ def _attach_alberta(regions):
     reg_col = _resolve(alberta, FIELDS["ab_region"], "Alberta subregions")
     alberta = alberta[[sub_col, reg_col, "geometry"]].rename(
         columns={sub_col: "ab_subregion", reg_col: "ab_region"})
-    alberta = alberta.to_crs(CRS_WGS84)
+    alberta = _repair(alberta.to_crs(CRS_WGS84), "Alberta subregions")
 
     regions = _largest_overlap_join(regions, alberta[["ab_subregion", "geometry"]],
                                     "ab_subregion")
