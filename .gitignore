@@ -80,3 +80,19 @@ data/fetched/*.tmp
 *_test.txt
 /test-output.txt
 /testrun.txt
+
+# The built website (`python -m src.cli build-site <dir>`). 432 species pages,
+# 1,138 wildlife pages and an embedded index, all regenerated from the database
+# in seconds — so committing a copy adds thousands of files that are stale the
+# next time anyone edits a plant. The source is src/static_site*.py + html/site/.
+/site_out/
+/site-out/
+/_site/
+
+# Saved suite output. The run prints thousands of lines and teeing it to a file
+# while chasing one failure is the normal way to work; the file is a note to
+# self, never an artefact. Named individually rather than as /*.txt, because
+# requirements.txt and requirements-optional.txt live at the root too.
+/suite_full.txt
+/undo_redo.txt
+/v265.txt
