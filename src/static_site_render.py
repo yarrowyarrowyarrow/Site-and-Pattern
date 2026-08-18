@@ -621,6 +621,13 @@ def write_site(model: dict, out_dir: str, *,
         [e["brief"] for e in model["species"]], indent=1))
     emit("sitemap.xml", _sitemap(written, base_url))
     emit("robots.txt", _robots(base_url))
+    # GitHub Pages runs Jekyll over a published folder unless this file exists,
+    # which silently drops anything whose name starts with an underscore. The
+    # site has no such paths today, so the failure would not appear until one
+    # was added — and then as a 404 on a page that renders perfectly locally.
+    # It was in the published branch as a file somebody had remembered to add
+    # by hand; a build output should not depend on that.
+    emit(".nojekyll", "")
 
     copied = sum(1 for v in photo_src.values() if not v.startswith("http"))
     return {"out_dir": str(root),

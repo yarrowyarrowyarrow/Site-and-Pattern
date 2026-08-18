@@ -409,6 +409,7 @@ def expected_paths(model: dict) -> set:
     for six months."""
     paths = {"index.html", "plants/index.html", "wildlife/index.html",
              "about/index.html", "map/index.html", "sitemap.xml", "robots.txt",
+             ".nojekyll",
              "assets/site.css", "assets/browse.js", "assets/catalogue.json"}
     for entry in model["species"]:
         paths.add(f"plants/{entry['slug']}/index.html")
