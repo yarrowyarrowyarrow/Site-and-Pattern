@@ -131,10 +131,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # one draws the ground under it.
         (_SRC / "ecoregion_map.py", 340),              # 333 now
         (_SRC / "ecoregion_basemap.py", 260),          # 210 now
-        # V2.66 took this to exactly 200 adding the hatch. Raised to 260 so the
-        # next edit is not forced to be a split; the seam here is thin and
-        # splitting "what a colour asserts" again would make two half-files.
-        (_SRC / "ecoregion_palette.py", 260),          # 200 now
+        # V2.66 took this to 200 adding the hatch, then to 311 adding the ELC
+        # palette: the real classification is 24 ecoregions in six ecozones,
+        # against the placeholder's six keys. Raised rather than split because
+        # the only seam on offer is "which dataset", and splitting one concern
+        # by dataset is how two palettes drift apart — which is the exact
+        # failure the shared-dict rule exists to prevent. The colour *maths*
+        # did come out, into src/colour_distance.py, because that is a
+        # different concern and three callers wanted it.
+        (_SRC / "ecoregion_palette.py", 380),          # 311 now
+        (_SRC / "colour_distance.py", 160),            # 105 now
         (_SRC / "static_site.py", 460),                # 378 now
         (_SRC / "static_site_render.py", 800),         # 744 now
         (_SRC / "static_site_species.py", 340),        # 256 now

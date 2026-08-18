@@ -129,21 +129,19 @@ def _load_regions(from_shipped: bool):
     return gpd.read_file(GPKG, layer="ecoregions"), False
 
 
-def _colour_for(name: str, palette, fallback_cycle) -> str:
-    """A colour for a region name, from the app's palette where it knows one.
+def _colour_for(name: str, zone: str) -> str:
+    """The app's colour for an ELC ecoregion.
 
-    The real ELC names will not all be app keys, so anything unknown draws from
-    a generated ramp. That is flagged in the run output rather than passed over:
-    a region drawn in a colour nobody chose is a region whose colour means
-    nothing, and the fix is to add it to the app's palette.
+    Imported from ``src.ecoregion_palette`` rather than defined here, so the
+    printed map and the website cannot drift and the legend swatches come from
+    the dict that fills the polygons.
     """
-    key = name.lower().replace(" ", "_").replace("/", "_")
-    if key in palette:
-        return palette[key]
-    return fallback_cycle(name)
+    from src.ecoregion_palette import elc_fill                 # noqa: PLC0415
+
+    return elc_fill(name, zone)
 
 
-def _draw_legend(ax, used: dict, hatched: set) -> None:
+def _draw_legend(ax, used: dict, hatched: set, zones: dict) -> None:
     """Swatches generated from the same dict that filled the polygons.
 
     Structural rather than conventional: the second rebuild attempt shipped a
@@ -153,13 +151,18 @@ def _draw_legend(ax, used: dict, hatched: set) -> None:
     """
     from matplotlib.patches import Patch
 
+    # Ordered by ecozone then name, so the key reads as the hierarchy the
+    # colours encode: one hue family per system, a lightness step within it.
+    order = sorted(used, key=lambda n: (zones.get(n, "zzz"), n))
     handles = [
-        Patch(facecolor=colour, edgecolor="#6d6a5e", linewidth=0.5,
-              hatch="///" if name in hatched else None, label=_display(name))
-        for name, colour in sorted(used.items())
+        Patch(facecolor=used[name], edgecolor="#6d6a5e", linewidth=0.5,
+              hatch="///" if name in hatched else None,
+              label=f"{_display(name)}  ({zones[name]})" if zones.get(name)
+                    else _display(name))
+        for name in order
     ]
     ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, -0.02),
-              ncol=3, frameon=False, fontsize=8, handlelength=1.6,
+              ncol=3, frameon=False, fontsize=7, handlelength=1.6,
               handleheight=1.1, borderaxespad=0.0)
 
 
@@ -240,25 +243,24 @@ def run(*, from_shipped: bool = False, dpi: int = 200) -> int:
     context.plot(ax=ax, color="#d7d6cd", edgecolor="#c6c5bb", lw=0.4, zorder=3)
     subject.plot(ax=ax, color="#eceada", edgecolor="none", zorder=4)
 
-    spare = plt.get_cmap("tab20")
-    seen: dict = {}
-
-    def fallback(name):
-        seen.setdefault(name, None)
-        idx = sorted(seen).index(name) % 20
-        return matplotlib.colors.to_hex(spare(idx))
+    from src.ecoregion_palette import (_FALLBACK_COLOUR,   # noqa: PLC0415
+                                       elc_zone_of)
 
     used: dict = {}
+    zones: dict = {}
     unknown: list = []
+    has_zone_column = "ecozone" in regions.columns
     for name, group in regions.groupby("ecoregion"):
-        colour = _colour_for(str(name), REGION_COLOUR, fallback)
-        key = str(name).lower().replace(" ", "_").replace("/", "_")
-        if key not in REGION_COLOUR:
-            unknown.append(str(name))
+        zone = (str(group.iloc[0]["ecozone"]) if has_zone_column
+                else elc_zone_of(str(name)))
+        colour = _colour_for(str(name), zone)
+        if colour == _FALLBACK_COLOUR:
+            unknown.append(f"{name}  (ecozone {zone or 'unknown'})")
         used[str(name)] = colour
+        zones[str(name)] = zone
         group.plot(ax=ax, color=colour, edgecolor="#8b8878", lw=0.5,
                    alpha=0.92, zorder=5)
-        if key in HATCHED:
+        if str(name) in HATCHED:
             group.plot(ax=ax, color="none", edgecolor="#6d6a5e", lw=0.0,
                        hatch="///", zorder=6)
 
@@ -289,7 +291,7 @@ def run(*, from_shipped: bool = False, dpi: int = 200) -> int:
              if not placeholder else
              "Ecoregions of Alberta and Saskatchewan  [PLACEHOLDER GEOMETRY]")
     ax.set_title(title, fontsize=15, loc="left", pad=12, color="#23261d")
-    _draw_legend(ax, used, set(HATCHED))
+    _draw_legend(ax, used, set(HATCHED), zones)
     caption = _CAPTION_PLACEHOLDER if placeholder else _CAPTION_REAL
     fig.text(0.012, 0.012, _wrap(caption, 150), fontsize=6.4, color="#5c5a4f",
              va="bottom", ha="left")
@@ -305,12 +307,11 @@ def run(*, from_shipped: bool = False, dpi: int = 200) -> int:
         print("\n  NOTE: drawn from placeholder geometry. The image says so in")
         print("  its title and caption; do not crop either off.")
     if unknown:
-        print(f"\n  {len(unknown)} region(s) drew from the fallback ramp rather")
-        print("  than the app palette, so their colour asserts nothing:")
+        print(f"\n  {len(unknown)} region(s) have no ecozone in the palette, so")
+        print("  their colour asserts nothing:")
         for name in sorted(unknown):
             print(f"    {name}")
-        print("  Add them to REGION_COLOUR in src/ecoregion_palette.py, then")
-        print("  re-run tests/test_ecoregion.py to re-check the hatch rule.")
+        print("  Add them to ECOZONE_OF in src/ecoregion_palette.py.")
     return 0
 
 

@@ -198,3 +198,114 @@ def legend_html(link_for=None, *, active: str = "") -> str:
             f'<a class="ecokey-item{on}" href="{html.escape(href)}">{label}</a>'
             if href else f'<span class="ecokey-item{on}">{label}</span>')
     return f'<div class="ecokey">{"".join(items)}</div>' if items else ""
+
+# ── The ELC classification (V2.66) ─────────────────────────────────────────
+#
+# Everything above is the app's six-key placeholder vocabulary. What follows is
+# the real one: the National Ecological Framework resolves **24 ecoregions**
+# across Alberta and Saskatchewan, and `tools/ecoregions` draws them.
+#
+# **Twenty-four fills is not twenty-four hues.** Six conventional hues already
+# could not all be separated under deuteranopia — that is why Moist Mixed
+# Grassland is hatched. Twenty-four is hopeless, and inventing a hue per class
+# is the specific thing a categorical palette must not do.
+#
+# So the encoding is hierarchical, which is what the classification already is:
+#
+#     hue       = the ecozone, the physiographic system  (6 values)
+#     lightness = which ecoregion inside it              (2 to 9 values)
+#
+# A reader sees the systems at a glance — Shield distinct from Boreal Plains
+# distinct from Prairies, which was the single largest complaint about the
+# earlier maps — and reads the individual ecoregion from its label and the
+# legend. That is how published ELC maps do it, and it is the right emphasis
+# for the question the layer exists to answer: knowing you are on the Shield
+# rather than the boreal plain changes what will grow; which upland within the
+# Shield is the finer point.
+
+#: Hue per ecozone, on the Okabe-Ito colour-vision-safe families.
+#:
+#: The families are physiographic — gold prairie, green plains, blue shield,
+#: red-violet cordillera — and Taiga versus Boreal within a family is a
+#: lightness step rather than a new hue, because those two *are* the same
+#: system north and south, and mistaking one for the other is a far smaller
+#: error than mistaking Shield for Plains. Conventional prairie-map colours
+#: were tried first and three of the six came out inseparable; Okabe-Ito is the
+#: standard set built for this and it keeps the convention where it matters.
+ECOZONE_COLOUR: dict = {
+    "Prairies":           "#e69f00",   # gold
+    "Boreal Plains":      "#009e73",   # green
+    "Taiga Plains":       "#6fc5aa",   # the same green, further north
+    "Boreal Shield":      "#0072b2",   # blue, Precambrian bedrock
+    "Taiga Shield":       "#6fa9cf",   # the same blue, further north
+    "Montane Cordillera": "#cc79a7",   # red-violet, the mountains
+}
+
+#: Which ecozone each ecoregion belongs to, from the harmonized build of
+#: 2026-08-17. Recorded rather than derived at draw time so the website can
+#: colour a region without loading the ecozone layer, and so a name that
+#: appears here and nowhere else is visible as a gap.
+ECOZONE_OF: dict = {
+    # Prairies
+    "Aspen Parkland": "Prairies",
+    "Cypress Upland": "Prairies",
+    "Fescue Grassland": "Prairies",
+    "Interlake Plain": "Prairies",
+    "Mixed Grassland": "Prairies",
+    "Moist Mixed Grassland": "Prairies",
+    # Boreal Plains
+    "Boreal Transition": "Boreal Plains",
+    "Clear Hills Upland": "Boreal Plains",
+    "Mid-Boreal Lowland": "Boreal Plains",
+    "Mid-Boreal Uplands": "Boreal Plains",
+    "Peace Lowland": "Boreal Plains",
+    "Slave River Lowland": "Boreal Plains",
+    "Wabasca Lowland": "Boreal Plains",
+    "Western Alberta Upland": "Boreal Plains",
+    "Western Boreal": "Boreal Plains",
+    # Taiga Plains
+    "Hay River Lowland": "Taiga Plains",
+    "Northern Alberta Uplands": "Taiga Plains",
+    # Boreal Shield
+    "Athabasca Plain": "Boreal Shield",
+    "Churchill River Upland": "Boreal Shield",
+    # Taiga Shield
+    "Selwyn Lake Upland": "Taiga Shield",
+    "Tazin Lake Upland": "Taiga Shield",
+    # Montane Cordillera
+    "Eastern Continental Ranges": "Montane Cordillera",
+    "Northern Continental Divide": "Montane Cordillera",
+    "Western Continental Ranges": "Montane Cordillera",
+}
+
+#: How far the within-ecozone steps spread, total, toward white and black.
+#: Deliberately narrow. The step separates neighbours enough to see a boundary;
+#: it must not travel far enough to read as a different system, which would
+#: undo the whole point of the hierarchy.
+_STEP_SPREAD = 0.30
+
+
+def elc_fill(ecoregion: str, ecozone: str = "") -> str:
+    """Fill colour for one ELC ecoregion.
+
+    The ecozone hue, stepped by where this ecoregion sorts within its ecozone.
+    Alphabetical ordering, so the same input always gives the same colour and a
+    re-run does not repaint the map for no reason.
+    """
+    zone = ecozone or ECOZONE_OF.get(ecoregion, "")
+    base = ECOZONE_COLOUR.get(zone)
+    if not base:
+        return _FALLBACK_COLOUR
+    siblings = sorted(name for name, z in ECOZONE_OF.items() if z == zone)
+    if ecoregion not in siblings or len(siblings) < 2:
+        return base
+    # -1 at the first sibling, +1 at the last; darken below zero, lighten above.
+    position = siblings.index(ecoregion) / (len(siblings) - 1)
+    offset = (position - 0.5) * 2.0 * _STEP_SPREAD
+    return (mix_to_white(base, offset) if offset >= 0
+            else mix_to_black(base, -offset))
+
+
+def elc_zone_of(ecoregion: str) -> str:
+    """The ecozone an ecoregion belongs to, or ``""`` if it is not one we know."""
+    return ECOZONE_OF.get(ecoregion, "")

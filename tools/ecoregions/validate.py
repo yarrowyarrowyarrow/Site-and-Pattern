@@ -25,7 +25,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-from tools.ecoregions.common import CRS_PROJECTED, CRS_WGS84, OUT, require
+from tools.ecoregions.common import (CRS_PROJECTED, CRS_WGS84, OUT,
+                                     REPO, require)
 from tools.ecoregions.harmonize import GPKG
 from tools.ecoregions.probes import (FORBIDDEN_NAMES,
                                      MIN_AB_GRASSLAND_SUBREGIONS, PROBES,
@@ -37,6 +38,11 @@ from tools.ecoregions.probes import (FORBIDDEN_NAMES,
 #: double-counting from overlapping polygons (it comes in high).
 _SUBJECT_AREA_KM2 = 661_848 + 651_036
 _AREA_TOLERANCE = 0.02          # 2 per cent
+
+#: OKLab deltaE x100 under simulated colour-vision deficiency. The documented
+#: floor for categorical fills, legal at this value only when a second channel
+#: carries the same distinction - which is what the hatch is for.
+_CVD_FLOOR = 8.0
 
 #: Words that mark a grassland subregion in Alberta's 2006 vocabulary.
 _GRASSLAND_TOKENS = ("grassland", "mixedgrass", "fescue", "grass")
@@ -193,6 +199,56 @@ def _check_required_units(regions, result: Result) -> None:
                f"earlier attempts made.")
 
 
+def _check_colour_separation(regions, result: Result) -> None:
+    """Two ecoregions that share a border must be tellable apart.
+
+    The same rule ``tests/test_ecoregion.py`` holds for the website's six-key
+    palette, applied to the ELC classification's twenty-four — and computed
+    against the real adjacency graph rather than every possible pair, because
+    Mixed Grassland and Selwyn Lake Upland are eight hundred kilometres apart
+    and a separation budget spent on them is wasted.
+
+    Failures here name the pairs. The fix is to re-step one of the two colours
+    in ``ECOZONE_COLOUR``, or to add one of them to ``HATCHED`` - never to lower
+    the floor.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(REPO))
+    from src.colour_distance import worst_cvd_delta_e            # noqa: PLC0415
+    from src.ecoregion_palette import HATCHED, elc_fill          # noqa: PLC0415
+
+    metric = regions.to_crs(CRS_PROJECTED)
+    by_name: dict = {}
+    for name, group in metric.groupby("ecoregion"):
+        by_name[str(name)] = group.geometry.union_all()
+
+    names = sorted(by_name)
+    touching, thin = [], []
+    for i, one in enumerate(names):
+        for two in names[i + 1:]:
+            shared = by_name[one].intersection(by_name[two].buffer(50))
+            if shared.is_empty or shared.area < 1e5:      # under 0.1 km2
+                continue
+            touching.append((one, two))
+            gap = worst_cvd_delta_e(elc_fill(one), elc_fill(two))
+            if gap < _CVD_FLOOR and one not in HATCHED and two not in HATCHED:
+                thin.append((one, two, gap))
+
+    result.add(bool(touching), "the adjacency graph is not empty",
+               "" if touching else
+               "no two ecoregions were found to share a border, so the colour "
+               "check below proves nothing")
+    result.add(not thin,
+               f"bordering ecoregions separate by colour or hatch "
+               f"({len(touching)} shared borders)",
+               "" if not thin else
+               "\n".join(f"{a} / {b}: deltaE {g:.1f} under colour-vision "
+                          f"deficiency, neither hatched" for a, b, g in thin) +
+               "\nRe-step one colour in ECOZONE_COLOUR, or add one of the pair "
+               "to HATCHED in src/ecoregion_palette.py.")
+
+
 def _check_crs(regions, result: Result) -> None:
     result.add(regions.crs is not None and regions.crs.to_string() == CRS_WGS84,
                f"stored in {CRS_WGS84}",
@@ -219,6 +275,7 @@ def run() -> int:
     _check_coverage(regions, result)
     _check_names(regions, result)
     _check_required_units(regions, result)
+    _check_colour_separation(regions, result)
     _check_probes(regions, result)
     result.report()
 

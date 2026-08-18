@@ -624,49 +624,10 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
 # applied first. Reimplemented rather than imported because the app ships no
 # colour-science dependency and this is thirty lines.
 
-_MACHADO = {
-    "protan": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216),
-               (-0.003882, -0.048116, 1.051998)),
-    "deutan": ((0.367322, 0.860646, -0.227968), (0.280085, 0.672501, 0.047413),
-               (-0.011820, 0.042940, 0.968881)),
-    "tritan": ((1.255528, -0.076749, -0.178779), (-0.078411, 0.930809, 0.147602),
-               (0.004733, 0.691367, 0.303900)),
-}
-
-
-def _linear(hexcolour):
-    value = hexcolour.lstrip("#")
-    out = []
-    for i in (0, 2, 4):
-        c = int(value[i:i + 2], 16) / 255.0
-        out.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
-    return out
-
-
-def _oklab(rgb):
-    r, g, b = rgb
-    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
-    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
-    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
-    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
-
-
-def _simulate(rgb, kind):
-    matrix = _MACHADO[kind]
-    return [min(1.0, max(0.0, sum(matrix[row][i] * rgb[i] for i in range(3))))
-            for row in range(3)]
-
-
-def _delta_e(one, two, kind=None):
-    a = _oklab(_simulate(_linear(one), kind) if kind else _linear(one))
-    b = _oklab(_simulate(_linear(two), kind) if kind else _linear(two))
-    return 100.0 * math.dist(a, b)
-
-
-def _worst_cvd(one, two):
-    return min(_delta_e(one, two, k) for k in _MACHADO)
+from src.colour_distance import (chroma as _chroma,  # noqa: E402
+                                 delta_e as _delta_e,
+                                 lightness as _lightness,
+                                 worst_cvd_delta_e as _worst_cvd)
 
 
 def _adjacent_pairs():
@@ -752,7 +713,7 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
         """The specific V2.51 defect: six colours, one lightness band, three
         of them green."""
         from src.ecoregion_palette import REGION_COLOUR
-        lightness = [_oklab(_linear(c))[0] for c in REGION_COLOUR.values()]
+        lightness = [_lightness(c) for c in REGION_COLOUR.values()]
         self.assertGreater(max(lightness) - min(lightness), 0.30)
 
     def test_every_confidence_band_still_reads_as_recorded(self):
@@ -776,14 +737,10 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
         absent fill has almost no chroma and every region fill has some."""
         from src.ecoregion_palette import ABSENT_FILL, REGION_COLOUR, region_fill
 
-        def chroma(hexcolour):
-            _, a, b = _oklab(_linear(hexcolour))
-            return math.hypot(a, b)
-
-        neutral = chroma(ABSENT_FILL[0])
+        neutral = _chroma(ABSENT_FILL[0])
         for key in REGION_COLOUR:
             for band in ("high", "medium", "low", ""):
                 self.assertGreater(
-                    chroma(region_fill(key, band)[0]), neutral * 2.5,
+                    _chroma(region_fill(key, band)[0]), neutral * 2.5,
                     f"{key} at {band or 'unstated'} confidence is barely more "
                     f"chromatic than the not-recorded grey.")
