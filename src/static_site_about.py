@@ -14,6 +14,7 @@ deliberately withholds (P12), and — since V2.65 — which works it is citing.
 from __future__ import annotations
 
 from src import citations
+from src.branding import APP_NAME
 from src.static_site_render import SITE_NAME, _crumb, _esc, _page
 
 
@@ -89,11 +90,12 @@ prairies.</p>
 <h2>What it is</h2>
 <p>A reference to the native plants of Alberta and the Canadian prairies, and
 the animals that depend on them. It is the catalogue behind <a
-href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">a desktop
-application</a> for designing landscapes with native plants: lawn-to-habitat
-conversion, pollinator gardens and ecological restoration. That application does
-the site analysis, the design and the planting plan; these pages are its
-catalogue, published so you can read it without installing anything.</p>
+href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">{_esc(APP_NAME)}</a>,
+a desktop application for designing landscapes with native plants:
+lawn-to-habitat conversion, pollinator gardens and ecological restoration.
+{_esc(APP_NAME)} does the site analysis, the design and the planting plan; these
+pages are its catalogue, published so you can read it without installing
+anything.</p>
 
 <h2>What it is honest about</h2>
 <ul>
