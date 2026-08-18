@@ -191,18 +191,27 @@ def mix_to_black(hexcolour: str, amount: float) -> str:
     return "#" + "".join(f"{round(c * keep):02x}" for c in parts)
 
 
-def legend_html(link_for=None, *, active: str = "") -> str:
+def legend_html(link_for=None, *, active: str = "",
+                level: str = "", within: str = "") -> str:
     """The colour key, as HTML rather than SVG.
 
     A key drawn inside the SVG has to survive the map being scaled down to a
     phone-width column, and it loses. As markup it wraps, and each swatch can
     be a link into that region's own page.
+
+    ``level`` and ``within`` must match whatever was passed to
+    :func:`src.ecoregion_map.map_svg`. They exist because the first
+    drill-down build drew six ecozones and printed a key of twenty-four
+    ecoregions underneath them: a legend naming colours that are not on the
+    map is worse than no legend, because the reader trusts it and goes looking.
+    Same arguments, same geometry call, so the two cannot disagree.
     """
     from src.ecoregion import ecoregion_display                # noqa: PLC0415
     from src.ecoregion_map import region_geometry              # noqa: PLC0415
 
     items = []
-    for key in sorted(region_geometry(), key=lambda k: DRAW_ORDER.get(k, 50)):
+    for key in sorted(region_geometry(level, within),
+                      key=lambda k: DRAW_ORDER.get(k, 50)):
         fill, _ = region_fill(key, "high")
         name, where = ecoregion_display(key)
         # The swatch is generated from the same REGION_COLOUR entry and the same
@@ -410,8 +419,56 @@ def _slug(name: str) -> str:
     return "".join(out).strip("_")
 
 
+#: How far a subregion's fill steps from its parent ecoregion's, in the same
+#: OKLab-lightness sense as ``_STEP_SPREAD``. Wider than the ecoregion step for
+#: a reason that is about *what is on screen*, not about taste: the ecoregion
+#: steps have to survive being drawn next to a neighbouring ecozone, which is
+#: what pins them at 0.06. Subregions are only ever drawn in the focus map of
+#: one ecoregion, where the comparison set is two to four siblings of the same
+#: hue and everything else on the map is greyed context. A step that reads as a
+#: step is the whole job there.
+_SUB_STEP_SPREAD = 0.16
+
+
 def _elc_colour_for_key(key: str) -> str:
-    """The ELC fill for a slugged ecoregion key, or ``""``."""
+    """The ELC fill for a key at any of the three levels, or ``""``.
+
+    V2.68: this understood ecoregion keys only, so ``zone_prairies`` and
+    ``sub_dry_mixedgrass`` fell through to the unknown-key grey — the same
+    answer a typo gets. Every level has to resolve now that the map draws all
+    three.
+    """
+    from src.ecoregion_tree import ECOZONE, SUBREGION        # noqa: PLC0415
+    from src.ecoregion_tree import _index, ancestors_of, level_of
+
+    level = level_of(key or "")
+    if level == ECOZONE:
+        # The ecozone's base hue, unstepped. That is exactly right for the
+        # overview map: six hues, no lightness variation to read as meaning.
+        return ECOZONE_COLOUR.get(_index()["zones"].get(key, ""), "")
+    if level == SUBREGION:
+        # The ecoregion that accounts for MOST of it, by measured area — not
+        # the first alphabetically, which is what this did in its first cut and
+        # painted Montane in Aspen Parkland's gold on the strength of a 6%
+        # overlap. Same error the page model made, one module along, and the
+        # same fix: ask the polygons.
+        from src.ecoregion_tree import subregion_parents      # noqa: PLC0415
+
+        parents = [k for k, _share in subregion_parents(key)
+                   if k in _index()["regions"]]
+        if not parents:
+            return ""
+        parent = parents[0]
+        base = _elc_colour_for_key(parent)
+        siblings = sorted(_index()["subs"][key][1] and
+                          [s for s, (_n, ps) in _index()["subs"].items()
+                           if parent in ps])
+        if base and len(siblings) > 1 and key in siblings:
+            position = siblings.index(key) / (len(siblings) - 1)
+            offset = (position - 0.5) * 2.0 * _SUB_STEP_SPREAD
+            return (mix_to_white(base, offset) if offset >= 0
+                    else mix_to_black(base, -offset))
+        return base
     by_key = {_slug(name): name for name in _elc_index()[0]}
     name = by_key.get(key or "")
     return elc_fill(name) if name else ""

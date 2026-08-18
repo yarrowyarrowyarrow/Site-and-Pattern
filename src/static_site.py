@@ -254,6 +254,7 @@ def build_model(*, search_fn: Optional[Callable] = None,
         "total_fauna": len(list_fauna_fn() or []),
         "stats": {},
     }
+    model["subregions"] = _subregion_pages(model["hubs"])
     model["stats"] = _stats(model)
     say(f"{len(model['wildlife'])} animals with documented plants")
     return model
@@ -325,6 +326,66 @@ def _hub_pages(species: list) -> list:
                          "dir": facet.hub_dir, "blurb": facet.blurb,
                          "note": facet.note, "pages": pages})
     return hubs
+
+
+def _subregion_pages(hubs: list) -> list:
+    """The third level: Alberta's natural subregions, as locator pages.
+
+    **Why these are their own page type and not hub pages.** A hub page exists
+    because a facet value selects a set of species. No species is tagged at
+    subregion level and none should be: the derivation resolves an occurrence
+    to the ecoregion its coordinate falls in, and writing those records down
+    one level further would be inventing precision the records do not have.
+
+    So a subregion page is not a filter result, it is a **place you can find
+    yourself on a map**. "I am in Dry Mixedgrass" is a sentence somebody in
+    southern Alberta can say about their own yard, and this page answers it
+    with: that is inside Mixed Grassland, and here is what is recorded there.
+    The plant list is its parent's, borrowed and labelled as borrowed.
+
+    Saskatchewan gets none of these, because Alberta publishes a subregion
+    layer and Saskatchewan does not. The asymmetry is honest.
+    """
+    from src.ecoregion_tree import (_index, dominant_parent,   # noqa: PLC0415
+                                    subregion_parents)
+
+    by_value: dict = {}
+    for hub in hubs:
+        if hub["key"] == "ecoregion":
+            by_value = {p["value"]: p for p in hub["pages"]}
+    if not by_value:
+        return []
+
+    out = []
+    for sub_key, (sub_name, _parents) in sorted(
+            _index()["subs"].items(), key=lambda kv: kv[1][0]):
+        overlaps = [
+            {"key": key,
+             "name": _index()["regions"].get(key, (key, ""))[0],
+             "share": share,
+             "slug": (by_value.get(key) or {}).get("slug", "")}
+            for key, share in subregion_parents(sub_key) if share >= 0.01]
+        dominant = dominant_parent(sub_key)
+        parent = by_value.get(dominant) if dominant else None
+        out.append({
+            "slug": slugify(sub_name),
+            "key": sub_key,
+            "name": sub_name,
+            "overlaps": overlaps,
+            # Empty when no ecoregion accounts for two thirds of it. The page
+            # then lists the overlaps instead of borrowing a species list, and
+            # that is the honest answer rather than a missing feature: Montane
+            # spans three ecoregions in two ecozones, and there is no single
+            # set of plants that "the Montane subregion" means.
+            "parent_key": dominant,
+            "parent_name": (_index()["regions"].get(dominant, ("", ""))[0]
+                            if dominant else ""),
+            "parent_slug": (parent or {}).get("slug", ""),
+            "share": next((o["share"] for o in overlaps
+                           if o["key"] == dominant), 0.0),
+            "plants": (parent or {}).get("plants", []),
+        })
+    return out
 
 
 def _hub_title(facet, value: str, label: str) -> str:
@@ -453,4 +514,6 @@ def expected_paths(model: dict) -> set:
             paths.add(f"{hub['dir']}/{page['slug']}/index.html")
     for page in model["wildlife"]:
         paths.add(f"wildlife/{page['slug']}/index.html")
+    for sub in model.get("subregions") or []:
+        paths.add(f"plants/subregion/{sub['slug']}/index.html")
     return paths

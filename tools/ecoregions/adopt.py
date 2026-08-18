@@ -183,9 +183,29 @@ def build(*, dry_run: bool = False) -> int:
         # One label per region, from the region's whole geometry.
         where_for[name] = _where(row.geometry,
                                  _provinces_for(row.geometry, provinces))
-    for _, row in regions.iterrows():
+    # How much of each Alberta subregion this piece accounts for.
+    #
+    # **The subregions are not a third tier of the ELC tree and the app must
+    # not assume they are.** Measured here: 12 of 21 sit ≥90% inside one
+    # ecoregion, but Montane is 42% Northern Continental Divide, Central
+    # Mixedwood is 31% Mid-Boreal Uplands across NINE ecoregions, and Athabasca
+    # Plain is 47% of its namesake. The Alberta framework and ELC are two
+    # classifications of the same ground that agree in most places and cross
+    # each other in the mountains and the mid-boreal.
+    #
+    # Shipping the share means the website can say "this subregion is 42% of
+    # that ecoregion" instead of picking a parent and being wrong four times in
+    # twenty-one. It is computed here because the area maths needs an equal-area
+    # projection and geopandas, and neither ships with the app.
+    from tools.ecoregions.common import CRS_PROJECTED         # noqa: PLC0415
+
+    areas = regions.assign(_a=regions.to_crs(CRS_PROJECTED).geometry.area)
+    sub_total = (areas[areas["ab_subregion"].astype(str) != ""]
+                 .groupby("ab_subregion")["_a"].sum().to_dict())
+    for (_, row), area in zip(regions.iterrows(), areas["_a"]):
         name = str(row["ecoregion"])
         zone = str(row.get("ecozone") or "")
+        sub = str(row.get("ab_subregion") or "")
         try:
             order = _ZONE_ORDER.index(zone)
         except ValueError:
@@ -198,7 +218,9 @@ def build(*, dry_run: bool = False) -> int:
                 "where": where_for.get(name, ""),
                 "sort": order * 100 + sorted(seen).index(name),
                 "ecozone": zone,
-                "ab_subregion": str(row.get("ab_subregion") or ""),
+                "ab_subregion": sub,
+                "sub_share": (round(area / sub_total[sub], 4)
+                              if sub and sub_total.get(sub) else None),
             },
             "geometry": json.loads(gpd.GeoSeries([row.geometry]).to_json(
             ))["features"][0]["geometry"],

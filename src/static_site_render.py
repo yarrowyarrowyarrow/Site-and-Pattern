@@ -444,49 +444,6 @@ def render_listing(page: dict, depth: int, photo_src: dict, crumb: list,
                  wide=True)
 
 
-def render_map_page(model: dict) -> str:
-    from src.ecoregion_map import (CAVEAT, frame_height,         # noqa: PLC0415
-                                   legend_html, map_svg)
-    hub = {h["key"]: h for h in model["hubs"]}.get("ecoregion", {"pages": []})
-    pages = {p["value"]: p["slug"] for p in hub["pages"]}
-    link = lambda k: f"../plants/ecoregion/{pages[k]}/" if k in pages else ""
-    svg = map_svg(width=700, height=frame_height(700), reference=True,
-                  link_for=link)
-    # Counted, not written down. The lede said "the six regions" for a whole
-    # increment after the survey made it twenty-four — and the whole list was
-    # sitting right underneath it, contradicting the sentence above it. Two
-    # numbers because the page shows two kinds of thing: the moisture niches
-    # in `hub["pages"]` are conditions rather than places and belong in
-    # neither count.
-    from src.ecoregion_tree import ECOREGION, ECOZONE, level_of  # noqa: PLC0415
-
-    levels = {p["value"]: level_of(p["value"]) for p in hub["pages"]}
-    n_zones = sum(1 for lv in levels.values() if lv == ECOZONE)
-    n_regions = sum(1 for lv in levels.values() if lv == ECOREGION)
-    # The list is already in tree order (each ecozone followed by what is inside
-    # it), so the nesting only needs saying in the markup for it to be visible.
-    _CLASS = {ECOZONE: " class=\"eco-zone\"", ECOREGION: " class=\"eco-region\""}
-    rows = "".join(
-        f'<li{_CLASS.get(levels.get(p["value"]), "")}>'
-        f'<a href="../plants/ecoregion/{_esc(p["slug"])}/">'
-        f'<strong>{_esc(p["name"])}</strong></a> '
-        f'<span class="src">{len(p["plants"])} species</span></li>'
-        for p in hub["pages"])
-    body = f"""
-{_crumb([("", "Ecoregion map")], 1)}
-<h1>The ecoregions</h1>
-<p class="lede">Alberta and Saskatchewan in the {n_regions} ecoregions this
-catalogue records ranges against, grouped by the {n_zones} ecozones that
-contain them. Click a region for its plants.</p>
-<figure class="mapfig wide-map">{svg}{legend_html(link)}</figure>
-<p class="note">{_esc(CAVEAT)}</p>
-<ul class="ranges cols">{rows}</ul>
-"""
-    return _page(f"Ecoregion map | {SITE_NAME}",
-                 "The prairie ecoregions this catalogue records plant ranges "
-                 "against.", body, 1, wide=True)
-
-
 def render_wildlife_index(model: dict, listed: int, total_fauna: int) -> str:
     blocks = []
     for taxon, heading in TAXON_GROUPS:
@@ -566,7 +523,11 @@ def write_site(model: dict, out_dir: str, *,
     # be a cycle. Two pages needed splitting out: the species page, and (V2.65)
     # the About page, once publishing the 114-work bibliography took this
     # module past its 800-line ceiling.
+    # V2.68 adds a third: the pages about *places*, once the ecoregion map
+    # became a three-level drill-down. Same seam, same cycle, same fix.
     from src.static_site_about import render_about           # noqa: PLC0415
+    from src.static_site_regions import (_hub_extra,         # noqa: PLC0415
+                                         render_map_page, render_subregion)
     from src.static_site_species import render_species       # noqa: PLC0415
 
     say = progress or (lambda _m: None)
@@ -605,7 +566,7 @@ def write_site(model: dict, out_dir: str, *,
                                 [("plants/", "Plants"),
                                  (f"{hub['dir']}/", title),
                                  ("", page["name"])],
-                                extra=_hub_extra(hub, page, depth + 1)))
+                                extra=_hub_extra(hub, page, model)))
     say(f"{sum(len(h['pages']) for h in model['hubs'])} listing pages "
         f"across {len(model['hubs'])} axes")
 
@@ -616,6 +577,12 @@ def write_site(model: dict, out_dir: str, *,
         emit(f"wildlife/{animal['slug']}/index.html",
              render_wildlife(animal, photo_src))
     say(f"{len(model['wildlife'])} wildlife pages")
+
+    for sub in model.get("subregions") or []:
+        emit(f'plants/subregion/{sub["slug"]}/index.html',
+             render_subregion(sub, photo_src))
+    if model.get("subregions"):
+        say(f'{len(model["subregions"])} subregion pages')
 
     emit("assets/catalogue.json", json.dumps(
         [e["brief"] for e in model["species"]], indent=1))
@@ -641,22 +608,6 @@ def write_site(model: dict, out_dir: str, *,
             "photos_copied": copied,
             "photos_hotlinked": sum(1 for v in photo_src.values()
                                     if v.startswith("http"))}
-
-
-def _hub_extra(hub: dict, page: dict, depth: int) -> str:
-    """The map, on ecoregion listings only. Everywhere else the axis has no
-    geometry and a decorative map would be noise."""
-    if hub["key"] != "ecoregion":
-        return ""
-    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
-                                   map_svg)
-    svg = map_svg({page["value"]: "high"}, width=360,
-                  height=frame_height(360),
-                  title=f'{page["name"]} extent')
-    if not svg:
-        return ""
-    return (f'<figure class="mapfig inline">{svg}'
-            f'<figcaption class="note">{_esc(CAVEAT)}</figcaption></figure>')
 
 
 def _stage_photos(model: dict, root: pathlib.Path, say: Callable) -> dict:

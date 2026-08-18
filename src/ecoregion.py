@@ -405,11 +405,20 @@ def ecoregion_display(key: str) -> tuple[str, str]:
     if level == ECOZONE:
         return _index()["zones"].get(key, key), ""
     if level == SUBREGION:
-        name, parents = _index()["subs"].get(key, (key, []))
+        from src.ecoregion_tree import subregion_parents      # noqa: PLC0415
+
+        name, _parents = _index()["subs"].get(key, (key, []))
         # The parent ecoregion is the useful "where" for a subregion: nobody
         # knows where Northern Fescue is, everybody can place Mixed Grassland.
-        where = ecoregion_display(parents[0])[0] if parents else ""
-        return name, where
+        #
+        # The one that accounts for MOST of it, measured. Taking `parents[0]`
+        # meant taking whichever sorted first, and that printed "Dry Mixedgrass
+        # (Cypress Upland)" in a public legend when Dry Mixedgrass is 98% Mixed
+        # Grassland and 2% Cypress Upland. Third place the same shortcut was
+        # taken in one increment — the palette and the page model made it too —
+        # which is what `subregion_parents` exists to stop.
+        biggest = [k for k, _s in subregion_parents(key)]
+        return name, (ecoregion_display(biggest[0])[0] if biggest else "")
     return key, ""
 
 

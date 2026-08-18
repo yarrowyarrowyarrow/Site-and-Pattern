@@ -312,7 +312,16 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # cleared rather than mapped: 384 of 432 species keep a tag, 47 lose their
 # last one. A tag that survives now names either a surveyed ecoregion or the
 # ecozone above it, which is the level its evidence actually supported.
-_SCHEMA_VERSION = 73
+# v74 (V2.69): no DDL — reseed to pick up `sub_share` on every feature of
+# data/ecoregions_canada.geojson. It records what fraction of each Alberta
+# natural subregion a given ecoregion accounts for, measured in an equal-area
+# projection by tools/ecoregions/adopt.py, and it exists because the subregions
+# are NOT a subdivision of the ELC ecoregions: 12 of 21 sit >=90% inside one,
+# but Montane is 42% Northern Continental Divide across six, and Central
+# Mixedwood is 31% of Mid-Boreal Uplands across nine. Without the shares the
+# app has to pick a parent, and every place that picked one picked it
+# alphabetically and was wrong about Montane.
+_SCHEMA_VERSION = 74
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

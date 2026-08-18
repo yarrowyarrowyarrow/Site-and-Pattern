@@ -161,16 +161,48 @@ def _projector(width: float, height: float):
     return project
 
 
-def region_geometry() -> dict:
+def region_geometry(level: str = "", within: str = "") -> dict:
     """``{key: [ring, ...]}`` merged across the file's duplicate entries.
 
     A region may be drawn as more than one polygon, and a caller asking to draw
     it means all of them.
+
+    ``level`` picks which of the three the keys come from — ecozone, ecoregion
+    (the default) or Alberta natural subregion. The polygon file has carried
+    all three on every feature since adoption; nothing had ever grouped by
+    anything but the ecoregion, so two thirds of the classification were
+    undrawable.
+
+    ``within`` restricts to one branch: ``region_geometry(SUBREGION,
+    within="mixed_grassland")`` is the three subregions of that ecoregion and
+    nothing else. That is what makes a drill-down possible without slicing
+    geometry — the pieces are already cut this finely on disk.
     """
+    from src.ecoregion_tree import ECOZONE, SUBREGION        # noqa: PLC0415
+    from src.ecoregion_tree import lineage_keys, subregion_key, zone_key
+
+    branch = set(lineage_keys(within)) if within else set()
     out: dict = {}
     for feature in _load():
-        key = ((feature.get("properties") or {}).get("key") or "").strip()
-        if not key:
+        props = feature.get("properties") or {}
+        region = (props.get("key") or "").strip()
+        if not region:
+            continue
+        if level == ECOZONE:
+            key = zone_key((props.get("ecozone") or "").strip())
+        elif level == SUBREGION:
+            key = subregion_key((props.get("ab_subregion") or "").strip())
+        else:
+            key = region
+        # Membership is tested on the GROUPING key alone. Testing the ecoregion
+        # too looked like belt and braces and quietly widened every subregion
+        # focus map to thirteen subregions: a piece of Alpine belongs to
+        # Eastern Continental Ranges, which is on Montane's lineage, so asking
+        # for Montane drew every subregion that shares any parent with it.
+        # `lineage_keys` already walks both directions, so the key test is
+        # sufficient at every level, and an unlabelled sliver is dropped by the
+        # emptiness check rather than needing a second rule.
+        if not key or (branch and key not in branch):
             continue
         out.setdefault(key, []).extend(_rings(feature.get("geometry") or {}))
     return out
@@ -180,8 +212,21 @@ def map_svg(highlight: Optional[dict] = None, *,
             width: int = 460, height: int = 300,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
-            link_for=None, reference: bool = False) -> str:
+            link_for=None, reference: bool = False,
+            level: str = "", within: str = "") -> str:
     """The ecoregion map as inline SVG.
+
+    ``level`` and ``within`` draw one level of the vocabulary, optionally
+    restricted to one branch — see :func:`region_geometry`. Together they make
+    the map a drill-down instead of a single flat picture of twenty-four
+    shapes: the overview colours six ecozones, an ecozone's page colours the
+    ecoregions inside it, and an ecoregion's page colours its Alberta natural
+    subregions.
+
+    When ``within`` is set the rest of the layer is still drawn, in the
+    not-recorded grey, because a branch floating on blank provinces loses the
+    one thing a locator map is for. You cannot tell where Mixed Grassland is
+    from a picture of Mixed Grassland.
 
     ``highlight`` is ``{ecoregion key: confidence band}``; regions absent from
     it are drawn in the "not recorded here" grey rather than omitted, because
@@ -201,9 +246,23 @@ def map_svg(highlight: Optional[dict] = None, *,
     by the per-species maps, where the region is a fact rather than a control.
     """
     highlight = highlight or {}
-    regions = region_geometry()
+    regions = region_geometry(level, within)
     if not regions:
         return ""
+    # The branch sits on the rest of the layer, drawn flat and grey.
+    #
+    # Always at the ECOREGION level, whatever level is in focus. Drawing the
+    # context at the focus level looked right for ecozones and silently deleted
+    # Saskatchewan from every subregion map: the subregion attribute only
+    # exists in Alberta, so grouping the backdrop that way drops every piece
+    # that has no subregion — which is the entire other province. The ecoregion
+    # layer is the one level that covers the whole subject area.
+    branch = set()
+    if within:
+        from src.ecoregion_tree import lineage_keys          # noqa: PLC0415
+        branch = set(lineage_keys(within))
+    context = ({k: v for k, v in region_geometry().items() if k not in branch}
+               if within else {})
     if cities is None:
         cities = width >= 420
     project = _projector(width, height)
@@ -229,6 +288,14 @@ def map_svg(highlight: Optional[dict] = None, *,
     parts += provinces_svg(project, subject_only=True, css="ecomap-prov")
     # Everything thematic is clipped to the two provinces the layer speaks for.
     parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">')
+    for _key, rings in sorted(context.items()):
+        for ring in rings:
+            points = " ".join(
+                f"{x:.1f},{y:.1f}" for x, y in
+                (project(float(lon), float(lat)) for lon, lat in ring))
+            parts.append(f'<polygon class="ecomap-region ecomap-outside" '
+                         f'points="{points}" fill="{ABSENT_FILL[0]}" '
+                         f'fill-opacity="{ABSENT_FILL[1]}"/>')
     for key, rings in order:
         band = highlight.get(key)
         present = reference or key in highlight

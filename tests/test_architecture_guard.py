@@ -137,7 +137,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # precedent, and overdue: this file decides what a real property gets
         # recommended, and it grew MultiPolygon support, boundary proximity and
         # three-level display without ever being guarded.
-        (_SRC / "ecoregion.py", 480),                  # 429 now
+        (_SRC / "ecoregion.py", 480),                  # 438 now
         # V2.49: 260 -> 340. The first number was set against a module that
         # drew six rectangles and nothing else; the map then gained provincial
         # borders, city dots, province codes and hand-placed region labels,
@@ -157,7 +157,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # hand-placed label anchors, so the map computes a point that is
         # actually inside each polygon instead of trusting a centroid, which a
         # crescent's is not.
-        (_SRC / "ecoregion_map.py", 400),              # 375 now
+        # V2.68: 400 -> 500. `region_geometry` learned to group by any of the
+        # three levels and to restrict to one branch, and `map_svg` learned to
+        # draw the rest of the layer as grey context behind it. That is the
+        # whole drill-down, ~60 lines, and it belongs here: this module owns
+        # "polygons to SVG", and a separate drill-down module would have to
+        # reach into the projector and the ring walker to do the same job.
+        (_SRC / "ecoregion_map.py", 500),              # 458 now
         (_SRC / "ecoregion_basemap.py", 260),          # 210 now
         # V2.66 took this to 200 adding the hatch, then to 311 adding the ELC
         # palette: the real classification is 24 ecoregions in six ecozones,
@@ -170,7 +176,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.67: reading the ecozone from the polygon file instead of trusting
         # a hand-typed copy cost ~40 lines and removed a whole class of drift -
         # the transcription was already wrong about Interlake Plain.
-        (_SRC / "ecoregion_palette.py", 420),          # 355 now
+        # V2.68: 420 -> 520. Ecozone and subregion keys resolve to a colour
+        # now, where before both fell through to the unknown-key grey. Split
+        # by level would put one question ("what colour is this region?") in
+        # three files, which is the drift the shared-dict rule exists to stop.
+        (_SRC / "ecoregion_palette.py", 520),          # 474 now
         (_SRC / "colour_distance.py", 160),            # 105 now
         # V2.68 — the three-level vocabulary and the tree the filter draws it
         # with. Opted in on arrival, the V2.41 precedent. The tree logic is
@@ -182,8 +192,19 @@ class TestStructuralCeilings(unittest.TestCase):
         # for free rather than growing a private copy.
         (_SRC / "ecoregion_tree.py", 340),             # 282 now
         (_SRC / "filter_widgets.py", 560),             # 434 now
-        (_SRC / "static_site.py", 460),                # 378 now
-        (_SRC / "static_site_render.py", 800),         # 744 now
+        # V2.68: 460 -> 560. `_subregion_pages` builds the third level of the
+        # drill-down. It is MODEL code and stays with the model: moving it into
+        # the renderer would put "what is a subregion page" in the view layer,
+        # which is the split this pair of modules exists to hold.
+        (_SRC / "static_site.py", 560),                # 519 now
+        # V2.68: the drill-down took this to 857/800 and the guard got the
+        # extraction it asks for rather than a bigger number. The seam is the
+        # one the reader already feels: `static_site_regions.py` holds every
+        # page that answers "where?" (the map page, the per-region maps, the
+        # subregion pages) and this module keeps the ones that answer "what?".
+        # Third split off this file, after the species page and the About page.
+        (_SRC / "static_site_render.py", 800),         # 666 now
+        (_SRC / "static_site_regions.py", 320),        # 246 now
         (_SRC / "static_site_species.py", 340),        # 256 now
         (_HTML / "site" / "browse.js", 200),           # 127 now
         (_SRC / "start_screen.py", 380),               # 292 now

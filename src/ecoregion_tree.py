@@ -126,6 +126,7 @@ def _index() -> dict:
     zones: dict = {}
     regions: dict = {}
     subs: dict = {}
+    shares: dict = {}
     try:
         with open(resource_path("data", "ecoregions_canada.geojson"),
                   encoding="utf-8") as handle:
@@ -151,7 +152,48 @@ def _index() -> dict:
             if region_key not in parents:
                 parents = parents + [region_key]
             subs[key] = (name, parents)
-    return {"zones": zones, "regions": regions, "subs": subs}
+            try:
+                share = float(props.get("sub_share") or 0.0)
+            except (TypeError, ValueError):
+                share = 0.0
+            shares.setdefault(key, {})
+            shares[key][region_key] = shares[key].get(region_key, 0.0) + share
+    return {"zones": zones, "regions": regions, "subs": subs, "shares": shares}
+
+
+#: A subregion accounted for at least this much by one ecoregion is treated as
+#: sitting inside it. Same two thirds as ``scripts/migrate_ecoregion_tags.py``,
+#: and for the same reason: at a half, a 51/49 split gets reported as a fact.
+DOMINANT_SHARE = 0.66
+
+
+def subregion_parents(key: str) -> list:
+    """``[(ecoregion key, share), ...]`` for one subregion, largest first.
+
+    **The Alberta subregions are not a third tier of the ELC tree**, and this
+    is the function that stops the site pretending they are. Measured from the
+    shipped polygons: 12 of the 21 sit ≥90% inside a single ecoregion, but
+    Montane is 42% Northern Continental Divide, Central Mixedwood is 31% of
+    Mid-Boreal Uplands spread across *nine* ecoregions, and Athabasca Plain is
+    46% of its own namesake. Two classifications of the same ground, agreeing
+    in most places and crossing in the mountains and the mid-boreal.
+
+    The first cut of the website's third level filed a subregion under
+    whichever parent sorted first alphabetically, which put **Montane inside
+    Aspen Parkland** — 6% of it — on a public page. Shares come from
+    ``sub_share`` in the polygon file, written by ``tools/ecoregions/adopt.py``
+    where an equal-area projection is available.
+    """
+    rows = (_index()["shares"].get(key) or {}).items()
+    return sorted(rows, key=lambda kv: (-kv[1], kv[0]))
+
+
+def dominant_parent(key: str) -> str:
+    """The one ecoregion that accounts for a subregion, or ``""`` when none
+    does. Empty is a real answer: it means the subregion genuinely spans
+    several, and the page should say so rather than name one."""
+    rows = subregion_parents(key)
+    return rows[0][0] if rows and rows[0][1] >= DOMINANT_SHARE else ""
 
 
 def ecozones() -> list:
