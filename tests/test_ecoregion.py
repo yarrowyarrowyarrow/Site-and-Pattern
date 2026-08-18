@@ -744,3 +744,52 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
                     _chroma(region_fill(key, band)[0]), neutral * 2.5,
                     f"{key} at {band or 'unstated'} confidence is barely more "
                     f"chromatic than the not-recorded grey.")
+
+
+class TestMultiPolygonRegionsAreFound(unittest.TestCase):
+    """A region drawn as several pieces is still one region.
+
+    Before V2.67 the lookup tested ``type != "Polygon"`` and skipped, which was
+    survivable only because the six shipped shapes were single rings. Every
+    published ecoregion layer has MultiPolygons in it — a region with an island,
+    or a lobe the far side of a river — and skipping them does not raise, it
+    just answers "you are in no ecoregion at all", which reads as *we do not
+    cover your area* rather than as a bug.
+    """
+
+    def setUp(self):
+        import src.ecoregion as eco
+        self._real = eco._load_features
+        eco._load_features = lambda: [{
+            "properties": {"key": "aspen_parkland", "name": "Aspen Parkland",
+                           "where": "test", "sort": 0},
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [[[-114.0, 53.0], [-113.0, 53.0], [-113.0, 54.0],
+                      [-114.0, 54.0], [-114.0, 53.0]]],
+                    [[[-110.0, 53.0], [-109.0, 53.0], [-109.0, 54.0],
+                      [-110.0, 54.0], [-110.0, 53.0]]],
+                ]},
+        }]
+        self.eco = eco
+
+    def tearDown(self):
+        self.eco._load_features = self._real
+        self.eco.geographic_ecoregions.cache_clear()
+
+    def test_a_point_in_the_first_piece_is_found(self):
+        self.assertEqual(self.eco.lookup_ecoregions(53.5, -113.5),
+                         ["aspen_parkland"])
+
+    def test_a_point_in_the_second_piece_is_found_too(self):
+        self.assertEqual(self.eco.lookup_ecoregions(53.5, -109.5),
+                         ["aspen_parkland"])
+
+    def test_a_point_in_the_gap_between_them_is_not(self):
+        self.assertEqual(self.eco.lookup_ecoregions(53.5, -111.5), [])
+
+    def test_the_region_still_appears_in_the_vocabulary(self):
+        self.eco.geographic_ecoregions.cache_clear()
+        self.assertIn("aspen_parkland",
+                      [k for k, _n, _w in self.eco.geographic_ecoregions()])

@@ -112,8 +112,15 @@ def mix_to_white(hexcolour: str, amount: float) -> str:
 
 
 def region_fill(key: str, band: str = "high") -> tuple:
-    """``(fill, opacity)`` for one region at one confidence band."""
-    base = REGION_COLOUR.get(key, _FALLBACK_COLOUR)
+    """``(fill, opacity)`` for one region at one confidence band.
+
+    Falls through to the ELC palette below for a key the six-region vocabulary
+    does not know. That bridge is what lets the polygon file be swapped for the
+    twenty-four-region one without a second edit here: the website asks for
+    ``mid_boreal_uplands``, this finds it is a Boreal Plains ecoregion, and the
+    map is coloured by the same rules as the printed one.
+    """
+    base = REGION_COLOUR.get(key) or _elc_colour_for_key(key) or _FALLBACK_COLOUR
     band = band if band in _BAND_MIX else ""
     return mix_to_white(base, _BAND_MIX[band]), _BAND_OPACITY[band]
 
@@ -326,3 +333,28 @@ def elc_fill(ecoregion: str, ecozone: str = "") -> str:
 def elc_zone_of(ecoregion: str) -> str:
     """The ecozone an ecoregion belongs to, or ``""`` if it is not one we know."""
     return ECOZONE_OF.get(ecoregion, "")
+
+
+def _slug(name: str) -> str:
+    """``"Mid-Boreal Uplands"`` -> ``"mid_boreal_uplands"``, matching the keys
+    ``tools/ecoregions/adopt.py`` writes into the polygon file."""
+    out, last_us = [], True
+    for char in (name or "").lower():
+        if char.isalnum():
+            out.append(char)
+            last_us = False
+        elif not last_us:
+            out.append("_")
+            last_us = True
+    return "".join(out).strip("_")
+
+
+#: Slugged ELC name -> the name itself, so a key from the polygon file can find
+#: its ecozone. Built once from ``ECOZONE_OF`` rather than typed twice.
+_ELC_BY_KEY: dict = {_slug(name): name for name in ECOZONE_OF}
+
+
+def _elc_colour_for_key(key: str) -> str:
+    """The ELC fill for a slugged ecoregion key, or ``""``."""
+    name = _ELC_BY_KEY.get(key or "")
+    return elc_fill(name) if name else ""

@@ -99,6 +99,28 @@ def _point_in_polygon(lat: float, lng: float, polygon: list[list[list[float]]]) 
     return point_in_polygon(lat, lng, polygon)
 
 
+def _polygons(geometry: dict) -> list:
+    """Every polygon in a geometry, as a list of ring-lists.
+
+    **MultiPolygon support, added V2.67.** Until then this module tested
+    ``type != "Polygon"`` and skipped, which was fine for six hand-traced
+    single-ring shapes and silently wrong for anything real: a published
+    ecoregion layer is full of MultiPolygons, because a region with an island,
+    a lake island or a lobe across a river is one region drawn as several
+    pieces. Adoption would have dropped those regions from every lookup without
+    an error, and the failure mode is the worst kind — a site inside a real
+    ecoregion reporting that it is in none, which reads as "we do not cover
+    your area yet" rather than as a bug.
+    """
+    kind = geometry.get("type")
+    coords = geometry.get("coordinates") or []
+    if kind == "Polygon":
+        return [coords] if coords else []
+    if kind == "MultiPolygon":
+        return [poly for poly in coords if poly]
+    return []
+
+
 def lookup_ecoregions(lat: float, lng: float) -> list[str]:
     """Every geographic ecoregion key whose polygon contains (lat, lng).
 
@@ -115,16 +137,13 @@ def lookup_ecoregions(lat: float, lng: float) -> list[str]:
     found: list[str] = []
     for feature in _load_features():
         geom = feature.get("geometry") or {}
-        if geom.get("type") != "Polygon":
-            continue
-        coords = geom.get("coordinates")
-        if not coords:
-            continue
         key = (feature.get("properties") or {}).get("key")
         if not key or key in found:
             continue
-        if _point_in_polygon(lat, lng, coords):
-            found.append(key)
+        for rings in _polygons(geom):
+            if _point_in_polygon(lat, lng, rings):
+                found.append(key)
+                break
     return found
 
 
