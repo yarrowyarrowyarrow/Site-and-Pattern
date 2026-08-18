@@ -356,6 +356,13 @@ ul.ranges li::before {
 ul.ranges li.haskey { padding-left: 0; }
 ul.ranges li.haskey::before { content: none; }
 ul.ranges li.haskey .ecokey-sw { margin-right: .42rem; }
+/* The list is a hierarchy: an ecozone, then the ecoregions inside it. Without
+   this, "Prairies 406 species" and "Aspen Parkland 372 species" read as
+   siblings when one contains the other, and the second number looks like it
+   should be added to the first. Indentation is the whole fix. */
+ul.ranges li.eco-zone { margin-top: .6rem; font-weight: 600; }
+ul.ranges li.eco-zone:first-child { margin-top: 0; }
+ul.ranges li.eco-region { margin-left: 1.1rem; }
 ul.cols { columns: 2; column-gap: 2rem; }
 
 /* ── Search page ────────────────────────────────────────────────────────── */

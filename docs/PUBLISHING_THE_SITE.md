@@ -21,8 +21,12 @@ because serving a file is nearly free for them.
 python -m src.cli build-site public
 ```
 
-That writes about 590 files into a new folder called `public`: 432 species
-pages, 86 animal pages, the ecoregion map, the browse page and its search index.
+That writes about 1,660 files into a new folder called `public`: 432 species
+pages, 1,138 wildlife pages, the ecoregion map, the browse page and its search
+index. The counts are computed at build time and printed at the end, so the
+numbers in this paragraph are illustrative and the ones on your screen are
+real.
+
 Open `public/index.html` in a browser to check it before anybody else sees it.
 
 Rebuild it any time the catalogue changes. Nothing is stored anywhere else, so
@@ -117,9 +121,9 @@ Worth knowing so you do not go looking for it:
 - **No Indigenous knowledge** (P12). The `notes` field is withheld from the
   public site by default, and the About page states plainly that the catalogue
   contains none and none should be inferred from it.
-- **Every fact carries its source or says it is missing.** The maps carry the
-  caveat that the outlines are a diagram; guessed flower colours are marked
-  *not verified* on the page rather than presented as fact.
+- **Every fact carries its source or says it is missing.** The map states the
+  survey its boundaries come from and how far they were simplified; guessed
+  flower colours are marked *not verified* rather than presented as fact.
 - **It works with no scripts.** Filtering uses a small script, but every page is
   readable and every link works with JavaScript switched off.
 

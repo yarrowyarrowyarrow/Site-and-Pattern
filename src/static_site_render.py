@@ -452,16 +452,32 @@ def render_map_page(model: dict) -> str:
     link = lambda k: f"../plants/ecoregion/{pages[k]}/" if k in pages else ""
     svg = map_svg(width=700, height=frame_height(700), reference=True,
                   link_for=link)
+    # Counted, not written down. The lede said "the six regions" for a whole
+    # increment after the survey made it twenty-four — and the whole list was
+    # sitting right underneath it, contradicting the sentence above it. Two
+    # numbers because the page shows two kinds of thing: the moisture niches
+    # in `hub["pages"]` are conditions rather than places and belong in
+    # neither count.
+    from src.ecoregion_tree import ECOREGION, ECOZONE, level_of  # noqa: PLC0415
+
+    levels = {p["value"]: level_of(p["value"]) for p in hub["pages"]}
+    n_zones = sum(1 for lv in levels.values() if lv == ECOZONE)
+    n_regions = sum(1 for lv in levels.values() if lv == ECOREGION)
+    # The list is already in tree order (each ecozone followed by what is inside
+    # it), so the nesting only needs saying in the markup for it to be visible.
+    _CLASS = {ECOZONE: " class=\"eco-zone\"", ECOREGION: " class=\"eco-region\""}
     rows = "".join(
-        f'<li><a href="../plants/ecoregion/{_esc(p["slug"])}/">'
+        f'<li{_CLASS.get(levels.get(p["value"]), "")}>'
+        f'<a href="../plants/ecoregion/{_esc(p["slug"])}/">'
         f'<strong>{_esc(p["name"])}</strong></a> '
         f'<span class="src">{len(p["plants"])} species</span></li>'
         for p in hub["pages"])
     body = f"""
 {_crumb([("", "Ecoregion map")], 1)}
 <h1>The ecoregions</h1>
-<p class="lede">Alberta and Saskatchewan divided into the six regions this
-catalogue records ranges against. Click a region for its plants.</p>
+<p class="lede">Alberta and Saskatchewan in the {n_regions} ecoregions this
+catalogue records ranges against, grouped by the {n_zones} ecozones that
+contain them. Click a region for its plants.</p>
 <figure class="mapfig wide-map">{svg}{legend_html(link)}</figure>
 <p class="note">{_esc(CAVEAT)}</p>
 <ul class="ranges cols">{rows}</ul>

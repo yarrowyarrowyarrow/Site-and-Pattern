@@ -282,10 +282,21 @@ def map_svg(highlight: Optional[dict] = None, *,
             strong = reference or key in highlight
             spin = (f' transform="rotate({angle} {cx:.1f} {cy:.1f})"'
                     if angle else "")
+            # The name, whole. V2.68 deleted a table of six abbreviations
+            # written when this map had six regions: four named regions the
+            # survey retired, and the two still reachable were shortening names
+            # into DIFFERENT names — the public map labelled Aspen Parkland
+            # "Parkland" and Moist Mixed Grassland "Moist Mixed", while drawing
+            # "Northern Continental Divide" in full three regions away.
+            #
+            # If a label ever has to be abbreviated to fit, drop it instead:
+            # the legend carries every name in full, keyed by colour, so an
+            # unlabelled region loses nothing and a truncated one loses its
+            # name.
             parts.append(
                 f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle"{spin} '
                 f'class="ecomap-label{" on" if strong else ""}">'
-                f'{html.escape(_short(name))}</text>')
+                f'{html.escape(name)}</text>')
 
     parts.append("</svg>")
     return "".join(parts)
@@ -360,18 +371,6 @@ def _label_point(key: str, ring: list) -> tuple:
         return _LABEL_POINT[key]
     lon, lat = _interior_point(ring)
     return lon, lat, 0
-
-
-def _short(name: str) -> str:
-    """Region names are long and the boxes are small."""
-    return {
-        "Boreal Mixedwood / Plain": "Boreal",
-        "Moist Mixed Grassland": "Moist Mixed",
-        "Mixedgrass Prairie": "Mixedgrass",
-        "Fescue / Foothills": "Foothills",
-        "Subalpine / Montane": "Montane",
-        "Aspen Parkland": "Parkland",
-    }.get(name, name)
 
 
 #: The one sentence that has to travel with every drawing of this file.

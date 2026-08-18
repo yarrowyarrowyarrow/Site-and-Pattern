@@ -52,15 +52,20 @@ class TestSaskatchewanFlora(unittest.TestCase):
         species that carried it could not be placed in any one surveyed
         ecoregion (39% Moist Mixed Grassland, 36% Aspen Parkland) but 92% of
         the old polygon is Prairies, so they rest at the ecozone — and the
-        ecozone is what a "belt" was always a rough name for."""
-        from src.ecoregion_ranges import stale_keys
+        ecozone is what a "belt" was always a rough name for.
 
-        if stale_keys():
-            self.skipTest(
-                "derived ranges are keyed to the retired vocabulary, so they "
-                "override the migrated tags with rows that match nothing. "
-                "Re-run:  python scripts/seed_ecoregion_ranges.py")
-        pool = search_plants(ecoregion="zone_prairies")
+        Queried through ``expand_for_filter``, which is what the panel does
+        and therefore what the user experiences. A **bare** `zone_prairies`
+        query now returns 7, and that number is the system working rather than
+        failing: the GBIF derivation writes rows at the *ecoregion* level,
+        because that is what a coordinate resolves to, and a derived row
+        overrides the heuristic column. So after the re-derivation only the 7
+        species GBIF had nothing for still carry a bare ecozone tag. The other
+        423 are found through their ecoregions, which is the lineage's whole
+        job."""
+        from src.ecoregion_tree import expand_for_filter
+
+        pool = search_plants(ecoregion=expand_for_filter(["zone_prairies"]))
         self.assertGreater(len(pool), 100)
 
     def test_sk_native_filter(self):
