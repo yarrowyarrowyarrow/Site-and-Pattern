@@ -445,6 +445,35 @@ class TestTheRenderedSite(unittest.TestCase):
         self.assertEqual(render._nodash("a — b"), "a, b")
         self.assertEqual(render._nodash("a—b"), "a, b")
 
+    def test_a_custom_domain_is_written_into_the_published_folder(self):
+        """GitHub Pages keeps the custom domain in a CNAME file at the root of
+        the published branch, and the publish replaces that branch wholesale.
+
+        So a domain set by hand in the Pages settings survives exactly until the
+        next rebuild and then reverts to *.github.io with the custom domain
+        404ing, with no error and nothing in the build output to notice. The
+        file has to come out of the build."""
+        import tempfile
+
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_cname_"))
+        render.write_site(self.model, str(out), copy_photos=False,
+                          base_url="https://grownativeplants.ca/")
+        cname = out / "CNAME"
+        self.assertTrue(cname.exists(), "no CNAME: the domain would drop")
+        self.assertEqual(cname.read_text(encoding="utf-8").strip(),
+                         "grownativeplants.ca")
+
+    def test_the_default_github_domain_writes_no_cname(self):
+        """A CNAME naming *.github.io is GitHub pointing at itself. The absence
+        is the correct output, not a missing feature."""
+        import tempfile
+
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_nocname_"))
+        render.write_site(
+            self.model, str(out), copy_photos=False,
+            base_url="https://yarrowyarrowyarrow.github.io/Site-and-Pattern/")
+        self.assertFalse((out / "CNAME").exists())
+
     def test_every_species_page_carries_its_range_map(self):
         """The drawing, and the caption that has to travel with it.
 

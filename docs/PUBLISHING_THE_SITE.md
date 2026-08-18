@@ -95,18 +95,74 @@ to rename it to something sayable.
 
 ---
 
-## Step 3 (optional): your own domain name
+## Step 3: your own domain name
 
 The only part that costs money. A `.ca` or `.com` is roughly **$15 to $20 a
-year** from Namecheap, Cloudflare Registrar or Porkbun. Cloudflare sells at
-cost, so it is usually the cheapest.
+year** from Namecheap, Cloudflare Registrar or Porkbun.
 
-Once bought, each host has a "custom domain" box: paste the name in, then add
-the two DNS records it shows you at the registrar. It takes a few minutes to
-take effect. HTTPS is issued automatically and free on all three.
+`grownativeplants.ca` was registered in V2.70. Here is the whole setup, once.
 
-You do not need this to publish. `yarrowyarrowyarrow.github.io/Site-and-Pattern`
-works perfectly well and costs nothing.
+### 3a. Build with the domain as the base URL
+
+```bash
+python -m src.cli build-site public --base-url https://grownativeplants.ca/
+```
+
+**This is the step people miss, and it breaks the domain silently.** GitHub
+Pages stores a custom domain in a file called `CNAME` at the root of the
+`gh-pages` branch. Publishing replaces that branch's contents wholesale, so a
+domain typed into the Pages settings survives exactly until the next rebuild
+and then reverts to `*.github.io`, with the custom domain 404ing and nothing in
+the build output to notice.
+
+So the build writes the file. It derives the host from `--base-url` rather than
+taking a separate flag, because two settings that have to agree do not stay in
+agreement. Check it landed:
+
+```bash
+cat public/CNAME
+```
+
+Should print `grownativeplants.ca`. If it prints nothing, the base URL was
+wrong or missing, and publishing would drop the domain.
+
+### 3b. DNS at the registrar
+
+Four `A` records and four `AAAA` records on the bare domain, all with host `@`
+(some registrars call it blank, or the domain itself):
+
+| Type | Host | Value |
+|---|---|---|
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+| AAAA | @ | 2606:50c0:8000::153 |
+| AAAA | @ | 2606:50c0:8001::153 |
+| AAAA | @ | 2606:50c0:8002::153 |
+| AAAA | @ | 2606:50c0:8003::153 |
+| CNAME | www | yarrowyarrowyarrow.github.io |
+
+Four of each because they are GitHub's four edge servers: any one of them can
+be down and the site stays up. The `www` row is a CNAME rather than an A record
+because it points at a *name*, so it keeps working if GitHub renumbers.
+
+**Check these against GitHub's own docs before typing them** ("Managing a
+custom domain for your GitHub Pages site"). They have been stable for years and
+they are still somebody else's infrastructure.
+
+### 3c. Tell GitHub
+
+Repository → **Settings → Pages → Custom domain**, enter `grownativeplants.ca`,
+Save. Then tick **Enforce HTTPS** once it becomes available, which can take an
+hour while a certificate is issued.
+
+DNS takes minutes to hours to propagate. Until it does, the domain may show a
+GitHub 404 page; that is normal and not a sign the records are wrong.
+
+The old address keeps working: GitHub redirects
+`yarrowyarrowyarrow.github.io/Site-and-Pattern/` to the custom domain, so no
+existing link breaks.
 
 ---
 

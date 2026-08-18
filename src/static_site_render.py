@@ -588,6 +588,9 @@ def write_site(model: dict, out_dir: str, *,
         [e["brief"] for e in model["species"]], indent=1))
     emit("sitemap.xml", _sitemap(written, base_url))
     emit("robots.txt", _robots(base_url))
+    domain = _custom_domain(base_url)
+    if domain:
+        emit("CNAME", domain + "\n")
     # GitHub Pages runs Jekyll over a published folder unless this file exists,
     # which silently drops anything whose name starts with an underscore. The
     # site has no such paths today, so the failure would not appear until one
@@ -658,6 +661,32 @@ def _sitemap(written: list, base_url: str) -> str:
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             + "\n".join(urls) + "\n</urlset>\n")
+
+
+def _custom_domain(base_url: str) -> str:
+    """The bare host to write into ``CNAME``, or ``""`` for a github.io URL.
+
+    **GitHub Pages keeps a custom domain in a file at the root of the published
+    branch**, and this publish replaces that branch's contents wholesale. So a
+    CNAME added by hand in the Pages settings survives exactly until the next
+    time the site is rebuilt, and then the domain silently reverts to
+    ``*.github.io`` with the custom one 404ing. There is no error and nothing in
+    the build output to notice.
+
+    Derived from ``base_url`` rather than taken as its own flag, on the rule
+    this codebase keeps relearning: two settings that must agree, set
+    separately, do not stay in agreement. "The site is served from
+    https://grownativeplants.ca/" already says what the domain is.
+
+    A ``*.github.io`` base URL writes no CNAME, which is correct — that is the
+    default domain and a CNAME naming it would be GitHub redirecting to itself.
+    """
+    from urllib.parse import urlparse                          # noqa: PLC0415
+
+    host = (urlparse(base_url or "").hostname or "").strip().lower()
+    if not host or host.endswith(".github.io") or host == "localhost":
+        return ""
+    return host
 
 
 def _robots(base_url: str) -> str:

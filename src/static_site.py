@@ -505,6 +505,9 @@ def expected_paths(model: dict) -> set:
     paths = {"index.html", "plants/index.html", "wildlife/index.html",
              "about/index.html", "map/index.html", "sitemap.xml", "robots.txt",
              ".nojekyll",
+             # CNAME only when a custom domain is in play; `expected_paths`
+             # has no base_url to check, so the link test tolerates its
+             # absence and `tests/test_static_site.py` pins the behaviour.
              "assets/site.css", "assets/browse.js", "assets/catalogue.json"}
     for entry in model["species"]:
         paths.add(f"plants/{entry['slug']}/index.html")
