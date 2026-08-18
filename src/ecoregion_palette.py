@@ -21,6 +21,8 @@ took confidence, and neither claim lost its channel.
 from __future__ import annotations
 
 import html
+import json
+from functools import lru_cache
 
 #: One hue per ecoregion, after the convention every published natural-regions
 #: map of the prairies uses: mountains violet, foothills olive, boreal
@@ -60,7 +62,14 @@ _FALLBACK_COLOUR = "#7f8f6a"
 #: of the two must be hatched.** That generalises — when the ELC polygons land
 #: with their dozen-odd regions, the test says which ones need a hatch rather
 #: than leaving it to somebody's eye.
-HATCHED: frozenset = frozenset({"moist_mixedgrass"})
+#: **Empty since V2.67.** The pair it existed for was Aspen Parkland against
+#: the old ``moist_mixedgrass``, a key the surveyed vocabulary does not have.
+#: Under the ecozone scheme those two are both Prairies and share a hue by
+#: design, so a hatch would be claiming a distinction the colour is not making;
+#: and every pair that crosses an ecozone boundary now clears the floor on
+#: colour alone. The machinery stays because the rule stays: add a key here the
+#: moment a test names one, and never before.
+HATCHED: frozenset = frozenset()
 
 #: How far toward white each confidence band is mixed. A region derived from
 #: three records must not look like one derived from three hundred; it must
@@ -120,7 +129,17 @@ def region_fill(key: str, band: str = "high") -> tuple:
     ``mid_boreal_uplands``, this finds it is a Boreal Plains ecoregion, and the
     map is coloured by the same rules as the printed one.
     """
-    base = REGION_COLOUR.get(key) or _elc_colour_for_key(key) or _FALLBACK_COLOUR
+    # Precedence follows the shipped data, not the order these were written.
+    # When the polygon file carries ecozones it is the ELC layer, and its
+    # palette is the authority: otherwise `aspen_parkland` would keep the
+    # six-key yellow-green while every region beside it drew from the ecozone
+    # scheme, which is two palettes on one map and measurably fails the
+    # colour-vision floor against Moist Mixed Grassland.
+    elc = _elc_colour_for_key(key)
+    if elc and _elc_index()[2]:
+        base = elc
+    else:
+        base = REGION_COLOUR.get(key) or elc or _FALLBACK_COLOUR
     band = band if band in _BAND_MIX else ""
     return mix_to_white(base, _BAND_MIX[band]), _BAND_OPACITY[band]
 
@@ -248,20 +267,26 @@ ECOZONE_COLOUR: dict = {
     "Montane Cordillera": "#8b489a",   # violet, the mountains
 }
 
-#: Which ecozone each ecoregion belongs to, from the harmonized build of
-#: 2026-08-17. Recorded rather than derived at draw time so the website can
-#: colour a region without loading the ecozone layer, and so a name that
-#: appears here and nowhere else is visible as a gap.
+#: Which ecozone each ecoregion belongs to. **The fallback only.** The
+#: shipped polygon file carries an ``ecozone`` per feature and that is read
+#: first; this exists so a missing or unreadable file still yields sensible
+#: colours rather than twenty-four greys.
+#:
+#: Hand-transcribing it once already went wrong: Interlake Plain was written
+#: here as Prairies when the build says Boreal Plains, and nothing would have
+#: caught it except the map looking odd. Two copies of a fact is one copy too
+#: many, which is the same lesson `src/ecoregion.py` learned in V2.38 when it
+#: made the polygon file the vocabulary.
 ECOZONE_OF: dict = {
     # Prairies
     "Aspen Parkland": "Prairies",
     "Cypress Upland": "Prairies",
     "Fescue Grassland": "Prairies",
-    "Interlake Plain": "Prairies",
     "Mixed Grassland": "Prairies",
     "Moist Mixed Grassland": "Prairies",
     # Boreal Plains
     "Boreal Transition": "Boreal Plains",
+    "Interlake Plain": "Boreal Plains",
     "Clear Hills Upland": "Boreal Plains",
     "Mid-Boreal Lowland": "Boreal Plains",
     "Mid-Boreal Uplands": "Boreal Plains",
@@ -309,6 +334,41 @@ ECOZONE_OF: dict = {
 _STEP_SPREAD = 0.06
 
 
+@lru_cache(maxsize=1)
+def _elc_index() -> tuple:
+    """``(name -> ecozone, ecozone -> sorted member names)``.
+
+    Read from the shipped polygons when they carry an ``ecozone`` property,
+    which the ELC-derived file does, and from ``ECOZONE_OF`` when they do not.
+    Reading the file is what keeps the colours in step with the geometry: a
+    region added to the layer is coloured by its own ecozone without anybody
+    editing this module.
+    """
+    from src.resources import resource_path                     # noqa: PLC0415
+
+    zones: dict = {}
+    try:
+        with open(resource_path("data", "ecoregions_canada.geojson"),
+                  encoding="utf-8") as handle:
+            for feature in (json.load(handle) or {}).get("features", []) or []:
+                props = feature.get("properties") or {}
+                name = (props.get("name") or "").strip()
+                zone = (props.get("ecozone") or "").strip()
+                if name and zone:
+                    zones[name] = zone
+    except Exception:                                            # noqa: BLE001
+        pass
+    from_file = bool(zones)
+    if not zones:
+        zones = dict(ECOZONE_OF)
+    members: dict = {}
+    for name, zone in zones.items():
+        members.setdefault(zone, []).append(name)
+    for zone in members:
+        members[zone].sort()
+    return zones, members, from_file
+
+
 def elc_fill(ecoregion: str, ecozone: str = "") -> str:
     """Fill colour for one ELC ecoregion.
 
@@ -316,11 +376,12 @@ def elc_fill(ecoregion: str, ecozone: str = "") -> str:
     Alphabetical ordering, so the same input always gives the same colour and a
     re-run does not repaint the map for no reason.
     """
-    zone = ecozone or ECOZONE_OF.get(ecoregion, "")
+    zones, members, _from_file = _elc_index()
+    zone = ecozone or zones.get(ecoregion, "")
     base = ECOZONE_COLOUR.get(zone)
     if not base:
         return _FALLBACK_COLOUR
-    siblings = sorted(name for name, z in ECOZONE_OF.items() if z == zone)
+    siblings = members.get(zone) or []
     if ecoregion not in siblings or len(siblings) < 2:
         return base
     # -1 at the first sibling, +1 at the last; darken below zero, lighten above.
@@ -332,7 +393,7 @@ def elc_fill(ecoregion: str, ecozone: str = "") -> str:
 
 def elc_zone_of(ecoregion: str) -> str:
     """The ecozone an ecoregion belongs to, or ``""`` if it is not one we know."""
-    return ECOZONE_OF.get(ecoregion, "")
+    return _elc_index()[0].get(ecoregion, "")
 
 
 def _slug(name: str) -> str:
@@ -349,12 +410,8 @@ def _slug(name: str) -> str:
     return "".join(out).strip("_")
 
 
-#: Slugged ELC name -> the name itself, so a key from the polygon file can find
-#: its ecozone. Built once from ``ECOZONE_OF`` rather than typed twice.
-_ELC_BY_KEY: dict = {_slug(name): name for name in ECOZONE_OF}
-
-
 def _elc_colour_for_key(key: str) -> str:
     """The ELC fill for a slugged ecoregion key, or ``""``."""
-    name = _ELC_BY_KEY.get(key or "")
+    by_key = {_slug(name): name for name in _elc_index()[0]}
+    name = by_key.get(key or "")
     return elc_fill(name) if name else ""

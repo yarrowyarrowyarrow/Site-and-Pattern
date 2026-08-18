@@ -121,30 +121,116 @@ def _polygons(geometry: dict) -> list:
     return []
 
 
+#: A site this close to a neighbouring ecoregion reports that one too.
+#:
+#: **Replaces a trick the hand-drawn polygons used** and the real ones cannot.
+#: V2.38 made the placeholder shapes overlap "by a fraction of a degree at
+#: their shared edges", because a property near a boundary genuinely belongs to
+#: both and the second answer is exactly the species list that was going
+#: missing. Surveyed ecoregions *tile* — that is what makes them a
+#: classification — so adopting them in V2.67 silently deleted the behaviour:
+#: every site began reporting exactly one region, and a garden two kilometres
+#: from the parkland edge stopped being told about the parkland.
+#:
+#: The intent is restored here with a measured distance instead of a drafting
+#: hack, which is both honest and better: five kilometres means five
+#: kilometres, at every boundary, rather than however wide somebody drew the
+#: overlap that day.
+_NEAR_BOUNDARY_M = 5_000.0
+
+
+@lru_cache(maxsize=1)
+def _feature_index() -> tuple:
+    """``(key, rings, (min_lat, min_lng, max_lat, max_lng))`` per polygon.
+
+    Bounding boxes are precomputed because the real layer is 115 polygons of
+    real coastline rather than six rectangles of five points each, and testing
+    every vertex of every one on every lookup took the ecoregion tests from
+    0.2 seconds to 43. A box test rejects almost all of them in four
+    comparisons.
+    """
+    index = []
+    for feature in _load_features():
+        key = ((feature.get("properties") or {}).get("key") or "").strip()
+        if not key:
+            continue
+        for rings in _polygons(feature.get("geometry") or {}):
+            outer = rings[0] if rings else []
+            if not outer:
+                continue
+            lats = [float(point[1]) for point in outer]
+            lngs = [float(point[0]) for point in outer]
+            index.append((key, rings,
+                          (min(lats), min(lngs), max(lats), max(lngs))))
+    return tuple(index)
+
+
+def _within_box(lat: float, lng: float, box, pad_deg: float = 0.0) -> bool:
+    min_lat, min_lng, max_lat, max_lng = box
+    return (min_lat - pad_deg <= lat <= max_lat + pad_deg
+            and min_lng - pad_deg <= lng <= max_lng + pad_deg)
+
+
+def _distance_to_ring_m(lat: float, lng: float, ring, per_lat, per_lng) -> float:
+    """Shortest distance in metres from a point to a ring's edge.
+
+    Flat maths on metres-per-degree about the query point, which is what
+    ``src/projection.py`` does and is correct to well under a percent at the
+    few-kilometre range this is asked about.
+    """
+    best = float("inf")
+    px, py = 0.0, 0.0
+    points = [((float(pt[0]) - lng) * per_lng, (float(pt[1]) - lat) * per_lat)
+              for pt in ring]
+    for i in range(len(points) - 1):
+        ax, ay = points[i]
+        bx, by = points[i + 1]
+        dx, dy = bx - ax, by - ay
+        span = dx * dx + dy * dy
+        if span <= 0:
+            best = min(best, (ax - px) ** 2 + (ay - py) ** 2)
+            continue
+        t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / span))
+        cx, cy = ax + t * dx, ay + t * dy
+        best = min(best, (cx - px) ** 2 + (cy - py) ** 2)
+    return best ** 0.5
+
+
 def lookup_ecoregions(lat: float, lng: float) -> list[str]:
-    """Every geographic ecoregion key whose polygon contains (lat, lng).
+    """Every geographic ecoregion key at (lat, lng), containing ones first.
 
-    In file order, de-duplicated — a region may be drawn as several polygons
-    (the prairie set ships one per province-side lobe) and being in two lobes
-    of the same region is still being in one region.
+    A region whose boundary passes within :data:`_NEAR_BOUNDARY_M` is included
+    too — see that constant for why. De-duplicated, and containing regions
+    always sort ahead of merely-near ones so ``lookup_ecoregion`` still answers
+    with the region the site is actually in.
 
-    Empty when the point falls outside every shipped polygon, which is the
-    honest answer for a site the data does not cover yet, and is what the
-    caller should say rather than guessing the nearest.
+    Empty when the point is outside every polygon and near none, which is the
+    honest answer for a site the data does not cover and is what the caller
+    should say rather than guessing the nearest.
     """
     if lat is None or lng is None:
         return []
-    found: list[str] = []
-    for feature in _load_features():
-        geom = feature.get("geometry") or {}
-        key = (feature.get("properties") or {}).get("key")
-        if not key or key in found:
+    from src.projection import metres_per_deg                    # noqa: PLC0415
+
+    per_lat, per_lng = metres_per_deg(lat)
+    pad_deg = _NEAR_BOUNDARY_M / max(per_lat, per_lng, 1.0)
+    inside: list[str] = []
+    near: list[str] = []
+    for key, rings, box in _feature_index():
+        if key in inside:
             continue
-        for rings in _polygons(geom):
-            if _point_in_polygon(lat, lng, rings):
-                found.append(key)
-                break
-    return found
+        if not _within_box(lat, lng, box, pad_deg):
+            continue
+        if _point_in_polygon(lat, lng, rings):
+            inside.append(key)
+            continue
+        if key in near:
+            continue
+        gap = min(_distance_to_ring_m(lat, lng, ring, per_lat, per_lng)
+                  for ring in rings)
+        if gap <= _NEAR_BOUNDARY_M:
+            near.append(key)
+    return inside + [key for key in near if key not in inside]
 
 
 def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:
@@ -177,14 +263,44 @@ MOISTURE_NICHES: list[tuple[str, str, str]] = [
 # The geographic vocabulary of last resort. Used only when the polygon file is
 # missing or unreadable — a frozen build with a broken resource path should
 # still offer a working filter rather than an empty one. Kept in step with the
-# shipped file by ``tests/test_ecoregion.py``.
+# shipped file by ``tests/test_ecoregion.py``, and generated from it rather
+# than typed: twenty-four rows is past the point where a human copy stays
+# right, and the one hand-transcription already made in V2.67 put Interlake
+# Plain in the wrong ecozone.
+#
+# V2.67: six hand-traced approximations became twenty-four surveyed ecoregions
+# from the National Ecological Framework, grouped by ecozone in display order.
 _FALLBACK_GEOGRAPHIC: list[tuple[str, str, str]] = [
-    ("aspen_parkland",     "Aspen Parkland",           "central AB / SK"),
-    ("mixedgrass_prairie", "Mixedgrass Prairie",       "south AB / SK"),
-    ("moist_mixedgrass",   "Moist Mixed Grassland",    "Regina / Saskatoon"),
-    ("fescue_foothills",   "Fescue / Foothills",       "SW Alberta"),
-    ("boreal_mixedwood",   "Boreal Mixedwood / Plain", "north AB / SK"),
-    ("subalpine_montane",  "Subalpine / Montane",      "the mountains"),
+    # Prairies
+    ("aspen_parkland", "Aspen Parkland", "south AB / SK"),
+    ("cypress_upland", "Cypress Upland", "south AB / SK"),
+    ("fescue_grassland", "Fescue Grassland", "south AB"),
+    ("mixed_grassland", "Mixed Grassland", "south AB / SK"),
+    ("moist_mixed_grassland", "Moist Mixed Grassland", "south AB / SK"),
+    # Boreal Plains
+    ("boreal_transition", "Boreal Transition", "central AB / SK"),
+    ("clear_hills_upland", "Clear Hills Upland", "north AB"),
+    ("interlake_plain", "Interlake Plain", "central SK"),
+    ("mid_boreal_lowland", "Mid-Boreal Lowland", "central SK"),
+    ("mid_boreal_uplands", "Mid-Boreal Uplands", "central AB / SK"),
+    ("peace_lowland", "Peace Lowland", "north AB"),
+    ("slave_river_lowland", "Slave River Lowland", "north AB"),
+    ("wabasca_lowland", "Wabasca Lowland", "north AB"),
+    ("western_alberta_upland", "Western Alberta Upland", "central AB"),
+    ("western_boreal", "Western Boreal", "central AB"),
+    # Boreal Shield
+    ("athabasca_plain", "Athabasca Plain", "north AB / SK"),
+    ("churchill_river_upland", "Churchill River Upland", "north SK"),
+    # Taiga Plains
+    ("hay_river_lowland", "Hay River Lowland", "north AB"),
+    ("northern_alberta_uplands", "Northern Alberta Uplands", "north AB"),
+    # Taiga Shield
+    ("selwyn_lake_upland", "Selwyn Lake Upland", "north SK"),
+    ("tazin_lake_upland", "Tazin Lake Upland", "north AB / SK"),
+    # Montane Cordillera
+    ("eastern_continental_ranges", "Eastern Continental Ranges", "central AB"),
+    ("northern_continental_divide", "Northern Continental Divide", "south AB"),
+    ("western_continental_ranges", "Western Continental Ranges", "central AB"),
 ]
 
 

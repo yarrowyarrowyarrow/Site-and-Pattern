@@ -52,7 +52,7 @@ import json
 import re
 import sys
 
-from tools.ecoregions.common import OUT, REPO, require
+from tools.ecoregions.common import OUT, REPO, repair, require
 from tools.ecoregions.export import GEOJSON_APP
 
 TARGET = REPO / "data" / "ecoregions_canada.geojson"
@@ -103,7 +103,9 @@ def build(*, dry_run: bool = False) -> int:
         raise SystemExit(
             f"{GEOJSON_APP} does not exist.\n"
             "  Run:  python -m tools.ecoregions.export")
-    regions = gpd.read_file(GEOJSON_APP)
+    # Repaired on the way in as well as on the way out: an export written
+    # before that check existed is still sitting on somebody's disk.
+    regions = repair(gpd.read_file(GEOJSON_APP), "exported layer")
 
     base = gpd.read_file(REPO / "data" / "basemap_prairie.geojson")
     subject = base[(base["layer"] == "province")

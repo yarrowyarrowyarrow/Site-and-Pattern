@@ -290,7 +290,20 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # **birds**, which `scripts/curate_birds.py` owns and which would otherwise be
 # decided by two tables that can disagree, and **trinomials**, which cannot be
 # rows because the catalogue keys fauna on binomials.
-_SCHEMA_VERSION = 71
+# v72 (V2.67): no DDL — reseed to pick up data/ecoregions_canada.geojson, now
+# the surveyed National Ecological Framework layer instead of six hand-traced
+# approximations. The geographic vocabulary went from 6 regions to **24**, so
+# every stored `ab_ecoregion` value and every `plant_ecoregions` row keyed to
+# the old names stops matching: exactly one key, `aspen_parkland`, survives.
+#
+# Those are NOT translated onto the new regions. Fanning a species recorded in
+# the old `boreal_mixedwood` rectangle across all nine Boreal Plains ecoregions
+# would assert nine occurrences where the evidence supports one, which is P9
+# failing through the back door. They are re-derived by re-running
+# `scripts/seed_ecoregion_ranges.py` against the new polygons; until that has
+# run, a species carries no derived range under the new keys and the filter
+# says nothing rather than guessing.
+_SCHEMA_VERSION = 72
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

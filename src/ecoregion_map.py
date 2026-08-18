@@ -297,22 +297,64 @@ def map_svg(highlight: Optional[dict] = None, *,
 #: window. Every point here is asserted to fall inside its own polygon by
 #: ``tests/test_ecoregion.py``, because the first version of this table had
 #: "Montane" printed in British Columbia.
-_LABEL_POINT = {
-    "boreal_mixedwood": (-110.5, 57.2, 0),
-    "aspen_parkland": (-111.5, 53.3, 0),
-    "moist_mixedgrass": (-104.6, 50.6, 0),
-    "mixedgrass_prairie": (-111.0, 50.1, 0),
-    "fescue_foothills": (-116.08, 52.40, 55),
-    "subalpine_montane": (-115.69, 51.20, 55),
-}
+#: **Empty since V2.67**, and kept as a mechanism rather than deleted.
+#:
+#: Six entries lived here to compensate for hand-drawn shapes whose centroids
+#: landed badly. The surveyed layer has twenty-four regions, and hand-placing
+#: twenty-four anchors is maintenance that goes stale the first time a polygon
+#: moves. ``_interior_point`` below now finds a point that is actually inside
+#: the region instead of trusting a centroid — which a crescent's centroid is
+#: not — so nothing needs placing by hand. An override stays available for a
+#: computed answer that is correct but ugly.
+_LABEL_POINT: dict = {}
+
+
+def _clearance(point: tuple, xs: list, ys: list) -> float:
+    """Distance from ``point`` to the nearest vertex — a cheap stand-in for
+    distance to the edge, which is all a label placement needs."""
+    lon, lat = point
+    return min((lon - x) ** 2 + (lat - y) ** 2
+               for x, y in zip(xs, ys)) ** 0.5
+
+
+def _interior_point(ring: list) -> tuple:
+    """A point inside ``ring``, as far from its edge as a coarse scan finds.
+
+    A centroid is not good enough. The parkland is a crescent and the Peace
+    Lowland wraps a river; both can put their centroid outside themselves, and
+    the first coloured draft of this map printed "Montane" in British Columbia
+    for exactly that reason. This samples a grid over the bounding box, keeps
+    what falls inside, and returns the sample furthest from any vertex — an
+    approximation of the pole of inaccessibility, which is where an atlas puts
+    a label.
+    """
+    from src.geometry import point_in_ring                       # noqa: PLC0415
+
+    xs = [float(c[0]) for c in ring]
+    ys = [float(c[1]) for c in ring]
+    centre = (sum(xs) / len(xs), sum(ys) / len(ys))
+    best, best_gap = None, -1.0
+    if point_in_ring(centre[1], centre[0], ring):
+        best, best_gap = centre, _clearance(centre, xs, ys)
+    steps = 12
+    for i in range(1, steps):
+        for j in range(1, steps):
+            lon = min(xs) + (max(xs) - min(xs)) * i / steps
+            lat = min(ys) + (max(ys) - min(ys)) * j / steps
+            if not point_in_ring(lat, lon, ring):
+                continue
+            gap = _clearance((lon, lat), xs, ys)
+            if gap > best_gap:
+                best, best_gap = (lon, lat), gap
+    return best or centre
 
 
 def _label_point(key: str, ring: list) -> tuple:
+    """``(lon, lat, angle)`` for a region's printed name."""
     if key in _LABEL_POINT:
         return _LABEL_POINT[key]
-    xs = [float(c[0]) for c in ring]
-    ys = [float(c[1]) for c in ring]
-    return sum(xs) / len(xs), sum(ys) / len(ys), 0
+    lon, lat = _interior_point(ring)
+    return lon, lat, 0
 
 
 def _short(name: str) -> str:

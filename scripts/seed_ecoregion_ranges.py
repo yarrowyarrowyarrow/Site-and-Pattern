@@ -135,13 +135,33 @@ def polygon_bbox(pad: float = 0.5) -> tuple[float, float, float, float]:
               encoding="utf-8") as f:
         data = json.load(f)
     lats, lngs = [], []
+
+    def collect(node):
+        """Walk any GeoJSON coordinate nesting down to its positions.
+
+        **Handles MultiPolygon, which V2.67 made necessary.** This used to
+        assume ``coordinates`` was a list of rings, which is true of a Polygon
+        and one level too shallow for a MultiPolygon: the surveyed ecoregion
+        layer is full of them, and the old loop reached a *ring* where it
+        expected a *point* and raised ``float() argument must be a string or a
+        real number, not 'list'``.
+
+        Loud rather than silent, which is the one mercy in it — the same
+        assumption in ``src/ecoregion.py`` skipped quietly and answered "you
+        are in no ecoregion" instead. Recursing costs nothing and cannot be
+        wrong at the next nesting depth either.
+        """
+        if (isinstance(node, (list, tuple)) and len(node) >= 2
+                and all(isinstance(v, (int, float)) for v in node[:2])):
+            lngs.append(float(node[0]))
+            lats.append(float(node[1]))
+            return
+        if isinstance(node, (list, tuple)):
+            for child in node:
+                collect(child)
+
     for feature in data.get("features") or []:
-        geom = feature.get("geometry") or {}
-        for ring in geom.get("coordinates") or []:
-            for point in ring:
-                if isinstance(point, (list, tuple)) and len(point) >= 2:
-                    lngs.append(float(point[0]))
-                    lats.append(float(point[1]))
+        collect((feature.get("geometry") or {}).get("coordinates") or [])
     if not lats:
         return (-90.0, 90.0, -180.0, 180.0)
     return (max(-90.0, min(lats) - pad), min(90.0, max(lats) + pad),

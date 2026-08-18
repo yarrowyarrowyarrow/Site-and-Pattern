@@ -33,7 +33,7 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 71`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 72`.
 
 **Sourcing is enforced (V2.42).** Every `source` field in
 `plant_fauna_master.json`, `bee_attributes_master.json` and

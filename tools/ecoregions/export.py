@@ -37,7 +37,8 @@ import argparse
 import json
 import sys
 
-from tools.ecoregions.common import CRS_PROJECTED, CRS_WGS84, OUT, REPO, require
+from tools.ecoregions.common import (CRS_PROJECTED, CRS_WGS84, OUT, REPO,
+                                     repair, require)
 from tools.ecoregions.harmonize import GPKG
 
 GPKG_OUT = OUT / "ecoregions_ab_sk.gpkg"
@@ -76,6 +77,19 @@ def run(*, adopt: bool = False) -> int:
     simple = wgs.copy()
     simple["geometry"] = simple.geometry.simplify(_TOLERANCE,
                                                   preserve_topology=True)
+    # `preserve_topology=True` preserves each ring's own topology; it does not
+    # promise the result is a valid polygon, and at this tolerance it is
+    # sometimes not. The first real export came out with a self-intersection at
+    # -112.563, 51.953 that the full-resolution GeoPackage did not have, and
+    # nothing noticed until the adoption stage tried to dissolve it. The
+    # simplified file is the one that ships, so it is the one that has to be
+    # valid.
+    simple = repair(simple, "simplified export")
+    still_bad = int((~simple.geometry.is_valid).sum())
+    if still_bad:
+        raise SystemExit(
+            f"{still_bad} geometries are still invalid after repair. Refusing "
+            f"to write a broken layer - lower _TOLERANCE and try again.")
     features = []
     for _, row in simple.iterrows():
         geometry = json.loads(shapely.to_geojson(row.geometry))

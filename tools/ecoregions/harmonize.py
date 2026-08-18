@@ -42,7 +42,8 @@ import json
 import sys
 
 from tools.ecoregions.common import (CRS_PROJECTED, CRS_WGS84, DATA, OUT,
-                                     SUBJECT_PROVINCES, ensure_dirs, require)
+                                     SUBJECT_PROVINCES, ensure_dirs, repair,
+                                     require)
 
 _RAW = DATA / "raw"
 GPKG = OUT / "ecoregions.gpkg"
@@ -72,55 +73,6 @@ FIELDS = {
     "ab_subregion": "NSRNAME",
     "ab_region": "NRNAME",
 }
-
-
-def _repair(gdf, label: str):
-    """Make every geometry valid, reporting how many needed it.
-
-    Published national layers routinely contain self-intersecting rings — this
-    repository's own placeholder ecoregion file has two — and every overlay in
-    this module raises ``GEOSException: side location conflict`` the moment one
-    reaches it. The repair is standard and lossless at this scale, but it is
-    *reported* rather than done quietly: a source that arrives with broken
-    topology is a fact about the source, and stage 4 asserts validity on the
-    output, so silently fixing it on the way in would hide the thing the check
-    is looking for.
-    """
-    from shapely.validation import make_valid
-
-    broken = ~gdf.geometry.is_valid
-    count = int(broken.sum())
-    if count:
-        print(f"  {label}: {count} of {len(gdf)} geometries were invalid, "
-              f"repaired with make_valid")
-        gdf = gdf.copy()
-        gdf.loc[broken, "geometry"] = (
-            gdf.loc[broken, "geometry"].apply(make_valid).apply(_areal_parts))
-        gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()]
-    return gdf
-
-
-def _areal_parts(geom):
-    """The polygonal parts of a repaired geometry, or ``None``.
-
-    ``make_valid`` on a ring that touches itself returns a GeometryCollection:
-    the polygons, plus the zero-width lines where the ring pinched. The first
-    version of this filtered rows by ``geom_type`` and so **dropped the entire
-    region** whenever that happened — a whole ecoregion silently leaving the
-    layer to fix a defect a few metres wide. Keep the area, discard the threads.
-    """
-    from shapely.ops import unary_union
-
-    if geom is None or geom.is_empty:
-        return geom
-    if geom.geom_type in ("Polygon", "MultiPolygon"):
-        return geom
-    if geom.geom_type == "GeometryCollection":
-        parts = [g for g in geom.geoms
-                 if g.geom_type in ("Polygon", "MultiPolygon")]
-        if parts:
-            return unary_union(parts)
-    return None
 
 
 def _resolve(gdf, wanted: str, source_label: str) -> str:
@@ -175,7 +127,7 @@ def _load_elc():
     gdf = gpd.read_file(path)
     if gdf.crs is None:
         raise SystemExit(f"{path.name} has no CRS. Refusing to assume one.")
-    return _repair(gdf.to_crs(CRS_WGS84), "ELC ecoregions")
+    return repair(gdf.to_crs(CRS_WGS84), "ELC ecoregions")
 
 
 def _attach_ecozone(regions):
@@ -194,7 +146,7 @@ def _attach_ecozone(regions):
         print("  ecozone file absent; ecozone column will be blank")
         regions["ecozone"] = ""
         return regions
-    zones = _repair(gpd.read_file(path).to_crs(CRS_WGS84), "ELC ecozones")
+    zones = repair(gpd.read_file(path).to_crs(CRS_WGS84), "ELC ecozones")
     zone_name = _resolve(zones, FIELDS["elc_ecozone_name"], "ELC ecozone")
     zones = zones[[zone_name, "geometry"]].rename(
         columns={zone_name: "ecozone"})
@@ -312,7 +264,7 @@ def _attach_alberta(regions):
     reg_col = _resolve(alberta, FIELDS["ab_region"], "Alberta subregions")
     alberta = alberta[[sub_col, reg_col, "geometry"]].rename(
         columns={sub_col: "ab_subregion", reg_col: "ab_region"})
-    alberta = _repair(alberta.to_crs(CRS_WGS84), "Alberta subregions")
+    alberta = repair(alberta.to_crs(CRS_WGS84), "Alberta subregions")
 
     regions = _split_by_subregion(regions, alberta)
 
@@ -370,7 +322,7 @@ def run() -> int:
     # overlay, not a defect in anything AAFC published, so it is ours to clean
     # up - and it is still printed rather than done quietly, because a run that
     # repairs its own output every time is telling you something.
-    regions = _repair(regions, "harmonized output")
+    regions = repair(regions, "harmonized output")
     regions = regions.set_crs(CRS_WGS84, allow_override=True)
     regions.to_file(GPKG, layer="ecoregions", driver="GPKG")
     walk.to_csv(CROSSWALK, index=False)

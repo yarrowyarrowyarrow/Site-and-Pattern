@@ -592,13 +592,28 @@ class TestRateLimitingIsNotAbsence(unittest.TestCase):
         lat_min, lat_max, lng_min, lng_max = polygon_bbox()
         self.assertLess(lat_min, lat_max)
         self.assertLess(lng_min, lng_max)
+        # Walked recursively rather than as list-of-rings: the surveyed layer
+        # is full of MultiPolygons, which nest one level deeper, and this test
+        # carried the same assumption as the code it was guarding. A guard
+        # written against the shape of the old data is not a guard.
+        def positions(node):
+            if (isinstance(node, (list, tuple)) and len(node) >= 2
+                    and all(isinstance(v, (int, float)) for v in node[:2])):
+                yield float(node[0]), float(node[1])
+                return
+            if isinstance(node, (list, tuple)):
+                for child in node:
+                    yield from positions(child)
+
+        checked = 0
         for feature in _load_features():
-            for ring in feature["geometry"]["coordinates"]:
-                for lng, lat in ring:
-                    self.assertGreaterEqual(lat, lat_min)
-                    self.assertLessEqual(lat, lat_max)
-                    self.assertGreaterEqual(lng, lng_min)
-                    self.assertLessEqual(lng, lng_max)
+            for lng, lat in positions(feature["geometry"]["coordinates"]):
+                checked += 1
+                self.assertGreaterEqual(lat, lat_min)
+                self.assertLessEqual(lat, lat_max)
+                self.assertGreaterEqual(lng, lng_min)
+                self.assertLessEqual(lng, lng_max)
+        self.assertGreater(checked, 0, "no coordinates were checked at all")
 
     def test_the_bbox_is_padded_so_a_boundary_record_is_not_lost(self):
         from scripts.seed_ecoregion_ranges import polygon_bbox

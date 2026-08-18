@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.ecoregion import (  # noqa: E402
     lookup_ecoregion,
+    lookup_ecoregions,
     label_for_key,
     _point_in_ring,
     _point_in_polygon,
@@ -39,14 +40,14 @@ class TestLoadFeatures(unittest.TestCase):
                                 "Expected at least 5 AB ecoregion features")
 
     def test_all_features_have_canonical_key(self):
-        """Every feature's `key` must be one of the canonical keys in
-        plant_panel._AB_ECOREGION_CHOICES — otherwise the auto-detect
-        result wouldn't match any combo option."""
-        canonical = {
-            "aspen_parkland", "mixedgrass_prairie", "moist_mixedgrass",
-            "fescue_foothills", "boreal_mixedwood", "riparian", "wet_meadow",
-            "subalpine_montane",
-        }
+        """Every feature's key must be in the filter's vocabulary, or the
+        auto-detect result matches no option in the dropdown.
+
+        The canonical set is read from the vocabulary rather than typed beside
+        it: since V2.38 the polygon file *is* the vocabulary, so a literal list
+        here would only ever be a second copy waiting to disagree with it."""
+        from src.ecoregion import ecoregion_keys
+        canonical = set(ecoregion_keys())
         for feat in _load_features():
             key = (feat.get("properties") or {}).get("key", "")
             self.assertIn(key, canonical,
@@ -105,29 +106,46 @@ class TestAlbertaCityLookups(unittest.TestCase):
     def test_red_deer_is_aspen_parkland(self):
         self.assertEco(52.2681, -113.8112, "aspen_parkland")
 
-    def test_fort_mcmurray_is_boreal_mixedwood(self):
-        self.assertEco(56.7264, -111.3803, "boreal_mixedwood")
+    def test_fort_mcmurray_is_wabasca_lowland(self):
+        """V2.67: the coarse "boreal_mixedwood" became the ELC ecoregion it
+        actually is. Still Boreal Plains, which is what mattered."""
+        self.assertEco(56.7264, -111.3803, "wabasca_lowland")
 
-    def test_grande_prairie_is_boreal_mixedwood(self):
-        self.assertEco(55.1707, -118.7947, "boreal_mixedwood")
+    def test_grande_prairie_is_peace_lowland(self):
+        """The Peace River country is its own ecoregion, which the six-key
+        vocabulary could not say."""
+        self.assertEco(55.1707, -118.7947, "peace_lowland")
 
-    def test_lethbridge_is_mixedgrass_prairie(self):
-        self.assertEco(49.6956, -112.8451, "mixedgrass_prairie")
+    def test_lethbridge_is_moist_mixed_grassland(self):
+        """The one the rebuild brief argued about and the source won. See
+        tools/ecoregions/probes.py for the evidence."""
+        self.assertEco(49.6956, -112.8451, "moist_mixed_grassland")
 
-    def test_medicine_hat_is_mixedgrass_prairie(self):
-        self.assertEco(50.0405, -110.6764, "mixedgrass_prairie")
+    def test_medicine_hat_is_mixed_grassland(self):
+        self.assertEco(50.0405, -110.6764, "mixed_grassland")
 
-    def test_calgary_is_fescue_foothills(self):
-        """Calgary at -114.07°W sits in the fescue band (-114.5 to -113.5)
-        of the starter polygon set. Real CEC data may place Calgary
-        in transition; that's a per-polygon revision, not a code change."""
-        self.assertEco(51.0447, -114.0719, "fescue_foothills")
+    def test_calgary_is_fescue_grassland_and_reaches_the_parkland(self):
+        """Calgary was the change everyone predicted, and it is a better answer
+        than the one it replaces twice over.
 
-    def test_banff_is_subalpine_montane(self):
-        self.assertEco(51.1784, -115.5708, "subalpine_montane")
+        The placeholder put it in ``fescue_foothills`` by fiat — its own comment
+        admitted the key existed because Calgary sat in a hand-drawn band. The
+        surveyed layer says Fescue Grassland, a real ELC unit, *and* puts the
+        city within five kilometres of Aspen Parkland, which is what a reader
+        standing there would tell you.
+        """
+        keys = lookup_ecoregions(51.0447, -114.0719)
+        self.assertEqual(keys[0], "fescue_grassland")
+        self.assertIn("aspen_parkland", keys)
 
-    def test_jasper_is_subalpine_montane(self):
-        self.assertEco(52.8737, -118.0814, "subalpine_montane")
+    def test_banff_is_northern_continental_divide(self):
+        self.assertEco(51.1784, -115.5708, "northern_continental_divide")
+
+    def test_jasper_is_eastern_continental_ranges(self):
+        """Banff and Jasper were one key before and are two ecoregions now,
+        which is a real distinction the mountains have and the placeholder
+        could not carry."""
+        self.assertEco(52.8737, -118.0814, "eastern_continental_ranges")
 
 
 class TestSaskatchewanCityLookups(unittest.TestCase):
@@ -139,14 +157,14 @@ class TestSaskatchewanCityLookups(unittest.TestCase):
         self.assertEqual(got, expected_key,
                          f"({lat}, {lng}) → got {got!r}, expected {expected_key!r}")
 
-    def test_regina_is_moist_mixedgrass(self):
-        self.assertEco(50.4452, -104.6189, "moist_mixedgrass")
+    def test_regina_is_moist_mixed_grassland(self):
+        self.assertEco(50.4452, -104.6189, "moist_mixed_grassland")
 
-    def test_lumsden_is_moist_mixedgrass(self):
-        self.assertEco(50.6500, -104.8700, "moist_mixedgrass")
+    def test_lumsden_is_moist_mixed_grassland(self):
+        self.assertEco(50.6500, -104.8700, "moist_mixed_grassland")
 
-    def test_saskatoon_is_moist_mixedgrass(self):
-        self.assertEco(52.1332, -106.6700, "moist_mixedgrass")
+    def test_saskatoon_is_moist_mixed_grassland(self):
+        self.assertEco(52.1332, -106.6700, "moist_mixed_grassland")
 
     def test_north_battleford_is_aspen_parkland(self):
         self.assertEco(52.7575, -108.2861, "aspen_parkland")
@@ -154,8 +172,8 @@ class TestSaskatchewanCityLookups(unittest.TestCase):
     def test_battleford_is_aspen_parkland(self):
         self.assertEco(52.7368, -108.2967, "aspen_parkland")
 
-    def test_swift_current_is_mixedgrass_prairie(self):
-        self.assertEco(50.2881, -107.7939, "mixedgrass_prairie")
+    def test_swift_current_is_mixed_grassland(self):
+        self.assertEco(50.2881, -107.7939, "mixed_grassland")
 
 
 class TestOutsideCoverage(unittest.TestCase):
@@ -272,18 +290,33 @@ class TestASiteCanBeInTwo(unittest.TestCase):
     near a boundary belongs to both, and the second one is exactly the species
     list that was going missing."""
 
-    #: Nordegg / Rocky Mountain House, where the foothills genuinely run into
-    #: the parkland. V2.49 moved this point: it used to be (53.0, -114.8),
-    #: which was an overlap of the *rectangles* rather than of anything on the
-    #: ground, and the redrawn polygons put that coordinate squarely in the
-    #: parkland alone. The behaviour under test is unchanged; only the place
-    #: where two regions really do meet has moved to where it really is.
-    TRANSITION = (52.0, -115.3)
+    #: Calgary, where the fescue grassland runs into the aspen parkland.
+    #:
+    #: This point has moved twice, and each move says something about the data
+    #: underneath it. It began at (53.0, -114.8), an overlap of two *rectangles*
+    #: rather than of anything on the ground. V2.49 moved it to Nordegg when the
+    #: redrawn polygons put that coordinate squarely in the parkland alone.
+    #: V2.67 moved it here, because the surveyed layer **tiles** — real
+    #: ecoregions do not overlap, that is what makes them a classification — so
+    #: two regions are reported where a site is inside one and within five
+    #: kilometres of another. Calgary genuinely is.
+    #:
+    #: The behaviour under test has never changed. What changed is that it is
+    #: now produced by a measured distance rather than by how wide somebody drew
+    #: an overlap.
+    TRANSITION = (51.0447, -114.0719)
 
-    def test_the_foothills_overlap_reports_both(self):
+    def test_a_boundary_site_reports_both(self):
         keys = _eco.lookup_ecoregions(*self.TRANSITION)
-        self.assertIn("fescue_foothills", keys)
+        self.assertIn("fescue_grassland", keys)
         self.assertIn("aspen_parkland", keys)
+
+    def test_the_region_the_site_is_actually_in_comes_first(self):
+        """Containing regions sort ahead of merely-near ones, so the singular
+        shim keeps answering with the region the site is in rather than one it
+        is beside."""
+        self.assertEqual(_eco.lookup_ecoregions(*self.TRANSITION)[0],
+                         "fescue_grassland")
 
     def test_the_singular_shim_still_answers_one(self):
         self.assertEqual(_eco.lookup_ecoregion(*self.TRANSITION),
@@ -293,11 +326,12 @@ class TestASiteCanBeInTwo(unittest.TestCase):
         self.assertEqual(_eco.lookup_ecoregions(53.55, -113.49),
                          ["aspen_parkland"])          # Edmonton
 
-    def test_two_lobes_of_one_region_count_once(self):
-        """moist_mixedgrass ships as two rectangles. Being in one of them is
-        being in the region once, not twice."""
+    def test_two_pieces_of_one_region_count_once(self):
+        """A region is drawn as many polygons — the surveyed layer splits each
+        one again by Alberta subregion — and being inside one piece is being in
+        the region once, not once per piece."""
         keys = _eco.lookup_ecoregions(52.13, -106.67)  # Saskatoon
-        self.assertEqual(keys, ["moist_mixedgrass"])
+        self.assertEqual(keys, ["moist_mixed_grassland"])
 
     def test_outside_everything_is_empty_not_a_guess(self):
         self.assertEqual(_eco.lookup_ecoregions(49.28, -123.12), [])   # Vancouver
@@ -309,7 +343,7 @@ class TestASiteCanBeInTwo(unittest.TestCase):
         self.assertEqual(data["keys"], _eco.lookup_ecoregions(*self.TRANSITION))
         self.assertEqual(data["key"], data["keys"][0])
         # The readout names both, so the user can see why two are checked.
-        self.assertIn("Fescue", data["label"])
+        self.assertIn("Fescue Grassland", data["label"])
         self.assertIn("Aspen Parkland", data["label"])
 
     def test_no_pin_no_payload(self):
@@ -461,10 +495,23 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
         self.assertEqual(len(fills), len(region_geometry()))
 
     def test_every_region_in_the_vocabulary_has_a_colour_of_its_own(self):
-        from src.ecoregion_map import REGION_COLOUR, region_geometry
-        drawn = set(region_geometry())
-        self.assertTrue(drawn <= set(REGION_COLOUR), drawn - set(REGION_COLOUR))
-        self.assertEqual(len(set(REGION_COLOUR.values())), len(REGION_COLOUR))
+        """Asked through ``region_fill`` rather than of ``REGION_COLOUR``.
+
+        Since V2.67 the fill resolves through the ecozone scheme for the ELC
+        vocabulary, so a literal-membership check would only be testing which
+        dict a colour happens to live in. What has to be true is that every
+        region the map draws gets a colour, and that no two get the same one.
+        """
+        from src.ecoregion_map import region_geometry
+        from src.ecoregion_palette import _FALLBACK_COLOUR, region_fill
+        drawn = sorted(region_geometry())
+        fills = {key: region_fill(key, "high")[0] for key in drawn}
+        uncoloured = [k for k, v in fills.items() if v == _FALLBACK_COLOUR]
+        self.assertEqual(uncoloured, [],
+                         "these regions fell through to the fallback colour, "
+                         "so their fill asserts nothing")
+        self.assertEqual(len(set(fills.values())), len(fills),
+                         "two regions share a fill")
 
     def test_confidence_still_shows_inside_one_region_s_colour(self):
         """The whole risk of this change: spending the fill on identity and
@@ -508,13 +555,22 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
 
     def test_every_region_name_is_printed_inside_that_region(self):
         """The first coloured draft printed "Montane" in British Columbia:
-        the hand-placed anchor had drifted a degree east of its own strip,
-        which nothing checked because nothing had ever drawn it in colour."""
-        from src.ecoregion_map import _LABEL_POINT
-        from src.ecoregion import lookup_ecoregions
-        for key, (lon, lat, _angle) in _LABEL_POINT.items():
-            self.assertIn(key, lookup_ecoregions(lat, lon),
-                          f"{key} label at {lat},{lon} is not inside {key}")
+        a hand-placed anchor had drifted a degree east of its own strip, which
+        nothing checked because nothing had ever drawn it in colour.
+
+        V2.67 removed the hand placements — twenty-four of them would go stale
+        the first time a polygon moved — so this now checks the *computed*
+        point for every region the map draws, which is a stronger claim than
+        the six it used to make.
+        """
+        from src.ecoregion_map import _label_point, region_geometry
+        from src.geometry import point_in_ring
+        for key, rings in region_geometry().items():
+            ring = max(rings, key=len)
+            lon, lat, _angle = _label_point(key, ring)
+            self.assertTrue(
+                point_in_ring(lat, lon, ring),
+                f"{key} label at {lat:.3f},{lon:.3f} is outside its own ring")
 
     def test_the_map_fills_its_frame(self):
         """A 760x470 box letterboxed a near-square map into its middle third,
@@ -633,32 +689,66 @@ from src.colour_distance import (chroma as _chroma,  # noqa: E402
 def _adjacent_pairs():
     """Region pairs that share ground, from the shipped polygons.
 
-    Pure-Python on purpose: the app has no shapely. The shipped polygons
-    deliberately overlap by a fraction of a degree at their shared edges (so a
-    site near a boundary reports both regions), which means "do these two
-    share ground" is answerable by asking whether any vertex of one falls
-    inside the other.
+    Pure-Python on purpose: the app has no shapely. Two regions count as
+    adjacent when a vertex of one falls inside the other, or when their
+    boundaries pass within a few kilometres — which covers both the deliberate
+    overlaps the placeholder used and the tiled edges the surveyed layer has.
+
+    Bounding boxes are compared first. The surveyed layer is 115 polygons of
+    real coastline rather than six rectangles, and testing every vertex of
+    every polygon against every other took this from instant to most of a
+    minute.
     """
-    from src.geometry import point_in_polygon
+    from src.geometry import point_in_ring
     from src.ecoregion_map import _load, _rings
 
-    shapes = {}
+    shapes: dict = {}
     for feature in _load():
         key = ((feature.get("properties") or {}).get("key") or "").strip()
-        if key:
-            shapes.setdefault(key, []).extend(
-                _rings(feature.get("geometry") or {}))
+        if not key:
+            continue
+        for ring in _rings(feature.get("geometry") or {}):
+            if not ring:
+                continue
+            lons = [float(p[0]) for p in ring]
+            lats = [float(p[1]) for p in ring]
+            shapes.setdefault(key, []).append(
+                (ring, (min(lons), min(lats), max(lons), max(lats))))
+
+    #: Degrees of slack when comparing boxes. Roughly 11 km of latitude: two
+    #: tiled regions touch exactly, and floating point plus simplification mean
+    #: "exactly" needs a tolerance.
+    pad = 0.1
+
+    def boxes_meet(one, two):
+        return not (one[2] + pad < two[0] or two[2] + pad < one[0]
+                    or one[3] + pad < two[1] or two[3] + pad < one[1])
+
+    def touches(a_pieces, b_pieces):
+        for a_ring, a_box in a_pieces:
+            for b_ring, b_box in b_pieces:
+                if not boxes_meet(a_box, b_box):
+                    continue
+                for lon, lat in a_ring:
+                    if point_in_ring(lat, lon, b_ring):
+                        return True
+                for lon, lat in b_ring:
+                    if point_in_ring(lat, lon, a_ring):
+                        return True
+                # Tiled neighbours share an edge without either's vertices
+                # falling strictly inside the other, so near-coincident
+                # vertices count as contact.
+                for lon, lat in a_ring[::4]:
+                    for blon, blat in b_ring[::4]:
+                        if abs(lon - blon) < 0.02 and abs(lat - blat) < 0.02:
+                            return True
+        return False
+
     pairs = set()
     keys = sorted(shapes)
     for i, one in enumerate(keys):
         for two in keys[i + 1:]:
-            hit = any(point_in_polygon(lat, lon, [ring])
-                      for ring in shapes[two]
-                      for lon, lat in shapes[one][0]) or \
-                  any(point_in_polygon(lat, lon, [ring])
-                      for ring in shapes[one]
-                      for lon, lat in shapes[two][0])
-            if hit:
+            if touches(shapes[one], shapes[two]):
                 pairs.add((one, two))
     return sorted(pairs)
 
@@ -682,8 +772,24 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
         self.assertGreaterEqual(len(_adjacent_pairs()), 6)
 
     def test_bordering_regions_separate_by_colour_or_by_hatch(self):
-        from src.ecoregion_palette import HATCHED, region_fill
+        """Same rule ``tools/ecoregions/validate.py`` holds on the printed map.
+
+        Two regions in the SAME ecozone are exempt: they share a hue on
+        purpose, and the lightness step between them cannot be widened without
+        breaking a cross-ecozone boundary that matters more (measured in V2.66:
+        0.06 holds everything, 0.10 does not). Inside one system the boundary
+        stroke and the label do the work.
+        """
+        from src.ecoregion_palette import HATCHED, elc_zone_of, region_fill
+        from src.ecoregion import ecoregion_display
+
+        def zone_of(key):
+            name, _where = ecoregion_display(key)
+            return elc_zone_of(name)
+
         for one, two in _adjacent_pairs():
+            if zone_of(one) and zone_of(one) == zone_of(two):
+                continue
             gap = _worst_cvd(region_fill(one, "high")[0],
                              region_fill(two, "high")[0])
             if gap >= self.FLOOR:
@@ -698,9 +804,17 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
     def test_no_region_is_hatched_without_needing_it(self):
         """A hatch is visual noise; it has to be earned. If a colour change
         makes one unnecessary, this says so rather than letting it linger."""
-        from src.ecoregion_palette import HATCHED, region_fill
+        from src.ecoregion_palette import HATCHED, elc_zone_of, region_fill
+        from src.ecoregion import ecoregion_display
+
+        def zone_of(key):
+            name, _where = ecoregion_display(key)
+            return elc_zone_of(name)
+
         needed = set()
         for one, two in _adjacent_pairs():
+            if zone_of(one) and zone_of(one) == zone_of(two):
+                continue
             if _worst_cvd(region_fill(one, "high")[0],
                           region_fill(two, "high")[0]) < self.FLOOR:
                 needed.update({one, two})
@@ -773,9 +887,12 @@ class TestMultiPolygonRegionsAreFound(unittest.TestCase):
                 ]},
         }]
         self.eco = eco
+        eco._feature_index.cache_clear()
+        eco.geographic_ecoregions.cache_clear()
 
     def tearDown(self):
         self.eco._load_features = self._real
+        self.eco._feature_index.cache_clear()
         self.eco.geographic_ecoregions.cache_clear()
 
     def test_a_point_in_the_first_piece_is_found(self):

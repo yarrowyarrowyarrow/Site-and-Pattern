@@ -129,7 +129,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # basemap went to `ecoregion_basemap.py` rather than into the ceiling,
         # on the same seam every atlas has: this file draws the subject, that
         # one draws the ground under it.
-        (_SRC / "ecoregion_map.py", 340),              # 333 now
+        # V2.67: +42 for `_interior_point`. Twenty-four regions cannot have
+        # hand-placed label anchors, so the map computes a point that is
+        # actually inside each polygon instead of trusting a centroid, which a
+        # crescent's is not.
+        (_SRC / "ecoregion_map.py", 400),              # 375 now
         (_SRC / "ecoregion_basemap.py", 260),          # 210 now
         # V2.66 took this to 200 adding the hatch, then to 311 adding the ELC
         # palette: the real classification is 24 ecoregions in six ecozones,
@@ -139,7 +143,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # failure the shared-dict rule exists to prevent. The colour *maths*
         # did come out, into src/colour_distance.py, because that is a
         # different concern and three callers wanted it.
-        (_SRC / "ecoregion_palette.py", 380),          # 311 now
+        # V2.67: reading the ecozone from the polygon file instead of trusting
+        # a hand-typed copy cost ~40 lines and removed a whole class of drift -
+        # the transcription was already wrong about Interlake Plain.
+        (_SRC / "ecoregion_palette.py", 420),          # 355 now
         (_SRC / "colour_distance.py", 160),            # 105 now
         (_SRC / "static_site.py", 460),                # 378 now
         (_SRC / "static_site_render.py", 800),         # 744 now

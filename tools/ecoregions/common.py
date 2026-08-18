@@ -75,3 +75,52 @@ def require(*modules: str) -> None:
             "(or: conda install -c conda-forge geopandas rasterio, which is "
             "the path of least resistance on Windows)"
         )
+
+
+def repair(gdf, label: str):
+    """Make every geometry valid, reporting how many needed it.
+
+    Published national layers routinely contain self-intersecting rings — this
+    repository's own placeholder ecoregion file has two — and every overlay in
+    this module raises ``GEOSException: side location conflict`` the moment one
+    reaches it. The repair is standard and lossless at this scale, but it is
+    *reported* rather than done quietly: a source that arrives with broken
+    topology is a fact about the source, and stage 4 asserts validity on the
+    output, so silently fixing it on the way in would hide the thing the check
+    is looking for.
+    """
+    from shapely.validation import make_valid
+
+    broken = ~gdf.geometry.is_valid
+    count = int(broken.sum())
+    if count:
+        print(f"  {label}: {count} of {len(gdf)} geometries were invalid, "
+              f"repaired with make_valid")
+        gdf = gdf.copy()
+        gdf.loc[broken, "geometry"] = (
+            gdf.loc[broken, "geometry"].apply(make_valid).apply(areal_parts))
+        gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()]
+    return gdf
+
+
+def areal_parts(geom):
+    """The polygonal parts of a repaired geometry, or ``None``.
+
+    ``make_valid`` on a ring that touches itself returns a GeometryCollection:
+    the polygons, plus the zero-width lines where the ring pinched. The first
+    version of this filtered rows by ``geom_type`` and so **dropped the entire
+    region** whenever that happened — a whole ecoregion silently leaving the
+    layer to fix a defect a few metres wide. Keep the area, discard the threads.
+    """
+    from shapely.ops import unary_union
+
+    if geom is None or geom.is_empty:
+        return geom
+    if geom.geom_type in ("Polygon", "MultiPolygon"):
+        return geom
+    if geom.geom_type == "GeometryCollection":
+        parts = [g for g in geom.geoms
+                 if g.geom_type in ("Polygon", "MultiPolygon")]
+        if parts:
+            return unary_union(parts)
+    return None
