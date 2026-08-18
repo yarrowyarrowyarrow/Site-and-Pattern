@@ -9,13 +9,18 @@ recorded in, with an occurrence count and a confidence band per region
 list of region names, which asks the reader to hold a map of Alberta and
 Saskatchewan in their head. A range is a *shape*; drawing it costs one SVG.
 
-**These outlines are hand-authored, and the map says so.** They were ten
-five-vertex rectangles until V2.49 traced them against real geography
-(``scripts/draw_ecoregions.py``), and they are still a diagram: the real CEC
-Level III polygons are a download that has never run in a session with open
-egress. An outline drawn without a caption is a claim about a boundary; the
-caption (``CAVEAT``) is what keeps it honest (P9). Replace the file and every
-map here sharpens with no code change.
+**These outlines are surveyed, since V2.67.** They were ten five-vertex
+rectangles, then six shapes traced against the geography by hand
+(``scripts/draw_ecoregions.py``, now dead weight kept only for its history),
+and they are now the National Ecological Framework for Canada v2.2 clipped to
+Alberta and Saskatchewan — twenty-four ecoregions in six ecozones, built by
+``tools/ecoregions/`` and adopted with no change to this file, because since
+V2.38 the polygon file *is* the vocabulary.
+
+An outline drawn without a caption is still a claim about a boundary, so
+``CAVEAT`` stays (P9) — but what it has to say changed with the data, and
+saying the old thing about the new file is its own failure. See the note on
+the constant.
 
 **What a colour asserts lives next door**, in :mod:`src.ecoregion_palette`, and
 is re-exported here so a caller keeps one import for "the ecoregions, drawn".
@@ -370,6 +375,18 @@ def _short(name: str) -> str:
 
 
 #: The one sentence that has to travel with every drawing of this file.
-CAVEAT = ("Approximate extents, not surveyed boundaries: the regions are "
-          "hand-traced against the geography, not digitised from a survey. "
-          "Occurrence counts are real; the outlines are a diagram.")
+#:
+#: V2.68: this said "Approximate extents, not surveyed boundaries ... the
+#: outlines are a diagram" for as long as the outlines *were* a diagram. V2.67
+#: replaced them with the surveyed layer and did not come back here, so 432
+#: species pages and the map page spent an increment disclaiming data that had
+#: become better than the disclaimer. Understating a source is not the safe
+#: direction of error it looks like: a reader who is told the outline is a
+#: sketch has no reason to trust it where it matters, at the edge.
+#:
+#: What is still worth saying is the simplification, because that is the one
+#: way this drawing differs from the survey it comes from.
+CAVEAT = ("Boundaries digitised from the National Ecological Framework for "
+          "Canada v2.2 (Ecological Stratification Working Group 1995), "
+          "simplified to about 900 m for display: an outline is accurate to "
+          "roughly a kilometre, not to the metre.")

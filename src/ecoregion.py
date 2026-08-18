@@ -272,7 +272,7 @@ MOISTURE_NICHES: list[tuple[str, str, str]] = [
 # from the National Ecological Framework, grouped by ecozone in display order.
 _FALLBACK_GEOGRAPHIC: list[tuple[str, str, str]] = [
     # Prairies
-    ("aspen_parkland", "Aspen Parkland", "south AB / SK"),
+    ("aspen_parkland", "Aspen Parkland", "central AB / SK"),
     ("cypress_upland", "Cypress Upland", "south AB / SK"),
     ("fescue_grassland", "Fescue Grassland", "south AB"),
     ("mixed_grassland", "Mixed Grassland", "south AB / SK"),

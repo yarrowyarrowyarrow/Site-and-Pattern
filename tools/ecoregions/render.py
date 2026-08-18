@@ -33,6 +33,7 @@ possible when the two lists are maintained separately.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from tools.ecoregions.common import (CRS_PROJECTED, CRS_WGS84, DATA, OUT, REPO,
@@ -120,7 +121,18 @@ def _load_regions(from_shipped: bool):
         # The shipped file names the region in `key`; the real one uses
         # `ecoregion`. Normalise so one drawing routine serves both.
         gdf = gdf.rename(columns={"key": "ecoregion"})
-        return gdf, True
+        # V2.68: this used to `return gdf, True` — "from shipped" was taken to
+        # mean "placeholder", which was true for as long as the shipped file
+        # held six hand-traced shapes and false from V2.67 onward. It stamped
+        # PLACEHOLDER across a map of the surveyed layer. The file says which
+        # it is, in the provenance line the pipeline writes into it, so ask it
+        # rather than inferring from which flag got passed.
+        try:
+            with open(path, encoding="utf-8") as handle:
+                provenance = (json.load(handle) or {}).get("comment") or ""
+        except (OSError, ValueError):
+            provenance = ""
+        return gdf, "digitised" not in provenance.lower()
     if not GPKG.exists():
         raise SystemExit(
             f"{GPKG} does not exist.\n"
@@ -139,6 +151,11 @@ def _colour_for(name: str, zone: str) -> str:
     from src.ecoregion_palette import elc_fill                 # noqa: PLC0415
 
     return elc_fill(name, zone)
+
+
+#: Legend rows the bottom margin has room for before the caption starts. The
+#: legend widens past this rather than growing down into the credit.
+_LEGEND_ROWS = 6
 
 
 def _draw_legend(ax, used: dict, hatched: set, zones: dict) -> None:
@@ -161,9 +178,16 @@ def _draw_legend(ax, used: dict, hatched: set, zones: dict) -> None:
                     else _display(name))
         for name in order
     ]
+    # Columns chosen from the entry count, not fixed at three. Three was tuned
+    # against the six placeholder regions; the surveyed layer has twenty-four,
+    # which is eight rows, and eight rows of legend ran straight through the
+    # provenance caption underneath — losing the last row of names and the
+    # first line of the source credit together. Six rows is the budget the
+    # bottom margin is set for, so widen instead of growing downward.
+    ncol = max(3, -(-len(handles) // _LEGEND_ROWS))
     ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, -0.02),
-              ncol=3, frameon=False, fontsize=7, handlelength=1.6,
-              handleheight=1.1, borderaxespad=0.0)
+              ncol=ncol, frameon=False, fontsize=7, handlelength=1.6,
+              handleheight=1.1, borderaxespad=0.0, columnspacing=1.2)
 
 
 def _display(name: str) -> str:

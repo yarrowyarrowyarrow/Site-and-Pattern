@@ -202,12 +202,20 @@ class TestPlantPanelSmoke(unittest.TestCase):
         for attr in ("_type_combo", "_sun_combo", "_water_combo",
                      "_use_combo", "_rarity_combo", "_ecoregion_combo"):
             self.assertIsInstance(getattr(self._panel, attr), CheckableComboBox)
-        # The ecoregion combo drops the "Any ecoregion" sentinel — it has one
-        # row per real region, driven by its placeholder for "any".
-        from src.plant_panel import _AB_ECOREGION_CHOICES
-        n_regions = sum(1 for _lbl, key in _AB_ECOREGION_CHOICES if key)
+        # The ecoregion combo drops the "Any ecoregion" sentinel — its
+        # placeholder covers "any". Since V2.67 it is a three-level tree rather
+        # than a flat list, so it carries a row per ecozone, per ecoregion and
+        # per Alberta subregion; the flat count it used to assert would now be
+        # asserting that the tree had not been built.
+        from src.ecoregion import MOISTURE_NICHES, geographic_keys
+        from src.ecoregion_tree import ecozones, regions_in, subregions_in
+        expected = (len(ecozones()) + len(geographic_keys())
+                    + sum(len(subregions_in(region))
+                          for zone, _n in ecozones()
+                          for region, _rn in regions_in(zone))
+                    + len(MOISTURE_NICHES))
         self.assertEqual(self._panel._ecoregion_combo.model().rowCount(),
-                         n_regions)
+                         expected)
 
     def _set_checked(self, combo, keys):
         """Check exactly ``keys`` in ``combo`` (clearing others) — order-safe."""
@@ -343,3 +351,105 @@ class TestPlantPanelSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTheEcoregionFilterIsATree(unittest.TestCase):
+    """Three levels, collapsed to six (V2.67).
+
+    The surveyed vocabulary is 24 ecoregions and 21 Alberta subregions. In one
+    flat list that is the menu the author asked not to have: *"tabs, subtabs and
+    subsubtabs to account for the 3 levels. This way we don't have one
+    overwhelming menu with 24 items."*
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from PyQt6.QtWidgets import QApplication
+        except ImportError as exc:                                # pragma: no cover
+            raise unittest.SkipTest(f"PyQt6 not installed: {exc}")
+        # A NAME, not an empty list: the first QApplication built in a process
+        # wins for the whole process, and one built as QApplication([]) makes
+        # the next QWebEngineView abort. See CLAUDE.md.
+        cls.app = QApplication.instance() or QApplication(["tests"])
+
+    def _combo(self):
+        from src.filter_widgets import (CheckableComboBox,
+                                        build_ecoregion_tree)
+        combo = CheckableComboBox(placeholder="Restoring toward…")
+        build_ecoregion_tree(combo)
+        return combo
+
+    def _visible(self, combo):
+        model = combo.model()
+        return [model.item(i) for i in range(model.rowCount())
+                if not combo.view().isRowHidden(i)]
+
+    def _item(self, combo, key):
+        from PyQt6.QtCore import Qt
+        model = combo.model()
+        for i in range(model.rowCount()):
+            if model.item(i).data(Qt.ItemDataRole.UserRole) == key:
+                return model.item(i)
+        raise AssertionError(f"no row for {key}")
+
+    def test_it_opens_showing_six_systems_and_the_two_niches(self):
+        combo = self._combo()
+        self.assertEqual(len(self._visible(combo)), 8)
+
+    def test_every_level_is_present_in_the_model(self):
+        """Collapsed is not absent: the rows exist and are only hidden, so a
+        filter the user set and then collapsed is still set."""
+        combo = self._combo()
+        self.assertGreater(combo.model().rowCount(), 100)
+
+    def test_opening_a_system_reveals_its_regions(self):
+        combo = self._combo()
+        before = len(self._visible(combo))
+        combo._set_expanded(self._item(combo, "zone_boreal_plains"), True)
+        after = self._visible(combo)
+        self.assertGreater(len(after), before)
+        self.assertIn("mid_boreal_uplands",
+                      [i.data(0x0100) for i in after])
+
+    def test_closing_a_system_hides_the_whole_subtree(self):
+        """Not one level. Re-opening a branch must not surface grandchildren
+        the user had already collapsed."""
+        combo = self._combo()
+        zone = self._item(combo, "zone_boreal_plains")
+        combo._set_expanded(zone, True)
+        combo._set_expanded(self._item(combo, "mid_boreal_uplands"), True)
+        combo._set_expanded(zone, False)
+        self.assertEqual(len(self._visible(combo)), 8)
+        combo._set_expanded(zone, True)
+        keys = [i.data(0x0100) for i in self._visible(combo)]
+        self.assertNotIn("sub_central_mixedwood", keys)
+
+    def test_a_parent_row_shows_a_disclosure_marker(self):
+        combo = self._combo()
+        zone = self._item(combo, "zone_boreal_plains")
+        self.assertTrue(zone.text().lstrip().startswith("▸"))
+        combo._set_expanded(zone, True)
+        self.assertTrue(zone.text().lstrip().startswith("▾"))
+
+    def test_a_moisture_niche_is_flat(self):
+        """`riparian` is a condition, not a place. It sits inside every
+        ecozone, so nesting it under one would say something false."""
+        from src.filter_widgets import DEPTH_ROLE
+        self.assertEqual(self._item(self._combo(), "riparian").data(DEPTH_ROLE), 0)
+
+    def test_the_summary_shows_the_bare_label_not_the_indented_one(self):
+        combo = self._combo()
+        combo.set_checked_keys(["mid_boreal_uplands"])
+        self.assertEqual(combo.lineEdit().text(), "Mid-Boreal Uplands")
+
+    def test_checking_a_system_is_one_key_that_expands_at_query_time(self):
+        """Checking an ecozone stays one checked row — the search expands it.
+        Auto-checking 27 descendants would make the summary read "27 selected"
+        for one click and lose which choice the user actually made."""
+        from src.ecoregion_tree import expand_for_filter
+        combo = self._combo()
+        combo.set_checked_keys(["zone_boreal_plains"])
+        self.assertEqual(combo.checked_keys(), ["zone_boreal_plains"])
+        self.assertIn("mid_boreal_uplands",
+                      expand_for_filter(combo.checked_keys()))

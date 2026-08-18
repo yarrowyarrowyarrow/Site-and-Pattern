@@ -63,6 +63,22 @@ TARGET = REPO / "data" / "ecoregions_canada.geojson"
 _ZONE_ORDER = ("Prairies", "Boreal Plains", "Boreal Shield", "Taiga Plains",
                "Taiga Shield", "Montane Cordillera")
 
+#: A subregion piece smaller than this share of *both* the ecoregion it sits in
+#: and the subregion it belongs to loses its subregion label.
+#:
+#: Two independently digitised layers do not agree along their edges, so
+#: intersecting them produces slivers that are artefacts of the mismatch rather
+#: than facts about the ground. The first adoption carried 44 pieces under
+#: 500 km2 out of 115, including **Aspen Parkland x Subalpine at 17.6 km2** —
+#: the parkland does not contain subalpine, that is two boundaries missing each
+#: other by a few hundred metres over a long shared edge.
+#:
+#: The geometry is kept and only the *label* is dropped, so the piece merges
+#: back into its ecoregion. Deleting the sliver instead would punch a hole in
+#: the layer and fail the coverage check for a good reason: the ground is still
+#: there, it is the claim about it that was never real.
+_MIN_SUBREGION_SHARE = 0.01
+
 
 def slug(name: str) -> str:
     """``"Mid-Boreal Uplands"`` -> ``"mid_boreal_uplands"``.
@@ -77,13 +93,20 @@ def slug(name: str) -> str:
 def _where(geometry, province_hint: str) -> str:
     """A short place hint for the dropdown's second line.
 
-    Derived from the polygon's own centroid rather than written by hand, so
-    twenty-four of them cannot quietly disagree with the geometry. Coarse on
-    purpose: this is the line under the name in a filter list, not a locality.
+    Derived from the geometry rather than written by hand, so twenty-four of
+    them cannot quietly disagree with the map. Coarse on purpose: this is the
+    line under a name in a filter list, not a locality.
+
+    **Computed for the whole region, never one piece of it.** Each ecoregion is
+    exported as several polygons (one per Alberta subregion), the app
+    de-duplicates the vocabulary by key and keeps the *first* piece's label, and
+    the first piece is whichever happened to sort first. Aspen Parkland — which
+    arcs from Calgary through Edmonton and east past North Battleford — came out
+    labelled "south AB / SK" because a southern fragment led the list.
     """
-    lon, lat = geometry.centroid.x, geometry.centroid.y
-    north = "north" if lat >= 55.5 else "central" if lat >= 51.5 else "south"
-    return f"{north} {province_hint}" if province_hint else north
+    lat = geometry.centroid.y
+    band = "north" if lat >= 55.5 else "central" if lat >= 51.5 else "south"
+    return f"{band} {province_hint}" if province_hint else band
 
 
 def _provinces_for(geom, provinces) -> str:
@@ -93,6 +116,41 @@ def _provinces_for(geom, provinces) -> str:
     hit = [code for code, shape in provinces.items()
            if geom.intersects(shape) and geom.intersection(shape).area > 1e-4]
     return " / ".join(sorted(hit))
+
+
+def _drop_sliver_subregions(regions):
+    """Blank ``ab_subregion`` on pieces too small to be a real claim.
+
+    Reported rather than silent: how many labels a boundary mismatch invented
+    is worth knowing, and it is the number that would change if either source
+    were re-digitised.
+    """
+    from tools.ecoregions.common import CRS_PROJECTED             # noqa: PLC0415
+
+    regions = regions.copy()
+    regions["_km2"] = regions.to_crs(CRS_PROJECTED).area / 1e6
+    by_region = regions.groupby("ecoregion")["_km2"].sum()
+    labelled = regions["ab_subregion"].fillna("").astype(bool)
+    by_sub = regions[labelled].groupby("ab_subregion")["_km2"].sum()
+
+    dropped = []
+    for idx, row in regions.iterrows():
+        sub = str(row.get("ab_subregion") or "")
+        if not sub:
+            continue
+        region_share = row["_km2"] / max(by_region.get(row["ecoregion"], 1.0), 1e-9)
+        sub_share = row["_km2"] / max(by_sub.get(sub, 1.0), 1e-9)
+        if region_share < _MIN_SUBREGION_SHARE and sub_share < _MIN_SUBREGION_SHARE:
+            dropped.append((row["ecoregion"], sub, row["_km2"]))
+            regions.at[idx, "ab_subregion"] = ""
+    if dropped:
+        print(f"  {len(dropped)} sliver subregion label(s) dropped as edge "
+              f"artefacts (geometry kept):")
+        for name, sub, km2 in sorted(dropped, key=lambda d: d[2])[:6]:
+            print(f"      {km2:8.1f} km2  {name} x {sub}")
+        if len(dropped) > 6:
+            print(f"      ... and {len(dropped) - 6} more")
+    return regions.drop(columns=["_km2"])
 
 
 def build(*, dry_run: bool = False) -> int:
@@ -112,14 +170,19 @@ def build(*, dry_run: bool = False) -> int:
                    & base["subject"].fillna(False).astype(bool)]
     provinces = {row["code"]: row.geometry for _, row in subject.iterrows()}
 
+    regions = _drop_sliver_subregions(regions)
+
     # One feature per (ecoregion, subregion) piece, as exported. The app
     # de-duplicates by key, so several pieces of one region is fine and is how
     # the old file already worked.
-    features, seen = [], {}
+    features, seen, where_for = [], {}, {}
     merged = regions.dissolve(by="ecoregion", as_index=False)
     for _, row in merged.iterrows():
         name = str(row["ecoregion"])
         seen[name] = str(row.get("ecozone") or "")
+        # One label per region, from the region's whole geometry.
+        where_for[name] = _where(row.geometry,
+                                 _provinces_for(row.geometry, provinces))
     for _, row in regions.iterrows():
         name = str(row["ecoregion"])
         zone = str(row.get("ecozone") or "")
@@ -132,8 +195,7 @@ def build(*, dry_run: bool = False) -> int:
             "properties": {
                 "key": slug(name),
                 "name": name,
-                "where": _where(row.geometry, _provinces_for(row.geometry,
-                                                            provinces)),
+                "where": where_for.get(name, ""),
                 "sort": order * 100 + sorted(seen).index(name),
                 "ecozone": zone,
                 "ab_subregion": str(row.get("ab_subregion") or ""),
@@ -224,10 +286,17 @@ def _next_steps() -> str:
         "     derived range under the new keys and the filter says so honestly",
         "     rather than guessing.",
         "",
-        "  2. The ab_ecoregion tags in data/plants_master.json still name the",
-        "     old six regions. They are the fallback the derived rows override,",
-        "     so they go stale rather than wrong - but they should be cleared or",
-        "     re-derived once step 1 has run.",
+        "  2. Move the ab_ecoregion tags in data/plants_master.json onto the",
+        "     new vocabulary - BY MEASUREMENT, never by matching the names:",
+        "         python scripts/migrate_ecoregion_tags.py --report",
+        "         python scripts/migrate_ecoregion_tags.py",
+        "     --report prints the mapping and writes nothing; run it first.",
+        "     It intersects each old polygon with the new layer and keeps the",
+        "     claim at the level that actually accounts for it - the ecoregion,",
+        "     else the ecozone, else nothing. Do not skip to writing the",
+        "     mapping out by hand: V2.67's plan did exactly that and got one of",
+        "     its four 'obvious renames' right. Three of the six old regions",
+        "     were MISPLACED rather than merely coarse.",
         "",
         "  3. Bump _SCHEMA_VERSION in src/db/plants.py, or no existing install",
         "     ever reseeds and none of this reaches a user.",
@@ -235,6 +304,12 @@ def _next_steps() -> str:
         "  4. Run the suite. The city lookups in tests/test_ecoregion.py are",
         "     calibrated against the old rectangles and will need updating to",
         "     the real answers - which stage 4 has already verified.",
+        "",
+        "  5. Check what the drawings SAY about themselves. src.ecoregion_map",
+        "     .CAVEAT travels with every map on the website, and it spent all",
+        "     of V2.67 calling this surveyed layer hand-traced. Its test now",
+        "     compares it against this file's own provenance line, so a future",
+        "     source change fails loudly instead of publishing a stale claim.",
         "=" * 74,
     ])
 

@@ -649,12 +649,36 @@ class TestEveryRegionHasItsOwnColour(unittest.TestCase):
             self.assertTrue(ref.startswith("#"),
                             f"url({ref}) leaves the document")
 
-    def test_the_caveat_says_the_outlines_are_not_boundaries(self):
-        """The polygons are hand-traced. An outline without this caption is a
-        claim about a boundary."""
+    def test_the_caveat_describes_the_polygons_that_actually_ship(self):
+        """An outline without a caption is a claim about a boundary — but the
+        caption has to match the file, in both directions.
+
+        This test used to assert the words "not surveyed boundaries", and it
+        passed for a whole increment after V2.67 made that false: the caption
+        was still calling the surveyed layer a hand-traced diagram on 432
+        public pages. So it now checks the claim against the polygon file's own
+        provenance rather than against a remembered string, and fails whichever
+        way the two drift apart."""
+        import json
+
         from src.ecoregion_map import CAVEAT
-        self.assertIn("Approximate extents", CAVEAT)
-        self.assertIn("not surveyed boundaries", CAVEAT)
+        from src.resources import resource_path
+
+        with open(resource_path("data", "ecoregions_canada.geojson"),
+                  encoding="utf-8") as handle:
+            provenance = (json.load(handle).get("comment") or "")
+
+        surveyed = "digitised" in provenance.lower()
+        self.assertIs(surveyed, "digitised" in CAVEAT.lower(),
+                      "the caption and the file disagree about whether these "
+                      "outlines come from a survey")
+        if surveyed:
+            self.assertIn("simplified", CAVEAT.lower(),
+                          "the export simplifies; that is the one way the "
+                          "drawing differs from its source and it must be said")
+            for stale in ("hand-traced", "not surveyed", "is a diagram"):
+                self.assertNotIn(stale, CAVEAT.lower(),
+                                 f"{stale!r} understates a surveyed layer")
 
     def test_a_missing_polygon_file_degrades_to_nothing(self):
         """A map is an illustration. Losing it must not take a page down."""
@@ -910,3 +934,84 @@ class TestMultiPolygonRegionsAreFound(unittest.TestCase):
         self.eco.geographic_ecoregions.cache_clear()
         self.assertIn("aspen_parkland",
                       [k for k, _n, _w in self.eco.geographic_ecoregions()])
+
+
+class TestTheVocabularyHasThreeLevels(unittest.TestCase):
+    """ecozone -> ecoregion -> Alberta subregion (V2.67).
+
+    Twenty-four ecoregions is too many for one dropdown, and the three levels
+    were already in the data — the polygon file has carried the ecozone and the
+    Alberta subregion on every feature since adoption, and nothing had ever
+    offered them.
+    """
+
+    def setUp(self):
+        from src import ecoregion_tree
+        self.t = ecoregion_tree
+
+    def test_the_top_level_is_six_not_twenty_four(self):
+        """The whole point: the first choice a user makes is six-way."""
+        self.assertEqual(len(self.t.ecozones()), 6)
+
+    def test_every_ecoregion_hangs_off_exactly_one_ecozone(self):
+        from src.ecoregion import geographic_keys
+        placed = [key for zone, _n in self.t.ecozones()
+                  for key, _rn in self.t.regions_in(zone)]
+        self.assertEqual(sorted(placed), sorted(geographic_keys()))
+        self.assertEqual(len(placed), len(set(placed)),
+                         "a region was filed under two ecozones")
+
+    def test_alberta_subregions_are_reachable(self):
+        """Dry Mixedgrass and Northern Fescue have been in the data since
+        adoption and in no dropdown ever."""
+        names = {name for _z, _zn, _l, regions in
+                 [(a, b, c, d) for a, b, c, d in self.t.tree()]
+                 for _rk, _rn, _l2, subs in regions
+                 for _sk, name in [(s[0], s[1]) for s in subs]}
+        self.assertIn("Dry Mixedgrass", names)
+        self.assertIn("Northern Fescue", names)
+
+    def test_saskatchewan_regions_carry_no_subregions(self):
+        """Alberta publishes a subregion layer and Saskatchewan does not. The
+        asymmetry is honest; inventing the missing half would not be."""
+        self.assertEqual(self.t.subregions_in("churchill_river_upland"), [])
+
+    # ── the name collision the rebuild brief predicted ──────────────────
+    def test_the_two_athabasca_plains_are_different_keys(self):
+        """"Athabasca Plain" is an ELC ecoregion on the Boreal Shield AND an
+        Alberta natural subregion, and they are different ground. The brief
+        warned about this pair; the first version of this module collided them
+        anyway by slugging both to the same string."""
+        self.assertEqual(self.t.level_of("athabasca_plain"), self.t.ECOREGION)
+        self.assertEqual(self.t.level_of("sub_athabasca_plain"),
+                         self.t.SUBREGION)
+
+    def test_a_lineage_never_leaves_its_own_ecozone(self):
+        """The symptom the collision produced: asking for the lineage of a
+        Boreal Plains ecoregion returned a Boreal Shield one, by walking down
+        to a subregion and back up the wrong parent."""
+        for key in ("mid_boreal_uplands", "wabasca_lowland", "peace_lowland"):
+            zones = {k for k in self.t.lineage_keys(key)
+                     if self.t.level_of(k) == self.t.ECOZONE}
+            self.assertEqual(zones, {"zone_boreal_plains"},
+                             f"{key} reached outside its own ecozone")
+
+    # ── matching runs along a lineage, both ways ────────────────────────
+    def test_a_region_matches_its_ecozone(self):
+        self.assertIn("zone_boreal_plains",
+                      self.t.lineage_keys("mid_boreal_uplands"))
+
+    def test_an_ecozone_matches_the_regions_inside_it(self):
+        keys = self.t.lineage_keys("zone_boreal_plains")
+        self.assertIn("mid_boreal_uplands", keys)
+        self.assertIn("peace_lowland", keys)
+
+    def test_a_moisture_niche_passes_through_untouched(self):
+        """`riparian` is a condition, not a place, so it has no lineage to
+        walk and must not be silently dropped by the expansion."""
+        self.assertEqual(self.t.expand_for_filter(["riparian"]), ["riparian"])
+
+    def test_expansion_is_deduplicated(self):
+        keys = self.t.expand_for_filter(["zone_boreal_plains",
+                                         "mid_boreal_uplands"])
+        self.assertEqual(len(keys), len(set(keys)))

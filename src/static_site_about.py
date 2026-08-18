@@ -116,9 +116,10 @@ anything.</p>
   <li><strong>Photographs are credited or absent.</strong> {s['with_photo']} of
   {s['species']} species have an openly-licensed photograph we can attribute.
   The rest show none.</li>
-  <li><strong>The maps are diagrams.</strong> The region outlines are
-  hand-traced against the geography, not digitised from a survey. The counts
-  inside them are real.</li>
+  <li><strong>The region outlines are surveyed.</strong> They come from the
+  National Ecological Framework for Canada v2.2, simplified to about 900 m for
+  display, so an outline is accurate to roughly a kilometre rather than to the
+  metre. Until recently they were hand-traced and this page said so.</li>
 </ul>
 
 <h2>What it does not contain</h2>

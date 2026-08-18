@@ -314,7 +314,8 @@ class TestTwoLineFacetItems(unittest.TestCase):
 
     def test_many_selections_summarise_rather_than_clip(self):
         combo = self._combo()
-        combo.set_checked_keys(["aspen_parkland", "moist_mixedgrass", "riparian"])
+        combo.set_checked_keys(["aspen_parkland", "moist_mixed_grassland",
+                        "riparian"])
         self.assertEqual(combo.lineEdit().text(), "3 selected")
         # …but the full list stays reachable.
         self.assertIn("Moist Mixed Grassland", combo.lineEdit().toolTip())

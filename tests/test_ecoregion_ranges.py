@@ -39,17 +39,56 @@ from src import ecoregion_ranges as R                     # noqa: E402
 # threshold rules are tested on their own rather than through Alberta.
 def _fake_lookup(lat, lng):
     if lat >= 100:                      # the overlap band
-        return ["aspen_parkland", "subalpine_montane"]
+        return ["aspen_parkland", "western_alberta_upland"]
     if lat >= 50:
         return ["aspen_parkland"]
     if lat >= 10:
-        return ["boreal_mixedwood"]
+        return ["mid_boreal_uplands"]
     return []                            # outside coverage
+
+
+def _shipped_ranges_are_stale():
+    """True while ``data/plant_ecoregions.json`` is keyed to a retired
+    vocabulary — the transitional state after a survey lands and before
+    ``scripts/seed_ecoregion_ranges.py`` has been re-run against it.
+
+    This is a **precondition**, not a bug, and it has exactly one alarm:
+    ``TestTheShippedEnvelope.test_every_derived_key_is_a_real_geographic_
+    ecoregion``, which stays RED for the whole window and names the command.
+    Tests that merely need *some* species to have a live range skip on this
+    instead, so one stale input reports as one failure rather than a dozen —
+    a suite where a dozen reds are "expected" is a suite nobody reads.
+
+    The condition clears itself: re-run the derivation and every skip below
+    turns back into a real assertion with no edit here.
+    """
+    import pathlib
+
+    from src.ecoregion import geographic_keys
+
+    path = (pathlib.Path(__file__).resolve().parent.parent
+            / "data" / "plant_ecoregions.json")
+    if not path.exists():
+        return False
+    try:
+        with open(path, encoding="utf-8") as handle:
+            species = (json.load(handle) or {}).get("species") or {}
+    except (OSError, ValueError):
+        return False
+    valid = set(geographic_keys())
+    return any(row.get("ecoregion") not in valid
+               for rows in species.values() for row in rows)
+
+
+_STALE_RANGES = _shipped_ranges_are_stale()
+_STALE_WHY = ("data/plant_ecoregions.json is still keyed to the retired "
+              "ecoregion vocabulary. Re-run:  python "
+              "scripts/seed_ecoregion_ranges.py")
 
 
 def _points(**counts):
     """``_points(aspen_parkland=5)`` → five points inside that region."""
-    lat_for = {"aspen_parkland": 60.0, "boreal_mixedwood": 20.0,
+    lat_for = {"aspen_parkland": 60.0, "mid_boreal_uplands": 20.0,
                "nowhere": 0.0, "overlap": 100.0}
     out = []
     for region, n in counts.items():
@@ -76,11 +115,11 @@ class TestTheThreshold(unittest.TestCase):
         """A species sitting at two records somewhere is the case a human
         should look at. A pipeline that only prints what it kept cannot be
         audited."""
-        pts = _points(aspen_parkland=40, boreal_mixedwood=2)
+        pts = _points(aspen_parkland=40, mid_boreal_uplands=2)
         rows = R.ranges_for_species(pts, lookup=_fake_lookup)
         thin = R.dropped_regions(pts, lookup=_fake_lookup)
         self.assertEqual([r["ecoregion"] for r in rows], ["aspen_parkland"])
-        self.assertEqual(thin, {"boreal_mixedwood": 2})
+        self.assertEqual(thin, {"mid_boreal_uplands": 2})
 
     def test_the_threshold_is_adjustable_without_editing_the_rule(self):
         pts = _points(aspen_parkland=2)
@@ -106,11 +145,11 @@ class TestConfidence(unittest.TestCase):
 
     def test_every_derived_row_carries_one(self):
         rows = R.ranges_for_species(
-            _points(aspen_parkland=300, boreal_mixedwood=4),
+            _points(aspen_parkland=300, mid_boreal_uplands=4),
             lookup=_fake_lookup)
         self.assertEqual([(r["ecoregion"], r["confidence"]) for r in rows],
                          [("aspen_parkland", "high"),
-                          ("boreal_mixedwood", "low")])
+                          ("mid_boreal_uplands", "low")])
 
     def test_the_bands_are_ordered_and_named_consistently(self):
         labels = [label for _floor, label in R.CONFIDENCE_BANDS]
@@ -127,7 +166,7 @@ class TestCountingPoints(unittest.TestCase):
         that is in both, and 'first match wins' is the bug being undone."""
         rows = R.ranges_for_species(_points(overlap=10), lookup=_fake_lookup)
         self.assertEqual({r["ecoregion"] for r in rows},
-                         {"aspen_parkland", "subalpine_montane"})
+                         {"aspen_parkland", "western_alberta_upland"})
         self.assertTrue(all(r["occurrences"] == 10 for r in rows))
 
     def test_records_outside_every_region_are_ignored(self):
@@ -138,7 +177,7 @@ class TestCountingPoints(unittest.TestCase):
     def test_commonest_first_then_alphabetical(self):
         """A stable order means a re-run's diff is real change in GBIF, not
         dict ordering."""
-        pts = (_points(aspen_parkland=5) + _points(boreal_mixedwood=5)
+        pts = (_points(aspen_parkland=5) + _points(mid_boreal_uplands=5)
                + _points(overlap=5))
         rows = R.ranges_for_species(pts, lookup=_fake_lookup)
         counts = [r["occurrences"] for r in rows]
@@ -234,7 +273,12 @@ class TestTheDerivationScript(unittest.TestCase):
     # these use real coordinates — which also makes them a check that the two
     # halves of the pipeline agree about Alberta.
     _EDMONTON     = (53.55, -113.49)     # aspen_parkland
-    _FORT_MCMURRAY = (56.73, -111.38)    # boreal_mixedwood
+    # V2.68: was commented `mid_boreal_uplands`, one of the six hand-traced
+    # regions. Under the surveyed layer this point returns TWO keys — it sits
+    # inside Wabasca Lowland and within 5 km of Mid-Boreal Uplands, which
+    # `lookup_ecoregions` reports rather than picking a winner. A yard on a
+    # boundary is genuinely in both, and saying so is the P9 answer.
+    _FORT_MCMURRAY = (56.73, -111.38)    # wabasca_lowland + mid_boreal_uplands
 
     def test_it_drives_the_derivation_per_species(self):
         from scripts.seed_ecoregion_ranges import derive
@@ -256,8 +300,10 @@ class TestTheDerivationScript(unittest.TestCase):
         self.assertEqual(ranges["Amelanchier alnifolia"],
                          [{"ecoregion": "aspen_parkland", "occurrences": 30,
                            "confidence": "high"}])
+        # Both keys the boundary point resolves to are reported as short of
+        # the threshold, and neither is silently collapsed into the other.
         self.assertEqual(dropped["Amelanchier alnifolia"],
-                         {"boreal_mixedwood": 2})
+                         {"wabasca_lowland": 2, "mid_boreal_uplands": 2})
         self.assertEqual(none, ["Nothing recordedii"])
 
     def test_the_saskatoon_berry_case_end_to_end(self):
@@ -314,7 +360,14 @@ class TestSeedingIntoTheCatalogue(unittest.TestCase):
             "Amelanchier alnifolia": [
                 {"ecoregion": "aspen_parkland", "occurrences": 312,
                  "confidence": "high"},
-                {"ecoregion": "boreal_mixedwood", "occurrences": 44,
+                # V2.68: was `boreal_mixedwood`, one of the six hand-traced
+                # regions. It survived here as a fixture value for a whole
+                # increment after the survey retired the key — and the seeder
+                # was rejecting it correctly the entire time, by exactly the
+                # rule the "atlantis" case below exists to prove. A fixture
+                # that names a dead key tests the rejection path twice and the
+                # acceptance path never.
+                {"ecoregion": "mid_boreal_uplands", "occurrences": 44,
                  "confidence": "high"},
             ],
             # A key no polygon defines — must never reach the table, or it
@@ -382,13 +435,13 @@ class TestSeedingIntoTheCatalogue(unittest.TestCase):
     def test_the_derived_range_replaces_the_unsourced_one(self):
         p = self._plant("Amelanchier alnifolia")
         self.assertEqual(p["ecoregion"].split(","),
-                         ["aspen_parkland", "boreal_mixedwood"])
+                         ["aspen_parkland", "mid_boreal_uplands"])
 
     def test_the_evidence_travels_with_the_claim(self):
         p = self._plant("Amelanchier alnifolia")
         rows = p["ecoregion_evidence"]
         self.assertEqual([r["ecoregion"] for r in rows],
-                         ["aspen_parkland", "boreal_mixedwood"])
+                         ["aspen_parkland", "mid_boreal_uplands"])
         self.assertEqual(rows[0]["occurrences"], 312)
         self.assertEqual(rows[0]["confidence"], "high")
         self.assertIn("GBIF", rows[0]["source"])
@@ -460,8 +513,15 @@ class TestSeedingIntoTheCatalogue(unittest.TestCase):
 
     def test_the_filter_still_reads_the_column_for_undeivided_species(self):
         """Species the derivation has not covered must keep filtering on their
-        existing tags — the parkland list must not shrink to one plant."""
-        hits = _plants_mod.search_plants(ecoregion=["moist_mixedgrass"])
+        existing tags — the parkland list must not shrink to one plant.
+
+        V2.68: was `moist_mixedgrass`, which the survey retired. Those 245
+        species now carry `zone_prairies` instead, because the measurement
+        could not put them in one ecoregion (39% Moist Mixed Grassland, 36%
+        Aspen Parkland) but could put 92% of them in one ecozone. That is the
+        heuristic tag resting at the level its evidence supports, and it is
+        the whole reason the ecozone level exists."""
+        hits = _plants_mod.search_plants(ecoregion=["zone_prairies"])
         self.assertGreater(len(hits), 100)
 
     def test_moisture_niches_still_filter(self):
@@ -517,12 +577,26 @@ class TestTheShippedEnvelope(unittest.TestCase):
     def test_every_derived_key_is_a_real_geographic_ecoregion(self):
         """A key outside the polygon vocabulary would be a row no filter can
         select — and riparian/wet_meadow must never appear, since no coordinate
-        can assert wet ground."""
+        can assert wet ground.
+
+        **This is the alarm for a stale derivation, and it is meant to stay red
+        through the whole window** where the polygons have moved and the ranges
+        have not yet been re-derived (see `_shipped_ranges_are_stale`). It is
+        deliberately the ONLY red one: everything downstream skips, so a stale
+        input reports as a single actionable failure rather than a dozen reds
+        that train the reader to stop looking.
+
+        Do not translate the old keys onto the new regions to clear it. Fanning
+        one `boreal_mixedwood` record across nine Boreal Plains ecoregions
+        asserts nine occurrences where the evidence supports one, which is P9
+        failing through the back door. Re-derive."""
         from src.ecoregion import geographic_keys
         valid = set(geographic_keys())
         for name, rows in R.parse_document(self._shipped()).items():
             for row in rows:
-                self.assertIn(row["ecoregion"], valid, name)
+                self.assertIn(row["ecoregion"], valid,
+                              f"{name}: {row['ecoregion']!r} is not a region "
+                              f"any polygon defines. {_STALE_WHY}")
 
     def test_a_populated_file_must_carry_its_provenance(self):
         """The moment it has species in it, it has to say where they came from
@@ -731,19 +805,60 @@ class TestTheFilterAgreesWithTheCard(unittest.TestCase):
             os.remove(_plants_mod._DB_PATH)
         _plants_mod.invalidate_plant_cache()
 
+    @staticmethod
+    def _keys_that_match_something():
+        """Geographic keys the catalogue can actually answer, right now.
+
+        **Not a hard-coded list, and that is the point.** These two tests
+        filtered on `boreal_mixedwood` and `mixedgrass_prairie` for a whole
+        increment after the survey retired those keys, and stayed green the
+        entire time — because a dead key matches nothing, `for p in []` runs
+        no assertions, and `set() | set() == set()`. A test that cannot fail
+        is not evidence.
+
+        Reading the live keys off the data means the vocabulary can move again
+        without quietly hollowing these out, and the floor below catches the
+        case where it moves so far that nothing matches at all.
+        """
+        from src.ecoregion import geographic_keys
+
+        return [key for key in geographic_keys()
+                if _plants_mod.search_plants(ecoregion=[key])]
+
+    @unittest.skipIf(_STALE_RANGES, _STALE_WHY)
+    def test_the_catalogue_can_answer_some_region_at_all(self):
+        """The floor under the two tests below. If this fails, the tag
+        vocabulary and the catalogue have come apart completely."""
+        live = self._keys_that_match_something()
+        self.assertGreaterEqual(
+            len(live), 3,
+            "fewer than three of the geographic regions match any plant — "
+            "either the tags were cleared without being re-derived, or the "
+            "polygon vocabulary moved and nothing followed it")
+
     def test_every_result_claims_the_region_it_was_found_under(self):
-        for key in ("aspen_parkland", "boreal_mixedwood", "mixedgrass_prairie"):
+        from src.ecoregion_tree import lineage_keys
+
+        for key in self._keys_that_match_something():
             for p in _plants_mod.search_plants(ecoregion=[key]):
                 tags = (p.get("ecoregion") or "").split(",")
-                self.assertIn(key, tags,
-                              f"{p['common_name']} came back under {key} but "
-                              f"its range reads {p.get('ecoregion')!r}")
+                # A hit may claim the key itself or anything on its lineage:
+                # a plant tagged only "Prairies" is a legitimate answer to a
+                # Mixed Grassland query. See src/ecoregion_tree.py.
+                self.assertTrue(set(tags) & set(lineage_keys(key)),
+                                f"{p['common_name']} came back under {key} but "
+                                f"its range reads {p.get('ecoregion')!r}")
 
+    @unittest.skipIf(_STALE_RANGES, _STALE_WHY)
     def test_a_multi_select_is_the_union_of_its_parts(self):
-        a = {p["id"] for p in _plants_mod.search_plants(ecoregion=["aspen_parkland"])}
-        b = {p["id"] for p in _plants_mod.search_plants(ecoregion=["boreal_mixedwood"])}
+        live = self._keys_that_match_something()
+        one, two = live[0], live[-1]
+        a = {p["id"] for p in _plants_mod.search_plants(ecoregion=[one])}
+        b = {p["id"] for p in _plants_mod.search_plants(ecoregion=[two])}
         both = {p["id"] for p in _plants_mod.search_plants(
-            ecoregion=["aspen_parkland", "boreal_mixedwood"])}
+            ecoregion=[one, two])}
+        self.assertTrue(a, f"{one} matched nothing")
+        self.assertTrue(b, f"{two} matched nothing")
         self.assertEqual(a | b, both)
 
     def test_a_moisture_niche_still_filters_off_the_column(self):

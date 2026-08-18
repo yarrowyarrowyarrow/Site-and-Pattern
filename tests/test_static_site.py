@@ -407,10 +407,21 @@ class TestTheRenderedSite(unittest.TestCase):
         self.assertEqual(render._nodash("a—b"), "a, b")
 
     def test_every_species_page_carries_its_range_map(self):
+        """The drawing, and the caption that has to travel with it.
+
+        The caption is checked by identity rather than by its opening words:
+        this asserted the literal string "Approximate extents" and so kept
+        passing after V2.67 replaced the hand-traced outlines with a surveyed
+        layer, while the page went on calling them a diagram. Pinning
+        `CAVEAT` itself means the wording can be corrected in one place and
+        the test still guards the thing it cares about, which is that no map
+        reaches a reader without its provenance."""
+        from src.ecoregion_map import CAVEAT
+
         page = (self.out / "plants" / "wild-bergamot" / "index.html").read_text(
             encoding="utf-8")
         self.assertIn("<svg", page)
-        self.assertIn("Approximate extents", page)
+        self.assertIn(render._esc(CAVEAT), page)
 
     def test_the_map_page_exists_and_is_linked_from_every_header(self):
         self.assertIn("map/index.html", self.files)

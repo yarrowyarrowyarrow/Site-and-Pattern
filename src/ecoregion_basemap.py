@@ -148,14 +148,17 @@ SUBJECT_CLIP_ID = "ecomap-subject-clip"
 def subject_clip_defs(project) -> str:
     """A ``<clipPath>`` covering Alberta and Saskatchewan.
 
-    The ecoregion layer classifies two provinces and nothing else, but the
-    polygons do not know that: the hand-traced placeholders run south past the
-    49th parallel into Montana and east past the Saskatchewan/Manitoba border,
-    because they were drawn to cover the provinces rather than to stop at them.
-    Clipping in SVG says the true thing — *this* is the area the layer speaks
-    for — without pretending the polygon underneath is more precise than it is,
-    and without needing a polygon-clipping library in a module that has always
-    been dependency-free.
+    The ecoregion layer classifies two provinces and nothing else, but a
+    polygon does not know where its own authority stops. The hand-traced
+    placeholders ran south past the 49th parallel into Montana and east past
+    the Saskatchewan/Manitoba border, because they were drawn to cover the
+    provinces rather than to stop at them. The surveyed layer that replaced
+    them in V2.67 is clipped to the two provinces at source, so this matters
+    less than it did — but it is still doing work at the edges, where
+    simplification pushes a boundary a few hundred metres the wrong side of a
+    border it is supposed to follow. Clipping in SVG says the true thing —
+    *this* is the area the layer speaks for — without needing a
+    polygon-clipping library in a module that has always been dependency-free.
 
     It stays useful after the real polygons land: a national dataset clipped to
     a provincial window still leaves ragged edges a pixel or two over the line.

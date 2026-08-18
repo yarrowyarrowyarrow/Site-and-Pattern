@@ -76,7 +76,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # controls cannot land here. The next thing that needs a line from this
         # file must extract the placement/polyculture-mix half first, which is
         # roughly 55% of it and has wanted separating since Chunk 4.
-        (_SRC / "plant_panel.py", 1600),               # 1600 now — AT CEILING
+        # V2.68: the ecoregion filter went three-level and took this to 1605,
+        # 5 over. Answered the way this block says to — the tree builder moved
+        # to `filter_widgets.build_ecoregion_tree`, where the widget it drives
+        # already lives. 18 lines of headroom is not a reprieve; the
+        # placement/polyculture-mix extraction above is still the next move.
+        (_SRC / "plant_panel.py", 1600),               # 1582 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
@@ -148,6 +153,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # the transcription was already wrong about Interlake Plain.
         (_SRC / "ecoregion_palette.py", 420),          # 355 now
         (_SRC / "colour_distance.py", 160),            # 105 now
+        # V2.68 — the three-level vocabulary and the tree the filter draws it
+        # with. Opted in on arrival, the V2.41 precedent. The tree logic is
+        # deliberately in `filter_widgets.py` and not in the panel that shows
+        # it: `plant_panel.py` was 5 lines OVER its ceiling with the builder
+        # inline, and the guard's own rule is to extract rather than raise.
+        # Every other multi-select filter in the app already draws itself
+        # through this module, so a second one that wants a hierarchy gets it
+        # for free rather than growing a private copy.
+        (_SRC / "ecoregion_tree.py", 340),             # 282 now
+        (_SRC / "filter_widgets.py", 560),             # 434 now
         (_SRC / "static_site.py", 460),                # 378 now
         (_SRC / "static_site_render.py", 800),         # 744 now
         (_SRC / "static_site_species.py", 340),        # 256 now

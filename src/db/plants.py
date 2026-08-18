@@ -303,7 +303,16 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # `scripts/seed_ecoregion_ranges.py` against the new polygons; until that has
 # run, a species carries no derived range under the new keys and the filter
 # says nothing rather than guessing.
-_SCHEMA_VERSION = 72
+# v73 (V2.68): no DDL — reseed to pick up the migrated `ab_ecoregion` tags in
+# data/plants_master.json. v72 left every heuristic tag pointing at a region
+# that no longer exists; `scripts/migrate_ecoregion_tags.py` moves them by
+# measuring each old polygon against the surveyed layer, never by matching
+# names. Three of the six old keys turned out to be MISPLACED rather than
+# merely coarse (`subalpine_montane`'s best overlap is 19%), so they are
+# cleared rather than mapped: 384 of 432 species keep a tag, 47 lose their
+# last one. A tag that survives now names either a surveyed ecoregion or the
+# ecozone above it, which is the level its evidence actually supported.
+_SCHEMA_VERSION = 73
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

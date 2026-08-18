@@ -56,6 +56,8 @@ from src.plant_facets import (      # noqa: E402  (re-export, not a use)
     _TYPE_LABELS, _DECIDUOUS_LABELS, _LIFECYCLE_LABELS, _MONTH_LABELS,
     _ECOREGION_CHOICES, _ECOREGION_DISPLAY, _AB_ECOREGION_CHOICES,
 )
+from src.ecoregion_tree import expand_for_filter
+from src.filter_widgets import build_ecoregion_tree
 
 # Flower colour (V2.48). Imported rather than restated: the panel, the
 # directory and the website all read one vocabulary.
@@ -305,18 +307,18 @@ class PlantPanel(QWidget):
             "Show only plants you can source from the checked tiers.\n"
             "Leave all unchecked to see everything."
         )
-        # Ecoregion choices are (label, key) tuples with a leading "Any" sentinel
-        # (empty key); the multi-select combo uses its placeholder for "any", so
-        # drop the sentinel and feed the real regions in display order.
-        _eco_labels = {key: lbl for lbl, key in _ECOREGION_CHOICES if key}
+        # Three levels, collapsed to six (V2.67). The surveyed vocabulary has
+        # 24 ecoregions and 21 Alberta subregions, which is not a list anybody
+        # can read: the top level is the six ecozones, and each opens.
         self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
-        for key, lbl in _eco_labels.items():
-            name, where = _ECOREGION_DISPLAY.get(key, (lbl, ""))
-            self._ecoregion_combo.add_check_item(name, key, subtitle=where)
+        build_ecoregion_tree(self._ecoregion_combo)
         self._ecoregion_combo.setStyleSheet(_combo_style)
         self._ecoregion_combo.setToolTip(
-            "Restore toward one or more Alberta ecoregions — shows plants\n"
-            "documented from any of them. Leave unchecked to see everything."
+            "Restore toward one or more ecoregions. Click the arrow to open a\n"
+            "system and see the regions inside it, and again for Alberta's\n"
+            "natural subregions.\n\n"
+            "Checking a system includes everything inside it, so you do not\n"
+            "have to tick them one by one. Leave unchecked to see everything."
         )
         self._ecoregion_combo.selectionChanged.connect(self._on_ecoregion_changed)
         row3.addWidget(self._rarity_combo, 1)
@@ -612,7 +614,12 @@ class PlantPanel(QWidget):
                 edible_only = self._edible_btn.isChecked(),
                 perennial_only = self._perennial_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
-                ab_ecoregion    = self._ecoregion_combo.checked_keys(),
+                # Expanded along the lineage: checking one ecozone has to match
+                # plants tagged with any region inside it, and checking one
+                # region has to match plants only ever tagged at the ecozone.
+                # See src/ecoregion_tree.py for why both directions.
+                ab_ecoregion    = expand_for_filter(
+                    self._ecoregion_combo.checked_keys()),
                 availability_in = self._rarity_combo.checked_keys(),
                 soil_ph         = self._soil_ph,
                 bloom_months    = self._bloom_combo.checked_keys(),
