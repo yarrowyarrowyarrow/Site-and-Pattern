@@ -228,8 +228,8 @@ def _hub_extra(hub: dict, page: dict, model: dict) -> str:
     if shown:
         svg = map_svg(width=460, height=frame_height(460), reference=True,
                       level=shown, within=within, labels=False,
-                      link_for=link, title=caption)
-        key_html = legend_html(link, level=shown, within=within)
+                      numbered=True, link_for=link, title=caption)
+        key_html = legend_html(link, level=shown, within=within, numbered=True)
     else:
         # Saskatchewan has no subregion layer, so the bottom of the drill-down
         # simply is not there. Falling back to "here is where this region is"

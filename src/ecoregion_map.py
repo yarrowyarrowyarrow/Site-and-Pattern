@@ -213,7 +213,7 @@ def map_svg(highlight: Optional[dict] = None, *,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
             link_for=None, reference: bool = False,
-            level: str = "", within: str = "") -> str:
+            level: str = "", within: str = "", numbered: bool = False) -> str:
     """The ecoregion map as inline SVG.
 
     ``level`` and ``within`` draw one level of the vocabulary, optionally
@@ -263,6 +263,24 @@ def map_svg(highlight: Optional[dict] = None, *,
         branch = set(lineage_keys(within))
     context = ({k: v for k, v in region_geometry().items() if k not in branch}
                if within else {})
+    # The focused region itself, drawn UNDER its children.
+    #
+    # Without this a subregion map has a hole in it exactly on the Alberta /
+    # Saskatchewan border, and the hole is a lie. Alberta publishes a natural
+    # subregion layer and Saskatchewan does not, so on a page for an ecoregion
+    # that crosses the border — Mid-Boreal Uplands, Boreal Transition, Athabasca
+    # Plain — the Alberta half is covered by subregion polygons and the
+    # Saskatchewan half is covered by nothing: it is inside the branch, so the
+    # grey context skips it, and it has no subregion, so the focus layer skips
+    # it too. It fell through to the bare province wash and read as *this
+    # ecoregion stops at the provincial boundary*, which is false about every
+    # one of them.
+    #
+    # Drawing the parent first says the true thing: the whole region, with the
+    # subregions that exist mapped on top of it and the rest plainly unmapped.
+    underlay = {}
+    if within and within in region_geometry():
+        underlay = {within: region_geometry()[within]}
     if cities is None:
         cities = width >= 420
     project = _projector(width, height)
@@ -296,6 +314,17 @@ def map_svg(highlight: Optional[dict] = None, *,
             parts.append(f'<polygon class="ecomap-region ecomap-outside" '
                          f'points="{points}" fill="{ABSENT_FILL[0]}" '
                          f'fill-opacity="{ABSENT_FILL[1]}"/>')
+    for parent_key, rings in underlay.items():
+        parent_fill, _op = region_fill(parent_key, "high")
+        parent_name = ecoregion_display(parent_key)[0]
+        for ring in rings:
+            points = " ".join(
+                f"{x:.1f},{y:.1f}" for x, y in
+                (project(float(lon), float(lat)) for lon, lat in ring))
+            parts.append(
+                f'<polygon class="ecomap-region ecomap-parent" '
+                f'points="{points}" fill="{parent_fill}" fill-opacity="0.45">'
+                f'<title>{html.escape(parent_name)}</title></polygon>')
     for key, rings in order:
         band = highlight.get(key)
         present = reference or key in highlight
@@ -365,6 +394,35 @@ def map_svg(highlight: Optional[dict] = None, *,
                 f'class="ecomap-label{" on" if strong else ""}">'
                 f'{html.escape(name)}</text>')
 
+    if numbered:
+        # A numbered disc per region, keyed to the legend.
+        #
+        # **Because the fill cannot carry this and it was measured.** Hue is
+        # the ecozone and lightness the ecoregion inside it, which works for
+        # two or three siblings and collapses at ten: Boreal Transition and
+        # Clear Hills Upland came out ΔE 0.3 apart, the same colour. A search
+        # over lightness, chroma and hue-rotation together found the best
+        # sibling separation that still clears the cross-ecozone colour-vision
+        # floor is ΔE 1.7 — still invisible. Ten regions cannot be told apart
+        # inside one hue family, full stop.
+        #
+        # So identity moves off the fill rather than the family being broken
+        # up, which is the trade the author asked for: *"I dont mean to change
+        # this too drastically as I really like the appearance however it must
+        # be usefully distinguishable."* Numbers are the atlas answer to
+        # exactly this and cost the palette nothing.
+        for index, key in enumerate(numbered_order(level, within), 1):
+            rings = regions.get(key) or []
+            if not rings:
+                continue
+            lon, lat, _angle = _label_point(key, max(rings, key=len))
+            cx, cy = project(lon, lat)
+            parts.append(
+                f'<g class="ecomap-num"><circle cx="{cx:.1f}" cy="{cy:.1f}" '
+                f'r="8.5"/><text x="{cx:.1f}" y="{cy:.1f}" '
+                f'text-anchor="middle" dominant-baseline="central">'
+                f'{index}</text></g>')
+
     parts.append("</svg>")
     return "".join(parts)
 
@@ -430,6 +488,23 @@ def _interior_point(ring: list) -> tuple:
             if gap > best_gap:
                 best, best_gap = (lon, lat), gap
     return best or centre
+
+
+def numbered_order(level: str = "", within: str = "") -> list:
+    """The keys of one map, in the order their numbers run.
+
+    **One function, called by the map and the legend**, for the reason
+    ``hub_slug`` exists: two lists that have to agree, kept in step by hand,
+    do not stay in step. A key numbered 4 on the map and 5 in the legend is
+    worse than no numbers, because the reader has no way to notice.
+
+    Alphabetical by display name, which is the order the legend already read
+    in and the order somebody scanning for a name expects.
+    """
+    from src.ecoregion import ecoregion_display              # noqa: PLC0415
+
+    return sorted(region_geometry(level, within),
+                  key=lambda k: ecoregion_display(k)[0])
 
 
 def _label_point(key: str, ring: list) -> tuple:

@@ -192,7 +192,8 @@ def mix_to_black(hexcolour: str, amount: float) -> str:
 
 
 def legend_html(link_for=None, *, active: str = "",
-                level: str = "", within: str = "") -> str:
+                level: str = "", within: str = "",
+                numbered: bool = False) -> str:
     """The colour key, as HTML rather than SVG.
 
     A key drawn inside the SVG has to survive the map being scaled down to a
@@ -209,9 +210,16 @@ def legend_html(link_for=None, *, active: str = "",
     from src.ecoregion import ecoregion_display                # noqa: PLC0415
     from src.ecoregion_map import region_geometry              # noqa: PLC0415
 
+    # Numbered rows read in the map's numbering order, not the painter's, or
+    # the key would count 1..n down a list whose numbers jumped about.
+    if numbered:
+        from src.ecoregion_map import numbered_order          # noqa: PLC0415
+        ordered = numbered_order(level, within)
+    else:
+        ordered = sorted(region_geometry(level, within),
+                         key=lambda k: DRAW_ORDER.get(k, 50))
     items = []
-    for key in sorted(region_geometry(level, within),
-                      key=lambda k: DRAW_ORDER.get(k, 50)):
+    for position, key in enumerate(ordered, 1):
         fill, _ = region_fill(key, "high")
         name, where = ecoregion_display(key)
         # The swatch is generated from the same REGION_COLOUR entry and the same
@@ -223,7 +231,9 @@ def legend_html(link_for=None, *, active: str = "",
             stroke = mix_to_black(REGION_COLOUR.get(key, _FALLBACK_COLOUR), 0.35)
             swatch = (f"repeating-linear-gradient(45deg,{fill},{fill} 2px,"
                       f"{stroke} 2px,{stroke} 3px)")
-        label = (f'<span class="ecokey-sw" style="background:{swatch}"></span>'
+        pip = (f'<span class="ecokey-n">{position}</span>' if numbered else "")
+        label = (pip
+                 + f'<span class="ecokey-sw" style="background:{swatch}"></span>'
                  f'<span class="ecokey-name">{html.escape(name)}</span>'
                  + (f'<span class="ecokey-where">{html.escape(where)}</span>'
                     if where else ""))

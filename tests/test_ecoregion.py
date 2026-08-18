@@ -15,6 +15,7 @@ expect some of these assertions to need adjustment for boundary cases
 like Calgary (which sits at the prairie-foothills transition).
 """
 
+import html
 import math
 import os
 import sys
@@ -794,6 +795,59 @@ class TestColoursSurviveColourBlindness(unittest.TestCase):
         """Guards the guard. If the adjacency finder returned nothing, every
         assertion below would pass while checking nothing at all."""
         self.assertGreaterEqual(len(_adjacent_pairs()), 6)
+
+    def test_a_focus_map_never_leaves_a_hole_at_the_provincial_border(self):
+        """A subregion map draws its parent ecoregion underneath.
+
+        Alberta publishes a natural subregion layer and Saskatchewan does not.
+        On the page for an ecoregion that crosses the border, the Alberta half
+        was covered by subregion polygons and the Saskatchewan half by nothing
+        at all: inside the branch, so the grey context skipped it; no subregion,
+        so the focus layer skipped it too. It fell through to the bare province
+        wash and drew a hard line down the provincial boundary, which reads as
+        *this ecoregion stops at the border* and is false about every one of
+        them. Reported from a phone: "I notice this split at the AB SK border".
+        """
+        from src.ecoregion_map import map_svg
+        from src.ecoregion_tree import SUBREGION, subregions_in
+
+        crossing = [k for k, _n, where in _eco.geographic_ecoregions()
+                    if "/" in where and subregions_in(k)]
+        self.assertTrue(crossing, "no cross-border region has subregions")
+        for key in crossing:
+            svg = map_svg(width=420, height=280, reference=True,
+                          level=SUBREGION, within=key, labels=False)
+            self.assertIn("ecomap-parent", svg,
+                          f"{key} draws no parent underlay, so its "
+                          f"subregion-less half is a hole")
+
+    def test_numbered_maps_and_their_legends_count_the_same(self):
+        """The number on the map and the number in the key must be the same
+        number. Two orderings kept in step by hand do not stay in step, and a
+        region numbered 4 on one and 5 on the other is worse than no numbers
+        at all because nothing about it looks wrong."""
+        from src.ecoregion_map import map_svg, numbered_order
+        from src.ecoregion_palette import legend_html
+        from src.ecoregion_tree import ECOREGION, ecozones
+
+        for zone, _name in ecozones():
+            order = numbered_order(ECOREGION, zone)
+            if len(order) < 2:
+                continue
+            svg = map_svg(width=460, height=310, reference=True,
+                          level=ECOREGION, within=zone, labels=False,
+                          numbered=True)
+            self.assertEqual(svg.count("ecomap-num"), len(order), zone)
+            key_html = legend_html(level=ECOREGION, within=zone, numbered=True)
+            for position, region in enumerate(order, 1):
+                name = _eco.ecoregion_display(region)[0]
+                pip = f'<span class="ecokey-n">{position}</span>'
+                self.assertIn(pip, key_html, f"{zone}: no pip {position}")
+                # The pip and the name it belongs to must be adjacent in the
+                # markup, which is what proves they are the same row.
+                after = key_html.split(pip, 1)[1]
+                self.assertLess(after.find(html.escape(name)), 400,
+                                f"{zone}: pip {position} is not on {name}")
 
     def test_bordering_regions_separate_by_colour_or_by_hatch(self):
         """Same rule ``tools/ecoregions/validate.py`` holds on the printed map.

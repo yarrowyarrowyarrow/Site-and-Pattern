@@ -163,7 +163,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # whole drill-down, ~60 lines, and it belongs here: this module owns
         # "polygons to SVG", and a separate drill-down module would have to
         # reach into the projector and the ring walker to do the same job.
-        (_SRC / "ecoregion_map.py", 500),              # 458 now
+        # V2.69: 500 -> 580. Numbered keys, and the parent underlay that fixed
+        # the hole a subregion map left on the Alberta/Saskatchewan border.
+        # Both are drawing, which is what this module is for.
+        (_SRC / "ecoregion_map.py", 580),              # 533 now
         (_SRC / "ecoregion_basemap.py", 260),          # 210 now
         # V2.66 took this to 200 adding the hatch, then to 311 adding the ELC
         # palette: the real classification is 24 ecoregions in six ecozones,
@@ -181,7 +184,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # by level would put one question ("what colour is this region?") in
         # three files, which is the drift the shared-dict rule exists to stop.
         (_SRC / "ecoregion_palette.py", 520),          # 474 now
-        (_SRC / "colour_distance.py", 160),            # 105 now
+        # V2.69: 160 -> 200 for `oklch_step` and the OKLab inverse it needs.
+        # Measuring a colour and moving one are the same concern; a module that
+        # can say two fills are ΔE 0.3 apart and cannot propose a better pair
+        # is half a tool.
+        (_SRC / "colour_distance.py", 200),            # 149 now
         # V2.68 — the three-level vocabulary and the tree the filter draws it
         # with. Opted in on arrival, the V2.41 precedent. The tree logic is
         # deliberately in `filter_widgets.py` and not in the panel that shows

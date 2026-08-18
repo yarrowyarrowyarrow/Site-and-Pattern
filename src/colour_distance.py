@@ -103,3 +103,47 @@ def chroma(hexcolour: str) -> float:
     """OKLCH C. Near zero means the colour reads as grey."""
     _, a_axis, b_axis = _oklab(_linear(hexcolour))
     return math.hypot(a_axis, b_axis)
+
+
+def _srgb(oklab) -> str:
+    """OKLab back to an sRGB hex string, clamped into gamut."""
+    lightness_, a_axis, b_axis = oklab
+    long_ = (lightness_ + 0.3963377774 * a_axis + 0.2158037573 * b_axis) ** 3
+    medium = (lightness_ - 0.1055613458 * a_axis - 0.0638541728 * b_axis) ** 3
+    short = (lightness_ - 0.0894841775 * a_axis - 1.2914855480 * b_axis) ** 3
+    linear = (
+        +4.0767416621 * long_ - 3.3077115913 * medium + 0.2309699292 * short,
+        -1.2684380046 * long_ + 2.6097574011 * medium - 0.3413193965 * short,
+        -0.0041960863 * long_ - 0.7034186147 * medium + 1.7076147010 * short,
+    )
+    out = []
+    for channel in linear:
+        channel = min(1.0, max(0.0, channel))
+        srgb = (12.92 * channel if channel <= 0.0031308
+                else 1.055 * channel ** (1 / 2.4) - 0.055)
+        out.append(f"{round(min(1.0, max(0.0, srgb)) * 255):02x}")
+    return "#" + "".join(out)
+
+
+def oklch_step(hexcolour: str, *, lightness_delta: float = 0.0,
+               chroma_scale: float = 1.0, hue_delta: float = 0.0) -> str:
+    """``hexcolour`` moved in OKLCH: lighter/darker, more/less saturated, hue
+    rotated by ``hue_delta`` degrees.
+
+    Added in V2.70 to separate the ecoregions *inside* one ecozone. They were
+    spread along lightness alone, which is one channel shared between as many
+    as ten siblings: Boreal Transition and Clear Hills Upland came out ΔE 0.3
+    apart, which is the same colour. Rotating the hue a few degrees and varying
+    the chroma gives two more channels to spend without pushing any of them far
+    enough to collide with a neighbouring ecozone.
+
+    Out-of-gamut results are clamped per channel rather than rejected: the
+    steps here are small, and a caller measuring the result (which
+    ``ecoregion_palette`` does, against the colour-vision floor) will catch a
+    clamp that mattered.
+    """
+    lightness_, a_axis, b_axis = _oklab(_linear(hexcolour))
+    radius = math.hypot(a_axis, b_axis) * max(0.0, chroma_scale)
+    angle = math.atan2(b_axis, a_axis) + math.radians(hue_delta)
+    return _srgb((min(1.0, max(0.0, lightness_ + lightness_delta)),
+                  radius * math.cos(angle), radius * math.sin(angle)))

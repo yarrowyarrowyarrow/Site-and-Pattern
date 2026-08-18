@@ -360,6 +360,20 @@ ul.ranges li.haskey .ecokey-sw { margin-right: .42rem; }
    this, "Prairies 406 species" and "Aspen Parkland 372 species" read as
    siblings when one contains the other, and the second number looks like it
    should be added to the first. Indentation is the whole fix. */
+/* Numbered keys on a focus map, and the matching pip in the legend.
+   Hue is the ecozone and lightness the ecoregion inside it, which works for two
+   or three siblings and collapses at ten: a search over lightness, chroma and
+   hue-rotation together found the best sibling separation that still clears the
+   cross-ecozone colour-vision floor is deltaE 1.7, which is the same colour. So
+   the number carries identity and the fill keeps saying which system it belongs
+   to. */
+.ecomap-num circle { fill: #fbfaf6; fill-opacity: .92; stroke: #4a4a44;
+                     stroke-width: .9; }
+.ecomap-num text { font: 600 10px/1 system-ui, sans-serif; fill: #23261d; }
+.ecokey-n { display: inline-flex; align-items: center; justify-content: center;
+            width: 1.15rem; height: 1.15rem; margin-right: .3rem; flex: none;
+            border: 1px solid #4a4a44; border-radius: 50%;
+            font-size: .68rem; font-weight: 600; }
 ul.ranges li.eco-zone { margin-top: .6rem; font-weight: 600; }
 ul.ranges li.eco-zone:first-child { margin-top: 0; }
 ul.ranges li.eco-region { margin-left: 1.1rem; }
