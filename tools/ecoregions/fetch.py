@@ -125,6 +125,16 @@ def _manual_instructions(pending: list) -> str:
                 f"{stem}.{ext}" for ext in source.siblings))
         if source.url:
             lines.append(f"      direct   : {source.url}")
+        if source.service:
+            lines.append("      NOT A FILE - this is a live ArcGIS service.")
+            lines.append(f"      service  : {source.service}")
+            lines.append("      get it with:")
+            lines.append(f"          python -m tools.ecoregions.arcgis "
+                         f"{source.service}")
+            lines.append(f"          python -m tools.ecoregions.arcgis "
+                         f"{source.service} \\")
+            lines.append(f"              --layer <id> --out "
+                         f"tools/ecoregions/data/raw/{source.filename}")
         lines.append(f"      landing  : {source.landing}")
         lines.append(f"      publisher: {source.publisher}")
         lines.append(f"      licence  : {source.licence}")

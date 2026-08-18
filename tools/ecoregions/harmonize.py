@@ -183,7 +183,15 @@ def _attach_alberta(regions):
     import geopandas as gpd
     import pandas as pd
 
-    path = _RAW / "alberta_natural_subregions.shp"
+    # Whatever form Alberta arrived in. GeoJSON is what the ArcGIS service
+    # yields, .shp is what a portal download would give, and .gdb is what the
+    # brief expected; pyogrio reads all three, so the only thing that has to
+    # vary is which name we look for.
+    path = next((candidate for candidate in (
+        _RAW / "alberta_natural_subregions.geojson",
+        _RAW / "alberta_natural_subregions.shp",
+        _RAW / "alberta_natural_subregions.gdb",
+    ) if candidate.exists()), _RAW / "alberta_natural_subregions.geojson")
     if not path.exists():
         print("  Alberta subregions absent; ab_subregion column will be blank")
         regions["ab_subregion"] = ""

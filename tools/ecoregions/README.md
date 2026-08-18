@@ -94,11 +94,37 @@ Downloaded 2026-08-17.
 | Shaded relief `SR_HR` | Natural Earth | 2.0 | Public domain | yes (233 MB) |
 | Terrestrial Ecoregions of Canada | AAFC / Ecological Stratification Working Group | National Ecological Framework v2.2 (1995 framework) | Open Government Licence - Canada | **no** |
 | Terrestrial Ecozones of Canada | AAFC / Ecological Stratification Working Group | v2.2 | Open Government Licence - Canada | **no** |
-| Natural Regions and Subregions of Alberta | Alberta Environment and Protected Areas (Natural Regions Committee 2006) | 2005 Final, 1:250 000 | Open Government Licence - Alberta | **no** |
+| Natural Regions and Subregions of Alberta | Alberta Environment and Protected Areas (Natural Regions Committee 2006) | 2005 Final, 1:250 000 | Open Government Licence - Alberta | **no**, and **not a file** - see below |
 
 Natural Earth is fetched from `github.com/nvkelso/natural-earth-vector` and
 `.../natural-earth-raster`, which are the upstream project's own repositories
 rather than a third-party mirror.
+
+### Alberta is a service, not a download
+
+The portal lists four "resources" for the Alberta subregions: an HTML metadata
+page, an XML metadata record, and two ESRI REST endpoints. None of them is a
+file. The layer is published as a live ArcGIS FeatureServer and the supported
+way to get all of it is to query it:
+
+```bash
+python -m tools.ecoregions.arcgis https://geospatial.alberta.ca/titan/rest/services/biota/natural_subregions_alberta_2005/FeatureServer
+# then, with the layer id it printed:
+python -m tools.ecoregions.arcgis <same url> --layer <id> \
+    --out tools/ecoregions/data/raw/alberta_natural_subregions.geojson
+```
+
+The brief anticipated the shape of this — it warned Alberta might arrive as a
+File Geodatabase rather than a shapefile, and said to list the layers before
+assuming. It arrives as neither, which is the same lesson one step further on:
+do not assume the format either.
+
+**Paging is the part that bites.** A feature service caps how many records one
+query returns. Ask for a province of polygons in one request and you get the
+cap, silently, with no error: a valid GeoJSON containing the first thousand
+features and nothing to say the rest exist. `arcgis.py` pages until the server
+stops flagging the transfer limit and then checks the total against the
+service's own count, refusing to write a short file.
 
 `data/` and `out/` are gitignored. The sources are 50-150 MB and a
 full-resolution GeoJSON export can exceed 100 MB.

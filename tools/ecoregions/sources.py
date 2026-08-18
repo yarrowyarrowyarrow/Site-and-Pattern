@@ -46,6 +46,9 @@ class Source:
     manual: bool = False
     #: Extra files that must arrive alongside (shapefile siblings, etc).
     siblings: tuple = field(default_factory=tuple)
+    #: ArcGIS MapServer/FeatureServer URL, when the dataset is published as a
+    #: live service rather than as a downloadable file.
+    service: str = ""
 
 
 #: Natural Earth 1:10m, from the upstream project's own GitHub repositories.
@@ -139,7 +142,7 @@ CLASSIFICATION: tuple = (
     ),
     Source(
         key="ab_subregions",
-        filename="alberta_natural_subregions.shp",
+        filename="alberta_natural_subregions.geojson",
         what="Natural Regions and Subregions of Alberta (the detail layer, "
              "joined spatially as an attribute)",
         url="",
@@ -150,7 +153,14 @@ CLASSIFICATION: tuple = (
         edition="2005 Final, 1:250 000",
         licence="Open Government Licence - Alberta",
         manual=True,
-        siblings=("shx", "dbf", "prj"),
+        # Not a file. Alberta publishes this as a live ArcGIS service; the
+        # portal's four "resources" are an HTML metadata page, an XML metadata
+        # record, and two REST endpoints. `tools.ecoregions.arcgis` queries it
+        # and writes the GeoJSON this expects. The brief warned that Alberta
+        # might arrive as a File Geodatabase rather than a shapefile; it
+        # arrives as neither, which is the same lesson one step further on.
+        service="https://geospatial.alberta.ca/titan/rest/services/biota/"
+                "natural_subregions_alberta_2005/FeatureServer",
     ),
 )
 
