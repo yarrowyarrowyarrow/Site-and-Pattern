@@ -9,11 +9,14 @@ in every column that looks like a classification field.
 
 WHY THIS IS ITS OWN STAGE
 -------------------------------------------------------------------------------
-Because the guesses are always wrong. The rebuild brief guessed ``NSRNAME``,
-``NRNAME``, ``ECOREGION_NAME`` and ``ECOZONE_NAME``, and said so in as many
-words: *"Do not assume field names."* An earlier attempt in this repository
-guessed ``NA_L3NAME`` and ``L3_KEY`` for the CEC shapefile and shipped a key map
-built on them without anyone ever running it against the file.
+Because you cannot tell which guesses are right without looking. The first real
+run settled this: of the rebuild brief's four guesses, ``NSRNAME`` and
+``NRNAME`` were **correct**, while ``ECOREGION_NAME`` and ``ECOZONE_NAME``
+missed — the AAFC files are bilingual and the columns carry an ``_EN`` suffix
+beside a ``_FR`` twin. Fifty per cent, with no way to know which half in
+advance. An earlier attempt in this repository guessed ``NA_L3NAME`` and
+``L3_KEY`` for the CEC shapefile and shipped a key map built on them without
+anyone ever running it against a file.
 
 A field name that does not exist fails loudly. The dangerous case is a field
 that exists and means something else — and that is only caught by looking at the
@@ -25,9 +28,10 @@ Copy the real field names into ``tools/ecoregions/harmonize.py``'s ``FIELDS``
 table. Nothing downstream guesses; ``harmonize`` refuses to run against a column
 it was not told about.
 
-Alberta's subregions may arrive as a File Geodatabase rather than a shapefile.
-This lists the layers of whatever it is given, so ``.gdb`` directories are
-handled the same way as ``.shp`` files.
+This lists the layers of whatever it is given, so a ``.gdb`` directory or the
+GeoJSON that ``tools.ecoregions.arcgis`` writes are handled the same way as a
+``.shp``. Alberta turned out to be the last of those: the province publishes the
+subregions as a live ArcGIS service, not as a file in any format.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from tools.ecoregions.common import DATA, require
+from tools.ecoregions.common import DATA, WINDOW, require
 from tools.ecoregions.sources import ALL, CLASSIFICATION, Source
 
 _RAW = DATA / "raw"
@@ -47,7 +51,14 @@ _INTERESTING = ("name", "nom", "eco", "zone", "region", "subregion", "prov",
                 "nsr", "nr_", "class", "type", "desc", "label", "code")
 
 #: Above this many distinct values a column is an identifier, not a class.
-_MAX_VALUES = 80
+#:
+#: Raised from 80 in V2.66 after the first real run: the national ecoregion
+#: layer has **194** names, so the cap suppressed the single list this stage
+#: exists to produce, printing "looks like an identifier" about the one column
+#: everything downstream is keyed on. A cap that hides the answer is worse than
+#: no cap. Use ``--window`` to see only the names inside the map window, which
+#: is the list you actually want to read.
+_MAX_VALUES = 260
 
 
 def _layers(path):
@@ -91,7 +102,23 @@ def _report_frame(gdf, label: str) -> None:
         print()
 
 
-def inspect_one(source: Source) -> bool:
+def _clip_to_window(gdf):
+    """Only the features inside the Alberta/Saskatchewan map window.
+
+    A national layer reports 194 ecoregions, of which about twenty are in the
+    two provinces this pipeline classifies. Reading the twenty is a job; reading
+    the 194 to find them is a chore that gets skipped.
+    """
+    import geopandas as gpd
+    from shapely.geometry import box
+
+    if gdf.crs is None:
+        return gdf
+    frame = gpd.GeoDataFrame(geometry=[box(*WINDOW)], crs="EPSG:4326")
+    return gdf[gdf.to_crs("EPSG:4326").intersects(frame.geometry.iloc[0])]
+
+
+def inspect_one(source: Source, *, window: bool = False) -> bool:
     import geopandas as gpd
 
     path = _RAW / source.filename
@@ -110,12 +137,17 @@ def inspect_one(source: Source) -> bool:
         except Exception as exc:                              # noqa: BLE001
             print(f"    layer {layer}: could not read - {exc}")
             continue
+        if window:
+            before = len(gdf)
+            gdf = _clip_to_window(gdf)
+            print(f"    (clipped to the map window: {before} -> {len(gdf)} "
+                  f"features)")
         _report_frame(gdf, str(layer))
     return True
 
 
-def run(only: str = "") -> int:
-    require("geopandas", "pyogrio")
+def run(only: str = "", *, window: bool = False) -> int:
+    require("geopandas", "pyogrio", "shapely")
     targets = [s for s in ALL if s.key == only] if only else list(CLASSIFICATION)
     if only and not targets:
         raise SystemExit(f"No source named {only!r}. "
@@ -126,7 +158,7 @@ def run(only: str = "") -> int:
     print()
     missing = 0
     for source in targets:
-        if not inspect_one(source):
+        if not inspect_one(source, window=window):
             missing += 1
         print("-" * 74)
         print()
@@ -143,8 +175,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--source", default="",
                         help="inspect one source by key instead of all")
+    parser.add_argument("--window", action="store_true",
+                        help="report only features inside the Alberta / "
+                             "Saskatchewan map window")
     args = parser.parse_args(argv)
-    return run(args.source)
+    return run(args.source, window=args.window)
 
 
 if __name__ == "__main__":

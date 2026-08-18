@@ -48,21 +48,29 @@ _RAW = DATA / "raw"
 GPKG = OUT / "ecoregions.gpkg"
 CROSSWALK = OUT / "crosswalk.csv"
 
-#: The real column names, filled in from the stage 2 report. Nothing here is a
-#: guess: a key left as "" makes this stage stop and tell you to run stage 2,
-#: rather than quietly picking a column that looks about right.
+#: The real column names, **verified against the actual downloads** by stage 2
+#: on 2026-08-17, not guessed. A key left as "" makes this stage stop and tell
+#: you to run stage 2 rather than quietly picking a column that looks about
+#: right.
 #:
-#: The defaults below are the AAFC National Ecological Framework v2.2 GeoJSON
-#: field names. **Confirm them against your own download** — the whole reason
-#: stage 2 exists is that these rot.
+#: What stage 2 found, and what it says about guessing:
+#:
+#:   * The AAFC ecoregion/ecozone names carry an ``_EN`` suffix, because the
+#:     files are bilingual and ship a ``_FR`` column beside each one. Every
+#:     guess that reached for ``ECOREGION_NAME`` missed by exactly that suffix.
+#:   * Alberta's ``NSRNAME`` and ``NRNAME`` were guessed **correctly** in the
+#:     rebuild brief. Worth recording: the rule is not that guesses are always
+#:     wrong, it is that you cannot tell which ones are without looking.
+#:   * ``ECOREGION_ID`` is 194 distinct across 218 polygons, so it is a
+#:     classification id and not a row id. ``OBJECTID`` is the row id.
 FIELDS = {
     "elc_ecoregion_name": "ECOREGION_NAME_EN",
     "elc_ecoregion_id": "ECOREGION_ID",
     "elc_ecozone_name": "ECOZONE_NAME_EN",
     "elc_ecozone_id": "ECOZONE_ID",
-    #: Alberta: subregion and its parent natural region.
-    "ab_subregion": "",
-    "ab_region": "",
+    # Alberta: subregion (21 values) and its parent natural region (6).
+    "ab_subregion": "NSRNAME",
+    "ab_region": "NRNAME",
 }
 
 
