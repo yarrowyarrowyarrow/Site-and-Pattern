@@ -43,7 +43,14 @@ from src.static_site import TAXON_GROUPS, _first_photo
 #: Plain text, never pre-escaped: everything here goes through ``_esc`` at the
 #: point of use. Storing the entity form instead produced ``&amp;amp;`` in every
 #: page title, because the ``<title>`` path escapes and the header path did not.
-SITE_NAME = "Site & Pattern"
+#: The website's own name, which is NOT the desktop app's.
+#:
+#: The app is Site & Pattern and stays that way: `src/branding.py` owns it, the
+#: installer carries it, and the user data folder is named after it. The public
+#: catalogue got its own domain in V2.70 and is named for what somebody typing
+#: it into a phone is trying to do. Two products from one catalogue, and the
+#: only thing they need to share is the data.
+SITE_NAME = "GrowNativePlants"
 SITE_SUB = "Plant Directory"
 TAGLINE = ("Native plants of Alberta and the Canadian prairies, and the "
            "animals that depend on them.")
@@ -133,8 +140,8 @@ def _page(title: str, description: str, body: str, depth: int,
 <footer class="foot">
   <div class="foot-inner">
     <p class="foot-lede">{_esc(TAGLINE)}</p>
-    <p>Generated from the <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">Site
-    and Pattern</a> catalogue. Photographs are open-licensed and credited
+    <p>Generated from an <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">open
+    catalogue</a> of prairie natives. Photographs are open-licensed and credited
     individually to their photographers. Every other figure carries its source
     on the page it appears on, and where a fact is unknown the page says so
     rather than filling the gap.</p>

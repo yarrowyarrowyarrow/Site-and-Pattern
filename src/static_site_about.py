@@ -14,7 +14,7 @@ deliberately withholds (P12), and — since V2.65 — which works it is citing.
 from __future__ import annotations
 
 from src import citations
-from src.static_site_render import _crumb, _esc, _page
+from src.static_site_render import SITE_NAME, _crumb, _esc, _page
 
 
 #: Bibliography kinds that are a *work* somebody wrote, as opposed to a
@@ -87,13 +87,13 @@ plant relationships, {s['edges']} relationships between them, and
 prairies.</p>
 
 <h2>What it is</h2>
-<p>This is the reference half of <a
-href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">Site and
-Pattern</a>, a desktop application for designing landscapes with native plants:
-lawn-to-habitat conversion, pollinator gardens and ecological restoration. The
-application does the site analysis, the design and the planting plan. These
-pages are its catalogue, published so you can read it without installing
-anything.</p>
+<p>A reference to the native plants of Alberta and the Canadian prairies, and
+the animals that depend on them. It is the catalogue behind <a
+href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">a desktop
+application</a> for designing landscapes with native plants: lawn-to-habitat
+conversion, pollinator gardens and ecological restoration. That application does
+the site analysis, the design and the planting plan; these pages are its
+catalogue, published so you can read it without installing anything.</p>
 
 <h2>What it is honest about</h2>
 <ul>
@@ -103,11 +103,6 @@ anything.</p>
   <li><strong>Evidence travels with the claim.</strong> Recorded ranges carry
   their occurrence counts and a confidence band. A region derived from three
   records is not presented like one derived from three hundred.</li>
-  <li><strong>Flower colour says whether it was checked.</strong> The colour was
-  originally seeded per genus, which put a red flower on the blue columbine.
-  {s['verified_colour']} species now carry a colour checkable against their own
-  common name or Latin epithet and are marked <em>checked</em>; the rest are
-  marked <em>not verified</em> rather than quietly presented as observed.</li>
   <li><strong>Relationships are documented, not inferred.</strong> Every animal
   listed on a plant page comes from a sourced record.</li>
   <li><strong>Grasses and sedges are not yellow.</strong> They are
@@ -149,7 +144,7 @@ would rather it were not here at all, it will be fixed or removed.</p>
 
 <p class="src">Catalogue built {_esc(model["built"])}.</p>
 """
-    return _page("About the Site and Pattern plant catalogue",
+    return _page(f"About the {SITE_NAME} plant catalogue",
                  "How this catalogue is sourced, what it is honest about, and "
                  "what it deliberately does not contain.", body, 1)
 
