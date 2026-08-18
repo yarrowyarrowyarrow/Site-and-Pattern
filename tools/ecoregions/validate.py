@@ -28,7 +28,8 @@ import sys
 from tools.ecoregions.common import CRS_PROJECTED, CRS_WGS84, OUT, require
 from tools.ecoregions.harmonize import GPKG
 from tools.ecoregions.probes import (FORBIDDEN_NAMES,
-                                     MIN_AB_GRASSLAND_SUBREGIONS, PROBES)
+                                     MIN_AB_GRASSLAND_SUBREGIONS, PROBES,
+                                     REQUIRED_ECOREGIONS, REQUIRED_ECOZONES)
 
 #: Combined area of Alberta and Saskatchewan, square kilometres, from Statistics
 #: Canada: 661 848 + 651 036. The union of the classified polygons has to land
@@ -63,6 +64,13 @@ class Result:
 
 
 def _check_probes(regions, result: Result) -> None:
+    """Each probe asserts up to three things, and all three always run.
+
+    The first version put the subregion check after a ``continue`` in the
+    ecoregion success branch, so it only ever ran when the ecoregion had already
+    failed — every subregion expectation on a passing probe was silently
+    skipped. A check that only runs when another check fails is not a check.
+    """
     from shapely.geometry import Point
 
     for probe in PROBES:
@@ -73,21 +81,33 @@ def _check_probes(regions, result: Result) -> None:
                        f"falls in no polygon at all\n"
                        f"expected {probe.ecoregion!r} ({probe.tests})")
             continue
-        got = str(hits.iloc[0]["ecoregion"])
-        if got == probe.ecoregion:
-            result.add(True, f"probe {probe.place} -> {got}")
-            continue
-        result.add(False, f"probe {probe.place}",
+        row = hits.iloc[0]
+
+        got = str(row["ecoregion"])
+        result.add(got == probe.ecoregion,
+                   f"probe {probe.place} -> {got}",
+                   "" if got == probe.ecoregion else
                    f"expected {probe.ecoregion!r}\n"
                    f"got      {got!r}\n"
                    f"tests    {probe.tests}\n"
                    f"This is either bad data or a bad expectation. Both are\n"
                    f"real possibilities; decide with the evidence, and if the\n"
                    f"expectation is wrong change it in probes.py and say why.")
+
+        if probe.ecozone:
+            zone = str(row.get("ecozone") or "")
+            result.add(zone == probe.ecozone,
+                       f"probe {probe.place} ecozone -> {zone or 'blank'}",
+                       "" if zone == probe.ecozone else
+                       f"expected ecozone {probe.ecozone!r}, got {zone!r}\n"
+                       f"The ecozone is usually what a probe is really\n"
+                       f"defending; a wrong one is a bigger deal than a wrong\n"
+                       f"ecoregion inside the right system.")
+
         if probe.ab_subregion:
-            sub = str(hits.iloc[0].get("ab_subregion") or "")
+            sub = str(row.get("ab_subregion") or "")
             result.add(sub == probe.ab_subregion,
-                       f"probe {probe.place} subregion",
+                       f"probe {probe.place} subregion -> {sub or 'blank'}",
                        "" if sub == probe.ab_subregion else
                        f"expected {probe.ab_subregion!r}, got {sub!r}")
 
@@ -147,6 +167,32 @@ def _check_names(regions, result: Result) -> None:
         f"which grasses belong on a site in Brooks versus one in Camrose.")
 
 
+def _check_required_units(regions, result: Result) -> None:
+    """Does the layer contain these units at all.
+
+    Separate from the point probes on purpose. A probe conflates "does this
+    exist" with "is this spot in it", and the Cypress Upland probe failed on the
+    second while the first was true the whole time — Maple Creek is a town at
+    the foot of the hills, not on the plateau.
+    """
+    have_regions = {str(v) for v in regions["ecoregion"].dropna().unique()}
+    missing = [n for n in REQUIRED_ECOREGIONS if n not in have_regions]
+    result.add(not missing, "every required ecoregion is present",
+               "" if not missing else
+               f"absent from the layer: {missing}\n"
+               f"present: {sorted(have_regions)}")
+
+    have_zones = {str(v) for v in regions.get(
+        "ecozone", regions["ecoregion"]).dropna().unique()}
+    gone = [n for n in REQUIRED_ECOZONES if n not in have_zones]
+    result.add(not gone, "every required ecozone is present",
+               "" if not gone else
+               f"absent from the layer: {gone}\n"
+               f"present: {sorted(have_zones)}\n"
+               f"A missing Shield ecozone is the largest single error the "
+               f"earlier attempts made.")
+
+
 def _check_crs(regions, result: Result) -> None:
     result.add(regions.crs is not None and regions.crs.to_string() == CRS_WGS84,
                f"stored in {CRS_WGS84}",
@@ -172,6 +218,7 @@ def run() -> int:
     _check_topology(regions, result)
     _check_coverage(regions, result)
     _check_names(regions, result)
+    _check_required_units(regions, result)
     _check_probes(regions, result)
     result.report()
 

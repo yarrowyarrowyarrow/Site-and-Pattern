@@ -207,6 +207,56 @@ def _largest_overlap_join(left, right, column: str):
     return left
 
 
+def _split_by_subregion(regions, alberta):
+    """Cut the ELC polygons along Alberta's subregion boundaries, inside Alberta.
+
+    **This replaced a largest-overlap join, which was the wrong shape for the
+    job.** That version gave each ELC polygon the single subregion it overlapped
+    most, and the first real run showed what that costs: twenty-one Alberta
+    subregions competing for twenty-four ELC polygons, so the small ones never
+    win and simply vanish. Northern Fescue disappeared entirely, and the
+    validator caught it — Alberta resolved three grassland subregions where the
+    brief requires four.
+
+    The brief's own words are the test: the Alberta attribute is *"what lets the
+    render carry more detail in Alberta than Attempt B had"*. One subregion per
+    ELC polygon carries **less** detail, not more. Intersecting instead means an
+    output polygon inside Alberta is (ELC ecoregion x Alberta subregion), which
+    is the finer of the two everywhere and keeps both vocabularies intact on the
+    same feature.
+
+    Saskatchewan is untouched: no subregion layer covers it, so its polygons stay
+    whole and carry an empty ``ab_subregion``. That asymmetry is honest — the
+    detail exists for one province and not the other, and pretending otherwise
+    would mean inventing it.
+    """
+    import geopandas as gpd
+    import pandas as pd
+
+    alberta_m = alberta.to_crs(CRS_PROJECTED)
+    regions_m = regions.to_crs(CRS_PROJECTED)
+
+    inside = gpd.overlay(regions_m, alberta_m, how="intersection",
+                         keep_geom_type=True)
+    outside = gpd.overlay(regions_m, alberta_m[["geometry"]].dissolve(),
+                          how="difference", keep_geom_type=True)
+    outside["ab_subregion"] = ""
+    outside["ab_region"] = ""
+
+    combined = gpd.GeoDataFrame(
+        pd.concat([inside, outside], ignore_index=True),
+        geometry="geometry", crs=CRS_PROJECTED)
+    combined = combined[~combined.geometry.is_empty & combined.geometry.notna()]
+    # Merge the fragments an intersection leaves behind: one row per distinct
+    # (ecoregion, subregion) pair rather than one per sliver of overlap.
+    combined = combined.dissolve(
+        by=["ecoregion", "ecoregion_id", "ecozone", "ab_subregion", "ab_region"],
+        as_index=False)
+    print(f"  Alberta split: {len(regions)} ELC polygons -> {len(combined)} "
+          f"(ecoregion x subregion inside Alberta, whole in Saskatchewan)")
+    return combined.to_crs(CRS_WGS84)
+
+
 def _attach_alberta(regions):
     """Alberta subregion and natural region, joined spatially.
 
@@ -242,10 +292,7 @@ def _attach_alberta(regions):
         columns={sub_col: "ab_subregion", reg_col: "ab_region"})
     alberta = _repair(alberta.to_crs(CRS_WGS84), "Alberta subregions")
 
-    regions = _largest_overlap_join(regions, alberta[["ab_subregion", "geometry"]],
-                                    "ab_subregion")
-    regions = _largest_overlap_join(regions, alberta[["ab_region", "geometry"]],
-                                    "ab_region")
+    regions = _split_by_subregion(regions, alberta)
 
     # The crosswalk: every (subregion, ecoregion) pair that shares ground, with
     # how much of the subregion that pairing accounts for.
