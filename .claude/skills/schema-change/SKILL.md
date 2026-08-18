@@ -20,7 +20,7 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.65`,
-`_SCHEMA_VERSION = 72` (in `src/db/plants.py`) — v71 is a reseed only: 26
+`_SCHEMA_VERSION = 73` (in `src/db/plants.py`) — v71 is a reseed only: 26
 recovered `larval_host` edges and the 9 animals they connect (F131), plus 80
 species gaining a `host_plant` or `bird_food` use tag the cited edges already
 justified (F120). v70 is a reseed only too: the

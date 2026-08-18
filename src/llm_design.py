@@ -2091,18 +2091,46 @@ def _match_communities_by_name(communities: list[dict],
     return out
 
 
-# Ecoregion key → the human words seeded community names use, so an
-# ecoregion-tagged site prefers its matching community (aspen_parkland →
-# "Aspen Parkland Edge", riparian → "Riparian Willow Thicket", …).
-_ECOREGION_WORDS = {
-    "aspen_parkland":     "aspen parkland",
-    "mixedgrass_prairie": "mixedgrass",
-    "fescue_foothills":   "foothills",
-    "boreal_mixedwood":   "boreal",
-    "riparian":           "riparian",
-    "wet_meadow":         "wet meadow",
-    "subalpine_montane":  "subalpine",
-}
+def _ecoregion_words(key: str) -> list:
+    """Words a seeded community's *name* might share with this region.
+
+    Used to prefer "Aspen Parkland Edge" on a parkland site and "Riparian
+    Willow Thicket" on a streamside one — a soft +3 on a name match, never a
+    filter.
+
+    V2.68: this was a hand-typed dict of the six regions that existed when it
+    was written, so after the survey a site detected as, say, Mid-Boreal
+    Uplands scored no community preference at all and fell back to catalogue
+    order. Nothing raised; the offline design just got blander.
+
+    The region's own name is now the first candidate, and the **ecozone above
+    it** the second — which is what actually matches the seeded communities,
+    since those are named for broad systems ("boreal", "prairie") rather than
+    for ELC ecoregions nobody had heard of when they were written.
+    """
+    from src.ecoregion import ecoregion_display               # noqa: PLC0415
+    from src.ecoregion_tree import ancestors_of               # noqa: PLC0415
+
+    if not key:
+        return []
+    # `ancestors_of` covers the geographic tree; the moisture niches have no
+    # lineage but do name communities ("Riparian Willow Thicket"), so the key
+    # itself is always tried. Gating the whole function on `level_of` dropped
+    # riparian and wet_meadow, which were in the table this replaced.
+    out = []
+    for candidate in [key] + sorted(ancestors_of(key)):
+        name, _where = ecoregion_display(candidate)
+        if not name or name == candidate:
+            continue
+        # A slash in a display name is an either/or, not a phrase: "Wet Meadow
+        # / Marsh" must match a community called "Wet Meadow Mix", which the
+        # whole string never would. These are substring tests, so each
+        # alternative has to be offered separately.
+        for part in name.split("/"):
+            part = part.strip().lower()
+            if part and part not in out:
+                out.append(part)
+    return out
 
 
 def _select_offline_communities(communities: list[dict], goals, site_config,
@@ -2116,12 +2144,15 @@ def _select_offline_communities(communities: list[dict], goals, site_config,
         return []
     from src.design_goals import community_name_hints
     hints = [h.lower() for h in (community_name_hints(goals) or []) if h]
-    eco_word = _ECOREGION_WORDS.get((site_config or {}).get("ecoregion_key"))
+    eco_words = _ecoregion_words((site_config or {}).get("ecoregion_key"))
 
     def _score(c: dict) -> int:
         text = ((c.get("name") or "") + " " + (c.get("description") or "")).lower()
         s = sum(2 for h in hints if h in text)
-        if eco_word and eco_word in text:
+        # The region itself scores once; the ecozone above it is a weaker but
+        # real signal, so the whole lineage is worth at most one +3 rather
+        # than one per level, which would let a deep key outvote the goals.
+        if any(word in text for word in eco_words):
             s += 3
         return s
 

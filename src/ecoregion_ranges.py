@@ -202,3 +202,44 @@ def parse_document(data: dict | None) -> dict[str, list[dict]]:
         if clean:
             out[name.strip()] = clean
     return out
+
+
+def stale_keys(data: dict | None = None) -> set:
+    """Derived keys the current polygon vocabulary does not define.
+
+    Empty is the normal state. Non-empty means the polygons have moved since
+    the last derivation run and these rows are keyed to regions that no longer
+    exist — the window between adopting a new layer and re-running
+    ``scripts/seed_ecoregion_ranges.py`` against it.
+
+    **Why this is worth naming rather than leaving to a test.** A derived key
+    that no longer exists is *inert*: it matches no filter, so the species
+    quietly falls back to its heuristic tag and nothing looks broken. But a key
+    that survives the change **by name** while its polygon moves is *wrong*,
+    and looks exactly as confident as it did before. V2.67 had exactly one:
+    ``aspen_parkland`` kept its key, and the traced polygon behind the old
+    derivation overlaps the surveyed Aspen Parkland by only 40%. So during the
+    window, 309 species assert a parkland range computed against ground that is
+    substantially somewhere else — Scarlet Globemallow, a dry-prairie plant,
+    reads "Aspen Parkland, 65 records, high confidence".
+
+    That is not fixable by translation (see ``docs/plans/V2.68``): it needs the
+    re-derivation. What is fixable is knowing you are in the window, which is
+    what this answers. Pass ``data`` to check a document in hand; omit it to
+    check the shipped file.
+    """
+    from src.ecoregion import geographic_keys                 # noqa: PLC0415
+
+    if data is None:
+        import json                                           # noqa: PLC0415
+
+        from src.resources import resource_path               # noqa: PLC0415
+        try:
+            with open(resource_path("data", "plant_ecoregions.json"),
+                      encoding="utf-8") as handle:
+                data = json.load(handle)
+        except Exception:                                     # noqa: BLE001
+            return set()
+    valid = set(geographic_keys())
+    return {row["ecoregion"] for rows in parse_document(data).values()
+            for row in rows if row["ecoregion"] not in valid}

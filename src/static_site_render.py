@@ -332,6 +332,18 @@ def render_browse(model: dict, photo_src: dict) -> str:
     # built from free-text database columns and one day one of them will.
     payload = json.dumps(index, separators=(",", ":")).replace("<", "\\u003c")
 
+    # Values the catalogue can actually answer. The hub pages have always
+    # pruned on this rule — "a value nothing matches gets no page rather than
+    # an empty one, because an empty page is a URL that reads as a fact about
+    # the flora when it is a fact about the catalogue" — but the sidebar
+    # rendered every option regardless, so the two disagreed. It went unnoticed
+    # while the vocabularies were small and complete; V2.68 took the ecoregion
+    # facet from 6 values to 32, of which the catalogue currently answers 4,
+    # and 28 dead checkboxes is a filter that mostly returns nothing.
+    in_use = {facet.key: {v for e in model["species"]
+                          for v in (e["facets"].get(facet.key) or [])}
+              for facet in FACETS}
+
     panels = []
     for group in GROUPS:
         facets = [f for f in FACETS if f.group == group]
@@ -343,7 +355,8 @@ def render_browse(model: dict, photo_src: dict) -> str:
                 f'<label><input type="checkbox" data-f="{_esc(facet.key)}" '
                 f'value="{_esc(value)}">{_swatch(facet.swatches.get(value, ""))}'
                 f'<span>{_esc(label)}</span></label>'
-                for value, label in facet.options)
+                for value, label in facet.options
+                if value in in_use[facet.key])
             note = (f'<p class="fnote">{_esc(facet.note)}</p>'
                     if facet.note else "")
             blocks.append(

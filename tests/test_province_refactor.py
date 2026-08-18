@@ -97,9 +97,22 @@ class TestProvinceRefactor(unittest.TestCase):
         self.assertEqual(sample["ab_ecoregion"], sample["ecoregion"])
 
     def test_search_ecoregion_and_legacy_param_agree(self):
-        new = search_plants(ecoregion="mixedgrass_prairie")
-        legacy = search_plants(ab_ecoregion="mixedgrass_prairie")
-        self.assertTrue(new, "expected mixedgrass plants in the seed data")
+        """`ab_ecoregion` is the frozen agent-API spelling of `ecoregion`.
+
+        The key is taken from the catalogue rather than typed in. It was
+        `mixedgrass_prairie`, retired by the V2.67 survey, and a retired key
+        matches nothing — so `assertEqual(len(new), len(legacy))` was comparing
+        0 to 0 and the alias could have been broken the whole time. The
+        `assertTrue` guard is what caught it. Reading the key off the data
+        means the check survives the next vocabulary change too."""
+        from src.ecoregion import geographic_keys
+
+        key = next((k for k in geographic_keys() if search_plants(ecoregion=k)),
+                   None)
+        self.assertIsNotNone(key, "no ecoregion selects any plant")
+        new = search_plants(ecoregion=key)
+        legacy = search_plants(ab_ecoregion=key)
+        self.assertTrue(new)
         self.assertEqual(len(new), len(legacy))
 
     def test_search_native_province_filter(self):

@@ -47,40 +47,21 @@ def _fake_lookup(lat, lng):
     return []                            # outside coverage
 
 
-def _shipped_ranges_are_stale():
-    """True while ``data/plant_ecoregions.json`` is keyed to a retired
-    vocabulary — the transitional state after a survey lands and before
-    ``scripts/seed_ecoregion_ranges.py`` has been re-run against it.
-
-    This is a **precondition**, not a bug, and it has exactly one alarm:
-    ``TestTheShippedEnvelope.test_every_derived_key_is_a_real_geographic_
-    ecoregion``, which stays RED for the whole window and names the command.
-    Tests that merely need *some* species to have a live range skip on this
-    instead, so one stale input reports as one failure rather than a dozen —
-    a suite where a dozen reds are "expected" is a suite nobody reads.
-
-    The condition clears itself: re-run the derivation and every skip below
-    turns back into a real assertion with no edit here.
-    """
-    import pathlib
-
-    from src.ecoregion import geographic_keys
-
-    path = (pathlib.Path(__file__).resolve().parent.parent
-            / "data" / "plant_ecoregions.json")
-    if not path.exists():
-        return False
-    try:
-        with open(path, encoding="utf-8") as handle:
-            species = (json.load(handle) or {}).get("species") or {}
-    except (OSError, ValueError):
-        return False
-    valid = set(geographic_keys())
-    return any(row.get("ecoregion") not in valid
-               for rows in species.values() for row in rows)
-
-
-_STALE_RANGES = _shipped_ranges_are_stale()
+#: True while ``data/plant_ecoregions.json`` is keyed to a retired vocabulary —
+#: the window between adopting a new polygon layer and re-running
+#: ``scripts/seed_ecoregion_ranges.py`` against it.
+#:
+#: A **precondition**, not a bug, and it has exactly one alarm:
+#: ``TestTheShippedEnvelope.test_every_derived_key_is_a_real_geographic_
+#: ecoregion`` stays RED for the whole window and names the command. Tests that
+#: merely need *some* species to have a live range skip on this instead, so one
+#: stale input reports as one failure rather than a dozen — a suite where a
+#: dozen reds are "expected" is a suite nobody reads.
+#:
+#: The predicate lives in ``src`` rather than here because it is a real
+#: question about app state, not a test convenience: during the window the app
+#: shows ranges that are not merely missing but *wrong*. See ``stale_keys``.
+_STALE_RANGES = bool(R.stale_keys())
 _STALE_WHY = ("data/plant_ecoregions.json is still keyed to the retired "
               "ecoregion vocabulary. Re-run:  python "
               "scripts/seed_ecoregion_ranges.py")

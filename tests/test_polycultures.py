@@ -361,7 +361,7 @@ class TestCommunityFacets(unittest.TestCase):
             p1 = _add_dummy_plant(conn, "Two Region Plant")
             p2 = _add_dummy_plant(conn, "Other Region Plant")
             conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
-                         ("aspen_parkland,moist_mixedgrass", p1))
+                         ("aspen_parkland,moist_mixed_grassland", p1))
             # Two members carry riparian so it would win a "dominant" vote and
             # be the only label under the old behaviour.
             conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
@@ -384,7 +384,8 @@ class TestCommunityFacets(unittest.TestCase):
         try:
             pid_plant = _add_dummy_plant(conn, "Filterable Region Plant")
             conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
-                         ("boreal_mixedwood,subalpine_montane", pid_plant))
+                         ("mid_boreal_uplands,eastern_continental_ranges",
+                          pid_plant))
             conn.commit()
         finally:
             conn.close()
@@ -397,19 +398,31 @@ class TestCommunityFacets(unittest.TestCase):
         # here is how this test came to assert "Boreal Mixedwood" while the
         # plant filter's dropdown said "Boreal Mixedwood / Plain" — two names
         # for one key, which is the bug the shared vocabulary removes.
-        for key in ("boreal_mixedwood", "subalpine_montane"):
+        for key in ("mid_boreal_uplands", "eastern_continental_ranges"):
             label = polycultures.ECOREGION_LABELS[key]
             passing = polycultures.filter_library(index,
                                                   facets={"habitat": [label]})
             self.assertIn(pid, passing,
                           f"filtering by {label} did not find the community")
 
-    def test_moist_mixedgrass_has_a_label(self):
-        """The most common ecoregion tag in the catalogue (246 plants) was
-        absent from the label table, so it silently read "Generalist"."""
-        self.assertIn("moist_mixedgrass", polycultures.ECOREGION_LABELS)
-        self.assertIn(polycultures.ECOREGION_LABELS["moist_mixedgrass"],
-                      polycultures.facet_filter_choices()["habitat"])
+    def test_every_key_in_the_vocabulary_has_a_label(self):
+        """A key with no label silently reads "Generalist".
+
+        This began as `test_moist_mixedgrass_has_a_label`, pinning the one key
+        that had been missing — the commonest tag in the catalogue, on 246
+        plants. Naming a single key is why it needed rewriting the moment the
+        survey retired that key in V2.68, and it would have gone stale again on
+        the next change. The invariant was never about that key: it is that
+        **whatever the vocabulary currently is, all of it has a label**."""
+        from src.ecoregion import ecoregion_keys
+
+        choices = polycultures.facet_filter_choices()["habitat"]
+        keys = list(ecoregion_keys())
+        self.assertGreater(len(keys), 10, "the vocabulary did not load")
+        for key in keys:
+            self.assertIn(key, polycultures.ECOREGION_LABELS,
+                          f"{key} has no label and would read 'Generalist'")
+            self.assertIn(polycultures.ECOREGION_LABELS[key], choices, key)
 
     def test_function_fallback_generalist(self):
         # A community whose plants carry no permaculture-use tags falls back to

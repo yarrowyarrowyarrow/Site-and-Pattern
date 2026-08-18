@@ -142,7 +142,30 @@ def _behaviour(plant: dict) -> list:
 
 
 def _ecoregions(plant: dict) -> list:
-    return _tokens(plant, "ecoregion")
+    """The plant's regions, plus every region **above** them.
+
+    V2.68: the vocabulary gained two levels above the ecoregion (ecozone) and
+    one below (Alberta natural subregion), and the migrated heuristic tags rest
+    wherever the evidence put them — 304 species carry `zone_prairies` and
+    nothing finer.
+
+    Only the *upward* expansion is baked in, and the asymmetry is deliberate.
+    Upward is definitional: a plant recorded in Mixed Grassland is in the
+    Prairies, so ticking the ecozone must find it. Downward is not — writing
+    every Prairies ecoregion into the row of a plant known only at the ecozone
+    would put five specific claims on a species page where the evidence
+    supports one general one, which is P9 failing in public. The desktop filter
+    matches downward too because it is answering "what could I plant here?";
+    a published page is making a statement about the species.
+    """
+    from src.ecoregion_tree import ancestors_of              # noqa: PLC0415
+
+    out = _tokens(plant, "ecoregion")
+    for key in list(out):
+        for parent in sorted(ancestors_of(key)):
+            if parent not in out:
+                out.append(parent)
+    return out
 
 
 def _photo(plant: dict) -> list:
@@ -304,8 +327,27 @@ WITHHELD_ROLES: tuple = ()
 
 
 def _ecoregion_options() -> tuple:
-    from src.ecoregion import ecoregions                     # noqa: PLC0415
-    return tuple((key, name) for key, name, _where in ecoregions())
+    """Ecozone, then its ecoregions, then the moisture niches.
+
+    The desktop draws this vocabulary as a collapsible tree; the website's
+    sidebar is a flat list of checkboxes, so the hierarchy survives here as
+    *order* — each ecozone immediately followed by what is inside it. Alberta's
+    subregions are deliberately left out: 21 more checkboxes would double the
+    control to serve one province, and no species is tagged at that level.
+
+    The ecozones are not decoration. 304 species carry `zone_prairies` and
+    nothing finer, and without an option they rendered as an unlabelled value —
+    which is a blank line in the sidebar, not an error anyone would notice.
+    """
+    from src.ecoregion import MOISTURE_NICHES                # noqa: PLC0415
+    from src.ecoregion_tree import tree                      # noqa: PLC0415
+
+    out = []
+    for zone_key, zone_name, _lvl, regions in tree():
+        out.append((zone_key, zone_name))
+        out.extend((key, name) for key, name, _l, _subs in regions)
+    out.extend((key, name) for key, name, _where in MOISTURE_NICHES)
+    return tuple(out)
 
 
 FACETS: tuple = (

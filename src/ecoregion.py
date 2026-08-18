@@ -382,10 +382,34 @@ def is_moisture_niche(key: str) -> bool:
 
 
 def ecoregion_display(key: str) -> tuple[str, str]:
-    """``(name, where)`` for a key — the two lines the filter list draws."""
+    """``(name, where)`` for a key — the two lines the filter list draws.
+
+    Covers all three levels. The ecozone and subregion names come from
+    :mod:`src.ecoregion_tree`, which reads them out of the same polygon file
+    this module reads its ecoregions from.
+
+    V2.68: without the tree lookup this returned the raw key for anything but
+    an ecoregion, and every caller that guards on ``name == key`` therefore
+    treated an ecozone as unknown — which is 304 species, since that is where
+    the migrated heuristic tags came to rest. The symptom was not an error
+    anywhere; it was prose and labels quietly omitting a region they could not
+    name.
+    """
     for k, name, where in ecoregions():
         if k == key:
             return name, where
+    from src.ecoregion_tree import ECOZONE, SUBREGION         # noqa: PLC0415
+    from src.ecoregion_tree import _index, level_of           # noqa: PLC0415
+
+    level = level_of(key)
+    if level == ECOZONE:
+        return _index()["zones"].get(key, key), ""
+    if level == SUBREGION:
+        name, parents = _index()["subs"].get(key, (key, []))
+        # The parent ecoregion is the useful "where" for a subregion: nobody
+        # knows where Northern Fescue is, everybody can place Mixed Grassland.
+        where = ecoregion_display(parents[0])[0] if parents else ""
+        return name, where
     return key, ""
 
 

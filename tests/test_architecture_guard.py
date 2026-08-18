@@ -118,7 +118,26 @@ class TestStructuralCeilings(unittest.TestCase):
         # was set too tight for the feature that was coming, so it is reset
         # against the finished shape rather than the first sketch.
         (_SRC / "flower_colour.py", 240),              # 178 now
-        (_SRC / "site_facets.py", 440),                # 400 now
+        # V2.68: 440 -> 520. The ecoregion facet went from 6 flat values to a
+        # three-level vocabulary — options ordered by ecozone, values expanded
+        # upward into each index row, and the reasoning for why the expansion
+        # is upward ONLY (downward would put five specific claims on a species
+        # page where the evidence supports one general one).
+        #
+        # Raised rather than split, and the seam is real enough to name: lines
+        # ~39-243 are seventeen pure `plant dict -> list of values` functions,
+        # and everything after is the options and the table. They are only ever
+        # used together — every Facet pairs a values function with its own
+        # options, and the whole point of this module is that the two cannot
+        # drift — so splitting makes two half-files with one caller. The next
+        # facet that needs more than a one-line derivation should take that
+        # extraction rather than this number going to 600.
+        (_SRC / "site_facets.py", 520),                # 476 now
+        # V2.68 — the vocabulary itself. Opted in on arrival, the V2.41
+        # precedent, and overdue: this file decides what a real property gets
+        # recommended, and it grew MultiPolygon support, boundary proximity and
+        # three-level display without ever being guarded.
+        (_SRC / "ecoregion.py", 480),                  # 429 now
         # V2.49: 260 -> 340. The first number was set against a module that
         # drew six rectangles and nothing else; the map then gained provincial
         # borders, city dots, province codes and hand-placed region labels,
