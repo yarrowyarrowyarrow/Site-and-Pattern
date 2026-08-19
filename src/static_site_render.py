@@ -93,10 +93,18 @@ _TOKEN_OK = re.compile(r"^[A-Za-z0-9]{16,64}$")
 
 
 def _beacon() -> str:
-    """The analytics snippet, or ``""``. Never emitted unless asked for."""
+    """The analytics snippet, or ``""``. Never emitted unless asked for.
+
+    Mirrors the snippet Cloudflare's own dashboard hands out, attribute for
+    attribute, including ``type="module"``. The first cut wrote ``defer``,
+    which is what Cloudflare's *older* snippet used; the beacon is shipped as
+    an ES module now, and loading a module as a classic script is the kind of
+    failure that records nothing and reports no error. There is no reason to
+    paraphrase a vendor's tag.
+    """
     if not _ANALYTICS:
         return ""
-    return ('<script defer src="https://static.cloudflareinsights.com/'
+    return ('<script type="module" src="https://static.cloudflareinsights.com/'
             'beacon.min.js" data-cf-beacon=\'{"token": "'
             + _ANALYTICS + '"}\'></script>')
 
