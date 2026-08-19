@@ -203,17 +203,22 @@ class TestStructuralCeilings(unittest.TestCase):
         # drill-down. It is MODEL code and stays with the model: moving it into
         # the renderer would put "what is a subregion page" in the view layer,
         # which is the split this pair of modules exists to hold.
-        (_SRC / "static_site.py", 560),                # 519 now
+        (_SRC / "static_site.py", 560),                # 556 now — 4 to spare
         # V2.68: the drill-down took this to 857/800 and the guard got the
         # extraction it asks for rather than a bigger number. The seam is the
         # one the reader already feels: `static_site_regions.py` holds every
         # page that answers "where?" (the map page, the per-region maps, the
         # subregion pages) and this module keeps the ones that answer "what?".
         # Third split off this file, after the species page and the About page.
-        (_SRC / "static_site_render.py", 800),         # 666 now
+        (_SRC / "static_site_render.py", 800),         # 713 now
         (_SRC / "static_site_regions.py", 320),        # 246 now
         (_SRC / "static_site_species.py", 340),        # 256 now
-        (_HTML / "site" / "browse.js", 200),           # 127 now
+        # V2.71 — the fourth split, on the same rule as the three above. The
+        # wildlife index became a filtered search with its own facet
+        # vocabulary, which is a *different* vocabulary from the plant one in
+        # site_facets.py and belongs beside the pages that use it.
+        (_SRC / "static_site_wildlife.py", 340),       # 274 now
+        (_HTML / "site" / "browse.js", 200),           # 156 now
         (_SRC / "start_screen.py", 380),               # 292 now
         (_SRC / "onboarding_flow.py", 620),            # ~551 now
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a

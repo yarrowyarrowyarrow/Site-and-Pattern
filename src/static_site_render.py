@@ -8,6 +8,13 @@ kind. That is the discipline ``html/`` already follows for the map and the 3D
 viewer, and here it also means the site keeps working when a CDN does not and
 can be read straight off a disk with ``file://``.
 
+**One opt-in exception, since V2.71:** ``write_site(analytics_token=...)``
+embeds the Cloudflare Web Analytics beacon so the site's owner can find out
+whether anyone is reading it. Off unless asked for, disclosed in the footer of
+every page it appears on, and chosen because it sets no cookie and keeps no
+per-visitor identifier. Everything above still holds for a build without it,
+which is the default.
+
 Links are **relative**, computed per page from its depth, so the output can be
 published at a domain root, in a subdirectory, or opened locally without a
 server. Root-relative ``/plants/...`` would have been shorter and would break
@@ -34,11 +41,12 @@ import html
 import json
 import os
 import pathlib
+import re
 import shutil
 from typing import Callable, Optional
 
 from src.site_facets import FACETS, GROUPS
-from src.static_site import TAXON_GROUPS, _first_photo
+from src.static_site import _first_photo
 
 #: Plain text, never pre-escaped: everything here goes through ``_esc`` at the
 #: point of use. Storing the entity form instead produced ``&amp;amp;`` in every
@@ -64,6 +72,41 @@ TAGLINE = ("Native plants of Alberta and the Canadian prairies, and the "
 #: cannot outrun it.
 _NAV = (("plants/", "Plants"), ("map/", "Ecoregions"),
         ("wildlife/", "Wildlife"), ("about/", "About"))
+
+#: Cloudflare Web Analytics site token for this build, or ``""`` for none
+#: (V2.71). Off by default and set for the length of one ``write_site`` call:
+#: it is a property of the *publish*, not of any page, and threading it through
+#: `_page`'s fifteen call sites in five modules to say one thing would be worse.
+#:
+#: Turning it on is the single exception to this module's "no external request
+#: of any kind" rule, so it is opt-in, it is validated (a token that is not
+#: plain alphanumerics is refused rather than pasted into 2,000 pages), and it
+#: is **disclosed in the footer of every page it appears on**. Cloudflare's
+#: beacon sets no cookie and stores no per-visitor identifier, which is why it
+#: is the one worth the exception; a script that did would not be.
+_ANALYTICS: str = ""
+
+#: What a valid Cloudflare beacon token looks like. Deliberately strict: the
+#: value lands inside a quoted JSON attribute on every page, and the failure
+#: mode of a loose check is markup injection across the whole site.
+_TOKEN_OK = re.compile(r"^[A-Za-z0-9]{16,64}$")
+
+
+def _beacon() -> str:
+    """The analytics snippet, or ``""``. Never emitted unless asked for."""
+    if not _ANALYTICS:
+        return ""
+    return ('<script defer src="https://static.cloudflareinsights.com/'
+            'beacon.min.js" data-cf-beacon=\'{"token": "'
+            + _ANALYTICS + '"}\'></script>')
+
+
+def _privacy_line() -> str:
+    if not _ANALYTICS:
+        return ""
+    return ('\n    <p>Page views are counted by Cloudflare Web Analytics, '
+            'which sets no cookies and records nothing that identifies you. '
+            'It is the only request this site makes to anywhere else.</p>')
 
 
 def _asset(name: str) -> str:
@@ -147,10 +190,10 @@ def _page(title: str, description: str, body: str, depth: int,
     rather than filling the gap.</p>
     <p>This catalogue records horticultural and ecological information only. It
     contains no Indigenous ecological knowledge, plant-use tradition or
-    land-management practice, and none should be inferred from it.</p>
+    land-management practice, and none should be inferred from it.</p>{_privacy_line()}
   </div>
 </footer>
-{scripts}
+{scripts}{_beacon()}
 </body>
 </html>
 """
@@ -259,12 +302,10 @@ def render_home(model: dict, photo_src: dict) -> str:
     body = f"""
 <section class="hero">
   <p class="kicker">A reference work for prairie habitat</p>
-  <h1>{s['species']} native and prairie-hardy plants, and the {s['animals']}
-  animals documented to use them.</h1>
+  <h1>{s['species']} native plants, and the {s['animals']} animals
+  documented to use them.</h1>
   <p class="lede">{_esc(TAGLINE)} Every relationship here is a
-  <strong>documented</strong> record with a source: {s['edges']} of them, of
-  which {s['specialist_edges']} involve an animal that has nowhere else to
-  go.</p>
+  <strong>documented</strong> record with a source.</p>
   <p class="cta">
     <a class="button" href="plants/">Search all {s['species']} plants</a>
     <a class="button ghost" href="wildlife/">Start from an animal</a>
@@ -280,9 +321,8 @@ def render_home(model: dict, photo_src: dict) -> str:
 <section class="split">
   <div>
     <h2>Where things grow</h2>
-    <p>Each region below is a page. On a species page the same map is shaded to
-    show where that plant has actually been recorded, with the occurrence count
-    and confidence behind every region.</p>
+    <p>Pick a region to see the plants recorded there. Every species page
+    carries this map too, shaded to show where that plant has been found.</p>
     <p class="note">{_esc(CAVEAT)}</p>
     <p><a class="more" href="map/">The full map</a></p>
   </div>
@@ -291,17 +331,12 @@ def render_home(model: dict, photo_src: dict) -> str:
 
 <section>
   <h2>By flower colour</h2>
-  <p>Grasses and sedges have a bucket of their own. They are wind-pollinated,
-  so what you see is the seed head, not a bloom, and filing them under yellow
-  would claim something the data does not say.</p>
+  <p>Pick a colour to see the plants that bloom in it.</p>
   <div class="chips">{chips("colour", "plants/colour")}</div>
 </section>
 
 <section>
   <h2>By bloom month</h2>
-  <p>A species with no recorded bloom window is listed under no month. We do not
-  know when it flowers, and that is not the same as knowing it does not flower
-  then.</p>
   <div class="chips">{chips("bloom", "plants/blooming-in")}</div>
 </section>
 
@@ -317,10 +352,9 @@ def render_home(model: dict, photo_src: dict) -> str:
 
 <section class="pitch">
   <h2>Start from the animal instead</h2>
-  <p>Most plant catalogues can tell you what a plant looks like. This one can
-  tell you which caterpillars eat it, which bees can physically reach its
-  nectar, and which of them have no alternative, because the catalogue is built
-  on the relationships rather than on the plants.</p>
+  <p>Most plant catalogues tell you what a plant looks like. This one also
+  tells you which caterpillars eat it, which bees feed on it, and which of them
+  have no alternative.</p>
   <p><a class="button" href="wildlife/">{s['animals']} animals</a></p>
 </section>
 """
@@ -451,79 +485,24 @@ def render_listing(page: dict, depth: int, photo_src: dict, crumb: list,
                  wide=True)
 
 
-def render_wildlife_index(model: dict, listed: int, total_fauna: int) -> str:
-    blocks = []
-    for taxon, heading in TAXON_GROUPS:
-        animals = [a for a in model["wildlife"] if a["taxon"] == taxon]
-        if not animals:
-            continue
-        links = "".join(
-            f'<a class="chip" href="{_esc(a["slug"])}/">{_esc(a["name"])}'
-            f'<span class="n">{a["total"]}</span></a>' for a in animals)
-        blocks.append(f'<section><h2>{_esc(heading)} '
-                      f'<span class="n">{len(animals)}</span></h2>'
-                      f'<div class="chips">{links}</div></section>')
-    omitted = total_fauna - listed
-    note = ""
-    if omitted > 0:
-        note = (f'<p class="note">{omitted} more animals are in the catalogue '
-                f'with no plant relationship documented yet. They are not '
-                f'listed here, because a page reading "0 plants support this '
-                f'species" would publish a fact about our coverage as though '
-                f'it were a fact about the animal.</p>')
-    body = f"""
-{_crumb([("", "Wildlife")], 1)}
-<h1>{listed} animals, and the plants that support them</h1>
-<p class="lede">Each relationship below is a documented record with a source,
-not an inference. A star marks a specialist: an animal that cannot simply move
-to another plant.</p>
-{note}
-{"".join(blocks)}
-"""
-    return _page("Wildlife of the prairies and the plants they need",
-                 "Native bees, butterflies, moths, birds and mammals, and the "
-                 "documented plants each one depends on.", body, 1)
-
-
-def render_wildlife(animal: dict, photo_src: dict) -> str:
-    depth = 2
-    blocks = []
-    for group in animal["groups"]:
-        blocks.append(f'<h2>{_esc(group["how"])}</h2>'
-                      f'{_grid(group["items"], depth, photo_src)}')
-    spec = animal["specialists"]
-    lede = (f'{animal["total"]} documented plant '
-            f'{"relationship" if animal["total"] == 1 else "relationships"}'
-            + (f', {spec} of them as a specialist with no alternative'
-               if spec else "") + ".")
-    notes = f'<p>{_esc(animal["notes"])}</p>' if animal.get("notes") else ""
-    body = f"""
-{_crumb([("wildlife/", "Wildlife"), ("", animal["name"])], depth)}
-<h1>{_esc(animal["name"])}</h1>
-<p class="sci">{_esc(animal.get("scientific_name"))}
-  <span class="src">{_esc(animal.get("taxon_label"))}</span></p>
-<p class="lede">{_esc(lede)}</p>
-{notes}
-{"".join(blocks)}
-"""
-    return _page(f'{animal["name"]}: the plants it needs',
-                 f'{animal["name"]} ({animal.get("scientific_name")}): '
-                 f'{animal["total"]} documented plant relationships.',
-                 body, depth, wide=True)
-
-
 # ── Writing it out ───────────────────────────────────────────────────────────
 
 def write_site(model: dict, out_dir: str, *,
                base_url: str = "",
                copy_photos: bool = True,
                include_notes: bool = False,
+               analytics_token: str = "",
                progress: Optional[Callable] = None) -> dict:
     """Render ``model`` into ``out_dir``. Returns a summary dict.
 
     ``out_dir`` is created if absent and written into, never emptied: a
     generator that deletes a directory the user pointed at is one bad argument
     away from removing something else.
+
+    ``analytics_token`` opts this build into the Cloudflare Web Analytics
+    beacon (see :data:`_ANALYTICS`). Empty means no analytics and no external
+    request, which is the default and the state every build before V2.71 was
+    in. A malformed token raises rather than being written into 2,000 pages.
     """
     # Imported here, not at module scope: static_site_species imports the shell
     # and the shared pieces back from this module, so a top-level import would
@@ -536,6 +515,23 @@ def write_site(model: dict, out_dir: str, *,
     from src.static_site_regions import (_hub_extra,         # noqa: PLC0415
                                          render_map_page, render_subregion)
     from src.static_site_species import render_species       # noqa: PLC0415
+    # V2.71 adds a fourth: the wildlife index became a filtered search rather
+    # than a wall of chips, and carries its own facet vocabulary.
+    from src.static_site_wildlife import (render_wildlife,   # noqa: PLC0415
+                                          render_wildlife_index)
+
+    global _ANALYTICS
+    token = (analytics_token or "").strip()
+    if token and not _TOKEN_OK.match(token):
+        raise ValueError(
+            "analytics token must be 16-64 plain alphanumeric characters; "
+            "got something else, and this value is written into every page")
+    # Set unconditionally, and never restored afterwards. Restoring on the way
+    # out would leak the token if a build raised half way; assigning on the way
+    # IN cannot, because the next build's own argument overwrites it whatever
+    # happened to the last one. Fail-closed for the value that decides whether
+    # a page phones home.
+    _ANALYTICS = token
 
     say = progress or (lambda _m: None)
     root = pathlib.Path(out_dir)
@@ -579,7 +575,7 @@ def write_site(model: dict, out_dir: str, *,
 
     emit("wildlife/index.html",
          render_wildlife_index(model, len(model["wildlife"]),
-                               int(model.get("total_fauna") or 0)))
+                               int(model.get("total_fauna") or 0), photo_src))
     for animal in model["wildlife"]:
         emit(f"wildlife/{animal['slug']}/index.html",
              render_wildlife(animal, photo_src))
@@ -608,6 +604,7 @@ def write_site(model: dict, out_dir: str, *,
 
     copied = sum(1 for v in photo_src.values() if not v.startswith("http"))
     return {"out_dir": str(root),
+            "analytics": bool(token),
             # Pages plus the photo files staged beside them: the number the
             # operator is about to upload, not just the number rendered.
             "files": len(written) + copied,
@@ -631,27 +628,41 @@ def _stage_photos(model: dict, root: pathlib.Path, say: Callable) -> dict:
     Both counts are reported at the end of the build, because "the site
     published with 321 hotlinks to iNaturalist" is something the operator should
     find out before uploading rather than when the CDN changes.
+
+    Animals are staged into ``assets/photos/wildlife/`` (V2.71). Their own
+    subfolder rather than the same one: species slugs and animal slugs are each
+    unique within their own set and nothing makes them unique across both, so
+    one flat folder is a filename collision waiting for the first plant and
+    insect that share a common name.
     """
     from src.image_cache import get_cached_image
     dest = root / "assets" / "photos"
-    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "wildlife").mkdir(parents=True, exist_ok=True)
     out: dict = {}
-    for entry in model["species"]:
-        url = (_first_photo(entry).get("url") or "").strip()
+
+    def stage(slug: str, url: str, folder: str) -> None:
         if not url or url in out:
-            continue
+            return
         # Named for the species, so the staged file is identifiable on disk and
         # stable across rebuilds. Slugs are unique, so filenames are too.
         local = get_cached_image(url)
         if local and os.path.exists(local):
-            name = f"{entry['slug']}{os.path.splitext(local)[1] or '.jpg'}"
+            name = f"{slug}{os.path.splitext(local)[1] or '.jpg'}"
             try:
-                shutil.copyfile(local, dest / name)
-                out[url] = f"assets/photos/{name}"
-                continue
+                shutil.copyfile(local, dest / folder / name if folder
+                                else dest / name)
+                out[url] = (f"assets/photos/{folder}/{name}" if folder
+                            else f"assets/photos/{name}")
+                return
             except OSError:
                 pass
         out[url] = url
+
+    for entry in model["species"]:
+        stage(entry["slug"], (_first_photo(entry).get("url") or "").strip(), "")
+    for animal in model.get("wildlife") or []:
+        stage(animal["slug"], (animal.get("image") or "").strip(), "wildlife")
+
     copied = sum(1 for v in out.values() if not v.startswith("http"))
     say(f"photos: {copied} copied from cache, {len(out) - copied} left as links")
     return out

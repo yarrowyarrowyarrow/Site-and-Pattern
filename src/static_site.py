@@ -279,6 +279,22 @@ def _brief(plant: dict, slugs: dict) -> dict:
     }
 
 
+def _animal_blurb(animal: dict) -> str:
+    """One animal's natural-history description, with its own name trimmed off.
+
+    Roughly a third of the rows open by restating the common name — *"Cryptic
+    Bumble Bee. A short-tongued social bumble bee…"* — which reads fine in a
+    tooltip and reads like a stutter under an `<h1>` that already says it.
+    """
+    text = (animal.get("description") or "").strip()
+    name = (animal.get("common_name") or "").strip()
+    if name and text.lower().startswith(name.lower()):
+        rest = text[len(name):].lstrip(" .:-—")
+        if rest:
+            text = rest[0].upper() + rest[1:]
+    return text
+
+
 def photo_credit(plant: dict) -> tuple:
     """``(url, credit line)`` for a plant row's photograph, or ``("", "")``.
 
@@ -417,14 +433,22 @@ def _wildlife_pages(list_fauna_fn: Callable, plants_for_fauna_fn: Callable,
         if not rows:
             continue
         groups: dict = {}
+        kinds: set = set()
         specialists = 0
         for row in rows:
-            how = _REL_FROM_ANIMAL.get(row.get("relationship") or "", "uses")
+            kind = (row.get("relationship") or "").strip()
+            how = _REL_FROM_ANIMAL.get(kind, "uses")
+            kinds.add(kind or "other")
             specialist = row.get("specificity") == "specialist"
             specialists += 1 if specialist else 0
             brief = dict(briefs.get(row.get("id")) or _brief(row, slugs))
             brief["specialist"] = specialist
             groups.setdefault(how, []).append(brief)
+        # V2.71: 58 fauna rows have carried a credited, openly-licensed
+        # photograph since the iNaturalist fetch and none of it was published.
+        # Through the same gate as a plant's, so an animal with no attribution
+        # gets no picture either.
+        image, credit = photo_credit(animal)
         out.append({
             "slug": fauna_slugs[animal["id"]],
             "id": animal["id"],
@@ -433,6 +457,16 @@ def _wildlife_pages(list_fauna_fn: Callable, plants_for_fauna_fn: Callable,
             "taxon": animal.get("taxon") or "",
             "taxon_label": _TAXON_LABEL.get(animal.get("taxon"), ""),
             "notes": animal.get("notes") or "",
+            # V2.71. `fauna` has no `notes` column at all — the key above has
+            # been reading `None` on every animal since the model was written,
+            # so the block it feeds has never once rendered. What the table
+            # *does* have is `description`, populated for all 1,156 rows with
+            # real natural history (tongue length, nesting habit, the genera it
+            # forages), and no page had ever shown a word of it.
+            "description": _animal_blurb(animal),
+            "image": image,
+            "credit": credit,
+            "kinds": sorted(kinds),
             "total": len(rows),
             "specialists": specialists,
             "groups": [{"how": how, "items": sorted(items,

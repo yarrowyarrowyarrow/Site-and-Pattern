@@ -88,9 +88,9 @@ def render_map_page(model: dict) -> str:
     body = f"""
 {_crumb([("", "Ecoregion map")], 1)}
 <h1>The ecoregions</h1>
-<p class="lede">Alberta and Saskatchewan in the {n_regions} ecoregions this
-catalogue records ranges against, grouped by the {n_zones} ecozones that
-contain them. Click a region for its plants.</p>
+<p class="lede">Alberta and Saskatchewan in {n_zones} broad ecozones. Click one
+for its plants. The {n_regions} finer ecoregions inside them are listed under
+the map.</p>
 <figure class="mapfig wide-map">{svg}{legend_html(link, level=ECOZONE)}</figure>
 <p class="note">{_esc(CAVEAT)}</p>
 <ul class="ranges cols">{rows}</ul>

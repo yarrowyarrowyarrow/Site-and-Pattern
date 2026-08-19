@@ -7,8 +7,16 @@ bibliography pushed that module past its 800-line ceiling. Same shape as
 `static_site_render`, and `write_site` imports them back at call time so the
 dependency runs one way only.
 
-The About page is where the catalogue says what it is honest about, what it
-deliberately withholds (P12), and — since V2.65 — which works it is citing.
+The About page is where the catalogue says what it is honest about and — since
+V2.65 — which works it is citing.
+
+V2.71 cut the long "What it does not contain" section at the owner's request,
+as part of a plainer-language pass. That did **not** weaken P12: the one-line
+statement ("no Indigenous ecological knowledge, plant-use tradition or
+land-management practice … and none should be inferred from it") lives in the
+site footer and therefore appears on every page, and the withholding itself was
+never a promise made in prose — it is enforced in code by
+`site_facets.WITHHELD_ROLES` and by notes being off by default.
 """
 
 from __future__ import annotations
@@ -89,52 +97,32 @@ prairies.</p>
 
 <h2>What it is</h2>
 <p>A reference to the native plants of Alberta and the Canadian prairies, and
-the animals that depend on them. It is the catalogue behind <a
+the animals that depend on them.</p>
+<p>It is the catalogue behind <a
 href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">{_esc(APP_NAME)}</a>,
-a desktop application for designing landscapes with native plants:
-lawn-to-habitat conversion, pollinator gardens and ecological restoration.
-{_esc(APP_NAME)} does the site analysis, the design and the planting plan; these
-pages are its catalogue, published so you can read it without installing
-anything.</p>
+a desktop application for lawn-to-habitat conversion, pollinator gardens and
+restoration planting. {_esc(APP_NAME)} is for the site analysis, the design and
+the planting plan. These pages are its catalogue, published so you can read it
+without installing anything.</p>
 
 <h2>What it is honest about</h2>
 <ul>
-  <li><strong>Unknowns stay unknown.</strong> A species with no recorded bloom
-  window appears under no month. A plant with no recorded flower colour appears
-  under no colour. Absence of a record is never rendered as a fact.</li>
-  <li><strong>Evidence travels with the claim.</strong> Recorded ranges carry
-  their occurrence counts and a confidence band. A region derived from three
-  records is not presented like one derived from three hundred.</li>
-  <li><strong>Relationships are documented, not inferred.</strong> Every animal
-  listed on a plant page comes from a sourced record.</li>
-  <li><strong>Grasses and sedges are not yellow.</strong> They are
-  wind-pollinated and have no showy flower, so they get a bucket that says
-  so.</li>
+  <li><strong>Unknowns stay unknown.</strong> A plant with no recorded bloom
+  window appears under no month, and one with no recorded flower colour appears
+  under no colour. A blank is never filled in.</li>
+  <li><strong>Evidence travels with the claim.</strong> Every recorded range
+  carries how many records it rests on, so a region built from three sightings
+  does not look like one built from three hundred.</li>
+  <li><strong>Relationships are documented, not guessed.</strong> Every animal
+  on a plant page comes from a sourced record.</li>
   <li><strong>Photographs are credited or absent.</strong> {s['with_photo']} of
   {s['species']} species have an openly-licensed photograph we can attribute.
   The rest show none.</li>
   <li><strong>The region outlines are surveyed.</strong> They come from the
   National Ecological Framework for Canada v2.2, simplified to about 900 m for
   display, so an outline is accurate to roughly a kilometre rather than to the
-  metre. Until recently they were hand-traced and this page said so.</li>
+  metre.</li>
 </ul>
-
-<h2>What it does not contain</h2>
-<p>No Indigenous ecological knowledge, plant-use tradition, land-management
-practice or design framework appears in this catalogue, and none should be
-inferred from it. That knowledge is held by the communities it belongs to and is
-theirs to share on their own terms, through relationship rather than
-extraction.</p>
-<p>Two things follow from that and are worth stating plainly, because both are
-deliberate omissions rather than gaps. The underlying dataset has a free-text
-notes field in which some entries describe traditional medicinal use; it is
-<strong>withheld from these pages</strong>. The dataset also tags some species
-with a generic <em>medicinal</em> use category; that tag is <strong>not
-published or searchable here</strong> either. Putting a public, indexed index of
-medicinal native plants on the web would operationalize knowledge that was never
-ours to publish. The horticultural facts those notes also carried, such as how a
-plant spreads, whether it is toxic and where to buy it, are recorded in
-structured fields and do appear.</p>
 
 {_sources_section()}
 
@@ -142,12 +130,12 @@ structured fields and do appear.</p>
 <p>Errors and photograph credit problems can be reported as issues on the
 <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">project
 repository</a>. If a photograph of yours is here and the credit is wrong, or you
-would rather it were not here at all, it will be fixed or removed.</p>
+would rather it were not here, it will be fixed or removed.</p>
 
 <p class="src">Catalogue built {_esc(model["built"])}.</p>
 """
     return _page(f"About the {SITE_NAME} plant catalogue",
-                 "How this catalogue is sourced, what it is honest about, and "
-                 "what it deliberately does not contain.", body, 1)
+                 "Where this catalogue comes from, what it is honest about, "
+                 "and the works it cites.", body, 1)
 
 

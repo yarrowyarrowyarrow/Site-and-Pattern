@@ -197,10 +197,17 @@ def _cmd_build_site(args) -> int:
     print(f"Writing to {args.out} ...")
     summary = write_site(model, args.out, base_url=args.base_url,
                          copy_photos=not args.no_photos,
-                         include_notes=args.include_notes, progress=say)
+                         include_notes=args.include_notes,
+                         analytics_token=getattr(args, "analytics_token", ""),
+                         progress=say)
     print(f"\n{summary['files']} files written to {summary['out_dir']}")
     print(f"  {summary['species']} species pages, "
           f"{summary['wildlife']} wildlife pages")
+    # Said out loud either way. "Did this build have analytics in it?" is not a
+    # question anyone should have to answer by grepping the output.
+    print("  analytics: Cloudflare beacon embedded, disclosed in the footer"
+          if summary.get("analytics") else
+          "  analytics: none (the site makes no external request)")
     if summary["photos_hotlinked"]:
         print(f"  {summary['photos_copied']} photographs copied from the local "
               f"cache; {summary['photos_hotlinked']} still point at their "
@@ -336,6 +343,13 @@ def _build_parser() -> argparse.ArgumentParser:
                          "~43 rows describe traditional medicinal and plant-use "
                          "practice, and P12 forbids publishing that without "
                          "free, prior and informed consent (see CLAUDE.md)")
+    bs.add_argument("--analytics-token", default="", dest="analytics_token",
+                    help="Cloudflare Web Analytics site token. OFF by default: "
+                         "with no token the site makes no external request at "
+                         "all. With one, every page loads Cloudflare's beacon "
+                         "(no cookies, no per-visitor identifier) and says so "
+                         "in its footer. Get the token from the Cloudflare "
+                         "dashboard under Analytics & Logs > Web Analytics")
     bs.set_defaults(func=_cmd_build_site)
 
     # validate-data

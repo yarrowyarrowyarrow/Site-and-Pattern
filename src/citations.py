@@ -223,8 +223,12 @@ def disclaimer() -> str:
     and nobody has confirmed that a cited work supports the specific claim
     citing it. Saying where a claim came from is not the same as certifying it.
     """
+    # Three short sentences rather than one long one, and no em dash (V2.71).
+    # The website normalises an em dash to a comma, which turned the last
+    # clause into a comma splice on a public page; the fix belongs here, in the
+    # sentence, rather than as an exception to the house style.
     return ("These are the works the data cites. Their bibliographic details "
             "were transcribed from the source records and have not been "
-            "checked against the works themselves, and no one has verified "
-            "that a given work supports every claim citing it — this tells you "
-            "where a claim came from, not that it has been confirmed.")
+            "checked against the works themselves. Nor has anyone verified "
+            "that a cited work supports the claim citing it: a citation tells "
+            "you where a claim came from, not that it has been confirmed.")

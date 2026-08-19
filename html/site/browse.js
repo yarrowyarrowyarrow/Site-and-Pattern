@@ -32,13 +32,21 @@
   var clear = document.getElementById('clear');
   var active = document.getElementById('active');
 
-  // Cards are looked up by slug, taken from the href the renderer emitted, so
-  // the two cannot drift over a path prefix.
+  // Cards are looked up by slug, taken from the last path segment of the href
+  // the renderer emitted, so the two cannot drift over a path prefix, and the
+  // one script drives both /plants/ and (since V2.71) /wildlife/ without ever
+  // being told which page it is on. It used to match `plants/<slug>/`, which
+  // silently found nothing anywhere else.
   var cards = {};
   Array.prototype.forEach.call(results.children, function (el) {
-    var m = /plants\/([^/]+)\//.exec(el.getAttribute('href') || '');
-    if (m) { cards[m[1]] = el; }
+    var parts = (el.getAttribute('href') || '').split('/').filter(Boolean);
+    if (parts.length) { cards[parts[parts.length - 1]] = el; }
   });
+
+  // What the running count calls the things. Read off the results container so
+  // the noun travels with the rows rather than being hardcoded here.
+  var noun = results.getAttribute('data-noun') || 'plant';
+  var nounPlural = results.getAttribute('data-noun-plural') || (noun + 's');
 
   function checkedBoxes() {
     return Array.prototype.slice.call(
@@ -130,7 +138,7 @@
       if (ok) { shown++; }
     }
 
-    count.textContent = shown + (shown === 1 ? ' plant' : ' plants');
+    count.textContent = shown + ' ' + (shown === 1 ? noun : nounPlural);
     noresults.hidden = shown !== 0;
     clear.hidden = !boxes.length && !text;
     paintActive(boxes);

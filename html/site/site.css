@@ -159,10 +159,16 @@ p { margin: .7rem 0; }
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   border-top: 1px solid var(--line); padding-top: 1.2rem;
 }
-.figures div { margin: 0; }
+/* Each figure is a flex column and the number takes `margin-top:auto`, so the
+   numbers sit on one line however many lines their labels take. Grid cells
+   stretch to the tallest in the row; without this, "Species" (one line) put
+   its number a line above "With a credited photograph" (two lines) and the
+   row read as four unrelated numbers. */
+.figures div { margin: 0; display: flex; flex-direction: column; }
 .figures dt { color: var(--muted); font-size: .78rem; letter-spacing: .04em;
               text-transform: uppercase; }
-.figures dd { margin: .15rem 0 0; font-size: 1.5rem; font-weight: 600;
+.figures dd { margin: .15rem 0 0; margin-top: auto; padding-top: .15rem;
+              font-size: 1.5rem; font-weight: 600;
               font-variant-numeric: tabular-nums; }
 
 .split {
@@ -330,6 +336,9 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
   border-radius: var(--radius); display: block; box-shadow: var(--shadow);
 }
 .hero-photo .credit { margin: .45rem 0 0; }
+/* Wildlife pages are a wide layout, and an insect photographed close up looks
+   absurd at 60rem across. */
+.hero-photo.narrow { max-width: 32rem; }
 
 table.facts { border-collapse: collapse; width: 100%; margin: .6rem 0; }
 table.facts th, table.facts td {

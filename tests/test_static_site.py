@@ -74,11 +74,23 @@ _PLANTS = [
 ]
 
 _FAUNA = [
+    # The description opens by restating the common name, as roughly a third of
+    # the real rows do. Under an <h1> that already says it, that is a stutter.
     {"id": 10, "common_name": "Monarch", "scientific_name": "Danaus plexippus",
-     "taxon": "lepidoptera", "notes": ""},
+     "taxon": "lepidoptera", "notes": "",
+     "description": "Monarch. A migratory milkweed butterfly.",
+     "image_url": "https://example.org/monarch.jpg",
+     "image_attribution": "(c) Someone, CC BY", "image_license": "CC BY"},
     # An animal with no documented plants — must get no page.
     {"id": 11, "common_name": "Ghost Moth", "scientific_name": "Nobody knowsii",
      "taxon": "lepidoptera", "notes": ""},
+    # A photograph with no attribution: the same trap as Bebb's Sedge, on the
+    # animal side of the site. It must publish no picture at all rather than an
+    # uncredited one (V2.71, when animal photographs started being published).
+    {"id": 12, "common_name": "Prairie Bee", "scientific_name": "Andrena nulla",
+     "taxon": "bee", "notes": "",
+     "image_url": "https://example.org/bee.jpg",
+     "image_attribution": "", "image_license": "CC BY"},
 ]
 
 
@@ -135,6 +147,11 @@ def _fake_entry(plant_id):
 
 
 def _fake_plants_for_fauna(fauna_id, relationship=""):
+    if fauna_id == 12:
+        row = dict(_PLANTS[1])
+        row["relationship"] = "pollen"
+        row["specificity"] = "generalist"
+        return [row]
     if fauna_id != 10:
         return []
     row = dict(_PLANTS[0])
@@ -506,8 +523,16 @@ class TestTheRenderedSite(unittest.TestCase):
 
     def test_no_external_resource_is_referenced(self):
         """No CDN, no webfont, no analytics. The map and the 3D viewer already
-        follow this; a page that phones home would be the first."""
-        allowed = ("https://github.com/", "https://example.org/p.jpg")
+        follow this; a page that phones home would be the first.
+
+        The two ``example.org`` photographs are the fixture's own, left as
+        links because this build passes ``copy_photos=False``; a real build
+        stages them into ``assets/photos/``. V2.71 added an opt-in analytics
+        beacon, which this build does not ask for and therefore must not have
+        — `TestAnalyticsIsOptInAndDisclosed` covers both states.
+        """
+        allowed = ("https://github.com/", "https://example.org/p.jpg",
+                   "https://example.org/monarch.jpg")
         for page in self.out.rglob("*.html"):
             for link in _LINK.findall(page.read_text(encoding="utf-8")):
                 if link.startswith(("http://", "https://")):
@@ -532,6 +557,153 @@ class TestTheRenderedSite(unittest.TestCase):
         (out / "CNAME").write_text("plants.example.org", encoding="utf-8")
         render.write_site(self.model, str(out), copy_photos=False)
         self.assertTrue((out / "CNAME").exists())
+
+
+class TestTheWildlifeIndexIsSearchable(unittest.TestCase):
+    """V2.71. The index was 1,138 chips in five fixed taxon blocks, which is a
+    list rather than a way to find anything, and the photographs the `fauna`
+    table had carried since the iNaturalist fetch were not published at all."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _model()
+        cls.out = pathlib.Path(tempfile.mkdtemp(prefix="site_wildlife_"))
+        render.write_site(cls.model, str(cls.out), copy_photos=False)
+        cls.html = (cls.out / "wildlife" / "index.html").read_text(
+            encoding="utf-8")
+
+    def _animal(self, name):
+        return next(a for a in self.model["wildlife"] if a["name"] == name)
+
+    def test_the_index_can_find_its_own_cards(self):
+        """Same failure the plant page has: if the card renderer and the script
+        disagree about the href, every filter hides everything and the page
+        still draws. `browse.js` keys on the last path segment, so this is what
+        proves the wildlife hrefs end in the slug the index rows carry."""
+        rows = json.loads(re.search(
+            r'<script id="catalogue" type="application/json">(.*?)</script>',
+            self.html, re.S).group(1))
+        hrefs = set(re.findall(r'<a class="card" href="([^"]+)"', self.html))
+        self.assertEqual(len(rows), len(self.model["wildlife"]))
+        for row in rows:
+            self.assertIn(f"../wildlife/{row['s']}/", hrefs)
+
+    def test_a_facet_offers_only_values_something_answers(self):
+        """A checkbox that can only ever return nothing is worse than a missing
+        one: the empty result reads as a fact about the prairie."""
+        offered = set(re.findall(r'<input type="checkbox" data-f="taxon" '
+                                 r'value="([^"]+)"', self.html))
+        self.assertEqual(offered, {"lepidoptera", "bee"})
+
+    def test_an_animal_with_no_photograph_answers_no_photo_filter(self):
+        """P9 as the filter sees it: absent is absent, not a weak yes. Ticking
+        "has a photograph" must drop it rather than keep it as an unknown."""
+        from src.static_site_wildlife import facets_for
+
+        self.assertIn("photo", facets_for(self._animal("Monarch"))["has"])
+        self.assertNotIn("has", facets_for(self._animal("Prairie Bee")))
+
+    def test_the_uncredited_animal_photo_is_absent_entirely(self):
+        """The licences oblige attribution. An animal photograph with no
+        credit is not published smaller or without a caption; it is not
+        published."""
+        bee = self._animal("Prairie Bee")
+        self.assertEqual(bee["image"], "")
+        page = (self.out / "wildlife" / bee["slug"] / "index.html").read_text(
+            encoding="utf-8")
+        # Not "no <img on the page": the plants it feeds on carry their own
+        # thumbnails and those are properly credited. What must be absent is
+        # this animal's picture and the figure that would hold it.
+        self.assertNotIn("example.org/bee.jpg", page)
+        self.assertNotIn("hero-photo", page)
+
+    def test_the_credited_animal_photo_is_published_with_its_credit(self):
+        monarch = self._animal("Monarch")
+        page = (self.out / "wildlife" / monarch["slug"] /
+                "index.html").read_text(encoding="utf-8")
+        self.assertIn("example.org/monarch.jpg", page)
+        self.assertIn("CC BY", page)
+
+    def test_the_animal_description_is_published_without_its_own_name(self):
+        """`fauna` has no `notes` column, so the model key that fed the animal
+        page's prose block had been reading `None` on every row since it was
+        written and the block had never rendered once. `description` is
+        populated for all 1,156 rows and no page had shown a word of it."""
+        monarch = self._animal("Monarch")
+        self.assertEqual(monarch["description"],
+                         "A migratory milkweed butterfly.")
+        page = (self.out / "wildlife" / monarch["slug"] /
+                "index.html").read_text(encoding="utf-8")
+        self.assertIn("A migratory milkweed butterfly.", page)
+        self.assertNotIn("Monarch. A migratory", page)
+
+    def test_an_animal_with_no_description_still_renders(self):
+        bee = self._animal("Prairie Bee")
+        self.assertEqual(bee["description"], "")
+        page = (self.out / "wildlife" / bee["slug"] / "index.html").read_text(
+            encoding="utf-8")
+        self.assertIn("1 documented plant relationship.", page)
+
+    def test_the_relationship_facet_reads_the_raw_kind(self):
+        """`groups` holds display phrases ("sips nectar at"). The facet has to
+        key on the relationship itself, or the vocabulary drifts the first time
+        a heading is reworded."""
+        self.assertEqual(self._animal("Monarch")["kinds"], ["nectar"])
+        self.assertEqual(self._animal("Prairie Bee")["kinds"], ["pollen"])
+
+
+class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
+    """V2.71. The site made no external request of any kind; a beacon is a real
+    change to that promise, so it is off by default, refuses a malformed token
+    rather than pasting it into every page, and says so where a reader looks."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _model()
+
+    def _build(self, **kw):
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_analytics_"))
+        summary = render.write_site(self.model, str(out), copy_photos=False,
+                                    **kw)
+        return out, summary
+
+    def test_no_beacon_unless_asked_for(self):
+        out, summary = self._build()
+        self.assertFalse(summary["analytics"])
+        for page in out.rglob("*.html"):
+            self.assertNotIn("cloudflareinsights",
+                             page.read_text(encoding="utf-8"))
+
+    def test_the_beacon_and_its_disclosure_land_on_every_page(self):
+        token = "a" * 32
+        out, summary = self._build(analytics_token=token)
+        self.assertTrue(summary["analytics"])
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(token, text, str(page))
+            self.assertIn("sets no cookies", text, str(page))
+
+    def test_a_malformed_token_is_refused(self):
+        """It lands inside a quoted JSON attribute on 2,000 pages. A loose
+        check here is markup injection across the whole site."""
+        for bad in ('x" onload="alert(1)', "short", "has spaces in it",
+                    "tok'en"):
+            with self.assertRaises(ValueError, msg=bad):
+                self._build(analytics_token=bad)
+
+    def test_a_build_cannot_inherit_the_previous_one_s_token(self):
+        """The token is module state for the length of one build, so the seam
+        that matters is what a *later* build sees. It is assigned on the way in
+        rather than restored on the way out, so neither a rejected token nor a
+        build that raised half way can put a beacon on the next one's pages."""
+        with self.assertRaises(ValueError):
+            self._build(analytics_token="nope")
+        self._build(analytics_token="b" * 32)
+        out, summary = self._build()
+        self.assertFalse(summary["analytics"])
+        for page in out.rglob("*.html"):
+            self.assertNotIn("cloudflareinsights",
+                             page.read_text(encoding="utf-8"), str(page))
 
 
 if __name__ == "__main__":
