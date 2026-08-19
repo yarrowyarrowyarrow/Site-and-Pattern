@@ -166,6 +166,49 @@ existing link breaks.
 
 ---
 
+## Step 4: find out whether anyone is reading it (optional)
+
+Off unless you ask for it. With no token the site makes **no request to
+anywhere else at all**, which is how it has always shipped and the default this
+step does not change.
+
+**Why Cloudflare Web Analytics and not Google Analytics.** It is free, it needs
+no cookie banner because it sets no cookies, it keeps no per-visitor
+identifier, and your domain is already on Cloudflare so there is no new account
+to open. Google Analytics would give more numbers than you need and would put a
+consent obligation on a catalogue that currently has none.
+
+Get the token once:
+
+1. In the Cloudflare dashboard, left sidebar: **Analytics & Logs → Web
+   Analytics**.
+2. **Add a site**, enter `grownativeplants.ca`, and it shows you a snippet.
+3. You do not need the snippet. Copy only the long value after `"token":` —
+   32 characters, letters and digits.
+
+Then build with it:
+
+```bash
+python -m src.cli build-site public --base-url https://grownativeplants.ca/ \
+  --analytics-token PASTE_THE_TOKEN_HERE
+```
+
+**What it does.** Adds one `<script>` to the end of every page, pointing at
+Cloudflare's beacon, and adds a line to the footer saying so. **How to read the
+output.** The last line of the build now reads either `analytics: Cloudflare
+beacon embedded, disclosed in the footer` or `analytics: none (the site makes
+no external request)`. Read that line — it is the only way to know which kind
+of build you just made. **What failure looks like:** a mistyped token is
+*refused* with an error rather than published, because the value goes into
+2,000 pages and a broken one would be silent. A token that is well-formed but
+belongs to a different site will not error; it will just record nothing, so
+check Cloudflare shows traffic within a day of publishing.
+
+Numbers show up under the same **Web Analytics** page in Cloudflare, usually
+within a few minutes of the first visit.
+
+---
+
 ## What is already handled
 
 Worth knowing so you do not go looking for it:
@@ -175,8 +218,9 @@ Worth knowing so you do not go looking for it:
 - **No uncredited photographs.** A photo without an attributable credit is not
   published at all, so there is nothing to audit before going live.
 - **No Indigenous knowledge** (P12). The `notes` field is withheld from the
-  public site by default, and the About page states plainly that the catalogue
-  contains none and none should be inferred from it.
+  public site by default, and the statement that the catalogue contains none
+  and none should be inferred from it sits in the **footer of every page**, not
+  only on the About page. A test fails the build if any page is missing it.
 - **Every fact carries its source or says it is missing.** The map states the
   survey its boundaries come from and how far they were simplified; guessed
   flower colours are marked *not verified* rather than presented as fact.
