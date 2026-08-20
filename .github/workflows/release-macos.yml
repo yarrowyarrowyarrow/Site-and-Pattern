@@ -90,6 +90,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          # WITHOUT THIS LINE THE TAG LANDS ON THE WRONG COMMIT (fixed V2.72).
+          # This action creates the tag when it does not already exist, and with
+          # no target_commitish GitHub anchors a new tag to the REPOSITORY'S
+          # DEFAULT BRANCH rather than to the commit being built. `main` has not
+          # moved since the V2.20 merge, so every tag from V2.21 to V2.71 - 51
+          # of them - ended up on that one commit, fifty releases out of date.
+          # Nothing looked wrong: the .dmg and .exe are uploaded assets, so the
+          # downloads were always correct; only the tag, and therefore the
+          # "Source code" links on the release page, pointed somewhere else.
+          target_commitish: ${{ github.sha }}
           name: ${{ github.ref_name }}
           # Keep this body IDENTICAL to release-windows.yml: both workflows
           # publish to the same release, so whichever finishes last sets the

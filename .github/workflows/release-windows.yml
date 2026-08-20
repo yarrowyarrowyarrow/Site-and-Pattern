@@ -77,6 +77,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          # Keep in step with release-macos.yml: whichever workflow gets there
+          # first creates the tag, so BOTH have to name the target or the fix
+          # only holds half the time. See the long note in that file.
+          target_commitish: ${{ github.sha }}
           name: ${{ github.ref_name }}
           body: |
             **Site & Pattern** — a native-plant landscape designer for Alberta and the Canadian prairies.

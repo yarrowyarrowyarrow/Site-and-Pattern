@@ -85,6 +85,23 @@ When starting a new piece of work:
 branch even if the harness suggests one as the default. If the system
 default branch is a codename, override it and use the next `V*.*`.
 
+**Every release also has a TAG of the same name, and that is a trap (V2.72).**
+`V2.71` names both `refs/heads/V2.71` and `refs/tags/V2.71`. If both are in a
+clone, git refuses to guess: `git push -u origin V2.71` fails with *"src refspec
+V2.71 matches more than one"*. A working clone normally has only the branch —
+the tag arrives if you ask for it by name, e.g. `git fetch origin V2.71`, which
+resolves to the tag. Fix a clone once with:
+
+```bash
+git config remote.origin.tagOpt --no-tags   # or a bare fetch drags all 102 back
+git tag -d $(git tag)                       # local refs only; remote untouched
+```
+
+and prefer `git switch <V>` (branches only) over `git checkout <V>`, and
+`git push -u origin HEAD` over naming the branch. **Never delete the remote
+tags**: each anchors a GitHub Release, and `github_releases.parse_release_version`
+reads `tag_name` off those releases to drive the in-app updater.
+
 **This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
 `.claude/settings.json`), so it no longer depends on remembering:
 - On **SessionStart** the hook computes the next V-branch
