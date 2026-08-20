@@ -81,6 +81,7 @@ class TestScene3DWindow(unittest.TestCase):
         self.assertEqual(len(scenes[0]["plants"]), 1)
         self.assertTrue(scenes[0]["plants"][0]["existing"])
         self.assertIsNone(win._thread)   # no boundary/pin → no fetch
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_year_slider_repushes_scene(self):
@@ -93,6 +94,7 @@ class TestScene3DWindow(unittest.TestCase):
         self.assertEqual(len(scenes), 1)
         self.assertEqual(scenes[0]["year"], 10)
         self.assertEqual(win._year_lbl.text(), "year 10")
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_open_3d_view_singleton(self):

@@ -12,8 +12,9 @@ import — plus a point-cloud sample for the 3D preview.
 
 Split on purpose:
 
-  * :class:`ScanAlignSession` — Qt-free pairing/state logic + preview
-    raster + engine invocation, unit-testable without a display;
+  * :class:`src.scan_align.ScanAlignSession` — Qt-free pairing/state logic +
+    preview raster + engine invocation, unit-testable without a display (it
+    lives in its own module precisely so importing it doesn't require Qt);
   * :class:`ScanImportDialog` — the Qt shell: preview label, pair list,
     one-shot hookup to the map's ``map_clicked`` bridge signal;
   * :func:`start_scan_import` — the File-menu entry point (kept off
@@ -32,109 +33,13 @@ from PyQt6.QtWidgets import (
 )
 
 from src.controllers.undo_support import undoable
+# The Qt-free core lives in its own module so it can be imported (and tested)
+# without a GUI stack; re-exported here because callers and tests have always
+# said `from src.scan_import_dialog import ScanAlignSession`.
+from src.scan_align import _MIN_PAIRS, _PREVIEW_MAX_PX, ScanAlignSession
 
-_PREVIEW_MAX_PX = 420       # longest preview edge
-_MIN_PAIRS = 2
-
-
-class ScanAlignSession:
-    """Pairing state + preview raster + engine invocation (Qt-free)."""
-
-    def __init__(self, points, *, file_path: Optional[str] = None,
-                 is_splat: bool = False, up: str = "z"):
-        self.points = points                  # (N, 3) aligned-input cloud
-        self.file_path = file_path            # source file (splat backdrop path)
-        self.is_splat = bool(is_splat)        # a Gaussian-splat PLY?
-        self.up = up                          # vertical axis the points were read with
-        self.pairs: list = []                 # [{"scan": (x, y), "map": (lat, lng)}]
-        self.pending_scan: Optional[tuple] = None
-        self._preview = None                  # cached (heights, extent, cell)
-
-    # ── preview raster ────────────────────────────────────────────────────
-
-    def preview_grid(self):
-        """Coarse nDSM for the preview image: ``(heights_2d, extent,
-        cell_m)`` with row 0 = north; NaN = no points."""
-        if self._preview is None:
-            import numpy as np
-            from src.scan_import import rasterize_ndsm
-            x = self.points[:, 0]
-            y = self.points[:, 1]
-            span = max(float(x.max() - x.min()), float(y.max() - y.min()),
-                       1e-6)
-            cell = max(0.05, span / _PREVIEW_MAX_PX)
-            grid, extent = rasterize_ndsm(self.points, cell_m=cell)
-            self._preview = (grid, extent, cell)
-        return self._preview
-
-    def pixel_to_scan_xy(self, px: float, py: float) -> tuple:
-        """Preview pixel (col, row) → scan-frame (x, y) metres."""
-        _grid, (min_x, _min_y, _max_x, max_y), cell = self.preview_grid()
-        return (min_x + (px + 0.5) * cell, max_y - (py + 0.5) * cell)
-
-    # ── pairing state machine ─────────────────────────────────────────────
-
-    def click_scan(self, scan_xy: tuple) -> None:
-        """A spot was picked on the preview — it becomes the pending half
-        of the next pair (re-clicking just replaces it)."""
-        self.pending_scan = (float(scan_xy[0]), float(scan_xy[1]))
-
-    def click_map(self, lat: float, lng: float) -> bool:
-        """A spot was picked on the map. Completes the pending pair;
-        returns False (ignored) when no scan half is pending."""
-        if self.pending_scan is None:
-            return False
-        self.pairs.append({"scan": self.pending_scan,
-                           "map": (float(lat), float(lng))})
-        self.pending_scan = None
-        return True
-
-    def remove_pair(self, index: int) -> None:
-        if 0 <= index < len(self.pairs):
-            self.pairs.pop(index)
-
-    @property
-    def ready(self) -> bool:
-        return len(self.pairs) >= _MIN_PAIRS
-
-    # ── engine ────────────────────────────────────────────────────────────
-
-    def run_import(self, project_dict: dict, *,
-                   cell_m: float = 0.25, min_height_m: float = 2.0) -> dict:
-        """Georeference with the collected pairs and land the footprints in
-        ``project_dict``. Returns ``{"features", "scan_sample"}`` (the
-        :func:`src.scan_import.import_scan` shape)."""
-        from src.footprint_extract import add_extracted_footprints
-        from src.scan_import import (align_scan, sample_for_scene,
-                                     scan_to_footprints)
-        if not self.ready:
-            raise ValueError(f"need at least {_MIN_PAIRS} control-point "
-                             f"pairs ({len(self.pairs)} so far)")
-        aligned, proj = align_scan(
-            self.points,
-            [p["scan"] for p in self.pairs],
-            [p["map"] for p in self.pairs])
-        rings = scan_to_footprints(aligned, proj, cell_m,
-                                   min_height_m=min_height_m)
-        return {
-            "features": add_extracted_footprints(rings, project_dict,
-                                                 source="scan"),
-            "scan_sample": sample_for_scene(aligned, proj),
-        }
-
-    def backdrop_feature(self) -> dict:
-        """Build the ``splat_backdrop`` GeoJSON feature for a Gaussian-splat
-        scan from the collected control points — the same georeference the
-        footprint path uses, stored as the splat's 3D placement transform."""
-        from src import splat_backdrop
-        if not self.ready:
-            raise ValueError(f"need at least {_MIN_PAIRS} control-point "
-                             f"pairs ({len(self.pairs)} so far)")
-        return splat_backdrop.feature_from_alignment(
-            self.points,
-            [p["scan"] for p in self.pairs],
-            [p["map"] for p in self.pairs],
-            file_path=self.file_path, up=self.up)
+__all__ = ["ScanAlignSession", "ScanImportDialog", "preview_qimage",
+           "start_scan_import"]
 
 
 def preview_qimage(session: ScanAlignSession) -> QImage:

@@ -120,11 +120,19 @@ def taxon_candidates(taxon) -> list:
     return out
 
 
-def pick_photo(candidates, accept=ACCEPT_LICENSES) -> "tuple | None":
-    """First ``(url, attribution, license_code)`` among ``candidates`` whose
+def open_candidates(candidates, accept=ACCEPT_LICENSES):
+    """Every ``(url, attribution, license_code)`` among ``candidates`` whose
     licence is in ``accept`` (defaults to the redistributable set; pass
-    ``BEE_ACCEPT_LICENSES`` for bees), else None. De-dupes by photo id so a photo
-    that appears as both the default and in taxon_photos isn't checked twice."""
+    ``BEE_ACCEPT_LICENSES`` for bees). De-dupes by photo id so a photo that
+    appears as both the default and in taxon_photos isn't yielded twice.
+
+    A generator rather than a single answer because there are two questions to
+    ask of the same photo set. This script asks "give me one photo for this
+    species" and takes the first. The curation bench asks "show me all of them
+    so a person can pick the one that is actually a *habit* shot" — which is the
+    only way the `habit` slot ever gets filled, since the first openly-licensed
+    photo is nearly always a flower macro.
+    """
     seen = set()
     for ph in candidates or []:
         if not isinstance(ph, dict):
@@ -140,8 +148,13 @@ def pick_photo(candidates, accept=ACCEPT_LICENSES) -> "tuple | None":
         url = ph.get("medium_url") or ph.get("url") or ph.get("square_url")
         if not url:
             continue
-        return (url, (ph.get("attribution") or "").strip(), code)
-    return None
+        yield (url, (ph.get("attribution") or "").strip(), code)
+
+
+def pick_photo(candidates, accept=ACCEPT_LICENSES) -> "tuple | None":
+    """First ``(url, attribution, license_code)`` among ``candidates`` whose
+    licence is in ``accept``, else None."""
+    return next(open_candidates(candidates, accept), None)
 
 
 def photo_from_taxon(taxon, accept=ACCEPT_LICENSES) -> "tuple | None":

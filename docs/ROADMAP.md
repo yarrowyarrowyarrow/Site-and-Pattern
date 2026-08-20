@@ -1,8 +1,28 @@
-# Site & Pattern — Feature Roadmap
+# Site & Pattern — Feature ledger
 
-A prioritized list of features for the Alberta-focused **Native Habitat Designer** — turning lawns into native plant habitat. Organized by effort/impact tiers, with the active sprint at the top.
+The effort/impact ledger: what has been built, tier by tier. It is the
+**historical** view — a record of what shipped and roughly what it cost.
 
-> For the *philosophy-driven* feature exploration (organized by design principle, complementary to this ledger), see [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and the design philosophy it derives from, [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md).
+> **Looking for what is being worked on now?** That is
+> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md), which carries the live plan (F63–F119 and
+> beyond). For a straight list of **everything not yet built**, see
+> [`BACKLOG.md`](BACKLOG.md). For the philosophy-driven lens over both — features
+> organized by the principle they serve — see
+> [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) and the founding text it
+> derives from, [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
+
+The "Current Sprint" table below is from the V1.x reframe (**early V1.x, before
+V1.5**) and is kept as the record of that pivot; everything in it is long done.
+It is not the current sprint and has not been since V1.5. Statuses inside it were
+never updated after the pivot and should be read as historical intent, not as
+state.
+
+> **Four statuses corrected in V2.52** — the tiers below had been drifting for a
+> long time. **P1** (succession/timeline planner) and **V5** (photo overlay) read
+> "Planned" and had shipped, as the succession engine / F2 and as F24. **P4**
+> (crop rotation tracker) and **P5** (input/output "energy leak" mapping) are
+> marked as retirement candidates: both are permaculture-era, predate the V1.x
+> pivot to native habitat, and have not been coherent with the product since.
 
 ---
 
@@ -52,7 +72,7 @@ Tools that help designers understand their site.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | A1 | **Sun path / shadow overlay** | Given lat/lng + date, draw the sun arc and show shadow direction arrows for morning/noon/evening — helps place shade-sensitive crops | Done |
-| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Done |
+| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Retired (V2.25 — Sun Path + real wind data cover it) |
 | A3 | **Slope / contour indicator** | Manual or imported contour lines to show terrain; helps place swales and ponds correctly | Done |
 | A4 | **Wind sector & windbreak effect** | Mark prevailing wind direction; windbreak structures/hedges show a "shelter zone" behind them (10x their height) | Done |
 
@@ -64,11 +84,11 @@ Features for long-term planning and tracking.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
+| P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Done — far past this card: `src/succession_engine.py` + the F2 snapshot timeline. Status corrected V2.52 |
 | P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
 | P3 | **Wildlife & Human Forage calendars** | Two expandable tree views — Wildlife Forage (pollinator nectar + bird food, nectar-gap flagging) and Human Forage (edible plants by harvest window). Each month expands to the individual plants providing forage. | Done |
-| P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
-| P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
+| P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | **Retirement candidate** (V2.52) — permaculture-era, predates the native-habitat pivot |
+| P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | **Retirement candidate** (V2.52) — same reason |
 | P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
 
 ---
@@ -78,10 +98,10 @@ Features for long-term planning and tracking.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | V1 | **Vegetation layer indicators** | Visual markers for vegetation layers (overstory, understory, shrub layer, herbaceous, groundcover, vine, root) with layer toggle | Planned |
-| V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Planned |
+| V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Retired (V2.25 — shipped in V1.x, removed: the tile filter added no design value; the 3D preview owns seasons now) |
 | V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
 | V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
-| V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Planned |
+| V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Done — shipped as **F24** (`src/site_photo.py` + `src/site_photo_flow.py`). Status corrected V2.52 |
 
 ---
 
@@ -132,7 +152,7 @@ Features for long-term planning and tracking.
 | Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
 | Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |
 | Sun path / shadow overlay (6 key dates, shadow arrows) | Done |
-| Sector analysis (8 presets: sun, wind, frost, noise, views, fire) | Done |
+| Sector analysis (8 presets: sun, wind, frost, noise, views, fire) | Retired in V2.25 |
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
 | Maintenance / labour estimator (plants + structures, capacity check) | Done |
@@ -143,6 +163,15 @@ Features for long-term planning and tracking.
 | Water budget calculator (demand vs rainfall + catchment) | Done |
 | Print / PDF export (map screenshot, plant list, notes, title block) | Done |
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
+| Unified relationship-edges layer (`relationship_edges` view + `src/db/relationships.py`; one query API over plant↔fauna, companion and shared-community edges, each tagged documented vs derived) | Done |
+| Relationship web map overlay (the design drawn as a network: species at their planting centroid, wildlife on a ring outside it, layer filter + legend) | Done |
+| First-run welcome (Generate / start from your yard / open the example), three-step getting-started strip above the map, beginner-default design goals | Done |
+| Generate Design removed from the Draw toolbar (V2.32) — a once-per-project action does not belong among the drawing tools. It stays on File → Generate Design… (Ctrl+G) and on the getting-started strip, which retires itself once the user no longer needs it | Done |
+| Worked example design — a front-yard lawn conversion built from an authored spec against the live catalogue (Help → Open the Example Design) | Done |
+| Site-prep sheet (lawn-removal methods sized to the area, decompact-don't-enrich advice keyed to soil texture, mulch volume, pH mismatches) | Done |
+| Numbered planting map — a scale plan drawing with scale bar, north arrow and a key that matches the buy list | Done |
+| Maintenance calendar — four year-bands with falling hour ranges, a first-season month-by-month, and the spring-not-fall cut-back rule | Done |
+| PDF export text fix — font sizes were set in points from a device-pixel figure, so every text page rendered blank at printer resolution | Done |
 
 ---
 

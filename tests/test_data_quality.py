@@ -2,7 +2,7 @@
 tests/test_data_quality.py
 
 Wraps src.data_quality.validate_all() in the unit-test harness so
-`python -m unittest discover -s tests` fails if anyone introduces a
+`python -m unittest discover -s tests -t .` fails if anyone introduces a
 typo, unknown tag, or duplicate scientific name into the shipped
 plant JSON. Also exercises the per-error pathway by feeding deliberately
 malformed records to ``validate_records`` directly.
@@ -300,6 +300,155 @@ class TestValidateFile(unittest.TestCase):
             self.assertIn("JSON parse error", errors[0])
         finally:
             tmp_path.unlink()
+
+
+class TestFlowerColourGate(unittest.TestCase):
+    """V2.48. The colour column was a genus-level guess and nothing checked it,
+    which is how both columbines came to be red. This gate is what stops that
+    class of error returning silently."""
+
+    def test_the_shipped_data_passes(self):
+        from src.data_quality import validate_flower_colour
+        errors, warnings = validate_flower_colour()
+        self.assertEqual(errors, [])
+        # The warnings are the honest remaining debt (genera where no species
+        # is checkable yet), not noise. If they hit zero, either somebody did
+        # the sourcing work or the check stopped working.
+        self.assertGreater(len(warnings), 0)
+
+    def test_a_name_that_contradicts_its_hex_is_an_error(self):
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        dq._load_json_list = lambda _p: [{
+            "scientific_name": "Testus blueus", "common_name": "Blue Testflower",
+            "plant_type": "wildflower", "flower_color": "#f2c11e",
+        }]
+        try:
+            errors, _ = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(len(errors), 1)
+        self.assertIn("its own name says 'blue'", errors[0])
+
+    def test_a_uniform_uncheckable_genus_is_a_warning(self):
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        dq._load_json_list = lambda _p: [
+            {"scientific_name": f"Testus sp{i}", "common_name": f"Test {i}",
+             "plant_type": "wildflower", "flower_color": "#f2c11e",
+             "flower_colour_source": "estimated"} for i in range(3)]
+        try:
+            errors, warnings = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(errors, [])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Testus", warnings[0])
+
+    def test_one_checkable_species_clears_its_genus(self):
+        """The warning means "nobody has verified any of these", so verifying
+        one is what should silence it."""
+        from src.data_quality import validate_flower_colour
+        import src.data_quality as dq
+        real = dq._load_json_list
+        rows = [{"scientific_name": f"Testus sp{i}", "common_name": f"Test {i}",
+                 "plant_type": "wildflower", "flower_color": "#f2c11e",
+                 "flower_colour_source": "estimated"} for i in range(3)]
+        rows[0]["flower_colour_source"] = "epithet"
+        dq._load_json_list = lambda _p: rows
+        try:
+            _, warnings = validate_flower_colour()
+        finally:
+            dq._load_json_list = real
+        self.assertEqual(warnings, [])
+
+
+class TestUseTagsAgainstEdges(unittest.TestCase):
+    """V2.65 (F120). The score reads use tags; the citations live in edges.
+    Nothing kept them in agreement, so the app held a sourced `larval_host`
+    record for Chokecherry while telling the user their chokecherry planting
+    had *"no butterfly/moth host plants"*.
+
+    The reconciliation is additive, and the **taxon requirement is the part
+    worth guarding** — without it a gall midge in a hawthorn, a horntail in a
+    spruce and a deer mouse eating grama seed all voted, and 21 of the 101
+    species would have been tagged on evidence that says nothing about
+    caterpillars or birds.
+    """
+
+    def setUp(self):
+        from src.data_quality import _TAG_BACKED_BY_EDGE, use_tags_vs_edges
+        self.table = _TAG_BACKED_BY_EDGE
+        self.found = use_tags_vs_edges
+
+    def test_the_shipped_data_has_no_contradiction_left(self):
+        """The headline. Every sourced edge that backs a tag now has it."""
+        self.assertEqual(self.found(), {})
+
+    def test_each_tag_names_the_taxon_that_has_to_be_at_the_far_end(self):
+        """The table is `{tag: (relationships, taxon)}` and both halves are
+        read. A three-element or bare-tuple entry means someone reverted to
+        the relationship-only shape that shipped the wrong tags."""
+        for tag, entry in self.table.items():
+            self.assertEqual(len(entry), 2, tag)
+            rels, want = entry
+            self.assertIsInstance(rels, tuple, tag)
+            self.assertTrue(rels, tag)
+            self.assertIn(want, ("lepidoptera", "bird", "bee",
+                                 "other_insect", "mammal"), tag)
+
+    def test_a_non_lepidopteran_larval_host_does_not_earn_host_plant(self):
+        """A gall midge developing in a hawthorn is a true larval-host record
+        and says nothing whatever about butterflies. `host_plant` drives
+        design_critic's butterfly/moth line, so it must not be earned here."""
+        rels, want = self.table["host_plant"]
+        self.assertEqual(rels, ("larval_host",))
+        self.assertEqual(want, "lepidoptera")
+
+    def test_a_mammal_eating_seed_does_not_earn_bird_food(self):
+        """Three `seed_food` edges in the shipped data name a deer mouse."""
+        rels, want = self.table["bird_food"]
+        self.assertEqual(set(rels), {"fruit_food", "seed_food"})
+        self.assertEqual(want, "bird")
+
+    def test_every_tagged_species_that_the_edges_justify_still_has_the_tag(self):
+        """The reconciliation ran over the shipped files, not a copy. Spot-check
+        four the report named, one per justifying taxon and file."""
+        rows = []
+        for name in ("plants_master.json", "garden_plants.json"):
+            with open(os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                    "data", name), encoding="utf-8") as fh:
+                rows += [r for r in json.load(fh) if isinstance(r, dict)]
+        by = {(r.get("common_name") or "").strip().lower(): r for r in rows}
+        for common, tag in (("chokecherry", "host_plant"),
+                            ("balsam poplar", "host_plant"),
+                            ("bearberry", "host_plant"),
+                            ("bur oak", "bird_food")):
+            tags = {t.strip() for t in
+                    (by[common].get("permaculture_uses") or "").split(",")}
+            self.assertIn(tag, tags, common)
+
+    def test_the_reconciler_only_ever_adds(self):
+        """Absence of an edge is absence of evidence, not evidence of absence:
+        the catalogue's edges cover a fraction of what is real, so removing a
+        tag for want of a record would delete a human's judgement on the
+        strength of a gap. Asserted by re-running the reconciler in report
+        mode and checking it proposes nothing at all."""
+        import importlib.util
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, "scripts", "reconcile_use_tags.py")
+        spec = importlib.util.spec_from_file_location("reconcile_use_tags",
+                                                      path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()):
+            result = mod.reconcile(write=False)
+        self.assertEqual(result["needed"], {})
 
 
 if __name__ == "__main__":

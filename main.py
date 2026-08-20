@@ -17,14 +17,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.ssl_bootstrap import ensure_ca_bundle
 ensure_ca_bundle()
 
+# File + stderr logging (V2.22) — before any Qt import so even an import-time
+# failure of the GUI stack leaves a trace in <user data dir>/logs/app.log.
+from src.log import init_logging
+init_logging()
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler
+from PyQt6.QtCore import Qt, QtMsgType, QTimer, qInstallMessageHandler
 
 # QtWebEngine must be initialised before QApplication on some platforms
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
 
 from src.app import MainWindow
+from src import app_mode, onboarding_flow
 
 
 def _qt_message_filter(msg_type, context, message):
@@ -61,8 +67,41 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("PermaDesign")
 
-    window = MainWindow()
-    window.show()
+    # The start screen, ahead of the map (V2.40, page in V2.41). Everything it
+    # offers is read from disk — the saves folder, the design you were last in,
+    # an autosave that survived a crash, what is in bloom — so it needs no
+    # MainWindow, and running it first is the whole difference between a start
+    # screen and a dialog laid over an app you can already see. Returns "" when
+    # it is turned off or dismissed, which means "start me on the blank map".
+    #
+    # The window is built *behind* it, on a zero-timer that fires inside the
+    # screen's own modal event loop. Constructing MainWindow is a few hundred
+    # ms and starts no threads, but it kicks off the Leaflet load, which is
+    # asynchronous and is the part that actually costs seconds. Without this
+    # the screen would be a straight regression in perceived speed: today's
+    # dialog already has the map loading behind it. Nothing is shown until a
+    # door is picked.
+    built: dict = {}
+    QTimer.singleShot(0, lambda: built.setdefault("window", MainWindow()))
+    choice = onboarding_flow.choose_start_action()
+
+    window = built.get("window") or MainWindow()
+    # V2.43 — the Learn door does not open the design app. Its surfaces are
+    # standalone windows (a walkable landscape, the Field Guide, the lessons),
+    # and *not showing the map and the six side tabs* is the whole of the
+    # simplification the feedback asked for. The window is still built — it is
+    # what the Learn windows hang their singletons off, and it makes stepping
+    # into Design later instant — it is simply never shown.
+    if app_mode.opens_main_window(choice):
+        window.show()
+    # Rows that draw a project wait for map_ready; the rest run at once.
+    onboarding_flow.act_on_start_choice(window, choice)
+
+    # Safety net: if a Learn door failed to open its window, Qt would quit the
+    # moment this function returns, with nothing on screen and no error. A
+    # working app on the wrong screen beats a silent exit.
+    if not any(w.isVisible() for w in app.topLevelWidgets()):
+        window.show()
 
     sys.exit(app.exec())
 

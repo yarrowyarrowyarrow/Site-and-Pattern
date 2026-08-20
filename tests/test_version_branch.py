@@ -17,10 +17,17 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.version_branch import (  # noqa: E402
+    abort_conflicted_state,
+    fast_forward_upstream,
+    list_remote_version_branches,
+    normalize_branch_ref,
     parse_version_branch,
     is_newer_version,
     newest_remote_version_branch,
     next_version_branch,
+    unmerged_paths,
+    update_to_branch,
+    working_tree_dirty,
 )
 
 
@@ -324,6 +331,13 @@ class TestVersionBranchSwitchCheckout(unittest.TestCase):
         # rc 0 + "refs/heads/<branch>" when attached; rc != 0 when detached.
         return self._d("symbolic-ref", "-q", "HEAD")
 
+    def _runner(self):
+        """The `git_runner` shape src/version_branch.py takes, bound to the
+        downstream clone. Shared by every subclass here."""
+        def _git(*args, timeout=30):
+            return self._d(*args)
+        return _git
+
     def test_checkout_dash_B_attaches_to_branch_despite_tag(self):
         # The fix: explicit origin/<target> start-point → real tracking branch.
         r = self._d("checkout", "-B", "V1.77", "origin/V1.77")
@@ -343,6 +357,235 @@ class TestVersionBranchSwitchCheckout(unittest.TestCase):
         self.assertNotEqual(
             self._symbolic_ref().returncode, 0,
             "bare `git checkout V1.77` should detach onto the same-named tag")
+
+
+class TestOneClickUpdateHelpers(TestVersionBranchSwitchCheckout):
+    """V2.25 — the restored one-click updater's Qt-free core. Reuses the
+    switch-checkout scaffolding (upstream repo with a V-branch AND a
+    same-named tag, downstream clone starting detached), which is exactly
+    the state a real install updates from."""
+
+    def test_update_to_branch_attaches_despite_same_named_tag(self):
+        ok, note = update_to_branch(self._runner(), "V1.77")
+        self.assertTrue(ok, note)
+        self.assertEqual(note, "")
+        sym = self._symbolic_ref()
+        self.assertEqual(sym.returncode, 0, "detached HEAD after update")
+        self.assertEqual(sym.stdout.strip(), "refs/heads/V1.77")
+
+    def test_update_to_branch_stashes_and_restores_local_changes(self):
+        self._d("checkout", "-q", "main")
+        path = os.path.join(self._downstream, "f")
+        with open(path, "w") as fh:
+            fh.write("local edit\n")
+        self.assertTrue(working_tree_dirty(self._runner()))
+        ok, note = update_to_branch(self._runner(), "V1.77",
+                                    stash_label="test-stash")
+        self.assertTrue(ok, note)
+        self.assertEqual(note, "")
+        with open(path) as fh:
+            self.assertEqual(fh.read().strip(), "local edit",
+                             "stashed local change was not restored")
+
+    def test_working_tree_dirty_ignores_untracked_files(self):
+        # A user's own file saved into the app folder must not trigger the
+        # stash prompt (and must never be swept into a stash).
+        with open(os.path.join(self._downstream, "yard.perma.geojson"),
+                  "w") as fh:
+            fh.write("{}\n")
+        self.assertFalse(working_tree_dirty(self._runner()))
+        ok, note = update_to_branch(self._runner(), "V1.77")
+        self.assertTrue(ok, note)
+        self.assertTrue(os.path.exists(
+            os.path.join(self._downstream, "yard.perma.geojson")))
+
+    def test_update_to_branch_reports_failure(self):
+        ok, note = update_to_branch(self._runner(), "V9.99")
+        self.assertFalse(ok)
+        self.assertIn("V9.99", note)
+
+    def test_fast_forward_upstream_when_behind(self):
+        # Attach to V1.77, grow the upstream branch, fetch → behind by one.
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("v177b.txt", "more", "V1.77 more")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertTrue(ok, note)
+        self.assertTrue(os.path.exists(
+            os.path.join(self._downstream, "v177b.txt")))
+
+    def test_fast_forward_refuses_divergence(self):
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        # Local commit downstream + different commit upstream → diverged.
+        with open(os.path.join(self._downstream, "local.txt"), "w") as fh:
+            fh.write("mine\n")
+        self._d("add", ".")
+        self._d("-c", "user.email=t@t", "-c", "user.name=T",
+                "-c", "commit.gpgsign=false", "commit", "-q", "-m", "local")
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("theirs.txt", "theirs", "upstream work")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertFalse(ok, "diverged branches must not fast-forward")
+
+
+class TestConflictedCheckoutRecovery(TestVersionBranchSwitchCheckout):
+    """V2.29 — the dead end a real install fell into.
+
+    Reported from the field: "Update failed / git merge --ff-only failed: error:
+    Merging is not possible because you have unmerged files." The updater had
+    created that state itself. It stashes local edits, switches branch, then pops
+    — and a CONFLICTING pop keeps the stash (good) while leaving the working tree
+    full of unmerged files (bad). git then refuses every merge, switch and stash,
+    so each later Check for Updates died on the same error while advising
+    `git pull --ff-only`, which fails identically. The app could not advise its
+    way out of a corner it had painted itself into.
+    """
+
+    def _conflict(self):
+        """Leave the downstream checkout with unmerged files, exactly the way the
+        updater used to: stash a local edit, switch to a branch that touched the
+        same file, pop."""
+        self._d("checkout", "-q", "main")
+        with open(os.path.join(self._downstream, "f"), "w") as fh:
+            fh.write("my own edit\n")
+        # V1.77 changed a DIFFERENT file, so make the branch touch 'f' too.
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("f", "upstream rewrote this", "V1.77 touches f")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        self._d("stash", "push", "-m", "site-and-pattern auto-update 1")
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        pop = self._d("stash", "pop")
+        self.assertNotEqual(pop.returncode, 0,
+                            "test setup expected the stash pop to conflict")
+
+    def test_the_reported_symptom_reproduces(self):
+        """Pin the exact failure from the screenshot, so the fix has a target."""
+        self._conflict()
+        res = self._d("merge", "--ff-only", "@{u}")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("unmerged files", res.stderr)
+        # …and the advice the dialog gave fails the very same way.
+        pull = self._d("pull", "--ff-only")
+        self.assertNotEqual(pull.returncode, 0,
+                            "`git pull --ff-only` cannot fix this state — the "
+                            "old dialog sent users in a circle")
+
+    def test_unmerged_paths_names_the_conflicted_files(self):
+        self.assertEqual(unmerged_paths(self._runner()), [])
+        self._conflict()
+        self.assertEqual(unmerged_paths(self._runner()), ["f"])
+
+    def test_abort_clears_the_conflict_and_keeps_the_work_in_the_stash(self):
+        self._conflict()
+        ok, detail = abort_conflicted_state(self._runner())
+        self.assertTrue(ok, detail)
+        self.assertEqual(unmerged_paths(self._runner()), [])
+        self.assertFalse(working_tree_dirty(self._runner()),
+                         "the tree should be clean and updatable again")
+        # The whole reason discarding is safe: the user's edit is still stashed.
+        self.assertIn("site-and-pattern auto-update",
+                      self._d("stash", "list").stdout)
+        self.assertIn("my own edit",
+                      self._d("stash", "show", "-p", "stash@{0}").stdout)
+
+    def test_the_update_path_is_unblocked_after_aborting(self):
+        self._conflict()
+        abort_conflicted_state(self._runner())
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertTrue(ok, note)
+
+    def test_a_conflicting_stash_pop_leaves_the_checkout_clean(self):
+        """The root-cause fix: update_to_branch must not hand back a checkout
+        that no later update can use."""
+        self._d("checkout", "-q", "main")
+        with open(os.path.join(self._downstream, "f"), "w") as fh:
+            fh.write("my own edit\n")
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("f", "upstream rewrote this", "V1.77 touches f")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+
+        ok, note = update_to_branch(self._runner(), "V1.77",
+                                    stash_label="test-stash")
+        self.assertTrue(ok, note)
+        self.assertIn("stash", note, "the note must say where the work went")
+        self.assertEqual(
+            unmerged_paths(self._runner()), [],
+            "a conflicting stash pop must not leave unmerged files behind — "
+            "that is the state that stranded the V2.29 install")
+        self.assertIn("test-stash", self._d("stash", "list").stdout,
+                      "the user's changes must still be recoverable")
+        # And the next update works, which is what was broken before.
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("later.txt", "more", "V1.77 later work")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertTrue(ok, note)
+
+    def test_abort_is_not_reset_hard(self):
+        """`reset --merge` refuses rather than clobbering unrelated local edits,
+        which is why it is allowed where `reset --hard` is not."""
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        path = os.path.join(self._downstream, "v177.txt")
+        with open(path, "w") as fh:
+            fh.write("unrelated local work\n")
+        ok, _detail = abort_conflicted_state(self._runner())
+        with open(path) as fh:
+            self.assertEqual(fh.read().strip(), "unrelated local work",
+                             "abort must never destroy uncommitted local work")
+
+
+class TestListRemoteVersionBranches(unittest.TestCase):
+    """V2.25 — the picker's full newest-first list (the newest-only helper
+    delegates to it)."""
+
+    class _Res:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    def test_sorted_newest_first(self):
+        out = "origin/V1.9\norigin/V2.0\norigin/main\norigin/V1.31\n"
+        runner = lambda *a: self._Res(0, out)  # noqa: E731
+        self.assertEqual(list_remote_version_branches(runner),
+                         ["V2.0", "V1.31", "V1.9"])
+        self.assertEqual(newest_remote_version_branch(runner), "V2.0")
+
+    def test_failure_is_empty(self):
+        runner = lambda *a: self._Res(1, "")  # noqa: E731
+        self.assertEqual(list_remote_version_branches(runner), [])
+
+
+class TestNormalizeBranchRef(unittest.TestCase):
+    """V2.25 — once the release *tag* V2.NN exists (published by the release
+    workflow), ``git rev-parse --abbrev-ref HEAD`` disambiguates the branch to
+    ``heads/V2.NN``; the updater dialogs and the Help-menu version label must
+    see the plain branch name."""
+
+    def test_strips_heads_prefix(self):
+        self.assertEqual(normalize_branch_ref("heads/V2.22"), "V2.22")
+        self.assertEqual(normalize_branch_ref("refs/heads/V2.22"), "V2.22")
+
+    def test_plain_names_pass_through(self):
+        self.assertEqual(normalize_branch_ref("V2.22"), "V2.22")
+        self.assertEqual(normalize_branch_ref("main"), "main")
+        self.assertEqual(normalize_branch_ref("  V2.22\n"), "V2.22")
+
+    def test_none_and_empty(self):
+        self.assertIsNone(normalize_branch_ref(None))
+        self.assertEqual(normalize_branch_ref(""), "")
+
+    def test_normalized_name_parses_as_version(self):
+        # The end-to-end point: the Help menu showed "dev" because
+        # parse_version_branch rejected "heads/V2.22".
+        self.assertIsNone(parse_version_branch("heads/V2.22"))
+        self.assertEqual(
+            parse_version_branch(normalize_branch_ref("heads/V2.22")), (2, 22))
 
 
 if __name__ == "__main__":

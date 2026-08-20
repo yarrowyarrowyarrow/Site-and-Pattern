@@ -129,15 +129,24 @@ _GROUP_LAYER_ORDER = [
     ("groundcover", "Groundcover"),
     ("root",        "Root layer"),
 ]
-_GROUP_ECOREGION = {
-    "aspen_parkland":     "Aspen Parkland",
-    "mixedgrass_prairie": "Mixedgrass Prairie",
-    "fescue_foothills":   "Fescue / Foothills",
-    "boreal_mixedwood":   "Boreal Mixedwood",
-    "riparian":           "Riparian",
-    "wet_meadow":         "Wet Meadow / Marsh",
-    "subalpine_montane":  "Subalpine / Montane",
-}
+def _ecoregion_labels() -> dict:
+    """Ecoregion key → habitat-facet label, read from the vocabulary (V2.38).
+
+    This used to be a hand-kept copy that had to be remembered separately, and
+    a key missing from it did not fail — it silently read "Generalist", which
+    is how `moist_mixedgrass` (the most common tag in the catalogue, on 246
+    plants) went unlabelled until V2.37. Reading `src.ecoregion` means a region
+    added to the polygon file is labelled here for free, and the class of bug
+    is gone rather than fixed once.
+    """
+    try:
+        from src.ecoregion import ecoregions
+        return {key: name for key, name, _where in ecoregions()}
+    except Exception:      # noqa: BLE001 — a label table must never break a query
+        return {}
+
+
+_GROUP_ECOREGION = _ecoregion_labels()
 _GROUP_SUN = {
     "full_sun":      "Full Sun",
     "partial_shade": "Partial Shade",
@@ -166,12 +175,28 @@ def _community_structure(members) -> str:
     return "Unsorted"
 
 
-def _community_habitat(members) -> str:
-    ecos = []
-    for m in members:
-        ecos += _csv_tokens(m.get("eco"))
-    dom = _dominant_token(ecos)
-    return _GROUP_ECOREGION.get(dom, "Generalist") if dom else "Generalist"
+def _community_habitat(members) -> list:
+    """Every ecoregion this community's members are documented from.
+
+    Multi-valued, like `_community_functions` and unlike sun/moisture: a plant's
+    `ecoregion` column is a comma-separated list because a species genuinely
+    grows in several, and collapsing that to the single most common token filed
+    a mixed community under one habitat and hid it from the others. Both
+    consumers already handle a list — `filter_library` intersects, and the
+    panel's group-by clones the tree item into each bucket — so the community
+    now appears under every ecoregion it actually belongs to.
+
+    Ordered by how many members carry the tag (strongest association first) so
+    the primary habitat still leads where a caller shows only one.
+    """
+    counts = collections.Counter(
+        token for m in members for token in _csv_tokens(m.get("eco")))
+    labels: list = []
+    for token, _n in counts.most_common():
+        label = _GROUP_ECOREGION.get(token)
+        if label and label not in labels:
+            labels.append(label)
+    return labels or ["Generalist"]
 
 
 def _community_sun(members) -> str:
@@ -510,22 +535,27 @@ def get_polyculture_by_id(polyculture_id):
 
 
 def create_polyculture(name, description, center_plant_id, parent_id=None, *,
-                        problem=None, context=None, forces=None, solution=None):
+                        problem=None, context=None, forces=None, solution=None,
+                        origin="user"):
     """Create a polyculture row.
 
     ``problem`` / ``context`` / ``forces`` / ``solution`` are the authored
     Alexander pattern-language fields (schema v27, F4); they are optional so
     user-created communities (which only fill name + description) keep working.
+
+    ``origin`` (schema v46) marks provenance: the default ``"user"`` is the
+    protected value — only ``seed_example_polycultures`` passes ``"seed"``,
+    and only ``origin='seed'`` rows are wiped by the schema-bump reseed.
     """
     conn = get_connection()
     try:
         cur = conn.execute(
             "INSERT INTO polycultures "
             "(name, description, center_plant_id, parent_id, "
-            " problem, context, forces, solution) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " problem, context, forces, solution, origin) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (name, description, center_plant_id, parent_id,
-             problem, context, forces, solution),
+             problem, context, forces, solution, origin),
         )
         polyculture_id = cur.lastrowid
         conn.commit()
@@ -1462,7 +1492,7 @@ EXAMPLE_POLYCULTURES = [
             ("Yarrow",                    "soil_builder",    0.8,  0.5),
             ("Wild Mint",                 "pest_deterrent", -0.7,  0.7),
             ("Giant Hyssop",              "pollinator",      0.5, -0.8),
-            ("Valerian",                  "other",          -0.8, -0.3),
+            ("Sitka Valerian",             "other",          -0.8, -0.3),
             ("Self-heal",                 "other",           0.3,  0.9),
             ("Bee Balm (Wild Bergamot)",  "pollinator",     -0.4, -0.8),
         ],
@@ -1939,7 +1969,7 @@ EXAMPLE_POLYCULTURES = [
             ('Gumweed', 'pollinator', 1.5, 0.0),
             ('Golden Tickseed', 'pollinator', 1.1, 1.8),
             ('Scarlet Butterfly Plant', 'pollinator', -0.7, 1.3),
-            ("Old Man's Whiskers (Prairie Smoke)", 'pollinator', -2.1, 0.0),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)", 'pollinator', -2.1, 0.0),
             ('Slender Blue Beardtongue', 'pollinator', -0.8, -1.3),
             ('Fuzzy-tongue Penstemon', 'pollinator', 1.1, -1.8),
         ],
@@ -2054,7 +2084,7 @@ EXAMPLE_POLYCULTURES = [
             ('Small-leaved Everlasting (Small-leaved Pussytoes)', 'groundcover', -1.5, 0.0),
             ('Veiny Meadow-Rue', 'pollinator', -1.5, -1.5),
             ('Twin Arnica', 'pollinator', -0.0, -1.5),
-            ('Prairie Smoke', 'pollinator', 1.5, -1.5),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)", 'pollinator', 1.5, -1.5),
         ],
     },
     {
@@ -2366,12 +2396,16 @@ EXAMPLE_POLYCULTURES = [
 
 
 def seed_example_polycultures():
-    """Create example polycultures if none exist yet. Safe to call multiple times."""
+    """Create the shipped example polycultures if they aren't present.
+    Safe to call multiple times. Counts only ``origin='seed'`` rows
+    (schema v46) — user-authored communities neither block the examples
+    from seeding nor get touched by it."""
     conn = get_connection()
     try:
-        count = conn.execute("SELECT COUNT(*) FROM polycultures").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM polycultures "
+                             "WHERE origin = 'seed'").fetchone()[0]
         if count > 0:
-            return  # Already have polycultures, don't re-seed
+            return  # Examples already seeded
     finally:
         conn.close()
 
@@ -2390,6 +2424,7 @@ def seed_example_polycultures():
             context=poly_def.get("context") or text.get("context"),
             forces=poly_def.get("forces") or text.get("forces"),
             solution=poly_def.get("solution") or text.get("solution"),
+            origin="seed",
         )
         for common_name, role, ox, oy in poly_def["members"]:
             plant = _get_plant_by_name(common_name)

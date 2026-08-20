@@ -19,12 +19,79 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.19`,
-`_SCHEMA_VERSION = 45` (in `src/db/plants.py`). CLAUDE.md and
-`docs/DATABASE_SCHEMA.md` lag the code — the code wins. `docs/DATABASE_SCHEMA.md`
-still says version 17; the inline changelog comments in `plants.py` stop at v41
-even though the constant is 45. Treat those docs as stale and fix them as part
-of your change (see step 6).
+**Current facts (verify before quoting):** branch `V2.65`,
+`_SCHEMA_VERSION = 74` (in `src/db/plants.py`) — v71 is a reseed only: 26
+recovered `larval_host` edges and the 9 animals they connect (F131), plus 80
+species gaining a `host_plant` or `bird_food` use tag the cited edges already
+justified (F120). v70 is a reseed only too: the
+980-species tail of the same F127 review, 820 more animals and 2,227 more
+edges. v69 is a reseed only too: the first 159 curated animals and 2,639
+edges (F127). v68 is a reseed only as well, for the
+first two rows `data/plant_photos.json` has ever carried. v67 is a reseed
+only as well: 37 more
+curated birds (F127a) plus a repair of v66's bird edges, which had read GloBI's
+`eatenBy` as `fruit_food` and so claimed fruit on plants that bear none. v66 is
+a reseed only too, carrying the 2,439 GloBI-sourced plant↔animal edges (F125)
+that took documented fauna coverage from 99 of 437 species to 271. v65 is also
+a reseed only, to carry the merged duplicate species rows. v64 adds
+`plants.flower_colour_source`, which records whether a species' flower colour
+was checked against its own common name or Latin epithet or is the genus-level
+default it was seeded as. Additive and empty in the migration: the version bump
+forces the reseed that carries the corrected values in. v63 adds `bird_morphology`
+(mass, wingspan and flight style for the 24 birds, feeding `src/flight_model.py`;
+child of `fauna`, so it IS wiped and re-seeded with the other attribute tables,
+unlike the v62 pair below). v62 adds `discovered_species`
+and `learn_state`, the Learn-mode species ledger. Both are **user-authored and
+must never be added to the reseed wipe list**: a reseed rebuilds the catalogue,
+and rebuilding the catalogue must not delete the record of what somebody found
+in it. They are keyed by `scientific_name`, never by id, because ids are not
+stable across a reseed. v61 adds `plant_fauna_derived`
+(genus-level host records expanded onto the catalogue, taking plant↔fauna
+coverage 22.6% → 46.5%), `fauna_fauna` (cleptoparasite edges, reaching 24 cuckoo
+bees a plant-only graph could never connect), `source`/`notes` on both companion
+tables, and a three-state `evidence` column on the `relationship_edges` view.
+Note `_migrate_to_v61`: `CREATE TABLE IF NOT EXISTS` does not add columns to an
+existing table, so the companion columns need a real `ALTER` — a fresh install
+passed while every existing install would have broken on "no such column".
+v60 was a data-only bump: no DDL,
+reseed to pick up `data/plant_ecoregions.json`, 427 species of GBIF-derived range.
+v59 added the
+`plant_ecoregions` table: per-species ecoregion range **with the evidence
+behind it** (georeferenced record count, confidence band, source), because the
+tags in `plants.ecoregion` were generated heuristically and never sourced.
+Note the shape, since it is not the v37 `permaculture_uses` move: the column
+**stays**, because a species the GBIF derivation has not covered keeps its
+existing tags, and because `riparian`/`wet_meadow` are site-scale moisture
+niches no coordinate can assert;
+v58 added fauna morphology to
+`bee_attributes` + `lepidoptera_attributes` (band pattern, wingspan range, wing
+shape/pattern, flight style … plus a `morph_data_source`/`citation` pair), which
+took creature appearance out of the name-substring tables in
+`src/scene_wildlife.py`;
+v57 added `leaf_data_source` + `leaf_data_citation` (the flower provenance pair,
+for the leaf and habit characters the bench can now edit);
+v56 added `flower_data_citation`; v55 added the
+`plant_photos` table and `flower_data_source`; v54 added
+`flowering_stems`; v53 added ten
+flower-morphology columns; v52 added three
+renderer-facing morphology columns in one bump (`bark_texture`,
+`leaf_surface`, `inflorescence_form`; F63/F66), which is the pattern to copy
+when several columns land together: one migration, one reseed, one version.
+Note `inflorescence_form` sits BESIDE `flower_form` rather than extending it,
+because `flower_form` feeds pollinator logic and must stay `plume` for the
+wind-pollinated grasses — a column's consumers decide whether you may widen its
+vocabulary. v51 added the `relationship_edges` VIEW (F7, the unified edges
+layer; a view rather than a table, so no seeder and no reseed-wipe entry, and
+`schema.sql` DROPs/recreates it on every `init_db`); v50 was a reseed-only bump
+for the garden-plant morphology; v49 added `fruit_form`, the shape half of
+`fruit_color`; v47/v48 added the botanical morphology columns.
+`scripts/seed_surface_morphology.py`,
+`scripts/seed_inflorescence_morphology.py`, `scripts/seed_fruit_morphology.py`
+and `scripts/seed_woody_morphology.py` are the worked examples of authoring
+seed values alongside a bump. The code always wins over the docs; the
+inline changelog comments in `plants.py` lag the constant. `tests/test_skill_library.py`
+fails the build when a skill quotes a stale version, so update this line as part
+of your bump (see step 6).
 
 ## The mental model: two independent mechanisms
 
@@ -80,7 +147,7 @@ existing installs.
 2. **Write a migration helper if you added a column/table to an existing
    table.** Follow `_migrate_to_v31`:
    ```python
-   def _migrate_to_v46(conn):
+   def _migrate_to_v47(conn):
        for col_name, col_def in (("my_col", "TEXT DEFAULT ''"),):
            try:
                conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
@@ -88,7 +155,8 @@ existing installs.
                pass  # column already present (fresh install got it from schema.sql)
        conn.commit()
    ```
-   Then wire it into `init_db`: `if current_version < 46: _migrate_to_v46(conn)`.
+   Then wire it into `init_db`: `if current_version < 47: _migrate_to_v47(conn)`.
+   (Mind the variable name — it is `current_version`, not `current`.)
    A brand-new `CREATE TABLE IF NOT EXISTS` needs **no** migration helper — the
    `executescript(schema.sql)` at the top of `init_db` creates it. (That is why
    `shade_zone_cache`/`wind_cache` had "no ALTER migration needed" — see the v21
@@ -252,7 +320,7 @@ python -m unittest tests.test_uses_junction tests.test_data_quality tests.test_p
 python scripts/check_plant_data.py --quiet
 
 # Full suite before you call it done (stdlib unittest — there is NO pytest here):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 All three were run in this session and pass (the first reports `OK`, the CLI

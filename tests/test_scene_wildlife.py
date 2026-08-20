@@ -117,10 +117,93 @@ class TestSceneWildlife(unittest.TestCase):
         self.assertTrue(any(len(c["route"]) > 1 for c in self.crit),
                         "expected some multi-plant routes")
 
+    def test_rangers_patrol_the_whole_design(self):
+        # V2.24: ranging fliers get scene-wide patrol waypoints so they forage
+        # across the yard instead of orbiting their anchor's bed (the reported
+        # clustering). At least one flier's route reaches well beyond its anchor.
+        import math
+        reached = 0.0
+        for c in self.crit:
+            if c["kind"] not in W._RANGING:
+                continue
+            ax, ay = c["route"][0][0], c["route"][0][1]
+            for wp in c["route"][1:]:
+                reached = max(reached, math.hypot(wp[0] - ax, wp[1] - ay))
+        # The synthetic scene spans ~18 m; a patrol leg should clear the anchor
+        # ring by a good margin (much more than the ~2 m own-host spacing).
+        self.assertGreaterEqual(reached, W._PATROL_MIN_M,
+                                "rangers should patrol across the design")
+
+    def test_no_creature_floats_above_its_plant(self):
+        """A creature's height must stay inside the plant it is on.
+
+        The archetypes are normalised to height 1 and scaled by ``height_m``, so
+        the plant's rendered top is exactly ``ground + height_m`` — any height
+        at or above that puts the animal in open air. Two of the old formulas
+        did exactly that for short plants (bird ``h*1.05``, bee ``h*0.9+0.15``),
+        which is what a user saw as insects and birds hovering clear of the
+        flowers they are supposed to be using. Bats are exempt: they are
+        authored to fly above the canopy on purpose.
+        """
+        by_name = {p["common_name"]: p for p in self.scene["plants"]}
+        for c in self.crit:
+            if c["app"].get("form") == "bat":
+                continue
+            host = by_name.get(c["on"])
+            if not host:
+                continue
+            self.assertLessEqual(
+                c["h"], float(host["height_m"]),
+                f"{c['name']} sits {c['h']} m up a {host['height_m']} m "
+                f"{c['on']} — it is floating above the plant, not on it")
+
+    def test_patrol_waypoints_take_their_own_plants_height(self):
+        """Every waypoint's height must suit the plant AT that waypoint.
+
+        Patrol legs used to carry ``base_h`` — the height computed for the
+        creature's ANCHOR plant — to a waypoint over a completely different one,
+        so a bird anchored on a 5 m saskatoon rested 3.6 m above a 0.4 m
+        coneflower. The host legs beside them always recomputed it; only the
+        patrol loop didn't, because it kept just (x, y).
+        """
+        import math
+        plants = self.scene["plants"]
+        checked = 0
+        for c in self.crit:
+            if c["app"].get("form") == "bat":
+                continue
+            for wp in c["route"]:
+                near = min(plants, key=lambda p: (p["x"] - wp[0]) ** 2
+                           + (p["y"] - wp[1]) ** 2)
+                d = math.hypot(near["x"] - wp[0], near["y"] - wp[1])
+                if d > 0.5:            # not actually over a plant — skip
+                    continue
+                self.assertLessEqual(
+                    wp[2], float(near["height_m"]) + 0.01,
+                    f"{c['name']} has a waypoint {wp[2]} m up over a "
+                    f"{near['height_m']} m {near['common_name']}")
+                checked += 1
+        self.assertGreater(checked, 0, "no waypoint landed on a plant to check")
+
+    def test_ground_critters_do_not_patrol(self):
+        # Mammals / beetles keep to their patch — their route never gains a
+        # far-flung patrol leg (movement stays local).
+        import math
+        for c in self.crit:
+            if c["kind"] not in ("mammal", "beetle"):
+                continue
+            ax, ay = c["route"][0][0], c["route"][0][1]
+            for wp in c["route"][1:]:
+                # own-host legs can exist but never a scene-wide patrol jump
+                self.assertLess(math.hypot(wp[0] - ax, wp[1] - ay), 30.0)
+
     def test_deterministic(self):
         again = W.wildlife_for_scene(self.scene)
         self.assertEqual([(c["name"], c["x"], c["y"]) for c in self.crit],
                          [(c["name"], c["x"], c["y"]) for c in again])
+        # Routes (incl. patrol legs) are deterministic too.
+        self.assertEqual([c["route"] for c in self.crit],
+                         [c["route"] for c in again])
 
     def test_all_hex_valid(self):
         for c in self.crit:
@@ -129,9 +212,16 @@ class TestSceneWildlife(unittest.TestCase):
                     self.assertRegex(v, _HEX, f"{c['name']} {k}={v}")
 
     def test_no_bats(self):
-        # Bats are nocturnal → skipped by day (they'd be a mammal 'bat' form).
+        """Bats are nocturnal, so none should appear in a daytime scene.
+
+        Matched on the creature's FORM, not on the substring "bat" in its
+        name. The substring version passed for years and then failed on
+        *Ancistrocerus adia**bat**us*, a potter wasp — which is the whole
+        argument against testing a taxonomic claim with `in`.
+        """
         for c in self.crit:
-            self.assertNotIn("bat", c["name"].lower())
+            self.assertNotEqual(c.get("app", {}).get("build"), "bat", c["name"])
+            self.assertNotEqual(c.get("kind"), "bat", c["name"])
 
     def test_empty_scene(self):
         self.assertEqual(W.wildlife_for_scene({"plants": []}), [])
@@ -169,7 +259,9 @@ class TestSeasonalDiel(unittest.TestCase):
     def test_bats_only_at_night(self):
         day = W.wildlife_for_scene(self._scene(7, False))
         night = W.wildlife_for_scene(self._scene(7, True))
-        self.assertFalse(any("bat" in c["name"].lower() for c in day))
+        # Form, not name substring — see test_no_bats.
+        self.assertFalse(any(c.get("app", {}).get("build") == "bat"
+                             or c.get("kind") == "bat" for c in day))
         # Bats appear at night if any host plant supports one.
         # (Not asserting presence — depends on the sampled plant set — only that
         #  they never appear by day.)
@@ -182,6 +274,9 @@ class TestSeasonalDiel(unittest.TestCase):
         winter_kinds = {c["kind"] for c in winter}
         self.assertNotIn("bee", winter_kinds)
         self.assertNotIn("butterfly", winter_kinds)
+        # V2.63: a bee with NO recorded flight season used to read as "no
+        # seasonal gate" and fly in January. Most of the catalogue has no
+        # attributes row, so this is the common case, not the rare one.
 
 
 class TestSupportSummary(unittest.TestCase):

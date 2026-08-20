@@ -38,11 +38,15 @@ Long names automatically wrap to two lines so nothing is hidden.
 
 ## 4. Place a single plant
 
-1. Click a plant row to select it.
-2. In the **Placement Mode** strip choose **Single**.
+1. Click a plant row to select it. **That's it — the map is now armed.** The button below
+   changes to **● Placing: ‹plant› · Single** so you can always see what a map click will drop.
+2. Click anywhere on the map to place it. Click again for another.
 3. (Optional) Click the **●** button to pick a marker colour, or set **Qty** to drop a hex burst at one click.
-4. Click **Place on Map**, then click anywhere on the map.
-5. Press **Esc** to finish.
+4. Press **Esc** — or click the ● Placing chip — to stop.
+
+Changing the plant, the mix, or the placement mode re-arms with the new choice, so you can
+never place the previous one by accident. **Fill Area** is the exception: it starts drawing
+straight away, so it still waits for an explicit press.
 
 Right-click a placed marker for **Remove this plant** or **Delete group** (when the marker belongs to a multi-plant placement).
 
@@ -50,7 +54,7 @@ Right-click a placed marker for **Remove this plant** or **Delete group** (when 
 
 ## 5. Place a row, grid, or circle
 
-Pick **Row**, **Grid**, or **Circle** in the Placement Mode strip, then click **Place on Map**. Each takes two clicks:
+Pick **Row**, **Grid**, or **Circle** in the Placement Mode strip — the map re-arms as you pick. Each takes two clicks:
 
 | Mode | First click | Second click |
 |------|-------------|--------------|
@@ -75,7 +79,7 @@ To plant multiple species mixed together in one Row / Grid / Circle:
    - A **clickable colour dot** — gives that species a unique marker colour just for this mix.
    - A **ratio spinner** (1–9) — `1:1:1` is even split; `3:1:1` gives that species 60%, others 20% each.
    - A **✕** button to remove the species.
-3. Click **Place Mix on Map**, then drop a Row / Grid / Circle as usual. The recipe stays armed — click again to drop another, **Esc** to finish.
+3. Drop a Row / Grid / Circle as usual — building the mix arms it. The recipe stays armed — click again to drop another, **Esc** to finish.
 
 Distribution is deterministic and spread-optimised: same-species plants are automatically pushed apart so the bed reads as mixed, not blocky.
 
@@ -98,7 +102,7 @@ The **Plant Communities** library on the same tab ships with 18 pre-built commun
 
 ## 7. Selection & multi-delete
 
-- **Shift+drag** on empty map → marquee-selects every plant, boundary, sector, and sun-path inside the rectangle.
+- **Shift+drag** on empty map → marquee-selects every plant, boundary, and sun-path inside the rectangle.
 - **Shift+click** an item to toggle its membership in the selection.
 - **Ctrl+Shift+drag** = additive marquee (extends instead of replaces).
 - The top-right **selection badge** shows the count plus **Delete** and **Clear** links.
@@ -108,7 +112,7 @@ The **Plant Communities** library on the same tab ships with 18 pre-built commun
 ## 8. Other drawing tools
 
 - **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
-- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it.
+- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it. Every map note is also listed under **Planning → Notes** — click one there to jump to it on the map.
 - **Structures tab** — search a structure library, drag hedgerows (4 styles: Hedge / Fence / Living Fence / Windbreak), or draw shapes (Garden Bed, Pathway, Patio, Lawn, Mulch, Water Feature, Custom).
 
 The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Plants, 🌳 Canopy, 🏗 Structures) toggles each layer's visibility without deleting anything. The Grid action's ▾ menu picks the base size (1×1, 5×5, 10×10, 100×100 m) plus opacity and colour.
@@ -117,11 +121,17 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 ## 9. Site analysis (Analysis tab)
 
-- **Sun Path** — pick a date (Summer Solstice, Equinox, Today, …), click *Place Sun Path…*, click the map. Shows the sun arc + sunrise/sunset/daylight-hours summary.
-- **Sectors** — toggle presets (Summer Sun, Winter Sun, NW Wind, Cold North, Frost Pocket, Noise, View, Fire Risk), click *Place Sectors…*, click the map. Drag the handles to resize / rotate / move; right-click the centre to remove.
-- **Contours** — set elevation + interval, click *Draw Contour Line*, click points on the map, double-click to finish.
-- **Wind** — pick direction + speed, click *Show Wind Overlay*.
-- **Season View** — Summer / Spring / Fall / Winter buttons fade plant markers by deciduous/evergreen behaviour to preview seasonal density.
+- **Sun Path** — pick a date (Summer Solstice, Equinox, Today, …), click *Place Sun Path…*, then click the map once to anchor it. You get the sun's arc, the sunrise/sunset/daylight summary, and a **time-of-day slider**: drag it and the sun travels its arc with the shadow swinging behind it. The slider spans that date's real daylight, so it stops at sunrise and sunset. **Changing the date redraws in place** — no need to re-place the anchor to compare two solstices.
+- **Wind** — three steps in one tab: **1** fetch this site's real wind history (Open-Meteo, cached for offline) and read the wind rose; **2** check the prevailing-direction dial (set automatically from the data — drag it to test other directions); **3** overlay the map: live wind shadow (sheltered zones behind trees/shrubs), snow catch, and the arrows + windbreak shelter-zone overlay via *Show Wind Overlay*.
+- Manual **contour drawing** lives on the Site tab (next to the automatic slope analysis).
+
+(The old Sectors and Season View tabs were retired in V2.25 — Sun Path and Wind cover the same questions with real data, and the season tile filter added no design value.)
+
+The teaching tools live on their own top-level **Learn** tab (V2.25):
+
+- **Field Study** — a five-question recall quiz built from your design and the plant catalogue: photo ID (only plants whose photo is actually downloaded), specialist relationships, and spot-the-gap questions about your own food web.
+- **Lessons** — a short guided course narrated against your own project.
+- **Present** — a docent-style walkthrough for showing the design to a neighbour or client.
 
 ---
 
@@ -133,28 +143,86 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 - **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
 - **Establishment Water Budget** — same garden / catchment inputs, but the demand splits into **Year 1** (1.5× baseline for establishment irrigation) and **Year 3+** (natives drop to ~0.2× baseline once rooted; cultivars stay at 1.0×). Shows both surpluses / deficits side-by-side, plus a suggested extra-barrel count for the Year-1 deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
-- **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.
+- **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons, plus a **Notes pinned on the map** list of your 📝 Note pins — click one to frame it on the map.
 
 ---
 
-## 11. Save & share
+## 11. See it in 3D (View → 3D Preview)
+
+The 3D preview is where the design stops being a plan and starts being a place.
+
+- **Year slider** — drag it to watch the design grow. Year 0 is the mature
+  reference; drag right and you see year 1, 5, 15, 25. Plants that the closing
+  canopy shades past their tolerance decline and drop out, and self-seeding
+  natives fill the gaps, so a late year shows the community that actually
+  survives rather than everything you ever planted.
+  Since V2.44 **each plant ages from the year you planted it**, not from the
+  design's year — so something you add at year 12 shows up as a young plant
+  among grown ones and catches up over the following seasons. Trees go in at
+  nursery size (about five years old) and shrubs at about three, because nobody
+  plants those from seed; herbs and grasses start from plugs as before.
+  Designs made before V2.44 carry no planting dates and render exactly as they
+  always did.
+- **Split view (View → Split view, or Ctrl+Shift+3)** — the 3D scene under the
+  map, both showing the same design and both editable. The map answers *where*;
+  the 3D answers *what it will be like*. Close it and the map takes the whole
+  column back.
+- **Time of year** — foliage colour, bloom, berries and snow all follow the
+  month. Each species turns its own autumn colour.
+- **Time of day** — drives the sun and the shadows (the same engine as the 2D
+  shade map, so the two always agree). Drag past dusk for a moonlit scene with
+  moths and bats instead of the day's bees and butterflies.
+- **Click any plant or creature** to open its card: what it is, when it blooms
+  and fruits, how big it gets at years 1 / 5 / 15 / 25, every animal documented
+  to use it and how — and, when it applies, *"pull this plant and N species lose
+  their only support here"*. Clicking also draws threads from the plant to each
+  creature in the scene that uses it, labelled with the relationship. Click a
+  bee and you get the reverse: which of your plants it visits. Esc or the ×
+  closes the card.
+- **Creature + Fly as a bee / Tour the year / Show its plants** — pick a native
+  bee, butterfly or moth, then either fly it yourself (WASD, F to snap to the
+  nearest flower), let it tour the season hands-free, or light up the plants in
+  your design that feed it.
+- **Walk the garden** — third-person stroll among the wildlife. **Flyover** —
+  a hands-free ~60 s cinematic: the design grows, the seasons turn, night falls.
+- **Identify** — labels every creature and lists who lives here.
+- **Detail** — lower it if the view is sluggish on your machine.
+
+Nothing in 3D is invented: a creature only appears if there is a documented
+relationship between it and a plant you actually placed.
+
+---
+
+## 12. Getting the design out
+
+- **File → Export PDF (plan + planting map)…** — the whole document: site prep, the buy list,
+  and a **numbered planting map drawn to scale** with a key, a scale bar and a north arrow.
+  That map page is what you take outside with a tape measure. (It needs a property boundary to
+  measure from; if you have plants but no boundary the PDF says so rather than dropping the page.)
+- **File → Export Planting Plan…** — the same content as text.
+- **Help → Send Feedback…** — tell the author what worked, what confused you, or what broke.
+  It opens a prefilled report in your browser so you can read it before posting; setup details
+  are optional and shown in full first.
+
+## 13. Save & share
 
 - **File → Save** (Ctrl+S) writes a `.perma.geojson` file — the whole design.
 - **File → Open** (Ctrl+O) loads one.
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
 - **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
-- **Help → Check for Updates…** — on source installs (git checkout), runs `git pull --ff-only` after a fetch + dirty-tree check; on `.exe` installs, opens the GitHub releases page in your browser. Restart the app after a successful pull for the new code to take effect.
+- **Help → Check for Updates…** — one click to the newest version. On source installs (git checkout) the app switches itself to the newest published `V*.*` branch (any local source edits are set aside safely first) and offers to restart; on packaged `.dmg`/`.exe` installs it downloads and opens the newest installer from GitHub Releases. **Help → Switch to a specific version…** does the same for any published version, forward or back.
 
 ---
 
-## 12. Keyboard shortcuts
+## 14. Keyboard shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | Ctrl+N / Ctrl+O / Ctrl+S | New / Open / Save project |
 | Ctrl+Shift+S | Save As |
-| Ctrl+Z / Ctrl+Y | Undo / Redo |
+| Ctrl+Z | Undo |
+| Ctrl+Shift+Z or Ctrl+Y | Redo |
 | Esc | Cancel current drawing / exit placement mode |
 | Shift+drag | Marquee-select |
 | Shift+click | Toggle an item in the selection |
@@ -163,13 +231,15 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 ---
 
-## 13. Tips that aren't obvious
+## 15. Tips that aren't obvious
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
 - The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.
 - **Mix stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
 - **Fill (hex) circles** need a **Total** cap or they'll generate thousands of markers on big radii.
+- The **Plants** tab's sub-tabs are **Browse** (search the catalogue), **Plant Communities**, and **On This Design**.
 - **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Mix*.
+- **“Blooms in…” / “Fruits in…”** narrow the list to plants flowering or fruiting in chosen months — the direct way to fill the nectar gap the Analysis tab names.
 - The **▶ chevron** doubles as a quick way to compare plants — multiple rows can stay expanded at once.
 
 ---

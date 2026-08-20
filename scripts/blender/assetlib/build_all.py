@@ -1,0 +1,243 @@
+"""Batch build orchestrator — the ONE code path both workflows share.
+
+The Blender-MCP session and the headless CLI both call build_all(), so what
+you approved in the viewport is byte-for-byte what gets exported. Each asset
+is built into its own wiped-and-recreated collection (idempotent — safe to
+re-run in a live session), normalised to the unit frame, AO-baked, budget-
+checked (raises on violation), and exported to one GLB.
+"""
+
+import random
+
+import bpy
+
+from . import conventions as C
+from .ao_bake import bake_ao
+from .export_glb import export_glb
+from .fauna import build_critter
+from .flora_herbs import FLAT_LEAF_LAYERS, build_herb, build_layer
+from .flora_shrubs import build_shrub
+from .flora_trees import build_tree
+from .structures import build_structure
+from .manifest import asset_table, write_manifest
+from .mesh_ops import clamp_footprint, decimate_to_budget, get_collection, \
+    make_empty, squash_to_aspect, tri_count, unit_frame, wipe_collection
+
+# Grid spacing when building many assets in one scene (MCP inspection).
+_GRID = 2.5
+
+
+def _budget_for(spec, tier=None):
+    if spec["kind"] == "tree":
+        return C.TRI_BUDGETS[f"tree_tier{tier}"]
+    return C.TRI_BUDGETS[spec["kind"]]
+
+
+def _check_budget(key, objs, budget):
+    n = sum(tri_count(o) for o in objs if o.type == "MESH")
+    if n > budget:
+        raise ValueError(f"{key}: {n} tris > budget {budget} — simplify the "
+                         f"builder or lower its counts (conventions.TRI_BUDGETS)")
+    return n
+
+
+def build_asset(key, spec=None, seed_salt="", half_widths=None):
+    """(Re)build one asset into collection `key`; returns {unit: tris}.
+
+    Wipes EVERY generated collection first: Blender object names are global
+    to the .blend, and the viewer looks parts/nodes up by exact name — a
+    second asset using 'Body' or 'tier0_bark' would get renamed 'Body.001'
+    and silently fail to load. One asset is resident at a time.
+
+    ``half_widths`` (optional) is filled with ``{unit: half_width}`` per flora
+    unit as measured by unit_frame — the authored aspect, published in the
+    manifest and re-measured by the viewer (see conventions.py).
+    """
+    table = asset_table()
+    spec = spec or table[key]
+    for k in table:
+        wipe_collection(k)
+    coll = get_collection(key, wipe=False)
+    rng = random.Random(C.seed_for(key + seed_salt))
+    tris = {}
+    halves = half_widths if half_widths is not None else {}
+
+    if spec["kind"] == "tree":
+        arch = key.split(".", 1)[1]
+        for t in spec["tiers"]:
+            prefix = f"tier{t}"
+            root = make_empty(prefix, coll)
+            parts = build_tree(arch, t, rng, coll, name_prefix=prefix)
+            objs = list(parts.values())
+            halves[prefix] = unit_frame(objs)
+            budget = _budget_for(spec, t)
+            for o in objs:
+                decimate_to_budget(o, budget)
+            bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
+                    seed_key=key + prefix + "bark")
+            bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
+                    seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs, budget)
+            for o in objs:
+                o.parent = root
+            root.location.x = t * _GRID          # side by side for inspection
+    elif spec["kind"] == "shrub":
+        form = key.split(".", 1)[1]
+        # One unit per (blade class, grain class) the catalogue actually uses,
+        # so a dogwood's paired broad leaves and a rose's alternate compound
+        # ones are different geometry rather than the same faceted blob.
+        for v, vkey in enumerate(spec["variant_keys"]):
+            prefix = f"{C.VARIANT_PREFIX}{v}"
+            root = make_empty(prefix, coll)
+            blade, grain = vkey.rsplit("_", 1)
+            parts = build_shrub(form, rng, coll, name_prefix=prefix,
+                                grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
+                                arrangement="opposite" if v % 2 else "alternate")
+            objs = list(parts.values())
+            halves[prefix] = unit_frame(objs)
+            for o in objs:
+                decimate_to_budget(o, _budget_for(spec))
+            bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
+                    seed_key=key + prefix + "bark")
+            bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
+                    seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
+                                         _budget_for(spec))
+            for o in objs:
+                o.parent = root
+            root.location.x = v * _GRID
+    elif spec["kind"] == "herb":
+        form = key.split(".", 1)[1]
+        for v, vkey in enumerate(spec["variant_keys"]):
+            prefix = f"{C.VARIANT_PREFIX}{v}"
+            root = make_empty(prefix, coll)
+            blade, grain, _aspect = C.parse_herb_variant_key(vkey)
+            parts = build_herb(form, rng, coll, name_prefix=prefix,
+                               grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
+                               arrangement="opposite" if v % 2 else "alternate",
+                               branching=C.herb_branching_for(vkey))
+            objs = list(parts.values())
+            # Flat-leaf geometry: finish on the exact measured correction — at
+            # THIS unit's aspect class (V2.34), not at one figure for the form.
+            squash_to_aspect(objs, C.herb_aspect_for(form, vkey))
+            halves[prefix] = unit_frame(objs)
+            for o in objs:
+                decimate_to_budget(o, _budget_for(spec))
+            bake_ao(objs, gradient=True, strength=0.7, seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
+                                         _budget_for(spec))
+            for o in objs:
+                o.parent = root
+            root.location.x = v * _GRID
+    elif spec["kind"] == "layer":
+        kind = key.split(".", 1)[1]
+        # A variant-keyed layer (groundcover) bakes one unit per (blade × grain)
+        # its species use, exactly like a herb; the rest are N random draws.
+        vkeys = spec.get("variant_keys")
+        for v in range(len(vkeys) if vkeys else spec["variants"]):
+            prefix = f"{C.VARIANT_PREFIX}{v}"
+            root = make_empty(prefix, coll)
+            morph = {}
+            if kind in C.ASPECT_LAYERS:
+                morph = {"aspect": C.LAYER_ASPECT_CLASSES[kind][v]}
+            elif vkeys:
+                blade, grain = vkeys[v].rsplit("_", 1)
+                morph = {"grain": int(grain),
+                         "leaf_shape": C.BLADE_SHAPE[blade],
+                         # Basal rosettes vs leaves spaced along a runner is the
+                         # groundcover field mark, so alternate the two.
+                         "arrangement": "basal" if v % 2 else "alternate"}
+            parts = build_layer(kind, rng, coll, name_prefix=prefix, **morph)
+            objs = list(parts.values())
+            if kind in FLAT_LEAF_LAYERS:
+                squash_to_aspect(objs, morph.get("aspect")
+                                 or C.LAYER_ASPECT[kind])
+            halves[prefix] = unit_frame(objs)
+            budget = C.TRI_BUDGETS.get(kind, _budget_for(spec))
+            for o in objs:
+                decimate_to_budget(o, budget)
+            bake_ao(objs, gradient=True, strength=0.6, seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs, budget)
+            for o in objs:
+                o.parent = root
+            root.location.x = v * _GRID
+    elif spec["kind"] == "fauna":
+        kind = key.split(".", 1)[1]
+        objs = build_critter(kind, rng, coll)           # no AO (tinted flat)
+        # The budget belongs to the UNIT the viewer instances, not to the file.
+        # bee, lep, bird and fly each hold several builds (F67), and billing the
+        # file for their sum would force every build to be a quarter of a
+        # critter. Same rule as a tree's tiers and a shrub's variants.
+        roots = [o for o in objs if o.name in spec.get("nodes", [])
+                 and o.type == "EMPTY"]
+        if roots:
+            for root in roots:
+                unit = [root] + [o for o in objs if o.parent is root]
+                tris[root.name] = _check_budget(
+                    f"{key}/{root.name}", unit, C.TRI_BUDGETS["fauna"])
+        else:
+            tris["unit"] = _check_budget(key, objs, C.TRI_BUDGETS["fauna"])
+    elif spec["kind"] == "structure":
+        sid = key.split(".", 1)[1]
+        objs = build_structure(sid, rng, coll)          # REAL metres, no frame
+        clamp_footprint(objs, spec["size_m"] / 2)       # keep the size promise
+        for o in objs:
+            decimate_to_budget(o, C.TRI_BUDGETS["structure"])
+        bake_ao(objs, gradient=False, strength=0.6, max_dist=1.2,
+                seed_key=key)
+        tris["unit"] = _check_budget(key, objs, C.TRI_BUDGETS["structure"])
+    else:
+        raise KeyError(f"unknown asset kind for {key}")
+    return tris
+
+
+def _match(key, only):
+    if not only:
+        return True
+    return any(key == o or key.startswith(o.rstrip("*")) for o in only)
+
+
+def build_all(out_dir=None, only=None, check_only=False, half_widths=None):
+    """Build every (matching) asset; export + manifest when out_dir given.
+
+    only  : iterable of keys / 'prefix*' patterns (e.g. ['tree.spruce',
+            'fauna*']). None = everything.
+    half_widths : optional dict filled with {key: {unit: half_width}} — the
+            authored aspect each flora unit came out at (see conventions.py).
+    Returns {key: {unit: tris}}.
+    """
+    import os
+    table = asset_table()
+    summary = {}
+    halves = {} if half_widths is None else half_widths
+    for key, spec in table.items():
+        if not _match(key, only):
+            continue
+        per_unit = {}
+        summary[key] = build_asset(key, spec, half_widths=per_unit)
+        if per_unit:
+            halves[key] = per_unit
+        if out_dir and not check_only:
+            os.makedirs(str(out_dir), exist_ok=True)
+            coll = bpy.data.collections[key]
+            # Export empties + meshes of this asset only. Empties are the
+            # tier/variant grid — zero their offset for the export frame.
+            roots = [o for o in coll.objects if o.parent is None]
+            saved = [(o, o.location.x) for o in roots]
+            for o, _x in saved:
+                o.location.x = 0.0
+            bpy.context.view_layer.update()
+            export_glb(list(coll.objects),
+                       os.path.join(str(out_dir), spec["file"]))
+            for o, x in saved:
+                o.location.x = x
+    if out_dir and not check_only and not only:
+        gen = "assetlib %s / Blender %s" % (
+            _asset_version(), ".".join(map(str, bpy.app.version)))
+        write_manifest(out_dir, generator=gen, half_widths=halves)
+    return summary
+
+
+def _asset_version():
+    from . import ASSET_VERSION
+    return ASSET_VERSION

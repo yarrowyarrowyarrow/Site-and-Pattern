@@ -1,0 +1,118 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">measuring…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script>
+// Render-level aspect check (dev page + the harness behind
+// tests/test_scene3d_render.py). Pushes ONE plant of known height_m/canopy_m at
+// a time and reads back the bounding box the viewer actually built, via
+// window.permaMeasure. That composition — archetype geometry x instance
+// transform — is what silently broke before V2.29: assets and instancing were
+// each correct while together they stretched every tree by its aspect ratio.
+//
+// The result is written into document.title as JSON so a headless
+// `--dump-dom` run can read it without CDP.
+// The `morph` column carries the species' REAL recorded leaf characters (schema
+// v47/v48, copied from data/plants_master.json). It is not decoration: those
+// fields pick which baked archetype variant the viewer instances, and each
+// variant is authored and shaped independently — so a probe that left them empty
+// would only ever measure the neutral 'broad_1' unit and pass while the eleven
+// variants the app actually uses went unmeasured. The compound-leaved cases
+// (rose, lupine) are the ones whose leaf reach differs most from a simple blade.
+const CASES = [
+  // genus,        type,        foliage,      height_m, canopy_m, morph
+  ['picea',        'tree',      'evergreen',  25, 7.5],
+  ['pinus',        'tree',      'evergreen',  25, 6],
+  ['populus',      'tree',      'deciduous',  20, 7.5],
+  ['quercus',      'tree',      'deciduous',  18, 15],
+  ['betula',       'tree',      'deciduous',  20, 7.5],
+  ['amelanchier',  'shrub',     'deciduous',  4,  3.6,
+   { leaf_shape: 'obovate', leaf_size_cm: 5, leaf_arrangement: 'alternate' }],
+  ['cornus',       'shrub',     'deciduous',  2.5, 3,
+   { leaf_shape: 'ovate', leaf_size_cm: 9, leaf_arrangement: 'opposite' }],
+  ['rosa',         'shrub',     'deciduous',  1.5, 1.4,
+   { leaf_shape: 'compound_pinnate', leaf_size_cm: 8,
+     leaf_arrangement: 'alternate' }],
+  ['achillea',     'wildflower','herbaceous', 0.5, 0.4,
+   { leaf_shape: 'bipinnate', leaf_size_cm: 8, leaf_arrangement: 'alternate',
+     growth_form: 'ferny' }],
+  ['lupinus',      'wildflower','herbaceous', 0.6, 0.45,
+   { leaf_shape: 'compound_palmate', leaf_size_cm: 10,
+     leaf_arrangement: 'alternate', growth_form: 'erect' }],
+  ['penstemon',    'wildflower','herbaceous', 0.4, 0.3,
+   { leaf_shape: 'lanceolate', leaf_size_cm: 8, leaf_arrangement: 'opposite',
+     growth_form: 'erect' }],
+  ['antennaria',   'wildflower','herbaceous', 0.15, 0.4,
+   { leaf_shape: 'spatulate', leaf_size_cm: 3, leaf_arrangement: 'basal',
+     growth_form: 'mat' }],
+  ['bouteloua',    'grass',     'herbaceous', 0.5, 0.4,
+   { leaf_shape: 'linear', leaf_size_cm: 12, leaf_arrangement: 'basal',
+     growth_form: 'tussock' }],
+];
+
+function scene(c) {
+  const [genus, type, foliage, h, cw, morph] = c;
+  const B = { min_x: -20, min_y: -20, max_x: 20, max_y: 20 };
+  return {
+    version: 1, year: 30, month: 7, is_night: false,
+    origin: { lat: 51.05, lng: -114.07 }, bounds: B, boundary: null,
+    sun: { azimuth_deg: 200, altitude_deg: 48 },
+    buildings: [], structures: [], scan_points: [], splat: null, terrain: null,
+    plants: [Object.assign({
+      plant_id: 1, common_name: genus, x: 0, y: 0,
+      height_m: h, canopy_m: cw, plant_type: type, genus: genus,
+      // The probe measures mature plants, so mature_height_m == height_m; the
+      // viewer picks the leaf archetype off the mature figure so a species' leaf
+      // size class does not change as it grows.
+      mature_height_m: h,
+      foliage_type: foliage, scale_factor: 1, spread_factor: 1, spread_rate: 0,
+      growth_curve: 'steady', color: '#5a8f4e', flower_color: '',
+      flower_form: 'none', bloom_start: 0, bloom_end: 0, fruit_color: '',
+      fruit_start: 0, fruit_end: 0, opacity: 1, health: 1,
+      health_state: 'healthy',
+    }, morph || {})],
+  };
+}
+
+const results = [];
+let i = 0;
+const out = document.getElementById('out');
+
+function step() {
+  const w = document.getElementById('v').contentWindow;
+  if (!w || typeof w.permaSetScene !== 'function'
+      || typeof w.permaMeasure !== 'function') { setTimeout(step, 250); return; }
+  // Wait for the GLB registry before the first measurement, so the numbers
+  // describe the assets that actually ship (the procedural fallback is measured
+  // when there are no models, which is also a valid configuration to check).
+  if (i === 0 && !window._waited) {
+    window._waited = true;
+    setTimeout(step, 4000);
+    return;
+  }
+  if (i >= CASES.length) {
+    document.title = 'MEASURED ' + JSON.stringify(results);
+    out.textContent = results.map(
+      r => r.genus.padEnd(13) + ' asked ' + r.want_h + 'x' + r.want_w
+           + '  got ' + r.height_m + 'x' + r.width_m
+           + '  aspect err ' + (r.err * 100).toFixed(0) + '%').join('\n');
+    return;
+  }
+  const c = CASES[i++];
+  w.permaSetScene(scene(c));
+  setTimeout(() => {
+    const m = w.permaMeasure();
+    const wantA = c[3] / c[4];
+    const gotA = (m.height_m || 0) / Math.max(1e-6, m.width_m || 0);
+    results.push({ genus: c[0], want_h: c[3], want_w: c[4],
+                   height_m: m.height_m || 0, width_m: m.width_m || 0,
+                   groups: m.groups,
+                   err: Math.abs(gotA - wantA) / wantA });
+    step();
+  }, 600);
+}
+step();
+</script></body></html>

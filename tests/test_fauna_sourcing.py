@@ -1,0 +1,1406 @@
+"""
+tests/test_fauna_sourcing.py — the F125 sourcing pipeline (V2.59).
+
+``plant_fauna`` covers 99 of 437 species. The fix is real cited records, and the
+development container's egress policy denies GloBI, GBIF and iNaturalist — so
+the fetch runs on the author's machine and the *review* runs here.
+
+Which means the gates are the part that must not rot. An aggregator returns what
+it has, not what is true in Alberta, and this catalogue's confidence work only
+means anything if a `documented` edge is genuinely documented. Everything below
+is network-free: the fetcher's mapping is exercised against a fixture response,
+and the ingester's gates against a synthetic candidate file.
+"""
+
+import importlib.util
+import json
+import os
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load(name):
+    path = os.path.join(_ROOT, "scripts", f"{name}.py")
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_fetch = _load("fetch_fauna_edges")
+_ingest = _load("ingest_fauna_edges")
+
+
+def _row(name, interaction, path, citation="A study 2020", life_stage=""):
+    """One GloBI row in the shape the live API actually returns.
+
+    `study_title` and `target_specimen_life_stage` are the real column names,
+    confirmed by running `--probe` against the API. The first version of this
+    fixture used `study_citation`, which does not exist — **the same wrong guess
+    the code made**, so the test passed while both were wrong and every fetched
+    edge would have arrived uncited and been binned by the ingest gate. A
+    fixture invented from the same assumption as the code under test proves
+    nothing; only the live probe settled it.
+    """
+    return {"target_taxon_name": name, "interaction_type": interaction,
+            "target_taxon_path": path, "study_title": citation,
+            "target_specimen_life_stage": life_stage}
+
+
+_BEE = "Animalia | Arthropoda | Insecta | Hymenoptera | Apidae"
+_LEP = "Animalia | Arthropoda | Insecta | Lepidoptera | Nymphalidae"
+_BIRD = "Animalia | Chordata | Aves | Passeriformes"
+_MAMMAL = "Animalia | Chordata | Mammalia | Artiodactyla"
+
+
+class TestTheFetcherMapsConservatively(unittest.TestCase):
+    """An interaction that cannot be mapped is dropped, never guessed into the
+    nearest available word."""
+
+    def _edges(self, rows, known=frozenset(), existing=frozenset()):
+        plant = {"common_name": "Test Plant", "scientific_name": "Testus plantus"}
+        return _fetch.to_edges(plant, rows, set(known), set(existing))[0]
+
+    def test_flower_visits_and_pollination_map(self):
+        edges = self._edges([_row("Bombus huntii", "flowersVisitedBy", _BEE),
+                             _row("Apis mellifera", "pollinatedBy", _BEE)])
+        self.assertEqual({e["relationship"] for e in edges},
+                         {"nectar", "pollen"})
+
+    def test_a_caterpillar_eating_is_a_larval_host(self):
+        edges = self._edges([_row("Danaus plexippus", "eatenBy", _LEP,
+                                  life_stage="larva")])
+        self.assertEqual(edges[0]["relationship"], "larval_host")
+
+    def test_an_adult_lepidopteran_eating_is_nectar_not_a_larval_host(self):
+        """Adults have no chewing mouthparts. Filing an adult nectar record as
+        a larval host would claim the plant feeds caterpillars it may never
+        host — and the life stage is right there in the response."""
+        edges = self._edges([_row("Vanessa cardui", "eatenBy", _LEP,
+                                  life_stage="adult")])
+        self.assertEqual(edges[0]["relationship"], "nectar")
+
+    def test_an_unrecorded_life_stage_stays_with_the_conservative_reading(self):
+        """Most 'eats' records on a plant are herbivory, so an unstated stage
+        keeps the larval-host reading rather than inventing certainty."""
+        edges = self._edges([_row("Papilio machaon", "eatenBy", _LEP)])
+        self.assertEqual(edges[0]["relationship"], "larval_host")
+
+    def test_a_bird_eating_is_fruit_forage(self):
+        edges = self._edges([_row("Bombycilla cedrorum", "eatenBy", _BIRD)])
+        self.assertEqual(edges[0]["relationship"], "fruit_food")
+
+    def test_mammal_browse_is_dropped(self):
+        """The seven relationships have no slot for browse. A deer stripping
+        willow is not `fruit_food`, and `cover` means the plant *shelters* the
+        animal — a different claim. Forcing it would be the exact failure V2.58
+        was spent undoing."""
+        self.assertEqual(
+            self._edges([_row("Odocoileus hemionus", "eatenBy", _MAMMAL)]), [])
+
+    def test_a_sap_sucking_insect_is_dropped(self):
+        """'eats' covers leaf miners, gall wasps and aphids. None of those is
+        forage."""
+        hemiptera = "Animalia | Arthropoda | Insecta | Hemiptera | Aphididae"
+        self.assertEqual(
+            self._edges([_row("Aphis nerii", "eatenBy", hemiptera)]), [])
+
+    def test_non_animals_are_dropped(self):
+        self.assertEqual(
+            self._edges([_row("Puccinia graminis", "eatenBy",
+                              "Fungi | Basidiomycota")]), [])
+
+    def test_genus_only_records_are_dropped(self):
+        """Not a species, so not an edge that can be keyed on."""
+        self.assertEqual(self._edges([_row("Bombus", "flowersVisitedBy", _BEE)]),
+                         [])
+
+    def test_duplicates_collapse(self):
+        edges = self._edges([_row("Bombus huntii", "flowersVisitedBy", _BEE),
+                             _row("Bombus huntii", "flowersVisitedBy", _BEE)])
+        self.assertEqual(len(edges), 1)
+
+    def test_already_seeded_edges_are_skipped(self):
+        existing = {("test plant", "bombus huntii", "nectar")}
+        self.assertEqual(
+            self._edges([_row("Bombus huntii", "flowersVisitedBy", _BEE)],
+                        existing=existing), [])
+
+    def test_new_animals_are_flagged_not_silently_used(self):
+        plant = {"common_name": "Test Plant", "scientific_name": "T. plantus"}
+        edges, new = _fetch.to_edges(
+            plant, [_row("Bombus huntii", "flowersVisitedBy", _BEE)],
+            known_fauna=set(), existing=set())
+        self.assertFalse(edges[0]["_known_fauna"])
+        self.assertEqual(new[0]["scientific_name"], "Bombus huntii")
+
+    def test_the_reporting_study_travels_with_the_edge(self):
+        """Reads `study_title` — see _row. This assertion failing is what
+        caught the wrong column name."""
+        edges = self._edges([_row("Bombus huntii", "flowersVisitedBy", _BEE,
+                                  citation="Cariveau et al. 2016")])
+        self.assertIn("Cariveau", edges[0]["_citation"])
+        self.assertIn("Cariveau", edges[0]["notes"])
+
+    def test_the_query_is_region_limited(self):
+        """GloBI is global. A bumblebee recorded on Achillea in a New Zealand
+        garden is not evidence about an Alberta yard."""
+        self.assertTrue(_fetch._BBOX)
+        west, south, east, north = [float(x) for x in _fetch._BBOX.split(",")]
+        self.assertLess(west, -50)
+        self.assertGreater(north, 45)
+
+
+class TestTheIngestGates(unittest.TestCase):
+    """Report first, apply second. Each gate reports a count, so a run says what
+    was thrown away and why."""
+
+    def setUp(self):
+        """Give the synthetic animals a clean bill of nativity.
+
+        These tests each exercise ONE gate, and once the real
+        `fauna_nativity.json` landed in the repo every one of them started
+        failing on a different gate — `Newus specius` is not in GBIF, so the
+        AB/SK check refused it before the gate under test ever ran. That is
+        the nativity gate working; it is also a test asserting the wrong
+        thing. Stubbing it here keeps each test about its own subject, and
+        `TestTheNativityGate` covers the real one.
+        """
+        self._real_nativity = _ingest._nativity
+        _ingest._nativity = lambda: {
+            name: {"ab_records": 500, "sk_records": 200, "origin": "native"}
+            for name in ("Newus specius", "Bombus", "Otherus specius")
+        }
+
+    def tearDown(self):
+        _ingest._nativity = self._real_nativity
+
+    def _review(self, candidates):
+        return _ingest.review(candidates)
+
+    def _c(self, **kw):
+        base = {"plant": "Wild Bergamot", "fauna": "Newus specius",
+                "relationship": "nectar", "_taxon": "bee",
+                "source": "globi", "_citation": "A study", "notes": "n"}
+        base.update(kw)
+        return base
+
+    def test_a_clean_candidate_survives(self):
+        self.assertEqual(len(self._review([self._c()])["kept"]), 1)
+
+    def test_an_edge_with_no_source_is_refused(self):
+        """The provenance standard, as revised in V2.59.
+
+        It originally demanded a named reporting study and rejected all 14,111
+        candidates, because GloBI only fills `study_title` when asked for
+        observations rather than distinct interactions. The bar is now "a
+        registered, checkable source" — GloBI qualifies, an empty string does
+        not. That is a real weakening and it is recorded as one, in the
+        bibliography record and in the source key itself.
+        """
+        out = self._review([self._c(source="")])
+        self.assertEqual(out["kept"], [])
+        self.assertTrue(any("no source" in r for r in out["rejected"]))
+
+    def test_an_edge_with_a_source_but_no_named_study_is_accepted(self):
+        """The 2,546 edges F125 actually shipped are exactly this shape."""
+        self.assertEqual(len(self._review([self._c(_citation="")])["kept"]), 1)
+
+    def test_nectar_is_refused_on_a_wind_pollinated_plant(self):
+        """A grass, sedge or rush has no nectar. GloBI recording a hoverfly on
+        a bulrush is a true observation of a visit and a false statement about
+        a reward. Reuses the app's own wind-pollinated vocabulary so this and
+        the flower-colour classifier cannot disagree."""
+        out = self._review([self._c(plant="Big Bluestem", relationship="nectar")])
+        self.assertEqual(out["kept"], [])
+        self.assertTrue(any("wind-pollinated" in r for r in out["rejected"]))
+
+    def test_pollen_is_still_allowed_on_a_grass(self):
+        """Bees genuinely collect grass and sedge pollen — dropping that too
+        would trade one wrong claim for a missing true one."""
+        out = self._review([self._c(plant="Big Bluestem", relationship="pollen",
+                                    fauna="Newus specius")])
+        self.assertEqual(len(out["kept"]), 1)
+
+    def test_a_relationship_outside_the_schema_is_refused(self):
+        out = self._review([self._c(relationship="grazing")])
+        self.assertEqual(out["kept"], [])
+
+    def test_a_taxon_outside_the_schema_is_refused(self):
+        out = self._review([self._c(_taxon="reptile")])
+        self.assertEqual(out["kept"], [])
+
+    def test_a_plant_we_do_not_stock_is_refused(self):
+        out = self._review([self._c(plant="Saguaro Cactus")])
+        self.assertEqual(out["kept"], [])
+
+    def test_genus_level_animals_are_refused(self):
+        self.assertEqual(self._review([self._c(fauna="Bombus")])["kept"], [])
+
+    def test_duplicates_within_the_file_collapse(self):
+        self.assertEqual(len(self._review([self._c(), self._c()])["kept"]), 1)
+
+    def test_edges_needing_a_new_animal_are_separated(self):
+        """They cannot be written yet: a fauna row needs a common name, a taxon
+        and a nativity call, none of which an interaction record supplies and
+        all of which show up in the UI."""
+        out = self._review([self._c(fauna="Newus specius")])
+        self.assertTrue(out["kept"][0]["_new_fauna"])
+        self.assertIn("Newus specius", out["new_fauna"])
+
+    def test_the_schema_vocabularies_match_the_database(self):
+        """Restated in the ingester as a gate. If schema.sql ever changes these
+        and this copy does not, --apply would write a value the CHECK
+        constraint rejects at seed time."""
+        with open(os.path.join(_ROOT, "src", "db", "schema.sql"),
+                  encoding="utf-8") as fh:
+            sql = fh.read()
+        for rel in _ingest._RELATIONSHIPS:
+            self.assertIn(f"'{rel}'", sql, f"{rel} is not in schema.sql")
+        for taxon in _ingest._TAXA:
+            self.assertIn(f"'{taxon}'", sql, f"{taxon} is not in schema.sql")
+
+    def test_review_never_writes(self):
+        """The safety property of the two-step design."""
+        path = os.path.join(_ROOT, "data", "plant_fauna_master.json")
+        before = os.path.getmtime(path)
+        self._review([self._c() for _ in range(5)])
+        self.assertEqual(os.path.getmtime(path), before)
+
+
+class TestTheBirdRouting(unittest.TestCase):
+    """V2.60. GloBI's `eatenBy` is not `fruit_food`, and V2.59 read it that way.
+
+    Of the 33 plants that ended up carrying a bird `fruit_food` edge, **ten
+    bear no fruit at all** — Lodgepole Pine, White Spruce, Tamarack, Paper
+    Birch, Trembling Aspen, Balsam Poplar and four composites. A crossbill on a
+    tamarack eats seeds; a sapsucker on a birch drinks sap, which the schema
+    cannot express. And GloBI filed three `flowersVisitedBy` records for a
+    White-crowned Sparrow, which does not nectar.
+
+    Same failure as the Monarch bug: an unspecific verb read as a specific
+    claim. Same answer: refuse what the record cannot support.
+    """
+
+    def test_a_frugivore_on_a_fruiting_plant_keeps_fruit_food(self):
+        self.assertEqual(
+            _ingest.route_bird("fruit_food", {"fruit"}, True), "fruit_food")
+
+    def test_a_frugivore_on_a_fruitless_plant_does_not_claim_fruit(self):
+        """The bug, in one line. A waxwing 'eating' a spruce is not eating
+        fruit, because a spruce has none."""
+        self.assertEqual(_ingest.route_bird("fruit_food", {"fruit"}, False), "")
+
+    def test_a_granivore_becomes_seed_food(self):
+        """The recovery, not just the refusal. A White-winged Crossbill on a
+        tamarack is a real and useful relationship — it is `seed_food`."""
+        self.assertEqual(
+            _ingest.route_bird("fruit_food", {"seeds"}, False), "seed_food")
+
+    def test_a_sapsucker_is_dropped_rather_than_forced(self):
+        """Sap has no slot in the seven relationships. Dropped as mammal
+        browse was, and recoverable from an observations-mode re-fetch."""
+        self.assertEqual(_ingest.route_bird("fruit_food", {"sap"}, False), "")
+        self.assertEqual(_ingest.route_bird("fruit_food", {"sap"}, True), "")
+
+    def test_only_a_nectarivore_nectars(self):
+        self.assertEqual(_ingest.route_bird("nectar", {"nectar"}, False),
+                         "nectar")
+        self.assertEqual(_ingest.route_bird("nectar", {"seeds"}, False), "")
+
+    def test_a_bird_that_takes_nothing_from_plants_yields_nothing(self):
+        """An empty feeds set is a decision, not a gap: a Red-tailed Hawk eats
+        no plant, so every plant record for one is a food-web artifact."""
+        self.assertEqual(_ingest.route_bird("fruit_food", set(), True), "")
+        self.assertEqual(_ingest.route_bird("nectar", set(), True), "")
+
+
+class TestTheLifeStageRecovery(unittest.TestCase):
+    """V2.65 (F131). The `hostOf` gate refuses 700 candidate host edges because
+    GloBI filed them under the unspecific `eatenBy`, and that gate is what
+    stopped 23 false Monarch hosts reaching the seed. But *unspecific* is not
+    *false*, and the observations fetch carries the field that separates them.
+
+    44 of the 700 have an observed larva on that exact plant. The ones that
+    reached the catalogue are checkable against any field guide: *Schinia
+    florida* is an obligate *Oenothera* specialist, *Cycnia tenera* is the
+    Dogbane Tiger Moth, *Chlosyne harrisii* hosts on flat-topped white aster.
+
+    These pin the rule, not the count — the count moves with the fetch.
+    """
+
+    def test_an_observed_larva_evidences_a_host(self):
+        """The recovery. `eatenBy` plus a caterpillar on the plant is a host
+        record, whatever verb the aggregator happened to file it under."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"larva"}, "lepidoptera"),
+            ("larval_host", True))
+
+    def test_an_egg_counts_as_a_host_claim(self):
+        """A female choosing where to oviposit is making the host claim
+        herself, and it is the same claim a field guide makes."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"egg"}, "lepidoptera"),
+            ("larval_host", True))
+
+    def test_a_pupa_alone_does_not_evidence_a_host(self):
+        """Larvae of many species wander off the host to pupate, so a pupa on a
+        stem is evidence of a stem and not of a diet. This costs one real edge
+        (a bagworm on chokecherry) and keeps the rule honest."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"pupa"}, "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_adult_lepidopteran_reroutes_to_nectar(self):
+        """The other direction. An adult butterfly at a flower is nectaring —
+        this is the Monarch-on-goldenrod record, correctly filed at last."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"adult"}, "lepidoptera"),
+            ("nectar", False))
+
+    def test_an_adult_beetle_is_not_rerouted_to_nectar(self):
+        """The Monarch bug in a new costume, refused. An adult beetle on a leaf
+        is *chewing it*; calling that nectar would invent a reward from a
+        record that describes damage. Refused rather than routed."""
+        rel, ok = _ingest.route_life_stage(
+            "larval_host", "GloBI eatenBy", {"adult"}, "other_insect")
+        self.assertEqual((rel, ok), ("larval_host", False))
+
+    def test_an_unrecorded_stage_stays_refused(self):
+        """59% of observation rows have no life stage. Absent is not adult and
+        it is not larval — it comes back untouched and the gate refuses it."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     set(), "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_unexplained_stage_string_is_not_guessed(self):
+        """A bare 'a' appears 12 times in the fetch. It is probably 'adult'.
+        'Probably' is not the standard this file is held to."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI eatenBy",
+                                     {"a"}, "lepidoptera"),
+            ("larval_host", False))
+
+    def test_an_explicit_hostof_needs_no_life_stage(self):
+        """The 716 edges that always passed still pass, with no observation
+        row and no stage — the verb was explicit to begin with."""
+        self.assertEqual(
+            _ingest.route_life_stage("larval_host", "GloBI hostOf",
+                                     set(), "lepidoptera"),
+            ("larval_host", True))
+
+    def test_other_relationships_are_untouched(self):
+        """This gate only ever speaks about host claims. A nectar edge must
+        pass through it unchanged, and must not come out `host_evidenced`."""
+        for rel in ("nectar", "pollen", "seed_food", "fruit_food"):
+            self.assertEqual(
+                _ingest.route_life_stage(rel, "GloBI eatenBy",
+                                         {"larva"}, "lepidoptera"),
+                (rel, False), rel)
+
+    def test_the_recovered_hosts_are_in_the_seed(self):
+        """The specialists, end to end. If a reseed or a re-run drops these,
+        the recovery silently unshipped."""
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        hosts = {(r["plant"], r["fauna"]) for r in rows
+                 if r.get("relationship") == "larval_host"}
+        for pair in (("Evening Primrose", "Schinia florida"),
+                     ("Spreading Dogbane", "Cycnia tenera"),
+                     ("Flat-topped White Aster", "Chlosyne harrisii"),
+                     ("Slender Nettle", "Polygonia interrogationis")):
+            self.assertIn(pair, hosts)
+
+    def test_the_recovery_added_no_monarch_host(self):
+        """The gate this one relaxes is the Monarch gate. Nothing it recovered
+        may put a Monarch on anything that is not a milkweed — `test_fauna`
+        asserts the same thing against the database, this asserts it against
+        the file, and both should have to fail before it ships."""
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        for r in rows:
+            if (r.get("fauna") == "Danaus plexippus"
+                    and r.get("relationship") == "larval_host"):
+                self.assertIn("milkweed", r["plant"].lower(), r["plant"])
+
+
+class TestTheBirdCuration(unittest.TestCase):
+    """The 67 birds F125 held, decided one at a time. Every verdict is an
+    unsourced call — the same footing as the 142 fauna rows already shipped —
+    which is why it is a diffable table and why these guard its shape."""
+
+    def setUp(self):
+        self.mod = _load("curate_birds")
+
+    def test_every_held_bird_has_a_verdict(self):
+        """A bird the table forgets is silently dropped by the ingest gate,
+        which reads as 'no records' rather than 'nobody looked'."""
+        self.assertEqual(self.mod.curate()["missing"], [])
+
+    def test_the_verdicts_are_the_three_defined_ones(self):
+        for name, row in self.mod.BIRDS.items():
+            self.assertIn(row[0], ("include", "hold", "reject"), name)
+
+    def test_ab_native_is_derived_from_the_province_list(self):
+        """Two fields that could disagree, so only one is authored."""
+        for r in self.mod.curate()["include"]:
+            self.assertEqual(r["ab_native"],
+                             1 if "AB" in r["native_provinces"].split(",")
+                             else 0, r["scientific_name"])
+
+    def test_introduced_species_are_rejected(self):
+        """The European Starling genuinely eats chokecherry. It must still not
+        become a row: this app recommends plants FOR the animals it lists."""
+        for name in ("Sturnus vulgaris", "Myiopsitta monachus",
+                     "Turdus philomelos"):
+            self.assertEqual(self.mod.BIRDS[name][0], "reject", name)
+
+    def test_the_feeds_vocabulary_is_closed(self):
+        allowed = {"fruit", "seeds", "nectar", "buds", "sap", "insects"}
+        for name, feeds in self.mod.feeds_map().items():
+            self.assertTrue(feeds <= allowed, f"{name}: {feeds - allowed}")
+
+    def test_the_gate_covers_the_birds_already_in_the_catalogue(self):
+        """Leaving them out is not neutral — the first run of this gate binned
+        62 existing edges belonging to the 24 hand-curated species."""
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = json.load(fh)
+        seeded = {r["scientific_name"] for r in rows
+                  if isinstance(r, dict) and r.get("taxon") == "bird"}
+        judged = set(self.mod.feeds_map())
+        self.assertEqual(seeded - judged, set())
+
+    def test_a_deprecated_name_resolves_onto_the_catalogue_row(self):
+        """`Picoides pubescens` is the Downy Woodpecker under its old genus and
+        the catalogue already holds it as `Dryobates pubescens`. Without the
+        synonym it would have been written as a second Downy Woodpecker."""
+        self.assertEqual(self.mod.SYNONYMS["Picoides pubescens"],
+                         "Dryobates pubescens")
+        self.assertNotIn("Picoides pubescens", self.mod.BIRDS)
+
+
+class TestTheAppliedEdgesSurviveTheirOwnGates(unittest.TestCase):
+    """The property `--refit` exists to keep true: a gate added after an
+    `--apply` must not leave contradicting rows behind in the seed file."""
+
+    def test_no_edge_is_stated_twice(self):
+        """A `--refit` re-route can land on top of an edge that already exists.
+
+        The first version tracked only the rows it rewrote, so when the
+        goldfinch's GloBI `fruit_food` on Common Sunflower became `seed_food`
+        it landed beside a **hand-authored, Cornell-cited** `seed_food` row and
+        both survived. Four pairs like that. The DB dedupes on insert, so
+        nothing broke visibly — which is exactly why it needs a test: a `globi`
+        duplicate shadowing a real citation is the kind of rot that is only
+        ever found by counting.
+        """
+        import collections
+        import json
+        with open(os.path.join(_ROOT, "data", "plant_fauna_master.json"),
+                  encoding="utf-8") as fh:
+            rows = [r for r in json.load(fh) if r.get("plant")]
+        counts = collections.Counter(
+            (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+             r.get("relationship", "")) for r in rows)
+        dupes = [k for k, v in counts.items() if v > 1]
+        self.assertEqual(dupes, [], f"edges stated twice: {dupes}")
+
+    def test_no_bird_claims_fruit_on_a_plant_that_bears_none(self):
+        import json
+        data = os.path.join(_ROOT, "data")
+
+        def rows(name):
+            with open(os.path.join(data, name), encoding="utf-8") as fh:
+                blob = json.load(fh)
+            return blob if isinstance(blob, list) else next(
+                v for v in blob.values() if isinstance(v, list))
+
+        fauna = {r["scientific_name"].strip().lower(): r
+                 for r in rows("fauna_master.json") if isinstance(r, dict)}
+        fruiting = set()
+        for name in ("plants_master.json", "garden_plants.json"):
+            for p in rows(name):
+                if p.get("common_name") and (
+                        (p.get("fruit_period") or "").strip()
+                        or (p.get("fruit_form") or "").strip()):
+                    fruiting.add(p["common_name"].strip().lower())
+        bad = [
+            (e["plant"], e["fauna"]) for e in rows("plant_fauna_master.json")
+            if e.get("plant") and e.get("relationship") == "fruit_food"
+            and fauna.get(e["fauna"].strip().lower(), {}).get("taxon") == "bird"
+            and e["plant"].strip().lower() not in fruiting
+        ]
+        self.assertEqual(bad, [], f"fruit claimed on fruitless plants: {bad}")
+
+
+class TestObservationMode(unittest.TestCase):
+    """F128, V2.61. The mode that carries a study, a life stage and a body
+    part — the three fields V2.59 wanted and could not have."""
+
+    def test_the_observation_forms_ask_for_observations(self):
+        for name, builder in _fetch._OBS_FORMS:
+            params = dict(builder("Monarda fistulosa"))
+            self.assertEqual(params.get("includeObservations"), "true", name)
+
+    def test_a_mistyped_flag_is_an_error_not_a_different_run(self):
+        """`--observations` typed with a space became `--` and `observations`,
+        neither of which matched the old `in sys.argv` check — so a run meant
+        to fetch citations silently ran the DEFAULT mode, resumed the old
+        checkpoint, and two hours later rewrote the identical uncited file.
+
+        The mode a long unattended run is in must never be decided by a
+        substring test. argparse rejects what it does not recognise.
+        """
+        import contextlib
+        import io
+        parser = _fetch.build_parser()
+        for argv in (["--", "observations"], ["-observations"],
+                     ["--observations=yes"], ["observations"]):
+            with self.assertRaises(SystemExit, msg=argv), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                parser.parse_args(argv)
+
+    def test_the_flag_actually_sets_the_mode(self):
+        """The other half. A parser that rejects everything would pass the
+        test above and be useless."""
+        parser = _fetch.build_parser()
+        self.assertTrue(parser.parse_args(["--observations"]).observations)
+        self.assertFalse(parser.parse_args([]).observations)
+        # argparse accepts unambiguous prefixes, which is a help rather than a
+        # hazard — `--obs` can only mean one thing here.
+        self.assertTrue(parser.parse_args(["--obs"]).observations)
+
+    def test_the_default_forms_still_do_not(self):
+        """Observation mode multiplies the row count several times over. It
+        must be opted into, not inherited."""
+        for name, builder in _fetch._FORMS:
+            self.assertNotIn("includeObservations",
+                             dict(builder("Monarda fistulosa")), name)
+
+    def test_a_column_is_read_through_its_aliases(self):
+        """V2.59 hard-coded `study_citation`, which does not exist, and the
+        fixture repeated the guess so the suite passed while both were wrong.
+        Nobody here can reach the API, so the code reads whichever spelling
+        turns up and `--probe` reports which ones are real."""
+        self.assertEqual(
+            _fetch._pick({"study_title": "Robertson 1929"}, "citation"),
+            "Robertson 1929")
+        self.assertEqual(
+            _fetch._pick({"target_specimen_body_part_name": "seed"},
+                         "body_part"), "seed")
+        self.assertEqual(_fetch._pick({}, "citation"), "")
+
+    def test_an_empty_alias_falls_through_to_the_next(self):
+        """A column that exists and a column that is populated are different
+        facts — the distinction that cost 14,111 edges."""
+        self.assertEqual(
+            _fetch._pick({"study_citation": "  ", "study_title": "Smith 2011"},
+                         "citation"), "Smith 2011")
+
+    def test_life_stage_and_body_part_travel_with_the_edge(self):
+        plant = {"common_name": "Test Plant", "scientific_name": "T. plantus"}
+        row = _row("Bombus huntii", "flowersVisitedBy", _BEE)
+        row["target_specimen_body_part_name"] = "flower"
+        row["target_specimen_life_stage"] = "adult"
+        edges, _ = _fetch.to_edges(plant, [row], set(), set())
+        self.assertEqual(edges[0]["_body_part"], "flower")
+        self.assertEqual(edges[0]["_life_stage"], "adult")
+
+
+class TestCitationUpgrade(unittest.TestCase):
+    """Turning `globi` into a named study — what "proper citations" means."""
+
+    def test_a_title_with_a_year_splits_into_authors_and_year(self):
+        r = _ingest.study_record("Robertson C 1929 Flowers and insects")
+        self.assertEqual(r["year"], 1929)
+        self.assertEqual(r["authors"], "Robertson C")
+        self.assertTrue(r["key"].startswith("globi_"))
+
+    def test_a_specimen_url_is_filed_as_one_not_as_a_study(self):
+        """What the live probe actually returned. `study_title` is 100%
+        populated and the first value sampled was
+        `https://scan-bugs.org/portal/collections/individual/index…` — a
+        museum specimen record, because much of GloBI is collection
+        aggregation rather than literature.
+
+        It is a real citation: one identifiable record a person can open,
+        strictly more than `globi` said. It is not a study, and filing it as
+        one would be the same category error this pipeline keeps undoing.
+        """
+        r = _ingest.study_record(
+            "https://scan-bugs.org:443/portal/collections/individual/index.php"
+            "?occid=12345678")
+        self.assertEqual(r["kind"], "specimen_record")
+        self.assertEqual(r["key"], "globi_scan_bugs_org")
+        self.assertIn("scan-bugs.org", r["title"])
+        self.assertIsNone(r["year"])
+        self.assertNotIn("occid", r["key"],
+                         "the per-record id must not end up in the key")
+
+    def test_every_record_from_one_portal_shares_one_key(self):
+        """Otherwise the bibliography grows one entry per specimen — tens of
+        thousands of them — and stops being a bibliography."""
+        a = _ingest.study_record("https://scan-bugs.org/portal/x?occid=1")
+        b = _ingest.study_record("https://scan-bugs.org/portal/y?occid=999")
+        self.assertEqual(a["key"], b["key"])
+
+    def test_a_title_with_no_year_still_makes_a_record(self):
+        """GloBI study titles are free text, not structured bibliography. A
+        dataset name is still a better citation than 'an aggregator has it'."""
+        r = _ingest.study_record("A dataset of pollinator visits")
+        self.assertIsNone(r["year"])
+        self.assertEqual(r["authors"], "")
+        self.assertEqual(r["title"], "A dataset of pollinator visits")
+
+    def test_the_record_admits_it_was_parsed_not_transcribed(self):
+        """A machine-split author field is not a reading of the work, and the
+        bibliography has a field for saying so."""
+        r = _ingest.study_record("Cariveau DP 2016 The allometry of proboscis")
+        self.assertEqual(r["record_confidence"], "unverified")
+        self.assertIn("Parsed from the study title", r["record_note"])
+
+    def test_the_key_is_stable_for_the_same_title(self):
+        a = _ingest.study_record("Robertson C 1929 Flowers and insects")
+        b = _ingest.study_record("Robertson  C  1929  Flowers and insects")
+        self.assertEqual(a["key"], b["key"])
+
+    def test_the_record_has_every_field_the_bibliography_requires(self):
+        import json
+        with open(os.path.join(_ROOT, "data", "sources_master.json"),
+                  encoding="utf-8") as fh:
+            existing = json.load(fh)["sources"]
+        required = set(existing[0]) & {"key", "authors", "year", "title",
+                                       "kind", "covers", "record_confidence"}
+        r = _ingest.study_record("Robertson C 1929 Flowers")
+        self.assertEqual(required - set(r), set())
+
+
+class TestTheNativityGate(unittest.TestCase):
+    """"Only flora and fauna native to AB and SK", made checkable.
+
+    The catalogue asserts nativity as a boolean nobody sourced: 142 of 167
+    fauna rows carry `ab_native = 1` and no province data at all. This gate
+    replaces the assertion with a count, for the animals that do not yet have
+    a human verdict behind them.
+    """
+
+    def setUp(self):
+        self.mod = _load("fetch_fauna_nativity")
+
+    def test_introduced_is_refused_however_many_records(self):
+        """The whole reason occurrence cannot stand in for nativity. A
+        European Starling has tens of thousands of Alberta records."""
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 90000, "sk_records": 40000, "origin": "introduced"})
+        self.assertFalse(ok)
+        self.assertIn("introduced", why)
+
+    def test_no_records_here_is_refused(self):
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 0, "sk_records": 0, "origin": "unstated"})
+        self.assertFalse(ok)
+        self.assertIn("no georeferenced records", why)
+
+    def test_a_handful_of_records_is_refused_as_too_thin(self):
+        """Present and *established here* are different claims, and one
+        mis-georeferenced record is how a desert quail gets in."""
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 1, "sk_records": 0, "origin": "unstated"})
+        self.assertFalse(ok)
+        self.assertIn("too thin", why)
+
+    def test_the_four_probe_species_land_where_the_live_run_put_them(self):
+        """Pinned against the real 2026-08-16 probe output, so the checklist
+        path cannot regress into the occurrence-facet dead end it replaced.
+
+        The starling is the one that matters: 267,995 Alberta records, and
+        `reject` is still the right answer. Occurrence proves presence and
+        says nothing whatever about belonging.
+        """
+        cases = [
+            ("Danaus plexippus",   370, 596, ["NATIVE"],     "accept"),
+            ("Callipepla gambelii",  0,   0, [],             "reject"),
+            ("Sturnus vulgaris", 267995, 15778, ["INTRODUCED"], "reject"),
+            ("Apis mellifera",    3671, 451, ["INTRODUCED"], "reject"),
+        ]
+        for name, ab, sk, means, expected in cases:
+            self.assertEqual(self.mod.assess(ab, sk, means)["verdict"],
+                             expected, name)
+
+    def test_checklist_values_are_deduplicated(self):
+        """The probe returned `['NATIVE'] * 9` for one monarch — nine
+        checklists agreeing, not nine pieces of evidence. Multiplied by 3,065
+        species it is just file bloat."""
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        self.assertIn("sorted(out)", src)
+        self.assertIn("out = set()", src)
+
+    def test_disagreeing_checklists_go_to_a_human(self):
+        """One checklist saying native and another saying introduced is a
+        real disagreement between sources. The first cut resolved it silently
+        by whichever test fired first."""
+        a = self.mod.assess(500, 200, ["NATIVE", "INTRODUCED"])
+        self.assertEqual(a["origin"], "conflicted")
+        self.assertEqual(a["verdict"], "review")
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 500, "sk_records": 200, "origin": "conflicted"})
+        self.assertFalse(ok)
+        self.assertIn("disagree", why)
+
+    def test_only_a_canada_row_can_judge_a_canada_question(self):
+        """The bug the 3,064-species run exposed.
+
+        The filter skipped a row only when it *named* a country that was not
+        Canada — so every row with no country field passed, and most have
+        none. `introduced somewhere on Earth` became `introduced to Canada`,
+        and the run flagged the Snow Goose (native to arctic Canada, feral in
+        Europe) and the Summer Tanager (introduced nowhere at all), while
+        Ruffed Grouse, Alder Flycatcher and Red-eyed Vireo came back
+        conflicted.
+        """
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        # The skip must be unconditional on the country NOT being Canada,
+        # not conditional on a country being present at all.
+        self.assertNotIn("if country and", src)
+        self.assertIn('if "CANADA" not in country.upper()', src)
+
+    def test_the_checklist_lookup_reports_the_countries_it_saw(self):
+        """Nobody could tell the filter was a no-op from the output. The
+        countries travel now, for diagnosis rather than for the verdict."""
+        import inspect
+        src = inspect.getsource(self.mod.establishment_from_checklists)
+        self.assertIn("seen_countries", src)
+
+    def test_a_well_recorded_species_passes(self):
+        ok, _ = _ingest.nativity_verdict(
+            {"ab_records": 400, "sk_records": 120, "origin": "unstated"})
+        self.assertTrue(ok)
+
+    def test_the_floor_is_the_one_the_catalogue_already_uses(self):
+        """A module does not own a threshold another module already owns. If
+        these drift, a species is 'present enough' for one feature and not the
+        other, and nobody finds it for a year."""
+        from src.ecoregion_ranges import MIN_RECORDS
+        self.assertEqual(_ingest._occurrence_floor(), MIN_RECORDS)
+
+    def test_a_missing_fetch_stands_the_gate_down_rather_than_binning_all(self):
+        """The fetch needs egress this repo does not have. A missing
+        measurement is not evidence of absence (P9) — with no file the gate
+        must fall back to V2.60 behaviour, not reject the catalogue."""
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.move(path, backup)
+        try:
+            self.assertEqual(_ingest._nativity(), {})
+            out = _ingest.review([{
+                "plant": "Wild Bergamot", "fauna": "Newus specius",
+                "relationship": "nectar", "_taxon": "bee", "source": "globi",
+                "notes": "GloBI flowersVisitedBy"}])
+            self.assertEqual(len(out["kept"]), 1, out["rejected"])
+        finally:
+            if existed:
+                shutil.move(backup, path)
+
+    def test_the_gate_actually_fires_when_the_fetch_has_run(self):
+        """The one that matters, and the one nothing else here can prove.
+
+        Every other test above exercises `nativity_verdict` in isolation.
+        This drives the real `review()` with a real nativity file on disk, so
+        a gate that is written but never wired — which is exactly how V2.59
+        shipped `fruit_food` on conifers — cannot pass.
+        """
+        import json
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.copy2(path, backup)
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump({
+                    "Goodus specius": {"ab_records": 400, "sk_records": 90,
+                                       "origin": "unstated"},
+                    "Alienus specius": {"ab_records": 0, "sk_records": 0,
+                                        "origin": "unstated"},
+                    "Introducus specius": {"ab_records": 5000,
+                                           "sk_records": 900,
+                                           "origin": "introduced"},
+                }, fh)
+            cands = [
+                {"plant": "Wild Bergamot", "fauna": name,
+                 "relationship": "nectar", "_taxon": "bee", "source": "globi",
+                 "notes": "GloBI flowersVisitedBy"}
+                for name in ("Goodus specius", "Alienus specius",
+                             "Introducus specius", "Unmeasured specius")
+            ]
+            out = _ingest.review(cands)
+            self.assertEqual([k["fauna"] for k in out["kept"]],
+                             ["Goodus specius"])
+            reasons = " ".join(out["rejected"])
+            for expect in ("no georeferenced records", "introduced",
+                           "nativity fetch not run"):
+                self.assertIn(expect, reasons)
+        finally:
+            os.remove(path)
+            if existed:
+                shutil.move(backup, path)
+
+    def test_an_animal_already_in_the_catalogue_is_not_re_litigated(self):
+        """Its nativity was decided when the row was authored. Overruling a
+        human on occurrence counts — which cannot tell native from merely
+        present — would be the gate exceeding what it can measure."""
+        import json
+        import shutil
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        backup = path + ".testbak"
+        existed = os.path.exists(path)
+        if existed:
+            shutil.copy2(path, backup)
+        try:
+            # Deliberately damning data for a species the catalogue holds.
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump({"Bombus huntii": {"ab_records": 0, "sk_records": 0,
+                                             "origin": "introduced"}}, fh)
+            out = _ingest.review([{
+                "plant": "Showy Milkweed", "fauna": "Bombus huntii",
+                "relationship": "pollen", "_taxon": "bee", "source": "globi",
+                "notes": "GloBI pollinatedBy"}])
+            self.assertEqual(len(out["kept"]), 1, out["rejected"])
+        finally:
+            os.remove(path)
+            if existed:
+                shutil.move(backup, path)
+
+    def test_the_province_boxes_hold_the_cities_they_should(self):
+        """Both provinces are surveyed rectangles, which is why a box works at
+        all. Pinned against real coordinates so a typo in a bound is caught."""
+        inside = {
+            "AB": [("Edmonton", 53.55, -113.49), ("Calgary", 51.05, -114.07),
+                   ("Fort McMurray", 56.73, -111.38)],
+            "SK": [("Regina", 50.45, -104.62), ("Saskatoon", 52.13, -106.67),
+                   ("Prince Albert", 53.20, -105.75)],
+        }
+        for code, cities in inside.items():
+            lo_lat, hi_lat, lo_lng, hi_lng = self.mod.PROVINCE_BOXES[code]
+            for name, lat, lng in cities:
+                self.assertTrue(lo_lat <= lat <= hi_lat and
+                                lo_lng <= lng <= hi_lng,
+                                f"{name} should be inside {code}")
+
+    def test_the_boxes_exclude_the_neighbours(self):
+        outside = [("Vancouver", 49.28, -123.12), ("Winnipeg", 49.90, -97.14),
+                   ("Toronto", 43.65, -79.38)]
+        for code in ("AB", "SK"):
+            lo_lat, hi_lat, lo_lng, hi_lng = self.mod.PROVINCE_BOXES[code]
+            for name, lat, lng in outside:
+                self.assertFalse(lo_lat <= lat <= hi_lat and
+                                 lo_lng <= lng <= hi_lng,
+                                 f"{name} must not be inside {code}")
+
+    def test_the_two_boxes_meet_at_the_shared_meridian(self):
+        """AB's east edge and SK's west edge are the same line, 110°W. A gap
+        would lose every record on the border; an overlap would double-count."""
+        self.assertEqual(self.mod.PROVINCE_BOXES["AB"][3],
+                         self.mod.PROVINCE_BOXES["SK"][2])
+
+    def test_assess_keeps_presence_and_origin_apart(self):
+        """Occurrence is not nativity, and the output must never collapse the
+        two. `origin: unstated` is the common case and is not a claim of
+        nativeness (P9 — absent is not estimated)."""
+        a = self.mod.assess(200, 30, [])
+        self.assertEqual(a["provinces"], "AB,SK")
+        self.assertEqual(a["origin"], "unstated")
+        self.assertEqual(a["verdict"], "review")
+
+    def test_a_disqualifying_establishment_value_is_matched_loosely(self):
+        """GBIF carries both the Darwin Core vocabulary and publisher free
+        text, so 'INTRODUCED', 'introduced', and 'Introduced (naturalised)'
+        all have to land the same way."""
+        for value in ("INTRODUCED", "introduced", "Introduced (naturalised)",
+                      "INVASIVE", "MANAGED"):
+            self.assertEqual(self.mod.assess(500, 10, [value])["verdict"],
+                             "reject", value)
+
+
+class TestTheIntroducedReview(unittest.TestCase):
+    """V2.62. GBIF's `origin` is a candidate list, not a verdict.
+
+    Two attempts to make it one both failed: the occurrence facet returns
+    nothing at all, and the checklist distributions contradict themselves —
+    strict filtering fixed the Summer Tanager, made the Red-eyed Vireo worse,
+    and lost *Apis mellifera*, the most obviously introduced insect there is.
+    24 candidates out of 3,064 is small enough to read instead.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_introduced")
+
+    def test_every_gbif_flagged_species_has_a_verdict(self):
+        """A candidate the table forgets falls through to the unreviewed
+        branch, which refuses it — safe, but silently, and silence is how a
+        native species disappears from the catalogue."""
+        import json
+        path = os.path.join(_ROOT, "data", "fetched", "fauna_nativity.json")
+        if not os.path.exists(path):
+            self.skipTest("nativity fetch not present")
+        with open(path, encoding="utf-8") as fh:
+            flagged = {k for k, v in json.load(fh).items()
+                       if v.get("origin") == "introduced"}
+        self.assertEqual(sorted(flagged - set(self.mod.INTRODUCED)), [])
+
+    def test_the_verdicts_are_the_three_defined_ones(self):
+        for name, row in self.mod.INTRODUCED.items():
+            self.assertIn(row[0], ("introduced", "native", "unsure"), name)
+
+    def test_unsure_fails_closed(self):
+        """A catalogue whose whole claim is that its species belong here must
+        refuse a species nobody can place, not admit it."""
+        unsure = [n for n, (v, _) in self.mod.INTRODUCED.items()
+                  if v == "unsure"]
+        self.assertTrue(unsure, "the table should keep at least one honest "
+                                "'I cannot call this'")
+        for n in unsure:
+            self.assertIn(n, self.mod.verdicts())
+
+    def test_the_known_introductions_are_refused(self):
+        for n in ("Sturnus vulgaris", "Pieris rapae", "Harmonia axyridis",
+                  "Coccinella septempunctata", "Thymelicus lineola",
+                  "Ostrinia nubilalis", "Noctua pronuba"):
+            self.assertIn(n, self.mod.verdicts(), n)
+
+    def test_the_gbif_false_positives_are_corrected(self):
+        """Every clear one is a bird. A Snow Goose breeds in the Canadian
+        Arctic in millions; the INTRODUCED rows are European feral birds."""
+        for n in ("Anser caerulescens", "Empidonax alnorum",
+                  "Vireo olivaceus", "Piranga olivacea"):
+            self.assertIn(n, self.mod.overrides(), n)
+            self.assertNotIn(n, self.mod.verdicts(), n)
+
+    def test_every_row_carries_a_reason(self):
+        """The table is a set of unsourced calls. It earns its place by being
+        arguable line by line."""
+        for name, (_v, reason) in self.mod.INTRODUCED.items():
+            self.assertGreater(len(reason), 40, name)
+
+    def test_the_review_beats_gbif_in_both_directions(self):
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 9, "sk_records": 9, "origin": "introduced"},
+            "Sturnus vulgaris", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("reviewed as introduced", why)
+        ok, _ = _ingest.nativity_verdict(
+            {"ab_records": 23334, "sk_records": 16102, "origin": "introduced"},
+            "Anser caerulescens", refuse, corrected)
+        self.assertTrue(ok, "a reviewed native must survive GBIF's error")
+
+    def test_a_newly_flagged_species_is_refused_and_named(self):
+        """The fail-safe. A species GBIF starts calling introduced after this
+        review is refused, and the reason says where to go and fix it."""
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 900, "sk_records": 40, "origin": "introduced"},
+            "Newus specius", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("curate_introduced", why)
+
+    def test_a_corrected_species_still_needs_records_here(self):
+        """Correcting GBIF's origin is not a free pass through the rest of
+        the gate."""
+        refuse, corrected = _ingest._reviewed_origin()
+        ok, why = _ingest.nativity_verdict(
+            {"ab_records": 0, "sk_records": 0, "origin": "introduced"},
+            "Anser caerulescens", refuse, corrected)
+        self.assertFalse(ok)
+        self.assertIn("no georeferenced records", why)
+
+
+class TestTheFetcherReadsTheRealCatalogue(unittest.TestCase):
+    def test_it_finds_the_plants_fauna_and_existing_edges(self):
+        plants, fauna, existing = _fetch.load_catalogue()
+        self.assertGreater(len(plants), 400)
+        self.assertGreater(len(fauna), 100)
+        self.assertGreater(len(existing), 300)
+        self.assertTrue(all(p.get("scientific_name") for p in plants))
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class TestTheTop200Review(unittest.TestCase):
+    """F127, V2.63. The occurrence gate cleared 1,252 animals and the top of
+    that list was still wrong — *Apis mellifera* at number one with 133 edges.
+
+    The honeybee is the instructive case: V2.62's review only saw species GBIF
+    *flagged*, and after the strict Canada filter this one read `unstated`, so
+    it was never a candidate. Occurrence counts cannot separate "native here"
+    from "GBIF holds records here for some reason", and a Central Asian
+    bumblebee with 1,125 Saskatchewan records is the proof.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_new_fauna")
+
+    def test_the_honeybee_is_refused(self):
+        """The species this whole review exists for."""
+        self.assertEqual(self.mod.verdict_for("Apis mellifera")[0], "reject")
+        self.assertNotIn("Apis mellifera", self.mod.verdicts())
+
+    def test_the_out_of_range_bumblebees_are_refused(self):
+        for name in ("Bombus impatiens", "Bombus vosnesenskii",
+                     "Bombus prshewalskyi", "Bombus bimaculatus",
+                     "Bombus vandykei", "Bombus hypnorum",
+                     "Bombus auricomus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_the_alberta_bumblebees_are_kept(self):
+        """A genus rule that rejected everything would pass the test above and
+        be useless."""
+        for name in ("Bombus kirbiellus", "Bombus vancouverensis"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "include", name)
+
+    def test_a_species_override_beats_its_genus_rule(self):
+        """`Andrena` is included wholesale; `Anthidium manicatum` is refused
+        even though wool carder bees are otherwise an included genus."""
+        self.assertEqual(self.mod.verdict_for("Andrena vicina")[0], "include")
+        self.assertEqual(
+            self.mod.verdict_for("Anthidium manicatum")[0], "reject")
+        self.assertEqual(self.mod.verdict_for("Polistes fuscatus")[0],
+                         "include")
+        self.assertEqual(self.mod.verdict_for("Polistes dominula")[0],
+                         "reject")
+
+    def test_trinomials_are_refused(self):
+        """The catalogue keys fauna on binomials. A subspecies row would not
+        resolve against anything — the `Picoides pubescens` lesson from
+        V2.60, arriving five more times."""
+        for name in ("Bombus vancouverensis nearcticus",
+                     "Papilio polyxenes asterius",
+                     "Vanessa atalanta rubria",
+                     "Limenitis arthemis arthemis",
+                     "Danaus plexippus plexippus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_anything_unreviewed_is_held_not_admitted(self):
+        """The 1,052-species tail. Its edges are probably fine, and 'probably
+        fine' is not what this catalogue claims about a documented edge."""
+        v, reason = self.mod.verdict_for("Totallus unknownus")
+        self.assertEqual(v, "hold")
+        self.assertIn("not reviewed", reason)
+
+    def test_a_species_with_no_english_name_keeps_its_binomial(self):
+        """The author's call, and the honest one: for a solitary bee the
+        binomial IS the name. Inventing 'Milwaukee Mining Bee' would be
+        writing a name nobody wrote."""
+        rows = self.mod.verdicts()
+        andrena = [r for k, r in rows.items() if k.startswith("Andrena ")]
+        self.assertTrue(andrena, "the review should include some Andrena")
+        for r in andrena:
+            self.assertEqual(r["common_name"], r["scientific_name"])
+
+    def test_species_with_a_real_english_name_use_it(self):
+        rows = self.mod.verdicts()
+        if "Strymon melinus" in rows:
+            self.assertEqual(rows["Strymon melinus"]["common_name"],
+                             "Gray Hairstreak")
+
+    def test_every_written_row_has_what_the_schema_demands(self):
+        import json
+        with open(os.path.join(_ROOT, "src", "db", "schema.sql"),
+                  encoding="utf-8") as fh:
+            sql = fh.read()
+        for name, row in self.mod.verdicts().items():
+            for field in ("scientific_name", "common_name", "taxon"):
+                self.assertTrue((row.get(field) or "").strip(),
+                                f"{name}: empty {field}")
+            self.assertIn(f"'{row['taxon']}'", sql, name)
+            self.assertIn(row["ab_native"], (0, 1), name)
+
+    def test_ab_native_is_derived_from_the_province_list(self):
+        for name, row in self.mod.verdicts().items():
+            self.assertEqual(
+                row["ab_native"],
+                1 if "AB" in row["native_provinces"].split(",") else 0, name)
+
+    def test_the_reviewed_animals_are_all_in_the_catalogue_now(self):
+        """The review is only worth anything if it was applied.
+
+        Except for the animals whose every edge is dropped downstream —
+        see `writable` and V2.64. Those are admitted and deliberately not
+        written, so the assertion is "admitted AND connected", not
+        "admitted".
+        """
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        connected, _orphans = self.mod.writable()
+        missing = sorted(set(connected) - have)
+        self.assertEqual(missing, [], f"reviewed but never written: {missing}")
+
+    def test_no_rejected_animal_reached_the_catalogue(self):
+        """The point of the exercise, asserted against the shipped file."""
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        rejected = {n for n, (v, _) in self.mod.SPECIES.items()
+                    if v == "reject"}
+        self.assertEqual(sorted(rejected & have), [])
+
+    def test_every_reviewed_species_actually_got_a_verdict(self):
+        """The pin's job. Before it, `Polistes fuscatus` fell through to
+        "not reviewed" because the genus rule was never written — silently
+        held, inside a list whose whole claim is that it was read."""
+        gaps = [n for n in self.mod.REVIEWED
+                if n not in self.mod.SPECIES
+                and n.split()[0] not in self.mod.GENUS]
+        self.assertEqual(gaps, [], f"reviewed but undecided: {gaps}")
+
+    def test_the_reviewed_list_is_pinned_not_recomputed(self):
+        """Recomputing "top 200 not yet in the catalogue" slides the window
+        every time rows are written. It pulled in 42 unread species —
+        *Megachile rotundata* and *Vespula germanica* among them, both
+        introduced — the moment the first 159 landed."""
+        self.assertEqual(len(self.mod.REVIEWED), 200)
+        self.assertEqual(len(set(self.mod.REVIEWED)), 200)
+
+
+class TestTheTailReview(unittest.TestCase):
+    """F130 / V2.64 — the 980 species the top-200 review left held.
+
+    A different problem from V2.63 and the tests reflect that. The top 200
+    was a shortlist of well-known pollinators; the tail is 457 singletons,
+    nearly a quarter of them larval-host records, and it is where the
+    introduced species turned out to be hiding — carpet beetles, cluster
+    flies, the Meadow Spittlebug, two deliberate biocontrol releases and a
+    Chinese Mantis sold as a garden beneficial.
+    """
+
+    def setUp(self):
+        self.mod = _load("curate_new_fauna")
+
+    # ── The pin ──────────────────────────────────────────────────────────
+    def test_the_tail_list_is_pinned_and_disjoint(self):
+        """`REVIEWED` is a slice and pinning it stopped a sliding window.
+        This one is not a slice, and is pinned for the other reason: a
+        re-fetch must not deliver new species already marked as read."""
+        self.assertEqual(len(self.mod.REVIEWED_TAIL), 980)
+        self.assertEqual(len(set(self.mod.REVIEWED_TAIL)), 980)
+        self.assertEqual(
+            set(self.mod.REVIEWED) & set(self.mod.REVIEWED_TAIL), set())
+
+    def test_every_tail_species_actually_got_a_verdict(self):
+        gaps = [n for n in self.mod.REVIEWED_TAIL
+                if self.mod.verdict_for(n)[1].startswith("not reviewed")]
+        self.assertEqual(gaps, [], f"pinned as read but undecided: {gaps}")
+
+    def test_nothing_the_tail_refused_reached_the_catalogue(self):
+        import json
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        leaked = sorted(n for n in self.mod.REVIEWED_TAIL
+                        if self.mod.verdict_for(n)[0] != "include"
+                        and n in have)
+        self.assertEqual(leaked, [], f"held or rejected, yet written: {leaked}")
+
+    # ── The two structural exclusions ────────────────────────────────────
+    def test_birds_are_decided_in_one_place_only(self):
+        """`curate_birds.py` owns birds and the ingest gate reads it. Two
+        tables that can disagree about the same animal is worse than one, so
+        no bird is in this file's pin and none comes out of `verdicts`."""
+        birds = _load("curate_birds")
+        for name in self.mod.REVIEWED_TAIL:
+            self.assertNotIn(name, birds.BIRDS,
+                             f"{name} is decided in curate_birds too")
+        rows = self.mod.verdicts()
+        self.assertEqual([n for n, r in rows.items() if r["taxon"] == "bird"],
+                         [])
+
+    def test_a_trinomial_is_refused_even_inside_an_included_genus(self):
+        """The rule sits ABOVE the genus lookup on purpose. Most of these
+        subspecies belong to genera the review admits, so a genus rule would
+        wave them straight in — and a subspecies row resolves against nothing
+        because the catalogue keys fauna on binomials."""
+        self.assertEqual(
+            self.mod.verdict_for("Satyrium titus mopsus")[0], "reject")
+        self.assertEqual(self.mod.verdict_for("Satyrium titus")[0], "include")
+        for name in ("Hesperia comma colorado", "Danaus plexippus plexippus",
+                     "Hoplitis albifrons argentifrons"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    # ── What the tail turned up that the top 200 could not ───────────────
+    def test_the_introduced_species_the_tail_surfaced_are_refused(self):
+        for name in ("Anthrenus verbasci", "Anthrenus scrophulariae",
+                     "Pollenia rudis", "Stomoxys calcitrans",
+                     "Philaenus spumarius", "Plutella xylostella",
+                     "Tenodera sinensis", "Otiorhynchus ovatus",
+                     "Sitona hispidulus", "Phyllobius oblongus",
+                     "Lepidosaphes ulmi", "Rhopalosiphum padi",
+                     "Rhyparochromus vulgaris", "Eumerus strigatus"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "reject", name)
+
+    def test_deliberate_biocontrol_releases_are_refused(self):
+        """Established, effective, and not prairie wildlife."""
+        for name in ("Larinus obtusus", "Urophora quadrifasciata",
+                     "Coccinella septempunctata"):
+            v, why = self.mod.verdict_for(name)
+            self.assertEqual(v, "reject", name)
+            self.assertIn("biocontrol", why.lower(), name)
+
+    def test_a_genus_that_splits_gets_read_species_by_species(self):
+        """A blanket rule either loses the natives or admits the imports."""
+        for native, introduced in (
+                ("Adelphocoris rapidus", "Adelphocoris lineolatus"),
+                ("Coccinella trifasciata", "Coccinella septempunctata"),
+                ("Agrilus anxius", "Agrilus cyanescens"),
+                ("Choreutis diana", "Choreutis pariana")):
+            self.assertEqual(self.mod.verdict_for(native)[0], "include",
+                             native)
+            self.assertEqual(self.mod.verdict_for(introduced)[0], "reject",
+                             introduced)
+
+    def test_a_superseded_name_does_not_become_a_second_row(self):
+        """One animal, two names. The `Picoides pubescens` failure again —
+        this time three flies and a beetle deep in the tail, where nobody
+        would have noticed the duplicate."""
+        for current, superseded in (
+                ("Platycheirus rosarum", "Pyrophaena rosarum"),
+                ("Lepturobosca chrysocoma", "Cosmosalia chrysocoma")):
+            self.assertEqual(self.mod.verdict_for(current)[0], "include",
+                             current)
+            self.assertNotEqual(self.mod.verdict_for(superseded)[0],
+                                "include", superseded)
+        # Held rather than rejected, because the animal itself is fine.
+        self.assertEqual(
+            self.mod.verdict_for("Phalaenophana pyramusalis")[0], "include")
+        self.assertEqual(
+            self.mod.verdict_for("Phaeolita pyramusalis")[0], "hold")
+
+    def test_a_visit_is_not_a_reward(self):
+        """The sparrow problem from V2.60, in three more shapes. GloBI files
+        `flowersVisitedBy` for an ambush bug, a crab spider, a robber fly and
+        a darner — true about where the animal was, false about what the
+        plant gave it."""
+        for name in ("Phymata americana", "Misumena vatia",
+                     "Laphria fernaldi", "Apiomerus spissipes",
+                     "Podisus maculiventris", "Sympetrum vicinum",
+                     "Aeshna umbrosa", "Enallagma civile"):
+            self.assertEqual(self.mod.verdict_for(name)[0], "hold", name)
+
+    def test_no_arachnid_is_filed_as_an_insect(self):
+        """Two reasons, either sufficient: they are predators on flowers, and
+        `other_insect` is a false statement about a spider in a field the app
+        prints beside the animal's name."""
+        for name in ("Phidippus audax", "Xysticus punctatus",
+                     "Tetragnatha extensa", "Phalangium opilio",
+                     "Eriophyes emarginatae", "Aculus tetanothrix"):
+            self.assertNotEqual(self.mod.verdict_for(name)[0], "include", name)
+        self.assertEqual(
+            [n for n in self.mod.verdicts()
+             if n.split()[0] in ("Phidippus", "Xysticus", "Misumena",
+                                 "Phalangium", "Eriophyes")], [])
+
+    # ── The rows that come with the animals ──────────────────────────────
+    def test_every_admitted_lepidopteran_has_an_explicit_kind(self):
+        """`lep_attributes` falls back to butterfly/day for an unknown genus,
+        which is a safe default and a silent one — it would file 138 moths as
+        butterflies without failing anything. The table must be complete, not
+        merely defaulted."""
+        rows = self.mod.verdicts()
+        missing = sorted({n.split()[0] for n, r in rows.items()
+                          if r["taxon"] == "lepidoptera"}
+                         - set(self.mod.LEP_KIND))
+        self.assertEqual(missing, [], f"no kind for: {missing}")
+
+    def test_flight_season_is_unknown_rather_than_invented(self):
+        for row in self.mod.lep_attributes():
+            self.assertEqual(row["flight_season"], "unknown")
+            self.assertIn(row["kind"], ("butterfly", "moth", "skipper"))
+            self.assertIn(row["activity"], ("day", "night"))
+
+    def test_the_attribute_rows_were_actually_written(self):
+        """For every lepidopteran that got a fauna row. The 18 admitted but
+        unconnected ones (see `writable`) get neither, which is the point."""
+        import json
+        path = os.path.join(_ROOT, "data",
+                            "lepidoptera_attributes_master.json")
+        with open(path, encoding="utf-8") as fh:
+            have = {r.get("scientific_name") for r in json.load(fh)}
+        connected = set(self.mod.writable()[0])
+        missing = sorted(r["scientific_name"] for r in self.mod.lep_attributes()
+                         if r["scientific_name"] in connected
+                         and r["scientific_name"] not in have)
+        self.assertEqual(missing, [], f"written but unattributed: {missing}")
+
+    def test_a_common_name_is_only_written_for_an_admitted_animal(self):
+        """A name in the table for something the review refused is a name
+        written for nothing, and it hides a verdict that changed."""
+        rows = self.mod.verdicts()
+        orphans = sorted(k for k in self.mod.COMMON_NAMES if k not in rows)
+        self.assertEqual(orphans, [], f"named but not admitted: {orphans}")
+
+    # ── The orphan filter ────────────────────────────────────────────────
+    def test_an_animal_with_no_surviving_edge_is_not_written(self):
+        """The first tail apply wrote 20 animals connected to nothing.
+
+        They were admitted honestly — native, in range, real. Their edges
+        then died downstream, almost all of them at the larval-host gate:
+        adult nectaring records GloBI files as `eatenBy`, which the fetcher's
+        life-stage default had promoted into host claims. The gate is right
+        and the consequence is a moth with nothing left, which is not a
+        catalogue entry.
+        """
+        import json
+        _connected, orphans = self.mod.writable()
+        self.assertTrue(orphans, "the filter should have something to filter")
+        with open(os.path.join(_ROOT, "data", "fauna_master.json"),
+                  encoding="utf-8") as fh:
+            have = {r["scientific_name"] for r in json.load(fh)
+                    if isinstance(r, dict) and r.get("scientific_name")}
+        self.assertEqual(sorted(set(orphans) & have), [])
+
+    def test_an_orphan_gets_no_attribute_row_either(self):
+        """An unwritten animal with a `lepidoptera_attributes` row is an
+        attribute keyed on a species the catalogue does not hold."""
+        import json
+        _connected, orphans = self.mod.writable()
+        path = os.path.join(_ROOT, "data",
+                            "lepidoptera_attributes_master.json")
+        with open(path, encoding="utf-8") as fh:
+            have = {r.get("scientific_name") for r in json.load(fh)}
+        self.assertEqual(sorted(set(orphans) & have), [])
+
+    def test_already_seeded_animals_count_as_connected(self):
+        """On a re-run every candidate edge is dropped as "already seeded",
+        so an animal that HAS edges looks exactly like one that never got
+        any. Getting this wrong would stop re-applying the review from ever
+        working twice."""
+        connected, orphans = self.mod.writable()
+        self.assertIn("Bombus kirbiellus", connected)
+        self.assertNotIn("Bombus kirbiellus", orphans)

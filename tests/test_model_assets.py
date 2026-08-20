@@ -1,0 +1,1179 @@
+"""
+tests/test_model_assets.py
+
+Guards the committed Blender-generated GLB assets (html/assets/models/)
+against the viewer contract in html/scene3d/09-models.js — stdlib only, no
+Blender, no Qt, no three.js:
+
+- manifest.json parses, is version 1, references only files that exist, and
+  every .glb in the directory is referenced (no orphans);
+- asset keys stay in lockstep with the viewer's OWN archetype vocabularies,
+  regex-extracted from the JS (the render_flower_sprites.py prior art:
+  extract the real thing, don't duplicate it);
+- every GLB is structurally sound via a ~40-line GLB/JSON-chunk parser:
+  no textures/images, plant primitives carry POSITION + COLOR_0, POSITION
+  bounds satisfy the unit frame, declared tier/variant/part and fauna node
+  names exist, per-unit triangle budgets hold (mirrors assetlib/conventions.py).
+
+Skips while html/assets/models/manifest.json does not exist (the plumbing
+ships before the first generated assets do).
+"""
+
+import json
+import math
+import os
+import re
+import struct
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_MODELS = os.path.join(_ROOT, "html", "assets", "models")
+_MANIFEST = os.path.join(_MODELS, "manifest.json")
+_SCENE3D = os.path.join(_ROOT, "html", "scene3d")
+
+# Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
+_TRI_BUDGETS = {"tree_tier0": 2200, "tree_tier1": 3600, "tree_tier2": 6000,
+                "shrub": 3600, "herb": 1200, "layer": 900, "groundcover": 1600,
+                "fauna": 1500,
+                "structure": 1500}
+
+
+def _assetlib_conventions():
+    """assetlib.conventions, or None if it can't be imported.
+
+    It is deliberately bpy-free (the whole generator↔viewer contract in one
+    importable place), so the aspect targets can be read here without Blender.
+    """
+    try:
+        sys.path.insert(0, os.path.join(_ROOT, "scripts", "blender"))
+        from assetlib import conventions           # noqa: PLC0415
+        return conventions
+    except Exception:                              # noqa: BLE001
+        return None
+
+
+def _read(path):
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
+
+
+def parse_glb(path):
+    """Minimal GLB v2 reader → (json_dict, binary_chunk_or_None).
+
+    The second element used to be a bare "did it have one" flag. It carries the
+    bytes now so a test can read actual vertex data — see
+    test_crown_leaf_cards_stay_in_scale_with_the_species_leaf, which needs edge
+    lengths and cannot get them from an accessor's min/max. Every other caller
+    ignores it or checks it for truthiness, and a non-empty bytes is truthy.
+    """
+    with open(path, "rb") as fh:
+        blob = fh.read()
+    magic, version, length = struct.unpack_from("<4sII", blob, 0)
+    if magic != b"glTF":
+        raise ValueError(f"{path}: not a GLB (magic {magic!r})")
+    if version != 2:
+        raise ValueError(f"{path}: glTF version {version} != 2")
+    if length != len(blob):
+        raise ValueError(f"{path}: declared length {length} != {len(blob)}")
+    off, js, binary = 12, None, None
+    while off < len(blob):
+        chunk_len, chunk_type = struct.unpack_from("<I4s", blob, off)
+        data = blob[off + 8:off + 8 + chunk_len]
+        if chunk_type == b"JSON":
+            js = json.loads(data.decode("utf-8"))
+        elif chunk_type == b"BIN\x00":
+            binary = data
+        off += 8 + chunk_len
+    if js is None:
+        raise ValueError(f"{path}: no JSON chunk")
+    return js, binary
+
+
+_COMPONENT_FMT = {5120: "b", 5121: "B", 5122: "h", 5123: "H",
+                  5125: "I", 5126: "f"}
+_TYPE_COUNT = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+
+
+def _read_accessor(gltf, binary, index):
+    """Decode one accessor into a list of component tuples.
+
+    Honours byteStride, because an interleaved buffer read as if it were tightly
+    packed produces plausible-looking garbage rather than an error.
+    """
+    acc = gltf["accessors"][index]
+    view = gltf["bufferViews"][acc["bufferView"]]
+    fmt = _COMPONENT_FMT[acc["componentType"]]
+    ncomp = _TYPE_COUNT[acc["type"]]
+    base = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+    stride = view.get("byteStride") or struct.calcsize(fmt) * ncomp
+    return [struct.unpack_from("<" + fmt * ncomp, binary, base + i * stride)
+            for i in range(acc["count"])]
+
+
+def _prim_tris(gltf, prim):
+    if prim.get("mode", 4) != 4:                  # TRIANGLES
+        return 0
+    accessors = gltf.get("accessors", [])
+    if "indices" in prim:
+        return accessors[prim["indices"]]["count"] // 3
+    return accessors[prim["attributes"]["POSITION"]]["count"] // 3
+
+
+def _tri_count(gltf):
+    """Total triangles across all mesh primitives (indexed or not)."""
+    return sum(_prim_tris(gltf, prim)
+               for mesh in gltf.get("meshes", [])
+               for prim in mesh.get("primitives", []))
+
+
+def _node_names(gltf):
+    return {n.get("name", "") for n in gltf.get("nodes", [])}
+
+
+def _mesh_nodes_under(gltf, root_idx):
+    """Depth-first node indices under (and including) root_idx."""
+    out, stack = [], [root_idx]
+    nodes = gltf.get("nodes", [])
+    while stack:
+        i = stack.pop()
+        out.append(i)
+        stack.extend(nodes[i].get("children", []))
+    return out
+
+
+def _tri_count_under(gltf, root_idx):
+    """Triangles in the meshes parented under one unit root.
+
+    A tier or a variant is what the viewer instances, so the budget belongs to
+    the unit; the whole file only bounds their sum, and a file holding eleven
+    variants would let any one of them balloon unnoticed.
+    """
+    nodes = gltf.get("nodes", [])
+    total = 0
+    for i in _mesh_nodes_under(gltf, root_idx):
+        if "mesh" not in nodes[i]:
+            continue
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            total += _prim_tris(gltf, prim)
+    return total
+
+
+def _catalogue_canopy_m(rec):
+    """The mature spread a catalogue row implies — the mirror of
+    assetlib/manifest._canopy_m and of src/db/plants._row_to_dict, which both
+    default an unrecorded canopy to 1.5x the planting spacing."""
+    for key, mul in (("mature_canopy_m", 1.0), ("spacing_m", 1.5)):
+        try:
+            v = float(rec.get(key) or 0)
+        except (TypeError, ValueError):
+            v = 0.0
+        if v > 0:
+            return v * mul
+    return 0.0
+
+
+def _unit_count(entry):
+    """How many variant units a manifest entry declares — a plain count for the
+    layer kinds, one per (blade class, grain class) for herbs and shrubs."""
+    return entry.get("variants", 0) or len(entry.get("variant_keys", {}))
+
+
+@unittest.skipUnless(os.path.isfile(_MANIFEST),
+                     "no generated GLB assets yet (html/assets/models)")
+class ModelAssetsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mf = json.loads(_read(_MANIFEST))
+        cls.gltf = {}
+        for section in ("plants", "fauna", "structures"):
+            for key, entry in cls.mf.get(section, {}).items():
+                path = os.path.join(_MODELS, entry["file"])
+                if os.path.isfile(path):
+                    cls.gltf[entry["file"]] = parse_glb(path)
+
+    # ── manifest ↔ files ────────────────────────────────────────────────────
+
+    def test_manifest_version_and_files(self):
+        self.assertEqual(self.mf.get("version"), 1)
+        for section in ("plants", "fauna", "structures"):
+            for key, entry in self.mf.get(section, {}).items():
+                path = os.path.join(_MODELS, entry["file"])
+                self.assertTrue(os.path.isfile(path),
+                                f"{section}.{key}: missing {entry['file']}")
+
+    def test_no_orphan_glbs(self):
+        referenced = {e["file"] for s in ("plants", "fauna", "structures")
+                      for e in self.mf.get(s, {}).values()}
+        on_disk = {f for f in os.listdir(_MODELS) if f.endswith(".glb")}
+        self.assertEqual(on_disk - referenced, set(),
+                         "GLBs on disk that the manifest never references")
+
+    # ── key parity with the viewer's own vocabularies ───────────────────────
+
+    def test_tree_keys_match_viewer_profiles(self):
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        prof_ids = set(re.findall(r"id:\s*'(\w+)'", src))
+        allowed = ({f"tree.{p}" for p in prof_ids if p != "def"}
+                   | {"tree.def_conifer", "tree.def_slender",
+                      "tree.def_oval", "tree.def_spreading"})
+        tree_keys = {k for k in self.mf["plants"] if k.startswith("tree.")}
+        self.assertTrue(tree_keys, "manifest has no tree.* keys")
+        self.assertEqual(tree_keys - allowed, set(),
+                         "tree keys the viewer would never look up")
+
+    def test_shrub_and_herb_keys_match_viewer_forms(self):
+        shrub_src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        m = re.search(r"const SHRUB_FORMS = \{(.*?)\n\};", shrub_src, re.S)
+        shrub_forms = set(re.findall(r"^\s{2}(\w+):", m.group(1), re.M))
+        herb_src = _read(os.path.join(_SCENE3D, "03-herbs.js"))
+        m = re.search(r"const HERB_FORMS = \{(.*?)\n\};", herb_src, re.S)
+        herb_forms = set(re.findall(r"^\s{2}(\w+):", m.group(1), re.M))
+        self.assertEqual(
+            {k.split(".", 1)[1] for k in self.mf["plants"]
+             if k.startswith("shrub.")}, shrub_forms)
+        self.assertEqual(
+            {k.split(".", 1)[1] for k in self.mf["plants"]
+             if k.startswith("herb.")}, herb_forms)
+
+    def test_viewer_leaf_classifiers_match_the_generator(self):
+        """The viewer picks a plant's baked archetype by (blade class, grain
+        class); the generator decides which of those to bake. Two independent
+        implementations of the same classification is the whole risk: drift one
+        break and a species silently falls back to the neutral variant, losing
+        exactly the identity this machinery exists to give it. So extract the
+        viewer's real tables and compare, rather than restating them here.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+
+        def js_list(name):
+            m = re.search(r"const " + name + r" = \[(.*?)\];", src, re.S)
+            self.assertIsNotNone(m, f"02-plants.js: {name} not found")
+            return re.findall(r"'([\w]+)'", m.group(1))
+
+        self.assertEqual(js_list("BLADE_CLASSES"),
+                         list(conventions.BLADE_CLASSES))
+        # Each shape list feeds one class; walking them proves the whole mapping
+        # agrees, including which shapes are absent (→ 'broad').
+        for name, cls in (("_COMPOUND_SHAPES", "compound"),
+                          ("_NARROW_SHAPES", "narrow"),
+                          ("_CUT_SHAPES", "cut")):
+            for shape in js_list(name):
+                self.assertEqual(conventions.blade_class(shape), cls,
+                                 f"{shape}: viewer says {cls}, generator "
+                                 f"says {conventions.blade_class(shape)}")
+        m = re.search(r"const GRAIN_LEAF_SCALE = \[([^\]]*)\]", src)
+        self.assertIsNotNone(m, "02-plants.js: GRAIN_LEAF_SCALE not found")
+        self.assertEqual([float(x) for x in m.group(1).split(",")],
+                         list(conventions.GRAIN_LEAF_SCALE))
+        m = re.search(r"const _GRAIN_BREAKS = \{(.*?)\};", src, re.S)
+        self.assertIsNotNone(m, "02-plants.js: _GRAIN_BREAKS not found")
+        breaks = {fam: (float(lo), float(hi)) for fam, lo, hi in re.findall(
+            r"(\w+):\s*\[([\d.]+),\s*([\d.]+)\]", m.group(1))}
+        self.assertEqual(breaks, {k: tuple(v) for k, v in
+                                  conventions._GRAIN_BREAKS.items()})
+
+    def test_each_blade_class_is_baked_as_a_typical_member(self):
+        """A blade class stands for its species, so the outline it is baked with
+        must be typical of them — specifically the member whose width/length sits
+        at the class median.
+
+        This is the check the aster regression needed. 'narrow' was baked as
+        `linear` (width/length 0.06) while 65 of its 100 species are `lanceolate`
+        (0.22) and only 22 truly linear, so the largest group of wildflowers drew
+        leaves 3.7x too narrow — thick bare stems with invisible threads on them.
+        Nothing caught it: the geometry was valid, budgeted, correctly
+        proportioned overall, and the right variant was being selected. Only the
+        blade WIDTH was wrong, and no test looked at width.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        # LEAF_WIDTH_RATIO lives in the bpy-importing mesh_ops; read it as data
+        # rather than dragging Blender into the ordinary suite.
+        src = _read(os.path.join(_ROOT, "scripts", "blender", "assetlib",
+                                 "mesh_ops.py"))
+        blob = re.search(r"LEAF_WIDTH_RATIO = \{(.*?)\}", src, re.S)
+        self.assertIsNotNone(blob, "mesh_ops.LEAF_WIDTH_RATIO not found")
+        ratio = {k: float(v) for k, v in
+                 re.findall(r'"(\w+)":\s*([\d.]+)', blob.group(1))}
+        catalogue = json.loads(_read(os.path.join(_ROOT, "data",
+                                                 "plants_master.json")))
+        served = set()
+        for types, _form_of, _prefix in conventions.FAMILY_FORMS.values():
+            served |= set(types)
+        for cls in conventions.BLADE_CLASSES:
+            members = [r.get("leaf_shape") for r in catalogue
+                       if r.get("plant_type") in served
+                       and conventions.blade_class(r.get("leaf_shape")) == cls]
+            ratios = sorted(ratio[s] for s in members if s in ratio)
+            if not ratios:
+                continue
+            median = ratios[len(ratios) // 2] if len(ratios) % 2 else (
+                (ratios[len(ratios) // 2 - 1] + ratios[len(ratios) // 2]) / 2)
+            baked = conventions.BLADE_SHAPE[cls]
+            self.assertIn(baked, ratio, f"{cls}: baked shape {baked} has no ratio")
+            self.assertAlmostEqual(
+                ratio[baked], median, delta=0.08,
+                msg=f"blade class '{cls}' is baked as '{baked}' "
+                    f"(width/length {ratio[baked]}) but its {len(ratios)} "
+                    f"species run {ratios[0]}–{ratios[-1]} with median {median} "
+                    f"— the class is being drawn at the edge of its range "
+                    f"instead of the middle of it.")
+
+    def test_every_catalogue_species_resolves_to_a_baked_variant(self):
+        """No herb or shrub in the shipped catalogue may ask for a variant the
+        manifest doesn't carry. The generator reads the same catalogue, so this
+        holds by construction — until someone adds a species and forgets to
+        rebuild the assets, which is precisely when it should fail."""
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        path = os.path.join(_ROOT, "data", "plants_master.json")
+        catalogue = json.loads(_read(path))
+        checked = 0
+        for family, (types, form_of, prefix) in conventions.FAMILY_FORMS.items():
+            for rec in catalogue:
+                if rec.get("plant_type") not in types:
+                    continue
+                form = form_of(rec)
+                entry = self.mf["plants"].get(f"{prefix}.{form}")
+                self.assertIsNotNone(entry, f"{prefix}.{form} missing")
+                blade = conventions.blade_class(rec.get("leaf_shape"))
+                grain = conventions.grain_class(rec.get("leaf_size_cm"),
+                                                rec.get("mature_height_m"),
+                                                family)
+                # Herbs carry the third (aspect) segment since V2.34, and the
+                # two forms with a stem a fourth (branch) since V2.35.
+                if family == "herb" and form in conventions.ASPECT_HERB_FORMS:
+                    want = conventions.herb_variant_key(
+                        blade, grain,
+                        conventions.herb_aspect_class(
+                            form, rec.get("mature_height_m"),
+                            _catalogue_canopy_m(rec)),
+                        conventions.branch_class(rec.get("stem_branching"))
+                        if form in conventions.BRANCH_HERB_FORMS else None)
+                else:
+                    want = conventions.variant_key(blade, grain)
+                self.assertIn(
+                    want, entry.get("variant_keys", {}),
+                    f"{rec.get('scientific_name')}: no baked {want} variant "
+                    f"for {prefix}.{form_of(rec)} — rebuild html/assets/models")
+                checked += 1
+        # 316 today (229 herbaceous + 55 shrubs + 32 groundcover). Grass, sedge,
+        # vine and aquatic stay outside this guard: they map to layer.*
+        # archetypes carrying plain interchangeable variants rather than
+        # morphology ones. The floor only has to catch the lookup going empty.
+        self.assertGreater(checked, 300, "catalogue stopped resolving")
+
+    def test_layer_and_fauna_keys_match_viewer(self):
+        layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
+                  if k.startswith("layer.")}
+        self.assertEqual(set(layers), {"grass", "aquatic", "vine",
+                                       "groundcover"})
+        # Groundcover is morphology-keyed (V2.29): its 32 species carry 14 leaf
+        # outlines, so it ships one unit per (blade × grain) like a herb rather
+        # than N interchangeable draws.
+        self.assertGreaterEqual(len(layers["groundcover"].get("variant_keys", {})), 4)
+        self.assertIsNone(layers["groundcover"].get("variants"))
+        # grass / aquatic / vine are aspect-keyed (V2.33, F65). They always
+        # shipped three units; until now the three were random draws of ONE
+        # shape picked by a plant-id hash, so a 2.67:1 mountain brome and a
+        # 0.56:1 golden sedge were both stretched out of a 1.31:1 archetype.
+        # Same payload, three real shapes, chosen by the species.
+        conventions = _assetlib_conventions()
+        for kind in ("grass", "aquatic", "vine"):
+            keys = layers[kind].get("variant_keys", {})
+            self.assertIsNone(layers[kind].get("variants"),
+                              f"layer.{kind} still declares interchangeable variants")
+            self.assertEqual(sorted(keys), ["aspect_0", "aspect_1", "aspect_2"],
+                             f"layer.{kind} variant keys are not the aspect axis")
+            if conventions is not None:
+                self.assertEqual(len(conventions.LAYER_ASPECT_CLASSES[kind]),
+                                 len(keys))
+        # The viewer's copy of the breaks must agree with the generator's, or a
+        # species asks for an aspect the manifest never baked.
+        if conventions is not None:
+            src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+            block = re.search(r"const LAYER_ASPECT_BREAKS = \{(.*?)\};", src, re.S)
+            self.assertIsNotNone(block, "02-plants.js lost LAYER_ASPECT_BREAKS")
+            for kind, (lo, hi) in conventions.LAYER_ASPECT_BREAKS.items():
+                found = re.search(kind + r":\s*\[([\d.]+),\s*([\d.]+)\]",
+                                  block.group(1))
+                self.assertIsNotNone(found, f"viewer has no {kind} aspect breaks")
+                self.assertAlmostEqual(float(found.group(1)), lo, places=3)
+                self.assertAlmostEqual(float(found.group(2)), hi, places=3)
+        # Fauna keys must cover what 09-models.js maps critter kinds onto.
+        src = _read(os.path.join(_SCENE3D, "09-models.js"))
+        wanted = set(re.findall(r"key:\s*'(\w+)'", src))
+        self.assertEqual(set(self.mf["fauna"]), wanted,
+                         "manifest fauna keys != _GLB_CRITTER keys")
+
+    def test_herb_archetypes_carry_the_aspect_axis(self):
+        """The forms with an aspect axis must ship three-part keys, and the
+        viewer's breaks must be the generator's.
+
+        F65 gave grass/aquatic/vine an aspect axis and left the herbs with the
+        same disease, which is the worse case: 228 wildflowers whose real
+        height ÷ canopy runs 0.11 to 3.33 were all being drawn at one of seven
+        single figures, so a creeping phlox and an upright blazingstar came out
+        four and three times the wrong proportion. Getting the two classifiers
+        out of step is silent — the lookup falls back to the neutral unit and
+        the species just quietly loses its shape again (09-models.js
+        _glbVariant).
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        herbs = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
+                 if k.startswith("herb.")}
+        self.assertTrue(herbs, "no herb archetypes in the manifest")
+        for form in conventions.ASPECT_HERB_FORMS:
+            self.assertIn(form, herbs, f"herb.{form} missing from the manifest")
+            keys = sorted(herbs[form].get("variant_keys", {}))
+            self.assertTrue(keys, f"herb.{form} has no variant keys")
+            stemmed = form in conventions.BRANCH_HERB_FORMS
+            pattern = r"^[a-z]+_\d_a\d_b\d$" if stemmed else r"^[a-z]+_\d_a\d$"
+            for vkey in keys:
+                self.assertRegex(
+                    vkey, pattern,
+                    f"herb.{form}/{vkey} is not a (blade × grain × aspect"
+                    + (" × branch)" if stemmed else ")")
+                    + " key — rebuild html/assets/models")
+            aspects = {conventions.parse_herb_variant_key(k)[2] for k in keys}
+            self.assertTrue(
+                aspects <= {0, 1, 2},
+                f"herb.{form} bakes aspect classes {sorted(aspects)}")
+        # `fern` is deliberately OUTSIDE the axis: one species maps to it, and a
+        # class it cannot fill would be a fabricated difference, not a recorded
+        # one (P9). It must keep the two-part key.
+        for vkey in herbs.get("fern", {}).get("variant_keys", {}):
+            self.assertNotRegex(vkey, r"_a\d$",
+                                "herb.fern gained an aspect axis it has no "
+                                "species to fill")
+        # The viewer's copy of the breaks must agree with the generator's.
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        block = re.search(r"const HERB_ASPECT_BREAKS = \{(.*?)\};", src, re.S)
+        self.assertIsNotNone(block, "02-plants.js lost HERB_ASPECT_BREAKS")
+        for form, (lo, hi) in conventions.HERB_ASPECT_BREAKS.items():
+            found = re.search(form + r":\s*\[([\d.]+),\s*([\d.]+)\]",
+                              block.group(1))
+            self.assertIsNotNone(found, f"viewer has no {form} aspect breaks")
+            self.assertAlmostEqual(float(found.group(1)), lo, places=3)
+            self.assertAlmostEqual(float(found.group(2)), hi, places=3)
+        self.assertEqual(
+            len(re.findall(r"(\w+):\s*\[", block.group(1))),
+            len(conventions.HERB_ASPECT_BREAKS),
+            "the viewer classifies a herb form the generator does not bake")
+        # …and the key the viewer builds must be the shape the generator parses.
+        self.assertIn("'_a' + herbAspectClassFor(", src,
+                      "02-plants.js variantKeyFor stopped emitting the aspect "
+                      "segment for herbs")
+
+    def test_stemmed_herb_forms_carry_the_branching_axis(self):
+        """`stem_branching` was recorded at schema v53 and read by nothing.
+
+        Every forb stem was one straight rod, so a goldenrod — whose silhouette
+        IS two orders of branching — came out as a blazingstar. Only the two
+        forms that HAVE a stem take the axis; the rest are basal-leaved with
+        bare scapes and a class they cannot fill would be a fabricated
+        difference (P9). The failure mode is the usual silent one: a key the
+        manifest doesn't carry degrades to the neutral unit, which is the
+        straight rod again.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        herbs = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
+                 if k.startswith("herb.")}
+        for form in conventions.BRANCH_HERB_FORMS:
+            self.assertIn(form, herbs)
+            keys = sorted(herbs[form].get("variant_keys", {}))
+            classes = {conventions.parse_herb_branch(k) for k in keys}
+            self.assertGreater(
+                len(classes), 1,
+                f"herb.{form} bakes only branch class {classes} — every one of "
+                f"its species would be drawn with the same stem")
+            self.assertTrue(classes <= {0, 1, 2})
+            # The neutral fallback must be the STRAIGHT rod, so a species with
+            # no recorded branching gets exactly the pre-axis geometry.
+            self.assertIn(conventions.herb_variant_key("broad", 1, 1, 0), keys,
+                          f"herb.{form} lost its unbranched neutral unit")
+        for form, entry in herbs.items():
+            if form in conventions.BRANCH_HERB_FORMS:
+                continue
+            for vkey in entry.get("variant_keys", {}):
+                self.assertNotRegex(
+                    vkey, r"_b\d$",
+                    f"herb.{form} gained a branching axis but has no stem")
+        # The viewer's copy of the vocabulary must be the generator's, in order
+        # — the class is an INDEX into it at both ends.
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        block = re.search(r"const BRANCH_CLASSES = \[(.*?)\];", src, re.S)
+        self.assertIsNotNone(block, "02-plants.js lost BRANCH_CLASSES")
+        self.assertEqual(re.findall(r"'(\w+)'", block.group(1)),
+                         list(conventions.BRANCH_CLASSES))
+        forms = re.search(r"const BRANCH_HERB_FORMS = \[(.*?)\];", src, re.S)
+        self.assertIsNotNone(forms, "02-plants.js lost BRANCH_HERB_FORMS")
+        self.assertEqual(set(re.findall(r"'(\w+)'", forms.group(1))),
+                         set(conventions.BRANCH_HERB_FORMS))
+
+    # ── GLB structure ───────────────────────────────────────────────────────
+
+    def test_every_fauna_build_the_app_can_ask_for_is_baked(self):
+        """Every `build` src/scene_wildlife.py emits must exist in the file.
+
+        This is the fauna half of "every catalogue species resolves to a baked
+        variant". The appearance layer names a body plan per genus and per
+        common-name rule; the generator bakes a fixed list
+        (assetlib/fauna_variants.py). If the two drift, a leafcutter silently
+        degrades to whatever build happens to be first and nobody notices —
+        which matters more here than anywhere else in the library, because 62 of
+        the 69 native bees have no photograph and the MODEL is the whole
+        identification (F67).
+        """
+        try:
+            from src import scene_wildlife            # noqa: PLC0415
+        except Exception:                             # noqa: BLE001
+            self.skipTest("src.scene_wildlife not importable")
+        wanted = {"bee": set(), "lep": set(), "bird": set()}
+        for genus in list(scene_wildlife._BEE_BUILD) + [
+                "bombus", "andrena", "osmia", "halictus", "nomada", "unknown"]:
+            wanted["bee"].add(
+                scene_wildlife._bee_appearance(genus, "")["build"])
+        for name, kind in (("Swallowtail", "butterfly"), ("Skipper", "butterfly"),
+                           ("Monarch", "butterfly"), ("Sphinx Moth", "moth"),
+                           ("Nothing In Particular", "butterfly")):
+            wanted["lep"].add(scene_wildlife._lep_appearance(name, "", kind)["build"])
+        for name in ("Downy Woodpecker", "Northern Flicker", "Ruby-throated "
+                     "Hummingbird", "Black-capped Chickadee", "Robin"):
+            wanted["bird"].add(scene_wildlife._bird_appearance(name)["build"])
+        for key, builds in wanted.items():
+            declared = set(self.mf["fauna"][key].get("nodes", []))
+            missing = builds - declared
+            self.assertFalse(
+                missing,
+                f"fauna.{key}: src/scene_wildlife.py can ask for {sorted(missing)} "
+                f"but the baked file only carries {sorted(declared)} — rebuild "
+                f"html/assets/models, or reconcile assetlib/fauna_variants.py")
+
+    def test_glbs_have_no_textures(self):
+        for fname, (gltf, _bin) in self.gltf.items():
+            for bad in ("images", "textures", "samplers"):
+                self.assertNotIn(bad, gltf, f"{fname} embeds {bad}")
+
+    def test_plant_glbs_have_position_and_color(self):
+        for key, entry in self.mf["plants"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            for mesh in gltf.get("meshes", []):
+                for prim in mesh.get("primitives", []):
+                    attrs = prim.get("attributes", {})
+                    self.assertIn("POSITION", attrs, f"{key}: no POSITION")
+                    self.assertIn("COLOR_0", attrs,
+                                  f"{key}: no COLOR_0 (AO) — vertexColors "
+                                  f"materials would render black")
+
+    def _plant_bounds(self, key, entry):
+        """(lo_y, hi_y, half_width) over every primitive in a plant GLB."""
+        gltf, _ = self.gltf[entry["file"]]
+        lo_y, hi_y, half = None, None, 0.0
+        for mesh in gltf.get("meshes", []):
+            for prim in mesh.get("primitives", []):
+                acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+                mn, mx = acc.get("min"), acc.get("max")
+                self.assertIsNotNone(mn, f"{key}: POSITION without min")
+                lo_y = mn[1] if lo_y is None else min(lo_y, mn[1])
+                hi_y = mx[1] if hi_y is None else max(hi_y, mx[1])
+                half = max(half, abs(mn[0]), abs(mx[0]),
+                           abs(mn[2]), abs(mx[2]))
+        return lo_y, hi_y, half
+
+    def _unit_bounds(self, entry, unit):
+        """(top y, half-width) of one named unit, or (None, 0)."""
+        gltf, _bin = self.gltf[entry["file"]]
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        # A variant's meshes are the parts parented under its root empty.
+        roots = [i for name, i in idx.items()
+                 if name == unit or name.startswith(unit + "_")]
+        if not roots:
+            keys = sorted(entry.get("variant_keys", {}).items(),
+                          key=lambda kv: kv[1])
+            names = [k for k, _ in keys]
+            if unit in names:
+                roots = [i for name, i in idx.items()
+                         if name == f"v{names.index(unit)}"
+                         or name.startswith(f"v{names.index(unit)}_")]
+        hi_y, half = None, 0.0
+        for r in roots:
+            for i in _mesh_nodes_under(gltf, r):
+                if "mesh" not in nodes[i]:
+                    continue
+                for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+                    acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+                    mn, mx = acc.get("min"), acc.get("max")
+                    if not mn or not mx:
+                        continue
+                    hi_y = mx[1] if hi_y is None else max(hi_y, mx[1])
+                    half = max(half, abs(mn[0]), abs(mx[0]),
+                               abs(mn[2]), abs(mx[2]))
+        return hi_y, half
+
+    def test_plant_glbs_satisfy_unit_frame(self):
+        for key, entry in self.mf["plants"].items():
+            lo_y, hi_y, _half = self._plant_bounds(key, entry)
+            # Catches metre- or centimetre-scale exports and off-origin assets.
+            self.assertGreaterEqual(lo_y, -0.05, f"{key}: base below y=0")
+            self.assertLessEqual(lo_y, 0.35, f"{key}: floats above ground")
+            self.assertAlmostEqual(hi_y, 1.0, delta=0.1,
+                                   msg=f"{key}: height {hi_y} != ~1.0")
+
+    def test_plant_glbs_are_authored_at_their_species_aspect(self):
+        """Each archetype's height ÷ width must match the real proportions of
+        the species that map to it (assetlib.conventions).
+
+        This is the guard the V2.29 fix needed and didn't have: assets were
+        authored 1:1 and instanced by (canopy_m, height_m, canopy_m), so a
+        3.3:1 spruce or 4.2:1 pine had every foliage clump stretched by that
+        factor — and *every* existing check passed, because triangle counts,
+        node names and materials were all still correct. Proportion is the
+        thing a silhouette regression shows up in first.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            # An archetype carrying the aspect axis holds units at DIFFERENT
+            # target aspects, so measuring the file's union would compare the
+            # widest unit against the pooled figure and prove nothing. Check each
+            # unit against its own class. Two axes reach here: the layer one
+            # ('aspect_0'…, F65) and the herb one ('broad_1_a2', V2.34).
+            fam, _, form = key.partition(".")
+            per_unit = ((fam == "layer" and form in conventions.LAYER_ASPECT_CLASSES)
+                        or (fam == "herb" and form in conventions.ASPECT_HERB_FORMS))
+            units = [(u, conventions.aspect_for(key, u))
+                     for u in sorted(entry.get("variant_keys", {}))] if per_unit else []
+            units = [(u, t) for u, t in units if t is not None]
+            if units:
+                for unit, target in units:
+                    hi_y, half = self._unit_bounds(entry, unit)
+                    if hi_y is None:
+                        continue
+                    got = hi_y / max(1e-6, 2 * half)
+                    self.assertAlmostEqual(
+                        got / target, 1.0, delta=0.35,
+                        msg=f"{key}/{unit}: aspect {got:.2f} vs {target:.2f}")
+                    checked += 1
+                continue
+            target = conventions.aspect_for(key)
+            if target is None:
+                continue
+            _lo, hi_y, half = self._plant_bounds(key, entry)
+            got = hi_y / max(1e-6, 2 * half)
+            # 35%: one archetype serves several species, and the builders shape
+            # to the target rather than solving for it exactly. The failure this
+            # guards against is a factor of 2–4, not a fifth.
+            self.assertAlmostEqual(
+                got / target, 1.0, delta=0.35,
+                msg=f"{key}: aspect {got:.2f} vs {target:.2f} for its species "
+                    f"— the archetype is being authored at the wrong "
+                    f"proportions, which the instance transform will turn into "
+                    f"stretched foliage")
+            checked += 1
+        self.assertGreater(checked, 20, "aspect targets stopped resolving")
+
+    def test_manifest_half_widths_match_the_shipped_geometry(self):
+        """The published half_width is what the viewer divides the canopy scale
+        by, so a stale manifest silently mis-sizes every plant."""
+        for key, entry in self.mf["plants"].items():
+            declared = entry.get("half_width")
+            if not declared:
+                continue
+            _lo, _hi, half = self._plant_bounds(key, entry)
+            widest = max(declared.values())
+            self.assertAlmostEqual(
+                widest, half, delta=0.05,
+                msg=f"{key}: manifest half_width {widest} != geometry {half} "
+                    f"— regenerate the manifest with the GLBs")
+
+    def _part_top(self, gltf, unit, part):
+        """Highest y of one named part of one unit, or None if absent."""
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(f"{unit}_{part}")
+        if i is None or "mesh" not in nodes[i]:
+            return None
+        hi = None
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+            top = acc.get("max", [0, 0, 0])[1]
+            hi = top if hi is None else max(hi, top)
+        return hi
+
+    def test_foliage_reaches_the_top_of_every_woody_unit(self):
+        """A woody plant's leaves must clothe it to the tip.
+
+        The regression a user's screenshot caught in V2.29: the rebuilt shrub
+        builder hung leaves only on twigs and sprouted every twig from one node,
+        so foliage stopped at 78% of a vase shrub's height and 54% of a spreading
+        one — half the plant was naked cane in midsummer, reading as a dead bush.
+        Every existing guard passed: triangle budgets, node names, unit-frame
+        bounds, the manifest, and the authored ASPECT (which compares the plant's
+        overall height to its overall width, and so is blind to *which part* is
+        up there). The render gate was blind too — it measures the union of all
+        parts, and the bark reached full height the whole time.
+
+        So the missing check is per-part vertical coverage. Deliberately loose at
+        90%: a bare lower cane is correct (that is what a vase shrub IS), and the
+        topmost twig may sit slightly under the tallest stem. What it catches is
+        a fifth or more of the plant going bare.
+        """
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            if "bark" not in entry.get("parts", []):
+                continue                       # herbs/layers are one green part
+            gltf, _ = self.gltf[entry["file"]]
+            units = [f"tier{t}" for t in entry.get("tiers", [])]
+            units += [f"v{v}" for v in range(_unit_count(entry))]
+            for unit in units:
+                foliage = self._part_top(gltf, unit, "foliage")
+                bark = self._part_top(gltf, unit, "bark")
+                if foliage is None or not bark:
+                    continue
+                self.assertGreaterEqual(
+                    foliage, bark * 0.90,
+                    f"{key}/{unit}: foliage tops out at {foliage:.2f} while the "
+                    f"bark reaches {bark:.2f} — the upper "
+                    f"{(1 - foliage / bark) * 100:.0f}% of this plant is bare "
+                    f"wood in midsummer.")
+                checked += 1
+        self.assertGreater(checked, 20, "woody units stopped resolving")
+
+    # How many times its species' real leaf one crown card may be drawn at.
+    #
+    # A card stands for a leafy SHOOT rather than a single leaf, so it is
+    # legitimately several leaves long — the same trade the pine's needle
+    # fascicles make, and the reason this is 10 rather than 2. What it catches is
+    # the V2.32 defect: card length came from the CLUMP RADIUS, so a bur oak —
+    # widest crown, largest leaf, and the only lobed outline in the table — drew
+    # 2.6 m leaves on an 18 m tree, about 13x life size, and a user reported the
+    # oak looking ridiculous. Every other guard passed: triangle budgets, node
+    # names, unit-frame bounds, the manifest, and even the authored aspect, which
+    # compares overall height to overall width and cannot see how big one leaf is.
+    #
+    # It also silently narrowed the tree, which is why this matters beyond the
+    # leaf itself: `half_width` is measured off the widest geometry and the
+    # viewer divides the instance by it, so a sparse fringe of outsized cards set
+    # the divisor while the dense crown sat well inside it — an 18 m bur oak with
+    # a 15 m canopy rendered about 8.7 m across.
+    _MAX_LEAF_OVERSIZE = 10.0
+
+    def test_crown_leaf_cards_stay_in_scale_with_the_species_leaf(self):
+        """No deciduous crown may be built out of giant leaves."""
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = []
+        for key, entry in self.mf["plants"].items():
+            fam, _, arch = key.partition(".")
+            if fam != "tree" or arch not in conventions.DECID_LEAF_SHAPE:
+                continue                       # conifers wear needles, not cards
+            leaf_cm = conventions.LEAF_CM.get(arch)
+            height_m = conventions.ARCHETYPE_HEIGHT_M.get(arch)
+            if not leaf_cm or not height_m:
+                continue
+            gltf, binary = self.gltf[entry["file"]]
+            # tier2 only: it is the tier a MATURE tree of this archetype uses, so
+            # ARCHETYPE_HEIGHT_M is the height that applies to it. Smaller tiers
+            # legitimately carry coarser cards (fewer triangles to spend) on
+            # physically smaller trees.
+            edge = self._p99_edge(gltf, binary, "tier2_foliage")
+            if edge is None:
+                continue
+            oversize = (edge * height_m) / (leaf_cm / 100.0)
+            self.assertLessEqual(
+                oversize, self._MAX_LEAF_OVERSIZE,
+                f"{key}: its crown cards run {edge * height_m:.2f} m on a "
+                f"{height_m:g} m tree, {oversize:.0f}x this species' {leaf_cm:g} "
+                f"cm leaf — the crown is being built out of giant leaves rather "
+                f"than foliage (assetlib.conventions.crown_card_length)")
+            checked.append(arch)
+        self.assertGreater(len(checked), 5,
+                           "deciduous tree archetypes stopped resolving")
+
+    def _p99_edge(self, gltf, binary, unit_part):
+        """99th-percentile triangle edge length of one named part, or None.
+
+        A percentile rather than the maximum: one stray long edge is noise, a
+        crown built out of oversized cards moves the whole distribution.
+        """
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(unit_part)
+        if i is None or "mesh" not in nodes[i] or not binary:
+            return None
+        lengths = []
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            if prim.get("mode", 4) != 4 or "indices" not in prim:
+                continue
+            pos = _read_accessor(gltf, binary, prim["attributes"]["POSITION"])
+            tri = _read_accessor(gltf, binary, prim["indices"])
+            for k in range(0, len(tri) - 2, 3):
+                a, b, c = tri[k][0], tri[k + 1][0], tri[k + 2][0]
+                for u, v in ((a, b), (b, c), (c, a)):
+                    lengths.append(math.dist(pos[u], pos[v]))
+        if not lengths:
+            return None
+        lengths.sort()
+        return lengths[int(len(lengths) * 0.99)]
+
+    # A deciduous crown must cover at least this fraction of the tree's height.
+    # A FLOOR, not a target: an open-grown prairie tree carries a live crown over
+    # 50-70% of its height, saplings and species vary either side of that, and the
+    # failure this guards is unambiguous — the crown collapsing into a tuft at the
+    # apex. Aspen measured 27% and willow 24% when a user's screenshot caught it.
+    _MIN_CROWN_FRAC = 0.40
+
+    def test_deciduous_crowns_are_not_tufts_on_a_pole(self):
+        """Foliage must span a real crown, not just the branch tips.
+
+        The V2.29 crown hung clumps only on terminal tips, which cannot put a leaf
+        below the outermost twigs however low the trunk splits — so an aspen was a
+        pole with foliage in its top quarter. Nothing caught it: the per-unit
+        aspect was right (that measures overall height vs overall width), the
+        budgets were right, and the render gate measures the union of all parts.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            if not key.startswith("tree."):
+                continue
+            # Conifers are foliated nearly to the ground by design; the crown-base
+            # question is a deciduous one (CONIFER_KINDS carries its own
+            # crown_base per tier).
+            if conventions.aspect_for(key) is None:
+                continue
+            gltf, _ = self.gltf[entry["file"]]
+            for t in entry.get("tiers", []):
+                unit = f"tier{t}"
+                base = self._part_base(gltf, unit, "foliage")
+                top = self._part_top(gltf, unit, "foliage")
+                if base is None or not top:
+                    continue
+                frac = (top - base) / top
+                self.assertGreaterEqual(
+                    frac, self._MIN_CROWN_FRAC,
+                    f"{key}/{unit}: foliage spans only {frac:.0%} of the tree's "
+                    f"height (from {base:.2f} to {top:.2f}) — the crown has "
+                    f"collapsed into a tuft on a pole.")
+                checked += 1
+        self.assertGreater(checked, 20, "tree tiers stopped resolving")
+
+    def _part_base(self, gltf, unit, part):
+        """Lowest y of one named part of one unit, or None if absent."""
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(f"{unit}_{part}")
+        if i is None or "mesh" not in nodes[i]:
+            return None
+        lo = None
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+            bottom = acc.get("min", [0, 0, 0])[1]
+            lo = bottom if lo is None else min(lo, bottom)
+        return lo
+
+    def test_declared_nodes_exist(self):
+        for key, entry in self.mf["plants"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            names = _node_names(gltf)
+            for t in entry.get("tiers", []):
+                self.assertIn(f"tier{t}", names, f"{key}: tier{t} missing")
+                for part in entry["parts"]:
+                    self.assertIn(f"tier{t}_{part}", names,
+                                  f"{key}: tier{t}_{part} missing")
+            for v in range(_unit_count(entry)):
+                self.assertIn(f"v{v}", names, f"{key}: v{v} missing")
+                # Every declared part, not just foliage: a shrub variant carries
+                # its own canes, and _glbLoadPlant looks them up by exact name.
+                for part in entry["parts"]:
+                    self.assertIn(f"v{v}_{part}", names,
+                                  f"{key}: v{v}_{part} missing")
+            if not entry.get("tiers") and not _unit_count(entry):
+                for part in entry["parts"]:
+                    self.assertIn(part, names, f"{key}: part {part} missing")
+        for key, entry in self.mf["fauna"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            names = _node_names(gltf)
+            prefixes = [""]
+            if key == "fly":
+                prefixes = ["hover_", "darner_"]
+                names_ok = {"hover", "darner"} <= names
+                self.assertTrue(names_ok, "fly: variant roots missing")
+            for node in entry["nodes"]:
+                if node in ("hover", "darner"):
+                    continue
+                found = any(p + node in names for p in prefixes)
+                # Rear dragonfly wings exist only on the darner variant.
+                if node in ("WingL2", "WingR2"):
+                    found = any(p + node in names for p in ["darner_", ""])
+                self.assertTrue(found, f"fauna.{key}: node {node} missing")
+
+    def test_structure_keys_match_catalogue(self):
+        # The placeable ids are string literals in src/db/structures.py;
+        # the existing_* ids use constants, so this regex excludes them.
+        src = _read(os.path.join(_ROOT, "src", "db", "structures.py"))
+        ids = set(re.findall(r'"id":\s*"(\w+)"', src))
+        section = self.mf.get("structures", {})
+        if not section:
+            self.skipTest("manifest has no structures section yet")
+        self.assertEqual(set(section), ids,
+                         "manifest structure keys != placeable catalogue ids")
+        for key, entry in section.items():
+            self.assertIn(entry.get("scale_mode"), ("uniform", "footprint"),
+                          f"structure.{key}: bad scale_mode")
+            self.assertGreater(entry.get("size_m", 0), 0)
+            self.assertGreater(entry.get("height_m", 0), 0)
+
+    def test_structure_glbs_sane(self):
+        for key, entry in self.mf.get("structures", {}).items():
+            gltf, _ = self.gltf[entry["file"]]
+            half_max = entry["size_m"] * 0.60      # authored long side / 2 + slack
+            lo_y, hi_y, half = None, 0.0, 0.0
+            for mesh in gltf.get("meshes", []):
+                for prim in mesh.get("primitives", []):
+                    attrs = prim.get("attributes", {})
+                    self.assertIn("COLOR_0", attrs,
+                                  f"structure.{key}: no baked AO")
+                    acc = gltf["accessors"][attrs["POSITION"]]
+                    mn, mx = acc["min"], acc["max"]
+                    lo_y = mn[1] if lo_y is None else min(lo_y, mn[1])
+                    hi_y = max(hi_y, mx[1])
+                    half = max(half, abs(mn[0]), abs(mx[0]),
+                               abs(mn[2]), abs(mx[2]))
+            # Stones/berms seat INTO the ground by design — allow a
+            # shallow burial, but catch a whole sunken asset.
+            self.assertGreaterEqual(lo_y, -0.15, f"{key}: below ground")
+            self.assertLessEqual(half, half_max,
+                                 f"{key}: wider than authored size_m")
+            self.assertLessEqual(hi_y, entry["height_m"] * 1.3 + 0.15,
+                                 f"{key}: taller than authored height_m")
+            self.assertLessEqual(_tri_count(gltf),
+                                 _TRI_BUDGETS["structure"],
+                                 f"structure.{key}: over triangle budget")
+
+    def test_fauna_materials_present(self):
+        for key, entry in self.mf["fauna"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            names = {m.get("name", "") for m in gltf.get("materials", [])}
+            for mat in entry["materials"]:
+                self.assertIn(mat, names, f"fauna.{key}: material {mat}")
+
+    def test_triangle_budgets(self):
+        """Per unit, matching what the builder enforces (see _tri_count_under)."""
+        for key, entry in self.mf["plants"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            family, _, name = key.partition(".")
+            # An archetype may carry its OWN budget under its bare name, which
+            # then wins over its family's — groundcover is a `layer.*` key but
+            # is the only one you look straight down at, so it gets more.
+            # Mirrors build_all's C.TRI_BUDGETS.get(kind, _budget_for(spec)).
+            kind = name if name in _TRI_BUDGETS else family
+            idx = {n.get("name", ""): i
+                   for i, n in enumerate(gltf.get("nodes", []))}
+            units = [(f"tier{t}", _TRI_BUDGETS[f"tree_tier{t}"])
+                     for t in entry.get("tiers", [])]
+            units += [(f"v{v}", _TRI_BUDGETS[kind])
+                      for v in range(_unit_count(entry))]
+            if not units:                       # single-unit file
+                self.assertLessEqual(_tri_count(gltf), _TRI_BUDGETS[kind],
+                                     f"{key}: over triangle budget")
+                continue
+            for name, budget in units:
+                self.assertIn(name, idx, f"{key}: unit {name} missing")
+                self.assertLessEqual(
+                    _tri_count_under(gltf, idx[name]), budget,
+                    f"{key}/{name}: over triangle budget")
+        for key, entry in self.mf["fauna"].items():
+            gltf, _ = self.gltf[entry["file"]]
+            # A fauna file may hold several BUILDS (V2.33, F67: four bees, four
+            # leps, three birds, and the fly's hover/darner pair since V2.27).
+            # The budget belongs to the unit the viewer instances — a bumblebee
+            # is one critter on screen, not a quarter of one — so it is checked
+            # per variant root, exactly as a tree's tiers are.
+            idx = {n.get("name", ""): i
+                   for i, n in enumerate(gltf.get("nodes", []))}
+            roots = [n for n in entry.get("nodes", []) if n in idx]
+            multi = [n for n in roots
+                     if any(m.startswith(n + "_") for m in idx)]
+            if multi:
+                for name in multi:
+                    self.assertLessEqual(
+                        _tri_count_under(gltf, idx[name]),
+                        _TRI_BUDGETS["fauna"],
+                        f"fauna.{key}/{name}: over triangle budget")
+            else:
+                self.assertLessEqual(_tri_count(gltf), _TRI_BUDGETS["fauna"],
+                                     f"fauna.{key}: over triangle budget")
+
+
+def _assetlib_mesh_ops():
+    """assetlib.mesh_ops, or None when Blender's bpy is not installed."""
+    try:
+        sys.path.insert(0, os.path.join(_ROOT, "scripts", "blender"))
+        from assetlib import mesh_ops             # noqa: PLC0415
+        return mesh_ops
+    except Exception:                            # noqa: BLE001
+        return None
+
+
+class LeafCostModelTest(unittest.TestCase):
+    """``leaf_tris`` must predict exactly what ``add_blade_or_leaf`` stamps.
+
+    Every flora builder sizes its leaf population by dividing its remaining
+    budget by this number, so an under-estimate is not a rounding error — it is
+    an over-budget asset, which is a hard export failure discovered only at
+    build time. The two drifted apart the moment blades became tessellation-
+    configurable (V2.29's 4-triangle shrub leaf), because the cost was a
+    module constant and the geometry was a loop.
+    """
+
+    def setUp(self):
+        self.ops = _assetlib_mesh_ops()
+        if self.ops is None:
+            self.skipTest("assetlib.mesh_ops needs bpy")
+
+    def _stamp(self, shape, segments):
+        import bmesh                             # noqa: PLC0415
+        import random                            # noqa: PLC0415
+        bm = bmesh.new()
+        self.ops.add_blade_or_leaf(
+            bm, random.Random(7), 0.2, 0.08, 0.9, 1.3, None, shape, segments)
+        n = sum(max(0, len(f.verts) - 2) for f in bm.faces)
+        bm.free()
+        return n
+
+    def test_cost_matches_the_geometry_for_every_outline(self):
+        shapes = sorted(set(self.ops.LEAF_WIDTH_RATIO) | {"lance"})
+        for shape in shapes:
+            for segments in (2, 3, 4):
+                with self.subTest(shape=shape, segments=segments):
+                    self.assertEqual(
+                        self._stamp(shape, segments),
+                        self.ops.leaf_tris(shape, segments),
+                        f"leaf_tris({shape!r}, {segments}) disagrees with what "
+                        f"add_blade_or_leaf actually stamps — every builder "
+                        f"budgets its leaf count with this number")
+
+    def test_a_coarse_blade_still_states_its_outline(self):
+        """A two-segment ribbon has ONE interior vertex, so where it sits is the
+        entire difference between a leaf and a rhombus. It must land on the
+        blade's widest point: that is what keeps a lanceolate willow leaf (widest
+        near the base, long taper) distinct from an ovate dogwood one."""
+        for shape in ("lanceolate", "ovate", "obovate", "elliptic",
+                      "orbicular", "cordate"):
+            with self.subTest(shape=shape):
+                grid = [i / 200 for i in range(201)]
+                peak = max(self.ops._leaf_width(shape, t) for t in grid)
+                coarse = max(self.ops._leaf_width(shape, t)
+                             for t in self.ops._blade_samples(shape, 2))
+                self.assertGreaterEqual(
+                    coarse, peak * 0.99,
+                    f"a 2-segment {shape} blade never samples its widest point, "
+                    f"so it is drawn narrower than the species' leaf")
+
+    def test_detailed_outlines_keep_their_tessellation(self):
+        """The lobed family's width profile is a 3-7 cycle sinusoid; one interior
+        vertex cannot carry it, so a coarse request must be refused rather than
+        silently flattening a cut leaf into a diamond."""
+        for shape in ("lobed", "pinnatifid", "bipinnate", "sagittate"):
+            self.assertEqual(self.ops.blade_segments(shape, 2), 4, shape)
+        self.assertEqual(self.ops.blade_segments("ovate", 2), 2)
+
+    def test_an_arched_rachis_costs_what_it_stamps(self):
+        """The arched rachis takes five samples where a straight one takes
+        three. A builder that budgets the straight cost and stamps the arched
+        one overruns, which is a hard export failure."""
+        import bmesh                               # noqa: PLC0415
+        import random                              # noqa: PLC0415
+        for arch in (0.0, 0.65):
+            for pairs in (None, 7):
+                with self.subTest(arch=arch, pairs=pairs):
+                    bm = bmesh.new()
+                    self.ops.add_blade_or_leaf(
+                        bm, random.Random(3), 0.9, 0.11, 0.05, 0.0, None,
+                        "compound_pinnate", 2, arch, pairs)
+                    got = sum(max(0, len(f.verts) - 2) for f in bm.faces)
+                    bm.free()
+                    self.assertEqual(
+                        got,
+                        self.ops.leaf_tris("compound_pinnate", 2, pairs, arch),
+                        "leaf_tris disagrees with add_blade_or_leaf")
+
+
+class ArcBladeTest(unittest.TestCase):
+    """A blade has to ARCH, not lean.
+
+    The old primitive climbed at a constant rate (``z = height * t``) and slid
+    sideways, so no authored value could tip a blade over: a bunchgrass read as
+    a shaving brush and a fern as a bundle of uprights, and every attempt to fix
+    it by widening the authored lean range changed nothing anyone could see.
+    Two properties pin the replacement down.
+    """
+
+    def setUp(self):
+        self.ops = _assetlib_mesh_ops()
+        if self.ops is None:
+            self.skipTest("assetlib.mesh_ops needs bpy")
+
+    def test_a_blade_past_ninety_degrees_comes_back_down(self):
+        """Turning more than a right angle must LOWER the tip below the top of
+        the arc. A lean can never do this, and it is the whole silhouette."""
+        tab = self.ops._arc_table(2.4, 0.85)
+        top = max(up for _fwd, up in tab)
+        self.assertLess(
+            tab[-1][1], top * 0.9,
+            "the tip of a 137-degree arc sits at the top of the curve, so the "
+            "blade is still climbing — this is a lean, not an arch")
+
+    def test_arching_trades_height_for_reach_monotonically(self):
+        """``_blades`` solves the tuft's spread by bisecting on this, so it has
+        to be monotonic or the solve lands anywhere."""
+        prev_h, prev_v = -1.0, 99.0
+        for arch in (0.0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8):
+            h, v = self.ops.arc_extent(1.0, arch, 0.85)
+            self.assertGreater(h, prev_h, f"reach fell at arch={arch}")
+            self.assertLess(v, prev_v + 1e-9, f"rise grew at arch={arch}")
+            prev_h, prev_v = h, v
+
+    def test_arc_extent_matches_the_stamped_blade(self):
+        """The builders shape a plant to its species' aspect from this
+        prediction before any geometry exists; if it disagrees with the stamp,
+        the aspect correction is applied to a shape that was never built."""
+        import bmesh                               # noqa: PLC0415
+        import random                              # noqa: PLC0415
+        for arch in (0.3, 0.9, 1.6):
+            with self.subTest(arch=arch):
+                bm = bmesh.new()
+                self.ops.add_blade(bm, random.Random(1), 0.8, 0.02, arch,
+                                   0.85, azimuth=0.0)
+                xs = [v.co.x for v in bm.verts]
+                zs = [v.co.z for v in bm.verts]
+                bm.free()
+                h, v = self.ops.arc_extent(0.8, arch, 0.85)
+                # The ribbon has width, so the stamp reaches a hair past the
+                # centre line the prediction traces.
+                self.assertAlmostEqual(max(xs), h, delta=0.03)
+                self.assertAlmostEqual(max(zs), v, delta=0.03)
+
+
+if __name__ == "__main__":
+    unittest.main()

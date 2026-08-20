@@ -51,10 +51,11 @@ as object `"bridge"` on a `QWebChannel`; the page loads
 `initChannel` also has a no-QWebChannel fallback so the page opens in a plain
 browser for dev — keep new bootstrap code inside that pattern.
 
-## The V1.64 split — six SEQUENTIAL CLASSIC scripts, not ES modules
+## The V1.64 split — SEQUENTIAL CLASSIC scripts, not ES modules
 
 `html/map.html` was a 4,900-line monolith; V1.64 split its single `<script>`
-into six files loaded **in order** at the bottom of `html/map.html`:
+into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
+`07-network.js`, joined them in V2.31 for the relationship-web overlay):
 
 ```html
 <script src="map/01-core.js"></script>
@@ -63,6 +64,7 @@ into six files loaded **in order** at the bottom of `html/map.html`:
 <script src="map/04-tools.js"></script>
 <script src="map/05-features.js"></script>
 <script src="map/06-overlays.js"></script>
+<script src="map/07-network.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -259,7 +261,7 @@ python -m unittest tests.test_map_js tests.test_bridge_contract -v   # bridge co
 python -m unittest tests.test_architecture_guard                     # line/method ceilings
 python tests/test_map_features.py                                    # JS-mirror geometry (script-style runner)
 python -m unittest tests.test_wind_shadow                            # if you touched the wind-shadow exemplar
-python -m unittest discover -s tests                                 # full suite before finishing
+python -m unittest discover -s tests -t .                                 # full suite before finishing
 ```
 
 All of the above pass headlessly (Qt-dependent tests self-skip). After any JS

@@ -58,9 +58,13 @@ __all__ = [
     "run_analysis",
     "pull_plant_impact",
     "chickadee_provision",
+    "relationship_web",
+    "plant_relationships",
     "phenology",
     "lesson_track",
     "reference_community",
+    "reference_fidelity",
+    "establishment",
     "docent_script",
     "export_plant_catalogue_docx",
 ]
@@ -336,6 +340,52 @@ def chickadee_provision(project: Project) -> dict:
         raise AnalysisError(f"Chickadee scenario unavailable: {exc}") from exc
 
 
+def relationship_web(project: Project,
+                     kinds: Optional[list] = None) -> dict:
+    """``project`` drawn as a network — the relationship web (F5), over the
+    unified edges layer (F7, :mod:`src.db.relationships`).
+
+    Returns the JSON-friendly graph from
+    :func:`src.relationship_graph.build_relationship_graph` — species nodes at
+    their planting centroid, wildlife nodes on a ring outside it, one edge per
+    documented relationship (plus derived plant↔plant links when asked for),
+    a legend and honest stats (specialists, single-support animals, anything
+    the readability cap dropped). ``kinds`` narrows the edge vocabulary; the
+    default shows the food web and shelter.
+
+    Raises:
+        AnalysisError: if the plant/fauna database can't be read.
+    """
+    _ensure_db()
+    from src.relationship_graph import build_relationship_graph
+    try:
+        return build_relationship_graph(project.placed_plants, kinds=kinds)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Relationship web unavailable: {exc}") from exc
+
+
+def plant_relationships(plant_id: int) -> dict:
+    """Everything connected to one plant, across the whole catalogue (F7).
+
+    The question the unified edges layer exists to answer: returns the
+    JSON-friendly dict from :func:`src.db.relationships.neighbourhood` —
+    the plant's documented relationships grouped by kind (caterpillar hosting,
+    nectar, fruit, nest sites, cover, companion pairings, shared communities),
+    each resolved to names, each carrying its evidence.
+
+    Unlike :func:`relationship_web` this is not scoped to a design.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.db.relationships import neighbourhood
+    try:
+        return neighbourhood(int(plant_id))
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Relationships unavailable: {exc}") from exc
+
+
 def phenology(project: Project, month: Optional[int] = None) -> dict:
     """The month-by-month phenology of ``project`` — the "what's happening now"
     dashboard (F51). Returns the JSON-friendly dict from
@@ -391,6 +441,53 @@ def reference_community(ecoregion: Optional[str] = None) -> dict:
         return resolve_reference_community(ecoregion)
     except Exception as exc:      # noqa: BLE001
         raise AnalysisError(f"Reference community unavailable: {exc}") from exc
+
+
+def reference_fidelity(project: Project,
+                       ecoregion: Optional[str] = None) -> dict:
+    """How close ``project`` is to the natural community of its place (F13).
+
+    The number that goes with :func:`reference_community`'s walkable target.
+    Returns the dict from :func:`src.reference_fidelity.fidelity`: a
+    :class:`~src.confidence.Band` (never a percentage — the inputs are a curated
+    spec and a catalogue with known gaps), the per-layer ``have``/``want``
+    comparison, the reference genera the design shares, and plain lines a caller
+    can print. ``known`` is False when there is nothing to compare, which is a
+    different answer from a low score.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.reference_fidelity import fidelity
+    try:
+        return fidelity(project.placed_plants, ecoregion)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Fidelity unavailable: {exc}") from exc
+
+
+def establishment(project: Project,
+                  ecoregion: Optional[str] = None) -> dict:
+    """Has anyone actually recorded these species growing here? (F14)
+
+    Bands every placed species by its georeferenced occurrence count in
+    ``ecoregion`` — the schema-v59/v60 range data, which carries a count, a
+    confidence band and a source per (species, region). Returns the dict from
+    :func:`src.establishment.establishment_for_design`.
+
+    **A species with no record is reported as unknown, never as unsuitable.**
+    Below the three-record floor an absent species and an under-collected one
+    are indistinguishable, and saying so is the point of the band.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.establishment import establishment_for_design
+    try:
+        return establishment_for_design(project.placed_plants, ecoregion)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Establishment unavailable: {exc}") from exc
 
 
 def docent_script(project: Project) -> dict:

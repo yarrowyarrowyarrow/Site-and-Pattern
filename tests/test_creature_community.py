@@ -17,6 +17,7 @@ import os
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -73,9 +74,12 @@ class TestCreatureCommunity(unittest.TestCase):
 
     def test_bee_community_has_forage(self):
         bid = None
-        for row in get_connection().execute(
-                "SELECT id FROM fauna WHERE taxon='bee' LIMIT 1"):
-            bid = row[0]
+        # Not `get_connection().execute(...)` — that keeps no handle, so the
+        # connection is never closed (ResourceWarning on Python 3.12+).
+        with closing(get_connection()) as conn:
+            for row in conn.execute(
+                    "SELECT id FROM fauna WHERE taxon='bee' LIMIT 1"):
+                bid = row[0]
         com = CC.build_creature_community(bid)
         self.assertIsNotNone(com)
         self.assertTrue(any("pollinator" in m["functions"] for m in com["members"]))
@@ -96,9 +100,10 @@ class TestCreatureCommunity(unittest.TestCase):
     def test_non_pollinator_fauna_returns_none(self):
         # A bird is neither a bee nor a lepidopteran → no community.
         bird_id = None
-        for row in get_connection().execute(
-                "SELECT id FROM fauna WHERE taxon='bird' LIMIT 1"):
-            bird_id = row[0]
+        with closing(get_connection()) as conn:
+            for row in conn.execute(
+                    "SELECT id FROM fauna WHERE taxon='bird' LIMIT 1"):
+                bird_id = row[0]
         if bird_id is not None:
             self.assertIsNone(CC.build_creature_community(bird_id))
 

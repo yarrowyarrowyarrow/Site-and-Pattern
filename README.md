@@ -6,7 +6,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 
 > **Status:** Site & Pattern is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
 
-> **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — twelve principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
+> **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — thirteen principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, beauty as the mechanism the ecology survives by, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
 
 ---
 
@@ -16,6 +16,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 - **Plant community planning** — assemble layered native plant communities (overstory, understory, shrub, groundcover, herbaceous) with documented companion relationships
 - **Native habitat structures** — bee hotels, native bee logs, rock xeriscape, brush piles, snags, native lawn patches, rain gardens, bioswales, and ponds
 - **Habitat-focused plant filters** — surface keystone species, larval host plants, bird-food producers, and nesting-material plants
+- **Flower-colour filter** — eleven buckets classified from the recorded hex, with grasses and sedges grouped separately because they are wind-pollinated and have no showy flower
 - **Hedgerows** — draw layered native hedgerows for property edges and wildlife corridors
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
 - **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
@@ -114,8 +115,40 @@ python -m src.cli list-communities                          # seeded communities
 python -m src.cli analyze my_yard.perma.geojson             # habitat score
 python -m src.cli analyze my_yard.perma.geojson --json      # machine-readable
 python -m src.cli export-catalogue plants.docx              # plant catalogue → DOCX
+python -m src.cli build-site public/                        # catalogue → static website
 python -m src.cli validate-data                             # check seed JSON
 ```
+
+### The catalogue as a website
+
+`build-site` renders the plant directory as plain static files: a species page
+per plant, a search page filtering on **23 axes** in the browser (colour, bloom
+month, ecoregion, sun, water, hardiness zone, height, life cycle, foliage,
+growth rate, ecological role, safety, availability and more), browse hubs per
+value, an ecoregion map, and a page per animal listing **the plants documented
+to support it**. No framework, no build step, no CDN, no external request: it
+can be hosted anywhere or opened straight off disk.
+
+```bash
+python -m src.cli build-site public/ --base-url https://plants.example.org
+```
+
+Each species page carries a **range map**: every ecoregion in its own colour,
+lightened by how much occurrence evidence stands behind it, so the shape says
+both *where* and *how sure*. The region outlines are hand-traced rather than
+digitised from a survey, and every map says so.
+
+To put it online, see [`docs/PUBLISHING_THE_SITE.md`](docs/PUBLISHING_THE_SITE.md):
+static files host free on GitHub Pages, Netlify or Cloudflare Pages.
+
+Three things it does on purpose. Photographs are copied out of the local image
+cache where they exist and are **never published without their credit**: a
+species we cannot attribute simply shows no photo. The free-text `notes` field
+is **withheld by default**, along with the `medicinal` use tag, because some of
+that content describes traditional plant-use practice and publishing it to the
+open web is not ours to do (see Principle 12 in
+[`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)); `--include-notes`
+overrides the first. And no em dash reaches a rendered page.
 
 Installing the package registers a `permadesign` console script for the
 same commands:
@@ -189,11 +222,12 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 - [`INSTALL.md`](INSTALL.md) — Installation guide for all platforms (one-click installers + from source), plus updating and troubleshooting
 - [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — In-app feature reference
 - [`docs/BUILD.md`](docs/BUILD.md) — Building the installers (Windows `.exe`, macOS `.dmg`, Linux zip) and the release/packaging internals
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — Feature roadmap with shipped vs. planned items
-- [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md) — Archived developer session notes
+- [`docs/README.md`](docs/README.md) — **What every document in `docs/` is for** — start here
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — The effort/impact feature ledger; [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) carries the live plan
 - [`docs/AGENT_API.md`](docs/AGENT_API.md) — Headless scripting API, CLI, and MCP tool reference for automation & AI agents
 - [`docs/PROJECT_FILE_FORMAT.md`](docs/PROJECT_FILE_FORMAT.md) — The `.perma.geojson` project file format
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
+- [`docs/3D_ASSETS.md`](docs/3D_ASSETS.md) — Blender-generated GLB assets for the 3D viewer: the `scripts/blender/assetlib` generator package (headless + Blender-MCP workflows), the generator↔viewer contract, and regeneration
 - [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
 - [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
 
@@ -217,9 +251,22 @@ If you'd like to use Site & Pattern commercially, please open an issue to discus
 
 ## Acknowledgments
 
-Plant data draws on:
-- Native plant references for Alberta and the Canadian prairies
-- Hardiness zone data from Natural Resources Canada
+Every fact and photograph this app ships, with its source and its licence, is
+listed in **[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md)** — including what
+each licence obliges us to do and where the gaps still are. In short:
+
+- **Photographs** — [iNaturalist](https://www.inaturalist.org/) contributors,
+  CC0 / CC BY / CC BY-SA only, credited individually wherever a photo appears
+- **Hardiness zones** — Natural Resources Canada
+- **Soil** — Gridded Soil Landscapes of Canada (AAFC) and SoilGrids v2.0 (ISRIC)
+- **Buildings, geocoding and map tiles** — OpenStreetMap contributors (ODbL),
+  with CARTO, Esri and Mapbox basemap layers
+- **Climate, wind and elevation** — [Open-Meteo](https://open-meteo.com/)
+- **Plant data** — native-plant references for Alberta and the Canadian prairies
+  (see [`docs/REFERENCES.md`](docs/REFERENCES.md)), compiled for this project
+
+If a photograph of yours is here and the credit is wrong — or you would rather it
+weren't here at all — open an issue and it will be fixed or removed.
 
 Site & Pattern was developed with significant assistance from AI coding tools.
 

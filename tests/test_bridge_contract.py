@@ -69,6 +69,16 @@ def _map_js_source() -> str:
     return out
 
 
+def _scene_viewer_source() -> str:
+    """scene3d.html plus every html/scene3d/*.js split chunk (V2.24) — the
+    viewer was split out of the single <script>, so the window.perma* hook
+    registrations now live in the chunks, not the HTML shell."""
+    out = _SCENE_HTML.read_text(encoding="utf-8")
+    for js in sorted((_SCENE_HTML.parent / "scene3d").glob("*.js")):
+        out += "\n" + js.read_text(encoding="utf-8")
+    return out
+
+
 class TestJsToPythonBridge(unittest.TestCase):
     """Every bridge.<name>( call on the JS side resolves on MapBridge."""
 
@@ -93,7 +103,7 @@ class TestScene3DHooks(unittest.TestCase):
         builders_src = _MAP3D_JS.read_text(encoding="utf-8")
         hooks = set(re.findall(r"window\.(perma\w+)", builders_src))
         self.assertTrue(hooks)
-        viewer = _SCENE_HTML.read_text(encoding="utf-8")
+        viewer = _scene_viewer_source()
         missing = sorted(
             h for h in hooks
             if not re.search(rf"window\.{h}\s*=", viewer))
@@ -106,24 +116,47 @@ class TestScene3DHooks(unittest.TestCase):
         # Driven outside map3d_js (scene3d_window's "Reset view" button and the
         # sprite gallery both call it raw) — before V2.12 it was never defined,
         # so the button silently did nothing.
-        viewer = _SCENE_HTML.read_text(encoding="utf-8")
+        viewer = _scene_viewer_source()
         self.assertRegex(
             viewer, r"window\.permaResetView\s*=",
             "html/scene3d.html must register window.permaResetView — the 3D "
             "window's Reset-view button and the sprite gallery both call it")
 
+    # Hooks driven from JS rather than from Python, with the page that drives
+    # each one. They are not dead code and they are not a naming drift — but
+    # they DO need a named owner, or the exemption becomes a hole in the guard.
+    _JS_DRIVEN_HOOKS = {
+        # The catalogue bench (V2.35) puts a 10 cm rule in the render so
+        # "is that bloom really 7 cm?" is answerable by eye. A measuring
+        # instrument, deliberately not part of the scene contract and never
+        # present in a presentation still, so the app has no reason to drive it.
+        "permaSetScaleRule": "html/tune_morphology.html",
+    }
+
     def test_viewer_does_not_register_unknown_hooks(self):
         # The reverse: a hook registered in the viewer but never driven
         # from Python is dead code or a naming drift.
-        viewer = _SCENE_HTML.read_text(encoding="utf-8")
+        viewer = _scene_viewer_source()
         registered = set(re.findall(r"window\.(permaSet\w+)\s*=", viewer))
         builders_src = _MAP3D_JS.read_text(encoding="utf-8")
         driven = set(re.findall(r"window\.(permaSet\w+)", builders_src))
-        unknown = sorted(registered - driven)
+        unknown = sorted(registered - driven - set(self._JS_DRIVEN_HOOKS))
         self.assertFalse(
             unknown,
             f"scene3d.html registers hooks nothing in map3d_js drives: "
-            f"{unknown}")
+            f"{unknown}. If a hook is driven from JS instead, add it to "
+            f"_JS_DRIVEN_HOOKS with the page that calls it.")
+
+    def test_js_driven_hooks_really_are_driven(self):
+        """The exemption above has to stay honest: a hook listed there whose
+        page has stopped calling it is exactly the dead code the guard exists to
+        catch, now wearing a permission slip."""
+        for hook, page in self._JS_DRIVEN_HOOKS.items():
+            path = _ROOT / page
+            self.assertTrue(path.is_file(), f"{page} is gone; drop {hook}")
+            self.assertIn(
+                hook, path.read_text(encoding="utf-8"),
+                f"{page} no longer calls {hook} — it is dead code now")
 
 
 if __name__ == "__main__":

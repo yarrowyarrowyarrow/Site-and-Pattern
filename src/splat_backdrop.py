@@ -229,7 +229,7 @@ def feature_from_alignment(points, control_scan_xy, control_latlng, *,
     pairs — the same 2D similarity the footprint import uses, captured as the
     splat's stored transform. ``points`` is the (georeferenced-input) cloud
     read from the splat PLY; ``control_scan_xy`` / ``control_latlng`` are the
-    matched pairs (see :class:`src.scan_import_dialog.ScanAlignSession`)."""
+    matched pairs (see :class:`src.scan_align.ScanAlignSession`)."""
     from src.projection import Projector
     from src.scan_import import (apply_similarity_2d, similarity_transform_2d)
     proj = Projector.for_positions([(la, ln) for (la, ln) in control_latlng])

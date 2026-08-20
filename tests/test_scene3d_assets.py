@@ -21,12 +21,41 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SCENE3D = os.path.join(_ROOT, "html", "scene3d.html")
+_SCENE3D_DIR = os.path.join(_ROOT, "html", "scene3d")
 _VENDOR = os.path.join(_ROOT, "html", "vendor")
 
 
 def _read(path):
     with open(path, "r", encoding="utf-8") as fh:
         return fh.read()
+
+
+class SharedGlobalDeclarationTest(unittest.TestCase):
+    """The viewer chunks are classic scripts sharing one global lexical scope,
+    loaded in order (01→08). A global that an EARLIER chunk reads must be
+    declared in an earlier (ideally the first) chunk, or the reader can hit it
+    before its `let` runs → "X is not defined" latches the error overlay and
+    blanks the scene. V2.26 bug: wildlifeGroup was `let` in 07 but read by
+    01-core's pointermove handler."""
+
+    def test_cross_chunk_globals_declared_in_first_chunk(self):
+        # Globals declared in a later chunk but read by 01-core (the first).
+        # Each must be declared exactly once, and in 01-core.js.
+        core = _read(os.path.join(_SCENE3D_DIR, "01-core.js"))
+        for name in ("wildlifeGroup",):
+            if not re.search(r"\b" + name + r"\b", core):
+                continue
+            decls = []
+            for fn in sorted(os.listdir(_SCENE3D_DIR)):
+                if not fn.endswith(".js"):
+                    continue
+                if re.search(r"\b(?:let|const|var)\s+" + name + r"\b",
+                             _read(os.path.join(_SCENE3D_DIR, fn))):
+                    decls.append(fn)
+            self.assertEqual(
+                decls, ["01-core.js"],
+                f"{name} is read by 01-core but declared in {decls} — declare "
+                "it in 01-core.js (see SharedGlobalDeclarationTest docstring)")
 
 
 class SceneViewerAssetsTest(unittest.TestCase):
@@ -74,6 +103,10 @@ class SceneViewerAssetsTest(unittest.TestCase):
             ("three", "addons", "controls", "OrbitControls.js"),
             ("three", "addons", "utils", "BufferGeometryUtils.js"),
             ("three", "addons", "postprocessing", "Pass.js"),
+            # V2.27: Blender GLB model assets (09-models.js) — the loader's
+            # '../utils/BufferGeometryUtils.js' import resolves to the vendored
+            # file above (test_vendored_imports_resolve walks it).
+            ("three", "addons", "loaders", "GLTFLoader.js"),
             ("spark", "spark.module.js"),
         ]
         for parts in required:
@@ -128,8 +161,33 @@ class SceneViewerAssetsTest(unittest.TestCase):
                     f"{os.path.relpath(resolved, _ROOT)}")
 
     def test_no_cdn_references_anywhere_in_html(self):
-        self.assertNotIn("unpkg.com", self.html)
-        self.assertNotIn("sparkjs.dev", self.html)
+        # The HTML shell and every split viewer chunk (html/scene3d/*.js, V2.24).
+        srcs = [self.html]
+        chunk_dir = os.path.join(_ROOT, "html", "scene3d")
+        if os.path.isdir(chunk_dir):
+            for f in sorted(os.listdir(chunk_dir)):
+                if f.endswith(".js"):
+                    srcs.append(_read(os.path.join(chunk_dir, f)))
+        for src in srcs:
+            self.assertNotIn("unpkg.com", src)
+            self.assertNotIn("sparkjs.dev", src)
+
+    def test_split_chunks_use_no_es_imports(self):
+        # The chunks are CLASSIC scripts sharing globals (THREE etc. come from the
+        # bootstrap module); a stray ES `import`/`export` would throw at load.
+        # Dynamic `import(...)` (Spark) is fine and stays.
+        chunk_dir = os.path.join(_ROOT, "html", "scene3d")
+        if not os.path.isdir(chunk_dir):
+            self.skipTest("viewer not split into chunks")
+        bad = []
+        static_im = re.compile(r"^\s*(?:import\s+[^(]|export\b)", re.M)
+        for f in sorted(os.listdir(chunk_dir)):
+            if not f.endswith(".js"):
+                continue
+            if static_im.search(_read(os.path.join(chunk_dir, f))):
+                bad.append(f)
+        self.assertFalse(bad, f"split chunks must not use static ES import/export "
+                              f"(they are classic scripts): {bad}")
 
 
 if __name__ == "__main__":

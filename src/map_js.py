@@ -110,10 +110,12 @@ def set_satellite_offset(east_m: float, north_m: float) -> str:
 def set_structures_visible(visible: bool) -> str:
     """Toggle the *combined* layer group for structures + hedgerows +
     shapes. No JS function exists for this — the call inlines the loop
-    over the three global marker dicts."""
+    over the three global marker dicts. Existing *trees* are skipped: they
+    toggle with the Plants layer now (V2.26), since a tree is a plant."""
     v = _jsbool(visible)
     return (
         "Object.values(structureMarkers).forEach(function(g) {"
+        "  if (g._pdStruct && g._pdStruct.structId === 'existing_tree') return;"
         f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
         "});"
         "Object.values(hedgerowLayers).forEach(function(g) {"
@@ -370,7 +372,7 @@ def undo_custom_shape_by_id(shape_id: str) -> str:
     return f"undoCustomShapeById({_jsstr(shape_id)});"
 
 
-# ── Sun / sector / wind / season overlays ───────────────────────────────────
+# ── Sun / wind overlays ──────────────────────────────────────────────────────
 
 def draw_sun_path(data: dict, lat: Optional[float] = None,
                    lng: Optional[float] = None) -> str:
@@ -383,15 +385,14 @@ def clear_sun_path() -> str:
     return "clearSunPath();"
 
 
-def draw_sectors(data: dict, lat: Optional[float] = None,
-                  lng: Optional[float] = None) -> str:
-    if lat is not None and lng is not None:
-        return f"drawSectors({_jsobj(data)}, {lat}, {lng});"
-    return f"drawSectors({_jsobj(data)});"
+def set_sun_path_time(minutes) -> str:
+    """Move the "sun now" marker + its shadow ray along the drawn arc.
 
-
-def clear_sectors() -> str:
-    return "clearSectors();"
+    Scrub-rate call: JS reuses the payload it already holds, so dragging the
+    time slider does not re-run the solar maths or rebuild the layer.
+    ``None``/negative removes the marker.
+    """
+    return f"setSunPathTime({-1 if minutes is None else int(minutes)});"
 
 
 def draw_wind_overlay(data: dict) -> str:
@@ -400,11 +401,6 @@ def draw_wind_overlay(data: dict) -> str:
 
 def clear_wind_overlay() -> str:
     return "clearWindOverlay();"
-
-
-def set_season_view(season: str, pid_visibility: dict) -> str:
-    """Highlight plants in/out of season for a given month name."""
-    return f"setSeasonView({_jsstr(season)}, {_jslit(pid_visibility)});"
 
 
 def set_bee_forage_view(bee_label: str, pid_style: dict) -> str:
@@ -419,6 +415,27 @@ def clear_bee_forage_view() -> str:
     """Leave the bee's-eye map view — restore every plant marker to its normal
     plant-type colour (F37 increment 3)."""
     return "clearBeeForageView();"
+
+
+def draw_relationship_graph(payload: dict) -> str:
+    """Draw the design as a living network — the relationship-web overlay (F5).
+
+    ``payload`` is a whole graph from
+    :func:`src.relationship_graph.build_relationship_graph`: nodes already
+    carrying lat/lng (species at their planting centroid, wildlife on a ring
+    outside it), edges already carrying both endpoints, colour and weight, plus
+    a legend and stats. The JS decides nothing — see html/map/07-network.js."""
+    return f"drawRelationshipGraph({_jsobj(payload)});"
+
+
+def set_relationship_graph_visible(visible: bool) -> str:
+    """Show/hide an already-drawn relationship web without rebuilding it (F5)."""
+    return f"setRelationshipGraphVisible({_jsbool(visible)});"
+
+
+def clear_relationship_graph() -> str:
+    """Remove the relationship web and its legend (F5)."""
+    return "clearRelationshipGraph();"
 
 
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,

@@ -39,3 +39,60 @@ Thumbs.db
 
 # Autosave
 *.perma.geojson.bak
+
+# Ecoregion pipeline (tools/ecoregions) — downloaded source datasets and
+# full-resolution intermediates. 50-150 MB of Natural Earth / ELC / Alberta
+# source data plus the working GeoPackages; regenerate with `python -m
+# tools.ecoregions.run`. The *shipped* outputs under data/ are tracked.
+tools/ecoregions/data/
+tools/ecoregions/out/
+
+# F125 fauna sourcing (V2.58). The fetcher's resume file holds a second copy of
+# every edge plus the done-list, so committing it doubles the data for nothing —
+# it exists only so a Ctrl-C can pick up where it stopped. The two OUTPUT files
+# beside it (fauna_edges_candidates.json, fauna_new_species.json) ARE committed:
+# they are the evidence a seeded edge is real, and the ingester reads them.
+data/fetched/_checkpoint.json
+data/fetched/_checkpoint_obs.json
+data/fetched/*.tmp
+
+# Local run artifacts (V2.61). None of these is ever committed, and a long
+# `git status` is how a real untracked file gets missed — the nativity fetch
+# output sat in a list of eleven the first time it was looked for.
+#
+# NB: gitignore has no trailing comments. The first version of this block put
+# `# why` after each pattern and every one of them silently stopped matching,
+# because the comment became part of the pattern.
+
+# Saved designs. The worked example is authored in code, never shipped as one.
+*.perma.geojson
+3d-debug.log
+# PyInstaller by-product. The real spec is scripts/packaging/permadesign.spec.
+/main.spec
+*-Installer.exe
+# `python -m src.cli build-site` output
+/public/
+/graphify-out/
+/build/
+/dist/
+# F92 order export, written wherever you happen to be standing
+/plant-order.csv
+*_test.txt
+/test-output.txt
+/testrun.txt
+
+# The built website (`python -m src.cli build-site <dir>`). 432 species pages,
+# 1,138 wildlife pages and an embedded index, all regenerated from the database
+# in seconds — so committing a copy adds thousands of files that are stale the
+# next time anyone edits a plant. The source is src/static_site*.py + html/site/.
+/site_out/
+/site-out/
+/_site/
+
+# Saved suite output. The run prints thousands of lines and teeing it to a file
+# while chasing one failure is the normal way to work; the file is a note to
+# self, never an artefact. Named individually rather than as /*.txt, because
+# requirements.txt and requirements-optional.txt live at the root too.
+/suite_full.txt
+/undo_redo.txt
+/v265.txt

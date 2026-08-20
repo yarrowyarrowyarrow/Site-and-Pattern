@@ -20,6 +20,7 @@ import os
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -197,7 +198,11 @@ class TestRealDBIntegration(unittest.TestCase):
 
     def test_builds_from_seeded_get_plant(self):
         from src.db.plants import get_connection
-        with get_connection() as conn:
+        # closing(), not `with get_connection()`: sqlite3's own context
+        # manager commits or rolls back a TRANSACTION and leaves the
+        # connection open, which is where this suite's
+        # 'ResourceWarning: unclosed database' noise came from.
+        with closing(get_connection()) as conn:
             row = conn.execute(
                 "SELECT id, common_name FROM plants "
                 "WHERE native_to_alberta = 1 LIMIT 1"

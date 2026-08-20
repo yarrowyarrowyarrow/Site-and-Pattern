@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSpinBox,
-    QSplitter,
+    QSizePolicy,
     QTextBrowser,
     QToolButton,
     QTreeWidget,
@@ -106,7 +106,17 @@ from src.plant_conditions import condition_matches
 # description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX; the
 # collapsed height is computed from the live row height × _TREE_COLLAPSED_ROWS.
 _TREE_EXPANDED_MAX = 16_777_215
-_TREE_COLLAPSED_ROWS = 7
+# Raised from 7 in V2.30. The cap hands room to the members list + description
+# card, which is right — but it was also the binding constraint once the mix
+# stopped stealing space, so the library showed seven rows of sixty on a tall
+# window for no reason.
+_TREE_COLLAPSED_ROWS = 10
+# ...and a FLOOR, which the panel never had. The tree was the only stretch
+# child with no minimum height, so it was the only widget in the column that
+# could be squeezed, and everything that grew below it grew at its expense.
+_TREE_MIN_ROWS = 6
+# The community mix scrolls past this many rows instead of growing without end.
+_MIX_ROWS_VISIBLE = 4
 
 # "Group By" lenses for the community library (V1.88). Each key (other than
 # "none") matches a facet from polycultures.get_community_facets(); the panel
@@ -1164,6 +1174,7 @@ class _CreaturePickerDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
+    placementCancelled = pyqtSignal()             # user stood the map down (V2.37)
     fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
     fillCommunityMixRequested = pyqtSignal(object, float, bool)  # [{id,weight,name,polyculture}], spacing, matrix (F22)
     # Emitted when the panel creates a brand-new community (e.g. via
@@ -1173,6 +1184,12 @@ class PolyculturePanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # True while the map is armed with this panel's selected community.
+        # MainWindow calls set_armed(False) when placement ends, so the chip
+        # can never claim the map is listening when it isn't.
+        self._armed = False
+        from src.placement_arming import rearm_timer
+        self._rearm_timer = rearm_timer(self, self._auto_arm)
         self._build_ui()
         self._refresh_polyculture_list()
 
@@ -1266,8 +1283,9 @@ class PolyculturePanel(QWidget):
         self._facet_combos["structure"].setToolTip(
             "Tallest vegetation layer the community reaches.")
         self._facet_combos["habitat"].setToolTip(
-            "Alberta ecoregion the member plants are documented from;\n"
-            "Generalist = no single home region.")
+            "Ecoregions the member plants are documented from. A community\n"
+            "belongs to every region its plants grow in, so it can appear\n"
+            "under several; Generalist = no recorded region.")
         self._facet_combos["function"].setToolTip(
             "Ecological functions the community serves (from its members'\n"
             "use tags). A community can serve several.")
@@ -1328,6 +1346,10 @@ class PolyculturePanel(QWidget):
         # sees as many communities as fit; once a community is selected it
         # shrinks to ~7 rows and the members list + description card take over.
         self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
+        # A real floor: whatever else the panel wants to show, the library keeps
+        # at least this many rows. Applied again after the first layout pass in
+        # _apply_tree_floor(), when sizeHintForRow() finally knows the metrics.
+        self.polyculture_tree.setMinimumHeight(_TREE_MIN_ROWS * 19)
         layout.addWidget(self.polyculture_tree, 1)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
@@ -1468,6 +1490,13 @@ class PolyculturePanel(QWidget):
         placement_layout.setSpacing(0)
         self._build_community_pattern_controls(placement_layout)
         self._build_community_mix_controls(placement_layout)
+        # Minimum vertical policy, the call src/plant_panel.py:519-521 makes and
+        # this panel never did: it tells the layout the pane will accept its
+        # sizeHint but must not be handed more, so a growing mix stops
+        # out-competing the stretch children above it.
+        placement_body.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._placement_body = placement_body
         self._placement_panel = CollapsiblePanel(
             "Placement", panel_id="poly_placement", expanded=False
         )
@@ -1504,7 +1533,19 @@ class PolyculturePanel(QWidget):
         self._mix_community_layout.setContentsMargins(0, 2, 0, 2)
         self._mix_community_layout.setSpacing(2)
         self._mix_community_rows.setVisible(False)
-        ml.addWidget(self._mix_community_rows)
+        # The rows scroll past four. Un-capped, eight communities added ~200 px
+        # of hard, non-shrinkable content to a pane that sits at stretch 0, and
+        # a QVBoxLayout gives a stretch-0 child its whole sizeHint before the
+        # stretch children get anything — so every row added came straight out
+        # of the community list above, which is the reported bug: the library
+        # collapsed to about three visible rows out of sixty.
+        self._mix_community_scroll = QScrollArea()
+        self._mix_community_scroll.setWidgetResizable(True)
+        self._mix_community_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._mix_community_scroll.setWidget(self._mix_community_rows)
+        self._mix_community_scroll.setMaximumHeight(_MIX_ROWS_VISIBLE * 26 + 8)
+        self._mix_community_scroll.setVisible(False)
+        ml.addWidget(self._mix_community_scroll)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
@@ -1618,6 +1659,7 @@ class PolyculturePanel(QWidget):
                 "Drag or right-click communities here to build a mix."
             )
             self._mix_community_rows.setVisible(False)
+            self._mix_community_scroll.setVisible(False)
             self._mix_community_place_btn.setEnabled(False)
             self._mix_community_clear_btn.setEnabled(False)
             return
@@ -1632,12 +1674,42 @@ class PolyculturePanel(QWidget):
                 f"Pick Row/Grid/Circle and click Place Mix on Map."
             )
         self._mix_community_rows.setVisible(True)
+        self._mix_community_scroll.setVisible(True)
         self._mix_community_clear_btn.setEnabled(True)
         self._mix_community_place_btn.setEnabled(n >= 2)
 
         for idx, c in enumerate(self._mix_communities):
             row = self._build_community_mix_row(idx, c)
             self._mix_community_layout.addWidget(row)
+        # Ask Qt to recompute geometry once the new rows have been laid out and
+        # contribute to sizeHint (src/plant_panel.py:948-962 does the same).
+        QTimer.singleShot(0, self._refit_placement_pane)
+
+    def _refit_placement_pane(self):
+        """Recompute the placement pane's geometry after the mix grows/shrinks.
+
+        The pane holds its content directly and its rows now scroll past
+        _MIX_ROWS_VISIBLE, so it settles at a bounded height; this just asks Qt
+        to notice promptly rather than on the next unrelated resize.
+        """
+        if hasattr(self, "_placement_body"):
+            self._placement_body.updateGeometry()
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.updateGeometry()
+        self._apply_tree_floor()
+
+    def _apply_tree_floor(self):
+        """Hold the community list to _TREE_MIN_ROWS of real rows.
+
+        Derived from the live row height rather than a fixed pixel count, the
+        same way the collapsed maximum is — before the first layout pass
+        sizeHintForRow() returns 0, hence the 19 px fallback the build-time call
+        also uses.
+        """
+        row_h = self.polyculture_tree.sizeHintForRow(0)
+        if row_h <= 0:
+            row_h = 19
+        self.polyculture_tree.setMinimumHeight(row_h * _TREE_MIN_ROWS + 4)
 
     def _build_community_mix_row(self, idx: int, community: dict) -> QFrame:
         row = QFrame()
@@ -1757,7 +1829,9 @@ class PolyculturePanel(QWidget):
         self.place_btn = QPushButton("Place on Map")
         self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.place_btn.setEnabled(False)
-        self.place_btn.clicked.connect(self._on_place)
+        # A toggle and a status readout: selecting a community arms the map on
+        # its own, so this shows what is armed and stands it down again.
+        self.place_btn.clicked.connect(self._on_place_btn_clicked)
         parent_layout.addWidget(self.place_btn)
 
         # show_fill_spacing=False: a community/mix is placed as units (or a
@@ -1769,6 +1843,8 @@ class PolyculturePanel(QWidget):
             show_fill_spacing=False,
             title="Placement Mode",
         )
+        self.placement_widget.patternChanged.connect(
+            self._on_pattern_params_changed)
         self.placement_widget.patternKindChanged.connect(
             self._on_placement_kind_changed)
         parent_layout.addWidget(self.placement_widget)
@@ -1806,6 +1882,16 @@ class PolyculturePanel(QWidget):
         community, no inter-unit gap)."""
         if hasattr(self, "_spacing_box"):
             self._spacing_box.setVisible(kind != "single")
+        # Changing Row → Grid is choosing what to place, so re-arm with it;
+        # switching to Fill Area stands the map down (it draws, it doesn't arm).
+        if kind == "fill":
+            if getattr(self, "_armed", False):
+                self.placementCancelled.emit()
+            return
+        if getattr(self, "_armed", False):
+            self._auto_arm()
+        else:
+            self._update_place_btn()
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
@@ -1839,10 +1925,13 @@ class PolyculturePanel(QWidget):
             return
 
         # Grouped: bucket communities under bold, unselectable category nodes.
-        # The "function" lens is multi-valued (a list of labels), so a community
-        # can appear under several folders; since a QTreeWidgetItem may only have
-        # one parent, the 2nd+ folder gets a clone (clone keeps the UserRole
-        # community id + nested variations, so selection/placement still work).
+        # The "function" and "habitat" lenses are multi-valued (a list of
+        # labels), so a community can appear under several folders — a community
+        # genuinely belongs to every ecoregion its members grow in, and filing it
+        # under only the commonest one hid it from the rest (V2.37). Since a
+        # QTreeWidgetItem may only have one parent, the 2nd+ folder gets a clone
+        # (clone keeps the UserRole community id + nested variations, so
+        # selection/placement still work).
         # Buckets sort A–Z; within a bucket the active sort order holds.
         buckets: dict[str, list] = {}
         for cid, item in built:
@@ -2044,6 +2133,13 @@ class PolyculturePanel(QWidget):
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
+        # Selecting a community arms the map with it (V2.37) — same reasoning as
+        # the plant list: the separate press left the map holding the previously
+        # armed community, so the wrong one got planted.
+        if has_selection:
+            self._auto_arm()
+        else:
+            self._update_place_btn()
         # Variations are only addable to top-level communities. A top-level
         # community's tree parent is either nothing (flat view) or a group
         # folder (grouped view, no id) — never another community.
@@ -2074,6 +2170,7 @@ class PolyculturePanel(QWidget):
         if row_h <= 0:
             row_h = 19  # fallback before first layout
         self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
+        self._apply_tree_floor()
 
         polyculture = polycultures.get_polyculture_by_id(current_id)
         if not polyculture:
@@ -2146,7 +2243,12 @@ class PolyculturePanel(QWidget):
         ceiling = 300
         desired = min(ceiling, n * 26 + 6) if n else 0
         self._members_scroll.setMaximumHeight(desired)
-        self._members_scroll.setMinimumHeight(desired)
+        # The floor is BELOW the ceiling, not equal to it. Pinning min == max
+        # made this pane perfectly rigid up to 300 px, so on a short window it
+        # was another block of space the community list had to surrender. It now
+        # yields down to about four rows and scrolls, and the list keeps its own
+        # floor (_apply_tree_floor).
+        self._members_scroll.setMinimumHeight(min(desired, 4 * 26 + 6))
 
     def _build_member_row(self, member: dict) -> QFrame:
         row = QFrame()
@@ -2410,6 +2512,53 @@ class PolyculturePanel(QWidget):
     # via the "Edit in Builder…" button. AddMemberDialog is kept above
     # in case external code or tests still import it.
 
+    # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _on_pattern_params_changed(self):
+        from src.placement_arming import request_rearm
+        request_rearm(self)
+
+    def _auto_arm(self):
+        """Re-arm the map with the selected community.
+
+        Fill Area is excluded: it enters polygon-draw mode immediately rather
+        than arming a click, so auto-arming it would hijack the map every time
+        the user arrowed through the community tree.
+        """
+        if self.placement_widget.kind == "fill":
+            return
+        if self._get_selected_polyculture_id() is None:
+            return
+        self._on_place()
+
+    def set_armed(self, armed: bool):
+        """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if getattr(self, "_armed", False) == bool(armed):
+            return
+        self._armed = bool(armed)
+        self._update_place_btn()
+
+    def _update_place_btn(self):
+        """Render the Place button as a live status chip while armed."""
+        if not hasattr(self, "place_btn"):
+            return
+        from src.placement_arming import apply_chip
+        name = ""
+        if getattr(self, "_armed", False):
+            pid = self._get_selected_polyculture_id()
+            if pid is not None:
+                name = (polycultures.get_polyculture_by_id(pid) or {}).get("name") or ""
+        apply_chip(self.place_btn, armed=getattr(self, "_armed", False),
+                   what=name or "community", kind=self.placement_widget.kind,
+                   idle_text="Place on Map", idle_style=_POLY_BTN_STYLE)
+
+    def _on_place_btn_clicked(self):
+        """The button toggles: arm the selection, or stand the map down."""
+        if getattr(self, "_armed", False):
+            self.placementCancelled.emit()
+            return
+        self._on_place()
+
     def _on_place(self):
         polyculture_id = self._get_selected_polyculture_id()
         if polyculture_id is None:
@@ -2441,6 +2590,8 @@ class PolyculturePanel(QWidget):
                 "params": pattern.get("params") or {},
             }
         self.placePolycultureRequested.emit(polyculture)
+        self._armed = True
+        self._update_place_btn()
 
     def _on_export(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -2506,6 +2657,9 @@ QPushButton:hover    { background: #388e3c; }
 QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
+
+# The armed chip's look and wording live in src/placement_arming.py — shared
+# with the plant browser, which arms the same map.
 
 # Compact, low-prominence style for the library management buttons (New /
 # Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the

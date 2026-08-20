@@ -24,10 +24,10 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
-    QInputDialog, QTabWidget,
+    QInputDialog, QTabWidget, QDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
 from src.plant_panel        import PlantPanel
@@ -36,6 +36,7 @@ from src.polyculture_panel      import PolyculturePanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
+from src.learn_panel      import LearnPanel
 from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
 from src.climate          import zone_label
@@ -48,13 +49,20 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
+from src import data_sources_flow, feedback_flow, onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
     open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
+from src.plant_directory_window import (
+    open_plant_directory as _open_plant_directory)
 from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
+from src.log import get_logger
+
+_log = get_logger(__name__)
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -138,7 +146,6 @@ class MainWindow(QMainWindow):
         # Pending anchor-mode configs (set when entering anchor mode, cleared after render)
         self._pending_sun_config:    dict | None = None
         self._pending_sun_anchor:    tuple | None = None
-        self._pending_sector_config: dict | None = None
         # Community-pattern stash: when set, _on_pattern_placed expands
         # each anchor position into one full community (instead of one
         # plant). Set by _enter_polyculture_pattern_mode, cleared on
@@ -169,6 +176,13 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self._start_autosave()
 
+        # Cold start (F44): paint the three-step strip for the empty project.
+        # The start menu is NOT opened here any more — main.py runs it before
+        # this window exists (V2.40), so the first thing a user sees is the
+        # choice rather than a modal over an already-painted map. Help →
+        # "Welcome / Getting Started" reopens it; see src/onboarding_flow.py.
+        onboarding_flow.refresh(self)
+
     # ── UI construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -195,45 +209,48 @@ class MainWindow(QMainWindow):
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
+        self.learn_panel     = LearnPanel(self)
 
-        # Tabbed side panel — five top-level tabs (Site, Plants, Structures,
-        # Analysis, Planning). The Polyculture library lives under an inner
-        # tab inside "Plants".
+        # Tabbed side panel — six top-level tabs (Site, Plants, Structures,
+        # Analysis, Planning, Learn). The Polyculture library lives under an
+        # inner tab inside "Plants".
         self._plant_poly_tab = self._build_plants_polycultures_tab()
 
         from src.fill_tab_widget import FillTabWidget
-        self._side_tabs = FillTabWidget()
+        # allow_shrink + elide as a safety net: with six labels the strip can
+        # overflow the panel minimum on wide-font systems (macOS); eliding a
+        # label beats clipping the first tab off-screen entirely.
+        self._side_tabs = FillTabWidget(allow_shrink=True)
         # Document mode lets the tab bar span the full width, which is what lets
-        # FillTabWidget stretch the tabs edge-to-edge (no gap after "Planning").
+        # FillTabWidget stretch the tabs edge-to-edge (no gap after "Learn").
         self._side_tabs.setDocumentMode(True)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self._plant_poly_tab, "Plants")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
-        # Side panel needs to be wide enough that all five tab labels can
-        # render in full ("Structures" is the widest at ~11px font). 260px
-        # is the empirical minimum; below that the tab bar truncates to
-        # "S..." even with elide off, because tabs share width equally
-        # when setExpanding(True).
-        self._side_tabs.setMinimumWidth(260)
+        self._side_tabs.addTab(self.learn_panel, "Learn")
+        # Side panel width. The old comment here claimed 300px was the point
+        # below which labels elide; measuring it (V2.37) showed that was never
+        # true — FillTabWidget(allow_shrink=True) gives every tab an equal
+        # share, so full labels need widest×6 ≈ 456px and the strip elided at
+        # 300px before and after. 320px is a modest floor that fits four of the
+        # six labels whole; drag the splitter (max 480) to see all six.
+        self._side_tabs.setMinimumWidth(320)
         self._side_tabs.setMaximumWidth(480)
-        # Show every label in full, and stretch the tabs to fill the whole tab
-        # strip (no empty gap to the right of "Planning").
+        # Stretch the tabs to fill the whole tab strip (no empty gap to the
+        # right of "Learn"); elide right on overflow instead of clipping.
         self._side_tabs.tabBar().setUsesScrollButtons(False)
-        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
+        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         self._side_tabs.tabBar().setExpanding(True)
-        # Tab styling — every tab strip in the app (these top-level tabs plus
-        # the Site/Plants/Analysis/Planning sub-tabs) shares the same
-        # green-underline look so the whole UI is consistent. A subtle pane
-        # border frames the side panel.
-        from src.ui_style import inner_tab_stylesheet
+        # Tab styling — these top-level tabs get their OWN look, distinct from
+        # the sub-tabs beneath them (ui_style.top_tab_stylesheet). Until V2.37
+        # every strip in the app shared one stylesheet, so a user facing three
+        # nested strips saw three identical toolbars and no indication which was
+        # the top of the tree. See the note in ui_style.py before re-unifying.
+        from src.ui_style import top_tab_stylesheet
         self._side_tabs.setStyleSheet(
-            inner_tab_stylesheet()
-            + "QTabWidget::pane { border: 1px solid #2e4a2e; top: -1px; }"
-            # Tighter horizontal padding than the sub-tabs so all five top-level
-            # labels still render in full at the 260px minimum panel width.
-            + "QTabBar::tab { padding: 5px 8px; }"
+            top_tab_stylesheet()
             + "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
@@ -256,6 +273,12 @@ class MainWindow(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
         self.toolbar.attach_to_layout(left_layout)
+        # Getting-started strip (F44) — the map's empty state, as app chrome
+        # rather than JS inside the QWebEngineView. Hides itself once the
+        # three-step path is walked; see src/onboarding_flow.py:refresh.
+        from src.first_step_bar import FirstStepBar
+        self.first_step_bar = FirstStepBar(self)
+        left_layout.addWidget(self.first_step_bar)
         left_layout.addWidget(self.map_widget, 1)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -327,7 +350,11 @@ class MainWindow(QMainWindow):
         inner.tabBar().setUsesScrollButtons(False)
         inner.tabBar().setExpanding(True)
         inner.setStyleSheet(inner_tab_stylesheet())
-        inner.addTab(self.plant_panel, "Plants")
+        # "Browse", not "Plants": this sits under the top-level Plants tab and
+        # above On This Design's own Species tab, and having the same word at
+        # three nesting levels at once is what made the strips unreadable
+        # (V2.37 user feedback). Each label now says what its level does.
+        inner.addTab(self.plant_panel, "Browse")
         inner.addTab(self.polyculture_panel, "Plant Communities")
         inner.addTab(self.on_this_design, "On This Design")
         v.addWidget(inner)
@@ -389,13 +416,9 @@ class MainWindow(QMainWindow):
     def _on_check_for_updates(self):
         return self._update_flow._on_check_for_updates()
 
-    def _run_update_flow(self, git_runner, *, stash_to_restore):
-        return self._update_flow._run_update_flow(
-            git_runner, stash_to_restore=stash_to_restore,
-        )
-
-    def _maybe_restore_stash(self, git_runner, stash_label):
-        return self._update_flow._maybe_restore_stash(git_runner, stash_label)
+    # V2.22: the in-app git mutation flows (_run_update_flow, stash/pop,
+    # _offer_branch_switch) were deleted — source checkouts get a read-only
+    # drift report; frozen builds keep the Releases downloader.
 
     def _newest_remote_version_branch(self, git_runner):
         return self._update_flow._newest_remote_version_branch(git_runner)
@@ -403,31 +426,33 @@ class MainWindow(QMainWindow):
     def _is_newer_version(self, target, current):
         return self._update_flow._is_newer_version(target, current)
 
-    def _offer_branch_switch(self, git_runner, *, target, current, stash_to_restore):
-        return self._update_flow._offer_branch_switch(
-            git_runner,
-            target=target, current=current,
-            stash_to_restore=stash_to_restore,
-        )
-
     def _open_releases_page(self):
         return self._update_flow._open_releases_page()
 
     def _build_menu(self):
         mb = self.menuBar()
 
-        # Edit menu
-        edit_menu = mb.addMenu("&Edit")
-
-        self._act_undo = edit_menu.addAction("&Undo")
+        # Undo/redo live on the Draw toolbar (the visible buttons); the menu
+        # bar stays File / View / Help (V2.25 — the Edit menu duplicated the
+        # toolbar and was dropped). The QActions still exist, parented to the
+        # window, so the keyboard shortcuts keep working and
+        # PersistenceController._sync_undo_actions can grey them out in step
+        # with the toolbar buttons.
+        self._act_undo = QAction("Undo", self)
         self._act_undo.setShortcut(QKeySequence.StandardKey.Undo)
         self._act_undo.setEnabled(False)
         self._act_undo.triggered.connect(self._do_undo)
+        self.addAction(self._act_undo)
 
-        self._act_redo = edit_menu.addAction("&Redo")
-        self._act_redo.setShortcut(QKeySequence.StandardKey.Redo)
+        self._act_redo = QAction("Redo", self)
+        # Both conventions: Ctrl+Shift+Z (shown on the toolbar) and the
+        # platform-standard binding (Ctrl+Y on Windows). Qt drops duplicates.
+        self._act_redo.setShortcuts(
+            [QKeySequence("Ctrl+Shift+Z"), QKeySequence("Ctrl+Y")]
+            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo))
         self._act_redo.setEnabled(False)
         self._act_redo.triggered.connect(self._do_redo)
+        self.addAction(self._act_redo)
 
         # File menu
         file_menu = mb.addMenu("&File")
@@ -477,9 +502,27 @@ class MainWindow(QMainWindow):
             "and a phased planting schedule, grouped by Alberta nursery source")
         act_shopping.triggered.connect(self._on_export_shopping_list)
 
-        act_pdf = file_menu.addAction("Export &PDF…")
-        act_pdf.setStatusTip("Export design as a presentation-quality PDF")
+        # Name what is in it. "Export as a presentation-quality PDF" told the
+        # user nothing about the numbered planting map, the key, the scale bar
+        # or the north arrow on page 4 — a tester asked for "a printable 2-D map
+        # of a design with legend" that had shipped in V2.31 and was simply
+        # unfindable (V2.37).
+        act_pdf = file_menu.addAction("Export &PDF (plan + planting map)…")
+        act_pdf.setStatusTip(
+            "Export the whole design as a PDF — site prep, buy list, and a "
+            "numbered planting map drawn to scale with a key, scale bar and "
+            "north arrow")
         act_pdf.triggered.connect(self._on_export_pdf)
+
+        # F92 — the order file. The PDF is what a client reads; this is what a
+        # nursery is sent. Beside Export PDF because it is the same act (getting
+        # the design out of the app) aimed at a different reader.
+        act_order = file_menu.addAction("Export &order file (CSV)…")
+        act_order.setStatusTip(
+            "Export the buy list as a spreadsheet grouped by where you can get "
+            "each plant — botanical names, quantities and price ranges, "
+            "numbered to match the planting map")
+        act_order.triggered.connect(self._on_export_order_file)
 
         file_menu.addSeparator()
 
@@ -500,7 +543,35 @@ class MainWindow(QMainWindow):
         )
         self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
 
+        # F44: the getting-started strip retires itself once you have a pin, a
+        # boundary and plants — but a user who dismissed it early (or who wants
+        # it back on a new design) needs a way to say so.
+        self._act_step_bar = view_menu.addAction("&Getting-started strip")
+        self._act_step_bar.setCheckable(True)
+        self._act_step_bar.setChecked(True)
+        self._act_step_bar.setStatusTip(
+            "Show the three-step strip above the map (pin → boundary → plants)")
+        # Lambda → flow function: the behaviour is in src/onboarding_flow.py,
+        # off MainWindow's method ledger.
+        self._act_step_bar.triggered.connect(
+            lambda checked: onboarding_flow.set_step_bar_hidden(
+                self, not checked))
+
         view_menu.addSeparator()
+
+        # V2.44: both views of the design at once — the map answers *where*,
+        # the 3D answers *what it will be like*, and until now answering one
+        # meant losing sight of the other. Lambda → controller shim, so this
+        # costs MainWindow no methods (src/controllers/split_view.py).
+        self._act_split = view_menu.addAction("S&plit view (map + 3D)")
+        self._act_split.setCheckable(True)
+        self._act_split.setShortcut("Ctrl+Shift+3")
+        self._act_split.setStatusTip(
+            "Show the 3D scene under the map and keep the two in step — edit "
+            "in either one")
+        self._act_split.triggered.connect(
+            lambda checked: _split_view.toggle(self, checked))
+
         act_3d = view_menu.addAction("&3D Preview…")
         act_3d.setStatusTip(
             "Open the 3D view of this design — growth timeline, sun "
@@ -510,6 +581,16 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
+
+        act_directory = view_menu.addAction("&Plant Directory…")
+        act_directory.setStatusTip(
+            "Every species in the catalogue — what it looks like, where it "
+            "grows, and which animals depend on it (F90)"
+        )
+        # Lambda for the same reason as the others: the window manages itself
+        # in src/plant_directory_window.py and takes `main` optionally, because
+        # the start screen opens it before any MainWindow exists.
+        act_directory.triggered.connect(lambda: _open_plant_directory(self))
 
         act_reference = view_menu.addAction("Walk a &Reference Ecosystem…")
         act_reference.setStatusTip(
@@ -558,6 +639,48 @@ class MainWindow(QMainWindow):
         # Frozen builds have no git; the version is baked in at build time.
         current_branch = build_version() or self._current_branch_name() or ""
         version_disp = current_branch if parse_version_branch(current_branch) else "dev"
+        # F44: the welcome shows once, so it needs a way back — both for
+        # someone who dismissed it and for anyone looking for the example
+        # design later.
+        act_welcome = help_menu.addAction("&Welcome / Getting Started…")
+        act_welcome.setStatusTip(
+            "Re-open the welcome: generate a design, start from your yard, "
+            "or open the worked example")
+        # Lambda → flow function; see the 3D Preview note above.
+        act_welcome.triggered.connect(
+            lambda: onboarding_flow.show_welcome(self))
+
+        act_example = help_menu.addAction("Open the &Example Design")
+        act_example.setStatusTip(
+            "Open a worked front-yard lawn conversion — a finished design to "
+            "score, walk in 3D, and take apart")
+        act_example.triggered.connect(
+            lambda: onboarding_flow.open_example(self))
+
+        help_menu.addSeparator()
+
+        # There was no way to tell the author anything from inside the app —
+        # a tester who hit the quiz crash had to already know the maintainer
+        # (V2.37). Lambda → flow function, so this costs no MainWindow method.
+        act_feedback = help_menu.addAction("Send &Feedback…")
+        act_feedback.setStatusTip(
+            "Tell the author what worked, what confused you, or what broke")
+        act_feedback.triggered.connect(
+            lambda: feedback_flow.send_feedback(self))
+
+        # V2.42: the app's sourcing and licensing position lived only in
+        # docs/ — reachable from code comments and by a user never. A person
+        # deciding whether to trust a planting recommendation should be able to
+        # see where it came from without cloning the repository.
+        act_sources = help_menu.addAction("Where This &Data Came From…")
+        act_sources.setStatusTip(
+            "The works the plant and wildlife data cites, how confident each "
+            "relationship is, and how the photographs are licensed")
+        act_sources.triggered.connect(
+            lambda: data_sources_flow.show_data_sources(self))
+
+        help_menu.addSeparator()
+
         act_about = help_menu.addAction(f"&About / Version: {version_disp}")
         act_about.setStatusTip(
             "Show the current Site & Pattern version, schema version, and "
@@ -566,9 +689,11 @@ class MainWindow(QMainWindow):
         act_about.triggered.connect(self._on_about)
 
         act_update = help_menu.addAction("Check for &Updates…")
-        act_update.setStatusTip("Get the latest version: pulls via git on source "
-                                "installs, or downloads and installs the newest "
-                                "release in-app on packaged (.dmg/.exe) installs")
+        act_update.setStatusTip("One-click update to the newest version: "
+                                "switches a source install to the latest "
+                                "V-branch in place, or downloads and installs "
+                                "the newest release on packaged (.dmg/.exe) "
+                                "installs")
         act_update.triggered.connect(self._on_check_for_updates)
 
         act_pick = help_menu.addAction("&Switch to a specific version…")
@@ -594,6 +719,10 @@ class MainWindow(QMainWindow):
         b.selection_moved.connect(self._on_selection_moved)
         b.fill_area_complete.connect(self._on_fill_area_complete)
         b.map_ready.connect(self._on_map_ready)
+        # Crash recovery: once the map can render, offer any autosave left
+        # behind by a session that died with unsaved work (one-shot).
+        b.map_ready.connect(
+            lambda: self._persistence.maybe_offer_autosave_recovery())
 
         # Toolbar → map
         self.toolbar.draw_boundary_requested.connect(self._enter_boundary_mode)
@@ -602,6 +731,15 @@ class MainWindow(QMainWindow):
         self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
         self.toolbar.undo_requested.connect(self._do_undo)
+
+        # Getting-started strip (F44). Lambdas → src/onboarding_flow.py so no
+        # new MainWindow methods are needed; the strip is a control, not a
+        # poster — its chips navigate to where each step happens.
+        self.first_step_bar.generate_requested.connect(self._on_generate_design)
+        self.first_step_bar.step_clicked.connect(
+            lambda key: onboarding_flow.on_step_clicked(self, key))
+        self.first_step_bar.dismissed.connect(
+            lambda: onboarding_flow.set_step_bar_hidden(self, True))
         self.toolbar.redo_requested.connect(self._do_redo)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
@@ -619,6 +757,10 @@ class MainWindow(QMainWindow):
         # arrives in the 4th argument; legacy single-mode placements pass
         # {"kind": "single"}.
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
+        # The panel's armed chip is a claim about the map, so the map has to be
+        # able to withdraw it: clicking the chip (or anything else that ends
+        # placement) routes through the one cancel path.
+        self.plant_panel.placement_cancelled.connect(self._cancel_draw)
         self.plant_panel.color_changed.connect(self._on_plant_color_changed)
 
         # Map → remove plant marker
@@ -634,6 +776,7 @@ class MainWindow(QMainWindow):
 
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
+        self.polyculture_panel.placementCancelled.connect(self._cancel_draw)
         self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
         self.polyculture_panel.fillCommunityMixRequested.connect(self._on_community_mix_fill_requested)
         self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
@@ -661,6 +804,16 @@ class MainWindow(QMainWindow):
         # Map → structures/hedgerows/shapes
         b.structure_placed.connect(self._on_structure_placed)
         b.structure_removed.connect(self._on_structure_removed)
+        # Drag / scroll-resize of existing tree & building marks (V2.26) —
+        # straight to the flow via lambdas (map controller + MainWindow both
+        # at their guard ceilings).
+        from src import tree_edit_flow
+        b.existing_feature_moved.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_moved(self, *a))
+        b.existing_feature_resized.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_resized(self, *a))
+        b.existing_feature_foliage.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_foliage(self, *a))
         b.hedgerow_complete.connect(self._on_hedgerow_complete)
         b.hedgerow_removed.connect(self._on_hedgerow_removed)
         b.shape_complete.connect(self._on_shape_complete)
@@ -673,13 +826,18 @@ class MainWindow(QMainWindow):
 
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
+        # Scrub → move the sun marker in JS over the payload it already holds.
+        self.analysis_panel.sun_time_changed.connect(
+            lambda mins: self.map_widget.set_sun_path_time(mins))
+        # Date changed → redraw at the anchor already placed, instead of making
+        # the user re-click the map to compare two solstices (V2.37).
+        self.analysis_panel.sun_redraw_requested.connect(
+            lambda cfg: (self._render_sun_path(cfg, *self._active_sun_state[1:])
+                         if getattr(self, "_active_sun_state", None) else None))
         # Clears routed through the controller so they reset the active-overlay
         # state and record an undo step (not straight to the map widget).
         self.analysis_panel.sun_path_cleared.connect(
             self._map_events._on_sun_path_removed)
-        self.analysis_panel.sector_requested.connect(self._on_sector_requested)
-        self.analysis_panel.sector_cleared.connect(
-            self._map_events._on_sectors_cleared)
         # (Manual contour drawing moved to Site panel — wired below.)
         # Auto-terrain controls live on the Site panel now (alongside the
         # single-point Elevation/slope readout) — the request / clear /
@@ -695,14 +853,22 @@ class MainWindow(QMainWindow):
         # Straight to the controller (MainWindow at its method ceiling).
         self.site_panel.download_soil_requested.connect(
             self._map_events._on_download_soil_requested)
-        # Shade overlay + OSM import (V1.51).
-        self.site_panel.shade_requested.connect(self._on_shade_requested)
-        self.site_panel.shade_cleared.connect(self._on_shade_cleared)
-        self.site_panel.shade_opacity.connect(self._on_shade_opacity)
-        self.site_panel.shade_zones_requested.connect(self._on_shade_zones_requested)
-        self.site_panel.shade_zones_visible_changed.connect(
+        # Shade overlay (V1.51) — on the Analysis panel since V2.38, sharing
+        # its date and clock with the sun path.
+        self.analysis_panel.shade_requested.connect(self._on_shade_requested)
+        self.analysis_panel.shade_cleared.connect(self._on_shade_cleared)
+        self.analysis_panel.shade_opacity.connect(self._on_shade_opacity)
+        self.analysis_panel.shade_zones_requested.connect(
+            self._on_shade_zones_requested)
+        self.analysis_panel.shade_zones_visible_changed.connect(
             self.map_widget.set_shade_zones_visible)
+        # OSM import (V1.51) — the casters stay on the Site tab.
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
+        # Tree crowns from the satellite photo (V2.26) — wired straight to the
+        # flow module via a lambda (MainWindow is at its method ceiling).
+        from src import tree_detect_flow
+        self.site_panel.tree_detect_requested.connect(
+            lambda: tree_detect_flow.detect_trees_for_site(self))
         # Wired straight to the controller (MainWindow is at its method ceiling,
         # so no shim) — the building-pack download lives in MapEventRouter.
         self.site_panel.download_buildings_requested.connect(
@@ -773,13 +939,19 @@ class MainWindow(QMainWindow):
             lambda *a: snow_microsite_flow.on_plants_changed(self))
         b.selection_moved.connect(
             lambda *a: snow_microsite_flow.on_plants_changed(self))
-        self.analysis_panel.season_changed.connect(self._on_season_changed)
         # "What the bee sees" (F37): the Bees tab drives the map recolour direct
         # (payload is built panel-side, so no new MainWindow method is needed).
         self.analysis_panel.bee_map_overlay_requested.connect(
             self.map_widget.set_bee_forage_view)
         self.analysis_panel.bee_map_overlay_cleared.connect(
             self.map_widget.clear_bee_forage_view)
+        # Relationship web (F5): same shape — the whole graph is built
+        # panel-side by src/relationship_graph.py, so this is a direct hand-off
+        # to the map widget with no MainWindow method in between.
+        self.analysis_panel.relationship_overlay_requested.connect(
+            self.map_widget.draw_relationship_graph)
+        self.analysis_panel.relationship_overlay_cleared.connect(
+            self.map_widget.clear_relationship_graph)
 
         # Map → polyculture removal
         b.polyculture_removed.connect(self._on_polyculture_removed)
@@ -794,15 +966,10 @@ class MainWindow(QMainWindow):
         b.boundary_props_changed.connect(self._on_boundary_props_changed)
         b.boundary_removed.connect(self._on_boundary_removed)
 
-        # Map → sun path / sector anchor & removal
+        # Map → sun path anchor & removal
         b.sun_anchor_placed.connect(self._on_sun_anchor_placed)
         b.sun_path_removed.connect(self._on_sun_path_removed)
         b.anchor_cancelled.connect(self._on_anchor_cancelled)
-        b.sector_anchor_placed.connect(self._on_sector_anchor_placed)
-        b.sector_group_removed.connect(self._on_sector_group_removed)
-        b.sector_group_moved.connect(self._on_sector_group_moved)
-        b.sector_group_rotated.connect(self._on_sector_group_rotated)
-        b.sector_group_resized.connect(self._on_sector_group_resized)
 
         # Toolbar → zoom sensitivity
         self.toolbar.zoom_step_changed.connect(self.map_widget.set_zoom_sensitivity)
@@ -810,6 +977,11 @@ class MainWindow(QMainWindow):
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
+        # Planning → Notes lists the map's 📝 Note pins; clicking one frames
+        # it on the map (~40 m box around the pin).
+        self.planning_panel.map_note_focus_requested.connect(
+            lambda lat, lng: self.map_widget.fit_bounds(
+                lat - 0.0004, lng - 0.0006, lat + 0.0004, lng + 0.0006))
 
         # Site panel ↔ map
         b.site_pin_placed.connect(self._on_site_pin_placed)
@@ -827,7 +999,7 @@ class MainWindow(QMainWindow):
         # ceiling), wired through thin lambdas.
         from src import design_review_flow as _drf
         self.site_panel.browse_communities_requested.connect(
-            lambda key: _drf.browse_communities(self, key))
+            lambda keys: _drf.browse_communities(self, keys))
         # On This Design rows → map (V2.13): click to locate, context menu to
         # select / remove / open in the Plant Library.
         self.on_this_design.species_focus_requested.connect(
@@ -838,6 +1010,13 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.remove_species(self, pid))
         self.on_this_design.species_show_in_library_requested.connect(
             lambda pid: _drf.show_in_library(self, pid))
+        self.on_this_design.species_substitute_requested.connect(
+            lambda pid: _drf.substitute_species(self, pid))
+        # …and from the map itself (V2.58). The species list is where this
+        # lived and, as the author put it, 99% of users will never find it
+        # there; the map is where you are looking at the plant you cannot get.
+        self.map_widget.bridge.plant_substitute_requested.connect(
+            lambda pid: _drf.substitute_species(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
         # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
@@ -998,7 +1177,11 @@ class MainWindow(QMainWindow):
                     p.get("marker_color") or "",
                 )
         except Exception:
-            pass
+            # Fall through to defaults so the marker still renders, but a
+            # broken catalogue must not stay invisible (wrong spacings
+            # everywhere with no trace).
+            _log.warning("plant lookup failed for id=%s; using default "
+                         "spacing/type", plant_id, exc_info=True)
         return 1.0, "herb", ""
 
     def _enter_measure_mode(self):
@@ -1122,12 +1305,12 @@ class MainWindow(QMainWindow):
         )
         self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
         self._pending_sun_config = None
-        # Remember the rendered overlay so undo/redo can reproduce it.
+        # Remember the rendered overlay so undo/redo — and the date combo's
+        # redraw-in-place — can reproduce it without another map click.
         self._active_sun_state = (config, lat, lng)
-
-    def _on_sector_requested(self, config: dict):
-        # Shim → MapEventRouter; see src/controllers/map_events.py.
-        return self._map_events._on_sector_requested(config)
+        # Hand the panel this date's real daylight so the time scrub spans
+        # sunrise→sunset, and draw the sun at its opening position.
+        self.analysis_panel.set_sun_window(sr, ss)
 
     def _on_contour_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
@@ -1227,10 +1410,6 @@ class MainWindow(QMainWindow):
     def _on_wind_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_wind_requested(config)
-
-    def _on_season_changed(self, season: str):
-        # Shim → MapEventRouter; see src/controllers/map_events.py.
-        return self._map_events._on_season_changed(season)
 
     # ── Draw-then-fill plant placement (F3) ──────────────────────────────────
 
@@ -1455,6 +1634,14 @@ class MainWindow(QMainWindow):
             self.plant_panel.clear_pending_polyculture()
         except Exception:
             pass
+        # Stand the panels' armed chips down with the map, so neither can claim
+        # placement is live after Esc or a switch to another tool.
+        for panel in (getattr(self, "plant_panel", None),
+                      getattr(self, "polyculture_panel", None)):
+            try:
+                panel.set_armed(False)
+            except (AttributeError, RuntimeError):
+                pass
         # Same idea for any community-pattern stash: dropping it on
         # cancel ensures the user starts fresh next time they hit Place.
         self._pending_community_pattern = None
@@ -1500,31 +1687,16 @@ class MainWindow(QMainWindow):
     def _on_selection_moved(self, originals_json: str, moved_json: str):
         return self._map_events._on_selection_moved(originals_json, moved_json)
 
-    # Sun-path / sector anchor handlers — shims → MapEventRouter.
+    # Sun-path anchor handlers — shims → MapEventRouter.
 
     def _on_sun_anchor_placed(self, lat: float, lng: float):
         return self._map_events._on_sun_anchor_placed(lat, lng)
-
-    def _on_sector_anchor_placed(self, lat: float, lng: float):
-        return self._map_events._on_sector_anchor_placed(lat, lng)
 
     def _on_sun_path_removed(self):
         return self._map_events._on_sun_path_removed()
 
     def _on_anchor_cancelled(self, mode: str):
         return self._map_events._on_anchor_cancelled(mode)
-
-    def _on_sector_group_removed(self, sid: str):
-        return self._map_events._on_sector_group_removed(sid)
-
-    def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
-        return self._map_events._on_sector_group_moved(sid, lat, lng)
-
-    def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
-        return self._map_events._on_sector_group_rotated(sid, rotation_deg)
-
-    def _on_sector_group_resized(self, sid: str, radius_m: float):
-        return self._map_events._on_sector_group_resized(sid, radius_m)
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
@@ -1707,12 +1879,26 @@ class MainWindow(QMainWindow):
         site_photo_flow.restore_site_photo(self)
         self.setWindowTitle(f"{APP_NAME} — {name}")
         self._set_mode_label("Ready")
+        # Back to an empty project — step 1 again (F44).
+        onboarding_flow.refresh(self)
 
     def _on_open(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Design", "",
-            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
-        )
+        """Open a design — from the in-app list first (F87, V2.39).
+
+        *"When loading a previously saved file they should be listed in the app
+        rather than opening the computer's file explorer."* The OS dialog is
+        still one button away, because a design kept somewhere else is a real
+        thing; it is the second option now instead of the only one.
+        """
+        from src.saves_dialog import SavesDialog, BROWSE
+        dlg = SavesDialog(self)
+        result = dlg.exec()
+        if result == BROWSE:
+            path = self._ask_for_design_file()
+        elif result == QDialog.DialogCode.Accepted:
+            path = dlg.chosen()
+        else:
+            return
         if not path:
             return
         try:
@@ -1720,12 +1906,24 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, "Open failed", str(exc))
 
+    def _ask_for_design_file(self) -> str:
+        """The OS file dialog, for a design that lives outside the saves
+        folder."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open Design", "",
+            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
+        )
+        return path or ""
+
     def _load_from_path(self, path: str):
         proj = project_io.load_project(path)
         self._project      = proj   # → ProjectStore.set_project (index rebuilt)
         self._project_path = path
         self._modified     = False
         self._clear_undo()
+        # So the start menu can offer "Continue" next launch (F87/V2.40).
+        from src import saves
+        saves.remember_last_design(path)
 
         # Redraw the whole map from the project's features (boundaries,
         # plants, structures, hedgerows, shapes, contours, annotations,
@@ -1768,6 +1966,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} — {name}")
 
         self._sync_planning_panel()
+        # A load bypasses _mark_modified (the project is clean), so the
+        # getting-started strip is refreshed here explicitly (F44).
+        onboarding_flow.refresh(self)
 
     def _on_save(self):
         # Shim → PersistenceController; see src/controllers/persistence.py.
@@ -1796,14 +1997,14 @@ class MainWindow(QMainWindow):
     def _on_export_shopping_list(self):
         """Export the design as a buy-it / plant-it Planting Plan (F40).
 
-        All the assembly lives in the Qt-free :mod:`src.planting_plan` so it can
-        be unit-tested and shared with the PDF export; this is just the file
-        plumbing."""
+        Assembly lives in the Qt-free :mod:`src.planting_plan_export`, which
+        orders the whole document (prep → buy → dig → phase → maintain) and is
+        shared with the PDF export; this is just the file plumbing."""
         if not self._placed_plants:
             QMessageBox.information(self, "Planting Plan", "No plants placed yet.")
             return
 
-        from src.planting_plan import build_planting_plan, render_plan_text
+        from src.planting_plan import build_planting_plan
 
         structs = [
             f["properties"]["struct_def"]
@@ -1818,20 +2019,15 @@ class MainWindow(QMainWindow):
         )
         plan = build_planting_plan(self._placed_plants, structures=structs,
                                    bed_area_m2=bed_area)
-        text = render_plan_text(plan)
 
-        # Year-by-year conversion schedule (F17): remove-this / plant-that, when.
-        try:
-            from src.conversion_plan import (
-                build_conversion_schedule, render_schedule_text)
-            from src.lawn_zones import conversion_summary
-            schedule = build_conversion_schedule(
-                self._placed_plants,
-                summary=conversion_summary(self._project.get("features", [])),
-            )
-            text += "\n\n" + render_schedule_text(schedule)
-        except Exception:  # noqa: BLE001 — the schedule augments the plan, never blocks it
-            pass
+        # The document reads in the order the work happens: prep the ground
+        # (F43) → buy it (F40) → dig it in the right places (F41) → phase it
+        # (F17) → keep it alive (F42). Each section is best-effort: a section
+        # that can't be built must never cost the user the rest of the sheet.
+        from src import planting_plan_export
+        text = planting_plan_export.assemble(
+            self._project, self._placed_plants, structs, plan,
+            bed_area_m2=bed_area)
 
         path, _ = QFileDialog.getSaveFileName(
             self, "Export Planting Plan", "planting_plan.txt",
@@ -1849,6 +2045,11 @@ class MainWindow(QMainWindow):
     # ── Undo / Redo ────────────────────────────────────────────────────────
 
     # ── PDF export (V3) ────────────────────────────────────────────────────
+
+    def _on_export_order_file(self):
+        """F92 — shim → order_file_flow; see src/order_file_flow.py."""
+        from src import order_file_flow
+        return order_file_flow.on_export_order_file(self)
 
     def _on_export_pdf(self):
         path, _ = QFileDialog.getSaveFileName(
@@ -1888,7 +2089,14 @@ class MainWindow(QMainWindow):
 
             notes = self.planning_panel.get_notes()
 
-            export_pdf(path, self._project, enriched, structs, notes, pixmap)
+            # Before / after / in five years (F76), if the 3D window has
+            # rendered it. Passed through rather than re-rendered here: export
+            # is synchronous and the viewer's capture is a chain of callbacks.
+            ba_panels, ba_caption = getattr(self, "_before_after", (None, ""))
+
+            export_pdf(path, self._project, enriched, structs, notes, pixmap,
+                       before_after=ba_panels,
+                       before_after_caption=ba_caption)
             self.statusBar().showMessage(f"PDF exported: {path}", 3000)
         except Exception as exc:
             QMessageBox.critical(self, "PDF Export Failed", str(exc))
@@ -1909,10 +2117,14 @@ class MainWindow(QMainWindow):
 
     def _sync_planning_panel(self):
         """Push current placed plants and structures to planning + analysis panels."""
-        # Shade-tab caster inventory (V2.13) — cheap feature scan, and this
-        # sync already runs on every design mutation, project load, and after
-        # OSM imports/feature marks.
+        # Caster inventory (V2.13) — cheap feature scan, and this sync already
+        # runs on every design mutation, project load, and after OSM
+        # imports/feature marks. Shown on both surfaces since V2.38.
         self.site_panel.update_caster_summary(self._project)
+        self.analysis_panel.update_caster_summary(self._project)
+        sc = (self._project.get("properties", {}).get("site_config", {}) or {})
+        self.analysis_panel.set_site_location(sc.get("latitude"),
+                                              sc.get("longitude"))
         enriched = []
         for p in self._placed_plants:
             entry = dict(p)
@@ -1936,9 +2148,27 @@ class MainWindow(QMainWindow):
                 structs.append(sd)
         self.planning_panel.set_structures(structs)
 
+        # Map notes (Draw → 📝 Note) mirrored into Planning → Notes so the
+        # journal and the on-map observations read as one record (V2.25).
+        map_notes = []
+        for f in self._project.get("features", []):
+            props = f.get("properties", {})
+            if props.get("element_type") != "annotation":
+                continue
+            coords = f.get("geometry", {}).get("coordinates") or []
+            if len(coords) >= 2:
+                map_notes.append({"id": props.get("annotation_id", ""),
+                                  "text": props.get("text", ""),
+                                  "lat": coords[1], "lng": coords[0]})
+        self.planning_panel.set_map_notes(map_notes)
+
         # Habitat Value Score tab in the analysis panel uses the same data.
         self.analysis_panel.set_placed_plants(enriched)
         self.analysis_panel.set_structures(structs)
+
+        # Learn tab (Field Study / Lessons / Present) narrates the same design.
+        self.learn_panel.set_placed_plants(enriched)
+        self.learn_panel.set_structures(structs)
 
         # Read-only shade-mix breakdown from the cached tags (if classified).
         try:
@@ -1970,6 +2200,17 @@ class MainWindow(QMainWindow):
             from src.lawn_zones import conversion_summary
             _conv = conversion_summary(self._project.get("features", []))
             self.on_this_design.set_lawn_conversion(_conv)
+            # Cues to care (F75, P13) — whether the planting will be read as
+            # tended. Computed here because it needs the whole project (drawn
+            # shapes, structures, boundary), not just the placed plants; the
+            # panel is handed finished lines like the lawn tally above.
+            try:
+                from src import cues_to_care
+                self.on_this_design.set_cues_to_care(
+                    cues_to_care.cue_lines(self._project),
+                    cues_to_care.tally(self._project))
+            except Exception:      # noqa: BLE001
+                self.on_this_design.set_cues_to_care([])
             # Same summary grounds the Habitat tab's lawn-equivalent
             # counterfactual (F10) and the phased conversion plan (F17).
             self.analysis_panel.set_lawn_conversion(_conv)
@@ -2063,6 +2304,32 @@ class MainWindow(QMainWindow):
             if r != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
+        # Clean exit (saved, or the user explicitly discarded unsaved work):
+        # the crash-recovery autosave would only nag next launch. A crash
+        # never reaches this line — which is exactly the point. Guarded on
+        # the recovery check having run so a window that never got a live
+        # map (offscreen tests) can't delete a real session's recovery file.
+        if getattr(self._persistence, "_recovery_checked", False):
+            self._persistence.clear_autosave()
+        # The 3D preview is a *top-level* window (Scene3DWindow.__init__ passes
+        # parent None), so stop_threads below cannot see it — findChildren only
+        # walks the object tree. It owns two workers of its own, including the
+        # photo warmer, and its closeEvent stops both. Close it first rather
+        # than teaching stop_threads about a second root.
+        win3d = getattr(self, "_scene3d_window", None)
+        if win3d is not None:
+            try:
+                win3d.close()
+            except RuntimeError:                 # already destroyed
+                pass
+        # Join the background workers before the window (their parent) goes
+        # away. A QThread destroyed while still running is a qFatal abort, not
+        # an exception — so without this, quitting during a terrain download or
+        # a wind fetch crashes on the way out instead of closing. See
+        # qt_safety.stop_threads for why it never terminate()s one.
+        from src.qt_safety import stop_threads
+        for name in stop_threads(self):
+            _log.warning("worker %s did not stop before exit", name)
         event.accept()
 
     # ── Keyboard shortcuts ────────────────────────────────────────────────────

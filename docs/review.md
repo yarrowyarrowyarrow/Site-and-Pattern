@@ -83,7 +83,7 @@ flag drift without having to re-derive the rule.
 
 ### Code patterns
 - **Tests are stdlib `unittest`**, run via
-  `python -m unittest discover -s tests`. Some legacy tests use their
+  `python -m unittest discover -s tests -t .`. Some legacy tests use their
   own custom runner (`test_terrain.py`, `test_climate.py`,
   `test_property_data.py`); those are pytest-style functions and
   `unittest discover` skips them.

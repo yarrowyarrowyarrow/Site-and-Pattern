@@ -44,6 +44,18 @@ _FAKE_PLANTS = {
         "mature_height_meters": 3.0, "mature_canopy_m": 2.0,
         "scientific_name": "Amelanchier alnifolia", "fruit_period": "July–August",
         "fruit_color": "#46295e"},
+    # Regeneration fixtures: a fast deciduous overstory, a full-sun forb it shades
+    # out, and a self-seeding native that colonises the gap.
+    7: {"plant_type": "tree", "years_to_maturity": 12, "growth_curve": "fast_early",
+        "mature_height_meters": 11.0, "mature_canopy_m": 8.0,
+        "deciduous_evergreen": "deciduous", "common_name": "Aspen"},
+    8: {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
+        "mature_height_meters": 0.6, "mature_canopy_m": 0.4,
+        "sun_requirement": "full_sun", "common_name": "Sun forb"},
+    9: {"plant_type": "wildflower", "years_to_maturity": 3, "growth_curve": "steady",
+        "mature_height_meters": 0.7, "mature_canopy_m": 0.5,
+        "sun_requirement": "full_sun,partial_shade", "spread_habit": "self_seeding",
+        "common_name": "Selfseeder"},
 }
 
 
@@ -68,6 +80,49 @@ def _boundary_feature(half_deg=0.0005):
 def _project(features):
     return {"type": "FeatureCollection", "properties": {"site_config": {}},
             "features": list(features)}
+
+
+def _existing_tree(foliage=""):
+    props = {"element_type": "existing_tree", "height_m": 10.0,
+             "canopy_radius_m": 3.0, "label": "Tree"}
+    if foliage:
+        props["tree_foliage"] = foliage
+    return {"type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [_LNG, _LAT]},
+            "properties": props}
+
+
+class TestExistingTreeFoliageShape(unittest.TestCase):
+    """An existing tree's foliage must drive BOTH its 3D crown shape (the
+    viewer keys conifer off genus + foliage_type) and its seasonal colour /
+    winter bareness (foliage_type). Rule (V2.26): explicit deciduous →
+    broadleaf; evergreen OR unknown → conifer (matching the shade model's
+    unknown-is-year-round rule). Setting foliage_type was the fix for
+    conifers rendering as deciduous — genus alone left _isDecid(undefined)
+    colouring/baring them like broadleaf."""
+
+    def _tree_plant(self, foliage):
+        scene = build_scene(_project([_existing_tree(foliage)]),
+                            get_plant=_get_plant)
+        trees = [p for p in scene["plants"] if p.get("existing")]
+        self.assertEqual(len(trees), 1)
+        return trees[0]
+
+    def test_evergreen_renders_as_conifer(self):
+        p = self._tree_plant("evergreen")
+        self.assertEqual(p["genus"], "spruce")
+        self.assertEqual(p["foliage_type"], "evergreen")
+
+    def test_unknown_defaults_to_conifer(self):
+        # Conifer-dominated sites + shade model treats unknown as year-round.
+        p = self._tree_plant("")
+        self.assertEqual(p["genus"], "spruce")
+        self.assertEqual(p["foliage_type"], "evergreen")
+
+    def test_explicit_deciduous_is_broadleaf(self):
+        p = self._tree_plant("deciduous")
+        self.assertEqual(p["genus"], "")
+        self.assertEqual(p["foliage_type"], "deciduous")
 
 
 class TestSceneBasics(unittest.TestCase):
@@ -106,6 +161,34 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(young["height_m"], 5.0)    # linear, 10/20 years
         self.assertEqual(young["canopy_m"], 3.0)
         self.assertEqual(mature["plant_type"], "tree")
+
+    def test_regeneration_recruits_fill_gaps(self):
+        # V2.24: when the closing canopy shades a plant to death, a self-seeding
+        # native already in the design recruits into the gap — the mature scene
+        # shows recovery, not a permanent bare spot.
+        n2 = 2.0 / 111320.0
+        n8 = 8.0 / 111320.0
+        proj = _project([
+            plant_feature({"plant_id": 7, "common_name": "Aspen",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 8, "common_name": "Sun forb",
+                           "lat": _LAT + n2, "lng": _LNG}),
+            plant_feature({"plant_id": 9, "common_name": "Selfseeder",
+                           "lat": _LAT + n8, "lng": _LNG}),
+        ])
+        young = build_scene(proj, year=1, get_plant=_get_plant)["plants"]
+        mature = build_scene(proj, year=25, get_plant=_get_plant)["plants"]
+        # Nothing recruited before anything died.
+        self.assertFalse(any(p.get("recruit") for p in young))
+        # The forb has been shaded out (opacity 0) and a recruit has grown in.
+        forb = next(p for p in mature if p["common_name"] == "Sun forb")
+        self.assertEqual(forb["health_state"], "dead")
+        recruits = [p for p in mature if p.get("recruit")]
+        self.assertTrue(recruits, "the gap should be colonised by year 25")
+        self.assertEqual(recruits[0]["plant_type"], "wildflower")
+        # It renders as a real (young, healthy) plant, not a ghost.
+        self.assertEqual(recruits[0]["health_state"], "healthy")
+        self.assertGreater(recruits[0]["opacity"], 0.0)
 
     def test_foliage_type_and_month_for_3d_forms(self):
         # The 3D viewer keys crown shape (conifer vs deciduous) and seasonal
@@ -354,6 +437,125 @@ class TestTerrainAndSun(unittest.TestCase):
                             when=datetime(2025, 1, 21, 1, 0))
         self.assertFalse(noon["is_night"])
         self.assertTrue(night["is_night"])
+
+
+class TestSceneWind(unittest.TestCase):
+    """F68 — the site's real wind reaches the 3D scene.
+
+    Before this the viewer swayed in a hard-coded diagonal at a fixed
+    amplitude, while src/wind.py had known the site's seasonal prevailing wind
+    since V1.67 and src/wind_shadow.py had known the design's own lee since
+    V1.68. Neither reached the one surface where a person would believe it.
+    """
+
+    def _project(self, **site):
+        cfg = {"latitude": 51.05, "longitude": -114.07}
+        cfg.update(site)
+        return {"type": "FeatureCollection", "features": [],
+                "properties": {"site_config": cfg}}
+
+    def test_wind_block_from_the_projects_stored_figure(self):
+        sc = build_scene(self._project(wind_prevailing_deg=292.5,
+                                       wind_mean_kmh=17.4),
+                         get_plant=lambda _i: {})
+        self.assertIsNotNone(sc["wind"])
+        self.assertAlmostEqual(sc["wind"]["from_deg"], 292.5)
+        self.assertAlmostEqual(sc["wind"]["mean_kmh"], 17.4)
+        # Honest about where it came from — a stored annual figure is not a
+        # fetched seasonal rose (P9).
+        self.assertTrue(sc["wind"]["approximate"])
+
+    def test_no_wind_block_when_the_site_wind_is_unknown(self):
+        sc = build_scene(self._project(), get_plant=lambda _i: {})
+        self.assertIsNone(sc["wind"],
+                          "a site with no known wind must not get a fabricated "
+                          "one — the viewer keeps its generic sway")
+
+    def test_season_follows_the_scene_month(self):
+        from src.wind_scene import season_for_month
+        self.assertEqual(season_for_month(1), "winter")
+        self.assertEqual(season_for_month(7), "summer")
+        self.assertEqual(season_for_month(10), "fall")
+
+    def test_seasonal_rose_beats_the_stored_annual_figure(self):
+        """The four seasonal blocks have been computed and cached since V1.67
+        and read from exactly one place. A prairie yard's January wind is not
+        its July wind, and the 3D view is where that shows."""
+        from src.wind_scene import wind_block
+        rose = {"annual": {"prevailing_deg": 270.0, "mean_speed": 15.0},
+                "seasons": {"winter": {"prevailing_deg": 315.0,
+                                       "mean_speed": 28.0}}}
+        got = wind_block(self._project(wind_prevailing_deg=200.0),
+                         month=1, get_rose=lambda _a, _b: rose)
+        self.assertAlmostEqual(got["from_deg"], 315.0)
+        self.assertAlmostEqual(got["mean_kmh"], 28.0)
+        self.assertEqual(got["season"], "winter")
+
+    def test_viewer_reads_the_block(self):
+        """A contract test, not a style one: the scene can carry wind all day
+        and change nothing if the viewer never applies it."""
+        src = _read_scene3d("01b-surface.js")
+        for token in ("uWindDir", "uShelter", "applySceneWind"):
+            self.assertIn(token, src, f"01b-surface.js lost {token}")
+        self.assertIn("applySceneWind(sc.wind)", _read_scene3d("05-flowers.js"),
+                      "permaSetScene never applies the scene's wind block")
+
+
+def _read_scene3d(name):
+    path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "html", "scene3d", name)
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
+class TestSpeciesField(unittest.TestCase):
+    """The scene carries `species`, not just `genus`.
+
+    A genus is not always one tree. Trembling aspen and balsam poplar are both
+    *Populus* and were byte-identical geometry because the viewer only ever saw
+    "populus" — a 20 m tree with a round trembling leaf on a narrow crown drawn
+    as a 25 m one with an ovate leaf on a broad crown. The epithet is what lets
+    the viewer's species table override the genus fallback, so if this field
+    stops being emitted the split silently collapses back to one sprite.
+    """
+
+    def test_species_is_genus_plus_epithet(self):
+        self.assertEqual(_species("Populus tremuloides"), "populus tremuloides")
+        self.assertEqual(_species("Populus balsamifera"), "populus balsamifera")
+
+    def test_cultivar_and_authority_are_dropped(self):
+        # 'Goodland' and 'Norland' apples are the same tree to a renderer, and
+        # an authority is not part of the name the viewer keys on.
+        self.assertEqual(_species("Malus domestica 'Goodland'"),
+                         "malus domestica")
+        self.assertEqual(_species("Picea glauca (Moench) Voss"), "picea glauca")
+
+    def test_a_bare_genus_yields_no_species(self):
+        self.assertEqual(_species("Salix"), "")
+        self.assertEqual(_species(""), "")
+
+    def test_the_viewer_prefers_species_over_genus(self):
+        """`profileFor` must consult the species table FIRST — reversed, every
+        Populus falls into the genus entry and the split does nothing."""
+        js = _read_plants_js()
+        body = js[js.index("function profileFor(p)"):]
+        body = body[:body.index("}")]
+        self.assertLess(
+            body.index("TREE_SPECIES_PROFILES"), body.index("TREE_PROFILES["),
+            "profileFor checks the genus table before the species one, so a "
+            "species profile can never win")
+
+
+def _species(scientific_name):
+    from src.scene_contract import _species_of        # noqa: PLC0415
+    return _species_of({"scientific_name": scientific_name})
+
+
+def _read_plants_js():
+    path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "html", "scene3d", "02-plants.js")
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
 
 
 if __name__ == "__main__":

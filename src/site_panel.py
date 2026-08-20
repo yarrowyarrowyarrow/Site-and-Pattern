@@ -29,7 +29,45 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QProgressBar, QTabWidget, QTextEdit,
 )
 
-from src import ui_style
+from src import glossary, ui_style
+
+#: Appended to each explained widget's stylesheet so the widget's own `color:`
+#: cannot reach its tooltip. Light card, dark text, a little padding — legible
+#: whichever half of the row you happen to hover (V2.58).
+_TOOLTIP_CSS = (
+    " QToolTip { color: #10200f; background-color: #f2f7ef;"
+    " border: 1px solid #6c8f6c; border-radius: 4px; padding: 6px 8px;"
+    " font-size: 11px; font-weight: normal; }")
+
+
+def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
+    """Put the glossary's explanation of ``key`` on a Site Info row (F122).
+
+    On **both** widgets, which is the whole point. Every tooltip this panel had
+    before V2.55 was attached to the *value* label, so hovering "Zone:" — the
+    word a beginner is actually stuck on — showed nothing at all, while hovering
+    the number beside it explained itself. ``addRow("Zone:", w)`` builds that
+    caption implicitly and ``labelForField`` is how you get it back.
+
+    Silently does nothing for an unknown key: a missing tooltip is a gap, a
+    traceback while building the panel is an outage. ``tests/test_glossary.py``
+    is what makes sure no key is missing.
+    """
+    text = glossary.tooltip_html(key, **ctx)
+    if not text:
+        return
+    value.setToolTip(text)
+    caption = form.labelForField(value)
+    if caption is not None:
+        caption.setToolTip(text)
+    # Block the stylesheet cascade (V2.58). These value labels set `color:` for
+    # their own text, and Qt lets that reach the QToolTip child — which is why
+    # hovering a value gave pale green on pale grey while hovering its caption
+    # was fine. Naming QToolTip explicitly on the same widget stops it.
+    for w in (value, caption):
+        if w is None:
+            continue
+        w.setStyleSheet((w.styleSheet() or "") + _TOOLTIP_CSS)
 
 
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
@@ -219,7 +257,7 @@ class SitePanel(QWidget):
     ecoregion_detected = pyqtSignal(object)       # AB ecoregion key (str) or "" (V1.87)
     # "Browse N reference communities →" clicked; carries the ecoregion key
     # so MainWindow can open the community library pre-filtered (V2.13).
-    browse_communities_requested = pyqtSignal(str)
+    browse_communities_requested = pyqtSignal(object)  # list[str] (V2.38)
 
     # Address search (geocode + place pin). Emitted when the user has
     # selected a result; MainWindow places the pin on the map and the
@@ -242,16 +280,17 @@ class SitePanel(QWidget):
     # One-time offline soil-pack download (Gridded SLC, V1.67).
     download_soil_requested = pyqtSignal()
 
-    # Shade overlay (V1.51): show/clear, live opacity, and a (month, day, hour)
-    # time selection for the time-of-day / season view.
-    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour) | None}
-    shade_cleared   = pyqtSignal()
-    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
-    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
-    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
+    # The shade overlay's controls moved to Analysis -> Sun & Shade in V2.38
+    # (one date and one clock for the arc and the shadows both); its signals
+    # went with them and now live on AnalysisPanel. What stays here is the
+    # capture of what is already on the ground, below.
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
+    # Detect existing tree crowns from the satellite photo itself (V2.26) —
+    # OSM rarely maps individual trees outside cities, so rural/acreage
+    # properties get their shade casters from the imagery instead.
+    tree_detect_requested = pyqtSignal()
     # Bulk-download a region's building footprints for offline reuse (V1.66).
     download_buildings_requested = pyqtSignal()
 
@@ -298,6 +337,25 @@ class SitePanel(QWidget):
         self._build_ui()
         self._set_empty_state()
 
+    def set_first_step(self, text: str):
+        """Show the current getting-started step at the top of the Site tab
+        (F45). Empty text hides the line."""
+        lbl = getattr(self, "_first_step", None)
+        if lbl is None:
+            return
+        lbl.setText(text or "")
+        lbl.setVisible(bool(text))
+
+    def focus_address_search(self):
+        """Put the cursor in the address box (F44 — 'Start from my yard' and
+        the step-1 chip both land here). Selects any existing text so typing
+        replaces it."""
+        try:
+            self._addr_input.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._addr_input.selectAll()
+        except (AttributeError, RuntimeError):
+            pass
+
     def attach_map_widget(self, map_widget):
         """Wire the panel to the map widget so the address finder can
         bias its query against the map's current view centre."""
@@ -314,22 +372,24 @@ class SitePanel(QWidget):
         outer.setSpacing(0)
 
         from src.fill_tab_widget import FillTabWidget
-        tabs = FillTabWidget()
+        # Four wide labels on a narrow panel — opt into shrink-to-fit (with
+        # elide) so a crowded strip compresses evenly instead of clipping the
+        # first tab off-screen (the "te Information" bug when Field Notes was
+        # selected; same fix as the Planning panel's six tabs).
+        tabs = FillTabWidget(allow_shrink=True)
         tabs.setDocumentMode(True)
         tabs.tabBar().setUsesScrollButtons(False)
         tabs.tabBar().setExpanding(True)
-        # Tighter tab padding than the stock sub-tab style: four labels — one
-        # of them "Existing Features & Shade" — have to fit the panel's 260 px
-        # minimum (same trick as the Analysis strip).
+        tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
+        # Tighter tab padding than the stock sub-tab style: four labels have
+        # to fit the panel's 300 px minimum (same trick as the Analysis strip).
         tabs.setStyleSheet(inner_tab_stylesheet()
                            + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)
 
-        self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
+        self._build_info_page(self._add_scroll_page(tabs, "Site Info"))
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
-        # "&&" — a single "&" is a Qt mnemonic marker and vanishes from view.
-        self._build_shade_page(
-            self._add_scroll_page(tabs, "Existing Features && Shade"))
+        self._build_features_page(self._add_scroll_page(tabs, "Features"))
         self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
     def _add_scroll_page(self, tabs, title):
@@ -347,6 +407,18 @@ class SitePanel(QWidget):
 
     def _build_info_page(self, layout):
         """Site Information sub-tab: property pin/address + climate + soil."""
+        # F45: the current step, stated before anything else on the panel the
+        # user lands on first. Text comes from src/onboarding.first_step_line,
+        # so this and the getting-started strip always say the same thing.
+        self._first_step = QLabel("")
+        self._first_step.setWordWrap(True)
+        self._first_step.setVisible(False)
+        self._first_step.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; font-weight: bold; "
+            "padding: 6px 8px; background: #1e3320; "
+            "border: 1px solid #3e5c3e; border-radius: 4px;")
+        layout.addWidget(self._first_step)
+
         info = QLabel(
             "Search an Alberta address below to drop a property pin and "
             "auto-fill site data from public sources. Drag the pin to refine; "
@@ -377,6 +449,10 @@ class SitePanel(QWidget):
         search_row.addWidget(self._addr_input, 1)
 
         self._btn_search = QPushButton("Find")
+        self._btn_search.setToolTip(
+            "Look the address up and list matches below — click one to drop\n"
+            "the property pin there. No internet? Use “Use Pin Drop…” instead."
+        )
         self._btn_search.setStyleSheet(_BTN_PRIMARY)
         self._btn_search.clicked.connect(self._on_address_search)
         search_row.addWidget(self._btn_search)
@@ -416,11 +492,20 @@ class SitePanel(QWidget):
         btn_row.addWidget(self._btn_drop)
 
         self._btn_refresh = QPushButton("Refresh data")
+        self._btn_refresh.setToolTip(
+            "Re-fetch this site's climate, soil, elevation and frost dates.\n"
+            "Results are cached with the project, so this is only needed if\n"
+            "you moved the pin or were offline the first time."
+        )
         self._btn_refresh.setStyleSheet(_BTN_SECONDARY)
         self._btn_refresh.clicked.connect(self._refresh_clicked)
         btn_row.addWidget(self._btn_refresh)
 
         self._btn_clear = QPushButton("Clear pin")
+        self._btn_clear.setToolTip(
+            "Remove the property pin and the site data fetched for it.\n"
+            "Your boundary and plants are not affected."
+        )
         self._btn_clear.setStyleSheet(_BTN_SECONDARY)
         self._btn_clear.clicked.connect(self.pin_clear_requested.emit)
         btn_row.addWidget(self._btn_clear)
@@ -449,29 +534,17 @@ class SitePanel(QWidget):
         self._lbl_hard_src = QLabel("")
         self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_hard_src.setWordWrap(True)
+        # Tooltips for these rows come from src/glossary.py via _explain()
+        # below, not from inline strings here (V2.55). Three of them used to be
+        # written out at this spot; the glossary is now the single source, so
+        # the panel and the companion that will read these out later cannot
+        # drift into saying two different things about one number.
         self._lbl_gdd   = QLabel("—")
         self._lbl_gdd.setStyleSheet("color: #c8e6c9;")
-        self._lbl_gdd.setToolTip(
-            "Growing-degree days (base 5 °C) — cumulative summer warmth "
-            "across the growing season. The single best predictor of "
-            "whether a plant has enough heat to flower, fruit, and reach "
-            "maturity at this location."
-        )
         self._lbl_frost = QLabel("—")
         self._lbl_frost.setStyleSheet("color: #c8e6c9;")
-        self._lbl_frost.setToolTip(
-            "Average last spring frost → first fall frost, computed "
-            "from the last 5 years of daily temperatures."
-        )
         self._lbl_ecoregion = QLabel("—")
         self._lbl_ecoregion.setStyleSheet("color: #c8e6c9;")
-        self._lbl_ecoregion.setToolTip(
-            "Auto-detected from the property's latitude and longitude. "
-            "The plant filter's ecoregion dropdown pre-populates from "
-            "this value, so the suggestions you see are filtered to "
-            "species native to your area. You can still override the "
-            "filter manually."
-        )
         # Ecoregion → community library cross-link (V2.13): once a region is
         # detected, jump to the Plant Communities tab with the Habitat filter
         # pre-set — from "where am I" straight to "what belongs here" (P2/P8).
@@ -488,8 +561,9 @@ class SitePanel(QWidget):
             "member plants are documented from this ecoregion.")
         self._btn_browse_comms.setVisible(False)
         self._btn_browse_comms.clicked.connect(
-            lambda: self.browse_communities_requested.emit(self._eco_key))
-        self._eco_key = ""
+            lambda: self.browse_communities_requested.emit(
+                list(getattr(self, "_eco_keys", []) or [])))
+        self._eco_keys: list[str] = []
 
         hl.addRow("Zone:",                self._lbl_zone)
         hl.addRow("Source:",              self._lbl_hard_src)
@@ -497,6 +571,16 @@ class SitePanel(QWidget):
         hl.addRow("Frost window:",        self._lbl_frost)
         hl.addRow("Ecoregion:",           self._lbl_ecoregion)
         hl.addRow("",                     self._btn_browse_comms)
+        # After addRow, always: labelForField only resolves once the row exists.
+        # The zone gets its base explanation here and a refreshed one naming the
+        # measured zone in _on_hardiness — set once at build time it would go
+        # stale, which reads as working while naming the wrong winter.
+        _explain(hl, self._lbl_zone,      glossary.ZONE)
+        _explain(hl, self._lbl_hard_src,  glossary.HARDINESS_SOURCE)
+        _explain(hl, self._lbl_gdd,       glossary.GDD)
+        _explain(hl, self._lbl_frost,     glossary.FROST_WINDOW)
+        _explain(hl, self._lbl_ecoregion, glossary.ECOREGION)
+        self._hard_form = hl
         layout.addWidget(self._hard_box)
 
         # ── Climate context (V2.13) ──────────────────────────────────
@@ -510,14 +594,8 @@ class SitePanel(QWidget):
         self._lbl_info_elev.setStyleSheet("color: #c8e6c9;")
         self._lbl_info_aspect = QLabel("—")
         self._lbl_info_aspect.setStyleSheet("color: #c8e6c9;")
-        self._lbl_info_aspect.setToolTip(
-            "Which way the ground faces. South-facing slopes run warmer and "
-            "drier; north-facing stay cooler and hold snow longer.")
         self._lbl_info_wind = QLabel("—")
         self._lbl_info_wind.setStyleSheet("color: #c8e6c9;")
-        self._lbl_info_wind.setToolTip(
-            "Annual prevailing direction from hourly ERA5 history "
-            "(cached offline). Full seasonal wind rose: Analysis → Wind.")
         self._lbl_wind_hint = QLabel("")
         self._lbl_wind_hint.setWordWrap(True)
         self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
@@ -526,6 +604,9 @@ class SitePanel(QWidget):
         cl.addRow("Aspect:",          self._lbl_info_aspect)
         cl.addRow("Prevailing wind:", self._lbl_info_wind)
         cl.addRow("",                 self._lbl_wind_hint)
+        _explain(cl, self._lbl_info_elev,   glossary.ELEVATION)
+        _explain(cl, self._lbl_info_aspect, glossary.ASPECT)
+        _explain(cl, self._lbl_info_wind,   glossary.PREVAILING_WIND)
         layout.addWidget(self._climate_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -561,6 +642,11 @@ class SitePanel(QWidget):
         rl.addRow("Snow → melt:",  self._lbl_rain_snow)
         rl.addRow("",             self._lbl_rain_note)
         rl.addRow("Source:",      self._lbl_rain_src)
+        _explain(rl, self._lbl_rain_annual,  glossary.RAIN_ANNUAL)
+        _explain(rl, self._lbl_rain_monthly, glossary.RAIN_MONTHLY)
+        _explain(rl, self._lbl_rain_growing, glossary.RAIN_GROWING)
+        _explain(rl, self._lbl_rain_snow,    glossary.RAIN_SNOW)
+        _explain(rl, self._lbl_rain_src,     glossary.RAIN_SOURCE)
         layout.addWidget(self._rain_box)
 
         # ── Winter cover & survival (snow as insulation) ─────────────
@@ -577,6 +663,8 @@ class SitePanel(QWidget):
         wl.addRow("Snow cover:", self._lbl_winter_cover)
         wl.addRow("Thaw stress:", self._lbl_winter_thaw)
         wl.addRow("", self._lbl_winter_notes)
+        _explain(wl, self._lbl_winter_cover, glossary.SNOW_COVER)
+        _explain(wl, self._lbl_winter_thaw,  glossary.THAW_STRESS)
         self._winter_box.setVisible(False)   # shown once metrics arrive
         layout.addWidget(self._winter_box)
 
@@ -596,6 +684,11 @@ class SitePanel(QWidget):
         sl.addRow("Sand/Silt/Clay:", self._lbl_soil_mix)
         sl.addRow("Reported depth:", self._lbl_soil_depth)
         sl.addRow("Source:",        self._lbl_soil_src)
+        _explain(sl, self._lbl_soil_ph,      glossary.SOIL_PH)
+        _explain(sl, self._lbl_soil_texture, glossary.SOIL_TEXTURE)
+        _explain(sl, self._lbl_soil_mix,     glossary.SOIL_MIX)
+        _explain(sl, self._lbl_soil_depth,   glossary.SOIL_DEPTH)
+        _explain(sl, self._lbl_soil_src,     glossary.SOIL_SOURCE)
 
         # One-time offline soil pack (Gridded Soil Landscapes of Canada): real
         # per-location soil offline, instead of the regional approximation that
@@ -1003,6 +1096,10 @@ class SitePanel(QWidget):
 
         slope_btn_row = QHBoxLayout()
         btn_auto = QPushButton("Generate")
+        btn_auto.setToolTip(
+            "Download elevation data for this area and draw contour lines +\n"
+            "a slope map. Needs a property pin (or a boundary) first."
+        )
         btn_auto.setStyleSheet(_BTN_PRIMARY)
         btn_auto.clicked.connect(self._on_auto_terrain_generate)
         slope_btn_row.addWidget(btn_auto)
@@ -1029,14 +1126,16 @@ class SitePanel(QWidget):
 
         layout.addStretch()
 
-    def _build_shade_page(self, layout):
-        """Existing Features & Shade sub-tab, in workflow order (V2.13):
-        capture what's already on the site (import, then by hand) BEFORE the
-        shade map — shade is only as real as the casters feeding it. The
-        satellite-alignment nudge stays last (cosmetic)."""
+    def _build_features_page(self, layout):
+        """What is already on the site: import it, then add what the import
+        missed by hand. The satellite-alignment nudge stays last (cosmetic).
+
+        This was "Features && Shade" until V2.38, and it was two things under
+        one label — capturing existing trees and buildings is data entry, and
+        the shade they cast is analysis. The shade map now lives on
+        Analysis → Sun & Shade, next to the sun that casts it."""
         self._build_osm_section(layout)
         self._build_existing_features_section(layout)
-        self._build_shade_section(layout)
         self._build_imagery_align_section(layout)
         layout.addStretch()
 
@@ -1113,9 +1212,6 @@ class SitePanel(QWidget):
             self._lbl_label.setText(self._label)
         else:
             self._lbl_label.setText("(custom pin)")
-        # Re-clamp the shade time slider to this location's daylight window.
-        if hasattr(self, "_shade_season"):
-            self._on_shade_season_changed(self._shade_season.currentIndex())
         self._reset_data_rows()
         if fetch:
             self._start_fetch()
@@ -1201,7 +1297,7 @@ class SitePanel(QWidget):
         self._lbl_gdd.setText(_DASH)
         self._lbl_frost.setText(_DASH)
         self._lbl_ecoregion.setText(_DASH)
-        self._eco_key = ""
+        self._eco_keys = []
         self._btn_browse_comms.setVisible(False)
         self._lbl_info_elev.setText(_DASH)
         self._lbl_info_aspect.setText(_DASH)
@@ -1309,25 +1405,35 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+        # Re-explain the zone now that we know which one it is (F122, V2.55).
+        # This is the row whose explanation depends on the measured value, so it
+        # is refreshed here rather than left at the generic text set at build
+        # time — and it is the call site climate.zone_description() never had.
+        _explain(self._hard_form, self._lbl_zone, glossary.ZONE, zone=zone)
 
     def _on_ecoregion(self, data):
-        """Surface the auto-detected ecoregion in the readout and push it to the
-        plant panel live (V1.87).
+        """Surface the auto-detected ecoregion(s) in the readout and push them
+        to the plant panel live (V1.87; multi-valued V2.38).
 
-        Emits ``ecoregion_detected`` with the region key so the plant library's
-        "Restoring toward…" filter updates for *this* session only — no longer
-        persisted to QSettings, so a region never sticks across unrelated
-        sessions. An empty string clears it (pin outside known regions)."""
+        Emits ``ecoregion_detected`` with the region keys so the plant
+        library's "Restoring toward…" filter updates for *this* session only —
+        not persisted to QSettings, so a region never sticks across unrelated
+        sessions. An empty list clears it (pin outside known regions).
+
+        A site near a boundary is in two ecoregions and both are sent. Sending
+        only the first is how the plant list quietly lost the half of its range
+        that was across the line."""
         if not data:
             self._lbl_ecoregion.setText("Outside known regions")
-            self._eco_key = ""
+            self._eco_keys = []
             self._btn_browse_comms.setVisible(False)
-            self.ecoregion_detected.emit("")
+            self.ecoregion_detected.emit([])
             return
         label = data.get("label") or data.get("key") or "—"
         self._lbl_ecoregion.setText(f"{label}  (auto)")
-        self._eco_key = data.get("key") or ""
-        n = self._count_reference_communities(self._eco_key)
+        self._eco_keys = list(data.get("keys")
+                              or ([data["key"]] if data.get("key") else []))
+        n = self._count_reference_communities(self._eco_keys)
         if n:
             self._btn_browse_comms.setText(
                 f"Browse {n} reference communit{'y' if n == 1 else 'ies'} "
@@ -1335,23 +1441,37 @@ class SitePanel(QWidget):
             self._btn_browse_comms.setVisible(True)
         else:
             self._btn_browse_comms.setVisible(False)
-        self.ecoregion_detected.emit(self._eco_key)
+        self.ecoregion_detected.emit(list(self._eco_keys))
+
+    @property
+    def _eco_key(self) -> str:
+        """First detected ecoregion key, or ``""``.
+
+        Back-compat for the single-key readers that predate the V2.38 move to
+        a list (the community cross-link's payload builder). Read-only —
+        detection writes ``_eco_keys``.
+        """
+        keys = getattr(self, "_eco_keys", None) or []
+        return keys[0] if keys else ""
 
     @staticmethod
-    def _count_reference_communities(eco_key: str) -> int:
-        """How many top-level saved communities have this ecoregion as their
-        dominant habitat facet — the count shown on the cross-link."""
-        if not eco_key:
+    def _count_reference_communities(eco_keys) -> int:
+        """How many top-level saved communities sit in any of these ecoregions
+        — the count shown on the cross-link."""
+        if isinstance(eco_keys, str):
+            eco_keys = [eco_keys] if eco_keys else []
+        if not eco_keys:
             return 0
         try:
             from src.db import polycultures
-            label = polycultures.ECOREGION_LABELS.get(eco_key)
-            if not label:
+            labels = {polycultures.ECOREGION_LABELS.get(k) for k in eco_keys}
+            labels.discard(None)
+            if not labels:
                 return 0
             idx = polycultures.get_library_index()
             return sum(1 for e in idx.values()
                        if e["parent_id"] is None
-                       and e["facets"].get("habitat") == label)
+                       and e["facets"].get("habitat") in labels)
         except Exception:
             return 0
 
@@ -1583,23 +1703,12 @@ class SitePanel(QWidget):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
 
-    # ── Shade overlay (V1.51) ──────────────────────────────────────────────
-
-    @staticmethod
-    def _nearest_key_date_index() -> int:
-        """Index into solar.KEY_DATES of the key date closest to today, by
-        circular day-of-year distance — so the shade view opens in the season
-        the user is actually standing in (V2.13)."""
-        from datetime import date
-        from src.solar import KEY_DATES
-        today = date.today().timetuple().tm_yday
-        best_i, best_d = 0, 400
-        for i, d in enumerate(KEY_DATES.values()):
-            doy = d.timetuple().tm_yday
-            dist = min(abs(doy - today), 365 - abs(doy - today))
-            if dist < best_d:
-                best_i, best_d = i, dist
-        return best_i
+    # ── The caster inventory ───────────────────────────────────────────────
+    # The shade *map* moved to Analysis → Sun & Shade in V2.38. This line
+    # stayed, because it belongs where the casters are entered: it answers
+    # "did my import land?" the moment you press the button, not one tab away.
+    # Analysis shows the same line from the same formatter, where it answers
+    # the other question — "will the shade I am about to draw be real?".
 
     def update_caster_summary(self, project_dict: dict):
         """Refresh the 'Casting shade: …' inventory line from the project's
@@ -1608,226 +1717,13 @@ class SitePanel(QWidget):
         lbl = getattr(self, "_caster_summary", None)
         if lbl is None:
             return
-        trees = buildings = 0
-        for f in (project_dict or {}).get("features") or []:
-            props = f.get("properties") or {}
-            et = props.get("element_type")
-            if et == "existing_tree":
-                trees += 1
-            elif et == "existing_building":
-                buildings += 1
-            elif (et == "canopy_footprint"
-                  or (et == "custom_shape" and props.get("cast_shade"))):
-                if props.get("caster_kind") == "tree":
-                    trees += 1
-                else:
-                    buildings += 1
-        if trees == 0 and buildings == 0:
-            lbl.setText("No existing features yet — import or draw them "
-                        "above so the shade is real.")
-            lbl.setStyleSheet("color: #ffcc80; font-size: 11px;")
-        else:
-            lbl.setText(
-                f"Casting shade: {buildings} building"
-                f"{'s' if buildings != 1 else ''} · {trees} tree"
-                f"{'s' if trees != 1 else ''} (+ your placed plants, "
-                "automatically).")
-            lbl.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-
-    def _build_shade_section(self, parent_layout):
-        """Show-shade button + opacity, plus season & time-of-day selectors that
-        drive the time-aware shade overlay (src/shade.py + ShadeWorker)."""
-        from src.solar import KEY_DATES
-        box = QGroupBox("Shade map")
-        box.setToolTip("Cast shade from existing trees/buildings and the "
-                       "design's own canopy, at a chosen season and time of day.")
-        v = QVBoxLayout(box)
-        v.setContentsMargins(6, 6, 6, 6)
-        v.setSpacing(4)
-
-        # Caster inventory (V2.13): tells the user whether the shade below
-        # will be real BEFORE they click — refreshed by update_caster_summary.
-        self._caster_summary = QLabel(
-            "No existing features yet — import or draw them above so the "
-            "shade is real.")
-        self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        v.addWidget(self._caster_summary)
-
-        season_row = QHBoxLayout()
-        season_row.addWidget(QLabel("Season:"))
-        self._shade_season = QComboBox()
-        # data = (month, day). V1.58: the overlay always shows a crisp single
-        # instant (a real date + the time slider) so shadows track the sun and
-        # match each building's outline — no season-averaged "blob". Planting-zone
-        # classification still uses the season average internally (separate path).
-        for label, d in KEY_DATES.items():
-            self._shade_season.addItem(label, (d.month, d.day))
-        # Default to the key date nearest today (V2.13) — opening in July
-        # should show July-ish sun, not whatever happens to be listed first.
-        self._shade_season.setCurrentIndex(self._nearest_key_date_index())
-        self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
-        season_row.addWidget(self._shade_season)
-        v.addLayout(season_row)
-
-        time_row = QHBoxLayout()
-        time_row.addWidget(QLabel("Time:"))
-        self._shade_hour = QSlider(Qt.Orientation.Horizontal)
-        # Minutes since midnight in 15-min steps, so shadows sweep smoothly
-        # rather than jumping by whole hours. 5 AM – 9 PM local solar by default.
-        self._shade_hour.setRange(5 * 60, 21 * 60)
-        self._shade_hour.setSingleStep(15)
-        self._shade_hour.setPageStep(60)
-        self._shade_hour.setValue(15 * 60)      # mid-afternoon: long, clearly
-                                                # directional shadows by default
-        self._shade_hour_lbl = QLabel("15:00")
-        self._shade_hour.valueChanged.connect(
-            lambda v: self._shade_hour_lbl.setText(f"{v // 60:02d}:{v % 60:02d}"))
-        # Scrub the slider to sweep shadows across the day. A short debounce
-        # coalesces rapid drags into one recompute, and only a real day (not
-        # "Typical") drives a live overlay — the averaged view has no time.
-        self._shade_scrub = QTimer(self)
-        self._shade_scrub.setSingleShot(True)
-        self._shade_scrub.setInterval(180)
-        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
-        self._shade_hour.valueChanged.connect(self._on_shade_hour_scrubbed)
-        time_row.addWidget(self._shade_hour)
-        time_row.addWidget(self._shade_hour_lbl)
-        v.addLayout(time_row)
-
-        opa_row = QHBoxLayout()
-        opa_row.addWidget(QLabel("Opacity:"))
-        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
-        self._shade_opacity.setRange(0, 100)
-        self._shade_opacity.setValue(50)
-        self._shade_opacity.valueChanged.connect(
-            lambda val: self.shade_opacity.emit(val / 100.0))
-        opa_row.addWidget(self._shade_opacity)
-        v.addLayout(opa_row)
-
-        btn_row = QHBoxLayout()
-        btn_show = QPushButton("Show shade")
-        btn_show.setStyleSheet(_BTN_PRIMARY)
-        btn_show.clicked.connect(self._on_show_shade)
-        btn_row.addWidget(btn_show)
-        btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_BTN_SECONDARY)
-        btn_clear.clicked.connect(self.shade_cleared.emit)
-        btn_row.addWidget(btn_clear)
-        v.addLayout(btn_row)
-
-        # Classify each planting cell as full sun / partial / full shade from
-        # the season-average grid and cache the tags (src/db/shade_zones.py) so
-        # plant matching can read them without recomputing.
-        btn_classify = QPushButton("Classify planting zones")
-        btn_classify.setStyleSheet(_BTN_SECONDARY)
-        btn_classify.setToolTip(
-            "Tag every spot full sun / partial shade / full shade from the "
-            "season-average shade, and cache it for plant matching.")
-        btn_classify.clicked.connect(self.shade_zones_requested.emit)
-        v.addWidget(btn_classify)
-
-        # Show-on-map toggle + colour legend for the classified zones.
-        zrow = QHBoxLayout()
-        self._zones_show_cb = QCheckBox("Show on map")
-        self._zones_show_cb.setChecked(True)
-        self._zones_show_cb.setToolTip(
-            "Show/hide the classified planting zones on the map.")
-        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
-        zrow.addWidget(self._zones_show_cb)
-        legend = QLabel(
-            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
-            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
-            '<span style="color:#5c6bc0">■</span> Full shade')
-        legend.setStyleSheet("font-size: 11px;")
-        zrow.addWidget(legend)
-        zrow.addStretch()
-        v.addLayout(zrow)
-
-        self._shade_zone_status = QLabel("")
-        self._shade_zone_status.setWordWrap(True)
-        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-        v.addWidget(self._shade_zone_status)
-
-        # Leaf-off honesty note (V2.13): shown for leaf-off dates so the
-        # lighter shadows under tagged deciduous trees aren't read as a bug.
-        self._shade_leafoff_note = QLabel(
-            "🍂 Deciduous trees are shown leaf-off for this date — bare "
-            "branches cast ~30% shade. Trees marked without a type still "
-            "cast full shade.")
-        self._shade_leafoff_note.setWordWrap(True)
-        self._shade_leafoff_note.setStyleSheet(
-            "color: #90a4ae; font-size: 10px;")
-        self._shade_leafoff_note.setVisible(False)
-        v.addWidget(self._shade_leafoff_note)
-
-        parent_layout.addWidget(box)
-
-    def mark_zones_shown(self):
-        """Re-check the 'Show on map' box (without re-emitting) after a classify
-        run draws the zones, so the toggle reflects what's on the map."""
-        self._zones_show_cb.blockSignals(True)
-        self._zones_show_cb.setChecked(True)
-        self._zones_show_cb.blockSignals(False)
-
-    def set_shade_zone_status(self, text: str):
-        """Show a short result line under the Classify button."""
-        if hasattr(self, "_shade_zone_status"):
-            self._shade_zone_status.setText(text)
-
-    def _on_show_shade(self):
-        season = self._shade_season.currentData()    # (month, day) or None
-        when = None
-        if season is not None:
-            v = self._shade_hour.value()             # minutes since midnight
-            when = (season[0], season[1], v // 60, v % 60)
-            # Hand the keyboard to the Time slider (V2.13): ←/→ scrub the
-            # shadows across the day immediately after showing them (the
-            # live-scrub debounce recomputes the overlay per step).
-            self._shade_hour.setFocus(Qt.FocusReason.OtherFocusReason)
-        self.shade_requested.emit({"when": when})
-
-    def _on_shade_season_changed(self, _idx):
-        """Clamp the time slider to the chosen day's sunrise→sunset so the user
-        scrubs only through real daylight, and label the ends. Falls back to the
-        generic 5 AM–9 PM range until a site location is known."""
-        season = self._shade_season.currentData()
-        # Leaf-off note for dates when deciduous crowns are bare (Oct–Apr).
-        if hasattr(self, "_shade_leafoff_note"):
-            from src.shade import _LEAF_OFF_MONTHS
-            self._shade_leafoff_note.setVisible(
-                season is not None and season[0] in _LEAF_OFF_MONTHS)
-        if season is None or self._lat is None or self._lng is None:
-            self._shade_hour.setRange(5 * 60, 21 * 60)
-            return
-        try:
-            from datetime import date
-            from src.solar import sunrise_sunset
-            sr, ss = sunrise_sunset(self._lat, self._lng,
-                                    date(2025, season[0], season[1]))
-            lo = max(0, int(sr * 60))                  # floor sunrise (minutes)
-            hi = min(24 * 60 - 1, int(ss * 60) + 15)   # a touch past sunset
-            if hi <= lo:
-                lo, hi = 5 * 60, 21 * 60
-        except Exception:  # noqa: BLE001 — fall back to the generic window
-            lo, hi = 5 * 60, 21 * 60
-        cur = self._shade_hour.value()
-        self._shade_hour.setRange(lo, hi)
-        self._shade_hour.setValue(min(max(cur, lo), hi))
-
-    def _on_shade_hour_scrubbed(self, _h):
-        """Slider moved — debounce a live overlay recompute (real days only)."""
-        if self._shade_season.currentData() is None:
-            return                          # averaged view has no time-of-day
-        self._shade_scrub.start()           # (re)arm the debounce
-
-    def _emit_shade_for_scrub(self):
-        season = self._shade_season.currentData()
-        if season is None:
-            return
-        v = self._shade_hour.value()                 # minutes since midnight
-        self.shade_requested.emit(
-            {"when": (season[0], season[1], v // 60, v % 60)})
+        from src import sun_shade
+        buildings, trees = sun_shade.caster_counts(project_dict)
+        text, have = sun_shade.caster_summary(
+            buildings, trees, where="this tab")
+        lbl.setText(text)
+        lbl.setStyleSheet(
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
 
     # ── Existing shade casters: mark/draw trees & buildings ────────────────
     # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
@@ -1852,6 +1748,15 @@ class SitePanel(QWidget):
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         vb.addWidget(hint)
+
+        # Running total of what will cast shade, refreshed by
+        # update_caster_summary — so an import that found nothing says so here,
+        # where you would go to fix it.
+        self._caster_summary = QLabel("")
+        self._caster_summary.setWordWrap(True)
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self.update_caster_summary(None)
+        vb.addWidget(self._caster_summary)
 
         dims = QHBoxLayout()
         dims.addWidget(QLabel("Height (m):"))
@@ -1982,15 +1887,16 @@ class SitePanel(QWidget):
     def _build_osm_section(self, parent_layout):
         box = QGroupBox("Existing features — import")
         box.setToolTip("Start here: pull what's already on and around the "
-                       "site from OpenStreetMap so the shade map below has "
-                       "real casters to work with. Anything missing can be "
-                       "drawn or marked by hand in the next section.")
+                       "site from OpenStreetMap so the shade map (Analysis → "
+                       "Sun & Shade) has real casters to work with. Anything "
+                       "missing can be drawn or marked by hand in the next "
+                       "section.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
         hint = QLabel("Captures what's already there using your drawn "
                       "property boundary (plus the neighbour margin below); "
                       "with no boundary it searches ≈60 m around the pin. "
-                      "The shade map below is only as real as these features.")
+                      "The shade map is only as real as these features.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         v.addWidget(hint)
@@ -2004,7 +1910,7 @@ class SitePanel(QWidget):
         v.addWidget(slow_note)
         # The section's one primary action — the partner of "Show shade".
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
-        btn = QPushButton("Import building && tree outlines")
+        btn = QPushButton("Import Building Outlines")
         btn.setStyleSheet(_BTN_PRIMARY)
         btn.setToolTip(
             "Traces nearby building perimeters — with heights from "
@@ -2017,6 +1923,51 @@ class SitePanel(QWidget):
             "Imported features cast shade and keep plants off them.")
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
+
+        # Trees from the imagery itself (V2.26): OSM's tree coverage is near
+        # zero outside city cores, so treed acreages got nothing from the
+        # import above — this reads crowns off the same satellite photo the
+        # map displays, anywhere in the world.
+        btn_trees = QPushButton("Import Tree Outlines")
+        btn_trees.setStyleSheet(_BTN_PRIMARY)
+        btn_trees.setToolTip(
+            "Finds individual trees on the property so the shade map has real "
+            "casters — OpenStreetMap rarely maps trees outside cities.\n"
+            "Reads the free global 1 m canopy-height map (Meta/WRI): each "
+            "tree's position and HEIGHT are measured from real height data "
+            "(±≈3 m), and crown size is estimated from height — the same "
+            "method professional forestry tools use.\n"
+            "Uses your boundary plus the neighbour margin below. Select any "
+            "tree and press Delete to remove it. Needs internet; falls back "
+            "to reading the satellite photo (less reliable) when height data "
+            "can't be reached.")
+        btn_trees.clicked.connect(self.tree_detect_requested.emit)
+        v.addWidget(btn_trees)
+
+        # Detection sensitivity: the shortest crown to call a tree. Lower =
+        # more (and smaller) trees — the canopy-height map underestimates
+        # isolated crowns, so 2 m catches spaced acreage trees a 3 m floor
+        # missed; raise it if a busy site picks up shrubs.
+        mh_row = QHBoxLayout()
+        mh_lbl = QLabel("Min tree height:")
+        mh_tip = ("Trees shorter than this (measured from the canopy-height "
+                  "map) are skipped. Lower it to catch more/smaller trees; "
+                  "raise it if detection picks up shrubs or hedges.")
+        mh_lbl.setToolTip(mh_tip)
+        mh_row.addWidget(mh_lbl)
+        self._tree_min_height = QDoubleSpinBox()
+        self._tree_min_height.setRange(1.0, 15.0)
+        self._tree_min_height.setSingleStep(0.5)
+        self._tree_min_height.setDecimals(1)
+        self._tree_min_height.setSuffix(" m")
+        self._tree_min_height.setValue(float(QSettings().value(
+            "site/tree_min_height", 2.0, type=float)))
+        self._tree_min_height.setToolTip(mh_tip)
+        self._tree_min_height.valueChanged.connect(
+            lambda v_: QSettings().setValue("site/tree_min_height", v_))
+        mh_row.addWidget(self._tree_min_height)
+        mh_row.addStretch(1)
+        v.addLayout(mh_row)
 
         # Neighbour margin (V2.13): how far past the boundary to keep
         # buildings — a tall neighbour still shades the site. 0 = strictly
@@ -2100,6 +2051,16 @@ class SitePanel(QWidget):
     def osm_neighbour_margin(self) -> float:
         """How far past the boundary the OSM import keeps neighbours (m)."""
         return float(self._osm_margin.value())
+
+    def tree_min_height(self) -> float:
+        """Minimum crown height (m) to count as a tree in auto-detection."""
+        return float(self._tree_min_height.value())
+
+    def satellite_offset(self) -> tuple:
+        """Current satellite-alignment nudge as ``(east_m, north_m)``. The
+        basemap is *displayed* shifted by this much, so imagery-derived
+        positions (tree detection) add it to land in data space."""
+        return (float(self._sat_east.value()), float(self._sat_north.value()))
 
     # ── Offline building-pack download (V1.66) ─────────────────────────────
 
@@ -2264,8 +2225,15 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.results.connect(self._on_geocode_results)
+        # F45: a dead end is where a beginner gives up, so the failure names
+        # the way through instead of only the problem. Address search is the
+        # app's only networked *entry* point — offline, pin-drop is not a
+        # workaround, it is the supported path.
         worker.failed.connect(
-            lambda msg: self._lbl_status.setText(f"Search failed: {msg}")
+            lambda msg: self._lbl_status.setText(
+                f"Search failed ({msg}). Address lookup needs the internet — "
+                f"use “Use Pin Drop…” below and click your yard "
+                f"on the map instead.")
         )
         # Auto-teardown chain — see _start_fetch for why we don't delete
         # threads synchronously.
@@ -2282,7 +2250,11 @@ class SitePanel(QWidget):
         self._addr_results.clear()
         if not hits:
             self._addr_results.setVisible(False)
-            self._lbl_status.setText("No Alberta results.")
+            # F45: say what to try next, not just that nothing was found.
+            self._lbl_status.setText(
+                "No Alberta results. Try a nearby intersection or town name — "
+                "or click “Use Pin Drop…” and click your yard on "
+                "the map.")
             return
         for h in hits:
             item = QListWidgetItem(h["label"])

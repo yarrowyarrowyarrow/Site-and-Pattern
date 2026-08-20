@@ -19,6 +19,7 @@ import os
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -127,7 +128,11 @@ class TestRealDBLazyFetch(unittest.TestCase):
         # Find a seeded plant tagged keystone_species and confirm the lazy
         # fauna fetch path runs and yields badges including "Keystone".
         from src.db.plants import get_connection, get_plant
-        with get_connection() as conn:
+        # closing(), not `with get_connection()`: sqlite3's own context
+        # manager commits or rolls back a TRANSACTION and leaves the
+        # connection open, which is where this suite's
+        # 'ResourceWarning: unclosed database' noise came from.
+        with closing(get_connection()) as conn:
             row = conn.execute(
                 "SELECT pu.plant_id FROM plant_uses pu "
                 "JOIN uses u ON u.id = pu.use_id "

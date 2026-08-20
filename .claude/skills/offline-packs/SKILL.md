@@ -225,7 +225,7 @@ python -m unittest tests.test_building_store tests.test_soil_grid tests.test_ter
     tests.test_soil_downloader tests.test_building_downloader tests.test_building_flow -v
 
 # Full suite before done (stdlib unittest only — no pytest):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 The `unittest` command above was run in this session and passes (`OK`, with the

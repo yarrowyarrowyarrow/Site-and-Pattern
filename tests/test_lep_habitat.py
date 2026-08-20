@@ -70,6 +70,11 @@ class TestLepSchemaSeed(unittest.TestCase):
         for lp in leps:
             self.assertIn(lp.get("lep_kind"), ("butterfly", "moth", "skipper"),
                           f"{lp['common_name']} has no/invalid kind")
+            # "unknown" is an accepted answer, as it already is for
+            # `overwintering_stage` (V2.63). F127 added 46 leps whose
+            # phenology nobody has recorded, and writing "June-August" for
+            # each would be 46 measurements that never happened. What must
+            # not happen is a SILENTLY blank field.
             self.assertTrue(lp.get("flight_season"),
                             f"{lp['common_name']} has no flight season")
 
@@ -147,6 +152,7 @@ class TestShippedData(unittest.TestCase):
             self.assertIn(e.get("kind"), ("butterfly", "moth", "skipper"), sci)
             self.assertIn(e.get("overwintering_stage"),
                           ("egg", "larva", "pupa", "adult", "migrant", "unknown"), sci)
+            # May be the literal "unknown" — see test_every_lep_has_attributes.
             self.assertTrue(e.get("flight_season"), sci)
 
     def test_seed_resolves_against_fauna(self):

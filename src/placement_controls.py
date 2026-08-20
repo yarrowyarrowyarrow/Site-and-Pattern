@@ -104,6 +104,17 @@ class PlacementControlsWidget(QWidget):
     a burst-quantity spinner that lives outside this widget)."""
 
     patternKindChanged = pyqtSignal(str)
+    # Any change to WHAT would be placed — the kind, or any of its parameters.
+    #
+    # Until V2.38 only the kind was announced, which was harmless while the user
+    # pressed "Place on Map" after setting things up: current_pattern() was read
+    # fresh at that moment. Once selecting a plant started arming the map
+    # (V2.37), the pattern was read at SELECTION time instead, so a Count set
+    # afterwards never reached the map — you asked for 11 in a row and got the
+    # 3 that "auto" derived from the spacing. Every control that feeds
+    # current_pattern() emits this now, so "what is armed" cannot drift from
+    # "what is on screen".
+    patternChanged = pyqtSignal()
 
     def __init__(
         self,
@@ -340,6 +351,21 @@ class PlacementControlsWidget(QWidget):
                 QSizePolicy.Policy.Preferred,
                 QSizePolicy.Policy.Preferred if i == 0
                 else QSizePolicy.Policy.Ignored)
+
+        # Announce every parameter current_pattern() reads. Gathered in one list
+        # at the end rather than wired at each construction site, so a control
+        # added later is visibly absent from it — the failure mode is silent
+        # otherwise, and it is the map quietly placing the previous thing.
+        for _control in (self._row_count, self._grid_rows, self._grid_cols,
+                         self._circle_count, self._fill_spacing,
+                         self._overlap_slider):
+            _control.valueChanged.connect(self._emit_pattern_changed)
+        for _control in (self._row_drift, self._grid_stagger, self._circle_fill,
+                         self._fill_matrix, self._canopy_base_checkbox):
+            _control.toggled.connect(self._emit_pattern_changed)
+
+    def _emit_pattern_changed(self, *_args):
+        self.patternChanged.emit()
 
     # ── Public API ────────────────────────────────────────────────────
 

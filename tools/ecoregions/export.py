@@ -1,0 +1,169 @@
+"""Stage 6 — write the spatial files other things consume.
+
+    python -m tools.ecoregions.export
+
+Writes, from ``out/ecoregions.gpkg``:
+
+  ``out/ecoregions_ab_sk.gpkg``      full resolution, ESRI:102001. Source of truth.
+  ``out/ecoregions_ab_sk.geojson``   full resolution, WGS84.
+  ``out/ecoregions_app.geojson``     simplified, WGS84, shaped for the app.
+
+WHY THREE FILES
+-------------------------------------------------------------------------------
+They answer different questions. The GeoPackage is the archival copy: one file,
+CRS carried properly, no precision lost, and the projected CRS other GIS tools
+expect. The full GeoJSON is the interchange copy. The simplified one is the only
+one small enough to ship inside a desktop installer and read on every page of a
+static site, which is what the app actually needs.
+
+Keeping the unsimplified version as the source of truth is the point of the
+split. Simplification is lossy and its tolerance is a judgement call; once the
+simplified file is the only copy, that judgement can never be revisited.
+
+WHAT THIS STAGE DELIBERATELY DOES NOT DO
+-------------------------------------------------------------------------------
+It does not overwrite ``data/ecoregions_canada.geojson``. That file feeds
+``src.ecoregion.lookup_ecoregions``, which decides which plants get recommended
+for somebody's actual garden; swapping it changes recommendations for every
+existing site, and it needs the region-key vocabulary, the plant filter, the
+GBIF-derived ranges and the schema version considered together. The rebuild
+brief scopes that out of the first run on purpose. ``--adopt`` prints what
+adopting would involve and still does not do it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+from tools.ecoregions.common import (CRS_PROJECTED, CRS_WGS84, OUT, REPO,
+                                     repair, require)
+from tools.ecoregions.harmonize import GPKG
+
+GPKG_OUT = OUT / "ecoregions_ab_sk.gpkg"
+GEOJSON_FULL = OUT / "ecoregions_ab_sk.geojson"
+GEOJSON_APP = OUT / "ecoregions_app.geojson"
+
+#: Simplification tolerance for the app copy, in degrees. Matches the basemap's:
+#: about 900 m, which is a fifth of a pixel on the widest map that draws it, and
+#: far finer than the polygons' own 1:1 000 000 source scale.
+_TOLERANCE = 0.008
+_COORD_DP = 4
+
+
+def _round(obj):
+    if isinstance(obj, (int, float)):
+        return round(float(obj), _COORD_DP)
+    return [_round(item) for item in obj]
+
+
+def run(*, adopt: bool = False) -> int:
+    require("geopandas", "shapely")
+    import geopandas as gpd
+    import shapely
+
+    if not GPKG.exists():
+        raise SystemExit(
+            f"{GPKG} does not exist.\n"
+            "  Run:  python -m tools.ecoregions.harmonize")
+    regions = gpd.read_file(GPKG, layer="ecoregions")
+
+    regions.to_crs(CRS_PROJECTED).to_file(GPKG_OUT, layer="ecoregions",
+                                          driver="GPKG")
+    wgs = regions.to_crs(CRS_WGS84)
+    wgs.to_file(GEOJSON_FULL, driver="GeoJSON")
+
+    simple = wgs.copy()
+    simple["geometry"] = simple.geometry.simplify(_TOLERANCE,
+                                                  preserve_topology=True)
+    # `preserve_topology=True` preserves each ring's own topology; it does not
+    # promise the result is a valid polygon, and at this tolerance it is
+    # sometimes not. The first real export came out with a self-intersection at
+    # -112.563, 51.953 that the full-resolution GeoPackage did not have, and
+    # nothing noticed until the adoption stage tried to dissolve it. The
+    # simplified file is the one that ships, so it is the one that has to be
+    # valid.
+    simple = repair(simple, "simplified export")
+    still_bad = int((~simple.geometry.is_valid).sum())
+    if still_bad:
+        raise SystemExit(
+            f"{still_bad} geometries are still invalid after repair. Refusing "
+            f"to write a broken layer - lower _TOLERANCE and try again.")
+    features = []
+    for _, row in simple.iterrows():
+        geometry = json.loads(shapely.to_geojson(row.geometry))
+        geometry["coordinates"] = _round(geometry["coordinates"])
+        properties = {k: (None if v != v else v)
+                      for k, v in row.drop("geometry").items()}
+        features.append({"type": "Feature", "properties": properties,
+                         "geometry": geometry})
+    GEOJSON_APP.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "name": "Ecoregions of Alberta and Saskatchewan (simplified)",
+        "comment": (
+            "National Ecological Framework for Canada v2.2 ecoregions clipped "
+            "to Alberta and Saskatchewan, with the Alberta natural subregion "
+            "attached by spatial overlap. Simplified to "
+            f"{_TOLERANCE} degrees for display and app use; the unsimplified "
+            "source of truth is ecoregions_ab_sk.gpkg. Generated by "
+            "tools/ecoregions."),
+        "features": features,
+    }, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    for path in (GPKG_OUT, GEOJSON_FULL, GEOJSON_APP):
+        print(f"  wrote {path.relative_to(REPO)}  "
+              f"({path.stat().st_size / 1e6:.2f} MB)")
+
+    if adopt:
+        print(_adoption_notes(sorted(regions["ecoregion"].dropna().unique())))
+    return 0
+
+
+def _adoption_notes(names: list) -> str:
+    return "\n".join([
+        "",
+        "=" * 74,
+        "  ADOPTING THIS INTO THE APP - what it would involve",
+        "=" * 74,
+        "",
+        "  Nothing below has been done. This is a checklist, not a report.",
+        "",
+        f"  The build resolves {len(names)} ecoregions:",
+        *[f"      {n}" for n in names],
+        "",
+        "  1. The region vocabulary is the polygon file (V2.38). Replacing",
+        "     data/ecoregions_canada.geojson changes the filter dropdown, the",
+        "     data validator and the per-species range tags all at once.",
+        "  2. data/plant_ecoregions.json holds GBIF-derived ranges keyed by the",
+        "     OLD region keys. Those keys do not survive this change, so",
+        "     scripts/seed_ecoregion_ranges.py has to be re-run against the new",
+        "     polygons or every species loses its range evidence.",
+        "  3. src/ecoregion_palette.py needs a colour per new region, and",
+        "     tests/test_ecoregion.py will then say which pairs need a hatch.",
+        "  4. tests/test_ecoregion.py pins about twenty city lookups. Some will",
+        "     legitimately change - Calgary is the obvious one, it sits on the",
+        "     prairie/foothills transition and the placeholder gives it",
+        "     fescue_foothills by fiat. Each change needs a human decision and",
+        "     a note, not a bulk update.",
+        "  5. _SCHEMA_VERSION in src/db/plants.py must be bumped or existing",
+        "     installs never reseed and never see any of it.",
+        "",
+        "  That is a piece of work with real consequences for real gardens.",
+        "  Review the layer first.",
+        "=" * 74,
+        "",
+    ])
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--adopt", action="store_true",
+                        help="print what adopting this into the app would "
+                             "involve (does not change anything)")
+    args = parser.parse_args(argv)
+    return run(adopt=args.adopt)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

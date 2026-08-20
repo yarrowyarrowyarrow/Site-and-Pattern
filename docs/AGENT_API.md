@@ -23,6 +23,8 @@ the reference behind it.
 from src.permadesign_api import (
     Project, query_plants, list_polycultures, list_structures,
     run_analysis, export_plant_catalogue_docx,
+    relationship_web, plant_relationships,
+    establishment, reference_fidelity,
 )
 ```
 
@@ -110,6 +112,100 @@ Returns:
 ```
 Raises `AnalysisError` if the plant DB can't be read.
 
+### How sure are we? (F13 / F14)
+
+```python
+establishment(project: Project, ecoregion: str | None = None) -> dict
+reference_fidelity(project: Project, ecoregion: str | None = None) -> dict
+```
+
+Both answer with a **band, never a percentage** — `src.confidence.Band`
+(`key`, `label`, `blurb`, `known`) — because the inputs are a curated spec and a
+catalogue with known gaps, and three significant figures over that is the false
+precision P9 forbids.
+
+`establishment` bands each placed species by its **georeferenced occurrence
+count** in `ecoregion` (schema v59/v60, which carries a count, a confidence band
+and a source per region):
+
+```jsonc
+{
+  "ecoregion": "aspen_parkland", "known": true,
+  "species": [{"plant_id": 12, "name": "Saskatoon Berry", "n": 3,
+               "occurrences": 312, "band": Band(key="high", …),
+               "source": "GBIF, retrieved 2026-08-02"}],
+  "counts": {"high": 4, "low": 1, "unknown": 2},
+  "lines": ["…", "No occurrence record in this ecoregion for 2 species …"]
+}
+```
+
+**A species with no record bands as `unknown`, never as unsuitable.** Below the
+three-record floor an absent species and an under-collected one are
+indistinguishable, and saying so is the point. `known` is `false` for the whole
+readout when the project has no site pin — there is no "somewhere" to be well
+recorded in.
+
+`reference_fidelity` compares the design's **structure** (per-layer presence and
+proportion, genus overlap as a capped bonus) against
+`reference_community(ecoregion)`, returning `{band, score, known, reference,
+layers, matched_species, missing_layers, lines}`. A low band is not a failure —
+a rain garden is deliberately unlike its reference — and `known` is `false`
+when there is nothing to compare, which is a different answer from a low score.
+
+Both raise `AnalysisError` if the plant DB can't be read.
+
+### Relationships (F5 / F7)
+
+```python
+relationship_web(project: Project, kinds: list | None = None) -> dict
+plant_relationships(plant_id: int) -> dict
+```
+
+`relationship_web` returns the design as a graph — species nodes at their
+planting centroid, wildlife nodes on a ring outside it, one edge per
+relationship, plus a legend and stats:
+
+```jsonc
+{
+  "nodes": [
+    {"id": "p12", "type": "plant", "plant_id": 12, "label": "Wild Bergamot",
+     "lat": 51.05, "lng": -114.07, "count": 4, "degree": 6, "on_ring": false},
+    {"id": "f88", "type": "fauna", "fauna_id": 88, "label": "Monarch",
+     "taxon": "lepidoptera", "lat": ..., "lng": ..., "on_ring": true,
+     "specialist": true, "only_source": true}
+  ],
+  "edges": [{"a": "p12", "b": "f88", "kind": "larval_host",
+             "phrase": "caterpillar host for", "strength": 1.0,
+             "evidence": "documented", "a_lat": ..., "b_lng": ...}],
+  "legend": [{"kind": "larval_host", "label": "Caterpillar host", "count": 9}],
+  "ring":  {"lat": ..., "lng": ..., "radius_m": 27.6, "lanes": 2},
+  "stats": {"species": 8, "wildlife": 24, "edges": 27, "specialists": 3,
+            "single_support": 21, "isolated": [], "dropped_fauna": 0,
+            "derived_edges": 0}
+}
+```
+
+`kinds` narrows the edge vocabulary (`src.db.relationships.EDGE_KINDS`);
+the default draws the food web and shelter. `stats.dropped_fauna` is what the
+readability cap left out — it is reported, never silently thinned.
+
+`plant_relationships` is the catalogue-wide version for one species — the
+"show me everything connected to this plant" query — grouped by kind and
+resolved to names:
+
+```jsonc
+{"plant_id": 12, "total": 9,
+ "groups": [{"kind": "larval_host", "label": "Caterpillar host",
+             "phrase": "caterpillar host for", "color": "#8bc34a",
+             "items": [{"id": 88, "type": "fauna", "name": "Monarch",
+                        "detail": "specialist", "strength": 1.0,
+                        "evidence": "documented"}]}]}
+```
+
+Every edge carries `evidence`: `documented` (a seeded record with a `source`)
+or `derived` (computed — e.g. two plants that feed the same animal). Both raise
+`AnalysisError` if the DB can't be read.
+
 ### Export
 
 ```python
@@ -157,6 +253,7 @@ python -m src.cli <subcommand> …      # or `permadesign <subcommand> …` once
 | `list-structures [--json]` | habitat structures |
 | `analyze <project.perma.geojson> [--json]` | habitat score of a saved project |
 | `export-catalogue <out.docx>` | plant catalogue → DOCX |
+| `build-site <dir> [--base-url --no-photos --include-notes]` | plant directory → static website (§4a) |
 | `generate <prompt> --out <project> [--lat --lng --endpoint --model]` | generate a design from a prompt via a local LLM (§4) |
 | `validate-data [--quiet --no-warnings]` | check shipped seed JSON |
 
@@ -302,6 +399,58 @@ proj.save("understory.perma.geojson")
 
 Tests inject a fake client (a canned spec), so generation is verified
 offline — see [`tests/test_llm_design.py`](../tests/test_llm_design.py).
+
+---
+
+## 4a. The catalogue as a static website (`src.static_site`)
+
+`build-site` renders the F90 plant directory as plain files — no framework, no
+build step, no CDN, no request to anything at run time.
+
+```bash
+python -m src.cli build-site public/ --base-url https://plants.example.org
+```
+
+| What it writes | Count against the shipped catalogue |
+|---|---|
+| `plants/<slug>/` | 439 species pages, each with a range map |
+| `wildlife/<slug>/` | 86 animals, *the plants documented to support each one* |
+| `plants/` | every species, filtered client-side across **23 axes** |
+| `plants/colour/<key>/` | colour buckets (F108) |
+| `plants/blooming-in/<month>/` | bloom months |
+| `plants/ecoregion/<region>/` | ecoregions, each with its extent drawn |
+| `plants/type/<form>/`, `plants/for/<role>/` | growth form, ecological role |
+| `map/` | the clickable ecoregion map |
+| `sitemap.xml`, `robots.txt`, `assets/` | stylesheet, filter script, JSON index |
+
+**The searchable axes are one table**, `src/site_facets.py`, driving the filter
+sidebar, the values baked into each index row and the landing pages together.
+Adding a facet there adds all three. They are deliberately *not*
+`search_plants` parameters: the site filters in the browser, so an axis costs a
+derivation function rather than a thirty-first parameter on a query layer the
+desktop shares.
+
+Three layers, all Qt-free: `src/static_site.py` builds the page model (every
+collaborator injectable, so the link graph can be asserted with no database),
+`src/static_site_render.py` turns it into HTML, and `src/static_site_species.py`
+renders the one page with real internal structure. Species pages come from the
+*same* `plant_directory.species_entry` the desktop window calls, so the two
+surfaces cannot drift. Maps come from `src/ecoregion_map.py` as inline SVG.
+
+**Two behaviours worth knowing before you publish:**
+
+- **Photographs are copied from the local image cache when it has them** and
+  fall back to the recorded URL when it does not; the build reports both counts.
+  A photograph with no attribution is not published at all.
+- **The free-text `notes` column is withheld by default**, and so is the
+  `medicinal` use tag (`site_facets.WITHHELD_ROLES`). Around 43 rows describe
+  traditional medicinal and plant-use practice, and publishing that to the open
+  web is out of scope for this project without free, prior and informed consent
+  (Principle 12). `--include-notes` overrides the notes; the structured
+  horticultural columns publish either way.
+- **No em dash reaches a rendered page.** Normalised in `_esc`, guarded by
+  `tests/test_static_site.py`, because most of the prose comes out of the
+  database rather than out of this repository.
 
 ---
 

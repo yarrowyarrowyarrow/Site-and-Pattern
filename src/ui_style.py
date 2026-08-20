@@ -21,6 +21,18 @@ these instead (site_panel.py migrated in V2.13).
 from __future__ import annotations
 
 
+# The app's base surface — dark green ground, pale text. It normally reaches a
+# widget by inheritance from `app.py:_APP_STYLE`, which is set on the
+# MainWindow. A window that opens *before* the MainWindow exists (the V2.40
+# start menu) has nothing to inherit from and lands on the platform's default
+# light palette, where this app's pale-green text is close to invisible. Such a
+# window carries this itself. Mirrors the first block of `_APP_STYLE` — if that
+# palette moves, move it here too.
+BASE_SURFACE = (
+    "QWidget { background-color: #1a2a1a; color: #c8e6c9; "
+    "font-family: 'Segoe UI', 'Arial', sans-serif; font-size: 13px; }"
+)
+
 GROUP_STYLE = (
     "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; "
     "margin-top: 10px; padding-top: 12px; }"
@@ -51,6 +63,60 @@ BTN_DOWNLOAD = (
 )
 
 
+# ── The tab hierarchy ────────────────────────────────────────────────────────
+# The side panel nests three deep — Plants → On This Design → Stats — and until
+# V2.37 every level used `inner_tab_stylesheet()` verbatim, on the stated
+# grounds that one look everywhere is consistent. A tester bounced off it: with
+# identical size, weight, colour and underline at every level, three stacked
+# strips read as three peer toolbars rather than as a path into the app. (The
+# top bar was in fact the *tighter* of the two, which inverted the cue.)
+#
+# So the levels differ deliberately now, and differ by WEIGHT and GROUND rather
+# than size: `FillTabWidget` spreads tabs edge-to-edge and the sidebar's
+# empirical minimum is 300px at ~11px text, so making the six top-level labels
+# bigger would just elide them.
+#
+#   L1 (top)  bold, on a darker ground, selected tab lifted into the pane colour
+#   L2 (sub)  regular, green underline on select — unchanged
+#   L3 (leaf) smaller and dimmer, underline only
+#
+# Don't re-unify these. The sameness was the bug.
+
+def top_tab_stylesheet() -> str:
+    """Stylesheet for the **top-level** side-panel tab bar (Site / Plants /
+    Structures / Analysis / Planning / Learn).
+
+    Reads as the primary navigation: bold, sitting on its own darker ground,
+    with the selected tab lifted into the panel's background colour so it looks
+    joined to the content below it rather than underlined like a sub-tab.
+
+    Measured, not guessed. `FillTabWidget(allow_shrink=True)` gives every tab an
+    EQUAL share when they'd overflow, so the binding constraint is the widest
+    label, not the sum: full labels need `widest × 6`. At 11px that is 456px
+    here, against 426px for the pre-V2.37 style — i.e. **the top strip has
+    always elided at the sidebar's minimum width**, and the old comment claiming
+    300px was sufficient was wrong. ElideRight makes that degrade gracefully and
+    the 480px maximum shows everything.
+
+    So the hierarchy is carried by things that cost no width — a darker ground,
+    and the selected tab lifting into the pane colour instead of being
+    underlined like a sub-tab — plus bold on the SELECTED tab only. Bolding all
+    six, or going to 12px, would have pushed the threshold to 500px+.
+    """
+    return (
+        "QTabWidget::pane { border: 1px solid #2e4a2e; background: #1e2a1e; "
+        "top: -1px; }"
+        "QTabBar { background: #0f1a10; }"
+        "QTabBar::tab { background: #0f1a10; color: #8aa08d; "
+        "padding: 7px 4px; font-size: 11px; "
+        "border: 1px solid transparent; border-bottom: none; }"
+        "QTabBar::tab:selected { background: #1e2a1e; color: #c8e6c9; "
+        "font-weight: bold; "
+        "border: 1px solid #2e4a2e; border-bottom: none; }"
+        "QTabBar::tab:hover:!selected { color: #a5d6a7; background: #16241a; }"
+    )
+
+
 def inner_tab_stylesheet() -> str:
     """Stylesheet for a panel's inner ``QTabWidget`` sub-tab strip — the compact
     green underline-on-select look used by the Plants and Site panels."""
@@ -62,4 +128,24 @@ def inner_tab_stylesheet() -> str:
         "QTabBar::tab:selected { color: #a5d6a7; "
         "border-bottom: 2px solid #66bb6a; }"
         "QTabBar::tab:hover { color: #c8e6c9; }"
+    )
+
+
+def leaf_tab_stylesheet() -> str:
+    """Stylesheet for a **third-level** tab strip (Plants → On This Design →
+    Plants/Communities/Stats).
+
+    Quieter and smaller than a sub-tab so a third strip reads as detail within
+    the second, not as another peer. Replaces the boxed look
+    `on_this_design_panel` had invented for itself, which made the deepest level
+    the most visually prominent of the three.
+    """
+    return (
+        "QTabWidget::pane { border: none; background: #1e2a1e; }"
+        "QTabBar::tab { background: transparent; color: #78909c; "
+        "padding: 3px 9px; font-size: 10px; "
+        "border-bottom: 1px solid transparent; }"
+        "QTabBar::tab:selected { color: #90a4ae; "
+        "border-bottom: 1px solid #4a7a4a; }"
+        "QTabBar::tab:hover { color: #b0bec5; }"
     )

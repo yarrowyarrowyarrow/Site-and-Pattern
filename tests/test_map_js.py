@@ -110,10 +110,11 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "loadHedgerow", "undoHedgerowById",
         "loadShape", "undoCustomShapeById",
         "drawSunPath", "clearSunPath",
-        "drawSectors", "clearSectors",
         "drawWindOverlay", "clearWindOverlay",
-        "setSeasonView", "setTimelineYearByPlantId",
+        "setTimelineYearByPlantId",
         "setBeeForageView", "clearBeeForageView",
+        "drawRelationshipGraph", "setRelationshipGraphVisible",
+        "clearRelationshipGraph",
         "clearContours", "undoLastContour", "finishContour",
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
@@ -438,23 +439,13 @@ class TestOverlays(unittest.TestCase):
         out = mj.draw_sun_path({"hours": []}, lat=53.5, lng=-113.5)
         self.assertIn(", 53.5, -113.5", out)
 
-    def test_draw_sectors_pair(self):
-        self.assertTrue(mj.draw_sectors({}).startswith("drawSectors(JSON.parse("))
-        self.assertIn(", 1.0, 2.0", mj.draw_sectors({}, 1.0, 2.0))
-
     def test_clear_overlays(self):
         self.assertEqual(mj.clear_sun_path(), "clearSunPath();")
-        self.assertEqual(mj.clear_sectors(), "clearSectors();")
         self.assertEqual(mj.clear_wind_overlay(), "clearWindOverlay();")
 
     def test_draw_wind_overlay(self):
         out = mj.draw_wind_overlay({"speed_kts": 8})
         self.assertTrue(out.startswith("drawWindOverlay(JSON.parse("))
-
-    def test_set_season_view(self):
-        out = mj.set_season_view("July", {"7": True, "42": False})
-        self.assertIn('"July"', out)
-        self.assertIn('"7": true', out)
 
     def test_set_timeline_year_by_plant_id(self):
         out = mj.set_timeline_year_by_plant_id(5, {"7": 0.4})
@@ -597,6 +588,117 @@ class TestBeeForageView(unittest.TestCase):
         # A quote in the bee name must not break out of the JS string literal.
         js = mj.set_bee_forage_view('a "cuckoo" bee', {})
         self.assertIn('\\"cuckoo\\"', js)
+
+
+class TestRelationshipGraph(unittest.TestCase):
+    """F5 — the whole graph goes over as one JSON literal."""
+
+    _GRAPH = {
+        "nodes": [{"id": "p1", "type": "plant", "label": "Wild Bergamot",
+                   "lat": 51.0, "lng": -114.0}],
+        "edges": [{"a": "p1", "b": "f2", "kind": "nectar",
+                   "phrase": "nectar for", "color": "#ffb300"}],
+        "legend": [], "ring": {"lat": 51.0, "lng": -114.0, "radius_m": 12.0},
+        "stats": {"species": 1},
+    }
+
+    @staticmethod
+    def _payload(js: str) -> dict:
+        """Undo the JSON.parse("…") double-encoding _jsobj emits."""
+        inner = js[len('drawRelationshipGraph(JSON.parse('):-len('));')]
+        return json.loads(json.loads(inner))
+
+    def test_draw_emits_call_with_payload(self):
+        js = mj.draw_relationship_graph(self._GRAPH)
+        self.assertTrue(js.startswith("drawRelationshipGraph(JSON.parse("))
+        self.assertTrue(js.strip().endswith(");"))
+        payload = self._payload(js)
+        self.assertEqual(payload["edges"][0]["kind"], "nectar")
+        self.assertEqual(payload["ring"]["radius_m"], 12.0)
+
+    def test_labels_survive_quotes_intact(self):
+        # A quote-bearing plant name must round-trip, not break the literal.
+        graph = json.loads(json.dumps(self._GRAPH))
+        graph["nodes"][0]["label"] = 'Bee "balm"'
+        js = mj.draw_relationship_graph(graph)
+        self.assertEqual(self._payload(js)["nodes"][0]["label"], 'Bee "balm"')
+
+    def test_visibility_and_clear(self):
+        self.assertEqual(mj.set_relationship_graph_visible(True),
+                         "setRelationshipGraphVisible(true);")
+        self.assertEqual(mj.set_relationship_graph_visible(False),
+                         "setRelationshipGraphVisible(false);")
+        self.assertEqual(mj.clear_relationship_graph(),
+                         "clearRelationshipGraph();")
+
+
+class TestLayerStackAndClickDispatch(unittest.TestCase):
+    """Source guards for the V2.37 placement fixes.
+
+    Both invariants are the kind a reader would "tidy away" as redundant, and
+    both cost a user-visible bug when they go: a boundary that stops being the
+    bottom layer becomes the topmost click target across the whole property,
+    and a forwarded click that is not stopped can reach onMapClick twice, which
+    gives a pattern two identical anchors and stacks a whole row on one point.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        base = _HTML_PATH.parent / "map"
+        cls.src = {p.name: p.read_text(encoding="utf-8")
+                   for p in sorted(base.glob("*.js"))}
+
+    def test_boundary_is_drawn_in_its_own_low_pane(self):
+        core = self.src["01-core.js"]
+        self.assertIn("createPane('boundaryPane')", core)
+        m = re.search(r"getPane\('boundaryPane'\)\.style\.zIndex\s*=\s*(\d+)",
+                      core)
+        self.assertIsNotNone(m, "boundaryPane has no explicit zIndex")
+        z = int(m.group(1))
+        sat = int(re.search(r"getPane\('satellitePane'\)\.style\.zIndex\s*=\s*(\d+)",
+                            core).group(1))
+        self.assertLess(z, 400, "boundary must sit below Leaflet's overlayPane")
+        self.assertGreater(z, sat, "boundary must sit above the satellite tiles")
+
+    def test_the_boundary_polygon_uses_that_pane(self):
+        poly = re.search(r"L\.polygon\(pts,\s*\{.*?\}\)",
+                         self.src["02-boundary.js"], re.S)
+        self.assertIsNotNone(poly)
+        self.assertIn("pane: 'boundaryPane'", poly.group(0))
+
+    def test_every_onmapclick_forward_stops_its_event_first(self):
+        """A layer handler that forwards to onMapClick must also stop the
+        event, so one physical click can only ever produce one anchor."""
+        for name in ("02-boundary.js", "05-features.js"):
+            body = self.src[name]
+            for m in re.finditer(r"\.on\('click',\s*function\s*\([^)]*\)\s*\{",
+                                 body):
+                # Take the handler body by brace matching from the opening `{`.
+                start = m.end() - 1
+                depth, i = 0, start
+                while i < len(body):
+                    if body[i] == "{":
+                        depth += 1
+                    elif body[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                handler = body[start:i]
+                if "onMapClick(" not in handler:
+                    continue
+                self.assertIn(
+                    "L.DomEvent.stop(e)", handler,
+                    f"{name}: a click handler forwards to onMapClick without "
+                    f"stopping the event first")
+
+    def test_pattern_click_rejects_a_coincident_second_anchor(self):
+        plants = self.src["03-plants.js"]
+        self.assertIn("_MIN_ANCHOR_GAP_M", plants)
+        handler = plants[plants.index("function _handlePatternClick"):]
+        handler = handler[:handler.index("\n    function ", 10)]
+        self.assertIn("_MIN_ANCHOR_GAP_M", handler,
+                      "the degenerate-anchor guard left _handlePatternClick")
 
 
 if __name__ == "__main__":

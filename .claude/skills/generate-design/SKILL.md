@@ -28,7 +28,11 @@ change: if you're tempted to ask the LLM for positions, sizes, or
 distances, stop — that belongs in the placement engine.
 
 The LLM is **optional**: `generate_design_offline` builds a design from
-goal filters + seeded communities with zero network, and
+goal filters + seeded communities with zero network — and since V2.23 it
+speaks the same placement vocabulary (a capacity-sized matrix-grass +
+forbs meadow mix via `_offline_plant_mix`, community pockets / a weighted
+mosaic via `_offline_community_plan`, budgeted by the shared
+`_trim_spec_to_budget`), and
 `src/generate_worker.py` transparently falls back to it on any
 `LLMError`, so the one-click button always yields a design.
 
@@ -49,7 +53,8 @@ src/llm_design.py  generate_design(prompt, …)
   │    keep-out circles + fill regions (src/exclusion.py), scored cell map
   │    (src/placement_score.py build_cell_env_map)
   │ 2. build context digests (palette, communities, structures, fauna, zones)
-  │    → LLMClient.generate_spec → JSON spec {plants, communities, structures}
+  │    → LLMClient.generate_spec → JSON spec {plants, plant_mixes,
+  │      communities, community_mixes, structures} (V2.23: mixes + counts)
   │ 3. _resolve_* : names/queries → catalogue ids (unmatched entries DROP;
   │    all-unmatched raises LLMError). Budget trim BEFORE placement
   │    (src/sourcing.py trim_to_budget).
@@ -157,6 +162,21 @@ Spec safety rails, in order of defence:
 - Per-plant spacing comes from the catalogue (`_plant_spacing_m`),
   falling back to 6 m. Community placement checks `community_fits`
   before anchoring.
+- **The spec drives every manual placement mode (V2.23).**
+  `communities[].count` (≤6) repeats a community, `layout` arranges the
+  repeats (row/grid/circle/scatter); `community_mixes` places N pockets,
+  each pocket one community chosen by `weight` via the SAME
+  `assign_species("even_split")` the Communities-tab mix handler uses —
+  a 2:1 mix over six pockets is exactly 4 + 2, deterministically.
+  `plant_mixes` interleaves 2–4 species through one stand (weights →
+  even-split rotation, spacing = `resolve_spacing(members, "max")`,
+  default layout drift, quantity capped at 60). One-member mixes fold
+  down to plain groups at resolution; budget maths expands counts and
+  expected pocket splits, and drops whole plant mixes (never trims
+  inside one — that would skew its ratios). Facade-placed community
+  members carry the instance's `polyculture_center_*` anchor (V2.23),
+  so generated communities select/delete as units exactly like
+  GUI-placed ones. Tests: `tests/test_generation_mixes.py`.
 
 ## The critic loop (P8/P9 made executable)
 
@@ -228,7 +248,7 @@ registry — adding a `Goal` is one edit. List order = checkbox order.
 Add coverage in `tests/test_design_goals.py`. A goal whose filter has no
 data backing yet should ship `backed=False` with a `prompt_hint` (the
 honest state) rather than a filter that silently matches nothing —
-`docs/data_gaps_v1.44.md` tracks what data each unbacked goal awaits.
+`docs/DATA_GAPS.md` tracks what data each unbacked goal awaits.
 
 ## Pitfalls & gotchas (real ones)
 
@@ -302,7 +322,7 @@ python3 -m unittest tests.test_llm_design tests.test_design_critic \
 python3 -m src.cli generate --no-llm --goal native_only --goal pollinator \
   --lat 53.5461 --lng -113.4938 --out /tmp/gen_check.perma.geojson
 
-python3 -m unittest discover -s tests   # full suite before pushing
+python3 -m unittest discover -s tests -t .   # full suite before pushing
 ```
 
 The Qt dialog/controller layer only gets offscreen smoke coverage — for

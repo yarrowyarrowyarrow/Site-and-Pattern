@@ -56,12 +56,21 @@ class TestSnapshotWindow(unittest.TestCase):
         win.refresh()
         self.assertEqual(len(win._canvases), 4)
         # Every canvas got a scene and a year, sharing one bounds box.
+        # Years are CAPPED at the design's own maturity horizon
+        # (snapshot_timeline.snapshot_years → succession.timeline_max_years):
+        # this fixture places no plants, so the cap is the 20-year floor and
+        # the last snapshot is year 20, not the uncapped 30. (Stale [1,5,15,30]
+        # expectation surfaced in V2.22 — the test needs QtWidgets and had
+        # never actually run in this container before.)
         years = [c._year for c in win._canvases]
-        self.assertEqual(years, [1, 5, 15, 30])
+        from src.snapshot_timeline import snapshot_years
+        self.assertEqual(years, snapshot_years([]))
+        self.assertEqual(years, [1, 5, 15, 20])
         boxes = {id(c._bounds) for c in win._canvases}
         self.assertEqual(len(boxes), 1)
         for c in win._canvases:
             self.assertIsNotNone(c._scene)
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_empty_project_sets_status_and_clears(self):
@@ -71,6 +80,7 @@ class TestSnapshotWindow(unittest.TestCase):
         win = SnapshotWindow(main)
         win.refresh()
         self.assertIn("No plants", win._status.text())
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_open_snapshot_view_singleton(self):

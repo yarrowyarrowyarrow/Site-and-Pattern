@@ -3,24 +3,36 @@ analysis_panel.py — Side-panel tab for site analysis overlays.
 
 Contains inner tabs:
   A1: Sun Path / Shadow overlay
-  A2: Sector Analysis layer
-  A3: Slope / Contour indicator
   A4: Wind / Windbreak effect
   H1: Habitat Value Score (Tallamy-style composite scoring of native habitat quality)
+  plus the observation/design tabs: This Month (phenology) and Bees.
+
+(The Sector, Season and Forage tabs were retired in V2.25: sun and wind cover
+the sector wedges' job, the season tile filter added no design value, and the
+forage calendar lives in Planning → Wildlife. The Field Study / Lessons /
+Present teaching tabs moved to the top-level Learn tab — src/learn_panel.py.)
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QComboBox, QDoubleSpinBox, QSpinBox,
-    QFormLayout, QTabWidget, QSlider, QCheckBox, QColorDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QComboBox, QSpinBox,
+    QFormLayout, QSlider, QCheckBox,
     QGroupBox, QFrame, QTextEdit, QDial, QScrollArea,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable
-from PyQt6.QtGui import QColor, QPixmap
+from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
+from PyQt6.QtGui import QPixmap
+
+
+# Quiet companion to the orange primary on the Sun & Shade tab.
+_SUN_BTN_SECONDARY = (
+    "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+    "border-radius: 4px; padding: 6px; }"
+    "QPushButton:hover { background: #455a64; }"
+)
 
 
 class AnalysisPanel(QWidget):
@@ -29,14 +41,16 @@ class AnalysisPanel(QWidget):
     # A1: Sun path
     sun_path_requested = pyqtSignal(dict)   # {lat, lng, date_key, show_shadows}
     sun_path_cleared = pyqtSignal()
+    sun_time_changed = pyqtSignal(int)      # minutes since midnight (V2.37 scrub)
+    sun_redraw_requested = pyqtSignal(dict)  # redraw at the existing anchor
 
-    # A2: Sector analysis
-    sector_requested = pyqtSignal(dict)     # {sectors: [{name, azimuth, spread, color}], lat, lng, radius}
-    sector_cleared = pyqtSignal()
-
-    # A3: Contour
-    contour_requested = pyqtSignal(dict)    # {interval_m, color, show_labels}
-    contour_cleared = pyqtSignal()
+    # A1 (V2.38): the cast-shade half, moved here from SitePanel so one date
+    # and one clock drive the arc and the shadows together.
+    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour, minute)}
+    shade_cleared   = pyqtSignal()
+    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
+    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
+    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
 
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
@@ -49,13 +63,16 @@ class AnalysisPanel(QWidget):
     # Snow-catch microsites (Step 3): winter drifts in the lee of windbreaks.
     snow_catch_toggled = pyqtSignal(bool)
 
-    # Season view
-    season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
-
     # "What the bee sees" map overlay (F37 increment 3): the Bees tab asks the
     # 2D map to recolour by the selected bee's floral-resource value.
     bee_map_overlay_requested = pyqtSignal(dict)   # {"bee": name, "styles": {pid: fit}}
     bee_map_overlay_cleared = pyqtSignal()
+
+    # F5: relationship web — a whole graph payload from
+    # src.relationship_graph.build_relationship_graph, drawn by
+    # html/map/07-network.js.
+    relationship_overlay_requested = pyqtSignal(dict)
+    relationship_overlay_cleared = pyqtSignal()
 
     # A cached species photo finished downloading off-thread — re-render the
     # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
@@ -69,6 +86,10 @@ class AnalysisPanel(QWidget):
         self._last_habitat_result = None          # for the species gallery re-render
         self._gallery_warmed: set[str] = set()    # image urls already fetched once
         self._lawn_conversion: dict | None = None  # for the F10 counterfactual
+        # Sun & Shade: the site's location, so the clock can span this site's
+        # real daylight before anything has been drawn.
+        self._sun_lat: float | None = None
+        self._sun_lng: float | None = None
         self._build_ui()
 
     def _build_ui(self):
@@ -78,30 +99,30 @@ class AnalysisPanel(QWidget):
 
         from src.ui_style import inner_tab_stylesheet
         from src.fill_tab_widget import FillTabWidget
-        self._tabs = FillTabWidget()
+        # Five sub-tabs on a narrow panel — opt into shrink-to-fit (with
+        # elide) so labels compress instead of the strip clipping off-screen
+        # (the Planning panel uses the same trick for its six tabs).
+        self._tabs = FillTabWidget(allow_shrink=True)
         self._tabs.setDocumentMode(True)
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
+        self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         # Tighter horizontal padding than the stock sub-tab style: this strip
-        # holds five labels and has to fit the side panel's 260px minimum on
-        # macOS too, whose system font renders wider than Windows/Linux at the
-        # same 11px (same trick as the top-level strip in app.py).
+        # has to fit the side panel's 300px minimum on macOS too, whose system
+        # font renders wider than Windows/Linux at the same 11px (same trick
+        # as the top-level strip in app.py).
         self._tabs.setStyleSheet(inner_tab_stylesheet()
                                  + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_sun_tab()
-        self._build_sector_tab()
         # Manual contour drawing moved to Site → Slope analysis (it's
         # site-scale terrain analysis and lives next to the auto-contour
         # generator there).
         self._build_wind_tab()
-        self._build_season_tab()
         self._build_habitat_tab()
-        self._build_forage_tab()
         self._build_phenology_tab()
-        self._build_field_study_tab()
-        self._build_lesson_tab()
-        self._build_present_tab()
+        # Field Study / Lessons / Present moved to the top-level Learn tab
+        # (src/learn_panel.py, V2.25) — teaching tools, not analysis.
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -111,40 +132,140 @@ class AnalysisPanel(QWidget):
     # ═════════════════════════════════════════════════════════════════════════
 
     def _build_sun_tab(self):
+        """Sun & Shade — one date, one clock, both answers (V2.38).
+
+        This was two tabs. Analysis → Sun Path drew the arc from its own date
+        combo, after a button press and a map click. Site → Features & Shade
+        cast the shadows from a *different* date combo and a different clock,
+        one tab across. They were computing the same instant from the same
+        ``solar`` module and could not be made to agree without setting both.
+        Now the date and the time are asked once, and the answer is the sun
+        where it is and the shadow it throws.
+
+        The existing-features *import* stayed on the Site tab: entering what is
+        already on the ground is data capture, not analysis, and folding the
+        two together is what made "Features & Shade" two things under one
+        label.
+        """
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
         tab = QWidget()
+        page.setWidget(tab)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
 
         info = QLabel(
-            "Show the sun's arc across the sky and shadow direction arrows "
-            "for the selected date. Helps place shade-sensitive crops."
+            "Where the light falls, and what stands in its way. Pick a date, "
+            "drag the clock: the sun moves along its arc and the shadows sweep "
+            "with it."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
+        self._build_sun_when_group(layout)
+        self._build_sun_arc_group(layout)
+        self._build_shade_group(layout)
+        self._build_shade_zones_group(layout)
+        # Wired last, in one place: every one of these handlers reads controls
+        # from more than one group, so connecting inside a builder would make
+        # the tab's construction order load-bearing.
+        self._sun_date.currentIndexChanged.connect(self._on_sun_date_changed)
+        self._sun_time_slider.valueChanged.connect(self._on_sun_time_scrubbed)
+        self._sun_shadows.toggled.connect(self._on_sun_option_changed)
+        self._sun_shadow_length.toggled.connect(self._on_sun_option_changed)
+        # Bring the clock and the leaf-off note in line with the opening date
+        # without emitting a redraw for an arc nobody has drawn yet.
+        self._apply_date_to_controls()
+
+        # Results area
+        self._sun_info = QLabel("")
+        self._sun_info.setWordWrap(True)
+        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
+        layout.addWidget(self._sun_info)
+
+        layout.addStretch()
+        self._tabs.addTab(page, "Sun && Shade")
+
+    def _build_sun_when_group(self, layout):
+        """The single date + single clock that drive both the arc and the shade."""
+        from src import sun_shade
+
+        box = QGroupBox("When")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
         self._sun_date = QComboBox()
-        self._sun_date.addItems([
-            "Summer Solstice (Jun 21)",
-            "Winter Solstice (Dec 21)",
-            "Spring Equinox (Mar 20)",
-            "Fall Equinox (Sep 22)",
-            "Last Frost (~May 7)",
-            "First Frost (~Sep 23)",
-            "Today",
-        ])
+        for label, data in sun_shade.date_choices():
+            self._sun_date.addItem(label, data)
+        # Open in the season the user is standing in — the Site panel's shade
+        # combo already did this and the sun path did not, so the two disagreed
+        # from the first frame.
+        self._sun_date.setCurrentIndex(sun_shade.nearest_key_date_index())
         form.addRow("Date:", self._sun_date)
 
+        # Time of day. This control existed before V2.37 as a three-position
+        # morning/noon/evening slider that was connected to nothing and read by
+        # nothing — a draggable control that did not do anything, which is worse
+        # than not having one. It is now a real scrub in minutes, clamped to the
+        # selected date's actual daylight, and it moves the sun, its shadow ray
+        # and the cast shade together.
         self._sun_time_slider = QSlider(Qt.Orientation.Horizontal)
-        self._sun_time_slider.setRange(0, 2)  # 0=morning, 1=noon, 2=evening
-        self._sun_time_slider.setValue(1)
-        self._sun_time_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._sun_time_label = QLabel("Show: All day arc")
+        self._sun_time_slider.setRange(*sun_shade.DEFAULT_WINDOW)
+        self._sun_time_slider.setSingleStep(15)
+        self._sun_time_slider.setPageStep(60)
+        self._sun_time_slider.setValue(15 * 60)   # mid-afternoon: long, clearly
+                                                  # directional shadows to start
+        self._sun_time_slider.setToolTip(
+            "Drag to move the sun along its arc and swing the shadows with it.\n"
+            "Range is that date's sunrise to sunset.\n\n"
+            "This is SUN time, not clock time: 12:00 is when the sun is "
+            "highest.\nIn Alberta that lands about 1½ hours before noon on a "
+            "summer clock\n(daylight saving plus the distance to the "
+            "time-zone meridian).")
+        self._sun_time_label = QLabel("Sun time  15:00")
         form.addRow(self._sun_time_label, self._sun_time_slider)
+        v.addLayout(form)
+
+        # Two update rates, deliberately. The sun marker is JS-only over a
+        # payload the map already holds, so it follows the drag at full rate.
+        # The shade recompute re-runs an elevation grid plus a full polygon
+        # pass on a worker thread, so it waits for the drag to settle.
+        self._shade_scrub = QTimer(self)
+        self._shade_scrub.setSingleShot(True)
+        self._shade_scrub.setInterval(180)
+        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
+
+        # Leaf-off honesty note (V2.13): shown for leaf-off dates so the
+        # lighter shadows under tagged deciduous trees aren't read as a bug.
+        self._shade_leafoff_note = QLabel(
+            "🍂 Deciduous trees are shown leaf-off for this date — bare "
+            "branches cast ~30% shade. Trees marked without a type still "
+            "cast full shade.")
+        self._shade_leafoff_note.setWordWrap(True)
+        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._shade_leafoff_note.setVisible(False)
+        v.addWidget(self._shade_leafoff_note)
+
+        layout.addWidget(box)
+
+    def _build_sun_arc_group(self, layout):
+        """The sun's arc across the sky, drawn on the map."""
+        box = QGroupBox("The sun's arc")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
 
         self._sun_shadows = QCheckBox("Show shadow direction arrows")
         self._sun_shadows.setChecked(True)
@@ -167,12 +288,18 @@ class AnalysisPanel(QWidget):
         arc_row.addWidget(self._sun_arc_radius)
         arc_row.addStretch()
         form.addRow(arc_row)
-
-        layout.addLayout(form)
+        v.addLayout(form)
 
         btn_row = QHBoxLayout()
-        btn_show = QPushButton("Place Sun Path…")
-        btn_show.setToolTip("Click this then click the map to place the sun path anchor")
+        # V2.38: this used to read "Place Sun Path…" and mean it — the arc
+        # would not draw until you had also found and clicked the right bit of
+        # map. The centre is now the boundary centroid (or the site pin) unless
+        # you say otherwise, so the common case costs one click instead of two
+        # plus aim.
+        btn_show = QPushButton("Show sun path")
+        btn_show.setToolTip(
+            "Draw the sun's arc centred on your property.\n"
+            "Use 'Move…' to centre it somewhere specific instead.")
         btn_show.setStyleSheet(
             "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -181,314 +308,317 @@ class AnalysisPanel(QWidget):
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
 
+        btn_move = QPushButton("Move…")
+        btn_move.setToolTip(
+            "Click this, then click the map to centre the arc on a "
+            "particular bed or tree.")
+        btn_move.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_move.clicked.connect(self._on_move_sun_path)
+        btn_row.addWidget(btn_move)
+
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
+        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
         btn_clear.clicked.connect(self.sun_path_cleared.emit)
         btn_row.addWidget(btn_clear)
-        layout.addLayout(btn_row)
+        v.addLayout(btn_row)
 
-        # Results area
-        self._sun_info = QLabel("")
-        self._sun_info.setWordWrap(True)
-        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
-        layout.addWidget(self._sun_info)
+        layout.addWidget(box)
 
-        layout.addStretch()
-        self._tabs.addTab(tab, "Sun Path")
+    def _build_shade_group(self, layout):
+        """The shade the site's trees and buildings actually cast, at that hour."""
+        box = QGroupBox("Cast shade")
+        box.setStyleSheet(self._GROUP_STYLE)
+        box.setToolTip("Cast shade from existing trees/buildings and the "
+                       "design's own canopy, at the date and time above.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
 
-    def _on_show_sun_path(self):
-        from src.solar import KEY_DATES
-        date_map = {
-            0: "Summer Solstice",
-            1: "Winter Solstice",
-            2: "Spring Equinox",
-            3: "Fall Equinox",
-            4: "Last Frost (~May 7)",
-            5: "First Frost (~Sep 23)",
-            6: "today",
-        }
-        date_key = date_map.get(self._sun_date.currentIndex(), "today")
-        if date_key == "today":
-            d = date.today()
-        else:
-            d = KEY_DATES.get(date_key, date.today())
+        # Caster inventory (V2.13): tells the user whether the shade below
+        # will be real BEFORE they click — refreshed by update_caster_summary.
+        self._caster_summary = QLabel("")
+        self._caster_summary.setWordWrap(True)
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self.update_caster_summary(None)
+        v.addWidget(self._caster_summary)
 
-        self.sun_path_requested.emit({
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Opacity:"))
+        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setRange(0, 100)
+        self._shade_opacity.setValue(50)
+        self._shade_opacity.valueChanged.connect(
+            lambda val: self.shade_opacity.emit(val / 100.0))
+        opa_row.addWidget(self._shade_opacity)
+        v.addLayout(opa_row)
+
+        btn_row = QHBoxLayout()
+        btn_show = QPushButton("Show shade")
+        btn_show.setStyleSheet(
+            "QPushButton { background: #37474f; color: #eceff1; "
+            "border: 1px solid #607d8b; border-radius: 4px; padding: 6px; "
+            "font-weight: bold; } QPushButton:hover { background: #455a64; }")
+        btn_show.clicked.connect(self._on_show_shade)
+        btn_row.addWidget(btn_show)
+        btn_clear = QPushButton("Clear")
+        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.clicked.connect(self.shade_cleared.emit)
+        btn_row.addWidget(btn_clear)
+        v.addLayout(btn_row)
+
+        layout.addWidget(box)
+
+    def _build_shade_zones_group(self, layout):
+        """Classify every planting spot full sun / partial / full shade."""
+        box = QGroupBox("Planting zones")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        # Classify each planting cell from the season-average grid and cache
+        # the tags (src/db/shade_zones.py) so plant matching can read them
+        # without recomputing.
+        btn_classify = QPushButton("Classify planting zones")
+        btn_classify.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_classify.setToolTip(
+            "Tag every spot full sun / partial shade / full shade from the "
+            "season-average shade, and cache it for plant matching.")
+        btn_classify.clicked.connect(self.shade_zones_requested.emit)
+        v.addWidget(btn_classify)
+
+        zrow = QHBoxLayout()
+        self._zones_show_cb = QCheckBox("Show on map")
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.setToolTip(
+            "Show/hide the classified planting zones on the map.")
+        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
+        zrow.addWidget(self._zones_show_cb)
+        legend = QLabel(
+            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
+            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
+            '<span style="color:#5c6bc0">■</span> Full shade')
+        legend.setStyleSheet("font-size: 11px;")
+        zrow.addWidget(legend)
+        zrow.addStretch()
+        v.addLayout(zrow)
+
+        self._shade_zone_status = QLabel("")
+        self._shade_zone_status.setWordWrap(True)
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        v.addWidget(self._shade_zone_status)
+
+        layout.addWidget(box)
+
+    # ── Reading the two controls ─────────────────────────────────────────────
+
+    def _sun_config(self) -> dict:
+        """The current Sun Path settings. One builder, so "place it" and
+        "redraw it where it already is" cannot drift apart."""
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
+        return {
             "date": d.isoformat(),
             "date_label": self._sun_date.currentText(),
             "show_shadows": self._sun_shadows.isChecked(),
             "show_shadow_length": self._sun_shadow_length.isChecked(),
             "arc_radius": self._sun_arc_radius.value(),
-        })
+        }
+
+    def _shade_when(self) -> tuple[int, int, int, int]:
+        """``(month, day, hour, minute)`` — the same instant the arc is drawn
+        for, read from the same two controls."""
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
+        mins = self._sun_time_slider.value()
+        return (d.month, d.day, mins // 60, mins % 60)
+
+    def _on_show_sun_path(self):
+        self.sun_path_requested.emit(self._sun_config())
+        # Hand the keyboard to the clock so ←/→ sweep the day immediately.
+        self._sun_time_slider.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def _on_move_sun_path(self):
+        """Re-centre the arc by clicking the map (the old default)."""
+        cfg = dict(self._sun_config())
+        cfg["pick_anchor"] = True
+        self.sun_path_requested.emit(cfg)
+
+    def _on_show_shade(self):
+        self.shade_requested.emit({"when": self._shade_when()})
+        self._sun_time_slider.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def set_sun_info(self, text: str):
         self._sun_info.setText(text)
 
-    # ═════════════════════════════════════════════════════════════════════════
-    #  A2 — Sector Analysis
-    # ═════════════════════════════════════════════════════════════════════════
+    # ── Time-of-day scrub (V2.37; drives the shade too since V2.38) ──────────
 
-    def _build_sector_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+    def set_sun_window(self, sunrise_hour: float, sunset_hour: float):
+        """Clamp the time slider to a date's real daylight, after a draw.
 
-        info = QLabel(
-            "Draw directional wedges on the map for sun, wind, frost flow, "
-            "noise, views — site analysis of environmental influences."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
+        You cannot drag the sun to 3 a.m. in June because there is no sun
+        there, and a slider that lets you ask an impossible question has to
+        answer it with nothing.
+        """
+        lo = int(max(0, min(23 * 60 + 59, round(sunrise_hour * 60))))
+        hi = int(max(lo + 1, min(24 * 60 - 1, round(sunset_hour * 60))))
+        self._apply_time_window(lo, hi)
 
-        # Preset sectors
-        self._sector_checks: list[tuple[QCheckBox, dict]] = []
-        presets = [
-            {"name": "Summer Sun",    "azimuth": 180, "spread": 120, "color": "#ff9800"},
-            {"name": "Winter Sun",    "azimuth": 180, "spread": 60,  "color": "#ffc107"},
-            {"name": "NW Wind",       "azimuth": 315, "spread": 45,  "color": "#42a5f5"},
-            {"name": "Cold North",    "azimuth": 0,   "spread": 60,  "color": "#90caf9"},
-            {"name": "Frost Pocket",  "azimuth": 0,   "spread": 90,  "color": "#b3e5fc"},
-            {"name": "Noise (Road)",  "azimuth": 90,  "spread": 45,  "color": "#ef5350"},
-            {"name": "Good View",     "azimuth": 180, "spread": 90,  "color": "#66bb6a"},
-            {"name": "Fire Risk",     "azimuth": 225, "spread": 45,  "color": "#ff5722"},
-        ]
+    def _apply_time_window(self, lo: int, hi: int):
+        """Set the clock's range, keeping the current reading where it can be
+        kept — re-dating should not throw away the hour you were looking at."""
+        cur = self._sun_time_slider.value()
+        blocked = self._sun_time_slider.blockSignals(True)
+        self._sun_time_slider.setRange(lo, hi)
+        self._sun_time_slider.setValue(max(lo, min(hi, cur)))
+        self._sun_time_slider.blockSignals(blocked)
+        self._sun_time_slider.setEnabled(True)
+        self._update_sun_time_label()
+        # Draw the marker at the opening position so the control is visibly
+        # live rather than waiting to be discovered.
+        self.sun_time_changed.emit(self._sun_time_slider.value())
 
-        sectors_group = QGroupBox("Sector Presets")
-        sectors_group.setStyleSheet(
-            "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; padding-top: 12px; }"
-            "QGroupBox::title { color: #a5d6a7; }"
-        )
-        sg_layout = QVBoxLayout(sectors_group)
-        sg_layout.setSpacing(2)
+    def set_site_location(self, lat, lng):
+        """Remember where the site is, so the clock can span its real daylight
+        before anything has been drawn.
 
-        for preset in presets:
-            row = QHBoxLayout()
-            cb = QCheckBox(preset["name"])
-            cb.setStyleSheet(f"color: {preset['color']};")
-            row.addWidget(cb)
-
-            # Azimuth spinner
-            az = QSpinBox()
-            az.setRange(0, 359)
-            az.setValue(preset["azimuth"])
-            az.setSuffix("°")
-            az.setFixedWidth(82)
-            row.addWidget(az)
-
-            # Spread spinner
-            sp = QSpinBox()
-            sp.setRange(10, 180)
-            sp.setValue(preset["spread"])
-            sp.setSuffix("°")
-            sp.setFixedWidth(75)
-            row.addWidget(sp)
-
-            sg_layout.addLayout(row)
-            self._sector_checks.append((cb, {
-                "name": preset["name"],
-                "color": preset["color"],
-                "az_spin": az,
-                "sp_spin": sp,
-            }))
-
-        layout.addWidget(sectors_group)
-
-        # Radius
-        radius_row = QHBoxLayout()
-        radius_row.addWidget(QLabel("Radius (m):"))
-        self._sector_radius = QSpinBox()
-        self._sector_radius.setRange(10, 500)
-        self._sector_radius.setValue(80)
-        self._sector_radius.setSuffix(" m")
-        radius_row.addWidget(self._sector_radius)
-        layout.addLayout(radius_row)
-
-        btn_row = QHBoxLayout()
-        btn_show = QPushButton("Place Sectors…")
-        btn_show.setToolTip("Click then click the map to place sector anchor; drag centre to move, orange handle to resize, purple to rotate; right-click centre to remove")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #1565c0; color: #e3f2fd; border: 1px solid #1976d2; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #1976d2; }"
-        )
-        btn_show.clicked.connect(self._on_show_sectors)
-        btn_row.addWidget(btn_show)
-
-        btn_clear = QPushButton("Clear All")
-        btn_clear.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_clear.clicked.connect(self.sector_cleared.emit)
-        btn_row.addWidget(btn_clear)
-        layout.addLayout(btn_row)
-
-        layout.addStretch()
-        self._tabs.addTab(tab, "Sectors")
-
-    def _on_show_sectors(self):
-        sectors = []
-        for cb, data in self._sector_checks:
-            if cb.isChecked():
-                sectors.append({
-                    "name": data["name"],
-                    "azimuth": data["az_spin"].value(),
-                    "spread": data["sp_spin"].value(),
-                    "color": data["color"],
-                })
-        if not sectors:
+        Called from ``_mark_modified``, i.e. on every feature mutation, so it
+        returns early when nothing moved — re-clamping emits, and emitting
+        crosses into JS."""
+        if (lat, lng) == (self._sun_lat, self._sun_lng):
             return
-        self.sector_requested.emit({
-            "sectors": sectors,
-            "radius_m": self._sector_radius.value(),
-        })
+        self._sun_lat, self._sun_lng = lat, lng
+        self._reclamp_time_to_date()
 
-    # ═════════════════════════════════════════════════════════════════════════
-    #  A3 — Slope / Contour
-    # ═════════════════════════════════════════════════════════════════════════
+    def _reclamp_time_to_date(self):
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
+        lo, hi = sun_shade.daylight_window(
+            getattr(self, "_sun_lat", None), getattr(self, "_sun_lng", None), d)
+        self._apply_time_window(lo, hi)
 
-    def _build_contour_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+    def _update_sun_time_label(self):
+        from src import sun_shade
+        # "Sun time", not "Time": solar.sunrise_sunset and solar.sun_position
+        # both work in local *solar* time — noon is when the sun is highest —
+        # and the shade worker consumes the same convention. Labelling it as
+        # clock time would be a quiet ~1½-hour lie on an Alberta summer day
+        # (P9: say what the model actually computes).
+        self._sun_time_label.setText(
+            f"Sun time  {sun_shade.clock(self._sun_time_slider.value())}")
 
-        info = QLabel(
-            "Draw manual contour lines to indicate terrain slope. Helps "
-            "place swales, ponds, and water features correctly.\n\n"
-            "Click points on the map to draw a contour line, double-click "
-            "to finish. Add multiple lines at different elevations."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
+    def _on_sun_time_scrubbed(self, minutes: int):
+        self._update_sun_time_label()
+        # Immediate: the receiver only moves one marker in JS over a payload it
+        # already holds, so this follows the drag.
+        self.sun_time_changed.emit(int(minutes))
+        # Debounced: the shade recompute is a worker-thread grid pass.
+        self._shade_scrub.start()
 
-        form = QFormLayout()
-        form.setContentsMargins(0, 0, 0, 0)
+    def _emit_shade_for_scrub(self):
+        """Fire the debounced shade recompute — but only if shade is on screen.
 
-        self._contour_elevation = QDoubleSpinBox()
-        self._contour_elevation.setRange(0, 2000)
-        self._contour_elevation.setSingleStep(0.5)
-        self._contour_elevation.setValue(0)
-        self._contour_elevation.setSuffix(" m")
-        form.addRow("Elevation:", self._contour_elevation)
+        Merging the two controls means the clock now belongs to both features,
+        and a scrub meant for the arc must not conjure a shade overlay nobody
+        asked for. ``only_if_active`` asks the main window, which is the one
+        thing that knows: the flag lives there, survives undo/redo and project
+        load, and a copy of it here would be a second truth to keep in step.
+        """
+        self.shade_requested.emit(
+            {"when": self._shade_when(), "only_if_active": True})
 
-        self._contour_interval = QDoubleSpinBox()
-        self._contour_interval.setRange(0.1, 10.0)
-        self._contour_interval.setSingleStep(0.5)
-        self._contour_interval.setValue(1.0)
-        self._contour_interval.setSuffix(" m")
-        form.addRow("Interval:", self._contour_interval)
+    def _on_sun_option_changed(self, _checked=False):
+        """An arrow/length toggle only matters to an arc already on the map."""
+        self.sun_redraw_requested.emit(self._sun_config())
 
-        self._contour_color = "#795548"
-        color_row = QHBoxLayout()
-        self._contour_color_btn = QPushButton()
-        self._contour_color_btn.setFixedSize(28, 28)
-        self._contour_color_btn.setStyleSheet(
-            f"background: {self._contour_color}; border: 1px solid #4a7a4a; border-radius: 4px;"
-        )
-        self._contour_color_btn.clicked.connect(self._pick_contour_color)
-        color_row.addWidget(self._contour_color_btn)
-        color_row.addStretch()
-        form.addRow("Color:", color_row)
+    def _apply_date_to_controls(self):
+        """Re-clamp the clock to the selected date and show/hide the leaf-off
+        note. No signals out — this is the part that is safe to run at build."""
+        from src import sun_shade
+        data = self._sun_date.currentData()
+        month = sun_shade.resolve_date(data).month if data is not None else None
+        self._shade_leafoff_note.setVisible(sun_shade.is_leaf_off(month))
+        self._reclamp_time_to_date()
 
-        self._contour_labels = QCheckBox("Show elevation labels")
-        self._contour_labels.setChecked(True)
-        form.addRow(self._contour_labels)
+    def _on_sun_date_changed(self, _index: int):
+        """Changing the date re-clamps the clock, redraws the arc where it
+        already is, and re-casts the shade for the new day.
 
-        # Slope arrow toggle
-        self._contour_slope_arrows = QCheckBox("Show downhill arrows")
-        self._contour_slope_arrows.setChecked(True)
-        self._contour_slope_arrows.setToolTip("Show arrows indicating downhill direction between contour lines")
-        form.addRow(self._contour_slope_arrows)
+        It used to re-enter anchor-placement mode, so comparing the solstices —
+        the single most obvious thing to do on this tab — meant picking a date,
+        pressing a button and re-clicking the map, every time.
+        """
+        self._apply_date_to_controls()
+        self.sun_redraw_requested.emit(self._sun_config())
+        self._shade_scrub.start()
 
-        layout.addLayout(form)
+    # ── The caster inventory, shown here and on the Site tab ────────────────
 
-        btn_row = QHBoxLayout()
-        btn_draw = QPushButton("Draw Contour Line")
-        btn_draw.setStyleSheet(
-            "QPushButton { background: #5d4037; color: #efebe9; border: 1px solid #795548; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #6d4c41; }"
-        )
-        btn_draw.clicked.connect(self._on_draw_contour)
-        btn_row.addWidget(btn_draw)
+    def update_caster_summary(self, project_dict: dict | None):
+        """Refresh the 'Casting shade: …' line from the project's existing
+        features. Same formatter as the Site tab's copy — that one answers
+        "did my import land?", this one answers "will this shade be real?"."""
+        lbl = getattr(self, "_caster_summary", None)
+        if lbl is None:
+            return
+        from src import sun_shade
+        buildings, trees = sun_shade.caster_counts(project_dict)
+        text, have = sun_shade.caster_summary(
+            buildings, trees, where="Site → Features")
+        lbl.setText(text)
+        lbl.setStyleSheet(
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
 
-        btn_clear = QPushButton("Clear All")
-        btn_clear.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_clear.clicked.connect(self.contour_cleared.emit)
-        btn_row.addWidget(btn_clear)
-        layout.addLayout(btn_row)
+    def mark_zones_shown(self):
+        """Re-check the 'Show on map' box (without re-emitting) after a classify
+        run draws the zones, so the toggle reflects what's on the map."""
+        self._zones_show_cb.blockSignals(True)
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.blockSignals(False)
 
-        # Note about auto-generated contours: that UI moved to Site →
-        # "Slope analysis (area)" because it's site-scale terrain analysis,
-        # not a manual annotation.
-        moved_note = QLabel(
-            "ℹ Looking for auto-generated contours from elevation data?\n"
-            "→ Site tab → Slope analysis."
-        )
-        moved_note.setWordWrap(True)
-        moved_note.setStyleSheet(
-            "color: #90a4ae; font-size: 11px; font-style: italic; "
-            "padding: 6px 4px;"
-        )
-        layout.addWidget(moved_note)
-
-        layout.addStretch()
-        self._tabs.addTab(tab, "Contours")
-
-    def _pick_contour_color(self):
-        color = QColorDialog.getColor(QColor(self._contour_color), self, "Contour Color")
-        if color.isValid():
-            self._contour_color = color.name()
-            self._contour_color_btn.setStyleSheet(
-                f"background: {self._contour_color}; border: 1px solid #4a7a4a; border-radius: 4px;"
-            )
-
-    def _on_draw_contour(self):
-        self.contour_requested.emit({
-            "elevation_m": self._contour_elevation.value(),
-            "interval_m": self._contour_interval.value(),
-            "color": self._contour_color,
-            "show_labels": self._contour_labels.isChecked(),
-            "show_slope_arrows": self._contour_slope_arrows.isChecked(),
-        })
-        # Increment elevation for next contour line
-        self._contour_elevation.setValue(
-            self._contour_elevation.value() + self._contour_interval.value()
-        )
+    def set_shade_zone_status(self, text: str):
+        """Show a short result line under the Classify button."""
+        if hasattr(self, "_shade_zone_status"):
+            self._shade_zone_status.setText(text)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A4 — Wind / Windbreak
     # ═════════════════════════════════════════════════════════════════════════
 
+    _GROUP_STYLE = (
+        "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; "
+        "margin-top: 10px; padding-top: 12px; }"
+        "QGroupBox::title { color: #a5d6a7; subcontrol-origin: margin; "
+        "left: 6px; padding: 0 3px; }"
+    )
+
     def _build_wind_tab(self):
+        # Scrollable page — three grouped steps stack taller than the panel
+        # at small window heights.
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
         tab = QWidget()
+        page.setWidget(tab)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
 
         info = QLabel(
-            "Fetch real seasonal wind data (Open-Meteo, free) for this site, or "
-            "set the prevailing direction by hand. Windbreaks and hedges show a "
-            "shelter zone behind them (10× their height)."
+            "Where does the wind come from — and which parts of your site are "
+            "sheltered? Fetch this site's real wind history, check the "
+            "direction, then overlay the sheltered zones on the map."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
-        # ── Real wind data (seasonal rose + current reading) ───────────────
+        # ── Step 1: real wind data (seasonal rose + current reading) ────────
+        data_group = QGroupBox("1 · Get this site's wind")
+        data_group.setStyleSheet(self._GROUP_STYLE)
+        dg = QVBoxLayout(data_group)
+        dg.setSpacing(6)
+
         btn_fetch = QPushButton("Fetch wind data (Open-Meteo)")
         btn_fetch.setStyleSheet(
             "QPushButton { background: #00695c; color: #e0f2f1; "
@@ -498,35 +628,94 @@ class AnalysisPanel(QWidget):
             "Download a seasonal wind rose + current reading for this location. "
             "Cached for offline use after the first fetch.")
         btn_fetch.clicked.connect(self.wind_data_requested.emit)
-        layout.addWidget(btn_fetch)
+        dg.addWidget(btn_fetch)
 
         from src.wind_rose_widget import WindRoseWidget
         self._wind_rose = WindRoseWidget()
-        layout.addWidget(self._wind_rose)
+        self._wind_rose.setToolTip(
+            "Wind rose: each petal points where wind blows FROM; a longer "
+            "petal = wind from there more often. Colour is strength — light "
+            "blue (calm/light) through green and orange to red (very strong).")
+        dg.addWidget(self._wind_rose)
 
         self._wind_current_lbl = QLabel("")
         self._wind_current_lbl.setStyleSheet("color: #b3e5fc; font-size: 12px;")
-        layout.addWidget(self._wind_current_lbl)
+        dg.addWidget(self._wind_current_lbl)
 
-        self._wind_status_lbl = QLabel("")
+        self._wind_status_lbl = QLabel(
+            "No data yet — drop a site pin (Site tab), then fetch.")
         self._wind_status_lbl.setWordWrap(True)
         self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(self._wind_status_lbl)
+        dg.addWidget(self._wind_status_lbl)
+
+        layout.addWidget(data_group)
+
+        # ── Step 2: one direction control (the dial) + typical strength ─────
+        dir_group = QGroupBox("2 · Prevailing wind")
+        dir_group.setStyleSheet(self._GROUP_STYLE)
+        rg = QVBoxLayout(dir_group)
+        rg.setSpacing(6)
+
+        dial_row = QHBoxLayout()
+        self._wind_dial = QDial()
+        self._wind_dial.setRange(0, 359)
+        self._wind_dial.setWrapping(True)
+        self._wind_dial.setNotchesVisible(True)
+        self._wind_dial.setValue(270)
+        self._wind_dial.setFixedSize(90, 90)
+        self._wind_dial.setToolTip(
+            "The direction the wind blows FROM (0° = N, 90° = E…).\n"
+            "Set automatically from fetched data; drag to test other "
+            "directions — the live wind shadow follows as you turn.")
+        self._wind_dial.valueChanged.connect(self._on_wind_dial)
+        self._wind_dial.sliderReleased.connect(
+            lambda: self.wind_shadow_commit.emit(self._wind_dial.value()))
+        dial_row.addWidget(self._wind_dial)
+
+        dial_text = QVBoxLayout()
+        dial_text.setSpacing(2)
+        self._wind_dial_lbl = QLabel(self._dir_text(270))
+        self._wind_dial_lbl.setStyleSheet(
+            "color: #b3e5fc; font-size: 13px; font-weight: bold;")
+        dial_text.addWidget(self._wind_dial_lbl)
+        dial_hint = QLabel("Drag the dial to test other directions.")
+        dial_hint.setWordWrap(True)
+        dial_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        dial_text.addWidget(dial_hint)
+        speed_row = QHBoxLayout()
+        speed_row.addWidget(QLabel("Typical strength:"))
+        self._wind_speed = QComboBox()
+        self._wind_speed.addItems(["Light", "Moderate", "Strong", "Very Strong"])
+        self._wind_speed.setCurrentIndex(1)
+        speed_row.addWidget(self._wind_speed)
+        speed_row.addStretch()
+        dial_text.addLayout(speed_row)
+        dial_text.addStretch()
+        dial_row.addLayout(dial_text, 1)
+        rg.addLayout(dial_row)
 
         self._wind_advice_lbl = QLabel("")
         self._wind_advice_lbl.setWordWrap(True)
         self._wind_advice_lbl.setStyleSheet(
             "color: #c5e1a5; font-size: 11px; font-style: italic;")
-        layout.addWidget(self._wind_advice_lbl)
+        rg.addWidget(self._wind_advice_lbl)
 
-        # ── Live wind shadow (V1.68): per-plant sheltered zones that update as
+        layout.addWidget(dir_group)
+
+        # ── Step 3: what to draw on the map ──────────────────────────────────
+        overlay_group = QGroupBox("3 · Show on the map")
+        overlay_group.setStyleSheet(self._GROUP_STYLE)
+        og = QVBoxLayout(overlay_group)
+        og.setSpacing(6)
+
+        # Live wind shadow (V1.68): per-plant sheltered zones that update as
         # you turn the dial or drag a plant.
         self._wind_shadow_chk = QCheckBox("Live wind shadow (sheltered zones)")
         self._wind_shadow_chk.setToolTip(
             "Show the leeward shelter of trees/shrubs, merged and porosity-aware. "
             "Turn the dial or drag a plant to see it update live.")
         self._wind_shadow_chk.toggled.connect(self.wind_shadow_toggled.emit)
-        layout.addWidget(self._wind_shadow_chk)
+        og.addWidget(self._wind_shadow_chk)
 
         # Snow-catch microsites (Step 3): winter snow drifts into the lee of
         # windbreaks — deeper-insulated, moister, slightly warmer planting spots.
@@ -536,59 +725,26 @@ class AnalysisPanel(QWidget):
             "structures — insulated, moister microsites. Uses the prevailing "
             "winter wind from the fetched wind rose.")
         self._snow_catch_chk.toggled.connect(self.snow_catch_toggled.emit)
-        layout.addWidget(self._snow_catch_chk)
+        og.addWidget(self._snow_catch_chk)
 
-        dial_row = QHBoxLayout()
-        self._wind_dial = QDial()
-        self._wind_dial.setRange(0, 359)
-        self._wind_dial.setWrapping(True)
-        self._wind_dial.setNotchesVisible(True)
-        self._wind_dial.setValue(270)
-        self._wind_dial.setFixedSize(90, 90)
-        self._wind_dial.valueChanged.connect(self._on_wind_dial)
-        self._wind_dial.sliderReleased.connect(
-            lambda: self.wind_shadow_commit.emit(self._wind_dial.value()))
-        dial_row.addWidget(self._wind_dial)
-        self._wind_dial_lbl = QLabel("Wind from 270°")
-        self._wind_dial_lbl.setStyleSheet("color: #b3e5fc; font-size: 11px;")
-        dial_row.addWidget(self._wind_dial_lbl)
-        dial_row.addStretch()
-        layout.addLayout(dial_row)
+        self._wind_arrows = QCheckBox("Wind direction arrows")
+        self._wind_arrows.setChecked(True)
+        self._wind_arrows.setToolTip(
+            "Arrows across the map showing which way the prevailing wind blows.")
+        og.addWidget(self._wind_arrows)
 
-        form = QFormLayout()
-        form.setContentsMargins(0, 0, 0, 0)
-
-        self._wind_dir = QComboBox()
-        self._wind_dir.addItems([
-            "N (0°)", "NNE (22°)", "NE (45°)", "ENE (67°)",
-            "E (90°)", "ESE (112°)", "SE (135°)", "SSE (157°)",
-            "S (180°)", "SSW (202°)", "SW (225°)", "WSW (247°)",
-            "W (270°)", "WNW (292°)", "NW (315°)", "NNW (337°)",
-        ])
-        self._wind_dir.setCurrentIndex(14)  # NW default for Edmonton
-        form.addRow("Wind from:", self._wind_dir)
-
-        self._wind_speed = QComboBox()
-        self._wind_speed.addItems(["Light", "Moderate", "Strong", "Very Strong"])
-        self._wind_speed.setCurrentIndex(1)
-        form.addRow("Typical:", self._wind_speed)
-
-        self._wind_shelter = QCheckBox("Show shelter zones behind windbreaks")
+        self._wind_shelter = QCheckBox("Shelter zones behind windbreaks")
         self._wind_shelter.setChecked(True)
         self._wind_shelter.setToolTip(
             "Hedgerows and windbreak structures show a\n"
-            "sheltered zone (10× height) on the leeward side"
-        )
-        form.addRow(self._wind_shelter)
-
-        self._wind_arrows = QCheckBox("Show wind flow arrows")
-        self._wind_arrows.setChecked(True)
-        form.addRow(self._wind_arrows)
-
-        layout.addLayout(form)
+            "sheltered zone (10× height) on the leeward side")
+        og.addWidget(self._wind_shelter)
 
         btn_row = QHBoxLayout()
         btn_show = QPushButton("Show Wind Overlay")
+        btn_show.setToolTip(
+            "Draw the arrows and windbreak shelter zones for the direction on "
+            "the dial. (The two checkboxes above draw live, on toggle.)")
         btn_show.setStyleSheet(
             "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -598,6 +754,7 @@ class AnalysisPanel(QWidget):
         btn_row.addWidget(btn_show)
 
         btn_clear = QPushButton("Clear")
+        btn_clear.setToolTip("Remove the arrows + windbreak shelter overlay.")
         btn_clear.setStyleSheet(
             "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
             "border-radius: 4px; padding: 6px; }"
@@ -605,18 +762,22 @@ class AnalysisPanel(QWidget):
         )
         btn_clear.clicked.connect(self.wind_cleared.emit)
         btn_row.addWidget(btn_clear)
-        layout.addLayout(btn_row)
+        og.addLayout(btn_row)
+
+        layout.addWidget(overlay_group)
 
         layout.addStretch()
-        self._tabs.addTab(tab, "Wind")
+        self._tabs.addTab(page, "Wind")
 
-    _WIND_AZIMUTHS = [0, 22, 45, 67, 90, 112, 135, 157,
-                      180, 202, 225, 247, 270, 292, 315, 337]
+    @staticmethod
+    def _dir_text(deg: int) -> str:
+        """'Wind from NW (315°)' — the dial's one human-readable readout."""
+        from src.wind import dir_label
+        return f"Wind from {dir_label(deg)} ({deg % 360}°)"
 
     def _on_show_wind(self):
-        az = self._WIND_AZIMUTHS[self._wind_dir.currentIndex()]
         self.wind_requested.emit({
-            "direction_from": az,
+            "direction_from": self._wind_dial.value(),
             "speed_label": self._wind_speed.currentText(),
             "show_shelter": self._wind_shelter.isChecked(),
             "show_arrows": self._wind_arrows.isChecked(),
@@ -631,7 +792,7 @@ class AnalysisPanel(QWidget):
         self._wind_advice_lbl.setText(text or "")
 
     def _on_wind_dial(self, value: int):
-        self._wind_dial_lbl.setText(f"Wind from {value}°")
+        self._wind_dial_lbl.setText(self._dir_text(value))
         self.wind_angle_changed_live.emit(value)
 
     def set_wind_data(self, rose: dict, current: dict | None):
@@ -647,14 +808,13 @@ class AnalysisPanel(QWidget):
         annual = rose.get("annual") or {}
         self._wind_rose.set_block(annual)
 
-        from src.wind import dir_index, speed_category
+        from src.wind import speed_category
         prevailing = annual.get("prevailing_deg")
         if prevailing is not None:
-            self._wind_dir.setCurrentIndex(dir_index(prevailing))
             blocked = self._wind_dial.blockSignals(True)
             self._wind_dial.setValue(int(prevailing) % 360)
             self._wind_dial.blockSignals(blocked)
-            self._wind_dial_lbl.setText(f"Wind from {int(prevailing) % 360}°")
+            self._wind_dial_lbl.setText(self._dir_text(int(prevailing)))
         cat = speed_category(annual.get("mean_speed"))
         idx = self._wind_speed.findText(cat)
         if idx >= 0:
@@ -674,99 +834,8 @@ class AnalysisPanel(QWidget):
         src = rose.get("source", "")
         self.set_wind_status(
             f"Prevailing {label} · mean {mean:.0f} km/h · calm {calm:.0f}%  "
-            f"({src}). Click 'Show Wind Overlay' to apply.")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  Season View
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_season_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
-
-        info = QLabel(
-            "Preview how your landscape looks in different seasons. "
-            "Deciduous plants fade in winter, herbaceous perennials "
-            "disappear, evergreens stay full."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
-
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Season:"))
-        self._season_combo = QComboBox()
-        self._season_combo.addItems(["Summer", "Spring", "Fall", "Winter"])
-        self._season_combo.setCurrentIndex(0)
-        row.addWidget(self._season_combo)
-        layout.addLayout(row)
-
-        apply_btn = QPushButton("Apply Season View")
-        apply_btn.clicked.connect(self._on_season_apply)
-        layout.addWidget(apply_btn)
-
-        reset_btn = QPushButton("Reset (Summer)")
-        reset_btn.clicked.connect(lambda: (
-            self._season_combo.setCurrentIndex(0),
-            self._on_season_apply(),
-        ))
-        layout.addWidget(reset_btn)
-
-        layout.addStretch()
-        self._tabs.addTab(tab, "Season")
-
-    def _on_season_apply(self):
-        self.season_changed.emit(self._season_combo.currentText())
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F48 — Field Study quiz layer
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_field_study_tab(self):
-        from src.field_study_widget import FieldStudyWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # The quiz is design-aware: it reads the live placed-plant list so the
-        # "spot the food-web gap" question is about the user's own design.
-        self._field_study = FieldStudyWidget(
-            plants_provider=lambda: self._placed_plants)
-        page.setWidget(self._field_study)
-        self._tabs.addTab(page, "Field Study")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F53 — Guided lesson track
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_lesson_tab(self):
-        from src.lesson_track_widget import LessonTrackWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # Design-aware: each step's "your design" readout is the live project.
-        self._lesson_track = LessonTrackWidget(
-            plants_provider=lambda: self._placed_plants,
-            structures_provider=lambda: self._structures)
-        page.setWidget(self._lesson_track)
-        self._tabs.addTab(page, "Learn")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F52 — Docent / presentation mode
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_present_tab(self):
-        from src.docent_widget import DocentWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # Design-aware: the narration is generated from the live project's facts.
-        self._docent = DocentWidget(
-            plants_provider=lambda: self._placed_plants,
-            structures_provider=lambda: self._structures)
-        page.setWidget(self._docent)
-        self._tabs.addTab(page, "Present")
+            f"({src}). The dial below is set to match — step 3 draws it "
+            f"on the map.")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  F51 — Phenology "what's happening now" dashboard
@@ -783,95 +852,6 @@ class AnalysisPanel(QWidget):
             plants_provider=lambda: self._placed_plants)
         page.setWidget(self._phenology)
         self._tabs.addTab(page, "This Month")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  Forage calendar — whole-design bloom succession + gaps (V2.13)
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_forage_tab(self):
-        from src.forage_calendar_widget import ForageCalendarWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        tab = QWidget()
-        page.setWidget(tab)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
-
-        info = QLabel(
-            "Is there always something in bloom? This is your design's forage "
-            "calendar — how many plants flower each month, where the pollinator "
-            "gaps are, and the spring-to-fall relay of who blooms when."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
-
-        self._forage_headline = QLabel("—")
-        self._forage_headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._forage_headline.setStyleSheet(
-            "color: #c8e6c9; font-size: 20px; font-weight: bold; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 10px;")
-        layout.addWidget(self._forage_headline)
-
-        self._forage_chart = ForageCalendarWidget()
-        layout.addWidget(self._forage_chart)
-
-        self._forage_note = QLabel("")
-        self._forage_note.setWordWrap(True)
-        self._forage_note.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; padding: 8px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
-        layout.addWidget(self._forage_note)
-
-        self._forage_suggest = QLabel("")
-        self._forage_suggest.setWordWrap(True)
-        self._forage_suggest.setTextFormat(Qt.TextFormat.RichText)
-        self._forage_suggest.setStyleSheet("color: #cbd8bf; font-size: 11px;")
-        self._forage_suggest.setVisible(False)
-        layout.addWidget(self._forage_suggest)
-
-        layout.addStretch()
-        self._forage_tab_index = self._tabs.addTab(page, "Forage")
-
-    def refresh_forage_tab(self):
-        """Rebuild the forage calendar from the placed plants (P6/P9)."""
-        if not hasattr(self, "_forage_chart"):
-            return
-        from src.forage_calendar import (build_forage_calendar,
-                                         gap_filling_suggestions)
-        cal = build_forage_calendar(self._placed_plants)
-        self._forage_chart.set_calendar(cal)
-        cov = cal["covered_growing"]
-        if cal["flowering_plants"] == 0:
-            self._forage_headline.setText("No forage yet")
-        elif not cal["gap_months"]:
-            self._forage_headline.setText(f"Continuous bloom · {cov}/7 months")
-        else:
-            self._forage_headline.setText(
-                f"Forage {cov}/7 growing months · "
-                f"{len(cal['gap_months'])} gap"
-                f"{'s' if len(cal['gap_months']) != 1 else ''}")
-        self._forage_note.setText(cal["note"])
-
-        # Gap-filling suggestions from the native plant list (best-fit first).
-        self._forage_suggest.setVisible(False)
-        if cal["gap_months"]:
-            try:
-                from src.db.plants import get_all_plants
-                allp = get_all_plants()
-                natives = [p for p in allp if p.get("native_to_alberta")]
-                cands = natives or allp
-                sugg = gap_filling_suggestions(self._placed_plants, cands, limit=6)
-            except Exception:      # noqa: BLE001 — never break the tab on a data hiccup
-                sugg = []
-            if sugg:
-                items = "; ".join(
-                    f"<b>{s['common_name']}</b> ({s['bloom_period']})" for s in sugg)
-                self._forage_suggest.setText(
-                    "🌱 <b>Fill the gaps with:</b> " + items)
-                self._forage_suggest.setVisible(True)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  H1 — Habitat Value Score
@@ -901,6 +881,10 @@ class AnalysisPanel(QWidget):
         layout.addWidget(info)
 
         btn = QPushButton("Calculate Habitat Value")
+        btn.setToolTip(
+            "Score what this design actually provides for wildlife, out of 100,\n"
+            "and list what would raise it. Needs at least one placed plant."
+        )
         btn.setStyleSheet(
             "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -977,6 +961,12 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown)
 
+        # ── How sure are we? (F13 + F14) — the confidence block ───────────
+        self._build_confidence_block(layout)
+
+        # ── Relationship web (F5) — the design drawn as a living network ───
+        self._build_relationship_web_block(layout)
+
         # ── Pull-a-plant impact simulator (F46) — learn by breaking it ─────
         pull_label = QLabel("Pull-a-plant — what does each plant hold up?")
         pull_label.setStyleSheet(
@@ -1036,16 +1026,16 @@ class AnalysisPanel(QWidget):
         layout.addWidget(self._habitat_tips)
 
         # Shade-zone breakdown — read-only summary of the cached shade tags
-        # (Site tab → "Classify planting zones"). Shown here so the light mix is
-        # visible alongside habitat value without recomputing the shade grid.
+        # (Sun & Shade → "Classify planting zones"). Shown here so the light
+        # mix is visible alongside habitat value without recomputing the grid.
         shade_label = QLabel("Light / shade mix")
         shade_label.setStyleSheet(
             "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
         layout.addWidget(shade_label)
 
         self._shade_breakdown = QLabel(
-            "Run 'Classify planting zones' on the Site tab to see the\n"
-            "full-sun / partial-shade / full-shade mix.")
+            "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
+            "the full-sun / partial-shade / full-shade mix.")
         self._shade_breakdown.setWordWrap(True)
         self._shade_breakdown.setStyleSheet(
             "color: #c8e6c9; font-size: 11px; padding: 6px; "
@@ -1065,6 +1055,192 @@ class AnalysisPanel(QWidget):
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
         self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  Relationship web (F5) — P3/P5/P10
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # Layer name → the edge kinds it turns on (src.db.relationships.EDGE_KINDS).
+    # Grouped rather than listed one-per-kind: seven trophic checkboxes is a
+    # database schema wearing a UI, and the useful question is "show me the food
+    # web" / "show me the horticulture", not "show me seed_food".
+    _WEB_LAYERS = [
+        ("food", "Food web — who eats, sips and lays eggs here", True,
+         ("larval_host", "nectar", "pollen", "fruit_food", "seed_food")),
+        ("shelter", "Shelter — nest sites and cover", True,
+         ("nesting", "cover")),
+        ("companion", "Companion pairings — good together / keep apart", False,
+         ("companion_friend", "companion_enemy")),
+        ("community", "Shares an authored plant community", False,
+         ("co_planted",)),
+        ("derived", "Inferred: plants feeding the same wildlife", False,
+         ("shared_fauna",)),
+    ]
+
+    def _build_confidence_block(self, layout):
+        """"How sure are we?" — the establishment and fidelity bands (F13/F14).
+
+        The Habitat Value Score is a confident-looking number out of 100, and
+        until now nothing beside it said how much of that rests on evidence.
+        These two read-outs are the counterweight, and both are **bands, never
+        percentages** — see :mod:`src.confidence`, which owns the words so the
+        two cannot end up on different scales.
+        """
+        head = QLabel("How sure are we?")
+        head.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(head)
+
+        hint = QLabel(
+            "Two questions the score itself cannot answer: has anyone actually "
+            "recorded these species growing where you are, and does the design "
+            "have the shape of the natural community for this place.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(hint)
+
+        self._confidence_text = QLabel(
+            "Calculate the Habitat Value Score to fill this in.")
+        self._confidence_text.setWordWrap(True)
+        self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
+        self._confidence_text.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; "
+            "border-radius: 4px;")
+        layout.addWidget(self._confidence_text)
+
+    def _refresh_confidence(self, placed_plants, ecoregion):
+        """Recompute both bands. Never raises — a missing band is a blank line,
+        not a broken panel."""
+        from src.confidence import UNKNOWN                   # noqa: PLC0415
+        blocks = []
+        try:
+            from src.establishment import (                  # noqa: PLC0415
+                establishment_for_design, summary_band)
+            est = establishment_for_design(placed_plants, ecoregion)
+            band = summary_band(est)
+            blocks.append(self._band_html(
+                "Recorded growing here", band, est.get("lines") or []))
+        except Exception as exc:                             # noqa: BLE001
+            blocks.append(self._band_html(
+                "Recorded growing here", UNKNOWN, [f"Unavailable: {exc}"]))
+        try:
+            from src.reference_fidelity import fidelity      # noqa: PLC0415
+            fid = fidelity(placed_plants, ecoregion)
+            blocks.append(self._band_html(
+                "Like the natural community", fid["band"],
+                fid.get("lines") or []))
+        except Exception as exc:                             # noqa: BLE001
+            blocks.append(self._band_html(
+                "Like the natural community", UNKNOWN, [f"Unavailable: {exc}"]))
+        self._confidence_text.setText("<br><br>".join(blocks))
+
+    @staticmethod
+    def _band_html(title: str, band, lines: list) -> str:
+        """One band as a heading, its label, its basis, and the detail lines.
+
+        The blurb is always shown, because a band label read without what it is
+        based on is exactly the false confidence this block exists to prevent.
+        """
+        colour = {"high": "#a5d6a7", "medium": "#ffcc80",
+                  "low": "#ef9a9a"}.get(band.key, "#90a4ae")
+        body = "".join(f"<br>{ln}" for ln in lines if ln)
+        return (f"<b>{title}:</b> <span style='color:{colour};'>"
+                f"{band.label}</span>"
+                f"<br><span style='color:#78909c;'>{band.blurb}</span>{body}")
+
+    def _build_relationship_web_block(self, layout):
+        """The relationship-web controls on the Habitat tab.
+
+        The overlay itself is the feature; this block is a toggle, a layer
+        filter and an honest read-out of what the picture contains.
+        """
+        head = QLabel("Relationship web — the design as a network")
+        head.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(head)
+
+        hint = QLabel(
+            "Draw the invisible half of the design on the map: which plants "
+            "feed, host and shelter which animals, and which plants are tied "
+            "to each other. Wildlife sit on a ring outside the planting — a "
+            "diagram, not a place, because an animal has no address in your "
+            "yard.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(hint)
+
+        self._web_toggle = QCheckBox("Show the relationship web on the map")
+        self._web_toggle.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+        self._web_toggle.toggled.connect(self._on_web_toggled)
+        layout.addWidget(self._web_toggle)
+
+        self._web_layer_boxes = {}
+        for key, label, on, _kinds in self._WEB_LAYERS:
+            box = QCheckBox(label)
+            box.setChecked(on)
+            box.setStyleSheet(
+                "color: #b0bec5; font-size: 11px; padding-left: 16px;")
+            box.toggled.connect(self._on_web_layers_changed)
+            layout.addWidget(box)
+            self._web_layer_boxes[key] = box
+
+        self._web_summary = QLabel("")
+        self._web_summary.setWordWrap(True)
+        self._web_summary.setVisible(False)
+        self._web_summary.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #16221f; border: 1px solid #2e4a4a; "
+            "border-radius: 4px;")
+        layout.addWidget(self._web_summary)
+
+    def _web_kinds(self) -> tuple:
+        """The edge kinds the current layer checkboxes select."""
+        kinds: list[str] = []
+        for key, _label, _on, kind_names in self._WEB_LAYERS:
+            box = self._web_layer_boxes.get(key)
+            if box is not None and box.isChecked():
+                kinds.extend(kind_names)
+        return tuple(kinds)
+
+    def _on_web_toggled(self, on: bool):
+        if on:
+            self._refresh_relationship_web()
+        else:
+            self._web_summary.setVisible(False)
+            self.relationship_overlay_cleared.emit()
+
+    def _on_web_layers_changed(self, _checked: bool):
+        if getattr(self, "_web_toggle", None) is not None \
+                and self._web_toggle.isChecked():
+            self._refresh_relationship_web()
+
+    def _refresh_relationship_web(self):
+        """Rebuild and re-emit the graph. Never raises — the web is a lens on
+        the design, and a lens that can crash the panel is worse than no lens."""
+        if getattr(self, "_web_toggle", None) is None \
+                or not self._web_toggle.isChecked():
+            return
+        kinds = self._web_kinds()
+        try:
+            from src.relationship_graph import (build_relationship_graph,
+                                                summary_lines)
+            graph = build_relationship_graph(self._placed_plants or [],
+                                             kinds=kinds)
+            lines = summary_lines(graph)
+        except Exception as exc:  # noqa: BLE001
+            self._web_summary.setText(
+                f"Relationship web unavailable: {exc}")
+            self._web_summary.setVisible(True)
+            self.relationship_overlay_cleared.emit()
+            return
+        if not kinds:
+            lines = ["Pick at least one layer to draw."]
+        self._web_summary.setText("<br>".join(lines))
+        self._web_summary.setVisible(True)
+        self.relationship_overlay_requested.emit(graph)
 
     def show_habitat_tab(self):
         """Raise the Habitat Value tab (On This Design → habitat-value
@@ -1299,8 +1475,10 @@ class AnalysisPanel(QWidget):
         cr = getattr(self, "_bee_photo_credit", None)
         if cr is None:
             return
+        from src.image_cache import credit_line
         bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
-        txt = bee.get("image_attribution", "") if on else ""
+        txt = credit_line(bee.get("image_attribution", ""),
+                          bee.get("image_license", "")) if on else ""
         cr.setText(txt or "")
         cr.setVisible(bool(txt))
 
@@ -1435,10 +1613,25 @@ class AnalysisPanel(QWidget):
     # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
 
     def _populate_pull_combo(self):
-        """Fill the pull-a-plant selector with the design's distinct species."""
+        """Fill the pull-a-plant selector with the design's distinct species.
+
+        V2.42: this used to run **only** from ``_calc_habitat_score``, which is
+        wired to a button. So the list was a snapshot of whatever was planted
+        the last time somebody pressed *Calculate* — it did not follow the
+        design, and after a few edits it listed species that were no longer
+        placed while missing the ones that were. It read as an arbitrary list
+        because that is what it had become. It is now also called from
+        :meth:`set_placed_plants`, so it follows every edit.
+
+        The selection is preserved across a refresh (rebuilding a combo the
+        user has already chosen from is its own bug — it would silently reset
+        their choice on every plant placed), and dropped only when the species
+        it names actually leaves the design.
+        """
         combo = getattr(self, "_pull_combo", None)
         if combo is None:
             return
+        previous = combo.currentData()
         combo.blockSignals(True)
         combo.clear()
         by_id: dict = {}
@@ -1449,14 +1642,28 @@ class AnalysisPanel(QWidget):
         if not by_id:
             combo.addItem("Place plants first", userData=None)
             combo.setEnabled(False)
+            combo.blockSignals(False)
             self._pull_result.setVisible(False)
-        else:
-            combo.setEnabled(True)
-            combo.addItem("— pick a plant to test —", userData=None)
-            for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
-                combo.addItem(name, userData=pid)
+            return
+
+        combo.setEnabled(True)
+        combo.addItem("— pick a plant to test —", userData=None)
+        for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
+            combo.addItem(name, userData=pid)
+        restored = False
+        if previous is not None and previous in by_id:
+            idx = combo.findData(previous)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+                restored = True
         combo.blockSignals(False)
-        self._pull_result.setVisible(False)
+        if restored:
+            # The design changed under a live answer, so the answer is stale
+            # too — recompute it rather than leave a number that no longer
+            # describes anything.
+            self._on_pull_plant()
+        else:
+            self._pull_result.setVisible(False)
 
     def _on_pull_plant(self, *_):
         """Render the impact of removing the selected plant (F46)."""
@@ -1519,8 +1726,8 @@ class AnalysisPanel(QWidget):
         total = sum((counts or {}).values())
         if not total:
             self._shade_breakdown.setText(
-                "Run 'Classify planting zones' on the Site tab to see the\n"
-                "full-sun / partial-shade / full-shade mix.")
+                "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
+                "the full-sun / partial-shade / full-shade mix.")
             return
 
         def _pct(n):
@@ -1543,17 +1750,71 @@ class AnalysisPanel(QWidget):
         if (hasattr(self, "_bee_tab_index")
                 and self._tabs.currentIndex() == self._bee_tab_index):
             self.refresh_bee_tab()
-        # The forage calendar tracks the placed plants directly (no button).
-        self.refresh_forage_tab()
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
             self._phenology.refresh()
-        # Guided lesson track reads the live design too.
-        if hasattr(self, "_lesson_track"):
-            self._lesson_track.refresh()
-        # Docent presentation script is regenerated from the live design.
-        if hasattr(self, "_docent"):
-            self._docent.refresh()
+        # The relationship web is a view of the design, so it follows every
+        # edit — placing a keystone shrub should visibly grow the network (F5).
+        self._refresh_relationship_web()
+        # Pull-a-plant is a view of the design too, and was not following it:
+        # its list was only rebuilt when the habitat score was recalculated by
+        # hand, so it drifted out of step with what was actually planted.
+        self._populate_pull_combo()
+        # Same rule for the confidence bands (F13/F14) — a read-out that only
+        # updates when a button is pressed is the V2.42 stale-list bug, and
+        # both of these change the moment a species is added or removed.
+        self._refresh_confidence(self._placed_plants or [],
+                                 self._site_ecoregion())
+
+    @staticmethod
+    def _layer_lines(result) -> list:
+        """The vegetation-layer rows, which say what they were scored against.
+
+        F129 (V2.65) re-bases this component onto the reference community's own
+        layers where one is known, so the denominator is no longer a fixed 5.
+        The row has to name the basis: a user who sees 15/15 for three layers
+        needs to know it was three layers *their grassland actually has*, and
+        not a bug.
+        """
+        if result.layer_basis and result.layer_detail:
+            detail = result.layer_detail
+            filled = sum(1 for d in detail.values() if d.get("present"))
+            thin = sorted(k for k, d in detail.items()
+                          if not d.get("present") and d.get("have"))
+            absent = sorted(k for k, d in detail.items()
+                            if not d.get("present") and not d.get("have"))
+            rows = [f"Vegetation layers  {filled:4d}/{len(detail)}   "
+                    f"{result.score_layers:4.1f} / 15",
+                    f"  (vs {result.layer_basis})"]
+            if thin:
+                rows.append(f"  thin: {', '.join(thin)}")
+            if absent:
+                rows.append(f"  absent: {', '.join(absent)}")
+            return rows
+        return [f"Vegetation layers  {len(result.layers_present):4d}/5   "
+                f"{result.score_layers:4.1f} / 15",
+                f"  ({', '.join(result.layers_present) or '—'})"]
+
+    def _site_ecoregion(self):
+        """The site's ecoregion key, cached against the pin.
+
+        ``lookup_ecoregion`` is a point-in-polygon sweep over the shipped
+        GeoJSON and this is called on every plant placement, so the answer is
+        memoised on the coordinates rather than recomputed per edit.
+        """
+        lat = getattr(self, "_sun_lat", None)
+        lng = getattr(self, "_sun_lng", None)
+        if lat is None or lng is None:
+            return None
+        if getattr(self, "_ecoregion_at", None) == (lat, lng):
+            return self._ecoregion_cache
+        try:
+            from src.ecoregion import lookup_ecoregion       # noqa: PLC0415
+            self._ecoregion_cache = lookup_ecoregion(lat, lng)
+        except Exception:                                    # noqa: BLE001
+            self._ecoregion_cache = None
+        self._ecoregion_at = (lat, lng)
+        return self._ecoregion_cache
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
@@ -1596,7 +1857,12 @@ class AnalysisPanel(QWidget):
         # The panel keeps all the rendering below.
         from src.habitat_score import compute_habitat_score, HabitatScoreError
         try:
-            result = compute_habitat_score(self._placed_plants, self._structures)
+            # The ecoregion re-bases the layer component onto the reference
+            # community's own layers (F129) — a prairie planting is no longer
+            # marked against a forest-garden stack it was never going to fill.
+            result = compute_habitat_score(
+                self._placed_plants, self._structures,
+                ecoregion=self._site_ecoregion())
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
@@ -1655,8 +1921,7 @@ class AnalysisPanel(QWidget):
             f"Host plants        {len(result.host_species):4d}     {result.score_host:4.1f} / 10",
             f"Bird-food species  {len(result.bird_species):4d}     {result.score_bird:4.1f} / 10",
             "",
-            f"Vegetation layers  {len(result.layers_present):4d}/5   {result.score_layers:4.1f} / 15",
-            f"  ({', '.join(result.layers_present) or '—'})",
+            *self._layer_lines(result),
             "",
             f"Habitat structures {len(result.habitat_struct_types):4d}     {result.score_structs:4.1f} / 10",
             f"  ({', '.join(result.habitat_struct_types) or '—'})",
@@ -1687,6 +1952,13 @@ class AnalysisPanel(QWidget):
             _food_web_msg = {
                 "complete": "Food web   supports caterpillars and the "
                             "birds that eat them",
+                # V2.58: this state used to be reported as "complete". Both
+                # links come from use TAGS with no wildlife record behind
+                # either, and saying "supports the birds that eat them" about a
+                # design we hold no bird records for is a claim the data cannot
+                # carry.
+                "unverified": "Food web   the plant tags suggest hosts and "
+                              "bird food, but no wildlife records back it yet",
                 "no_birds": "Food web   caterpillars, but no bird support "
                             "yet; add berry/seed plants",
                 "no_hosts": "Food web   birds, but no host plants yet; "
@@ -1696,12 +1968,27 @@ class AnalysisPanel(QWidget):
             _fw_line = _food_web_msg.get(food_web.get("status"))
             if _fw_line:
                 lines.append(_fw_line)
+            # Coverage (V2.58). Absence of data must never read as absence of
+            # relationships — the failure that made 16 native plants look like
+            # a broken app rather than a thin catalogue.
+            _scored = int(food_web.get("species_scored") or 0)
+            _known = int(food_web.get("species_with_records") or 0)
+            if _scored and _known < _scored:
+                lines.append(
+                    f"  Wildlife records exist for {_known} of your {_scored} "
+                    f"species — the other {_scored - _known} are not known to "
+                    f"support nothing, they are simply not recorded yet.")
         if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]
             lines.append(
                 "  Gap months: " + ", ".join(month_names[m-1] for m in result.gap_months)
             )
+            # Name the way through (F45). Reporting the gap and leaving the user
+            # to find the plants that fill it was the complaint: "gap months are
+            # shown for a design but there is no option to choose plants that
+            # flower or fruit a particular month". There is one now.
+            lines.append("    → Plants → Browse → “Blooms in…” to fill them")
         lines.append("")
         lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 
@@ -1772,9 +2059,10 @@ class AnalysisPanel(QWidget):
         return out[:12]
 
     def _make_species_card(self, name: str, path: str,
-                           attribution: str = "") -> QWidget:
-        """A small thumbnail + caption card for one species. ``attribution`` is
-        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit."""
+                           attribution: str = "", license_str: str = "") -> QWidget:
+        """A small thumbnail + caption card for one species. The photo credit is
+        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit,
+        formatted by the one shared formatter (src/image_cache.credit_line)."""
         card = QWidget()
         v = QVBoxLayout(card)
         v.setContentsMargins(0, 0, 0, 0)
@@ -1785,8 +2073,10 @@ class AnalysisPanel(QWidget):
         pm = QPixmap(path)
         if not pm.isNull():
             thumb.setPixmap(pm)
-        if attribution:
-            thumb.setToolTip(attribution)
+        from src.image_cache import credit_line
+        credit = credit_line(attribution, license_str)
+        if credit:
+            thumb.setToolTip(credit)
         thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
         cap = QLabel(name)
         cap.setWordWrap(True)
@@ -1835,7 +2125,7 @@ class AnalysisPanel(QWidget):
         for name, path, url, attr, lic in items:
             if path:
                 row.insertWidget(row.count() - 1,
-                                 self._make_species_card(name, path, attr))
+                                 self._make_species_card(name, path, attr, lic))
                 shown += 1
             elif url and url not in self._gallery_warmed:
                 pending.append((url, attr, lic))
@@ -1860,7 +2150,10 @@ class AnalysisPanel(QWidget):
     def _warm_gallery_images(self, pending: list):
         """Fetch+cache the not-yet-cached species photos off the UI thread,
         re-rendering the strip as each lands (mirrors plant_list_view's warm)."""
-        sig = self.galleryImageReady
+        # Bind the OWNER, not its bound signal — see src/qt_safety.py. A
+        # gallery warm that lands after the panel is gone used to emit into
+        # freed memory.
+        owner = self
 
         class _FetchTask(QRunnable):
             def __init__(self, url, attr, lic):
@@ -1870,8 +2163,9 @@ class AnalysisPanel(QWidget):
             def run(self):
                 try:
                     from src.image_cache import resolve_image
+                    from src.qt_safety import emit_if_alive
                     if resolve_image(self._url, self._attr, self._lic):
-                        sig.emit()
+                        emit_if_alive(owner, "galleryImageReady")
                 except Exception:  # noqa: BLE001 — a missing photo is not an error
                     pass
 

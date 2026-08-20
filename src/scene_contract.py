@@ -22,7 +22,31 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
-                  growth_curve, color, opacity, common_name, existing?}, ...],
+                  growth_curve, color, opacity, health, health_state,
+                  common_name, bark_color, fall_color, leaf_size_cm,
+                  leaf_shape, leaf_arrangement, growth_form,
+                  existing?, recruit?}, ...],
+                                       # bark_color / fall_color / leaf_size_cm:
+                                       #   botanical morphology (schema v47) —
+                                       #   the species' real trunk colour, its
+                                       #   autumn colour ('' = evergreen or no
+                                       #   colouring), and its typical leaf
+                                       #   length. Additive; the viewer falls
+                                       #   back to per-genus defaults when empty
+                                       # growth_form (schema v48): the species'
+                                       #   habit, and the viewer's first choice
+                                       #   of herb archetype — the hardcoded
+                                       #   genus table is the fallback
+                                       # recruit: true = a self-seeded gap
+                                       #   coloniser that grew in where a plant
+                                       #   was shaded out (V2.24 regeneration);
+                                       #   additive, older viewers just draw it
+                                       # health: 1.0 healthy → 0.0 dead;
+                                       #   health_state: healthy|declining|dead
+                                       #   — src.succession_engine, the growing
+                                       #   canopy shading understory out over
+                                       #   the timeline (opacity already folds
+                                       #   it in: dead → 0, declining dimmed)
                                        # foliage_type: deciduous|evergreen|
                                        #   herbaceous|semi-evergreen (3D crown
                                        #   shape + seasonal colour)
@@ -121,6 +145,20 @@ def _genus_of(plant: dict) -> str:
     """First token of the scientific name, lowercased — the 3D viewer's key for
     species-specific geometry/colour. Empty when unknown."""
     return (plant.get("scientific_name") or "").split(" ")[0].lower()
+
+
+def _species_of(plant: dict) -> str:
+    """``genus species``, lowercased, cultivar and authority dropped.
+
+    A genus is not always one tree. Trembling aspen and balsam poplar are both
+    Populus and share nothing about their crowns — the aspen's leaf is round on
+    a flat petiole, the poplar's ovate and half again as long on a much broader
+    tree — so the viewer needs the epithet to tell them apart. Cultivars are
+    dropped deliberately: 'Goodland' and 'Norland' apples are the same tree to
+    a renderer.
+    """
+    parts = (plant.get("scientific_name") or "").replace("'", " ").split()
+    return " ".join(parts[:2]).lower() if len(parts) >= 2 else ""
 
 _MONTHS = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
@@ -265,12 +303,25 @@ def _terrain_block(elevation: Optional[dict], proj: Projector) -> Optional[dict]
     }
 
 
+def _wind_block(project, when, year, bounds, proj):
+    """The scene's wind, or None. Isolated so one bad cache row or a missing
+    shapely can never take the whole scene down with it — a swaying preview
+    with generic wind is a far better failure than no preview."""
+    try:
+        from src.wind_scene import wind_block
+        return wind_block(project, month=when.month, year=year,
+                          bounds=bounds, origin=proj)
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
 def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
                 scan: Optional[dict] = None,
-                splat: Optional[dict] = None) -> dict:
+                splat: Optional[dict] = None,
+                wind: Optional[bool] = True) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
@@ -283,6 +334,9 @@ def build_scene(project: dict, *, year: int = 0,
     (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
     from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
     opacity}) so the 3D viewer can place it behind the design.
+    ``wind`` set False skips the site's wind block (:mod:`src.wind_scene`),
+    which is the one part of the scene that can touch the DB cache — tests and
+    headless callers that want a pure function pass False.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -302,6 +356,138 @@ def build_scene(project: dict, *, year: int = 0,
             cache[pid] = get_plant(pid) or {}
         return cache[pid]
 
+    def _plant_scene_dict(plant_id, common_name, plant, x, y, st, *,
+                          opacity, health, health_state, recruit=False):
+        """One plant's Scene JSON record. Shared by placed plants and the
+        regeneration recruits so the two can never drift. ``st`` is a
+        ``scene3d.plant_3d_state`` result; ``plant`` the DB record.
+
+        Genus drives the viewer's species-specific geometry; scale/spread drive
+        the structural tier + colony; colour is the natural foliage green with a
+        real-coloured flower/berry layer shown in season."""
+        d = {
+            "plant_id": plant_id,
+            "common_name": common_name,
+            "x": round(x, 2), "y": round(y, 2),
+            "height_m": st["height_m"], "canopy_m": st["canopy_m"],
+            "plant_type": st["plant_type"] or "herb",
+            "genus": _genus_of(plant),
+            # Additive (schema-free): the viewer prefers a species
+            # profile and falls back to the genus one.
+            "species": _species_of(plant),
+            "foliage_type": st.get("foliage_type", "herbaceous"),
+            "scale_factor": st["scale_factor"],
+            "spread_factor": st["spread_factor"],
+            "spread_rate": st["spread_rate"],
+            "growth_curve": plant.get("growth_curve") or "steady",
+            "color": _foliage_color(plant),
+            "flower_color": plant.get("flower_color") or "",
+            "flower_form": plant.get("flower_form") or "none",
+            **_bloom_window(plant),
+            "fruit_color": plant.get("fruit_color") or "",
+            # Fruit SHAPE (schema v49) — additive, so no SCENE_VERSION bump. The
+            # viewer falls back to the round `berry` sprite when it is empty.
+            "fruit_form": plant.get("fruit_form") or "",
+            # The graminoid field mark (schema v52) — additive, and it
+            # SUPERSEDES flower_form in the viewer for grasses, sedges and
+            # rushes. flower_form stays 'plume' for all of them because it
+            # feeds the pollinator logic, where a wind-pollinated grass
+            # correctly offers a bee nothing.
+            "inflorescence_form": plant.get("inflorescence_form") or "",
+            # The bloom as characters rather than as one of fifteen 64px
+            # pictures (schema v53, V2.34). Additive like the rest of this
+            # block — the viewer feature-checks `flower_arch` and falls back to
+            # the billboard where it is empty, so a species the seed data does
+            # not describe renders exactly as it did before.
+            "flower_arch": plant.get("flower_arch") or "",
+            "flower_symmetry": plant.get("flower_symmetry") or "",
+            "petal_shape": plant.get("petal_shape") or "",
+            "petal_count": plant.get("petal_count"),
+            "florets_per_head": plant.get("florets_per_head"),
+            "flower_diameter_cm": plant.get("flower_diameter_cm"),
+            "flower_center_color": plant.get("flower_center_color") or "",
+            "flower_height_frac": plant.get("flower_height_frac"),
+            # How many inflorescences a mature plant carries (schema
+            # v54) — the number "in full bloom" mostly IS, and the one
+            # the viewer used to derive from canopy.
+            "flowering_stems": plant.get("flowering_stems"),
+            # …and how the stem forks (v53), read since V2.35 by both
+            # the baked units and the procedural builder.
+            "stem_branching": plant.get("stem_branching") or "",
+            **_fruit_window(plant),
+            # Botanical morphology (schema v47, V2.29) — additive fields the
+            # viewer feature-checks, so no SCENE_VERSION bump. Empty for every
+            # species the seed data doesn't describe yet, and the viewer falls
+            # back to its per-genus defaults, so this can only add fidelity.
+            "bark_color": plant.get("bark_color") or "",
+            "fall_color": plant.get("fall_color") or "",
+            # Surface character (schema v52) — which procedural bark grain and
+            # leaf surface the viewer draws (01b-surface.js). Additive like the
+            # rest of this block; empty falls back to a per-genus bark default
+            # and a matte leaf.
+            "bark_texture": plant.get("bark_texture") or "",
+            "leaf_surface": plant.get("leaf_surface") or "",
+            "leaf_size_cm": plant.get("leaf_size_cm"),
+            # Leaf size is only meaningful against the plant's own stature, and
+            # `height_m` above is this YEAR's height — so the baked leaf
+            # archetype is chosen against the mature figure, or a plant's leaves
+            # would change size class as it grew.
+            "mature_height_m": st["mature_height_m"],
+            # …and the same argument for spread: a herb's baked aspect unit is
+            # chosen from mature height ÷ mature canopy (V2.34), so it must not
+            # change class as the colony fills in. `canopy_m` above is this
+            # year's footprint; this one is the species' figure.
+            "mature_canopy_m": st.get("mature_canopy_m") or 0,
+            "leaf_shape": plant.get("leaf_shape") or "",
+            "leaf_arrangement": plant.get("leaf_arrangement") or "",
+            # Woody habit (schema v47): excurrent (one leader) / decurrent
+            # (spreading, no leader) / multi_stem / suckering / arching /
+            # prostrate / rosette. Authored since V2.29 and read by nothing
+            # until now, which is why a multi-stemmed water birch and a
+            # single-leadered paper birch were the same sprite.
+            "branching": plant.get("branching") or "",
+            "growth_form": plant.get("growth_form") or "",
+            "opacity": opacity,
+            "health": health,
+            "health_state": health_state,
+        }
+        if recruit:
+            # A self-seeded gap coloniser that grew in after a plant was shaded
+            # out (V2.24). Additive flag — the viewer may style it, old viewers
+            # just draw it as the young plant it is.
+            d["recruit"] = True
+        return d
+
+    # ── Temporal succession (V2.21) ──────────────────────────────────────────
+    # Which placed plants the growing canopy has shaded past their tolerance by
+    # this year. Aligned to the placed-plant features in iteration order; folds
+    # into opacity (dead drop out of the climax community, declining dim) and
+    # ships as explicit health / health_state fields for the 3D viewer's
+    # withered render. Best-effort — a data hiccup must never break the scene.
+    health_by_index: dict = {}
+    recruit_list: list = []
+    try:
+        from src.succession_engine import (
+            SuccessionEngine, static_casters_from_project)
+        placed_recs = [r for r in
+                       (plant_record_from_feature(f)
+                        for f in project.get("features", []))
+                       if r is not None]
+        if placed_recs:
+            engine = SuccessionEngine(
+                placed_recs, get_plant=get_plant,
+                static_casters=static_casters_from_project(project),
+                origin=(lat0, lng0))
+            for info in engine.evaluate_year(int(year))["plants"]:
+                health_by_index[info["index"]] = info
+            # Regeneration (V2.24): self-seeders that fill the gaps left by
+            # plants the closing canopy shaded out.
+            recruit_list = engine.recruits(int(year))
+    except Exception:  # noqa: BLE001 — succession is best-effort
+        health_by_index = {}
+        recruit_list = []
+    _placed_i = 0
+
     for f in project.get("features", []):
         props = f.get("properties", {}) or {}
         geom = f.get("geometry", {}) or {}
@@ -310,38 +496,32 @@ def build_scene(project: dict, *, year: int = 0,
         rec = plant_record_from_feature(f)
         if rec is not None:
             plant = _plant_rec(rec["plant_id"])
-            st = plant_3d_state(plant, rec["lat"], rec["lng"], year)
+            # V2.44: the plant's own age when it carries a planting year, the
+            # design's age when it does not (which is everything from before).
+            st = plant_3d_state(plant, rec["lat"], rec["lng"], year,
+                                planted_year=rec.get("planted_year"))
             x, y = proj.to_xy(rec["lat"], rec["lng"])
-            plants.append({
-                "plant_id": rec["plant_id"],
-                "common_name": rec.get("common_name", ""),
-                "x": round(x, 2), "y": round(y, 2),
-                "height_m": st["height_m"], "canopy_m": st["canopy_m"],
-                "plant_type": st["plant_type"] or "herb",
-                # Genus drives the 3D viewer's species-specific geometry (spruce
-                # vs pine vs fir, white-barked aspen/birch, red-stemmed dogwood…).
-                "genus": _genus_of(plant),
-                "foliage_type": st.get("foliage_type", "herbaceous"),
-                # Growth maturity (0.1–1.0) drives the 3D viewer's structural
-                # tier (sapling/young/mature branch complexity); spread_factor
-                # (≥1.0) widens the footprint; spread_rate (0–1) drives the
-                # continuous, year-by-year colony scatter for self-spreaders.
-                "scale_factor": st["scale_factor"],
-                "spread_factor": st["spread_factor"],
-                "spread_rate": st["spread_rate"],
-                "growth_curve": plant.get("growth_curve") or "steady",
-                # 3D body = natural foliage colour (V1.90); flowers carry their
-                # own real colour + form, shown when in bloom for the month.
-                "color": _foliage_color(plant),
-                "flower_color": plant.get("flower_color") or "",
-                "flower_form": plant.get("flower_form") or "none",
-                **_bloom_window(plant),
-                # Fleshy fruit (V2.0): a curated berry colour shown in the fruit
-                # season. Empty for dry-fruited / non-fruiting plants.
-                "fruit_color": plant.get("fruit_color") or "",
-                **_fruit_window(plant),
-                "opacity": st["presence_opacity"],
-            })
+            # Fold succession health into visibility: a plant shaded to death by
+            # the closing canopy drops out (opacity 0 → the viewer culls it),
+            # a declining one is dimmed, and health/health_state ride along so
+            # the 3D viewer can render the withered transition.
+            info = health_by_index.get(_placed_i)
+            _placed_i += 1
+            health = info["health"] if info else 1.0
+            health_state = info["state"] if info else "healthy"
+            presence = st["presence_opacity"]
+            if health_state == "dead":
+                opacity = 0.0
+            elif health_state == "declining":
+                opacity = round(presence * (0.5 + 0.5 * health), 3)
+            else:
+                opacity = presence
+            # Succession health (V2.21) folds into opacity above; the shared
+            # builder emits the rest of the record (genus geometry, scale/spread
+            # tier, foliage colour, seasonal flower/berry layer).
+            plants.append(_plant_scene_dict(
+                rec["plant_id"], rec.get("common_name", ""), plant, x, y, st,
+                opacity=opacity, health=health, health_state=health_state))
             continue
 
         if etype == "existing_tree" and geom.get("type") == "Point":
@@ -349,6 +529,18 @@ def build_scene(project: dict, *, year: int = 0,
             x, y = proj.to_xy(lat, lng)
             canopy = float(props.get("canopy_radius_m")
                            or (props.get("size_m") or 6.0) / 2.0) * 2.0
+            # Foliage drives BOTH the 3D crown shape (the viewer keys conifer
+            # off genus AND foliage_type — 04-quality.js) and its seasonal
+            # colour / winter bareness (foliage_type). Rule: an explicitly
+            # deciduous crown is broadleaf-and-bare-in-winter; everything else
+            # — evergreen OR unknown — renders as a conifer, matching the
+            # shade model (which treats unknown foliage as year-round shade)
+            # and the conifer-dominated sites this serves. Setting foliage_type
+            # was the fix for "conifers showed as deciduous in 3D": genus alone
+            # gave a conifer shape but _isDecid(undefined) still coloured and
+            # bared it like a broadleaf.
+            _foliage = (props.get("tree_foliage") or "").lower()
+            _ft = "deciduous" if _foliage == "deciduous" else "evergreen"
             plants.append({
                 "plant_id": None,
                 "common_name": props.get("label", "Existing tree"),
@@ -356,7 +548,8 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
-                "genus": "",
+                "genus": "spruce" if _ft == "evergreen" else "",
+                "foliage_type": _ft,
                 # Existing trees are mature with no modelled colony spread.
                 "scale_factor": 1.0,
                 "spread_factor": 1.0,
@@ -410,6 +603,22 @@ def build_scene(project: dict, *, year: int = 0,
                 "size_m": float(sd.get("size_m") or 1.0),
                 "height_m": float(sd.get("height_m") or 1.0),
             })
+
+    # Regeneration (V2.24): self-seeding herbaceous natives fill the gaps the
+    # closing canopy has opened, so the mature scene shows recovery rather than
+    # permanent bare spots. Recruits are additive plants (flagged `recruit`) that
+    # grow in from the year they established.
+    for rc in recruit_list:
+        plant = _plant_rec(rc["plant_id"])
+        # age+1: the scene's year 0 means "mature", so a freshly-established
+        # recruit is sized as a young plant of its age and grows on as the slider
+        # advances.
+        st = plant_3d_state(plant, rc["lat"], rc["lng"], int(rc["age"]) + 1)
+        rx, ry = proj.to_xy(rc["lat"], rc["lng"])
+        plants.append(_plant_scene_dict(
+            rc["plant_id"], plant.get("common_name", ""), plant, rx, ry, st,
+            opacity=st["presence_opacity"], health=1.0, health_state="healthy",
+            recruit=True))
 
     boundary_xy = None
     if boundary:
@@ -475,4 +684,10 @@ def build_scene(project: dict, *, year: int = 0,
         # Night when the sun is down (V2.12): the 3D view renders a moonlit
         # scene and swaps day pollinators for nocturnal moths & bats.
         "is_night": _is_night(lat0, lng0, when or _DEFAULT_WHEN),
+        # The site's REAL prevailing wind for this month, plus the lee of the
+        # design's own windbreaks as a coverage grid (V2.33, F68). Additive and
+        # feature-checked by the viewer, so no SCENE_VERSION bump; None when the
+        # site's wind is unknown, and the viewer keeps its generic sway.
+        "wind": _wind_block(project, when or _DEFAULT_WHEN, year, bounds, proj)
+        if wind else None,
     }

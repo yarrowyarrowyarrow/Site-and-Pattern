@@ -87,6 +87,7 @@ class MapBridge(QObject):
 
     # A plant marker was clicked
     plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
+    plant_substitute_requested = pyqtSignal(int)   # plantId — "the nursery is out" (F91)
 
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
@@ -110,6 +111,13 @@ class MapBridge(QObject):
     # Structure signals
     structure_placed = pyqtSignal(str, str, float, float, float)  # structId, name, lat, lng, sizeM
     structure_removed = pyqtSignal(str, str, float, float)        # markerId, structId, lat, lng
+    # Existing tree/building marks are draggable + scroll-resizable (V2.26).
+    existing_feature_moved = pyqtSignal(str, str, float, float, float, float)
+        # markerId, structId, oldLat, oldLng, newLat, newLng
+    existing_feature_resized = pyqtSignal(str, str, float, float, float)
+        # markerId, structId, lat, lng, newDiameterM
+    existing_feature_foliage = pyqtSignal(str, str, float, float, str)
+        # markerId, structId, lat, lng, foliage ("evergreen"|"deciduous")
 
     # Hedgerow signals
     hedgerow_complete = pyqtSignal(str, str, str, str, float, int)  # id, pointsJson, species, style, lengthM, numPlants
@@ -139,13 +147,6 @@ class MapBridge(QObject):
     sun_anchor_placed = pyqtSignal(float, float)   # lat, lng — user clicked anchor
     sun_path_removed  = pyqtSignal()
     anchor_cancelled  = pyqtSignal(str)            # mode that was cancelled
-
-    # Sector signals
-    sector_anchor_placed   = pyqtSignal(float, float)     # lat, lng
-    sector_group_removed   = pyqtSignal(str)              # sid
-    sector_group_moved     = pyqtSignal(str, float, float) # sid, lat, lng
-    sector_group_rotated   = pyqtSignal(str, float)        # sid, rotationDeg
-    sector_group_resized   = pyqtSignal(str, float)        # sid, radiusM
 
     # Site pin (search-bar pin drop / drag / right-click remove)
     site_pin_placed  = pyqtSignal(float, float, str)   # lat, lng, label
@@ -223,26 +224,6 @@ class MapBridge(QObject):
     def onAnchorCancelled(self, mode: str):
         self.anchor_cancelled.emit(mode)
 
-    @pyqtSlot(float, float)
-    def onSectorAnchorPlaced(self, lat: float, lng: float):
-        self.sector_anchor_placed.emit(lat, lng)
-
-    @pyqtSlot(str)
-    def onSectorGroupRemoved(self, sid: str):
-        self.sector_group_removed.emit(sid)
-
-    @pyqtSlot(str, float, float)
-    def onSectorGroupMoved(self, sid: str, lat: float, lng: float):
-        self.sector_group_moved.emit(sid, lat, lng)
-
-    @pyqtSlot(str, float)
-    def onSectorGroupRotated(self, sid: str, rotation_deg: float):
-        self.sector_group_rotated.emit(sid, rotation_deg)
-
-    @pyqtSlot(str, float)
-    def onSectorGroupResized(self, sid: str, radius_m: float):
-        self.sector_group_resized.emit(sid, radius_m)
-
     @pyqtSlot(int, str, float, float)
     def onPlantPlaced(self, plant_id: int, common_name: str, lat: float, lng: float):
         self.plant_placed.emit(plant_id, common_name, lat, lng)
@@ -259,6 +240,16 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_marker_clicked.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(int)
+    def onPlantSubstituteRequested(self, plant_id: int):
+        """Right-click a plant on the map → find an ecological substitute.
+
+        Added in V2.58: the feature already existed on the On This Design
+        species list, where — as the author put it — 99% of users will never
+        find it. The map is where you are looking at the plant you cannot get.
+        """
+        self.plant_substitute_requested.emit(plant_id)
 
     @pyqtSlot(str, int, float, float)
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
@@ -306,6 +297,25 @@ class MapBridge(QObject):
     @pyqtSlot(str, str, float, float)
     def onStructureRemoved(self, marker_id: str, struct_id: str, lat: float, lng: float):
         self.structure_removed.emit(marker_id, struct_id, lat, lng)
+
+    @pyqtSlot(str, str, float, float, float, float)
+    def onExistingFeatureMoved(self, marker_id: str, struct_id: str,
+                               old_lat: float, old_lng: float,
+                               new_lat: float, new_lng: float):
+        self.existing_feature_moved.emit(marker_id, struct_id, old_lat,
+                                         old_lng, new_lat, new_lng)
+
+    @pyqtSlot(str, str, float, float, float)
+    def onExistingFeatureResized(self, marker_id: str, struct_id: str,
+                                 lat: float, lng: float, new_diameter_m: float):
+        self.existing_feature_resized.emit(marker_id, struct_id, lat, lng,
+                                           new_diameter_m)
+
+    @pyqtSlot(str, str, float, float, str)
+    def onExistingFeatureFoliage(self, marker_id: str, struct_id: str,
+                                 lat: float, lng: float, foliage: str):
+        self.existing_feature_foliage.emit(marker_id, struct_id, lat, lng,
+                                           foliage)
 
     # ── Hedgerow slots ────────────────────────────────────────────────────────
 
@@ -706,10 +716,6 @@ class MapWidget(QWebEngineView):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
         self.run_js(map_js.set_mode("sun_anchor"))
 
-    def enter_sector_anchor_mode(self):
-        """Enter sector anchor placement mode."""
-        self.run_js(map_js.set_mode("sector_anchor"))
-
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
         if lat is not None and lng is not None:
@@ -720,15 +726,9 @@ class MapWidget(QWebEngineView):
     def clear_sun_path(self):
         self.run_js(map_js.clear_sun_path())
 
-    def draw_sectors(self, data: dict, lat: float = None, lng: float = None):
-        """Draw sector analysis wedges on the map at the given anchor."""
-        if lat is not None and lng is not None:
-            self.run_js(map_js.draw_sectors(data, lat, lng))
-        else:
-            self.run_js(map_js.draw_sectors(data))
-
-    def clear_sectors(self):
-        self.run_js(map_js.clear_sectors())
+    def set_sun_path_time(self, minutes):
+        """Move the sun marker along the drawn arc (scrub-rate; JS-only)."""
+        self.run_js(map_js.set_sun_path_time(minutes))
 
     def set_zoom_sensitivity(self, level: str):
         """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
@@ -884,9 +884,27 @@ class MapWidget(QWebEngineView):
         """Leave the "what the bee sees" map view (F37 increment 3)."""
         self.run_js(map_js.clear_bee_forage_view())
 
+    def clear_relationship_graph(self):
+        """Remove the relationship-web overlay (F5)."""
+        self.run_js(map_js.clear_relationship_graph())
+
     def clear_selection(self):
         """Clear the current map selection (no delete)."""
         self.run_js(map_js.clear_selection())
+
+    def draw_relationship_graph(self, payload: dict):
+        """Draw the design's relationship web (F5). ``payload`` comes straight
+        from ``relationship_graph.build_relationship_graph`` — an empty graph
+        clears the overlay rather than drawing nothing over a stale one."""
+        payload = payload or {}
+        if not payload.get("nodes"):
+            self.run_js(map_js.clear_relationship_graph())
+            return
+        self.run_js(map_js.draw_relationship_graph(payload))
+
+    def set_relationship_graph_visible(self, visible: bool):
+        """Show/hide the relationship web without rebuilding it (F5)."""
+        self.run_js(map_js.set_relationship_graph_visible(bool(visible)))
 
     def set_bee_forage_view(self, payload: dict):
         """Recolour the map as the chosen bee's floral-resource map
@@ -934,10 +952,6 @@ class MapWidget(QWebEngineView):
         self.run_js(map_js.set_plant_group_for_latest(
             plant_id, lat, lng, group_id,
         ))
-
-    def set_season_view(self, season: str, pid_visibility: dict):
-        """Highlight plants in/out of season for a given month name."""
-        self.run_js(map_js.set_season_view(season, pid_visibility))
 
     def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
                                       pid_presence: dict | None = None,

@@ -50,6 +50,7 @@ class OnThisDesignPanel(QWidget):
     species_select_requested = pyqtSignal(int)           # ctx: select on map
     species_remove_requested = pyqtSignal(int)           # ctx: remove all (confirmed downstream)
     species_show_in_library_requested = pyqtSignal(int)  # ctx: Plant Library
+    species_substitute_requested = pyqtSignal(int)       # ctx: the nursery is out (F91)
     community_focus_requested = pyqtSignal(str)          # click → zoom to members
     open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
     open_planning_requested = pyqtSignal()               # Stats: cost → Planning
@@ -62,13 +63,11 @@ class OnThisDesignPanel(QWidget):
         root.setSpacing(2)
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
-        self._tabs.setStyleSheet(
-            "QTabWidget::pane { border: 1px solid #2e4a2e; background: #1a2a1a; }"
-            "QTabBar::tab { background: #1e2e1e; color: #a5d6a7; "
-            "padding: 3px 10px; border: 1px solid #2e4a2e; "
-            "border-bottom: none; font-size: 11px; }"
-            "QTabBar::tab:selected { background: #2e4a2e; color: #e8f5e9; }"
-        )
+        # Third level in the tree (Plants → On This Design → here), so it takes
+        # the quietest tab style. This strip used to invent a boxed look of its
+        # own, which made the deepest level the loudest of the three.
+        from src.ui_style import leaf_tab_stylesheet
+        self._tabs.setStyleSheet(leaf_tab_stylesheet())
         root.addWidget(self._tabs)
 
         # Plants sub-tab
@@ -95,7 +94,8 @@ class OnThisDesignPanel(QWidget):
         self._plants_list.customContextMenuRequested.connect(
             self._on_plant_row_menu)
         pl.addWidget(self._plants_list, 1)
-        self._tabs.addTab(plants_widget, "Plants")
+        # "Species", not "Plants" — see the note in app.py's inner tab strip.
+        self._tabs.addTab(plants_widget, "Species")
 
         # Communities sub-tab
         communities_widget = QWidget()
@@ -149,6 +149,11 @@ class OnThisDesignPanel(QWidget):
         self._habitat_value = None
         # Lawn-conversion zone summary (N2) — set via set_lawn_conversion.
         self._lawn_conversion: dict | None = None
+        # Cues-to-care findings (F75) — set via set_cues_to_care. Whether the
+        # planting reads as tended, which is what decides if it is still here
+        # in three years (P13).
+        self._cues_lines: list = []
+        self._cues_tally = None
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -197,6 +202,10 @@ class OnThisDesignPanel(QWidget):
         act_select = menu.addAction("Select on map")
         act_library = menu.addAction("Show in Plant Library")
         menu.addSeparator()
+        # F91. Placed next to Remove because it belongs to the same moment: you
+        # are about to lose this plant — the nursery is out, or it is over
+        # budget — and the question is what to put there instead.
+        act_sub = menu.addAction("Find a substitute…")
         act_remove = menu.addAction("Remove all from design…")
         chosen = menu.exec(self._plants_list.mapToGlobal(pos))
         if chosen is act_focus:
@@ -205,6 +214,8 @@ class OnThisDesignPanel(QWidget):
             self.species_select_requested.emit(pid)
         elif chosen is act_library:
             self.species_show_in_library_requested.emit(pid)
+        elif chosen is act_sub:
+            self.species_substitute_requested.emit(pid)
         elif chosen is act_remove:
             self.species_remove_requested.emit(pid)
 
@@ -289,6 +300,17 @@ class OnThisDesignPanel(QWidget):
         self._lawn_conversion = summary or None
         self._refresh_stats(self._latest_enriched)
 
+    def set_cues_to_care(self, lines, tally=None):
+        """Store the cues-to-care findings (F75) and refresh the Stats tab.
+
+        Computed in ``app.py`` from the project and passed in as lines, like the
+        lawn tally and the cost breakdown — the panel stays presentation-only
+        and never reaches for the project itself.
+        """
+        self._cues_lines = list(lines or [])
+        self._cues_tally = tally
+        self._refresh_stats(self._latest_enriched)
+
     def _value_block_html(self) -> str:
         """The habitat-value half of value-vs-price (F11, P6): what the design is
         worth, shown directly above the cost so the two read together."""
@@ -371,6 +393,38 @@ class OnThisDesignPanel(QWidget):
         return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
                 "What your spend creates: " + ", ".join(creates) + ".</p>")
 
+    def _cues_block_html(self) -> str:
+        """Will the neighbours read it as cared for? (F75, P13.)
+
+        The sibling of "Where to grow next": that block asks whether the design
+        works ecologically, this one asks whether it survives *socially*, which
+        is what actually decides whether it is still there in three years. A
+        native planting is rarely removed for failing ecologically — it is
+        removed because it read as neglect.
+
+        Only absences and the sign prompt are listed. Reciting the cues that are
+        already present would bury the one thing worth changing.
+        """
+        if not self._cues_lines:
+            return ""
+        tally = self._cues_tally
+        if tally and tally[1] and tally[0] == tally[1]:
+            head = ("<p><b>How it will be read</b><br>"
+                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    f"All {tally[1]} cues to care are here — this will read as "
+                    "tended.</span>")
+        else:
+            sub = (f" <span style='color:#78909c;font-size:10px;'>"
+                   f"({tally[0]} of {tally[1]} cues present)</span>"
+                   if tally and tally[1] else "")
+            head = f"<p><b>How it will be read</b>{sub}"
+        items = "".join(
+            f"<li style='margin-bottom:3px;'>{line}</li>"
+            for line in self._cues_lines)
+        return (head +
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                f"{items}</ul></p>")
+
     def _lawn_block_html(self) -> str:
         s = self._lawn_conversion
         if not s or s.get("total_zone_m2", 0) <= 0:
@@ -448,13 +502,16 @@ class OnThisDesignPanel(QWidget):
     def _refresh_stats(self, enriched: list[dict]):
         value_html = self._value_block_html()
         nudges_html = self._nudges_block_html()
+        # Directly after the ecological gaps, because they are the two halves of
+        # the same question — will this design work, and will it be allowed to.
+        cues_html = self._cues_block_html()
         cost_html = self._cost_block_html()
         framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
             self._stats_text.setHtml(
-                body + lawn_html + value_html + nudges_html
+                body + lawn_html + value_html + nudges_html + cues_html
                 + cost_html + framing_html)
             return
         from src.db.plants import get_plant
@@ -528,6 +585,7 @@ class OnThisDesignPanel(QWidget):
         rows.append(lawn_html)
         rows.append(value_html)
         rows.append(nudges_html)
+        rows.append(cues_html)
         rows.append(cost_html)
         rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))

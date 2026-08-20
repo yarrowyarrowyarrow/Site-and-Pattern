@@ -1,0 +1,1531 @@
+{
+ "_comment": "Canonical bibliographic registry for the biological data (V2.42). Every `source` string in plant_fauna_master.json, bee_attributes_master.json and lepidoptera_attributes_master.json resolves to a key here, so the app can render a real citation instead of a shorthand and a reader can go and check the claim. Keys are stable identifiers, never displayed.",
+ "_honesty": "`record_confidence` describes THIS BIBLIOGRAPHIC ENTRY, not the ecological claims that cite it. 'verified' = the author/title/year/publisher below have been checked against the work or a library catalogue. 'unverified' = transcribed from the shorthand citation already in the seed data and NOT yet checked; the work is real and the citation is genuine, but a detail here (an edition year, a publisher) may be wrong. Per P9 we ship the distinction rather than a uniform-looking table that hides it. Do not promote an entry to 'verified' without actually checking it.",
+ "_p9": "Nothing in this file certifies an ecological claim. It makes each claim traceable to a work a reader can obtain. Whether that work supports the specific edge citing it is a separate question, unanswerable from inside this repository - see docs/DATA_AUDIT.md section 7.",
+ "sources": [
+  {
+   "key": "acorn_sheldon_butterflies_ab",
+   "authors": "Acorn, J. and Sheldon, I.",
+   "year": 2006,
+   "title": "Butterflies of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Year as cited in the seed data. Lone Pine has issued this title in more than one printing; the edition actually consulted is not recorded.",
+   "aliases": [
+    "Acorn & Sheldon 2006",
+    "Acorn & Sheldon 2006, Butterflies of Alberta"
+   ]
+  },
+  {
+   "key": "acorn_bugs_ab",
+   "authors": "Acorn, J.",
+   "year": null,
+   "title": "Bugs of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "insects_general",
+   "record_confidence": "unverified",
+   "record_note": "No year given in the seed citation and none assumed here rather than guess one.",
+   "aliases": [
+    "Acorn, Bugs of Alberta"
+   ]
+  },
+  {
+   "key": "pohl_et_al_2018_checklist",
+   "authors": "Pohl, G.R., Landry, J.-F., Schmidt, B.C., Lafontaine, J.D., Troubridge, J.T., Macaulay, A.D., van Nieukerken, E.J., deWaard, J.R., Dombroskie, J.J., Klymko, J., Nazari, V. and Stead, K.",
+   "year": 2018,
+   "title": "Annotated Checklist of the Moths and Butterflies (Lepidoptera) of Canada and Alaska",
+   "publisher": "Pensoft Publishers",
+   "series": "Pensoft Series Faunistica",
+   "kind": "checklist",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Author list transcribed from the published work; not checked against the title page.",
+   "aliases": [
+    "Pohl et al. 2018",
+    "Pohl et al. 2018 (Moths of Alberta)"
+   ]
+  },
+  {
+   "key": "cornell_birds_of_the_world",
+   "authors": "Cornell Lab of Ornithology",
+   "year": null,
+   "title": "Birds of the World",
+   "publisher": "Cornell Lab of Ornithology",
+   "url": "https://birdsoftheworld.org/",
+   "kind": "database",
+   "covers": "birds",
+   "record_confidence": "unverified",
+   "record_note": "A continuously revised subscription database, not a fixed edition. A citation to it should carry an access date and a species account; neither is recorded in the current seed data.",
+   "aliases": [
+    "Birds of the World",
+    "Cornell Birds of the World"
+   ]
+  },
+  {
+   "key": "wilson_carril_2015_bees",
+   "authors": "Wilson, J.S. and Carril, O.M.",
+   "year": 2015,
+   "title": "The Bees in Your Backyard: A Guide to North America's Bees",
+   "publisher": "Princeton University Press",
+   "kind": "field_guide",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Widely held title; publisher and year transcribed from the seed citation and general knowledge, not from the book.",
+   "aliases": [
+    "Wilson & Carril 2015"
+   ]
+  },
+  {
+   "key": "packer_bees_of_canada",
+   "authors": "Packer, L.",
+   "year": null,
+   "title": "Bees of Canada",
+   "kind": "database",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "The seed citation gives author and short title only. This most likely refers to the Bees of Canada project associated with the Packer Lab (York University), but the specific work - database, key, or publication - is NOT established. Highest-priority entry to resolve.",
+   "aliases": [
+    "Packer, Bees of Canada"
+   ]
+  },
+  {
+   "key": "pattie_fisher_mammals_ab",
+   "authors": "Pattie, D. and Fisher, C.",
+   "year": null,
+   "title": "Mammals of Alberta",
+   "publisher": "Lone Pine Publishing",
+   "place": "Edmonton, Alberta",
+   "kind": "field_guide",
+   "covers": "mammals",
+   "record_confidence": "unverified",
+   "record_note": "Year not given in the seed citation.",
+   "aliases": [
+    "Pattie & Fisher, Mammals of Alberta"
+   ]
+  },
+  {
+   "key": "sheffield_et_al_2014_grasslands",
+   "authors": "Sheffield, C.S., Frier, S.D. and Dumesh, S.",
+   "year": 2014,
+   "title": "The bees (Hymenoptera: Apoidea, Apiformes) of the Prairies Ecozone, with comparisons to other grasslands of Canada",
+   "container": "Arthropods of Canadian Grasslands",
+   "publisher": "Biological Survey of Canada",
+   "kind": "chapter",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Cited in bee_attributes_master.json's source string for nesting and floral-host attributes.",
+   "aliases": [
+    "Sheffield, Frier & Dumesh 2014",
+    "Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands)"
+   ]
+  },
+  {
+   "key": "anbc_alberta_native_bees",
+   "authors": "Alberta Native Bee Council",
+   "year": null,
+   "title": "Alberta native bee compilation",
+   "kind": "organisation_compilation",
+   "covers": "bees",
+   "record_confidence": "unverified",
+   "record_note": "Named in the bee attribute file's source string. Not a single citable publication; treat as an organisational data source pending a specific reference. The bee attribute file originally carried all three works in one free-text string; it now cites them as a comma-separated key list (this key, sheffield_et_al_2014_grasslands, wilson_carril_2015_bees).",
+   "aliases": [
+    "Alberta Native Bee Council",
+    "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges)."
+   ]
+  },
+  {
+   "key": "bird_et_al_1995_ab_butterflies",
+   "authors": "Bird, C.D., Hilchie, G.J., Kondla, N.G., Pike, E.M. and Sperling, F.A.H.",
+   "year": 1995,
+   "title": "Alberta Butterflies",
+   "publisher": "Provincial Museum of Alberta",
+   "place": "Edmonton, Alberta",
+   "kind": "monograph",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Cited by one record in lepidoptera_attributes_master.json.",
+   "aliases": [
+    "Bird et al. 1995"
+   ]
+  },
+  {
+   "key": "unattributed_prairie_pollination",
+   "authors": "",
+   "year": null,
+   "title": "Unattributed prairie-composite pollination literature",
+   "kind": "NOT_A_WORK",
+   "covers": "pollination",
+   "record_confidence": "unverified",
+   "record_note": "THIS IS NOT A CITATION AND MUST NOT BE RENDERED AS ONE. The 16 edges carrying this key were seeded with the source string 'Prairie-composite pollination literature; Acorn & Sheldon 2006', whose first half names no work. The Acorn & Sheldon half is real and is why these edges are not simply wrong, but the original author cited two things and only one of them can be checked - so promoting these edges to the Acorn & Sheldon key would assert a coverage that was never claimed. They are parked here instead, visible and countable, until somebody re-sources them. Doing so is the single highest-value citation task in the repository.",
+   "aliases": [
+    "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "Prairie-composite pollination literature"
+   ]
+  },
+  {
+   "key": "pohl_et_al_2010",
+   "authors": "Pohl, G.R., Anweiler, G.G., Schmidt, B.C. and Kondla, N.G.",
+   "year": 2010,
+   "title": "An annotated list of the Lepidoptera of Alberta, Canada",
+   "container": "ZooKeys",
+   "kind": "journal_article",
+   "covers": "lepidoptera",
+   "record_confidence": "unverified",
+   "record_note": "Cited by lepidoptera_attributes_master.json. Volume and page range not recorded.",
+   "aliases": [
+    "Pohl et al. 2010",
+    "Acorn & Sheldon 2006; Pohl et al. 2010"
+   ]
+  },
+  {
+   "key": "globi",
+   "authors": "Poelen, J.H., Simons, J.D. and Miller, C.J.",
+   "year": 2014,
+   "title": "Global Biotic Interactions: An open infrastructure to share and analyze species-interaction datasets",
+   "container": "Ecological Informatics",
+   "publisher": "Elsevier",
+   "kind": "database",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "An AGGREGATOR, not a primary work, and the edges filed under it are weaker evidence than the field guides above. GloBI collates interaction records from hundreds of datasets; the 2,546 edges added in V2.59 were fetched from its /interaction endpoint, which returns distinct interactions WITHOUT the reporting study. Each is independently checkable by querying GloBI for the same pair, which is why it qualifies as documented — but the specific paper behind each record is not yet captured. Re-fetching with includeObservations=true would upgrade these in place; tracked as F125b.",
+   "aliases": [
+    "GloBI",
+    "Global Biotic Interactions",
+    "Poelen et al. 2014",
+    "globalbioticinteractions.org"
+   ]
+  },
+  {
+   "key": "globi_bascompte_barrett_s_c_h_and_k_helenurm_1987_the_reproductive",
+   "authors": "Barrett, S. C. H., and K. Helenurm",
+   "year": 1987,
+   "title": "Barrett, S. C. H., and K. Helenurm. 1987. The Reproductive-Biology of Boreal Forest Herbs.1. Breeding Systems and Pollination. Canadian Journal of Botany 65:2036-2046.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Barrett, S. C. H., and K. Helenurm. 1987. The Reproductive-Biology of Boreal Forest Herbs.1. Breeding Systems and Pollination. Canadian Journal of Botany 65:2036-2046."
+   ]
+  },
+  {
+   "key": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
+   "authors": "Clements, R. E., and F. L. Long",
+   "year": 1923,
+   "title": "Clements, R. E., and F. L. Long. 1923, Experimental pollination. An outline of the ecology of flowers and insects. Washington, D.C., USA, Carnegie Institute of Washington.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Clements, R. E., and F. L. Long. 1923, Experimental pollination. An outline of the ecology of flowers and insects. Washington, D.C., USA, Carnegie Institute of Washington."
+   ]
+  },
+  {
+   "key": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
+   "authors": "Robertson, C",
+   "year": 1929,
+   "title": "Robertson, C. 1929. Flowers and insects: lists of visitors to four hundred and fifty-three flowers. Carlinville, IL, USA, C. Robertson.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Robertson, C. 1929. Flowers and insects: lists of visitors to four hundred and fifty-three flowers. Carlinville, IL, USA, C. Robertson."
+   ]
+  },
+  {
+   "key": "globi_bascompte_small_e_1976_insect_pollinators_of_the_mer_bleue_p",
+   "authors": "Small, E",
+   "year": 1976,
+   "title": "Small, E. 1976. Insect pollinators of the Mer Bleue peat bog of Ottawa. Canadian Field Naturalist 90:22-28.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Small, E. 1976. Insect pollinators of the Mer Bleue peat bog of Ottawa. Canadian Field Naturalist 90:22-28."
+   ]
+  },
+  {
+   "key": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
+   "authors": "Clint Otto, Russ Bryant, and Ned H. Euliss Jr",
+   "year": 2020,
+   "title": "Clint Otto, Russ Bryant, and Ned H. Euliss Jr., 2020, The U.S. Geological Survey Pollinator Library Dataset: U.S. Geological Survey. https://doi.org/10.5066/P9DSS3VL. Accessed at <https://www.sciencebase.gov/catalog/file/get/5f076d2082ce21d4c3fb7426?f=__disk__c5%2F05%2Fa4%2Fc505a40f8b320c4d1444ba286d4e7ec1143390a9> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Clint Otto, Russ Bryant, and Ned H. Euliss Jr., 2020, The U.S. Geological Survey Pollinator Library Dataset: U.S. Geological Survey. https://doi.org/10.5066/P9DSS3VL. Accessed at <https://www.sciencebase.gov/catalog/file/get/5f076d2082ce21d4c3fb7426?f=__disk__c5%2F05%2Fa4%2Fc505a40f8b320c4d1444ba286d4e7ec1143390a9> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_dorey_j_b_fischer_e_e_chesshire_p_r_et_al_a_globally_synthes",
+   "authors": "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (",
+   "year": 2023,
+   "title": "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (2023). https://doi.org/10.1038/s41597-023-02626-w. Accessed at <https://github.com/globalbioticinteractions/dorey2023/archive/ee2f9f138a5c4464fc8edc69c39507d20fe4a0f4.zip> on 01 Aug 2026.2014.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Dorey, J.B., Fischer, E.E., Chesshire, P.R. et al. A globally synthesised and flagged bee occurrence dataset and cleaning workflow. Sci Data 10, 747 (2023). https://doi.org/10.1038/s41597-023-02626-w. Accessed at <https://github.com/globalbioticinteractions/dorey2023/archive/ee2f9f138a5c4464fc8edc69c39507d20fe4a0f4.zip> on 01 Aug 2026.2014."
+   ]
+  },
+  {
+   "key": "globi_ecdysis_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from ecdysis.org",
+   "url": "https://ecdysis.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "ecdysis.org"
+   ]
+  },
+  {
+   "key": "globi_fricke_e_c_svenning_j_accelerating_homogenization_of_the_glo",
+   "authors": "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (",
+   "year": 2020,
+   "title": "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (2020). https://doi.org/10.1038/s41586-020-2640-y. Accessed at <https://github.com/globalbioticinteractions/fricke2020/archive/a104a34d91a6267efdc0660ff45ca7783cfc8b20.zip> on 01 Aug 2026.Prather 2000",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Fricke, E.C., Svenning, J. Accelerating homogenization of the global plant–frugivore meta-network. Nature 585, 74–78 (2020). https://doi.org/10.1038/s41586-020-2640-y. Accessed at <https://github.com/globalbioticinteractions/fricke2020/archive/a104a34d91a6267efdc0660ff45ca7783cfc8b20.zip> on 01 Aug 2026.Prather 2000"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_03fec74b695e4de5",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 03fec74b-695e-4de5-bbe6-ae735fe4ab31",
+   "url": "https://www.gbif.org/dataset/03fec74b-695e-4de5-bbe6-ae735fe4ab31",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "03fec74b-695e-4de5-bbe6-ae735fe4ab31"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_26255917adf24cc3",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 26255917-adf2-4cc3-853e-94dd1bc27b8d",
+   "url": "https://www.gbif.org/dataset/26255917-adf2-4cc3-853e-94dd1bc27b8d",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "26255917-adf2-4cc3-853e-94dd1bc27b8d"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_58d3f1699b2945b6",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 58d3f169-9b29-45b6-afd4-bc5ad6a13b0e",
+   "url": "https://www.gbif.org/dataset/58d3f169-9b29-45b6-afd4-bc5ad6a13b0e",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "58d3f169-9b29-45b6-afd4-bc5ad6a13b0e"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_9c3f2c7779804e76",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 9c3f2c77-7980-4e76-86a9-525221c85074",
+   "url": "https://www.gbif.org/dataset/9c3f2c77-7980-4e76-86a9-525221c85074",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "9c3f2c77-7980-4e76-86a9-525221c85074"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_acf0d7d1d84c4148",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset acf0d7d1-d84c-4148-a208-2882fee74aab",
+   "url": "https://www.gbif.org/dataset/acf0d7d1-d84c-4148-a208-2882fee74aab",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "acf0d7d1-d84c-4148-a208-2882fee74aab"
+   ]
+  },
+  {
+   "key": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
+   "authors": "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth",
+   "year": 2022,
+   "title": "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth, 2022, \"A dataset for pollinator diversity and their interactions with plants in the Pacific NorthWest\", https://doi.org/10.5683/SP3/WTEZNH, Borealis, V1. Accessed at <https://github.com/globalbioticinteractions/guzman2022/archive/e24f70b4a435156264c45a853b4a58687df4cdfc.zip> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "Guzman, Laura Melissa; Kelly, Tyler; Elle, Elizabeth, 2022, \"A dataset for pollinator diversity and their interactions with plants in the Pacific NorthWest\", https://doi.org/10.5683/SP3/WTEZNH, Borealis, V1. Accessed at <https://github.com/globalbioticinteractions/guzman2022/archive/e24f70b4a435156264c45a853b4a58687df4cdfc.zip> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasemcgowan_j_d_1973_fall_and_winter_foo",
+   "authors": "hurlbertlab/dietdatabaseMcGowan, J. D",
+   "year": 1973,
+   "title": "hurlbertlab/dietdatabaseMcGowan, J. D. 1973. Fall and Winter Foods of Ruffed Grouse in Interior Alaska. The Auk 90: 636-640.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseMcGowan, J. D. 1973. Fall and Winter Foods of Ruffed Grouse in Interior Alaska. The Auk 90: 636-640."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasetheberge_j_b_and_g_c_west_1973_signi",
+   "authors": "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West",
+   "year": 1973,
+   "title": "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West. 1973. Significance of Brooding to the Energy Demands of Alaskan Rock Ptarmigan Chicks. The Arctic Journal of the Arctic Institude of North America 26: 138-148.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseTheberge, J. B. and G. C. West. 1973. Significance of Brooding to the Energy Demands of Alaskan Rock Ptarmigan Chicks. The Arctic Journal of the Arctic Institude of North America 26: 138-148."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabaseweeden_r_b_1967_seasonal_and_geograp",
+   "authors": "hurlbertlab/dietdatabaseWeeden, R. B",
+   "year": 1967,
+   "title": "hurlbertlab/dietdatabaseWeeden, R. B. 1967. Seasonal and geographic variation in the foods of adult White-tailed Ptarmigan. Condor 69:303-309.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseWeeden, R. B. 1967. Seasonal and geographic variation in the foods of adult White-tailed Ptarmigan. Condor 69:303-309."
+   ]
+  },
+  {
+   "key": "globi_hurlbertlab_dietdatabasewest_g_c_and_m_s_meng_1966_nutrition",
+   "authors": "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng",
+   "year": 1966,
+   "title": "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng. 1966. Nutrition of Willow Ptarmigan in northern Alaska. Auk 83:603-615.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "hurlbertlab/dietdatabaseWest, G. C. and M. S. Meng. 1966. Nutrition of Willow Ptarmigan in northern Alaska. Auk 83:603-615."
+   ]
+  },
+  {
+   "key": "globi_inaturalist_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from iNaturalist.org",
+   "url": "https://iNaturalist.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "iNaturalist.org"
+   ]
+  },
+  {
+   "key": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
+   "authors": "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol",
+   "year": 2020,
+   "title": "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol. 2020; 00: 1– 14. https://doi.org/10.1111/1365-2745.13530 . Accessed at <https://github.com/globalbioticinteractions/lamanna2020/archive/f8f0791ae6261bf65eee5156413c5c3a370a4359.zip> on 31 Jul 2026.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "LaManna, JA, Burkle, LA, Belote, RT, Myers, JA. Biotic and abiotic drivers of plant–pollinator community assembly across wildfire gradients. J Ecol. 2020; 00: 1– 14. https://doi.org/10.1111/1365-2745.13530 . Accessed at <https://github.com/globalbioticinteractions/lamanna2020/archive/f8f0791ae6261bf65eee5156413c5c3a370a4359.zip> on 31 Jul 2026."
+   ]
+  },
+  {
+   "key": "globi_millerse_pollination_collectionalarc_n_r_waser_n_m_and_oller",
+   "authors": "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J",
+   "year": 2008,
+   "title": "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J., 2008. Year‐to‐year variation in the topology of a plant–pollinator interaction network. Oikos, 117(12), pp.1796-1807.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "millerse/Pollination-CollectionAlarcón, R., Waser, N.M. and Ollerton, J., 2008. Year‐to‐year variation in the topology of a plant–pollinator interaction network. Oikos, 117(12), pp.1796-1807."
+   ]
+  },
+  {
+   "key": "globi_millerse_pollination_collectionbauer_p_j_1983_bumblebee_poll",
+   "authors": "millerse/Pollination-CollectionBauer, P.J",
+   "year": 1983,
+   "title": "millerse/Pollination-CollectionBauer, P.J., 1983. Bumblebee pollination relationships on the Beartooth Plateau tundra of southern Montana. American Journal of Botany, pp.134-144.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "millerse/Pollination-CollectionBauer, P.J., 1983. Bumblebee pollination relationships on the Beartooth Plateau tundra of southern Montana. American Journal of Botany, pp.134-144."
+   ]
+  },
+  {
+   "key": "globi_scan_bugs_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from scan-bugs.org",
+   "url": "https://scan-bugs.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "scan-bugs.org"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1156633",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1156633 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1156633"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165816",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165816 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165816"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175960",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175960 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175960"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176085",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176085 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176085"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176555",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176555 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176555"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176566",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176566 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176566"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176699",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176699 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176699"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176785",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176785 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176785"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176844",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176844 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176844"
+   ]
+  },
+  {
+   "key": "globi_www_bumblebeewatch_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from www.bumblebeewatch.org",
+   "url": "https://www.bumblebeewatch.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "www.bumblebeewatch.org"
+   ]
+  },
+  {
+   "key": "globi_arctos_database_museum",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from arctos.database.museum",
+   "url": "https://arctos.database.museum/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "arctos.database.museum"
+   ]
+  },
+  {
+   "key": "globi_bascompte_oppenheimer_r_l_and_lill_j_t_2021_a_plant_bee_visi",
+   "authors": "Oppenheimer, R. L., and Lill, J. T. (",
+   "year": 2021,
+   "title": "Oppenheimer, R. L., and Lill, J. T. (2021). A Plant-Bee Visitation Network for Plummers Island, MD. Proceedings of the Entomological Society of Washington, 123(2): 365-381.",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "bascompte:Oppenheimer, R. L., and Lill, J. T. (2021). A Plant-Bee Visitation Network for Plummers Island, MD. Proceedings of the Entomological Society of Washington, 123(2): 365-381."
+   ]
+  },
+  {
+   "key": "globi_bins_boldsystems_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from bins.boldsystems.org",
+   "url": "https://bins.boldsystems.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "bins.boldsystems.org"
+   ]
+  },
+  {
+   "key": "globi_gbif_dataset_6e1ef3288dc04366",
+   "authors": "",
+   "year": null,
+   "title": "GBIF dataset 6e1ef328-8dc0-4366-a79f-93d5c34a5b34",
+   "url": "https://www.gbif.org/dataset/6e1ef328-8dc0-4366-a79f-93d5c34a5b34",
+   "kind": "dataset",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported only the dataset key for this record, with no title. The key resolves at gbif.org and names the dataset exactly; who published it and when are not captured here.",
+   "aliases": [
+    "6e1ef328-8dc0-4366-a79f-93d5c34a5b34"
+   ]
+  },
+  {
+   "key": "globi_mczbase_mcz_harvard_edu",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from mczbase.mcz.harvard.edu",
+   "url": "https://mczbase.mcz.harvard.edu/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "mczbase.mcz.harvard.edu"
+   ]
+  },
+  {
+   "key": "globi_mycoportal_org",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from mycoportal.org",
+   "url": "https://mycoportal.org/",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "A collection portal, not a published work. GloBI reports a per-specimen URL for records aggregated from museum collections; this entry names the collection, and the individual record is reachable by querying GloBI for the same species pair. Weaker than a paper and stronger than citing the aggregator.",
+   "aliases": [
+    "mycoportal.org"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165301",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165301 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165301"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165564",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165564 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165564"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165565",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165565 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165565"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165587",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165587 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165587"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165700",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165700 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165700"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165701",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165701 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165701"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165757",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165757 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165757"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165762",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165762 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165762"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1165960",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1165960 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1165960"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1166137",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1166137 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1166137"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1166170",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1166170 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1166170"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1166253",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1166253 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1166253"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175572",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175572 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175572"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175738",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175738 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175738"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175805",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175805 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175805"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175842",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175842 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175842"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175939",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175939 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175939"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1175949",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1175949 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1175949"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176010",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176010 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176010"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176014",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176014 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176014"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176017",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176017 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176017"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176023",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176023 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176023"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176024",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176024 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176024"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176037",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176037 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176037"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176064",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176064 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176064"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176081",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176081 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176081"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176086",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176086 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176086"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176087",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176087 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176087"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176285",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176285 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176285"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176288",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176288 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176288"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176290",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176290 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176290"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176301",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176301 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176301"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176306",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176306 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176306"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176348",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176348 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176348"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176416",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176416 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176416"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176426",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176426 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176426"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176433",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176433 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176433"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176435",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176435 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176435"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176446",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176446 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176446"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176473",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176473 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176473"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176487",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176487 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176487"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176502",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176502 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176502"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176517",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176517 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176517"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176534",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176534 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176534"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176552",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176552 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176552"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176553",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176553 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176553"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176554",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176554 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176554"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176564",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176564 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176564"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176569",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176569 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176569"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176570",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176570 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176570"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176576",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176576 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176576"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176613",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176613 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176613"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176617",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176617 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176617"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176688",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176688 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176688"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176692",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176692 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176692"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1176698",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1176698 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1176698"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1177101",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1177101 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1177101"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1177160",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1177160 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1177160"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1180512",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1180512 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1180512"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1180513",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1180513 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1180513"
+   ]
+  },
+  {
+   "key": "globi_specimen_usda_ars_bbsl1180514",
+   "authors": "",
+   "year": null,
+   "title": "Specimen records from the USDA-ARS:BBSL1180514 collection",
+   "kind": "specimen_record",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "GloBI reported a specimen catalogue number rather than a publication. This entry names the collection; the individual specimen is identified by the catalogue number in the edge's own record and reachable by querying GloBI for the same species pair.",
+   "aliases": [
+    "USDA-ARS:BBSL1180514"
+   ]
+  },
+  {
+   "key": "globi_university_of_michigan_museum_of_zoology_insect_division_ful",
+   "authors": "University of Michigan Museum of Zoology Insect Division. Full Database Export",
+   "year": 2020,
+   "title": "University of Michigan Museum of Zoology Insect Division. Full Database Export 2020-11-20 provided by Erika Tucker and Barry Oconner. Accessed at <https://github.com/EMTuckerLab/ummzi/archive/6731357a377e9c2748fc931faa2ff3dc0ce3ea7a.zip> on 31 Jul 2026.https://doi.org/10.15468/tmxd7n",
+   "kind": "study",
+   "covers": "interactions",
+   "record_confidence": "unverified",
+   "record_note": "Parsed from the study title GloBI reports for this record, not transcribed from the work itself: the author and year fields are a split on the first four-digit year and may be wrong even where the title is right. Verifiable by querying GloBI for the same species pair.",
+   "aliases": [
+    "University of Michigan Museum of Zoology Insect Division. Full Database Export 2020-11-20 provided by Erika Tucker and Barry Oconner. Accessed at <https://github.com/EMTuckerLab/ummzi/archive/6731357a377e9c2748fc931faa2ff3dc0ce3ea7a.zip> on 31 Jul 2026.https://doi.org/10.15468/tmxd7n"
+   ]
+  }
+ ]
+}

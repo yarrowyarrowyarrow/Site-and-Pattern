@@ -7,6 +7,7 @@ but no file I/O yet.  The full implementation comes in Step 4.
 
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -22,7 +23,10 @@ def _utc_now_iso() -> str:
 # the `field_notes` properties block (F6 site-walk notes). Additive — older
 # readers ignore unknown element_types in project_to_map_data and unknown
 # properties keys, so projects stay forward/backward compatible.
-SCHEMA_VERSION = "1.8"
+# 1.9 (V2.22): plant features carry a stable `feature_id` (pf_<hex>), minted
+# at placement by src/project_store.plant_feature. Identity for mutations —
+# coordinate matching remains as the legacy-file fallback. Additive.
+SCHEMA_VERSION = "1.9"
 
 
 def new_placement_group_id() -> str:
@@ -73,9 +77,36 @@ def new_project(name: str = "Untitled Design") -> dict:
 
 
 def save_project(project: dict, path: str) -> None:
-    """Write project dict to a .perma.geojson file."""
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(project, f, indent=2)
+    """Write project dict to a .perma.geojson file — atomically.
+
+    A design is a single file, so durability is the whole game here:
+    the JSON is serialized to a sibling temp file first (same directory ⇒
+    same filesystem), fsynced, then ``os.replace``d over the target — a
+    crash or power cut mid-save can truncate only the temp file, never the
+    user's design. The previous on-disk version survives one save as
+    ``<path>.bak`` so even a *successfully saved* mistake is recoverable.
+    """
+    path = os.path.abspath(path)
+    directory = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(
+        prefix=os.path.basename(path) + ".", suffix=".tmp", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(project, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        if os.path.exists(path):
+            try:
+                os.replace(path, path + ".bak")
+            except OSError:
+                pass  # backup is best-effort; the atomic swap below still holds
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def load_project(path: str) -> dict:
@@ -213,7 +244,7 @@ def project_to_map_data(project: dict) -> dict:
             # singleton group. This keeps the group abstraction uniform and
             # lets group-delete operate consistently.
             group_id = props.get("placement_group_id") or new_placement_group_id()
-            result["plants"].append({
+            record = {
                 "plant_id":    props.get("plant_id", 0),
                 "common_name": props.get("common_name", "Unknown"),
                 "lat": lat,
@@ -222,7 +253,13 @@ def project_to_map_data(project: dict) -> dict:
                 "polyculture_name": props.get("polyculture_name", ""),
                 "polyculture_center_lat": props.get("polyculture_center_lat"),
                 "polyculture_center_lng": props.get("polyculture_center_lng"),
-            })
+            }
+            # Stable per-feature identity (schema 1.9) — carried when the
+            # file has one; legacy features stay id-less (coordinate
+            # fallback) rather than minting fresh ids every load.
+            if props.get("feature_id"):
+                record["feature_id"] = props["feature_id"]
+            result["plants"].append(record)
 
         elif etype in ("existing_tree", "existing_building") \
                 and geom.get("type") == "Point":
@@ -236,8 +273,13 @@ def project_to_map_data(project: dict) -> dict:
             size_m = props.get("size_m")
             if not size_m:
                 size_m = float(props.get("canopy_radius_m", 3.0)) * 2.0
+            # Forward the crown's foliage so the map can colour conifer vs
+            # deciduous (and so it survives a save/reload) — previously
+            # dropped here, which is why detected/marked trees all looked
+            # identical on the 2D map regardless of type (V2.26).
             sd = existing_feature_def(sid, size_m=size_m,
-                                      height_m=props.get("height_m") or 6.0)
+                                      height_m=props.get("height_m") or 6.0,
+                                      foliage=props.get("tree_foliage") or "")
             sd["name"] = props.get("label", sd["name"])
             result["structures"].append({
                 "lat": lat, "lng": lng, "struct_def": sd,

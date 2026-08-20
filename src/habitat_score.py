@@ -21,7 +21,9 @@ Score components (100 pts total):
   2. Keystone species      15 pts   full at 5 distinct species
   3. Host plants           10 pts   full at 10
   4. Bird-food species     10 pts   full at 10
-  5. Vegetation layers     15 pts   3 pts per canonical layer, max 5
+  5. Vegetation layers     15 pts   against the REFERENCE community's layers
+                                    when an ecoregion is known (F129); the
+                                    universal 5-layer stack otherwise
   6. Habitat structures    10 pts   2 pts per distinct type, max 5
   7. Bloom continuity      20 pts   bloom-months in Apr–Oct / 7 * 20
 
@@ -42,6 +44,17 @@ from typing import Optional
 
 
 # Canonical layer names paired with the plant_types that fulfil them.
+#
+# **F124, V2.60 — this used to know six plant_types and the catalogue holds
+# eleven.** The five it missed were `wildflower` (210 species, the largest
+# group in the catalogue by a factor of four), `grass` (53), `sedge` (20),
+# `aquatic` (19), `rush` (8) and `fern` (1): **311 of 437 species mapped to no
+# layer at all**, so the vegetation-layer component counted them as nothing. A
+# twelve-plant prairie meadow of wildflowers, grasses and sedges scored **0 of
+# 15** on layer diversity — this app's own central use case scoring zero on a
+# component it plainly satisfies. Found while building F91 in V2.57, held for
+# the author because the fix RAISES the score of every affected design, which
+# the headline-stability rule reserves to them.
 PLANT_TYPE_TO_LAYER: dict[str, str] = {
     "tree":        "overstory",
     "shrub":       "shrub",
@@ -49,11 +62,59 @@ PLANT_TYPE_TO_LAYER: dict[str, str] = {
     "groundcover": "groundcover",
     "vine":        "vine",
     "root":        "herbaceous",
+    # The five that were missing. All herbaceous by habit — but see
+    # `layer_for_plant`, which reads height, because filing all 292 of them
+    # under one layer would take the prairie meadow from 0 of 15 to 3 of 15
+    # and call that fixed.
+    "wildflower":  "herbaceous",
+    "grass":       "herbaceous",
+    "sedge":       "herbaceous",
+    "rush":        "herbaceous",
+    "fern":        "herbaceous",
+    "aquatic":     "herbaceous",
 }
 
 CANONICAL_LAYERS: frozenset[str] = frozenset(
     {"overstory", "shrub", "herbaceous", "groundcover", "vine"}
 )
+
+#: Plant types whose layer depends on how tall the species actually gets.
+#: A 0.05 m moss phlox and a 2 m big bluestem are both `wildflower`/`grass` by
+#: type and are not the same layer of vegetation by any reading.
+_HEIGHT_SENSITIVE: frozenset[str] = frozenset(
+    {"wildflower", "grass", "sedge", "rush", "fern", "aquatic", "herb", "root"}
+)
+
+#: Where the groundcover layer stops. Not chosen: **read off the catalogue's
+#: own `groundcover` type**, where 26 of 30 species come in under 0.30 m and
+#: the tallest is 0.60. Using the boundary the data already draws keeps this
+#: from becoming one more arbitrary constant.
+_GROUNDCOVER_MAX_M = 0.30
+
+
+def layer_for_plant(plant_type: str, height_m: Optional[float] = None) -> str:
+    """The vegetation layer a species occupies, or ``""`` if it has none.
+
+    Type alone answers it for trees, shrubs and vines. For the herbaceous
+    group it does not: `wildflower` spans 0.05 m to 3.00 m in this catalogue,
+    and calling all 210 of them one layer measures nothing.
+
+    **What this deliberately does not do** is re-file the types that already
+    had a layer. Eleven of the 56 shrubs come in under a metre and are
+    arguably groundcover; a creeping juniper certainly is. Acting on that
+    would *lower* scores, which is the opposite of the change that was
+    approved, so it is left alone and recorded in the plan instead.
+    """
+    layer = PLANT_TYPE_TO_LAYER.get((plant_type or "").strip().lower(), "")
+    if not layer or plant_type not in _HEIGHT_SENSITIVE:
+        return layer
+    try:
+        h = float(height_m)
+    except (TypeError, ValueError):
+        # No height recorded — keep the type's answer rather than guessing
+        # short. Absent is not zero (P9).
+        return layer
+    return "groundcover" if h < _GROUNDCOVER_MAX_M else layer
 
 # Structure ids that contribute to habitat value (Water + Habitat
 # categories from src/db/structures.py).
@@ -165,6 +226,16 @@ class HabitatScore:
     # status ∈ {"complete", "no_birds", "no_hosts", "empty"}.
     food_web: dict = field(default_factory=dict)
 
+    #: What the layer component was scored against (F129, V2.65). Empty means
+    #: the universal five-layer stack; otherwise the name of the reference
+    #: community whose layers formed the denominator. A reader has to be able
+    #: to tell which question `score_layers` answers, because the two are not
+    #: the same question and one of them is unanswerable for a prairie.
+    layer_basis: str = ""
+    #: Per-layer ``{have, want, present}`` when scored against a reference,
+    #: so a panel can say *which* of the reference's layers are thin.
+    layer_detail: dict = field(default_factory=dict)
+
     def as_dict(self) -> dict:
         """JSON-serialisable view, used by the scripting API."""
         return {
@@ -183,6 +254,8 @@ class HabitatScore:
                 "bird_food":  {"species": self.bird_species,
                                "score": round(self.score_bird, 1), "max": 10},
                 "layers":     {"present": self.layers_present,
+                               "basis": self.layer_basis,
+                               "detail": dict(self.layer_detail),
                                "score": round(self.score_layers, 1), "max": 15},
                 "structures": {"types": self.habitat_struct_types,
                                "score": round(self.score_structs, 1), "max": 10},
@@ -307,11 +380,69 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
     return nudges[:limit]
 
 
+def _reference_layer_score(plant_rows: dict, ecoregion, resolve) -> Optional[tuple]:
+    """Score the layer component against the reference community (F129, V2.65).
+
+    Returns ``(score_out_of_15, reference name, per-layer detail)``, or None
+    when there is no reference to score against and the caller should keep the
+    universal stack.
+
+    **The universal stack is forest-shaped and this app is for prairie.**
+    ``CANONICAL_LAYERS`` is overstory / shrub / herbaceous / groundcover / vine
+    — the permaculture *forest-garden* stack. A grassland genuinely occupies
+    two or three of those, so even after F124 fixed the plant-type map in
+    V2.60, a correct and complete prairie planting was capped at **6 of 15**
+    while a woodland-edge design reached 15. The component was measuring *how
+    much like a forest garden is this* and reporting the answer as habitat
+    value, in an app whose own reference communities are grasslands.
+
+    So the denominator becomes the layers the reference community actually has.
+    A grassland design that fills every layer of a grassland scores 15, and a
+    woodland design still has to fill four or five layers to get there. The
+    question changes from "how woodland-like is this" to "how much of your
+    place's own structure have you rebuilt", which is the question P2 says the
+    app is asking.
+
+    The per-layer arithmetic is **not reimplemented here** —
+    :func:`src.reference_fidelity.fidelity` already decides what counts as a
+    layer being present (a 0.25 presence fraction, half credit for started but
+    thin) and a second copy of that judgement would drift from the fidelity
+    band that sits three rows above it in the same panel.
+    """
+    if not ecoregion:
+        return None
+    try:
+        from src.reference_fidelity import fidelity          # noqa: PLC0415
+    except ImportError:
+        return None
+    plants = [{"plant_type": r.get("plant_type") or "",
+               "scientific_name": r.get("scientific_name") or "",
+               "common_name": r.get("common_name") or ""}
+              for r in plant_rows.values()]
+    try:
+        res = fidelity(plants, ecoregion, resolve=resolve)
+    except Exception:           # noqa: BLE001 — a score must never crash a panel
+        return None
+    layers = res.get("layers") or {}
+    # `known` False means no reference resolved, or the catalogue holds none of
+    # its genera. Scoring 0 there would report a catalogue gap as a design
+    # failure, so fall back rather than invent a denominator (P9).
+    if not res.get("known") or not layers:
+        return None
+    filled = sum(1.0 if d.get("present") else (0.5 if d.get("have") else 0.0)
+                 for d in layers.values())
+    return (15.0 * filled / len(layers),
+            res.get("reference") or "the reference community",
+            {k: dict(v) for k, v in layers.items()})
+
+
 def compute_habitat_score(
     placed_plants: list[dict],
     structures: list[dict],
     *,
     connection=None,
+    ecoregion: Optional[str] = None,
+    resolve_reference=None,
 ) -> Optional[HabitatScore]:
     """Compute the Habitat Value Score for a design.
 
@@ -325,6 +456,14 @@ def compute_habitat_score(
         connection: optional open sqlite3 connection (for tests / reuse).
             When ``None``, a fresh ``src.db.plants.get_connection()`` is
             opened and closed internally.
+        ecoregion: optional ecoregion key. When given and a reference
+            community resolves for it, the vegetation-layer component is
+            scored against **that community's** layers instead of the
+            universal forest-garden stack (F129). Omitted or unresolvable,
+            the universal stack is used exactly as before — so every existing
+            caller keeps the score it had.
+        resolve_reference: optional resolver, injected for tests; defaults to
+            ``reference_ecosystem.resolve_reference_community``.
 
     Returns:
         A :class:`HabitatScore`, or ``None`` when nothing is placed (no
@@ -354,7 +493,7 @@ def compute_habitat_score(
         plant_ids = list({p["plant_id"] for p in placed_plants})
         for pid in plant_ids:
             row = connection.execute(
-                "SELECT id, common_name, plant_type, "
+                "SELECT id, common_name, plant_type, mature_height_meters, "
                 "       native_to_alberta, bloom_period "
                 "FROM plants WHERE id = ?",
                 (pid,)
@@ -374,6 +513,40 @@ def compute_habitat_score(
             _n = len(fauna_supported_by_plants(scored_ids, taxon=_taxon))
             if _n:
                 fauna_by_taxon[_taxon] = _n
+        # Birds the design actually FEEDS or shelters, as distinct from birds
+        # recorded visiting a flower (V2.59). A hummingbird at a milkweed is a
+        # true record and a bird supported by the planting — but it is not the
+        # bird half of the Tallamy chain, which is about berries, seeds and
+        # the insects a bird carries to its nestlings. See the food-web block
+        # below for why the difference has to be kept.
+        _birds_nectaring = set()
+        for _rel in ("nectar", "pollen"):
+            _birds_nectaring |= fauna_supported_by_plants(
+                scored_ids, taxon="bird", relationship=_rel)
+        n_birds_forage = len(
+            fauna_supported_by_plants(scored_ids, taxon="bird")
+            - _birds_nectaring)
+        # How many of THIS design's species the catalogue has any wildlife
+        # record for (V2.58). Without this the panels cannot tell "these plants
+        # support nothing" from "we have not recorded what they support" — and
+        # a user who places 16 natives and is shown no animals reasonably
+        # concludes the app is broken.
+        if scored_ids:
+            _marks = ",".join("?" * len(scored_ids))
+            n_with_records = connection.execute(
+                f"SELECT COUNT(DISTINCT plant_id) FROM plant_fauna "
+                f"WHERE plant_id IN ({_marks})", scored_ids).fetchone()[0]
+        else:
+            n_with_records = 0
+        # And how thin the catalogue is overall, so the panel can say so
+        # without hardcoding it (V2.59). It was hardcoded — "relationship data
+        # for 99 of 437 plants" — and F125's sourcing made that sentence false
+        # in the same commit that made it much better news. Two counts are
+        # cheaper than a number that goes stale silently.
+        catalogue_species = connection.execute(
+            "SELECT COUNT(*) FROM plants").fetchone()[0]
+        catalogue_with_records = connection.execute(
+            "SELECT COUNT(DISTINCT plant_id) FROM plant_fauna").fetchone()[0]
     except Exception as exc:
         raise HabitatScoreError(str(exc)) from exc
     finally:
@@ -414,14 +587,20 @@ def compute_habitat_score(
     ]
     score_bird = min(len(bird_species) / 10.0, 1.0) * 10
 
-    # ── 5. Vegetation layer diversity (15 pts, 3 pts per layer) ───────
+    # ── 5. Vegetation layer diversity (15 pts) ────────────────────────
     layers_present: set[str] = set()
     for r in plant_rows.values():
-        layer = PLANT_TYPE_TO_LAYER.get(r.get("plant_type", ""))
+        layer = layer_for_plant(r.get("plant_type", ""),
+                                r.get("mature_height_meters"))
         if layer:
             layers_present.add(layer)
     layers_canonical = layers_present & CANONICAL_LAYERS
     score_layers = min(len(layers_canonical), 5) * 3
+    layer_basis, layer_detail = "", {}
+    against_reference = _reference_layer_score(
+        plant_rows, ecoregion, resolve_reference)
+    if against_reference is not None:
+        score_layers, layer_basis, layer_detail = against_reference
 
     # ── 6. Structural diversity (10 pts, 2 pts per distinct type) ─────
     habitat_struct_types: set[str] = set()
@@ -452,11 +631,52 @@ def compute_habitat_score(
     # gathered: caterpillars come from larval-host lepidoptera (relationship
     # data) or the host_plant tag; birds from the bird fauna they support or
     # the bird_food tag. Reported beside the score, never added to it.
+    #
+    # **V2.58 — this used to assert a complete web off the TAGS.** ``has_birds``
+    # read ``n_birds > 0 or bool(bird_species)``, and ``bird_species`` is the
+    # list of plants carrying the ``bird_food`` *tag*. So a design with a tagged
+    # plant and no bird record at all reported ``birds: True, n_birds: 0,
+    # complete: True``, and the Analysis panel printed "supports caterpillars
+    # and the birds that eat them" about a design the app held no bird records
+    # for. A user placed sixteen natives, was shown no animals, and reasonably
+    # concluded something had broken.
+    #
+    # This is the V2.53 contradiction running the other way. That increment
+    # fixed the case where the tags DENY what the edges document; the case where
+    # the tags CLAIM what the edges do not record was left, and design_critic's
+    # docstring still describes this dict as "edge-derived", which it was not.
+    #
+    # Both sources are kept — a tag is a real editorial signal — but they are
+    # now reported apart, and **"complete" means documented**, because that is
+    # the word doing the persuading.
+    #
+    # **V2.59 — and a nectaring bird does not close the chain.** The bird half
+    # counted any bird edge at all, including `nectar`. F125's sourcing put a
+    # Ruby-throated Hummingbird on Showy Milkweed — a true record — and a
+    # milkweed-only design promptly reported a complete food web. It is the
+    # worst possible example: monarchs are the textbook aposematic caterpillar
+    # that birds learn *not* to eat. Every line this status drives talks about
+    # berries, seeds and the protein nestlings need, so the count behind it now
+    # excludes flower visits. `n_birds` still reports every bird supported —
+    # the hummingbird is not deleted, it is just not evidence of a food chain.
     n_birds = fauna_by_taxon.get("bird", 0)
-    has_caterpillars = n_lepidoptera_supported > 0 or bool(host_species)
-    has_birds = n_birds > 0 or bool(bird_species)
-    if has_caterpillars and has_birds:
+    birds_documented = n_birds_forage > 0
+    cats_documented = n_lepidoptera_supported > 0
+    birds_claimed = bool(bird_species)
+    cats_claimed = bool(host_species)
+    has_birds = birds_documented or birds_claimed
+    has_caterpillars = cats_documented or cats_claimed
+
+    def _evidence(documented: bool, claimed: bool) -> str:
+        if documented:
+            return "documented"
+        return "tag_only" if claimed else "none"
+
+    if birds_documented and cats_documented:
         food_web_status = "complete"
+    elif has_birds and has_caterpillars:
+        # Both links are asserted by tags and neither is backed by a record.
+        food_web_status = "unverified"
     elif has_caterpillars:
         food_web_status = "no_birds"
     elif has_birds:
@@ -466,10 +686,21 @@ def compute_habitat_score(
     food_web = {
         "caterpillars": has_caterpillars,
         "n_caterpillars": n_lepidoptera_supported,
+        "caterpillars_evidence": _evidence(cats_documented, cats_claimed),
         "birds": has_birds,
         "n_birds": n_birds,
-        "complete": has_caterpillars and has_birds,
+        # Of those, the ones fed or sheltered rather than nectared (V2.59).
+        # `n_birds - n_birds_forage` is the flower-visitor count, so a panel
+        # can say both things without a second query.
+        "n_birds_forage": n_birds_forage,
+        "birds_evidence": _evidence(birds_documented, birds_claimed),
+        "complete": birds_documented and cats_documented,
         "status": food_web_status,
+        # Coverage, so a thin catalogue never again reads as an empty ecology.
+        "species_with_records": n_with_records,
+        "species_scored": n_species,
+        "catalogue_with_records": catalogue_with_records,
+        "catalogue_species": catalogue_species,
     }
 
     return HabitatScore(
@@ -497,4 +728,6 @@ def compute_habitat_score(
         n_lepidoptera_supported=n_lepidoptera_supported,
         fauna_by_taxon=fauna_by_taxon,
         food_web=food_web,
+        layer_basis=layer_basis,
+        layer_detail=layer_detail,
     )

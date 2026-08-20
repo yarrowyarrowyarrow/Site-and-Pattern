@@ -17,6 +17,7 @@ network once" notice even online. Vendoring removes that whole class of failure.
 | `three/addons/controls/OrbitControls.js` | npm `three` → `examples/jsm/controls/` | 0.180.0 (MIT) |
 | `three/addons/utils/BufferGeometryUtils.js` | npm `three` → `examples/jsm/utils/` | 0.180.0 (MIT) |
 | `three/addons/postprocessing/Pass.js` | npm `three` → `examples/jsm/postprocessing/` (Spark needs it) | 0.180.0 (MIT) |
+| `three/addons/loaders/GLTFLoader.js` | npm `three` → `examples/jsm/loaders/` (Blender GLB assets, V2.27; its `../utils/BufferGeometryUtils.js` import resolves to the row above) | 0.180.0 (MIT) |
 | `spark/spark.module.js` | npm `@sparkjsdev/spark` → `dist/spark.module.js` | 2.1.0 (MIT) |
 
 The directory layout mirrors the old importmap keys, so the importmap in

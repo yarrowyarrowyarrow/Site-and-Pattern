@@ -161,7 +161,18 @@ def _rasterio_sampler(cog_url: str) -> Optional[Callable]:
     except ImportError:
         return None
     try:
-        vsi = cog_url if cog_url.startswith("/vsicurl/") else f"/vsicurl/{cog_url}"
+        # /vsicurl/ is GDAL's HTTP reader — prefixing it onto a LOCAL path makes
+        # an unopenable name, so rasterio.open fails and this returns None. The
+        # sampler could therefore only ever read remote COGs, and
+        # tests/test_hrdem.py's local-GeoTIFF case had been failing wherever
+        # rasterio is installed while skipping (and so passing) everywhere it is
+        # not. Only URLs get the prefix.
+        if cog_url.startswith(("/vsicurl/", "/vsi")):
+            vsi = cog_url
+        elif cog_url.startswith(("http://", "https://", "ftp://")):
+            vsi = f"/vsicurl/{cog_url}"
+        else:
+            vsi = cog_url                    # a path on this machine
         ds = rasterio.open(vsi)
     except Exception:  # noqa: BLE001 — unreachable / not a raster
         return None

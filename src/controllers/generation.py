@@ -44,9 +44,17 @@ class GenerationController:
         has_pin = (site_config.get("latitude") is not None
                    and site_config.get("longitude") is not None)
 
+        # F44: a first-timer opening this dialog used to face an all-unticked
+        # list and no way to know which goals are sane. Fall back to the
+        # beginner defaults (native, feeds something, stays put, buyable) —
+        # only when the project has none of its own, so a user who
+        # deliberately cleared every goal keeps that choice.
+        from src.onboarding import FIRST_RUN_GOALS
+        preselected = site_config.get("priorities") or list(FIRST_RUN_GOALS)
+
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
-            preselected=site_config.get("priorities", []),
+            preselected=preselected,
             fauna_options=self._fauna_options(), parent=main)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
@@ -77,6 +85,12 @@ class GenerationController:
         main = self._main
         if hasattr(main, "_act_generate"):
             main._act_generate.setEnabled(False)
+        # The getting-started strip carries the other visible Generate button —
+        # keep the two in step so a run can't be started twice.
+        try:
+            main.first_step_bar.set_generate_enabled(False)
+        except AttributeError:
+            pass
         main.statusBar().showMessage("Generating design…")
 
         thread = QThread(main)
@@ -122,6 +136,10 @@ class GenerationController:
         main = self._main
         if hasattr(main, "_act_generate"):
             main._act_generate.setEnabled(True)
+        try:
+            main.first_step_bar.set_generate_enabled(True)
+        except AttributeError:
+            pass
         self._thread = None
         self._worker = None
 

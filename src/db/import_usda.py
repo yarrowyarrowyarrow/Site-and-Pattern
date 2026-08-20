@@ -183,6 +183,8 @@ def import_from_csv(csv_path: str, dry_run: bool = False) -> dict:
 
         if not dry_run:
             conn.commit()
+            from src.db.plants import invalidate_plant_cache
+            invalidate_plant_cache()
 
         return {
             "matched": matched,

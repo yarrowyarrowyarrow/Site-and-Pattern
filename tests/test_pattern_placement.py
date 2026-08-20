@@ -8,10 +8,19 @@ behaviourally equivalent so the Python tests catch regressions in the JS
 math without firing up a browser.
 
 Run with:
-    python -m pytest tests/test_pattern_placement.py -v
+    python -m unittest tests.test_pattern_placement -v
+
+NB (V2.37): every test here is a module-level ``test_*`` function, which
+``unittest`` does not collect — so for a long time this whole file ran zero
+tests under ``python -m unittest discover -s tests -t .``, the project's only test
+command, while the docstring pointed at a pytest that has no config in this
+repo. ``TestPatternGeometry`` at the bottom now adopts them all as subTests so
+they actually guard something. Keep new cases in the same plain-function style;
+the adopter picks them up automatically.
 """
 
 import math
+import unittest
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -498,6 +507,78 @@ def test_marquee_sectors_and_sunpath():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Degenerate anchors (V2.37)
+#
+# User report: "Row placement does not work on top of a boundary. It places all
+# the plants on the one spot. This is true of all placement types including
+# grid, circle, etc."
+#
+# Port of the guard in html/map/03-plants.js `_handlePatternClick`.
+
+MIN_ANCHOR_GAP_M = 0.5
+
+
+def handle_pattern_click(anchors, lat, lng):
+    """Mirror of the JS anchor collector. Returns the new anchor list."""
+    if len(anchors) == 1 and haversine_m(anchors[0], [lat, lng]) < MIN_ANCHOR_GAP_M:
+        return anchors                      # ignored — wait for a distinct point
+    return anchors + [[lat, lng]]
+
+
+def test_two_coincident_anchors_never_commit_a_pattern():
+    """The reported bug, at its root: whatever made the second click land on the
+    first, the pattern must not commit a zero-length gesture."""
+    anchors = handle_pattern_click([], 53.5, -113.5)
+    assert len(anchors) == 1
+    anchors = handle_pattern_click(anchors, 53.5, -113.5)
+    assert len(anchors) == 1, "a repeat click at the same point started a pattern"
+
+
+def test_a_distinct_second_anchor_still_commits():
+    anchors = handle_pattern_click([], 53.5, -113.5)
+    anchors = handle_pattern_click(anchors, 53.5001, -113.5)   # ~11 m north
+    assert len(anchors) == 2
+
+
+def test_degenerate_row_would_have_stacked_every_plant():
+    """Why the guard matters: the geometry itself has no defence."""
+    pos = row_positions(53.5, -113.5, 53.5, -113.5, 1.0, 0)
+    assert len(pos) == 2
+    assert pos[0] == pos[1], "expected the historical stacked-on-one-spot result"
+
+
+def test_degenerate_circle_collapses_to_its_centre():
+    pos = circle_positions(53.5, -113.5, 0.0, 1.0, 0)
+    assert all(abs(p[0] - 53.5) < 1e-9 and abs(p[1] + 113.5) < 1e-9 for p in pos)
+
+
+def test_guard_tolerance_is_below_a_real_gesture():
+    """A deliberate short row must still be allowed — the guard is for
+    coincident clicks, not for small plantings."""
+    anchors = handle_pattern_click([], 53.5, -113.5)
+    one_metre_north = 53.5 + 1.0 / 111320.0
+    anchors = handle_pattern_click(anchors, one_metre_north, -113.5)
+    assert len(anchors) == 2, "a 1 m row was rejected as degenerate"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestPatternGeometry(unittest.TestCase):
+    """Adopt every module-level ``test_*`` above so ``unittest`` runs them.
+
+    Without this the file collects zero tests under the project's only test
+    command; see the module docstring.
+    """
+
+    def test_all_pattern_geometry_cases(self):
+        cases = [(k, v) for k, v in sorted(globals().items())
+                 if k.startswith("test_") and callable(v)]
+        self.assertGreater(len(cases), 20, "test functions stopped being found")
+        for name, fn in cases:
+            with self.subTest(case=name):
+                fn()
+
 
 if __name__ == "__main__":
     import sys

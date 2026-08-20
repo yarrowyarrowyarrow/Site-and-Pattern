@@ -35,8 +35,9 @@ The authoritative reader/writer is [`src/project.py`](../src/project.py)
       "wind_exposure": null,
       "priorities": []
     }
-    // Optional, off by default (added V1.41):
-    // "use_utm_projection": false     // opt a project into the UTM distance backend
+    // "use_utm_projection" (V1.41–V2.21) is obsolete: the UTM backend was
+    // never reachable and was deleted in V2.22. Old files carrying the key
+    // are fine — readers ignore unknown properties.
   },
   "features": [ /* see element types below */ ]
 }
@@ -92,6 +93,8 @@ Multiple boundaries are allowed; each needs a unique `boundary_id`.
     "element_type": "plant",
     "plant_id": 42,                       // FK into the plant database
     "common_name": "Yarrow",
+    "feature_id": "pf_49147dfef7e7",      // stable per-plant identity (1.9);
+                                          // absent in legacy files (coords fallback)
     "placement_group_id": "pg_abcdef0123",// shared by one placement gesture
     "quantity": 1,
     // present only for community members:

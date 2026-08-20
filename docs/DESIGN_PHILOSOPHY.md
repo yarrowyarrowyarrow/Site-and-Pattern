@@ -14,7 +14,11 @@
 > **Companion documents:**
 > - [`REFERENCES.md`](REFERENCES.md) — the complete bibliography (every source text).
 > - [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) — an in-depth, in-breadth map of
->   the features this framework makes possible, organized by principle.
+>   the features this framework makes possible, organized by principle (and the shipped
+>   record of F1–F62).
+> - [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) — the forward roadmap (V2.32 →), including a
+>   **proposed thirteenth principle** on beauty as the mechanism by which a native planting
+>   survives contact with people. Proposed, not adopted — this document still carries twelve.
 >
 > **A note on the name.** The application is **Site & Pattern** (formerly PermaDesign).
 > What users see now reads "Site & Pattern"; a few internal identifiers keep the legacy
@@ -43,8 +47,15 @@ Complex ecological order emerges from simple rules applied locally, not from top
 > scored placement; `src/pattern_language.py` now frames seeded communities
 > (`src/db/polycultures.py`) as Alexander patterns (problem → context → forces → solution →
 > related patterns). **State: strong** — generative scoring *plus* an explicit pattern-language
-> framing (roadmap F4, shipped); the remaining gap is that the placement rules themselves are
-> still implicit in `placement_score`/`llm_design` rather than declared and tweakable (F23).
+> framing (roadmap F4, shipped); and the design now *self-heals* over time — the V2.24 gap
+> recruitment in `src/succession_engine.py` lets self-seeding natives colonise the openings the
+> closing canopy leaves, an emergent bottom-up behaviour rather than a stamped layout. The
+> **worked example** (`src/onboarding.py`, roadmap F44) follows the same discipline where it would
+> have been easiest not to: it is authored as species names plus offsets and *resolved against the
+> live catalogue* at open time, so the app's showcase design is a rule set rather than a frozen
+> file — and can never name a plant the catalogue doesn't have. The remaining gap is that the
+> placement rules themselves are still implicit in `placement_score`/`llm_design` rather than
+> declared and tweakable (F23).
 
 ### 2. The best designs disappear into their context
 
@@ -76,10 +87,17 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 > plant and see which species lose all support and whether the food-web chain snaps; and the
 > **feed-a-chickadee scenario** (`src/chickadee_scenario.py`, roadmap F47) walks one edge all
 > the way up — host plant → caterpillar → nestling — weighing the design's caterpillar capacity
-> against the 6,000–9,000 a brood needs. **State: partial (strengthening)** — the relationships
-> are increasingly *scored*, now *testable by removal*, and now *followed up the chain to a
-> fledged bird*, but not yet drawn as a network (F5) or unified into one edges layer (F7);
-> mycorrhizal/symbiosis links still live only in plant `notes` text.
+> against the 6,000–9,000 a brood needs. The four edge shapes are now **one queryable layer**
+> (`src/db/relationships.py` over the schema-v51 `relationship_edges` view, roadmap F7), which
+> answers "show me everything connected to this plant" in a single call and can see the
+> second-order edge no individual table holds — two plants tied together by an animal they both
+> feed; and a design is finally **drawn as the network it is** (`src/relationship_graph.py` +
+> `html/map/07-network.js`, roadmap F5), over the real map, with species at their planting
+> centroid and wildlife on a ring outside it. **State: strong** — the relationships are modeled,
+> scored, testable by removal, followed up the chain to a fledged bird, queryable as one layer,
+> and visible as a graph. Still absent: mycorrhizal/symbiosis links (F25) and successional
+> edges (F26) — they live only in plant `notes` text and inferred roles, and the edges layer
+> now has a shape ready for both.
 
 ### 4. Time is the most undervalued design variable
 
@@ -94,14 +112,27 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > spring/summer/fall/winter seasonal toggle (F16, shipped), and the **phenology "what's
 > happening now" dashboard** (`src/phenology.py`, roadmap F51) that reads the design's trajectory
 > at *this* month's resolution — what's blooming, fruiting, waking, and going dormant right now.
-> **State: strong.**
+> The timeline is no longer merely *visual*: the **temporal succession engine**
+> (`src/succession_engine.py`, V2.21) computes the shade the growing overstory casts over the
+> understory year by year and lets sun-loving plants that get over-topped past their tolerance
+> decline and die, so the year-N scene shows the emerging *climax community* — the survivors —
+> rather than every plant frozen at full health (folded into `scene_contract` health/opacity and
+> the 3D viewer's withered render). V2.24 makes that simulation more honest: a declared-deciduous
+> crown shades the understory only for its leaf-on season (so a part-shade plant thrives under a
+> birch where it would struggle under a spruce), canopy trees are *suppressed* by crowding rather
+> than culled like a forb, and — crucially — a shaded-out gap does not stay bare: a self-seeding
+> herbaceous native already in the design **recruits into it** and grows in, so the trajectory now
+> shows *recovery*, not just loss. **State: strong.**
 
 ### 5. Perception is constructed, not received
 
 Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual culture theory, Norman's affordances, and pain science all demonstrate that what an observer notices depends on what they have been trained to notice. The application is fundamentally a perception tool: it should help users *see* ecological relationships they currently cannot — pollinator pathways, mycorrhizal connections, successional trajectories, and habitat value that are invisible to the untrained eye.
 
 > **Where this lives in the code:** the site-analysis overlays in `src/analysis_panel.py`
-> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis,
+> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade) — one **Sun & Shade**
+> surface since V2.38 (`src/sun_shade.py`), because the sun's arc and the shadow it throws
+> are one perception and were two tabs with two clocks; drag the clock and the sun moves
+> and the shade sweeps with it — plus sector analysis,
 > the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
 > leaf-off and bloom, the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
 > puts the user's real yard under the design, and the **snow-catch microsite overlay**
@@ -122,11 +153,27 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > ranges-not-certainties — each step read back against the user's own design; and **docent /
 > presentation mode** (`src/docent.py`, roadmap F52) turns the design into a narrated tour built
 > from its own facts, so the user can teach *others* to see it (a neighbour, an HOA board, a class).
-> **State: partial** — site forces, seasonality, the real site, winter snow microsites, a single
-> bee's world, active recall, a guided course and a presentable tour are made visible, but
-> ecological *relationships* (pollinator
-> pathways, mycorrhizal networks, succession trajectories) are still not drawn as networks
-> (roadmap F5, F15).
+> Since V2.31 the ecological *relationships* are drawn too: the **relationship web overlay**
+> (`src/relationship_graph.py` + `html/map/07-network.js`, roadmap F5 — see principle #3) puts the
+> design's food web on the real map, and F15's pollinator-pathway idea was merged into it as a month
+> filter rather than shipped as a third overlay saying the same thing.
+> Since V2.41 the catalogue itself is a place you can stand in: the **plant directory**
+> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90) opens *before any
+> design exists* and gives every species a page — photograph and credit, conditions, season,
+> morphology in plain English, the sourced range **with its occurrence counts and confidence
+> band**, every documented animal with the specialists flagged, companions, sourcing. It is the
+> first surface in the app that treats the data as something to *read* rather than something to
+> place, and it made thirteen filters pressable that had worked for years with no control
+> attached to them.
+> **State: strong** — site forces, seasonality, the real site, winter snow microsites, a single
+> bee's world, the food web itself, active recall, a guided course, a presentable tour and now the
+> catalogue as a reference work are all made visible. What is *not* yet visible is the thing the
+> eye judges first: the app can show you what a design **means** far better than it can show you
+> what it will **look like**. The 3D preview resolves 434 species into ~75 distinguishable looks
+> (`docs/SPRITE_AUDIT.md`), and 111 of 434 species have no photograph at all while the named
+> photo-slot table (F70) ships empty — the directory now makes that gap *visible* rather than
+> merely true, which is the honest first step toward closing it (roadmap F63–F74 in
+> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md)).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -143,7 +190,12 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > (`src/chickadee_scenario.py`, roadmap F47), which converts the abstract food-web score into
 > the one number people feel — whether the design's host plants could raise a chickadee brood
 > (the 6,000–9,000 caterpillars of Tallamy & Shropshire 2009), reported as an honest range.
-> **State: strong.**
+> A legible number still has to be a number about the right thing: until V2.65 the
+> vegetation-layer component scored every design against the permaculture *forest-garden* stack,
+> so a complete prairie planting was capped at 6 of 15 by a metric that was really measuring how
+> woodland-like it was. F129 re-bases it on the layers the site's own reference community has —
+> and the same planting scores *lower* in Aspen Parkland than on prairie, because there it really
+> is missing a canopy. **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 
@@ -167,7 +219,21 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 > **year-by-year conversion schedule** (`src/conversion_plan.py`, roadmap F17) that crosses the
 > drawn zones with the restoration-stage timeline into a remove-this / plant-that, when task list,
 > plus the **lawn-equivalent counterfactual** (roadmap F10) that frames the conversion as repair of
-> a near-zero-value lawn. **State: strong.**
+> a near-zero-value lawn; and the V2.24 **gap recruitment** in `src/succession_engine.py` models the
+> system repairing *itself* — self-seeding natives recolonising the openings the maturing canopy
+> leaves, so restoration is shown as an ongoing process rather than a one-time install. Repair
+> starts from an honest inventory of what's already there: V2.26's **automatic tree detection**
+> reads the free Meta/WRI global 1 m canopy-height map (`src/tree_detect_chm.py`, variable-window
+> local-maxima on real heights — the industry method) to fill the site inventory on the treed/rural
+> properties OSM knows nothing about, with *measured* tree heights (±≈3 m) rather than guesses, so
+> the shade map reflects the real site anywhere in the world. The conversion now begins where it
+> actually begins — the ground: the **site-prep sheet** (`src/site_prep.py`, roadmap F43) sizes the
+> lawn removal and, against the reflex, tells the user **not to enrich** (a fertility spike favours
+> the weeds that outcompete young natives, which are adapted to the soil already there), so prep is
+> repair of soil *structure* rather than a shopping list; and the **maintenance calendar**
+> (`src/maintenance_calendar.py`, roadmap F42) carries the restoration past install day — including
+> cutting back in spring rather than fall, so the overwintering habitat the rest of the app models
+> is not tidied away every October. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
@@ -179,8 +245,30 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > **precipitation-timing split** in `src/precip_split.py` — which separates immediately-available
 > growing-season rain from delayed snowmelt water (both as honest liquid-water equivalent, with
 > *no* false snow-depth precision) rather than letting one "precipitation" number imply more
-> growing-season water than a site gets. **State: strong** (language); **partial** (placement is
-> still point-wise/deterministic once generated — see roadmap item C).
+> growing-season water than a site gets. Since V2.42 it also lives in the **provenance** of the
+> biological data itself: `evidence` on every relationship edge distinguishes `documented` (cited)
+> from `recorded` (in a table, uncited) from `derived` (computed), each derived edge carries a
+> coarse `confidence` band — never a probability — plus the genus it was expanded from, and
+> `data/sources_master.json` marks each bibliographic entry `verified`/`unverified` so the app
+> can say where a claim came from without implying anyone has checked it. **V2.48 added the
+> case study**: `flower_color` had been seeded per *genus* since v31, which was survivable while
+> it only tinted a floret and became a wrong answer the moment V2.47 made it filterable. The
+> lesson is the principle in one line, so it is worth stating plainly here: *an unmarked
+> estimate is safe exactly until something starts asking it questions.*
+> `flower_colour_source` (schema v64) now separates a colour checkable against the species' own
+> name or Latin epithet from the genus default, the species page and the website print
+> **not verified** on the 359 that are still a guess, and
+> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band
+> while captioning that the region outlines themselves are hand-drawn boxes rather than surveyed
+> boundaries.
+> V2.65 added the other half of the same discipline — *not claiming less than the evidence
+> supports*. The Habitat Value Score read use tags while the citations lived in edges, so the app
+> held a sourced larval-host record for Chokecherry and told the user their chokecherry planting
+> had no host plants (F120); and the ingest gate refused 700 host records for coming from a vague
+> verb when the observations file could name the life stage on 44 of them (F131). Both fixes are
+> bounded the same way: a taxon has to be right at the far end, an unrecorded stage stays
+> unrecorded, and **additive only** — absence of an edge is absence of evidence, never evidence of
+> absence. **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects
 
@@ -193,9 +281,15 @@ This is the synthesis of all preceding themes. Every other landscape application
 > labels** (`src/ecological_role.py`, roadmap F1) now read those plant↔fauna edges back to the
 > user per plant ("hosts 7 caterpillars", "specialist host"); the **native-bee habitat builder**
 > (`src/bee_habitat.py`, F37) reads the same bee↔plant edges *forward* into "design for this
-> species" guidance. **State: partial** — the edges are
-> modeled in data, increasingly scored, summarised per node, and now actionable per target
-> species, but not yet drawn as a first-class relationship network in the UI (roadmap F5, F7).
+> species" guidance; and the **unified edges layer** (`src/db/relationships.py`, F7) plus the
+> **relationship web overlay** (`src/relationship_graph.py` + `html/map/07-network.js`, F5)
+> finally make the network first-class — one vocabulary of edge kinds behind one query API,
+> and a map layer that draws the design as the graph it always was.
+> **State: strong** — the edges are modeled in data, scored, summarised per node, actionable
+> per target species, queryable as a single layer, and drawn. What is still object-shaped is
+> *generation*: `llm_design` picks a species list and `placement_score` scores cells, neither
+> reasoning over the edge graph directly — placing for the network rather than for the site is
+> the next honest step.
 
 ### 11. The body and the site know things the screen does not
 
@@ -214,9 +308,14 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > into a standing invitation to walk the ground and confirm it ("is it early, late, on time?").
 > **State: strong (was a gap)** — the app now *fetches* site data, *hands the user a field plan*,
 > *captures their own on-site observation*, *reads the winter the plants will actually face*, and
-> *sends the user out to verify its predictions*. The remaining reach: pinning individual
-> observations to map points and feeding them back into generation as soft constraints (the
-> "pinned" slice of F6).
+> *sends the user out to verify its predictions*. V2.31 finished the artifact that goes outside:
+> the Planting Plan became a whole document — prep, buy list, a **numbered scale plan drawing**
+> with a scale bar and north arrow (`src/planting_map.py`, roadmap F41), the phased schedule, and
+> the maintenance cadence — assembled in the order the work happens
+> (`src/planting_plan_export.py`). The drawing is deliberately *not* the satellite capture: a
+> screenshot is unusable in a yard with a tape measure, and a keyed plan at a stated scale is what
+> you can lay out from. The remaining reach: pinning individual observations to map points and
+> feeding them back into generation as soft constraints (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 
@@ -237,6 +336,38 @@ Until such consultation has taken place, references to Indigenous knowledge in t
 > [`REFERENCES.md`](REFERENCES.md), and the consent-gate rule injected at session start (see
 > `CLAUDE.md` and the `.claude/` SessionStart hook). **State: directional guardrail** —
 > references stay directional until free, prior, and informed consent is obtained.
+
+---
+
+### 13. A native planting has to be loved to survive
+
+Nassauer's *cues to care*, Alexander's "quality without a name", and the plain evidence of every converted front yard converge on a point the ecological case alone cannot carry: **a planting that nobody finds beautiful gets removed, and one that a neighbour admires gets copied.** Ecological quality and legible human care are not opposed — a mown edge, a crisp border, a visible path and a deliberate repeat are what buy an ecologically rich planting its social licence. Beauty is not decoration layered over the ecology; it is the mechanism by which the ecology survives contact with people. The application must therefore make its designs *desirable*, not only defensible — and must help the user show them to whoever has to agree.
+
+This is not a softening of the other twelve. It is the missing half of Tallamy's own argument, which is the app's stated *why*: his strategy depends on suburban neighbours tolerating and then copying each other's yards, and that is a social mechanism, not an ecological one. A design that scores 82/100 for habitat value and gets torn out in year two has produced nothing. The honest consequence is that "make the preview beautiful" and "show the plant as it really looks" are **core work, not polish** — which is how V2.33's 3D and photography work should be read.
+
+Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md). The missing citation it rests on — Joan Nassauer, *Messy Ecosystems, Orderly Frames* (Landscape Journal, 1995) — is now in [`REFERENCES.md`](REFERENCES.md).
+
+> **Where this lives in the code:** the aesthetic-composition terms in
+> [`placement_score.py`](../src/placement_score.py) (`_height_gradient`, `_cohesion`,
+> `_rhythm`) are cues-to-care logic that predates the principle; the **saves folder and
+> in-app design list** ([`saves.py`](../src/saves.py), F87, V2.39) belong here too and not
+> only under "usability" — a design a person cannot find again is a design that does not get
+> revisited, and revisiting is the whole of stewardship. Naming the ceremony around the work
+> as part of whether the work happens is the same argument as the one about beauty; docent mode
+> ([`docent.py`](../src/docent.py)) exists explicitly to present a design to *"a neighbour, an
+> HOA board, a class"*; the lawn counterfactual is an argument aimed at a sceptic; and the
+> presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the
+> first artefact the user can actually hand to the person whose agreement they need — including
+> a sidewalk camera at eye height, which is the view that decides whether a planting gets a
+> complaint or a question about where to buy the seeds. **Flower colour became a filter** in
+> V2.47 ([`flower_colour.py`](../src/flower_colour.py), F108) — the hex had been in the schema
+> since v31 driving the 3D florets, and none of the thirty search parameters could ask about
+> it, which meant the catalogue could answer every ecological question and not the one a
+> person asks when they are choosing a plant because they want to look at it. **State:
+> partial** — the app can now render and print the argument, but it does not yet critique a
+> design for the moves that decide whether it survives socially (roadmap F75), it cannot yet
+> put before / after / in-five-years on one page (F76), and colour is a *filter* rather than
+> an analysis: nothing yet says "your June is all yellow".
 
 ---
 

@@ -489,6 +489,8 @@ class MapEventRouter:
             }
         })
         self._main._mark_modified()
+        # Mirror into Planning → Notes ("Notes on the map" list).
+        self._main._sync_planning_panel()
 
     @undoable("remove note")
     def _on_annotation_removed(self, ann_id: str):
@@ -497,6 +499,7 @@ class MapEventRouter:
             if f.get("properties", {}).get("annotation_id") != ann_id
         ]
         self._main._mark_modified()
+        self._main._sync_planning_panel()
 
     # ── Plant move handlers ──────────────────────────────────────────────────
 
@@ -610,7 +613,7 @@ class MapEventRouter:
     def _on_mouse_moved(self, lat: float, lng: float):
         self._main._sb_coords.setText(f"Lat: {lat:.5f} , Lng: {lng:.5f}")
 
-    # ── Sun-path / sector anchor handlers ───────────────────────────────────
+    # ── Sun-path anchor handlers ─────────────────────────────────────────────
 
     @undoable("sun path")
     def _on_sun_anchor_placed(self, lat: float, lng: float):
@@ -619,31 +622,11 @@ class MapEventRouter:
         if self._main._pending_sun_config:
             self._main._render_sun_path(self._main._pending_sun_config, lat, lng)
 
-    @undoable("sun sectors")
-    def _on_sector_anchor_placed(self, lat: float, lng: float):
-        """User placed sector anchor; now draw."""
-        if self._main._pending_sector_config:
-            self._main.map_widget.draw_sectors(
-                self._main._pending_sector_config, lat, lng,
-            )
-            names = [s["name"] for s in
-                     self._main._pending_sector_config.get("sectors", [])]
-            self._main._set_mode_label(f"Sectors: {', '.join(names)}")
-            # Remember the rendered overlay so undo/redo can reproduce it.
-            self._main._active_sector_state = (
-                self._main._pending_sector_config, lat, lng)
-            self._main._pending_sector_config = None
-
     @undoable("remove sun path")
     def _on_sun_path_removed(self):
         self._main.map_widget.clear_sun_path()
         self._main._active_sun_state = None
         self._main._set_mode_label("Sun path removed")
-
-    @undoable("clear sun sectors")
-    def _on_sectors_cleared(self):
-        self._main.map_widget.clear_sectors()
-        self._main._active_sector_state = None
 
     def _on_anchor_cancelled(self, mode: str):
         self._main.toolbar.reset_draw_buttons()
@@ -652,18 +635,6 @@ class MapEventRouter:
             self._main.plant_panel.clear_pending_polyculture()
         except Exception:
             pass
-
-    def _on_sector_group_removed(self, sid: str):
-        self._main._set_mode_label("Sector group removed")
-
-    def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
-        pass  # could persist if sectors were saved to project file
-
-    def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
-        pass
-
-    def _on_sector_group_resized(self, sid: str, radius_m: float):
-        pass
 
     # ── Site pin handlers ───────────────────────────────────────────────────
 
@@ -1072,6 +1043,13 @@ class MapEventRouter:
         elevation grid. Falls back to the raster ShadeWorker without shapely."""
         from src.shade import ShadeWorker, _HAVE_SHAPELY
 
+        # V2.38: the clock is shared with the sun path, so a scrub arrives here
+        # whether or not shade is showing. "Only if active" means the drag
+        # sweeps an overlay you already asked for and never conjures one.
+        if (config or {}).get("only_if_active") and not getattr(
+                self._main, "_shade_overlay_active", False):
+            return
+
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
@@ -1083,10 +1061,13 @@ class MapEventRouter:
         when = _when_from_config(config)    # (month, day, hour[, minute]) local
 
         # Remember the request so an outline/height edit can recompute the same
-        # view in place (see _refresh_shade_if_active).
-        self._main._last_shade_config = dict(config or {})
+        # view in place (see _refresh_shade_if_active). The transient scrub flag
+        # is not part of the view.
+        cfg = dict(config or {})
+        cfg.pop("only_if_active", None)
+        self._main._last_shade_config = cfg
         self._main._shade_opacity = (
-            self._main.site_panel._shade_opacity.value() / 100.0)
+            self._main.analysis_panel._shade_opacity.value() / 100.0)
         # Open the shade undo step now; the worker's ready callback commits it
         # (and only records when the overlay actually turns ON).
         self._main._persistence.begin_shade_undo()
@@ -1180,17 +1161,17 @@ class MapEventRouter:
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
         if boundary is None and sc.get("latitude") is None:
-            self._main.site_panel.set_shade_zone_status(
+            self._main.analysis_panel.set_shade_zone_status(
                 "Drop a property pin or draw a boundary first.")
             return
 
-        self._main.site_panel.set_shade_zone_status("Classifying planting zones…")
+        self._main.analysis_panel.set_shade_zone_status("Classifying planting zones…")
         self._run_worker(ShadeZoneWorker(self._main._project, boundary, sc),
                          self._on_shade_zones_ready, "shade_zone")
 
     def _on_shade_zones_ready(self, rows):
         if not rows:
-            self._main.site_panel.set_shade_zone_status(
+            self._main.analysis_panel.set_shade_zone_status(
                 "Couldn't classify — no terrain grid for this site yet.")
             return
         from src.db import shade_zones
@@ -1206,7 +1187,7 @@ class MapEventRouter:
         except Exception:  # noqa: BLE001 — feedback is best-effort
             mismatches = []
         counts = shade_zones.tag_counts(pk)
-        self._main.site_panel.set_shade_zone_status(
+        self._main.analysis_panel.set_shade_zone_status(
             shade_zones.format_classification_status(len(rows), counts, mismatches))
         # Mirror the mix into the Analysis tab's read-only breakdown.
         try:
@@ -1223,7 +1204,7 @@ class MapEventRouter:
             d_lng = self._grid_spacing([r["centroid_lng"] for r in rows]) or 0.00006
             if cells:
                 self._main.map_widget.draw_shade_zones(cells, d_lat, d_lng)
-                self._main.site_panel.mark_zones_shown()
+                self._main.analysis_panel.mark_zones_shown()
         except Exception:  # noqa: BLE001 — visualisation is best-effort
             pass
         self._main.statusBar().showMessage("Planting zones classified.", 3000)
@@ -1403,23 +1384,40 @@ class MapEventRouter:
         from src import building_flow
         building_flow.start_building_download(self._main)
 
-    # ── Sun / sector / contour / wind analysis-overlay request slots ────────
+    # ── Sun / contour / wind analysis-overlay request slots ─────────────────
 
+    @undoable("sun path")
     def _on_sun_path_requested(self, config: dict):
-        """A1: Enter anchor-placement mode; render after user clicks the map."""
+        """A1: draw the arc on the property, or enter anchor-placement mode.
+
+        Until V2.38 this *always* entered anchor mode: the arc would not appear
+        until you had also found and clicked the right bit of map. For a
+        feature whose answer is nearly always "the middle of my yard", that is
+        a toll gate rather than a control. The centre now defaults to the
+        boundary centroid (else the site pin), and picking a spot by hand is
+        the "Move…" button — still there, no longer compulsory.
+        """
+        from src import sun_shade
+
+        if not (config or {}).get("pick_anchor"):
+            sc = (self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+            anchor = sun_shade.default_anchor(self._main._project, sc)
+            if anchor is not None:
+                self._main._render_sun_path(config, anchor[0], anchor[1])
+                return
+            # Nothing to centre on yet — say so rather than silently opening a
+            # click mode the user didn't ask for.
+            self._main.statusBar().showMessage(
+                "Drop a property pin or draw a boundary first — or use "
+                "‘Move…’ to click the centre yourself.", 5000)
+            return
+
         self._main._pending_sun_config = config
         self._main._pending_sun_anchor = None
         self._main.map_widget.enter_sun_anchor_mode()
         self._main._set_mode_label(
             "Click map to place sun path anchor — right-click to cancel"
-        )
-
-    def _on_sector_requested(self, config: dict):
-        """A2: Enter anchor-placement mode; draw after user clicks the map."""
-        self._main._pending_sector_config = config
-        self._main.map_widget.enter_sector_anchor_mode()
-        self._main._set_mode_label(
-            "Click map to place sector anchor — right-click to cancel"
         )
 
     def _on_contour_requested(self, config: dict):
@@ -1539,50 +1537,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._set_mode_label("Site data ready")
 
-    # ── Season view + growth timeline ────────────────────────────────────────
-
-    def _on_season_changed(self, season: str):
-        """Apply seasonal view to the map — adjusts plant visibility by type."""
-        from src.db.plants import get_plant
-
-        # Seasonal opacity rules based on deciduous_evergreen field
-        # Summer: everything full
-        # Winter: deciduous → 0.15, herbaceous → 0.05, evergreen → 1.0
-        # Spring/Fall: intermediate
-        season_opacity = {
-            "Summer":  {"deciduous": 1.0, "evergreen": 1.0, "herbaceous": 1.0},
-            "Spring":  {"deciduous": 0.7, "evergreen": 1.0, "herbaceous": 0.6},
-            "Fall":    {"deciduous": 0.5, "evergreen": 1.0, "herbaceous": 0.4},
-            "Winter":  {"deciduous": 0.15, "evergreen": 1.0, "herbaceous": 0.05},
-        }
-        rules = season_opacity.get(season, season_opacity["Summer"])
-
-        pid_vis = {}
-        plant_cache = {}
-        for p in self._main._placed_plants:
-            pid = p["plant_id"]
-            if pid not in plant_cache:
-                plant = get_plant(pid)
-                if plant:
-                    de = (plant.get("deciduous_evergreen") or "").lower()
-                    if de in ("evergreen",):
-                        plant_cache[pid] = "evergreen"
-                    elif de in ("deciduous",):
-                        plant_cache[pid] = "deciduous"
-                    else:
-                        # Herbs, groundcover, etc. treated as herbaceous
-                        ptype = plant.get("plant_type", "herb")
-                        if ptype in ("tree", "shrub"):
-                            plant_cache[pid] = "deciduous"
-                        else:
-                            plant_cache[pid] = "herbaceous"
-                else:
-                    plant_cache[pid] = "herbaceous"
-
-            pid_vis[pid] = rules[plant_cache[pid]]
-
-        self._main.map_widget.set_season_view(season, pid_vis)
-        self._main._set_mode_label(f"Season: {season}")
+    # ── Growth timeline ──────────────────────────────────────────────────────
 
     def _on_timeline_year_changed(self, year: int):
         """Compute per-plant scale factors for the timeline year and send to JS."""

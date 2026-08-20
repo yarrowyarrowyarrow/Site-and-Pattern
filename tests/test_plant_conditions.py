@@ -214,3 +214,66 @@ class TestTypeTaxonomy(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBloomFruitMonthFilter(unittest.TestCase):
+    """V2.37 user feedback: "gap months are shown for a design but there is no
+    option to choose plants that flower or fruit a particular month."
+
+    The parser (habitat_score.parse_month_range) and the data were already
+    there — 428 of 434 plants record a bloom window — but search_plants had no
+    month parameter of any kind, so the analysis panel could name a nectar gap
+    and offer no way to act on it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_a_month_inside_a_range_matches(self):
+        """The reason this can't be a SQL LIKE: the column is free text, so
+        "May-August" has to match July without containing the word."""
+        from src.db.plants import search_plants
+        july = search_plants(bloom_months=[7])
+        self.assertTrue(july)
+        from src.habitat_score import parse_month_range
+        for p in july:
+            self.assertIn(7, parse_month_range(p.get("bloom_period") or ""),
+                          f"{p['common_name']} ({p.get('bloom_period')})")
+
+    def test_months_are_ored_not_anded(self):
+        from src.db.plants import search_plants
+        june = {p["id"] for p in search_plants(bloom_months=[6])}
+        july = {p["id"] for p in search_plants(bloom_months=[7])}
+        both = {p["id"] for p in search_plants(bloom_months=[6, 7])}
+        self.assertEqual(both, june | july)
+
+    def test_year_wrapping_windows_are_handled(self):
+        """`parse_month_range` wraps "Nov-Feb" across the year boundary; the
+        filter must inherit that rather than reimplement month maths."""
+        from src.habitat_score import parse_month_range
+        wrapped = parse_month_range("Nov-Feb")
+        for m in (11, 12, 1, 2):
+            self.assertIn(m, wrapped)
+        self.assertNotIn(6, wrapped)
+
+    def test_an_unrecorded_window_is_excluded_not_assumed(self):
+        """P9: "we don't know when this blooms" is not "it blooms in July"."""
+        from src.db.plants import search_plants
+        for p in search_plants(bloom_months=[7]):
+            self.assertTrue((p.get("bloom_period") or "").strip())
+
+    def test_no_months_means_no_restriction(self):
+        from src.db.plants import search_plants
+        self.assertEqual(len(search_plants(bloom_months=[])),
+                         len(search_plants()))
+        self.assertEqual(len(search_plants(bloom_months=None)),
+                         len(search_plants()))
+
+    def test_fruit_months_filter_independently(self):
+        from src.db.plants import search_plants
+        fruiting = search_plants(fruit_months=[8])
+        self.assertTrue(fruiting)
+        from src.habitat_score import parse_month_range
+        for p in fruiting:
+            self.assertIn(8, parse_month_range(p.get("fruit_period") or ""))

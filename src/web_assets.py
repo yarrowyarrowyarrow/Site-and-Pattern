@@ -82,6 +82,8 @@ _MIME = {
     ".gif": "image/gif",
     ".svg": "image/svg+xml",
     ".ply": "application/octet-stream",
+    ".glb": "model/gltf-binary",
+    ".gltf": "model/gltf+json",
 }
 
 
@@ -122,6 +124,26 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_response(204)
             self.send_header("Content-Length", "0")
             self.end_headers()
+            return
+
+        # Cached species photos for the 3D click-to-learn card. Strictly
+        # narrower than /__localfile below: the key is resolved INSIDE the image
+        # cache directory and nowhere else, so no remote URL reaches the browser
+        # and no path outside the cache is addressable.
+        if parsed.path == "/__image":
+            qs = parse_qs(parsed.query)
+            key = (qs.get("k") or [""])[0]
+            target = None
+            try:
+                from src.image_cache import cached_path_for_key
+                target = cached_path_for_key(key)
+            except Exception:                      # noqa: BLE001 — graceful
+                target = None
+            if target and _mime_for(target).startswith("image/"):
+                self._serve(target)
+            else:
+                _log(f"404 {parsed.path}")
+                self.send_error(404)
             return
 
         if parsed.path == "/__localfile":

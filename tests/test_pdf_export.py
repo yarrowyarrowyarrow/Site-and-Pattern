@@ -81,6 +81,48 @@ class TestPdfExport(unittest.TestCase):
         export_pdf(out, {"properties": {}, "features": []}, [], [], notes="")
         self.assertTrue(os.path.exists(out))
 
+    def test_a_missing_planting_map_says_why(self):
+        """The planting map page used to be dropped silently when it couldn't
+        be built, so a user who asked for "a printable 2-D map with legend" got
+        a PDF without one and no way to tell whether the feature existed. The
+        design here has plants but no property boundary — and the map is a
+        scale drawing, so it needs the outline to measure from."""
+        from src.pdf_export import export_pdf
+        _project, placed, structs = self._sample()
+        no_boundary = {"properties": {"project_name": "T"}, "features": []}
+        out = os.path.join(self._tmp, "no_map.pdf")
+        export_pdf(out, no_boundary, placed, structs, notes="")
+        self.assertTrue(os.path.exists(out))
+
+        empty = os.path.join(self._tmp, "no_plants.pdf")
+        export_pdf(empty, no_boundary, [], [], notes="")
+        # An explanation page is only worth printing when there ARE plants to
+        # map; an empty design needs no excuse.
+        self.assertGreater(os.path.getsize(out), os.path.getsize(empty))
+
+    def test_presentation_still_page_renders(self):
+        """The F69 still page referenced `still_pixmap` and `still_caption`
+        without either being a parameter, so export_pdf raised NameError on
+        EVERY call and PDF export was dead from V2.33 until V2.37. It went
+        unnoticed because these tests skip without PyQt6, which the CI image
+        did not have. Passing a still exercises the branch that was never
+        reachable."""
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtCore import Qt
+        from src.pdf_export import export_pdf
+        project, placed, structs = self._sample()
+        still = QPixmap(240, 160)
+        still.fill(Qt.GlobalColor.darkGreen)
+        out = os.path.join(self._tmp, "with_still.pdf")
+        export_pdf(out, project, placed, structs, notes="",
+                   still_pixmap=still, still_caption="Year 5, June")
+        self.assertTrue(os.path.exists(out))
+
+        plain = os.path.join(self._tmp, "no_still.pdf")
+        export_pdf(plain, project, placed, structs, notes="")
+        self.assertGreater(os.path.getsize(out), os.path.getsize(plain),
+                           "the still did not add a page")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-// html/map/06-overlays.js — sun path, sectors, contours/terrain, shade overlays, wind, legend, site pin, QWebChannel bootstrap.
+// html/map/06-overlays.js — sun path, contours/terrain, shade overlays, wind, legend, site pin, QWebChannel bootstrap.
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -197,246 +197,87 @@
 
     function clearSunPath() {
       if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+      if (_sunNowLayer) { map.removeLayer(_sunNowLayer); _sunNowLayer = null; }
       _sunPathData   = null;
       _sunPathAnchor = null;
     }
 
-    // ── A2: Sector analysis wedges ──────────────────────────────────────────
-    // Each group: {id, layer, centerMk, rotateMk, resizeMk, lat, lng, radiusM,
-    //              rotationDeg, sectorsData, selected}
-    var sectorGroups = [];
+    // ── The sun at a time of day (V2.37) ───────────────────────────────────
+    // The arc was drawn once and never moved: three fixed markers, no "now",
+    // and no way to sweep the day. Seeing the sun travel — and the shadow swing
+    // with it — is the whole reason to look at a sun path, and it was a Python
+    // round-trip and a full layer teardown away.
+    //
+    // This moves ONE marker and ONE shadow ray over the payload already cached
+    // for redraw-on-zoom, so scrubbing is cheap enough to be continuous.
+    var _sunNowLayer = null;
 
-    function _makeSectorId() {
-      return 's' + Date.now() + Math.random().toString(36).slice(2, 6);
+    function _sunPointAt(lat, lng, pos, arcRadius) {
+      var azRad = pos.azimuth * Math.PI / 180;
+      var dist  = arcRadius * (1 - pos.altitude / 90 * 0.3);
+      return [lat + dist * Math.cos(azRad) / 111320,
+              lng + dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180))];
     }
 
-    function _buildSectorWedges(group) {
-      // Remove old content but keep the group layer
-      group.layer.clearLayers();
-      var lat = group.lat, lng = group.lng;
-      var radiusM = group.radiusM;
-      var rotDeg  = group.rotationDeg || 0;
+    function setSunPathTime(minutes) {
+      if (!_sunPathData || !_sunPathAnchor) return;
+      if (_sunNowLayer) { map.removeLayer(_sunNowLayer); _sunNowLayer = null; }
+      if (minutes === null || minutes === undefined || minutes < 0) return;
 
-      group.sectorsData.forEach(function(sec) {
-        var azimuth = (sec.azimuth || 0) + rotDeg;
-        var spread  = sec.spread || 45;
-        var color   = sec.color || '#ff9800';
-        var name    = sec.name || 'Sector';
-
-        var startAngle = azimuth - spread / 2;
-        var endAngle   = azimuth + spread / 2;
-        var steps = Math.max(12, Math.round(spread / 3));
-
-        var pts = [[lat, lng]];
-        for (var i = 0; i <= steps; i++) {
-          var angle = (startAngle + (endAngle - startAngle) * i / steps) * Math.PI / 180;
-          var dLat = radiusM * Math.cos(angle) / 111320;
-          var dLng = radiusM * Math.sin(angle) / (111320 * Math.cos(lat * Math.PI / 180));
-          pts.push([lat + dLat, lng + dLng]);
-        }
-        pts.push([lat, lng]);
-
-        L.polygon(pts, {
-          color: color, weight: 1.5, fillColor: color,
-          fillOpacity: 0.15, interactive: false
-        }).addTo(group.layer);
-
-        var midAngle = azimuth * Math.PI / 180;
-        var labelDist = radiusM * 0.65;
-        var labelLat = lat + labelDist * Math.cos(midAngle) / 111320;
-        var labelLng = lng + labelDist * Math.sin(midAngle) / (111320 * Math.cos(lat * Math.PI / 180));
-        L.marker([labelLat, labelLng], {
-          icon: L.divIcon({
-            className: 'structure-label',
-            html: '<span style="color:' + escH(color) + ';font-size:11px;font-weight:bold">' + escH(name) + '</span>',
-            iconSize: [0, 0], iconAnchor: [0, 8]
-          }),
-          interactive: false
-        }).addTo(group.layer);
+      var hour = minutes / 60.0;
+      var lat = _sunPathAnchor.lat, lng = _sunPathAnchor.lng;
+      var positions = (_sunPathData.positions || []).filter(function (p) {
+        return p.altitude > 0;
       });
-    }
+      if (!positions.length) return;
 
-    function _positionSectorHandles(group) {
-      if (!group.centerMk) return;
-      group.centerMk.setLatLng([group.lat, group.lng]);
-      if (group.rotateMk) {
-        // Rotation handle: north of center at 110% of radius
-        var rLat = group.lat + group.radiusM * 1.1 / 111320;
-        group.rotateMk.setLatLng([rLat, group.lng]);
+      // Nearest sampled position. The path is sampled every ~20 minutes, which
+      // is finer than the eye can follow at yard scale — interpolating azimuth
+      // across the sample would be false precision, not extra accuracy (P9).
+      var best = positions[0], bestGap = Math.abs(positions[0].hour - hour);
+      for (var i = 1; i < positions.length; i++) {
+        var gap = Math.abs(positions[i].hour - hour);
+        if (gap < bestGap) { best = positions[i]; bestGap = gap; }
       }
-      if (group.resizeMk) {
-        // Resize handle: east of center at the outer radius
-        var angle90 = 90 * Math.PI / 180;
-        var rsLat = group.lat + group.radiusM * Math.cos(angle90) / 111320;
-        var rsLng = group.lng + group.radiusM * Math.sin(angle90) / (111320 * Math.cos(group.lat * Math.PI / 180));
-        group.resizeMk.setLatLng([rsLat, rsLng]);
-      }
-    }
+      // Before sunrise or after sunset there is no sun to draw. Saying nothing
+      // is the honest answer; drawing a sun below the horizon is not.
+      if (bestGap > 0.75) return;
 
-    function drawSectors(data, anchorLat, anchorLng) {
-      var lat = (anchorLat !== undefined) ? anchorLat : map.getCenter().lat;
-      var lng = (anchorLng !== undefined) ? anchorLng : map.getCenter().lng;
-      var sectors = data.sectors || [];
-      var radiusM = data.radius_m || 80;
-      var sid = _makeSectorId();
+      var autoRadius = _viewportRadiusMetres(lat);
+      var arcRadius  = _sunPathData.arc_radius
+        ? Math.max(_sunPathData.arc_radius, autoRadius) : autoRadius;
+      var pt = _sunPointAt(lat, lng, best, arcRadius);
 
-      var group = {
-        id: sid, lat: lat, lng: lng, radiusM: radiusM,
-        rotationDeg: 0, sectorsData: sectors,
-        layer: L.layerGroup().addTo(map),
-        centerMk: null, rotateMk: null, resizeMk: null, selected: false
-      };
-      sectorGroups.push(group);
+      _sunNowLayer = L.layerGroup().addTo(map);
+      // The shadow ray runs from the anchor directly away from the sun, and
+      // lengthens as the sun drops — the thing you are actually trying to see.
+      var shadowLen = arcRadius * 0.45 /
+                      Math.max(0.18, Math.tan(best.altitude * Math.PI / 180));
+      shadowLen = Math.min(shadowLen, arcRadius * 1.1);
+      var shadowAz = (best.azimuth + 180) * Math.PI / 180;
+      L.polyline([[lat, lng],
+                  [lat + shadowLen * Math.cos(shadowAz) / 111320,
+                   lng + shadowLen * Math.sin(shadowAz) /
+                         (111320 * Math.cos(lat * Math.PI / 180))]], {
+        color: '#37474f', weight: 4, opacity: 0.55, interactive: false,
+        dashArray: '2 6'
+      }).addTo(_sunNowLayer);
 
-      _buildSectorWedges(group);
+      L.circleMarker(pt, {
+        radius: 9, color: '#fff8e1', fillColor: '#ffd54f',
+        fillOpacity: 1, weight: 2, interactive: false
+      }).addTo(_sunNowLayer);
 
-      // Centre drag marker
-      var centerMk = L.circleMarker([lat, lng], {
-        radius: 7, color: '#fff', fillColor: '#263238', fillOpacity: 0.9,
-        weight: 2, interactive: true
-      }).addTo(map);
-      centerMk.bindTooltip('Drag to move · right-click to remove · shift+click to select', { sticky: true, offset: [10, 0] });
-      group.centerMk = centerMk;
-      _makeSectorMoveDraggable(centerMk, group);
-      centerMk.on('click', function(e) {
-        var oe = e.originalEvent;
-        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
-          L.DomEvent.stop(e);
-          toggleSelection({ kind: 'sector', sectorId: sid });
-        }
-      });
-      centerMk.on('contextmenu', function(e) {
-        L.DomEvent.stop(e);
-        showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
-          { label: 'Remove Sector Group', action: function() {
-            _removeSectorGroup(sid);
-            if (bridge) bridge.onSectorGroupRemoved(sid);
-          }}
-        ]);
-      });
-
-      // Rotate handle (small circle connected by thin line, placed north of center)
-      var rLat = lat + radiusM * 1.1 / 111320;
-      var rotateMk = L.circleMarker([rLat, lng], {
-        radius: 5, color: '#fff', fillColor: '#9c27b0', fillOpacity: 1,
-        weight: 2, interactive: true
-      }).addTo(map);
-      rotateMk.bindTooltip('Drag to rotate', { sticky: true });
-      group.rotateMk = rotateMk;
-      _makeSectorRotateDraggable(rotateMk, group);
-
-      // Resize handle (east at outer radius)
-      var angle90 = 90 * Math.PI / 180;
-      var rsLat = lat + radiusM * Math.cos(angle90) / 111320;
-      var rsLng = lng + radiusM * Math.sin(angle90) / (111320 * Math.cos(lat * Math.PI / 180));
-      var resizeMk = L.circleMarker([rsLat, rsLng], {
-        radius: 5, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
-        weight: 2, interactive: true
-      }).addTo(map);
-      resizeMk.bindTooltip('Drag to resize', { sticky: true });
-      group.resizeMk = resizeMk;
-      _makeSectorResizeDraggable(resizeMk, group);
-
-      return sid;
-    }
-
-    function _makeSectorMoveDraggable(marker, group) {
-      marker.on('mousedown', function(e) {
-        if (e.originalEvent.button !== 0) return;
-        L.DomEvent.stop(e);
-        var startLL = e.latlng;
-        var origLat = group.lat, origLng = group.lng;
-        map.dragging.disable();
-        function onMove(ev) {
-          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
-          group.lat = origLat + (ll.lat - startLL.lat);
-          group.lng = origLng + (ll.lng - startLL.lng);
-          _buildSectorWedges(group);
-          _positionSectorHandles(group);
-        }
-        function onUp() {
-          map.dragging.enable();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          if (bridge) bridge.onSectorGroupMoved(group.id, group.lat, group.lng);
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
-
-    function _makeSectorRotateDraggable(marker, group) {
-      marker.on('mousedown', function(e) {
-        if (e.originalEvent.button !== 0) return;
-        L.DomEvent.stop(e);
-        var origRot = group.rotationDeg;
-        var startAngle = Math.atan2(e.latlng.lng - group.lng, e.latlng.lat - group.lat) * 180 / Math.PI;
-        map.dragging.disable();
-        function onMove(ev) {
-          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
-          var curAngle = Math.atan2(ll.lng - group.lng, ll.lat - group.lat) * 180 / Math.PI;
-          group.rotationDeg = origRot + (curAngle - startAngle);
-          _buildSectorWedges(group);
-          _positionSectorHandles(group);
-        }
-        function onUp() {
-          map.dragging.enable();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          if (bridge) bridge.onSectorGroupRotated(group.id, group.rotationDeg);
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
-
-    function _makeSectorResizeDraggable(marker, group) {
-      marker.on('mousedown', function(e) {
-        if (e.originalEvent.button !== 0) return;
-        L.DomEvent.stop(e);
-        var origRadius = group.radiusM;
-        map.dragging.disable();
-        function onMove(ev) {
-          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
-          var dLat = (ll.lat - group.lat) * 111320;
-          var dLng = (ll.lng - group.lng) * 111320 * Math.cos(group.lat * Math.PI / 180);
-          group.radiusM = Math.max(10, Math.sqrt(dLat * dLat + dLng * dLng));
-          _buildSectorWedges(group);
-          _positionSectorHandles(group);
-        }
-        function onUp() {
-          map.dragging.enable();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          if (bridge) bridge.onSectorGroupResized(group.id, group.radiusM);
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
-
-    function _removeSectorGroup(sid) {
-      for (var i = 0; i < sectorGroups.length; i++) {
-        var g = sectorGroups[i];
-        if (g.id === sid) {
-          map.removeLayer(g.layer);
-          if (g.centerMk) map.removeLayer(g.centerMk);
-          if (g.rotateMk) map.removeLayer(g.rotateMk);
-          if (g.resizeMk) map.removeLayer(g.resizeMk);
-          sectorGroups.splice(i, 1);
-          return;
-        }
-      }
-    }
-
-    function clearSectors() {
-      sectorGroups.forEach(function(g) {
-        map.removeLayer(g.layer);
-        if (g.centerMk) map.removeLayer(g.centerMk);
-        if (g.rotateMk) map.removeLayer(g.rotateMk);
-        if (g.resizeMk) map.removeLayer(g.resizeMk);
-      });
-      sectorGroups = [];
+      var mm = ('0' + Math.round((best.hour % 1) * 60)).slice(-2);
+      L.marker(pt, {
+        icon: L.divIcon({
+          className: 'measure-label',
+          html: '<span style="font-size:11px;font-weight:700">☀ ' +
+                Math.floor(best.hour) + ':' + mm + ' · ' +
+                best.altitude.toFixed(0) + '°</span>',
+          iconSize: [0, 0], iconAnchor: [0, -12]
+        }), interactive: false
+      }).addTo(_sunNowLayer);
     }
 
     // ── A3: Contour lines ───────────────────────────────────────────────────
@@ -1206,8 +1047,8 @@
     // ── Dynamic wind shadow (V1.68) ─────────────────────────────────────────
     // Two layers: a per-plant ghost (JS-computed, redrawn live as the dial turns
     // / a plant drags — zero Python round-trips) and the authoritative merged,
-    // porosity-banded shelter that Python pushes on commit. Matches the sector
-    // live-drag pattern. Geometry mirrors src/wind_shadow.py.
+    // porosity-banded shelter that Python pushes on commit.
+    // Geometry mirrors src/wind_shadow.py.
     var windShadowLayer = null;   // merged (idle view)
     var windGhostLayer  = null;   // per-plant wedges (during interaction)
     var _windCasters = [];        // [{id,lat,lng,height_m,half_width_m,porosity}]

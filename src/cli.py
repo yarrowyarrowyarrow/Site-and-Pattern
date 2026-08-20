@@ -173,6 +173,48 @@ def _cmd_generate(args) -> int:
     return 0
 
 
+def _cmd_build_site(args) -> int:
+    """Render the catalogue as a static website (V2.47).
+
+    The directory has been a desktop-only surface since F90 shipped it; this is
+    the same pages, as files anybody can host.
+    """
+    from src.permadesign_api import _ensure_db
+    from src.static_site import build_model
+    from src.static_site_render import write_site
+
+    # Every other subcommand reaches the catalogue through the facade, which
+    # calls this; `build-site` talked to `search_plants` directly and so failed
+    # with "no such table: plants" on a checkout that had never launched the
+    # GUI. Idempotent, and the seed takes a second.
+    _ensure_db()
+
+    def say(msg: str) -> None:
+        print(f"  {msg}")
+
+    print("Building the catalogue model...")
+    model = build_model(progress=say)
+    print(f"Writing to {args.out} ...")
+    summary = write_site(model, args.out, base_url=args.base_url,
+                         copy_photos=not args.no_photos,
+                         include_notes=args.include_notes,
+                         analytics_token=getattr(args, "analytics_token", ""),
+                         progress=say)
+    print(f"\n{summary['files']} files written to {summary['out_dir']}")
+    print(f"  {summary['species']} species pages, "
+          f"{summary['wildlife']} wildlife pages")
+    # Said out loud either way. "Did this build have analytics in it?" is not a
+    # question anyone should have to answer by grepping the output.
+    print("  analytics: Cloudflare beacon embedded, disclosed in the footer"
+          if summary.get("analytics") else
+          "  analytics: none (the site makes no external request)")
+    if summary["photos_hotlinked"]:
+        print(f"  {summary['photos_copied']} photographs copied from the local "
+              f"cache; {summary['photos_hotlinked']} still point at their "
+              f"original URLs (warm the cache to bundle them)")
+    return 0
+
+
 def _cmd_validate_data(args) -> int:
     # Wraps src.data_quality.validate_all — the same check
     # scripts/check_plant_data.py runs. Exits non-zero on errors.
@@ -285,6 +327,30 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--model", default="",
                     help="model name (default: env / config / llama3.2)")
     ge.set_defaults(func=_cmd_generate)
+
+    # build-site
+    bs = sub.add_parser("build-site",
+                        help="render the plant directory as a static website")
+    bs.add_argument("out", help="output directory (created if absent)")
+    bs.add_argument("--base-url", default="",
+                    help="public URL the site will be served from; only used "
+                         "for sitemap.xml and robots.txt")
+    bs.add_argument("--no-photos", action="store_true", dest="no_photos",
+                    help="do not copy cached photographs into the output; "
+                         "reference their original URLs instead")
+    bs.add_argument("--include-notes", action="store_true", dest="include_notes",
+                    help="publish the free-text notes field. OFF by default: "
+                         "~43 rows describe traditional medicinal and plant-use "
+                         "practice, and P12 forbids publishing that without "
+                         "free, prior and informed consent (see CLAUDE.md)")
+    bs.add_argument("--analytics-token", default="", dest="analytics_token",
+                    help="Cloudflare Web Analytics site token. OFF by default: "
+                         "with no token the site makes no external request at "
+                         "all. With one, every page loads Cloudflare's beacon "
+                         "(no cookies, no per-visitor identifier) and says so "
+                         "in its footer. Get the token from the Cloudflare "
+                         "dashboard under Analytics & Logs > Web Analytics")
+    bs.set_defaults(func=_cmd_build_site)
 
     # validate-data
     vd = sub.add_parser("validate-data",

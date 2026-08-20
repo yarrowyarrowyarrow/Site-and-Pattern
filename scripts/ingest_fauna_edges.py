@@ -1,0 +1,880 @@
+#!/usr/bin/env python3
+"""
+scripts/ingest_fauna_edges.py — review and merge fetched edges (F125).
+
+The other half of ``fetch_fauna_edges.py``. That one runs where there is
+internet; this one runs in the repo, offline, over the file it produced.
+
+    python3 scripts/ingest_fauna_edges.py            # report only, changes nothing
+    python3 scripts/ingest_fauna_edges.py --apply    # write into the seed files
+
+**Report first, apply second, and never the other way round.** An aggregator
+returns what it has, not what is true here: a greenhouse observation from
+Belgium, a species that does not occur in Alberta, a genus-level record dressed
+as a species. Everything below is a gate, and the gates are the point — this
+catalogue's confidence work only means anything if a `documented` edge is
+genuinely documented.
+
+Every gate reports a count, so a run tells you what was thrown away and why
+rather than only what survived.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from typing import Optional
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)          # so `src.` imports resolve when run as a script
+_DATA = os.path.join(_ROOT, "data")
+_FETCHED = os.path.join(_DATA, "fetched")
+
+#: The schema's vocabularies. Restated here as a gate rather than imported, so
+#: a candidate file that predates a schema change fails loudly instead of
+#: writing a value the CHECK constraint will reject at seed time.
+_RELATIONSHIPS = {"larval_host", "nectar", "pollen", "seed_food",
+                  "fruit_food", "nesting", "cover"}
+_TAXA = {"lepidoptera", "bird", "bee", "other_insect", "mammal"}
+
+#: Life-stage strings that mean "the immature animal was on this plant" (F131).
+#: An egg counts: a female choosing where to oviposit IS the host claim, and it
+#: is the same claim a field guide makes. A PUPA deliberately does not — larvae
+#: of many species wander off the host to pupate, so a pupa on a stem is
+#: evidence of a stem, not of a diet.
+_LARVAL_STAGES = {"larva", "larvae", "caterpillar", "nymph", "egg", "eggs"}
+#: ...and the ones that mean the opposite. GloBI writes several spellings.
+#: A bare "a" appears 12 times and is NOT read as adult — it is unexplained,
+#: and guessing would be exactly the shortcut this whole file exists to refuse.
+_ADULT_STAGES = {"adult", "adults", "adult(s)", "imago",
+                 "post-juvenile adult stage"}
+
+#: The citation key new edges are filed under. Registered in
+#: data/sources_master.json by --apply if it is not already there.
+_SOURCE_KEY = "globi"
+#: The bibliography record, in the shape data/sources_master.json actually uses.
+_SOURCE_RECORD = {
+    "key": _SOURCE_KEY,
+    "authors": "Poelen, J.H., Simons, J.D. and Miller, C.J.",
+    "year": 2014,
+    "title": ("Global Biotic Interactions: An open infrastructure to share and "
+              "analyze species-interaction datasets"),
+    "container": "Ecological Informatics",
+    "publisher": "Elsevier",
+    "kind": "database",
+    "covers": "interactions",
+    "record_confidence": "unverified",
+    "record_note": (
+        "An AGGREGATOR, not a primary work, and weaker evidence than a field "
+        "guide. Each edge is checkable by querying GloBI for the same pair, "
+        "which is why it counts as documented — but the specific paper behind "
+        "it is not captured. Re-fetching with includeObservations=true would "
+        "upgrade these in place."),
+    "aliases": ["GloBI", "Global Biotic Interactions", "Poelen et al. 2014",
+                "globalbioticinteractions.org"],
+}
+
+
+def _rows(path: str) -> list:
+    with open(path, "r", encoding="utf-8") as fh:
+        blob = json.load(fh)
+    return blob if isinstance(blob, list) else next(
+        v for v in blob.values() if isinstance(v, list))
+
+
+def _load_seed() -> tuple:
+    plants = {}
+    plant_types = {}
+    has_fruit = set()
+    for name in ("plants_master.json", "garden_plants.json"):
+        for r in _rows(os.path.join(_DATA, name)):
+            if r.get("common_name"):
+                key = r["common_name"].strip().lower()
+                plants[key] = r["common_name"]
+                plant_types[key] = (r.get("plant_type") or "").strip().lower()
+                if (r.get("fruit_period") or "").strip() or \
+                        (r.get("fruit_form") or "").strip():
+                    has_fruit.add(key)
+    fauna = {}
+    for r in _rows(os.path.join(_DATA, "fauna_master.json")):
+        if r.get("scientific_name"):
+            fauna[r["scientific_name"].strip().lower()] = r
+    edge_rows = _rows(os.path.join(_DATA, "plant_fauna_master.json"))
+    existing = {(r["plant"].strip().lower(), r["fauna"].strip().lower(),
+                 r.get("relationship", ""))
+                for r in edge_rows if r.get("plant") and r.get("fauna")}
+    return plants, fauna, edge_rows, existing, plant_types, has_fruit
+
+
+def _bird_feeds() -> dict:
+    """``scientific_name → set(feeds)`` from the curation table (F127a).
+
+    Imported rather than restated so the nativity call and the feeding guild
+    stay in one place. A bird that is not in the table has no entry, and
+    ``_route_bird`` drops its edges — which is deliberate: an animal nobody has
+    decided about must not arrive through a relationship record.
+    """
+    import importlib.util
+    path = os.path.join(_ROOT, "scripts", "curate_birds.py")
+    spec = importlib.util.spec_from_file_location("curate_birds", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    verdicts = {name: row[0] for name, row in mod.BIRDS.items()}
+    return mod.feeds_map(), dict(mod.SYNONYMS), verdicts
+
+
+def route_bird(rel: str, feeds: set, plant_has_fruit: bool) -> str:
+    """The relationship a bird record actually supports, or ``""`` to drop it.
+
+    **GloBI's ``eatenBy`` is not ``fruit_food``, and the fetcher assumed it
+    was.** Of the 33 plants carrying a bird ``fruit_food`` edge, ten bear no
+    fruit at all — Lodgepole Pine, White Spruce, Tamarack, Paper Birch,
+    Trembling Aspen, Balsam Poplar, and four composites. A crossbill on a
+    tamarack is eating seeds; a sapsucker on a birch is drinking sap, which the
+    schema cannot express at all.
+
+    And in the other direction, GloBI filed three ``flowersVisitedBy`` records
+    for a White-crowned Sparrow. Sparrows do not nectar; the bird was at the
+    flower gleaning insects.
+
+    This is the Monarch bug again — an unspecific verb read as a specific
+    claim — so it gets the same answer: refuse what the record cannot support
+    rather than route it to the nearest available word.
+    """
+    if not feeds:
+        return ""
+    if rel in ("nectar", "pollen"):
+        # Only a nectarivore nectars. Everything else at a flower is after
+        # insects, and a visit is not a reward.
+        return rel if "nectar" in feeds else ""
+    if rel == "fruit_food":
+        if "fruit" in feeds and plant_has_fruit:
+            return "fruit_food"
+        if "seeds" in feeds:
+            return "seed_food"
+        # Sap, buds and pure insectivory have no slot in the seven
+        # relationships. Dropped rather than forced, exactly as mammal browse
+        # was — and recoverable, since F128's observations re-fetch carries the
+        # body part eaten.
+        return ""
+    return rel
+
+
+def _life_stages(path: str = "") -> dict:
+    """``(plant, fauna, relationship) → set(life stages)`` from an observations
+    fetch (F131).
+
+    Returns ``{}`` when the file is absent, and every caller treats that as "no
+    evidence" rather than an error — the ingester has to keep working on a
+    checkout that only has the candidates file.
+    """
+    path = path or os.path.join(_FETCHED, "fauna_edges_observations.json")
+    if not os.path.exists(path):
+        return {}
+    stages: dict = {}
+    for r in _rows(path):
+        stage = (r.get("_life_stage") or "").strip().lower()
+        if not stage or not r.get("plant") or not r.get("fauna"):
+            continue
+        key = (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+               r.get("relationship", ""))
+        stages.setdefault(key, set()).add(stage)
+    return stages
+
+
+def route_life_stage(rel: str, notes: str, stages: set, taxon: str) -> tuple:
+    """Re-read a host claim against the life stage actually observed (F131).
+
+    Returns ``(relationship, host_is_evidenced)``.
+
+    The ``hostOf`` gate below refuses 700 candidate ``larval_host`` edges
+    because GloBI filed them under the unspecific ``eatenBy``, and that gate is
+    right: it is what stopped 23 false Monarch host edges reaching the seed.
+    But "unspecific verb" is not the same as "false", and the observations
+    fetch carries the one field that can tell them apart. Of the 700, **44
+    have an observed larva on that exact plant** — Hoary Elfin on Bearberry,
+    Freija Fritillary on Bog Cranberry, Tiger Swallowtail on Chokecherry — all
+    real host records the verb alone could not vouch for.
+
+    The reverse direction is narrower than it looks. An ``adult`` record means
+    the animal was not breeding there, but it does not automatically mean
+    nectar: an adult beetle on a leaf is *chewing it*, and rerouting that to
+    ``nectar`` would be the Monarch bug wearing a different hat. So the reroute
+    is allowed for Lepidoptera only, where the adult has no mandibles for
+    foliage and a flower visit is a nectar visit. Both cases it currently moves
+    are *Hemaris thysbe* on bergamot, which is a hummingbird moth doing exactly
+    that.
+
+    Anything else — no observation row, a stage nobody wrote down, a bare
+    ``"a"`` — comes back unchanged and unevidenced, and stays refused.
+    """
+    if rel != "larval_host":
+        return rel, False
+    if "hostOf" in (notes or ""):
+        return rel, True            # explicit verb; the life stage adds nothing
+    if not stages:
+        return rel, False
+    if stages & _LARVAL_STAGES:
+        return "larval_host", True
+    if stages & _ADULT_STAGES and taxon == "lepidoptera":
+        return "nectar", False
+    return rel, False
+
+
+def _occurrence_floor() -> int:
+    """Minimum georeferenced records inside AB or SK before presence counts.
+
+    **Imported, not chosen.** `ecoregion_ranges.MIN_RECORDS` already decides
+    how many occurrences make a claim for this catalogue, and the repo's rule
+    is that a module does not own a threshold another module already owns —
+    `src/confidence.py` says so and a test asserts it. Picking a second number
+    here would mean a species could be "present enough" for one feature and
+    not the other, which is the kind of disagreement nobody finds for a year.
+
+    Not zero either way: one misidentified or mis-georeferenced record is
+    exactly how a desert quail ends up in a prairie catalogue.
+    """
+    from src.ecoregion_ranges import MIN_RECORDS
+    return MIN_RECORDS
+
+
+def _nativity() -> dict:
+    """``scientific_name → assessment`` from the GBIF occurrence fetch, if run.
+
+    Absent file means the gate stands down rather than rejecting everything:
+    the fetch needs egress and this repo cannot make it. A missing measurement
+    is not evidence of absence (P9), so it degrades to the V2.60 behaviour —
+    curated animals pass, uncurated ones do not — instead of silently binning
+    the catalogue.
+    """
+    path = os.path.join(_FETCHED, "fauna_nativity.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _reviewed_origin() -> tuple:
+    """``(refuse, corrected)`` from the hand-reviewed introduced list.
+
+    GBIF's `origin` is a **candidate list, not a verdict** — see
+    `scripts/curate_introduced.py` for the two failed attempts to make it one.
+    24 species out of 3,064 is small enough to read, and reading them found
+    that 19 were right and every clear false positive was a bird.
+    """
+    import importlib.util
+    path = os.path.join(_ROOT, "scripts", "curate_introduced.py")
+    spec = importlib.util.spec_from_file_location("curate_introduced", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.verdicts(), mod.overrides()
+
+
+def nativity_verdict(row: dict, name: str = "",
+                     refuse: Optional[dict] = None,
+                     corrected: Optional[dict] = None) -> tuple:
+    """``(ok, reason)`` for one animal's occurrence assessment.
+
+    Three ways to fail, reported apart because they mean different things:
+    it is **introduced** (a positive finding), it has **no records here** (a
+    real absence, given the fetch succeeded), or it is **below the floor**
+    (present, but on evidence too thin to seed a claim on).
+    """
+    refuse = refuse if refuse is not None else {}
+    corrected = corrected if corrected is not None else {}
+    # The hand-reviewed verdict comes FIRST and beats GBIF in both directions.
+    # A person read all 24 candidates; GBIF's aggregate contradicts itself.
+    if name and name in refuse:
+        return False, "reviewed as introduced to Canada (curate_introduced)"
+    if name and name in corrected:
+        pass                    # GBIF was wrong; fall through to the counts
+    elif not row:
+        return False, "no AB/SK occurrence data (nativity fetch not run)"
+    elif row.get("origin") == "introduced":
+        # Unreviewed, and GBIF says introduced. Refused — but the reason names
+        # where to go, because if this fires the species is new since the
+        # review rather than genuinely undecidable.
+        return False, ("flagged introduced by GBIF and not yet reviewed "
+                       "(add it to curate_introduced)")
+    elif row.get("origin") == "conflicted":
+        # One GBIF checklist says native to Canada, another says introduced.
+        # Kept as its own reason rather than folded into the line above: a
+        # source contradicting itself is different information from a source
+        # making a claim, and this gate cannot adjudicate between checklists.
+        return False, "checklists disagree on whether it is native here"
+    if not row:
+        return False, "no AB/SK occurrence data (nativity fetch not run)"
+    ab = int(row.get("ab_records") or 0)
+    sk = int(row.get("sk_records") or 0)
+    if ab + sk == 0:
+        return False, "no georeferenced records in AB or SK"
+    floor = _occurrence_floor()
+    if max(ab, sk) < floor:
+        return False, (f"under {floor} records in AB or SK — present, but "
+                       f"too thin to seed on")
+    # Everything below here is `origin: unstated` with real records behind it,
+    # and it will be the large majority — GBIF's checklists cover vertebrates
+    # and known invasives far better than they cover solitary bees.
+    #
+    # **Accepting it is an inference, not a measurement, and this is the
+    # sentence that says so.** The reasoning: introduced species are the ones
+    # people build registers about, so absence from GRIIS, given substantial
+    # AB/SK records, is weak evidence of belonging here. Weak, not strong —
+    # it will let through the occasional unrecorded introduction.
+    #
+    # The alternative was refusing every `unstated` species, which would
+    # almost certainly reject the entire insect queue and make the whole
+    # exercise pointless. `origin` travels with the row either way, so the app
+    # can always say "present here; origin unrecorded" rather than implying a
+    # nativity check that did not happen.
+    return True, ""
+
+
+def review(candidates: list) -> dict:
+    """Run every gate. Returns counts plus the edges that survived."""
+    plants, fauna, _edge_rows, existing, plant_types, has_fruit = _load_seed()
+    from src.flower_colour import WIND_POLLINATED_TYPES
+    bird_feeds, synonyms, bird_verdicts = _bird_feeds()
+    life_stages = _life_stages()
+    nativity = _nativity()
+    refuse_origin, corrected_origin = _reviewed_origin()
+    kept, rejected = [], {}
+
+    def drop(reason):
+        rejected[reason] = rejected.get(reason, 0) + 1
+
+    seen = set()
+    for c in candidates:
+        plant = (c.get("plant") or "").strip()
+        animal = (c.get("fauna") or "").strip()
+        rel = (c.get("relationship") or "").strip()
+        # Resolve deprecated names onto the row the catalogue actually keys on
+        # BEFORE anything else looks at the animal — otherwise `Picoides
+        # pubescens` reads as a new species and gets written as a second Downy
+        # Woodpecker beside `Dryobates pubescens`.
+        raw_animal = animal     # the name the observations file is keyed by
+        animal = synonyms.get(animal, animal)
+
+        if not plant or not animal or not rel:
+            drop("incomplete record"); continue
+        if rel not in _RELATIONSHIPS:
+            drop(f"relationship not in the schema vocabulary ({rel})"); continue
+        if (c.get("_taxon") or "") not in _TAXA:
+            drop("taxon not in the schema vocabulary"); continue
+        if plant.strip().lower() not in plants:
+            drop("plant is not in this catalogue"); continue
+        if " " not in animal:
+            drop("animal is genus-level, not a species"); continue
+        # Birds get re-read against what the species actually eats (F127a).
+        # This runs BEFORE the key is built, because it can change the
+        # relationship — a crossbill's `fruit_food` on a tamarack becomes
+        # `seed_food`, and that is a different edge.
+        if (c.get("_taxon") or "") == "bird":
+            routed = route_bird(rel, bird_feeds.get(animal, set()),
+                                plant.strip().lower() in has_fruit)
+            if not routed:
+                if animal in bird_feeds:
+                    drop("bird record the species' diet does not support")
+                elif animal in bird_verdicts:
+                    drop(f"bird {bird_verdicts[animal]} by curation "
+                         f"(not an Alberta/prairie species)")
+                else:
+                    drop("bird has not been assessed (F127a)")
+                continue
+            rel = routed
+        # A host claim gets re-read against the life stage actually observed
+        # (F131). Also before the key, and for the same reason: an adult
+        # record becomes a different edge, not a dropped one.
+        stages = (life_stages.get((plant.lower(), raw_animal.lower(), rel))
+                  or life_stages.get((plant.lower(), animal.lower(), rel))
+                  or set())
+        rel, host_evidenced = route_life_stage(
+            rel, c.get("notes"), stages, (c.get("_taxon") or ""))
+        key = (plant.lower(), animal.lower(), rel)
+        if key in existing:
+            drop("already seeded"); continue
+        if key in seen:
+            drop("duplicate within the candidate file"); continue
+        # Provenance gate. Originally this demanded a named reporting study and
+        # rejected all 14,111 candidates, because GloBI only fills `study_title`
+        # when asked for observations rather than distinct interactions.
+        #
+        # The standard is now "a registered, checkable source", which GloBI is:
+        # a peer-reviewed aggregator (Poelen, Simons & Miller 2014) where anyone
+        # can look up this exact pair and see the underlying records. That is a
+        # different and weaker claim than a named paper, and it is recorded as
+        # such — the source key says `globi`, not a study. An edge with no
+        # source at all is still refused; that would be an assertion.
+        if not (c.get("source") or "").strip():
+            drop("no source at all — cannot be filed as documented"); continue
+        # A grass, sedge or rush has no nectar to offer. GloBI records a
+        # hoverfly on a bulrush as `flowersVisitedBy`, which is a true
+        # observation of a visit and a false statement about a reward — the
+        # insect was after pollen or shelter. Reuses the app's own
+        # wind-pollinated vocabulary so this and the flower-colour classifier
+        # cannot disagree. `pollen` is deliberately NOT dropped: bees do
+        # collect grass and sedge pollen.
+        if (rel == "nectar"
+                and plant_types.get(plant.strip().lower()) in WIND_POLLINATED_TYPES):
+            drop("nectar claimed on a wind-pollinated plant"); continue
+        # A larval host must come from GloBI's EXPLICIT `hostOf` verb.
+        #
+        # This gate exists because the first apply put 23 false Monarch host
+        # edges into the seed — on goldenrod, aster, blazingstar, sunflower,
+        # yarrow. Monarch caterpillars are obligate Asclepias specialists;
+        # every one of those is an ADULT NECTARING record that GloBI files as
+        # `eatenBy`, which the fetcher's "life stage unrecorded → larval_host"
+        # default then promoted into a host claim. The repo's own
+        # test_fauna.test_monarch_only_hosts_on_milkweed caught it.
+        #
+        # 107 of 120 candidate host edges come by that route, so this is a
+        # heavy cut and it is the right one: telling somebody to plant
+        # goldenrod to host monarch caterpillars is worse than telling them
+        # nothing.
+        #
+        # V2.65 (F131): the re-fetch happened, so this no longer rests on the
+        # verb alone — `route_life_stage` above sets `host_evidenced` when an
+        # immature stage was actually observed on this plant, which recovers 44
+        # genuine hosts. Everything still unevidenced is refused exactly as
+        # before, monarchs included.
+        if rel == "larval_host" and not host_evidenced:
+            drop("larval_host with neither a hostOf verb nor an observed "
+                 "immature stage"); continue
+        # AB/SK nativity (V2.61). Only for animals the catalogue does NOT
+        # already hold: the existing rows had their nativity decided when they
+        # were authored, and re-litigating that from occurrence counts would
+        # quietly overrule a human on evidence that cannot tell native from
+        # merely present. New animals have no such decision behind them, so
+        # they need one, and GBIF is the only thing that scales to 2,898.
+        if nativity and animal.strip().lower() not in fauna:
+            ok, why = nativity_verdict(nativity.get(animal), animal,
+                                       refuse_origin, corrected_origin)
+            if not ok:
+                drop(why); continue
+        seen.add(key)
+        kept.append({
+            "plant": plants[plant.strip().lower()],
+            "fauna": animal,
+            "relationship": rel,
+            "source": _SOURCE_KEY,
+            "notes": (c.get("notes") or "")[:300],
+            # Kept when GloBI supplied one, so a later observations-mode run can
+            # upgrade these in place rather than re-deriving them.
+            **({"study": c["_citation"][:200]}
+               if (c.get("_citation") or "").strip() else {}),
+            "_new_fauna": animal.strip().lower() not in fauna,
+            "_taxon": c.get("_taxon"),
+        })
+    return {"kept": kept, "rejected": rejected,
+            "new_fauna": sorted({k["fauna"] for k in kept if k["_new_fauna"]})}
+
+
+def _report(result: dict) -> None:
+    kept = result["kept"]
+    ready = [k for k in kept if not k["_new_fauna"]]
+    print("=" * 64)
+    print(f"  {len(kept)} edges survived every gate")
+    print(f"    {len(ready)} ready now (animal already in fauna_master)")
+    print(f"    {len(kept) - len(ready)} blocked on {len(result['new_fauna'])} "
+          f"new animals")
+    print(f"  {len({k['plant'] for k in ready})} plants would gain an edge")
+    print("=" * 64)
+    if result["rejected"]:
+        print("\nrejected:")
+        for reason, n in sorted(result["rejected"].items(),
+                                key=lambda kv: -kv[1]):
+            print(f"  {n:6d}  {reason}")
+    by_rel: dict = {}
+    for k in ready:
+        by_rel[k["relationship"]] = by_rel.get(k["relationship"], 0) + 1
+    if by_rel:
+        print("\nready edges by relationship:")
+        for rel, n in sorted(by_rel.items(), key=lambda kv: -kv[1]):
+            print(f"  {n:6d}  {rel}")
+
+
+def _apply(result: dict) -> None:
+    """Write the ready edges into the seed file, and register the source.
+
+    Only edges whose animal already exists are written. The rest wait for their
+    fauna rows, which need a common name, a taxon and a nativity call — none of
+    which an interaction record supplies, and all of which show up in the UI.
+    """
+    ready = [{k: v for k, v in e.items() if not k.startswith("_")}
+             for e in result["kept"] if not e["_new_fauna"]]
+    if not ready:
+        print("nothing ready to write.")
+        return
+
+    path = os.path.join(_DATA, "plant_fauna_master.json")
+    rows = _rows(path)
+    rows.extend(ready)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(rows, fh, indent=1, ensure_ascii=False)
+    print(f"wrote {len(ready)} edges into {os.path.relpath(path, _ROOT)}")
+
+    # The bibliography is a structured record set, not a key→string map. The
+    # first version appended {"key","citation"} — and worse, put it at the top
+    # level rather than into the `sources` list — so data_quality rejected all
+    # 2,546 edges for citing a work that was not in the bibliography. That guard
+    # was right and is why this is caught here rather than by a user.
+    src_path = os.path.join(_DATA, "sources_master.json")
+    if os.path.exists(src_path):
+        with open(src_path, "r", encoding="utf-8") as fh:
+            blob = json.load(fh)
+        rows = blob.get("sources") if isinstance(blob, dict) else None
+        if rows is not None and not any(r.get("key") == _SOURCE_KEY
+                                        for r in rows):
+            rows.append(dict(_SOURCE_RECORD))
+            with open(src_path, "w", encoding="utf-8") as fh:
+                json.dump(blob, fh, indent=1, ensure_ascii=False)
+            print(f"registered '{_SOURCE_KEY}' in sources_master.json")
+
+    print("\nNEXT: bump _SCHEMA_VERSION in src/db/plants.py so existing "
+          "installs reseed, then run the suite.")
+
+
+#: A leading `word:` database namespace on a GloBI study title. Bare lowercase
+#: only, and no spaces, so a real title with a colon in it is left alone.
+_NAMESPACE_RE = re.compile(r"^[a-z][a-z0-9_-]{2,}:(?!//)\s*")
+_YEAR_RE = re.compile(r"\b(1[6-9]\d\d|20[0-4]\d)\b")
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+def study_record(title: str) -> dict:
+    """A GloBI ``study_title`` turned into a bibliography record.
+
+    ``sources_master.json`` holds structured records — authors, year, title,
+    kind — and GloBI hands over one free-text string, so this parses what it
+    can and **says that it parsed it**.
+
+    **Two shapes, because the live probe showed two.** `study_title` came back
+    100% populated, which is the good news, and the first value sampled was
+    ``https://scan-bugs.org/portal/collections/individual/index…`` — a
+    specimen record in the Symbiota Collections of Arthropods Network, not a
+    paper. Much of GloBI is museum-collection aggregation, so a large share of
+    these will be URLs.
+
+    A URL is still a real citation: it names one identifiable record a person
+    can open, which is strictly more than `globi` said. But it is a *specimen
+    record*, not a study, and calling it one would be the same category error
+    this pipeline keeps having to undo. So it gets `kind: specimen_record`,
+    the host as its title, and the URL where a URL belongs — and slugging the
+    whole thing into a key is skipped, because
+    ``globi_https_scan_bugs_org_443_portal_collections_individual`` is not an
+    identifier anybody can read.
+    """
+    title = " ".join((title or "").split())
+    if _UUID_RE.match(title):
+        # A bare GBIF dataset key. Ten of the 129 non-URL citations in the
+        # real fetch are these, and a UUID is not a citation — but it does
+        # identify one dataset exactly, and gbif.org/dataset/<key> resolves.
+        # Named for what it is rather than dressed up as a title.
+        return {
+            "key": f"globi_gbif_dataset_{title.replace('-', '')[:16]}",
+            "authors": "",
+            "year": None,
+            "title": f"GBIF dataset {title}",
+            "url": f"https://www.gbif.org/dataset/{title}",
+            "kind": "dataset",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "GloBI reported only the dataset key for this record, with no "
+                "title. The key resolves at gbif.org and names the dataset "
+                "exactly; who published it and when are not captured here."),
+            "aliases": [title],
+        }
+    if title.lower().startswith("urn:catalog:"):
+        # `urn:catalog:USDA-ARS:BBSL:1176785` — a specimen catalogue number,
+        # the same kind of thing as the portal URLs below and in need of the
+        # same collapsing. Left alone it made **one bibliography entry per
+        # pinned beetle**, nine of them from a single bee collection, each
+        # demanding an author it can never have.
+        parts = title.split(":")
+        collection = ":".join(parts[2:4]) if len(parts) >= 4 else "unknown"
+        slug = _SLUG_RE.sub("_", collection.lower()).strip("_")[:40]
+        return {
+            "key": f"globi_specimen_{slug}" if slug else _SOURCE_KEY,
+            "authors": "",
+            "year": None,
+            "title": f"Specimen records from the {collection} collection",
+            "kind": "specimen_record",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "GloBI reported a specimen catalogue number rather than a "
+                "publication. This entry names the collection; the individual "
+                "specimen is identified by the catalogue number in the edge's "
+                "own record and reachable by querying GloBI for the same "
+                "species pair."),
+            "aliases": [collection],
+        }
+    if title.lower().startswith(("http://", "https://")):
+        # First whitespace token only. GloBI has at least one record whose
+        # "citation" is a URL prefix glued to a prose blurb —
+        # `http://iNaturalist.org is a place where you can record what you see
+        # in nature, …` — and taking everything up to the next slash made the
+        # whole sentence the hostname, then the bibliography key. A hostname
+        # has no spaces.
+        tail = title.split("//", 1)[-1] if "//" in title else ""
+        parts = tail.split("/", 1)[0].split(":")[0].split()
+        host = parts[0] if parts else ""
+        if "." not in host:
+            host = ""
+        slug = _SLUG_RE.sub("_", host.lower()).strip("_")[:48].strip("_")
+        if not slug:
+            # A URL we cannot read a host out of is not better provenance than
+            # the aggregator; say so rather than invent a key.
+            return dict(_SOURCE_RECORD)
+        return {
+            "key": f"globi_{slug}" if slug else _SOURCE_KEY,
+            "authors": "",
+            "year": None,
+            "title": f"Specimen records from {host}",
+            "url": f"https://{host}/",
+            "kind": "specimen_record",
+            "covers": "interactions",
+            "record_confidence": "unverified",
+            "record_note": (
+                "A collection portal, not a published work. GloBI reports a "
+                "per-specimen URL for records aggregated from museum "
+                "collections; this entry names the collection, and the "
+                "individual record is reachable by querying GloBI for the "
+                "same species pair. Weaker than a paper and stronger than "
+                "citing the aggregator."),
+            "aliases": [host],
+        }
+    # GloBI namespaces some study titles by the database they came from —
+    # `bascompte:Robertson, C. 1929. Flowers and insects…` is the Bascompte
+    # web-of-life collection. The prefix is a namespace, not part of anybody's
+    # name, and left on it became the author's surname in five bibliography
+    # records. Only stripped when the prefix is a bare lowercase word, so a
+    # real title containing a colon ("Flowers and insects: lists of visitors")
+    # is untouched.
+    title = _NAMESPACE_RE.sub("", title, count=1)
+    year_match = _YEAR_RE.search(title)
+    year = int(year_match.group(1)) if year_match else None
+    authors = ""
+    if year_match and year_match.start() > 0:
+        # Everything before the year is conventionally the author list.
+        authors = title[:year_match.start()].strip(" .,;")
+    slug = _SLUG_RE.sub("_", title.lower()).strip("_")[:60].strip("_")
+    return {
+        "key": f"globi_{slug}" if slug else _SOURCE_KEY,
+        "authors": authors,
+        "year": year,
+        "title": title,
+        "kind": "study",
+        "covers": "interactions",
+        "record_confidence": "unverified",
+        "record_note": (
+            "Parsed from the study title GloBI reports for this record, not "
+            "transcribed from the work itself: the author and year fields are "
+            "a split on the first four-digit year and may be wrong even where "
+            "the title is right. Verifiable by querying GloBI for the same "
+            "species pair."),
+        "aliases": [title] if title else [],
+    }
+
+
+def upgrade_citations(obs_rows: list, write: bool = False) -> dict:
+    """Attach a named study to edges currently citing the aggregator (F128).
+
+    The 2,439 edges F125 shipped all cite `globi`, because GloBI only fills
+    `study_title` when asked for observations rather than distinct
+    interactions. This reads an observation-mode fetch and upgrades them in
+    place: same edges, better provenance.
+
+    Matched on ``(plant, fauna, relationship)``. An observation row that
+    matches nothing is ignored rather than added — adding edges is
+    ``--apply``'s job and it has gates this does not.
+    """
+    plants, _fauna, edge_rows, _existing, _types, _fruit = _load_seed()
+    best: dict = {}
+    for r in obs_rows:
+        cit = (r.get("_citation") or "").strip()
+        if not cit or not r.get("plant") or not r.get("fauna"):
+            continue
+        key = (r["plant"].strip().lower(), r["fauna"].strip().lower(),
+               r.get("relationship", ""))
+        # Longest title wins: GloBI's shorter forms are usually a dataset name
+        # where the longer one is the paper.
+        if len(cit) > len(best.get(key, "")):
+            best[key] = cit
+
+    studies: dict = {}
+    upgraded, already, unmatched = 0, 0, 0
+    for row in edge_rows:
+        if not row.get("plant"):
+            continue
+        if row.get("source") != _SOURCE_KEY:
+            already += 1        # a hand-authored citation is already better
+            continue
+        key = (row["plant"].strip().lower(), row["fauna"].strip().lower(),
+               row.get("relationship", ""))
+        cit = best.get(key)
+        if not cit:
+            unmatched += 1
+            continue
+        rec = study_record(cit)
+        studies.setdefault(rec["key"], rec)
+        row["source"] = rec["key"]
+        row["notes"] = (row.get("notes") or "").split(" — ")[0]
+        upgraded += 1
+
+    print(f"  {upgraded} edges gained a named study")
+    print(f"  {unmatched} still cite the aggregator (no observation matched)")
+    print(f"  {already} already had a hand-authored citation, untouched")
+    print(f"  {len(studies)} distinct studies would be registered")
+    if write and upgraded:
+        src_path = os.path.join(_DATA, "sources_master.json")
+        with open(src_path, "r", encoding="utf-8") as fh:
+            blob = json.load(fh)
+        have = {s.get("key") for s in blob["sources"]}
+        blob["sources"].extend(r for k, r in sorted(studies.items())
+                               if k not in have)
+        with open(src_path, "w", encoding="utf-8") as fh:
+            json.dump(blob, fh, indent=1, ensure_ascii=False)
+        path = os.path.join(_DATA, "plant_fauna_master.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(edge_rows, fh, indent=1, ensure_ascii=False)
+        print(f"\nwrote {os.path.relpath(path, _ROOT)} and registered "
+              f"{len(studies)} studies")
+    elif not write:
+        print("\n(report only — add --apply to write)")
+    return {"upgraded": upgraded, "unmatched": unmatched,
+            "studies": studies}
+
+
+def refit(write: bool = False) -> dict:
+    """Re-run the current gates over edges a PREVIOUS run already wrote.
+
+    A gate added after an ``--apply`` does not retroactively clean what that
+    apply let through, and the bird routing was added exactly one increment
+    late: V2.59 wrote 15 ``fruit_food`` edges on plants that bear no fruit —
+    a goldfinch on Black-eyed Susan, a redpoll on Paper Birch, a chickadee on
+    goldenrod. Every one is a seed record wearing the wrong word.
+
+    So the applied data has to stay re-derivable. Only ``source == globi`` rows
+    are touched; hand-authored edges are somebody's reading of a book and are
+    not this script's to revise.
+    """
+    plants, fauna, edge_rows, _existing, plant_types, has_fruit = _load_seed()
+    bird_feeds, synonyms, _verdicts = _bird_feeds()
+    taxon_of = {k: (v.get("taxon") or "") for k, v in fauna.items()}
+
+    changed, removed, kept = [], [], 0
+    out, seen = [], set()
+    for r in edge_rows:
+        if not r.get("plant") or r.get("source") != _SOURCE_KEY:
+            # Pass-through rows still claim their key. The first version only
+            # tracked the rows it rewrote, and a re-route can land on top of a
+            # HAND-AUTHORED edge: `Common Sunflower / Spinus tristis` was
+            # already asserted with a Cornell citation, and the goldfinch's
+            # GloBI `fruit_food` became a second `seed_food` beside it. Four
+            # pairs like that survived. The better-cited row is the one to
+            # keep, so claiming the key here also decides that correctly —
+            # a `globi` duplicate of a real citation is pure noise.
+            if r.get("plant") and r.get("fauna"):
+                seen.add((r["plant"].strip().lower(),
+                          r["fauna"].strip().lower(),
+                          r.get("relationship", "")))
+            out.append(r)
+            continue
+        animal = synonyms.get(r["fauna"].strip(), r["fauna"].strip())
+        if taxon_of.get(animal.lower()) != "bird":
+            out.append(r)
+            continue
+        routed = route_bird(r["relationship"],
+                            bird_feeds.get(animal, set()),
+                            r["plant"].strip().lower() in has_fruit)
+        if not routed:
+            removed.append((r["plant"], animal, r["relationship"]))
+            continue
+        key = (r["plant"].strip().lower(), animal.lower(), routed)
+        if key in seen:
+            removed.append((r["plant"], animal,
+                            f"{r['relationship']}→{routed} (duplicate)"))
+            continue
+        seen.add(key)
+        if routed != r["relationship"]:
+            changed.append((r["plant"], animal, r["relationship"], routed))
+            r = dict(r, relationship=routed, fauna=animal)
+        else:
+            kept += 1
+        out.append(r)
+
+    print(f"refit over {len(edge_rows)} rows: {kept} bird edges unchanged, "
+          f"{len(changed)} re-routed, {len(removed)} removed")
+    for p, a, old, new in changed:
+        print(f"  {old:11s} → {new:11s}  {p} / {a}")
+    for p, a, why in removed:
+        print(f"  REMOVED ({why:22s})  {p} / {a}")
+    if write and (changed or removed):
+        path = os.path.join(_DATA, "plant_fauna_master.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, indent=1, ensure_ascii=False)
+        print(f"\nrewrote {os.path.relpath(path, _ROOT)}")
+    elif not write:
+        print("\n(report only — add --apply to write)")
+    return {"changed": changed, "removed": removed, "kept": kept}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--apply", action="store_true",
+                    help="write the ready edges into the seed files")
+    ap.add_argument("--refit", action="store_true",
+                    help="re-run the current gates over already-written edges")
+    ap.add_argument("--citations", action="store_true",
+                    help="upgrade `globi` edges to named studies from an "
+                         "observation-mode fetch (F128)")
+    ap.add_argument("--file", default=os.path.join(
+        _FETCHED, "fauna_edges_candidates.json"))
+    args = ap.parse_args()
+
+    if args.refit:
+        refit(write=args.apply)
+        return 0
+
+    if args.citations:
+        obs = os.path.join(_FETCHED, "fauna_edges_observations.json")
+        if not os.path.exists(obs):
+            print(f"no observation file at {obs}\nRun\n"
+                  f"    python3 scripts/fetch_fauna_edges.py --observations\n"
+                  f"on a machine with internet first.")
+            return 1
+        with open(obs, "r", encoding="utf-8") as fh:
+            rows = json.load(fh)
+        print(f"upgrading citations from {len(rows)} observation records\n")
+        upgrade_citations(rows, write=args.apply)
+        return 0
+
+    if not os.path.exists(args.file):
+        print(f"no candidate file at {args.file}\n"
+              f"Run scripts/fetch_fauna_edges.py on a machine with internet "
+              f"first.")
+        return 1
+    with open(args.file, "r", encoding="utf-8") as fh:
+        candidates = json.load(fh)
+    print(f"reviewing {len(candidates)} candidates from "
+          f"{os.path.relpath(args.file, _ROOT)}\n")
+
+    result = review(candidates)
+    _report(result)
+    if args.apply:
+        print()
+        _apply(result)
+    else:
+        print("\n(report only — re-run with --apply to write)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

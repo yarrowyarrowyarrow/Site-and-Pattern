@@ -13,7 +13,7 @@ never touch the real user DB.
 
 ```bash
 # Full suite (from the repo root)
-python3 -m unittest discover -s tests
+python3 -m unittest discover -s tests -t .
 
 # One module
 python3 -m unittest tests.test_project_store -v
@@ -163,5 +163,5 @@ to the snapshot the test defends.
 ## Validation
 
 ```bash
-python3 -m unittest discover -s tests      # full (slow, ~7min, expect skips, exit 0)
+python3 -m unittest discover -s tests -t .      # full (slow, ~7min, expect skips, exit 0)
 ```

@@ -1,0 +1,242 @@
+==========================================================================
+  SCHEMA REPORT - the real field names, not the expected ones
+==========================================================================
+
+  elc_ecoregion  <- nef_ca_ter_ecoregion_v2_2.geojson
+      Terrestrial Ecoregions of Canada (the base geometry)
+      Agriculture and Agri-Food Canada / Ecological Stratification Working Group, National Ecological Framework v2.2 (1995 framework)
+
+    layer nef_ca_ter_ecoregion_v2_2: 218 features, CRS EPSG:4326
+    geometry types: ['Polygon']
+
+    column                       dtype         non-null  distinct
+    ---------------------------- ------------ ---------  --------
+    OBJECTID                     int32              218       218
+    ECOREGION_ID                 int32              218       194
+    ECOZONE_ID                   int32              218        15
+    ECOPROVINCE_ID               float64            218        53
+    ECOREGION_NAME_EN            str                218       194
+    ECOREGION_NAME_FR            str                218       195
+    SHAPE_Length                 float64            218       218
+    SHAPE_Area                   float64            218       218
+
+    ECOREGION_ID: 194 distinct (too many to list; looks like an identifier)
+    ECOZONE_ID  (15 distinct):
+        1
+        10
+        11
+        12
+        13
+        14
+        15
+        2
+        3
+        4
+        5
+        6
+        7
+        8
+        9
+
+    ECOPROVINCE_ID  (53 distinct):
+        1.100000023841858
+        1.2000000476837158
+        10.100000381469727
+        10.199999809265137
+        10.300000190734863
+        11.100000381469727
+        11.199999809265137
+        11.300000190734863
+        11.399999618530273
+        12.100000381469727
+        12.199999809265137
+        12.300000190734863
+        12.399999618530273
+        13.100000381469727
+        13.199999809265137
+        13.300000190734863
+        14.100000381469727
+        14.199999809265137
+        14.300000190734863
+        14.399999618530273
+        15.100000381469727
+        15.199999809265137
+        2.0999999046325684
+        2.200000047683716
+        2.299999952316284
+        2.4000000953674316
+        2.5
+        2.5999999046325684
+        2.700000047683716
+        3.0999999046325684
+        3.200000047683716
+        3.299999952316284
+        4.099999904632568
+        4.199999809265137
+        4.300000190734863
+        5.099999904632568
+        5.199999809265137
+        5.300000190734863
+        5.400000095367432
+        6.099999904632568
+        6.199999809265137
+        6.300000190734863
+        6.400000095367432
+        6.5
+        6.599999904632568
+        7.099999904632568
+        7.199999809265137
+        7.300000190734863
+        8.100000381469727
+        8.199999809265137
+        9.100000381469727
+        9.199999809265137
+        9.300000190734863
+
+    ECOREGION_NAME_EN: 194 distinct (too many to list; looks like an identifier)
+    ECOREGION_NAME_FR: 195 distinct (too many to list; looks like an identifier)
+--------------------------------------------------------------------------
+
+  elc_ecozone  <- nef_ca_ter_ecozone_v2_2.geojson
+      Terrestrial Ecozones of Canada (the parent level, for the crosswalk: this is what separates Boreal Shield from Boreal Plains and Taiga Shield)
+      Agriculture and Agri-Food Canada / Ecological Stratification Working Group, National Ecological Framework v2.2 (1995 framework)
+
+    layer nef_ca_ter_ecozone_v2_2: 25 features, CRS EPSG:4326
+    geometry types: ['Polygon']
+
+    column                       dtype         non-null  distinct
+    ---------------------------- ------------ ---------  --------
+    OBJECTID                     int32               25        25
+    ECOZONE_ID                   int32               25        15
+    ECOZONE_NAME_EN              str                 25        15
+    ECOZONE_NAME_FR              str                 25        15
+    SHAPE_Length                 float64             25        25
+    SHAPE_Area                   float64             25        25
+
+    ECOZONE_ID  (15 distinct):
+        1
+        10
+        11
+        12
+        13
+        14
+        15
+        2
+        3
+        4
+        5
+        6
+        7
+        8
+        9
+
+    ECOZONE_NAME_EN  (15 distinct):
+        Arctic Cordillera
+        Atlantic Maritime
+        Boreal Cordillera
+        Boreal Plains
+        Boreal Shield
+        Hudson Plains
+        Mixedwood Plains
+        Montane Cordillera
+        Northern Arctic
+        Pacific Maritime
+        Prairies
+        Southern Arctic
+        Taiga Cordillera
+        Taiga Plains
+        Taiga Shield
+
+    ECOZONE_NAME_FR  (15 distinct):
+        Bas-Arctique
+        Bouclier borΘal
+        CordillΦre arctique
+        CordillΦre borΦale
+        CordillΦre montagnarde
+        Haut-Arctique
+        Maritime de l'Atlantique
+        Maritime du Pacifique
+        Plaines Hudsoniennes
+        Plaines borΘales
+        Plaines α forΘts mixtes
+        Prairies
+        Ta∩ga de la CordillΦre
+        Ta∩ga des plaines
+        Ta∩ga du bouclier
+
+--------------------------------------------------------------------------
+
+  ab_subregions  <- alberta_natural_subregions.geojson
+      Natural Regions and Subregions of Alberta (the detail layer, joined spatially as an attribute)
+      Alberta Environment and Protected Areas (Natural Regions Committee 2006), 2005 Final, 1:250 000
+
+    layer natural_subregions_alberta_2005 layer 0: 420 features, CRS EPSG:4326
+    geometry types: ['Polygon']
+
+    column                       dtype         non-null  distinct
+    ---------------------------- ------------ ---------  --------
+    NSRNAME                      str                420        21
+    NSRCODE                      str                420        21
+    NRNAME                       str                420         6
+    OBJECTID                     int32              420       420
+    Shape__Area                  float64            420       420
+    GlobalID                     str                420       420
+
+    NSRNAME  (21 distinct):
+        Alpine
+        Athabasca Plain
+        Boreal Subarctic
+        Central Mixedwood
+        Central Parkland
+        Dry Mixedgrass
+        Dry Mixedwood
+        Foothills Fescue
+        Foothills Parkland
+        Kazan Uplands
+        Lower Boreal Highlands
+        Lower Foothills
+        Mixedgrass
+        Montane
+        Northern Fescue
+        Northern Mixedwood
+        Peace River Parkland
+        Peace-Athabasca Delta
+        Subalpine
+        Upper Boreal Highlands
+        Upper Foothills
+
+    NSRCODE  (21 distinct):
+        A
+        AP
+        BSR
+        CM
+        CP
+        DMG
+        DMW
+        FF
+        FP
+        KU
+        LBH
+        LF
+        M
+        MG
+        NF
+        NM
+        PAD
+        PRP
+        SA
+        UB
+        UF
+
+    NRNAME  (6 distinct):
+        Boreal
+        Canadian Shield
+        Foothills
+        Grassland
+        Parkland
+        Rocky Mountain
+
+--------------------------------------------------------------------------
+
+Copy the real classification field names into the FIELDS table in
+tools/ecoregions/harmonize.py, then run the harmonize stage.

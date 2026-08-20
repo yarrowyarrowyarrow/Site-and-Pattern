@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import contextmanager
 
 from src.tile_store import connect, ensure_schema, pack, sha1_json, unpack
 # Pure tile geometry is shared with the terrain pack — same 0.01° scheme.
@@ -54,8 +55,27 @@ CREATE TABLE IF NOT EXISTS building_meta (
 """
 
 
-def _connect(path: str | None = None) -> sqlite3.Connection:
-    return connect(path or _db_path())
+@contextmanager
+def _connect(path: str | None = None):
+    """Open the pack, commit on success, and **always close**.
+
+    A context manager, not a bare connection, because ``with conn:`` on its own
+    is the sqlite3 trap: it commits or rolls back a TRANSACTION and leaves the
+    connection open. Every call site here was already a ``with``, so all of
+    them leaked one — measured at 23 unclosed connections in a single test run,
+    all from these two stores.
+
+    That is worse than untidy for a WAL pack opened with a 30 s busy timeout:
+    leaked readers hold locks, and a later writer sits waiting on them. On
+    Windows, where file locking is stricter than on Linux, that reads as the
+    application hanging.
+    """
+    conn = connect(path or _db_path())
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:

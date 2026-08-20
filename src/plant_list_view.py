@@ -158,18 +158,34 @@ QListWidget::item:hover {
 """
 
 
-def _type_icon(plant_type: str) -> QIcon:
-    """Return a small coloured circle icon for the given plant type."""
-    color_hex = _TYPE_COLORS.get(plant_type, "#78909c")
+def _swatch_icon(color_hex: str, outline: bool = False) -> QIcon:
+    """A small filled circle. ``outline`` draws a hairline ring, which the pale
+    flower colours need or a white swatch is invisible on a light menu."""
     pix = QPixmap(14, 14)
     pix.fill(Qt.GlobalColor.transparent)
     p = QPainter(pix)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     p.setBrush(QBrush(QColor(color_hex)))
-    p.setPen(Qt.PenStyle.NoPen)
+    p.setPen(QColor(120, 120, 120) if outline else Qt.PenStyle.NoPen)
     p.drawEllipse(1, 1, 12, 12)
     p.end()
     return QIcon(pix)
+
+
+def _type_icon(plant_type: str) -> QIcon:
+    """Return a small coloured circle icon for the given plant type."""
+    return _swatch_icon(_TYPE_COLORS.get(plant_type, "#78909c"))
+
+
+def _colour_icon(colour_key: str) -> QIcon:
+    """The swatch beside a flower-colour choice (V2.48).
+
+    A colour filter whose menu is a list of words is a colour filter you have
+    to read instead of look at, which defeats the point of filtering by colour.
+    Outlined, because white and cream are otherwise invisible.
+    """
+    from src.flower_colour import COLOUR_SWATCHES          # noqa: PLC0415
+    return _swatch_icon(COLOUR_SWATCHES.get(colour_key, "#78909c"), outline=True)
 
 
 # ── Plant list item roles ─────────────────────────────────────────────────────
@@ -347,6 +363,17 @@ class PlantListModel(QAbstractListModel):
             idx = self.index(row)
             self.dataChanged.emit(idx, idx, [_PLANT_EXPANDED_ROLE])
 
+    def warm_photo(self, plant: dict):
+        """Start caching one plant's photo now.
+
+        Public since V2.41, because the prefetch had exactly one trigger —
+        expanding a row — and the plant directory's species page is a second
+        consumer that never expands anything. Without this its photo panel says
+        "not downloaded yet" for the whole session on every species the user
+        never happened to expand in the list.
+        """
+        self._prefetch_image(plant)
+
     def _prefetch_image(self, plant: dict):
         """Kick a one-time background fetch of a plant's photo into the local
         cache (I1). Off the UI thread; emits ``imageReady`` when done so the row
@@ -365,14 +392,20 @@ class PlantListModel(QAbstractListModel):
             return
         attribution = plant.get("image_attribution", "")
         license_str = plant.get("image_license", "")
-        signal = self.imageReady
+        # Bind the OWNER, not its bound signal. A bound signal keeps no strong
+        # claim on the object's C++ lifetime, so a fetch that finishes after the
+        # model has gone (close the panel, switch tabs, end a test) emits into
+        # freed memory — a hard crash from a nicety. `emit_if_alive` checks the
+        # wrapper before touching it.
+        owner = self
 
         class _FetchTask(QRunnable):
             def run(self):
                 try:
                     from src.image_cache import resolve_image
+                    from src.qt_safety import emit_if_alive
                     if resolve_image(url, attribution, license_str):
-                        signal.emit(pid)
+                        emit_if_alive(owner, "imageReady", pid)
                 except Exception:
                     pass
 
@@ -696,7 +729,12 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.drawPixmap(detail.left(), detail.top(), scaled)
         y = detail.top() + scaled.height() + 2
         fm_s = QFontMetrics(self._small_font)
-        attr = (plant.get("image_attribution") or "").strip()
+        # One shared formatter (src/image_cache.credit_line) so every surface
+        # that shows a photo shows the same credit — this one used to print the
+        # attribution and drop the licence.
+        from src.image_cache import credit_line
+        attr = credit_line(plant.get("image_attribution") or "",
+                           plant.get("image_license") or "")
         if attr:
             painter.setPen(QColor("#78909c"))
             painter.setFont(self._small_font)

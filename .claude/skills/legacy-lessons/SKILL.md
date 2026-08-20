@@ -265,6 +265,81 @@ criterion explicit. And test the *shape* of an output (spans, spacing,
 distribution), not just its validity; "all plants inside the boundary"
 was green while the feature was visibly broken. (See `generate-design`.)
 
+## 17. The updater's self-made dead end (V2.29)
+
+A user screenshot: **"Update failed — git merge --ff-only failed: error:
+Merging is not possible because you have unmerged files"**, followed by
+the dialog's advice, *"You can finish from a terminal instead: `git pull
+--ff-only`"* — which fails with the **identical** error. The app had
+painted itself into a corner and then handed the user a map back to the
+same corner.
+
+It had also *built* the corner. `update_to_branch` stashes local edits,
+switches branch, then pops. A conflicting `git stash pop` keeps the stash
+(good) but leaves the working tree **full of unmerged files** (bad), and
+the old code returned `(True, "kept safe in the stash")` — truthful about
+the stash, silent about the wreckage. git then refuses every merge,
+switch *and* stash, so every later Check for Updates hit the same wall.
+Reproduced in six lines of git; the tests had covered the
+successful-stash-and-restore path and the diverged-branch path, but never
+a **conflicting** pop.
+
+**Scar:** `version_branch.unmerged_paths` +
+`abort_conflicted_state` (`git reset --merge` — *not* `--hard`: it resets
+only paths differing between HEAD and index and refuses rather than
+clobbering unrelated edits); `update_to_branch` now aborts the half
+application so the checkout it hands back is always updatable;
+`update_flow._clear_conflicts_if_any` runs before both update paths and
+offers the way out *with consent* (a conflict the user is hand-resolving
+must never be discarded silently); and the failure text only suggests a
+terminal command when that command can actually work.
+`tests/test_version_branch.py:TestConflictedCheckoutRecovery` pins the
+symptom itself — including that `git pull --ff-only` cannot fix it — and
+`test_architecture_guard.py` pins the wiring plus a **tightened**
+destructive-git check: exact-token matching (so the files may keep
+documenting the `--hard` they must not run), now covering `clean`, `-f`,
+`--force` and `version_branch.py` as well.
+**Rule:** an error message is a dead end unless it names a command that
+works *from the state the user is actually in*. Check the state, then
+advise. And when a recovery path can conflict, test the conflict — the
+happy path proves nothing about the corner your code leaves behind.
+
+## 18. The half-deleted foliage (V2.29)
+
+Another user screenshot: every shrub in the app a bundle of dark wiry
+canes, in midsummer, described as *"still looking wirey and bare year
+round"*. Every guard was green. The leaves were provably built, budgeted
+under their triangle ceiling, sized from each species' `leaf_size_cm`,
+shaped by its `leaf_shape`, arranged opposite-vs-alternate by its
+`leaf_arrangement`, and positioned across the whole crown — a test even
+pinned that foliage reaches 90% of every woody unit's height.
+
+None of that is what draws pixels. The V2.29 rebuild replaced the shrubs'
+closed 20-triangle icosahedral leaf blobs with **flat leaf ribbons**, and
+`MATS.shrubFoliage` stayed on `THREE.FrontSide` — correct and cheaper for
+a solid, fatal for a ribbon, which simply is not drawn from behind. About
+half of every shrub's foliage rendered as nothing at all.
+
+The interesting part is the guard that *would not* have worked. The
+obvious instinct is a render-level check: boot the viewer, hide the mesh,
+count the pixels that change. Built it (`window.permaVisibility`) and
+measured — the culled foliage still drew **9,492 pixels against 16,782**
+fixed, because half of a leaf's faces do point at the camera. A
+"does this draw anything" assertion sails straight past a 44% loss. The
+invariant that actually bites is a source-level one:
+`tests/test_scene3d_render.py:FlatLeafMaterialsTest` — every material
+applied to flat leaf geometry must be double-sided, plus a check that
+`plantMaterial` still maps the flag onto `THREE.DoubleSide` so the first
+check means something.
+
+**Scar:** `doubleSide: true` on `MATS.shrubFoliage`, joining `leaf` and
+`blade`, which had always been ribbons.
+**Rule:** when geometry changes *kind* — solid to ribbon, closed to open,
+opaque to alpha — every material applied to it is now unreviewed. And
+before trusting a proposed guard, measure what it would actually have
+reported on the real bug; a guard that would have passed is worse than
+none, because it will be believed.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

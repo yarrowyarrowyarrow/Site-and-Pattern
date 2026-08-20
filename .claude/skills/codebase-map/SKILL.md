@@ -17,7 +17,7 @@ inventory: [reference.md](reference.md).
 
 - Entry: `main.py` → `src/app.py` `MainWindow`. Left: Leaflet map in
   QWebEngineView (`src/map_widget.py` + `html/map.html` + `html/map/`). Right:
-  five side tabs (Site / Plants / Structures / Analysis / Planning).
+  six side tabs (Site / Plants / Structures / Analysis / Planning / Learn).
 - Reference data (plant catalogue, fauna, communities) lives in a per-user
   SQLite DB seeded from `data/*.json` — never in the repo tree
   (`src/user_paths.py` is the single source of truth for the directory).
@@ -61,7 +61,7 @@ inventory: [reference.md](reference.md).
 
 | Path | What |
 |---|---|
-| `src/db/plants.py` | Connection, `_SCHEMA_VERSION` (currently 45), migration/reseed logic, `search_plants`, climate/wind caches. |
+| `src/db/plants.py` | Connection, `_SCHEMA_VERSION` (currently 70), migration/reseed logic, `search_plants`, climate/wind caches. |
 | `src/db/schema.sql` | Authoritative DDL, loaded on every `init_db`. |
 | `src/db/seed_data.py` | Seeds the catalogue from `data/*.json`. |
 | `src/db/polycultures.py`, `src/db/recipes.py` | Spatial plant communities + ratio-only recipes. |
@@ -82,8 +82,9 @@ inventory: [reference.md](reference.md).
 `src/plant_panel.py` (+ `src/plant_list_view.py`, `src/on_this_design_panel.py`,
 `src/placement_controls.py`), `src/polyculture_panel.py`,
 `src/structure_panel.py`, `src/site_panel.py`, `src/analysis_panel.py`,
-`src/planning_panel.py`, plus small QPainter widgets
-(`src/wind_rose_widget.py`, `src/forage_calendar_widget.py`,
+`src/planning_panel.py`, `src/learn_panel.py` (Field Study / Lessons /
+Present, V2.25), plus small QPainter widgets
+(`src/wind_rose_widget.py`,
 `src/phenology_widget.py`, `src/docent_widget.py`, `src/field_study_widget.py`,
 `src/lesson_track_widget.py`). Widgets draw; they never compute — the maths
 lives in a Qt-free sibling module.
@@ -194,17 +195,19 @@ scripts), `.github/workflows/release-macos.yml` and
 |---|---|
 | `docs/DESIGN_PHILOSOPHY.md` | The twelve principles + "where this lives in the code" + honest State markers. Read before designing features. |
 | `docs/PHILOSOPHY_ROADMAP.md` | Features F1–F53 ranked by principle/impact; "Shipped" section is the historical record — keep it honest. |
-| `docs/ROADMAP.md` | The effort/impact feature ledger (complementary to the philosophy roadmap). |
+| `docs/README.md` | **Index of every document here and what it is for — start with this one.** |
+| `docs/ROADMAP_NEXT.md` | The LIVE plan (F63–F82 and beyond), grouped by theme. |
+| `docs/ROADMAP.md` | The effort/impact feature ledger — historical, not live. |
 | `docs/REFERENCES.md` | Full bibliography behind the philosophy. Directional only — see the P12 hard rule in `CLAUDE.md`. |
 | `docs/AGENT_API.md` | Scripting/CLI/MCP reference (lags the code slightly — the contract test is the truth). |
 | `docs/PROJECT_FILE_FORMAT.md` | The `*.perma.geojson` format, feature `element_type`s, schema history. |
 | `docs/DATABASE_SCHEMA.md` | SQLite catalogue schema narrative. |
 | `docs/BUILD.md` | Run locally + build the 1-click installers. |
 | `docs/USER_GUIDE.md` | 5-minute tour of the controls. |
-| `docs/3D_SPRITES.md` | Catalogue of 3D plant sprites/geometry archetypes. |
+| `docs/3D_SPRITES.md` | Catalogue of procedural 3D plant sprites/archetypes, the live gallery, and the flower-tuning bench. |
+| `docs/SPRITE_AUDIT.md` | How good the sprites really are — fidelity and distinctness, scored, four passes deep. |
 | `docs/review.md` | Priorities/history primer for deep-dive code reviews. |
-| `docs/data_gaps_v1.44.md` | Known seed-data gaps for the Generate Design goals. |
-| `docs/archive/` | Historical brainstorms/handoffs — context only. |
+| `docs/DATA_GAPS.md` | Known seed-data gaps — the Generate Design goals, and the photo/provenance gaps (F70). |
 
 ## Data, scripts, tests
 
@@ -215,7 +218,7 @@ scripts), `.github/workflows/release-macos.yml` and
 - `scripts/` — offline data tooling (catalogue checks `check_plant_data.py`,
   flora/fauna expanders, sprite renderers, DOCX export) + `scripts/packaging/`.
 - `tests/` — stdlib `unittest` only. Run everything:
-  `python -m unittest discover -s tests`. Qt-dependent tests self-skip
+  `python -m unittest discover -s tests -t .`. Qt-dependent tests self-skip
   headless. Every DB test redirects `src.db.plants._DATA_DIR`/`_DB_PATH` to a
   tempdir BEFORE importing consumers. The suite doubles as the architecture's
   enforcement: guard tests fail builds on ceiling/contract/path violations.

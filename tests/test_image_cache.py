@@ -6,6 +6,7 @@ network): the fetch path is exercised against a ``file://`` URL so it runs
 offline, and the schema test confirms plants/fauna carry the image columns.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -70,6 +71,187 @@ class TestImageCache(unittest.TestCase):
         meta = ic._load_meta().get(url)
         self.assertEqual(meta["attribution"], "© Tester, CC0")
         self.assertEqual(meta["license"], "CC0")
+
+
+class TestCacheKeyAddressing(unittest.TestCase):
+    """The key is how a cached photo reaches the 3D viewer without its URL
+    leaving the app (src/web_assets.py `/__image`)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="permadesign_imgkey_")
+        cls._orig = _plants_mod._user_data_dir
+        _plants_mod._user_data_dir = lambda: pathlib.Path(cls._tmp)
+        src_png = os.path.join(cls._tmp, "keyed.png")
+        with open(src_png, "wb") as fh:
+            fh.write(_PNG)
+        cls.url = pathlib.Path(src_png).as_uri()
+        cls.path = ic.fetch_and_cache_image(cls.url, "© Tester", "CC0")
+
+    @classmethod
+    def tearDownClass(cls):
+        _plants_mod._user_data_dir = cls._orig
+
+    def test_key_round_trips_to_the_cached_file(self):
+        self.assertEqual(ic.cached_path_for_key(ic.cache_key(self.url)),
+                         self.path)
+
+    def test_key_is_stable_and_opaque(self):
+        key = ic.cache_key(self.url)
+        self.assertEqual(key, ic.cache_key(self.url))
+        self.assertTrue(key.isalnum() and len(key) == 16)
+        self.assertNotIn("/", key)
+
+    def test_unknown_or_hostile_keys_resolve_to_nothing(self):
+        # Anything that isn't a known cache stem must return None — the route
+        # that serves these is the only thing standing between a URL parameter
+        # and the filesystem.
+        for bad in ("", "nope", "../../etc/passwd", "a/b", "..",
+                    os.path.basename(self.path)):
+            self.assertIsNone(ic.cached_path_for_key(bad), bad)
+
+    def test_credit_line_needs_no_placeholder_when_half_the_data_is_missing(self):
+        self.assertEqual(ic.credit_line("© A", "cc-by"), "© A · cc-by")
+        self.assertEqual(ic.credit_line("© A", ""), "© A")
+        self.assertEqual(ic.credit_line("", "cc-by"), "cc-by")
+        self.assertEqual(ic.credit_line("", ""), "")
+
+    def test_credit_line_does_not_state_the_licence_twice(self):
+        """Every seeded iNaturalist attribution already names its licence in
+        prose, so pasting the slug after it says the same thing in two
+        notations."""
+        inat = ("(c) Rob Foster, some rights reserved (CC BY), "
+                "uploaded by Rob Foster")
+        self.assertEqual(ic.credit_line(inat, "cc-by"), inat)
+        for attribution, licence in (
+                ("(c) X, some rights reserved (CC BY-SA)", "cc-by-sa"),
+                ("(c) X, some rights reserved (CC BY-NC)", "cc-by-nc"),
+                ("Public domain, via Wikimedia Commons", "cc0"),
+                ("Creative Commons Attribution 4.0", "cc-by")):
+            self.assertEqual(ic.credit_line(attribution, licence), attribution)
+
+    def test_a_licence_that_is_not_already_stated_is_still_appended(self):
+        """Broad on purpose: a doubled credit is cosmetic, a missing one is a
+        licence violation, so anything uncertain keeps the slug."""
+        self.assertEqual(ic.credit_line("Photo by A. Person", "cc-by-sa"),
+                         "Photo by A. Person · cc-by-sa")
+        self.assertEqual(ic.credit_line("© Someone 2019", "GFDL"),
+                         "© Someone 2019 · GFDL")
+
+
+class TestConcurrentMetadataWrites(unittest.TestCase):
+    """The index is written from worker threads by four different surfaces.
+
+    Before V2.37 it was read-modify-write with no lock and `open(path, "w")`
+    with no atomic replace, which cost two things: warmed entries vanished
+    (last writer wins), and a reader arriving mid-write got an unparseable file
+    and therefore "no photo" — non-deterministically, for a photo that was in
+    fact cached.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="permadesign_imgrace_")
+        self._orig = _plants_mod._user_data_dir
+        _plants_mod._user_data_dir = lambda: pathlib.Path(self._tmp)
+        ic._meta_cache = None
+        ic._meta_stamp = None
+
+    def tearDown(self):
+        _plants_mod._user_data_dir = self._orig
+        ic._meta_cache = None
+        ic._meta_stamp = None
+
+    def test_concurrent_writers_all_survive(self):
+        import threading
+        n = 40
+        barrier = threading.Barrier(n)
+
+        def write(i):
+            barrier.wait()          # maximise overlap
+            ic._remember(f"https://example.invalid/{i}.jpg",
+                         {"filename": f"{i}.jpg",
+                          "attribution": "© Sigitas Juzėnas", "license": "CC0"})
+
+        threads = [threading.Thread(target=write, args=(i,)) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        ic._meta_cache = None       # force a real re-read from disk
+        ic._meta_stamp = None
+        meta = ic._load_meta()
+        self.assertEqual(len(meta), n,
+                         "concurrent writers lost entries — the index is "
+                         "still read-modify-write without a lock")
+
+    def test_reader_never_sees_a_torn_index(self):
+        """Non-ASCII attributions are what turn a torn read into a crash, so
+        write them while a reader hammers the same file."""
+        import threading
+        stop = threading.Event()
+        failures = []
+
+        def reader():
+            while not stop.is_set():
+                try:
+                    ic._meta_cache = None      # defeat the memo, hit the file
+                    ic._meta_stamp = None
+                    ic._load_meta()
+                except Exception as exc:       # noqa: BLE001 — that's the point
+                    failures.append(exc)
+                    return
+
+        r = threading.Thread(target=reader, daemon=True)
+        r.start()
+        try:
+            for i in range(60):
+                ic._remember(f"https://example.invalid/{i}.jpg",
+                             {"filename": f"{i}.jpg",
+                              "attribution": "© Étienne Lacroix-Carignan, "
+                                             "nekatere pravice pridržane",
+                              "license": "CC BY-NC"})
+        finally:
+            stop.set()
+            r.join(timeout=5)
+        self.assertEqual(failures, [], f"reader saw a torn index: {failures}")
+
+    def test_load_meta_degrades_on_an_unreadable_index(self):
+        """Any unparseable index must read as "no cache", never propagate — the
+        readers run on paint paths and inside Qt slots, where an escaping
+        exception aborts the process rather than printing a traceback."""
+        ic._remember("https://example.invalid/a.jpg",
+                     {"filename": "a.jpg", "attribution": "© Sigitas Juzėnas",
+                      "license": "CC0"})
+        p = ic._meta_path()
+        for corrupt in (p.read_bytes()[: len(p.read_bytes()) // 2],   # truncated
+                        b"\xff\xfe\x00 not json at all",              # undecodable
+                        b"[]"):                                       # wrong shape
+            with open(p, "wb") as fh:
+                fh.write(corrupt)
+            ic._meta_cache = None
+            ic._meta_stamp = None
+            self.assertEqual(ic._load_meta(), {})   # must not raise
+
+    def test_index_is_parsed_once_per_revision(self):
+        """The read path is called once per plant per quiz question; it must
+        not re-parse the whole file every time."""
+        ic._remember("https://example.invalid/a.jpg", {"filename": "a.jpg"})
+        parses = []
+        real_load = json.load
+
+        def counting_load(fh, **kw):
+            parses.append(1)
+            return real_load(fh, **kw)
+
+        json.load = counting_load
+        try:
+            for _ in range(50):
+                ic.get_cached_image("https://example.invalid/a.jpg")
+        finally:
+            json.load = real_load
+        self.assertLessEqual(len(parses), 1,
+                             f"re-parsed the index {len(parses)} times")
 
 
 class TestImageSchema(unittest.TestCase):

@@ -43,7 +43,27 @@ class FieldStudyWidget(QWidget):
         self._i = 0
         self._score = 0
         self._answered = False
+        # URLs already queued for warming this session, so pressing Restart ten
+        # times doesn't re-request the same photos ten times.
+        self._warmed: set[str] = set()
+        # Stops the background photo warmer when this widget goes away. Owned
+        # here (not created per-task) so a cancel that arrives before the task
+        # starts is still honoured.
+        import threading
+        self._warm_cancel = threading.Event()
+        # `destroyed` fires from C++ teardown, where `self` is already unusable,
+        # so bind the flag itself rather than a method on the widget.
+        self.destroyed.connect(lambda *_a, _c=self._warm_cancel: _c.set())
         self._build()
+
+    def cancel_background_work(self):
+        """Stop the photo warmer. Safe to call more than once.
+
+        Called on `destroyed`, and worth calling explicitly from anything that
+        tears this widget down deliberately — Qt's destruction ordering is not
+        something to rely on for stopping a thread.
+        """
+        self._warm_cancel.set()
 
     def _build(self):
         lay = QVBoxLayout(self)
@@ -125,16 +145,92 @@ class FieldStudyWidget(QWidget):
             self._quiz = generate_quiz(plants, seed=random.randrange(1 << 30), n=5)
         except Exception:      # noqa: BLE001
             self._quiz = []
+        # Identify questions only cover plants whose photo is already cached,
+        # so warm a few more catalogue photos each run — the ID pool grows
+        # with every quiz (and works offline once cached).
+        self._warm_photo_pool()
         self._i = 0
         self._score = 0
+        self._answered = False
         self._start_btn.setText("Restart quiz")
         if not self._quiz:
+            # Leaving the previous question's buttons live here was a crash:
+            # the next click indexed an empty quiz, and an IndexError escaping a
+            # Qt slot aborts the process rather than raising.
+            self._clear_question()
             self._progress.setText("Quiz unavailable — the plant database "
                                    "couldn't be read.")
             return
         self._show()
 
+    def _clear_question(self):
+        """Take every question control off screen. Used when there is no
+        question to show, so nothing clickable outlives the quiz behind it."""
+        self._prompt.setVisible(False)
+        self._hint.setVisible(False)
+        self._photo.setVisible(False)
+        self._explain.setVisible(False)
+        self._next_btn.setVisible(False)
+        for b in self._opt_btns:
+            b.setEnabled(False)
+            b.setVisible(False)
+
+    def _warm_photo_pool(self, limit: int = 8):
+        """Fetch+cache a few not-yet-cached catalogue photos in the background,
+        so the identify pool grows with every quiz.
+
+        Sequential, via the shared :class:`~src.photo_warm.PhotoWarmer`, rather
+        than the eight parallel tasks this used to start on the global pool.
+        That warmer is deliberately serial with a courtesy delay because ~380 of
+        these requests go to one host, and being a single writer is also what
+        keeps the shared metadata index consistent. Failures are silent — a
+        missing photo just stays out of the pool.
+        """
+        try:
+            from src.db.plants import get_all_plants
+            from src.image_cache import get_cached_image
+            from src.photo_warm import photo_rows
+            pending = [row for row in photo_rows(get_all_plants())
+                       if row[0] not in self._warmed
+                       and not get_cached_image(row[0])]
+        except Exception:      # noqa: BLE001
+            return
+        if not pending:
+            return
+        batch = random.sample(pending, min(limit, len(pending)))
+        # Remember before starting: a URL queued twice is wasted work, and the
+        # user can press Restart faster than a fetch completes.
+        self._warmed.update(url for url, _a, _l in batch)
+
+        from PyQt6.QtCore import QRunnable, QThreadPool
+
+        # The warmer is sequential with a courtesy delay, so it lives for a few
+        # seconds — long enough to outlive the widget that started it if the
+        # user closes the tab, and a task still running while Qt tears down
+        # around it is how a background fetch turns into a crash. It takes a
+        # cancel event for exactly this; `destroyed` sets it, and PhotoWarmer
+        # checks it between items and waits on it instead of sleeping, so a
+        # cancel lands immediately rather than after the current gap.
+        cancel = self._warm_cancel
+
+        class _WarmTask(QRunnable):
+            def __init__(self, items):
+                super().__init__()
+                self._items = items
+
+            def run(self):
+                try:
+                    from src.photo_warm import PhotoWarmer
+                    PhotoWarmer(self._items, cancel_event=cancel).run()
+                except Exception:      # noqa: BLE001
+                    pass
+
+        QThreadPool.globalInstance().start(_WarmTask(batch))
+
     def _show(self):
+        if not self._quiz or not 0 <= self._i < len(self._quiz):
+            self._clear_question()
+            return
         q = self._quiz[self._i]
         self._answered = False
         self._progress.setText(f"Question {self._i + 1} of {len(self._quiz)}   "
@@ -171,7 +267,10 @@ class FieldStudyWidget(QWidget):
             self._photo.setVisible(False)
 
     def _answer(self, idx: int):
-        if self._answered:
+        # Guard the index as well as the answered flag: this is a slot, and a
+        # click that arrives when the quiz is empty (a failed restart) or out of
+        # range would take an IndexError straight out of Qt and abort the app.
+        if self._answered or not self._quiz or not 0 <= self._i < len(self._quiz):
             return
         self._answered = True
         q = self._quiz[self._i]
@@ -180,12 +279,16 @@ class FieldStudyWidget(QWidget):
             self._score += 1
         for i, b in enumerate(self._opt_btns[:len(q["options"])]):
             b.setEnabled(False)
+            # NB: one closing brace. The doubled `}}` only escapes inside an
+            # f-string, and these continuation lines are plain literals — so the
+            # rule reached Qt unbalanced and the whole stylesheet was dropped,
+            # silently costing the right/wrong colouring this method exists for.
             if i == correct:
                 b.setStyleSheet(_OPT_STYLE + f"QPushButton {{ color: {_OK}; "
-                                "border-color: #43a047; font-weight: bold; }}")
+                                "border-color: #43a047; font-weight: bold; }")
             elif i == idx:
                 b.setStyleSheet(_OPT_STYLE + f"QPushButton {{ color: {_BAD}; "
-                                "border-color: #b04a4a; }}")
+                                "border-color: #b04a4a; }")
         verdict = "✓ Correct. " if idx == correct else "✗ Not quite. "
         self._explain.setText(verdict + q.get("explanation", ""))
         self._explain.setVisible(True)

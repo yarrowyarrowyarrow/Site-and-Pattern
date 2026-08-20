@@ -112,8 +112,8 @@
     // Build a right-click menu for a plant marker. Offers single delete,
     // delete-group (when this marker is part of a multi-plant placement),
     // and bulk-delete-selection (when ≥1 plant is selected and this is one
-    // of them). Reuses the showContextMenu pattern established by sectors
-    // and sun path.
+    // of them). Reuses the showContextMenu pattern established by the
+    // sun path.
     function showPlantContextMenu(e, circle) {
       var pd = circle._pd;
       var ev = e.originalEvent;
@@ -135,7 +135,14 @@
           action: function() { deletePlantGroup(pd.groupId); }
         });
       }
-
+      // "The nursery is out" (F91, V2.58) — above Remove, being the
+      // alternative TO removing. File is AT its ceiling: extract
+      // showPlantContextMenu before adding anything else here.
+      if (pd.plantId) {
+        items.push({ label: 'Find a substitute…', action: function() {
+          if (bridge) bridge.onPlantSubstituteRequested(pd.plantId); } });
+        items.push('sep');
+      }
       items.push({
         label: 'Remove this plant',
         action: function() { _removeSinglePlantMarker(pd.markerId); }
@@ -580,12 +587,24 @@
       _patternPreview = preview;
     }
 
+    // Below anything anyone means to draw, well above the cosLat projection's
+    // ~centimetre error at yard scale.
+    var _MIN_ANCHOR_GAP_M = 0.5;
+
     // Handle a click in plant mode when a pattern is active. Each pattern
     // takes 2 clicks; the second click commits and emits onPatternPlaced.
     function _handlePatternClick(lat, lng) {
       if (!currentPlant || !currentPlant.pattern) return;
       var pat = currentPlant.pattern;
       var pp = pat.params || {};
+      // Ignore a second anchor on top of the first: coincident anchors make
+      // every pattern degenerate (row length 0, radius 0) and drop the whole
+      // planting on one spot. Wait for a distinct point — the gesture is
+      // unfinished, not wrong.
+      if (_patternAnchors.length === 1 &&
+          haversineMeters(_patternAnchors[0], [lat, lng]) < _MIN_ANCHOR_GAP_M) {
+        return;
+      }
       _patternAnchors.push([lat, lng]);
       _patternStage = _patternAnchors.length;
 

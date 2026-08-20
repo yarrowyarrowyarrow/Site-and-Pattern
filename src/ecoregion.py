@@ -1,45 +1,58 @@
 """
-ecoregion.py — Point-in-polygon lookup of Alberta ecoregions (V1.36).
+ecoregion.py — which ecoregions a point falls in, and the vocabulary of them.
 
-Replaces the "pick your ecoregion from a 7-option dropdown" guesswork
-with automatic detection from the property's lat/lng. The plant filter
-combo at ``plant_panel._AB_ECOREGION_CHOICES`` becomes a verification
-(with the right answer pre-selected) rather than a question — most
-users don't actually know whether their address falls in Aspen
-Parkland or Boreal Mixedwood.
+Design principle P2 — see docs/DESIGN_PHILOSOPHY.md (the best designs disappear
+into their context: the context has a name, and it is not the province you are
+in).
 
-Polygon data lives in ``data/ecoregions_canada.geojson`` as a standard
-GeoJSON FeatureCollection. Each feature's ``properties.key`` matches a
-canonical ecoregion key in ``plant_panel._AB_ECOREGION_CHOICES`` (the
-list this module's output drives).
+Replaces the "pick your ecoregion from a dropdown" guesswork with automatic
+detection from the property's lat/lng. The plant filter becomes a verification
+(with the right answer pre-selected) rather than a question — most people do not
+know whether their address falls in Aspen Parkland or Boreal Mixedwood.
+
+Two things changed in V2.38, both from user feedback.
+
+**A site can be in more than one.** ``lookup_ecoregion`` returned the *first*
+matching polygon and stopped. A property near a boundary — which is where a lot
+of the interesting planting is — belongs to both, and saying so is more useful
+than picking one. :func:`lookup_ecoregions` returns them all; the singular name
+is kept as a shim for callers that genuinely want one.
+
+**Two axes were sharing one.** ``aspen_parkland``, ``mixedgrass_prairie``,
+``moist_mixedgrass``, ``fescue_foothills``, ``boreal_mixedwood`` and
+``subalpine_montane`` are *geographic* ecoregions — regions on a map, hundreds
+of kilometres across. ``riparian`` and ``wet_meadow`` are *site-scale moisture
+niches*: a streamside metre exists inside any of the six. This module's own
+docstring used to admit they were "per-feature rather than per-region at the
+provincial scale" and keep them "manual-only in the dropdown" — which is a note
+saying the vocabulary has two kinds of thing in it. They are separated here:
+the geographic list comes from the polygons, the moisture list is a constant.
+
+**The geographic vocabulary is the shipped polygon file**, not a hard-coded
+list beside it. *"I'd prefer it breakdown into the individual ecoregions it
+exists in so when I add BC and other areas of turtle island we simply add more
+ecoregions"* — that only works if adding a region means adding a polygon and
+nothing else. ``scripts/prepare_ecoregions.py`` writes the file;
+``data/ecoregions_canada.geojson`` is then the single source of truth for what
+geographic ecoregions exist, what they are called, and where they are.
 
 Implementation notes:
 
-  * **Pure Python, no shapely / pyproj.** The original step-4 plan
-    proposed introducing shapely + pyproj here as groundwork for future
-    spatial features (soil intersect, watershed). For a single
-    point-in-polygon lookup, ray casting (~15 lines) is just as
-    correct, has zero install footprint, and avoids the PyInstaller
-    bundling risk those native-dep libraries carry on Windows.
-    The shapely adoption can happen later when a feature genuinely
-    needs polygon overlay / union ops.
+  * **Pure Python, no shapely / pyproj.** For point-in-polygon, ray casting
+    (~15 lines, in ``src/geometry.py``) is just as correct as shapely, has zero
+    install footprint, and avoids the PyInstaller bundling risk those native
+    libraries carry on Windows. Polygon *overlay* work belongs in the dev-time
+    prep script, which may use shapely freely.
 
-  * **Lat/lng comparison, no projection.** Ecoregion boundaries at
-    the scale of Alberta are coarse enough that the WGS84
-    -> projected distortion doesn't move a city across a boundary.
-    Future features that need accurate areas (e.g. "show me the
-    fraction of my property that falls in Region X") will need
-    projection; that's the moment to add pyproj, not this one.
+  * **Lat/lng comparison, no projection.** Ecoregion boundaries at provincial
+    scale are coarse enough that WGS84→projected distortion does not move a
+    city across a boundary.
 
-  * **Starter polygon set.** The shipped polygons are rectangular
-    approximations of Alberta's five major terrestrial ecoregions
-    (boreal mixedwood, aspen parkland, mixedgrass prairie, fescue
-    foothills, subalpine montane). The two minor regions in the
-    plant filter (``riparian``, ``wet_meadow``) are per-feature
-    rather than per-region at the provincial scale — they stay
-    manual-only in the dropdown. ``scripts/prepare_ecoregions.py``
-    is the documented path to upgrade to fidelity polygons from
-    the CEC Level III Ecoregions shapefile.
+  * **The shipped polygons are still rectangular approximations** of the major
+    prairie ecoregions (V1.36) — five vertices each. Replacing them with real
+    CEC Level III boundaries is a download-once dev step (see the script), and
+    until that lands a lookup near a boundary is a rough answer, which is why
+    the site panel reports it as detection rather than fact (P9).
 """
 
 import json
@@ -86,36 +99,340 @@ def _point_in_polygon(lat: float, lng: float, polygon: list[list[list[float]]]) 
     return point_in_polygon(lat, lng, polygon)
 
 
-def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:
-    """Return the canonical ``ab_ecoregion`` key for (lat, lng), or
-    ``None`` if the point falls outside every shipped ecoregion polygon.
+def _polygons(geometry: dict) -> list:
+    """Every polygon in a geometry, as a list of ring-lists.
 
-    Returns the first matching feature when polygons overlap — the
-    shipped polygon set is intentionally non-overlapping, so order
-    doesn't matter in practice, but feature order in the GeoJSON is
-    the tiebreaker if a future revision introduces overlap."""
-    if lat is None or lng is None:
-        return None
+    **MultiPolygon support, added V2.67.** Until then this module tested
+    ``type != "Polygon"`` and skipped, which was fine for six hand-traced
+    single-ring shapes and silently wrong for anything real: a published
+    ecoregion layer is full of MultiPolygons, because a region with an island,
+    a lake island or a lobe across a river is one region drawn as several
+    pieces. Adoption would have dropped those regions from every lookup without
+    an error, and the failure mode is the worst kind — a site inside a real
+    ecoregion reporting that it is in none, which reads as "we do not cover
+    your area yet" rather than as a bug.
+    """
+    kind = geometry.get("type")
+    coords = geometry.get("coordinates") or []
+    if kind == "Polygon":
+        return [coords] if coords else []
+    if kind == "MultiPolygon":
+        return [poly for poly in coords if poly]
+    return []
+
+
+#: A site this close to a neighbouring ecoregion reports that one too.
+#:
+#: **Replaces a trick the hand-drawn polygons used** and the real ones cannot.
+#: V2.38 made the placeholder shapes overlap "by a fraction of a degree at
+#: their shared edges", because a property near a boundary genuinely belongs to
+#: both and the second answer is exactly the species list that was going
+#: missing. Surveyed ecoregions *tile* — that is what makes them a
+#: classification — so adopting them in V2.67 silently deleted the behaviour:
+#: every site began reporting exactly one region, and a garden two kilometres
+#: from the parkland edge stopped being told about the parkland.
+#:
+#: The intent is restored here with a measured distance instead of a drafting
+#: hack, which is both honest and better: five kilometres means five
+#: kilometres, at every boundary, rather than however wide somebody drew the
+#: overlap that day.
+_NEAR_BOUNDARY_M = 5_000.0
+
+
+@lru_cache(maxsize=1)
+def _feature_index() -> tuple:
+    """``(key, rings, (min_lat, min_lng, max_lat, max_lng))`` per polygon.
+
+    Bounding boxes are precomputed because the real layer is 115 polygons of
+    real coastline rather than six rectangles of five points each, and testing
+    every vertex of every one on every lookup took the ecoregion tests from
+    0.2 seconds to 43. A box test rejects almost all of them in four
+    comparisons.
+    """
+    index = []
     for feature in _load_features():
-        geom = feature.get("geometry") or {}
-        if geom.get("type") != "Polygon":
+        key = ((feature.get("properties") or {}).get("key") or "").strip()
+        if not key:
             continue
-        coords = geom.get("coordinates")
-        if not coords:
+        for rings in _polygons(feature.get("geometry") or {}):
+            outer = rings[0] if rings else []
+            if not outer:
+                continue
+            lats = [float(point[1]) for point in outer]
+            lngs = [float(point[0]) for point in outer]
+            index.append((key, rings,
+                          (min(lats), min(lngs), max(lats), max(lngs))))
+    return tuple(index)
+
+
+def _within_box(lat: float, lng: float, box, pad_deg: float = 0.0) -> bool:
+    min_lat, min_lng, max_lat, max_lng = box
+    return (min_lat - pad_deg <= lat <= max_lat + pad_deg
+            and min_lng - pad_deg <= lng <= max_lng + pad_deg)
+
+
+def _distance_to_ring_m(lat: float, lng: float, ring, per_lat, per_lng) -> float:
+    """Shortest distance in metres from a point to a ring's edge.
+
+    Flat maths on metres-per-degree about the query point, which is what
+    ``src/projection.py`` does and is correct to well under a percent at the
+    few-kilometre range this is asked about.
+    """
+    best = float("inf")
+    px, py = 0.0, 0.0
+    points = [((float(pt[0]) - lng) * per_lng, (float(pt[1]) - lat) * per_lat)
+              for pt in ring]
+    for i in range(len(points) - 1):
+        ax, ay = points[i]
+        bx, by = points[i + 1]
+        dx, dy = bx - ax, by - ay
+        span = dx * dx + dy * dy
+        if span <= 0:
+            best = min(best, (ax - px) ** 2 + (ay - py) ** 2)
             continue
-        if _point_in_polygon(lat, lng, coords):
-            return feature.get("properties", {}).get("key")
-    return None
+        t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / span))
+        cx, cy = ax + t * dx, ay + t * dy
+        best = min(best, (cx - px) ** 2 + (cy - py) ** 2)
+    return best ** 0.5
+
+
+def lookup_ecoregions(lat: float, lng: float) -> list[str]:
+    """Every geographic ecoregion key at (lat, lng), containing ones first.
+
+    A region whose boundary passes within :data:`_NEAR_BOUNDARY_M` is included
+    too — see that constant for why. De-duplicated, and containing regions
+    always sort ahead of merely-near ones so ``lookup_ecoregion`` still answers
+    with the region the site is actually in.
+
+    Empty when the point is outside every polygon and near none, which is the
+    honest answer for a site the data does not cover and is what the caller
+    should say rather than guessing the nearest.
+    """
+    if lat is None or lng is None:
+        return []
+    from src.projection import metres_per_deg                    # noqa: PLC0415
+
+    per_lat, per_lng = metres_per_deg(lat)
+    pad_deg = _NEAR_BOUNDARY_M / max(per_lat, per_lng, 1.0)
+    inside: list[str] = []
+    near: list[str] = []
+    for key, rings, box in _feature_index():
+        if key in inside:
+            continue
+        if not _within_box(lat, lng, box, pad_deg):
+            continue
+        if _point_in_polygon(lat, lng, rings):
+            inside.append(key)
+            continue
+        if key in near:
+            continue
+        gap = min(_distance_to_ring_m(lat, lng, ring, per_lat, per_lng)
+                  for ring in rings)
+        if gap <= _NEAR_BOUNDARY_M:
+            near.append(key)
+    return inside + [key for key in near if key not in inside]
+
+
+def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:
+    """The first matching ecoregion key, or ``None``.
+
+    Kept for callers that genuinely want a single answer (the site panel's
+    one-line readout). Anything choosing *plants* should use
+    :func:`lookup_ecoregions` — a boundary site's second region is exactly the
+    one whose species list you were missing.
+    """
+    keys = lookup_ecoregions(lat, lng)
+    return keys[0] if keys else None
+
+
+# ── The vocabulary ──────────────────────────────────────────────────────────
+#
+# Name and place are kept APART. Packed into one label they elided mid-word in
+# the filter dropdown — "Moist Mixed Gras...ina (Saskatoon)" — so neither the
+# ecoregion nor the geography survived; the two-line item painter in
+# `filter_widgets` puts the name first and whole, the place under it.
+
+# Site-scale moisture niches. Not places — conditions that occur inside any
+# geographic ecoregion — so they are not in the polygon file and never will be.
+MOISTURE_NICHES: list[tuple[str, str, str]] = [
+    # (key, name, where it is)
+    ("riparian",   "Riparian",           "streamside"),
+    ("wet_meadow", "Wet Meadow / Marsh", "wet ground"),
+]
+
+# The geographic vocabulary of last resort. Used only when the polygon file is
+# missing or unreadable — a frozen build with a broken resource path should
+# still offer a working filter rather than an empty one. Kept in step with the
+# shipped file by ``tests/test_ecoregion.py``, and generated from it rather
+# than typed: twenty-four rows is past the point where a human copy stays
+# right, and the one hand-transcription already made in V2.67 put Interlake
+# Plain in the wrong ecozone.
+#
+# V2.67: six hand-traced approximations became twenty-four surveyed ecoregions
+# from the National Ecological Framework, grouped by ecozone in display order.
+_FALLBACK_GEOGRAPHIC: list[tuple[str, str, str]] = [
+    # Prairies
+    ("aspen_parkland", "Aspen Parkland", "central AB / SK"),
+    ("cypress_upland", "Cypress Upland", "south AB / SK"),
+    ("fescue_grassland", "Fescue Grassland", "south AB"),
+    ("mixed_grassland", "Mixed Grassland", "south AB / SK"),
+    ("moist_mixed_grassland", "Moist Mixed Grassland", "south AB / SK"),
+    # Boreal Plains
+    ("boreal_transition", "Boreal Transition", "central AB / SK"),
+    ("clear_hills_upland", "Clear Hills Upland", "north AB"),
+    ("interlake_plain", "Interlake Plain", "central SK"),
+    ("mid_boreal_lowland", "Mid-Boreal Lowland", "central SK"),
+    ("mid_boreal_uplands", "Mid-Boreal Uplands", "central AB / SK"),
+    ("peace_lowland", "Peace Lowland", "north AB"),
+    ("slave_river_lowland", "Slave River Lowland", "north AB"),
+    ("wabasca_lowland", "Wabasca Lowland", "north AB"),
+    ("western_alberta_upland", "Western Alberta Upland", "central AB"),
+    ("western_boreal", "Western Boreal", "central AB"),
+    # Boreal Shield
+    ("athabasca_plain", "Athabasca Plain", "north AB / SK"),
+    ("churchill_river_upland", "Churchill River Upland", "north SK"),
+    # Taiga Plains
+    ("hay_river_lowland", "Hay River Lowland", "north AB"),
+    ("northern_alberta_uplands", "Northern Alberta Uplands", "north AB"),
+    # Taiga Shield
+    ("selwyn_lake_upland", "Selwyn Lake Upland", "north SK"),
+    ("tazin_lake_upland", "Tazin Lake Upland", "north AB / SK"),
+    # Montane Cordillera
+    ("eastern_continental_ranges", "Eastern Continental Ranges", "central AB"),
+    ("northern_continental_divide", "Northern Continental Divide", "south AB"),
+    ("western_continental_ranges", "Western Continental Ranges", "central AB"),
+]
+
+
+def _split_label(label: str) -> tuple[str, str]:
+    """``"Aspen Parkland (central AB)"`` → ``("Aspen Parkland", "central AB")``.
+
+    Transitional: features written before V2.38 carry one packed ``label``
+    instead of separate ``name`` / ``where``. Splitting on the *last* bracket
+    keeps names that contain their own brackets intact.
+    """
+    label = (label or "").strip()
+    if label.endswith(")") and "(" in label:
+        head, _, tail = label.rpartition("(")
+        return head.strip(), tail[:-1].strip()
+    return label, ""
+
+
+@lru_cache(maxsize=1)
+def geographic_ecoregions() -> tuple[tuple[str, str, str], ...]:
+    """``(key, name, where)`` per geographic ecoregion, in display order.
+
+    Read from the shipped polygons, so adding a region to the file adds it to
+    every dropdown, the validator's accepted vocabulary and the seeding script
+    at once. De-duplicated by key: several polygons may share one region, and
+    the *first* one's name wins (later lobes name their own province-side).
+
+    Order is each feature's ``sort`` property when present, else file order.
+    """
+    rows: list[tuple[int, int, tuple[str, str, str]]] = []
+    seen: set[str] = set()
+    for i, feature in enumerate(_load_features()):
+        props = feature.get("properties") or {}
+        key = props.get("key")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        name = (props.get("name") or "").strip()
+        where = (props.get("where") or "").strip()
+        if not name:
+            name, packed_where = _split_label(props.get("label") or key)
+            where = where or packed_where
+        try:
+            sort = int(props.get("sort", i))
+        except (TypeError, ValueError):
+            sort = i
+        rows.append((sort, i, (key, name or key, where)))
+    if not rows:
+        return tuple(_FALLBACK_GEOGRAPHIC)
+    rows.sort(key=lambda r: (r[0], r[1]))
+    return tuple(row[2] for row in rows)
+
+
+def ecoregions() -> list[tuple[str, str, str]]:
+    """The whole filter vocabulary: geographic regions, then moisture niches.
+
+    One list because one dropdown asks the question, but the two halves are
+    different kinds of claim and :func:`is_moisture_niche` tells them apart.
+    """
+    return list(geographic_ecoregions()) + list(MOISTURE_NICHES)
+
+
+def ecoregion_keys() -> list[str]:
+    """The canonical keys, in display order — the validator's vocabulary."""
+    return [key for key, _name, _where in ecoregions()]
+
+
+def geographic_keys() -> list[str]:
+    """Just the regions on the map (no moisture niches)."""
+    return [key for key, _name, _where in geographic_ecoregions()]
+
+
+def is_moisture_niche(key: str) -> bool:
+    """True for ``riparian`` / ``wet_meadow`` — a condition, not a place.
+
+    A site *detection* may never return one of these: no lat/lng puts you in
+    "wet ground". They are only ever chosen by hand, or asserted per species.
+    """
+    return any(k == key for k, _n, _w in MOISTURE_NICHES)
+
+
+def ecoregion_display(key: str) -> tuple[str, str]:
+    """``(name, where)`` for a key — the two lines the filter list draws.
+
+    Covers all three levels. The ecozone and subregion names come from
+    :mod:`src.ecoregion_tree`, which reads them out of the same polygon file
+    this module reads its ecoregions from.
+
+    V2.68: without the tree lookup this returned the raw key for anything but
+    an ecoregion, and every caller that guards on ``name == key`` therefore
+    treated an ecozone as unknown — which is 304 species, since that is where
+    the migrated heuristic tags came to rest. The symptom was not an error
+    anywhere; it was prose and labels quietly omitting a region they could not
+    name.
+    """
+    for k, name, where in ecoregions():
+        if k == key:
+            return name, where
+    from src.ecoregion_tree import ECOZONE, SUBREGION         # noqa: PLC0415
+    from src.ecoregion_tree import _index, level_of           # noqa: PLC0415
+
+    level = level_of(key)
+    if level == ECOZONE:
+        return _index()["zones"].get(key, key), ""
+    if level == SUBREGION:
+        from src.ecoregion_tree import subregion_parents      # noqa: PLC0415
+
+        name, _parents = _index()["subs"].get(key, (key, []))
+        # The parent ecoregion is the useful "where" for a subregion: nobody
+        # knows where Northern Fescue is, everybody can place Mixed Grassland.
+        #
+        # The one that accounts for MOST of it, measured. Taking `parents[0]`
+        # meant taking whichever sorted first, and that printed "Dry Mixedgrass
+        # (Cypress Upland)" in a public legend when Dry Mixedgrass is 98% Mixed
+        # Grassland and 2% Cypress Upland. Third place the same shortcut was
+        # taken in one increment — the palette and the page model made it too —
+        # which is what `subregion_parents` exists to stop.
+        biggest = [k for k, _s in subregion_parents(key)]
+        return name, (ecoregion_display(biggest[0])[0] if biggest else "")
+    return key, ""
 
 
 def label_for_key(key: Optional[str]) -> str:
-    """Return the human-readable label for an ecoregion key, or '—'
-    when the key is unknown. Reads the GeoJSON properties.label so the
-    UI string stays in sync with the shipped data file."""
+    """The human-readable one-line label for a key, or ``'—'`` when unknown."""
     if not key:
         return "—"
-    for feature in _load_features():
-        props = feature.get("properties") or {}
-        if props.get("key") == key:
-            return props.get("label") or key
-    return key
+    name, where = ecoregion_display(key)
+    if name == key and not where:
+        return key
+    return f"{name} ({where})" if where else name
+
+
+# Module-level snapshot for callers that build constants at import time
+# (``plant_panel`` does). Everything else should call :func:`ecoregions`, which
+# stays correct if the caches are cleared.
+ECOREGIONS: list[tuple[str, str, str]] = ecoregions()

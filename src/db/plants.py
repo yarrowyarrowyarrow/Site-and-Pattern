@@ -20,7 +20,10 @@ import sqlite3
 import sys
 from typing import Optional
 
+from src.log import get_logger
 from src.resources import resource_path
+
+_log = get_logger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -28,6 +31,15 @@ _HERE        = os.path.dirname(os.path.abspath(__file__))
 # Resolve through resource_path so the schema is found inside a PyInstaller
 # bundle (where a module's __file__ is unreliable), not just in a source tree.
 _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
+
+# The photo slots (schema v55, F70), in the order `_attach_photos` prefers them
+# when it synthesizes `image_url`. `habit` leads deliberately: the whole plant
+# with something for scale is what someone deciding whether they want it — or
+# trying to find it in their own yard in May — actually needs, and it is the
+# frame iNaturalist's leading photo almost never is.
+PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+               "seedling")
+_PLANT_PHOTOS_JSON_PATH = resource_path("data", "plant_photos.json")
 
 
 def _user_data_dir() -> pathlib.Path:
@@ -55,6 +67,7 @@ _GARDEN_JSON_PATH       = resource_path("data", "garden_plants.json")
 _FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
 _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 _BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
+_BIRD_MORPH_JSON_PATH   = resource_path("data", "bird_morphology_master.json")
 _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.json")
 _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 
@@ -160,7 +173,155 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 45
+# v42 (V2.15): province-neutral data model — `ab_ecoregion` renamed to
+# `ecoregion` (+ native_province) for the Saskatchewan integration; the old
+# name survives as a read-side alias for the frozen agent-API contract.
+# v43 (V2.16): no DDL — reseed for the Saskatchewan grassland flora + fauna.
+# v44 (V2.18): added the `nurseries` table (native-plant supplier directory),
+# seeded from data/nurseries_master.json; wiped + reseeded on every bump.
+# v45 (V2.19): no DDL — reseed for the native-only supplier list (NPSS) and
+# the Lumsden soil-pH plant-matching fixes.
+# v46 (V2.22): added polycultures.origin ('seed' | 'user'). The reseed now
+# wipes ONLY origin='seed' rows, so communities users author in the builder
+# finally survive schema bumps (they were silently destroyed on every bump
+# since the builder shipped). _migrate_to_v46 adds the column to old DBs and
+# stamps the shipped examples by name so the first v46 reseed doesn't
+# duplicate them.
+# v50 (V2.30): no DDL — reseed for the morphology of data/garden_plants.json.
+# Those five rows (both apples, Evans and Nanking cherry, bee balm) were the
+# ONLY species in the catalogue with no leaf_shape / leaf_size_cm / bark_color:
+# the two morphology scripts both target plants_master.json and nothing covered
+# the garden file. Since V2.29 a plant's recorded leaf characters select its
+# baked archetype variant and put its blade outline into a tree crown's
+# silhouette, so those five fell back to neutral defaults — and three of them
+# are trees sitting next to each other, which a user picked out of the sprite
+# contact sheet as "three near-identical green blobs".
+# See scripts/seed_garden_morphology.py for the values and their sourcing.
+# v51 (V2.31, F7): the `relationship_edges` VIEW — one queryable edges layer over
+# plant_fauna + companion_friends + companion_enemies + shared polyculture
+# membership, read by src/db/relationships.py. A VIEW, not a table: the
+# per-relationship tables stay the source of truth, so no seeder changes, no new
+# reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
+# it on every init_db, so the definition can evolve without a migration; the
+# version bump is here because schema.sql changed, per CLAUDE.md.
+# v56 (V2.36): `plants.flower_data_citation` — WHICH source a flower number came
+# from, beside v55's `flower_data_source` which records only what KIND of source
+# it was. "Read in a flora" that does not name the flora is not a citation, and
+# the catalogue is about to start carrying values read out of published
+# descriptions. Free text, per species; same shape as `safety_source`.
+# v57 (V2.36): `plants.leaf_data_source` + `plants.leaf_data_citation` — the same
+# pair for the leaf and habit characters, which the bench can now edit. Those
+# columns were seeded by genus-level estimate for all 434 species and are about
+# to start being corrected out of a flora; without provenance the catalogue
+# cannot tell a read value from a guessed one, which is the whole point of v55
+# and v56. Kept separate from the flower pair because the two get verified in
+# different sittings from different sources.
+# v58 (V2.36): fauna morphology on `bee_attributes` + `lepidoptera_attributes`.
+# The animals were where the plants were before V2.33 — every creature's look
+# was derived in src/scene_wildlife.py from substrings of its COMMON NAME, so 69
+# bees shared 12 appearances (29 bumblebees identical) and 31 lepidoptera shared
+# 16. Bees gain body length, build, two colours, metallic, scopa, wing tint and
+# the per-tergite `band_pattern`; leps gain a wingspan RANGE (the fauna data's
+# first real measurement), three wing colours, shape, pattern, eyespots, resting
+# posture and flight_style. Both gain a morph_data_source/citation pair.
+# v59 (V2.38): the `plant_ecoregions` table — per-species ecoregion range WITH
+# the evidence behind it. `plants.ecoregion` holds tags that were generated
+# heuristically and never sourced; a user caught it (Saskatoon Berry, a
+# defining Aspen Parkland shrub, tagged only mixedgrass + moist mixedgrass).
+# Each row carries the georeferenced record count and a confidence band, so
+# three records and three hundred stop being the same claim (P9). Derived by
+# scripts/seed_ecoregion_ranges.py from GBIF into data/plant_ecoregions.json.
+# The column stays: it is the fallback for species the derivation has not run
+# for, and the only home for riparian / wet_meadow, which are site-scale
+# moisture niches no coordinate can assert.
+# v60 (V2.38): no DDL — reseed to pick up data/plant_ecoregions.json, the
+# GBIF-derived per-species ecoregion ranges. 427 species now carry a sourced
+# range with an occurrence count behind it.
+# v62 (V2.43): +discovered_species, +learn_state — the Learn-mode species
+# ledger. Both are USER-AUTHORED and are deliberately absent from the reseed
+# wipe block below; see their comment in schema.sql. The bump exists only so
+# the CREATE TABLEs reach existing installs.
+# v63 (V2.45): +bird_morphology — mass, wingspan and flight style for the 24
+# birds, seeded from data/bird_morphology_master.json. Birds were the only
+# flying taxon with no attributes table, which is why the viewer's wingbeats
+# were hardcoded constants. Child of `fauna`, so it is wiped and repopulated
+# with the other two attribute tables on every reseed.
+# v66 (V2.59): no DDL change — a seed-data bump for F125. 2,439 plant↔animal
+# edges sourced from GloBI take documented coverage from 99 of 437 species to
+# 271 of 437. The bump exists so existing installs actually reseed and see
+# them; without it the new rows sit in the JSON and reach nobody, which is the
+# reseed-that-never-fired failure this file's own notes warn about.
+# (An earlier pass wrote 2,546 and 320 of 437. The difference is the
+# larval-host gate: 107 adult-nectaring records had been promoted into host
+# claims, including 23 that put Monarch caterpillars on goldenrod. Fewer,
+# correct edges.)
+# v67 (V2.60): no DDL change — a seed-data bump for F127a. 37 more birds in
+# `fauna` (24 → 61), all curated for Alberta/prairie nativity one at a time in
+# scripts/curate_birds.py, and their edges routed on what each species actually
+# eats. Also a REPAIR of v66's data: GloBI's `eatenBy` is not `fruit_food`, and
+# reading it that way had put 20 fruit claims on plants that bear no fruit (a
+# goldfinch on Black-eyed Susan, a redpoll on Paper Birch) and 14 nectar claims
+# on birds that do not nectar. Re-derivable via
+# `ingest_fauna_edges.py --refit`.
+# v68 (V2.62): no DDL change — a seed-data bump for two photographs. They are
+# the first rows `data/plant_photos.json` has ever carried: it shipped as a
+# literal `[]`, so photo coverage in the app came entirely from `image_url`.
+# One of them is a HABIT shot of Astragalus laxmannii, and the backlog records
+# that zero species had one. Without this bump both sit in the JSON and reach
+# nobody, which is the reseed-that-never-fired failure this file's notes warn
+# about — and it would be an odd one to hit on the file whose whole point is
+# being seen.
+# v69 (V2.63): no DDL change — a seed-data bump for F127. 159 curated animals
+# and 2,639 edges, taking plants with a wildlife record from 275 of 437 to 293.
+# (The comment shipped here said "over 400", which was never true of any count
+# in that increment; corrected in v70.) The review is
+# `scripts/curate_new_fauna.py`, and it exists because the occurrence gate
+# alone let *Apis mellifera* through at the top of the list with 133 edges.
+# Species with no accepted English name keep their binomial as `common_name`,
+# which for a solitary bee is the name.
+#
+# v70 (V2.64): no DDL change — the rest of F127. The 980-species tail of the
+# same held queue, read the same way: 838 more animals (327 → 1,165), 2,227
+# more edges (5,488 → 7,714), and plants with a wildlife record 293 → 302 of
+# 437. 278 new `lepidoptera_attributes` rows come with it, because a new
+# lepidopteran with no `kind` sorts nowhere in the scene or the habitat panel.
+#
+# Two things in the tail are refused structurally rather than one at a time:
+# **birds**, which `scripts/curate_birds.py` owns and which would otherwise be
+# decided by two tables that can disagree, and **trinomials**, which cannot be
+# rows because the catalogue keys fauna on binomials.
+# v72 (V2.67): no DDL — reseed to pick up data/ecoregions_canada.geojson, now
+# the surveyed National Ecological Framework layer instead of six hand-traced
+# approximations. The geographic vocabulary went from 6 regions to **24**, so
+# every stored `ab_ecoregion` value and every `plant_ecoregions` row keyed to
+# the old names stops matching: exactly one key, `aspen_parkland`, survives.
+#
+# Those are NOT translated onto the new regions. Fanning a species recorded in
+# the old `boreal_mixedwood` rectangle across all nine Boreal Plains ecoregions
+# would assert nine occurrences where the evidence supports one, which is P9
+# failing through the back door. They are re-derived by re-running
+# `scripts/seed_ecoregion_ranges.py` against the new polygons; until that has
+# run, a species carries no derived range under the new keys and the filter
+# says nothing rather than guessing.
+# v73 (V2.68): no DDL — reseed to pick up the migrated `ab_ecoregion` tags in
+# data/plants_master.json. v72 left every heuristic tag pointing at a region
+# that no longer exists; `scripts/migrate_ecoregion_tags.py` moves them by
+# measuring each old polygon against the surveyed layer, never by matching
+# names. Three of the six old keys turned out to be MISPLACED rather than
+# merely coarse (`subalpine_montane`'s best overlap is 19%), so they are
+# cleared rather than mapped: 384 of 432 species keep a tag, 47 lose their
+# last one. A tag that survives now names either a surveyed ecoregion or the
+# ecozone above it, which is the level its evidence actually supported.
+# v74 (V2.69): no DDL — reseed to pick up `sub_share` on every feature of
+# data/ecoregions_canada.geojson. It records what fraction of each Alberta
+# natural subregion a given ecoregion accounts for, measured in an equal-area
+# projection by tools/ecoregions/adopt.py, and it exists because the subregions
+# are NOT a subdivision of the ELC ecoregions: 12 of 21 sit >=90% inside one,
+# but Montane is 42% Northern Continental Divide across six, and Central
+# Mixedwood is 31% of Mid-Boreal Uplands across nine. Without the shares the
+# app has to pick a parent, and every place that picked one picked it
+# alphabetically and was wrong about Montane.
+_SCHEMA_VERSION = 74
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -422,6 +583,354 @@ def _migrate_to_v42(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v55(conn: sqlite3.Connection):
+    """Photo sets with named slots (V2.35, F70).
+
+    Creates the table. The BACK-FILL of existing `plants.image_url` values into
+    `flower`-slot rows lives in `_seed_plant_photos`, not here: on a fresh
+    install the migration chain runs BEFORE the reseed populates `plants`, so a
+    back-fill at this point would silently find nothing and the coverage report
+    would say every species has no photo while 328 of them plainly do.
+    """
+    conn.executescript(_photo_ddl())
+    # ...and where each flower number came from (P9). Additive and nullable;
+    # empty reads as "unknown provenance", which is honest for a DB that
+    # predates the column.
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN flower_data_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
+
+def _migrate_to_v56(conn: sqlite3.Connection):
+    """Which source a flower number came from (V2.36).
+
+    `flower_data_source` records the *kind* of source — estimated, read off a
+    photo, read in a flora, measured with a ruler. It does not record *which*,
+    and "read in a flora" without naming the flora is not a citation. That was
+    tolerable while every value was the seeder's genus default and the honest
+    answer was "a general botanical convention"; it stops being tolerable the
+    moment somebody starts typing numbers out of published descriptions, because
+    then the catalogue is making a specific claim it cannot attribute.
+
+    Free text on purpose, and per species rather than per value: a person tunes
+    one species in one sitting out of one book. `apply_safety_tags.py` already
+    does exactly this with `safety_source`.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_data_citation TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
+
+def _migrate_to_v57(conn: sqlite3.Connection):
+    """The same provenance pair, for the leaf and habit characters (V2.36).
+
+    v55/v56 gave the flower columns a source and a citation because the bench
+    was about to start correcting them out of published descriptions. The bench
+    now edits `leaf_shape`, `leaf_size_cm`, `leaf_arrangement`, `leaf_surface`,
+    `growth_form`, `branching` and `mature_height_m` as well — and those are in
+    a worse position than the flower columns ever were, because they are
+    populated for ALL 434 species by a genus-level estimate rather than left
+    blank. A wrong estimate is indistinguishable from a checked value, and
+    every one of them changes what the 3D viewer draws.
+
+    Two columns rather than reusing the flower pair: leaf and flower characters
+    get verified in different sittings from different sources. A photograph
+    settles petal count; a flora settles leaf length. One shared citation would
+    have to be overwritten by whichever was checked last.
+    """
+    for col in ("leaf_data_source", "leaf_data_citation"):
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col} TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
+    conn.commit()
+
+
+def _migrate_to_v61(conn: sqlite3.Connection):
+    """Sourcing columns on the companion tables (V2.42).
+
+    The new tables in v61 (``plant_fauna_derived``, ``fauna_fauna``) need no
+    migration — ``schema.sql`` creates them with ``IF NOT EXISTS`` on every
+    ``init_db``. The companion tables DO: ``CREATE TABLE IF NOT EXISTS`` is a
+    no-op against an existing table, so an install upgrading from v60 would keep
+    two-column ``companion_friends``/``companion_enemies`` while the recreated
+    ``relationship_edges`` view selects ``cf.source`` — and every relationship
+    query would fail with "no such column" on a DB that had merely been used
+    before.
+
+    Deliberately additive and empty. A companion pairing with no source reads
+    ``recorded`` rather than ``documented``, which is the honest state for data
+    nobody has cited; filling these in is how a pairing earns the stronger word.
+    """
+    for table in ("companion_friends", "companion_enemies"):
+        for col in ("source", "notes"):
+            try:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass                      # column already present
+    conn.commit()
+
+
+def _migrate_to_v64(conn: sqlite3.Connection):
+    """Where a flower colour came from (V2.48).
+
+    ``flower_color`` has been on the row since v31 and was seeded at GENUS
+    level: 32 genera carried one hex across three or more species, so both
+    columbines were red and so was the yellow one. That was tolerable while the
+    hex only tinted a floret in the 3D preview; V2.47 made it a filter, and a
+    genus default answering "show me the blue ones" is a wrong answer rather
+    than a vague one.
+
+    Additive and empty, because the version bump forces a reseed and the reseed
+    is what carries the corrected values in. The column exists here so a DB that
+    upgrades without one still has somewhere honest to read from: blank means
+    "unknown provenance", which is exactly right for data that predates the
+    question.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_colour_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
+    conn.commit()
+
+
+def _migrate_to_v59(conn: sqlite3.Connection):
+    """The evidence behind a species' ecoregion range (V2.38).
+
+    Pure additive DDL — ``schema.sql`` creates ``plant_ecoregions`` with
+    ``IF NOT EXISTS`` on every ``init_db``, so this exists mainly to be the
+    documented home of the reasoning and to be explicit for a DB that upgrades
+    without a reseed. Nothing is migrated INTO it: the existing
+    ``plants.ecoregion`` tags are unsourced, and copying them here would launder
+    a guess into a row that looks derived, which is the exact failure this table
+    is meant to end (P9). The table stays empty until
+    ``scripts/seed_ecoregion_ranges.py`` has run and its output is seeded.
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS plant_ecoregions (
+            plant_id    INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+            ecoregion   TEXT    NOT NULL,
+            occurrences INTEGER NOT NULL DEFAULT 0,
+            confidence  TEXT    NOT NULL DEFAULT 'low',
+            source      TEXT    NOT NULL DEFAULT '',
+            PRIMARY KEY (plant_id, ecoregion)
+        )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_plant_ecoregions_region "
+                 "ON plant_ecoregions(ecoregion)")
+    conn.commit()
+
+
+def _migrate_to_v58(conn: sqlite3.Connection):
+    """What the animals look like, as data (V2.36).
+
+    The fauna were in the state the flora were in before V2.33, only worse
+    because nothing said so. Every creature's appearance was computed in
+    `src/scene_wildlife.py` from substrings of its common name — a twelve-genus
+    bee table and seventeen `if "azure" in name` tests — which meant:
+
+      * 69 bees rendered as 12 distinct animals; the 29 Bombus were identical
+        to one another, as were all 20 cuckoo bees;
+      * 31 lepidoptera rendered as 16; a Polyphemus, a Cecropia and an Isabella
+        Tiger Moth were the same moth;
+      * no size was a measurement — `size` was a hand-tuned 0.5-1.25 multiplier
+        in Python, so a 140 mm Cecropia and a 22 mm azure differed by a fudge
+        factor rather than by a fact.
+
+    None of it lived in the database, so none of it could be sourced, checked or
+    corrected without editing code. These columns move it into the catalogue
+    where `scripts/tune_fauna.py` can edit it and the data-quality gate can
+    validate it.
+
+    On the existing attribute tables rather than new ones: they are already 1:1
+    with `fauna`, already taxon-specific for exactly this reason (the schema
+    comment above says so), and already wiped and re-seeded with fauna, so this
+    needs no new reseed-wipe entry.
+    """
+    bee = ("body_length_mm REAL", "build TEXT", "hair_colour TEXT",
+           "integument_colour TEXT", "metallic INTEGER", "scopa_position TEXT",
+           "wing_tint TEXT", "band_pattern TEXT",
+           "morph_data_source TEXT DEFAULT ''",
+           "morph_data_citation TEXT DEFAULT ''")
+    lep = ("wingspan_min_mm REAL", "wingspan_max_mm REAL",
+           "forewing_colour TEXT", "hindwing_colour TEXT", "margin_colour TEXT",
+           "wing_shape TEXT", "wing_pattern TEXT", "eyespot_count INTEGER",
+           "resting_posture TEXT", "flight_style TEXT",
+           "morph_data_source TEXT DEFAULT ''",
+           "morph_data_citation TEXT DEFAULT ''")
+    for table, cols in (("bee_attributes", bee), ("lepidoptera_attributes", lep)):
+        for col in cols:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass                      # already there
+    conn.commit()
+
+
+def _photo_ddl() -> str:
+    """The plant_photos DDL, lifted out of schema.sql so the v55 migration can
+    run it on a DB that predates the table. schema.sql stays authoritative — this
+    reads it rather than restating it, so the two can never drift."""
+    with open(_SCHEMA_PATH, "r", encoding="utf-8") as fh:
+        sql = fh.read()
+    # Between the markers, not by regex: a `;` inside a `--` comment in the
+    # table body truncated the first attempt mid-statement, and SQLite's error
+    # for that ("near CREATE") points nowhere near the cause.
+    start = sql.find(">>> plant_photos")
+    end = sql.find("<<< plant_photos")
+    if start < 0 or end < 0:
+        raise RuntimeError("schema.sql lost its plant_photos markers")
+    return sql[sql.index("\n", start) + 1:sql.rfind("\n", start, end)]
+
+
+def _migrate_to_v54(conn: sqlite3.Connection):
+    """How many inflorescences a mature plant carries (V2.35).
+
+    Additive and nullable. Empty falls back to a count derived from
+    stem_branching and stature in the viewer, so an unmigrated or unseeded
+    install draws a sensible plant rather than a bare one.
+    """
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN flowering_stems INTEGER")
+    except sqlite3.OperationalError:
+        pass              # already present -> fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v53(conn: sqlite3.Connection):
+    """The bloom as something to build (V2.34).
+
+    Ten columns describing a flower as characters rather than as one of fifteen
+    64x64 pictures. Additive and nullable, filled by the reseed that follows the
+    version bump; where a species records nothing the viewer draws exactly the
+    billboard it drew before, so partial coverage degrades to today rather than
+    to a hole. See scripts/seed_flower_morphology.py.
+    """
+    for ddl in (
+        "ALTER TABLE plants ADD COLUMN flower_arch TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN flower_symmetry TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN petal_shape TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN petal_count INTEGER",
+        "ALTER TABLE plants ADD COLUMN florets_per_head INTEGER",
+        "ALTER TABLE plants ADD COLUMN flower_diameter_cm REAL",
+        "ALTER TABLE plants ADD COLUMN flower_center_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN flower_height_frac REAL",
+        "ALTER TABLE plants ADD COLUMN stem_branching TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN basal_rosette INTEGER DEFAULT 0",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass          # already present -> fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v52(conn: sqlite3.Connection):
+    """Surface character + the graminoid inflorescence (V2.33).
+
+    Additive and nullable, filled by the reseed that follows the version bump.
+    Every consumer falls back to its previous behaviour where they are empty —
+    a per-genus bark grain, a matte leaf, the generic plume — so an upgraded DB
+    is never in a broken intermediate state. See
+    scripts/seed_surface_morphology.py and
+    scripts/seed_inflorescence_morphology.py for the fields and their sourcing.
+    """
+    for ddl in (
+        "ALTER TABLE plants ADD COLUMN bark_texture TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN leaf_surface TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN inflorescence_form TEXT DEFAULT ''",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass          # already present → fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v49(conn: sqlite3.Connection):
+    """Fruit SHAPE column (V2.29). Additive and nullable, filled by the reseed
+    that follows the version bump; empty on dry-fruited species, which draw no
+    fruit at all. The viewer falls back to the round `berry` sprite where it is
+    empty, so an upgraded DB is never in a broken intermediate state."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN fruit_form TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass          # already present → fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v48(conn: sqlite3.Connection):
+    """Herbaceous growth-form column (V2.29). Additive and nullable, filled by
+    the reseed that follows the version bump; empty for woody plants."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN growth_form TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass          # already present → fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v47(conn: sqlite3.Connection):
+    """Botanical morphology columns (V2.29) — what a species looks like.
+
+    Additive and nullable: the reseed that follows the version bump fills them
+    for the woody species, and every consumer falls back to its previous
+    behaviour where they are empty, so an upgraded DB is never in a broken
+    intermediate state. See scripts/seed_woody_morphology.py for the fields and
+    where their values come from.
+    """
+    for ddl in (
+        "ALTER TABLE plants ADD COLUMN leaf_shape TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN leaf_size_cm REAL",
+        "ALTER TABLE plants ADD COLUMN leaf_arrangement TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN bark_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN fall_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN branching TEXT DEFAULT ''",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass          # already present → fresh install / already migrated
+    conn.commit()
+
+
+def _migrate_to_v46(conn: sqlite3.Connection):
+    """Polyculture provenance (V2.22) — the end of reseed data loss.
+
+    Adds ``polycultures.origin`` ('seed' | 'user') so the reseed can wipe
+    shipped examples without touching communities the user authored in the
+    builder. On an upgraded DB every existing row lands as 'user' (the safe
+    default); the shipped examples are then re-stamped 'seed' **by name**
+    so the reseed that immediately follows this migration replaces them
+    instead of duplicating them. A user community that happens to share an
+    example's name is treated as the example (replaced) — the pre-v46
+    behaviour for every community, now confined to that one collision.
+    """
+    try:
+        conn.execute("ALTER TABLE polycultures "
+                     "ADD COLUMN origin TEXT NOT NULL DEFAULT 'user'")
+    except sqlite3.OperationalError:
+        return  # column already present → fresh install / already migrated
+    from src.db.polycultures import EXAMPLE_POLYCULTURES  # lazy: avoid cycle
+
+    def _names(defs):
+        for d in defs:
+            yield d["name"]
+            yield from _names(d.get("variations", []))
+
+    names = list(_names(EXAMPLE_POLYCULTURES))
+    qmarks = ",".join("?" for _ in names)
+    conn.execute(
+        f"UPDATE polycultures SET origin = 'seed' WHERE name IN ({qmarks})",
+        names)
+    conn.commit()
+
+
 # Vegetation layers and ecological functions used to split the legacy
 # single `role` field on polyculture_members. Mirrored in
 # src/polyculture_panel.py so the UI and the migration use one source of
@@ -562,6 +1071,134 @@ def _populate_plant_uses(conn: sqlite3.Connection, entries: list[dict]) -> int:
     return len(rows)
 
 
+def _seed_plant_photos(conn: sqlite3.Connection) -> int:
+    """Load ``data/plant_photos.json`` into ``plant_photos`` as origin='seed'
+    (V2.35, F70). Returns the number of rows inserted.
+
+    Runs on EVERY reseed and inserts only shipped rows, because the wipe above
+    removed only shipped rows — a person's own photographs (origin='user') are
+    still sitting in the table and must not be duplicated or disturbed.
+
+    A species the file doesn't mention keeps whatever ``plants.image_url`` the
+    fetch script gave it: ``_attach_photos`` prefers this table and falls back to
+    the column, so partial coverage degrades to the previous release rather than
+    to a blank (P9).
+    """
+    import json as _json                                 # noqa: PLC0415
+
+    if not os.path.exists(_PLANT_PHOTOS_JSON_PATH):
+        return 0
+    with open(_PLANT_PHOTOS_JSON_PATH, "r", encoding="utf-8") as fh:
+        entries = _json.load(fh)
+    rows = []
+    for e in entries:
+        sci = (e.get("scientific_name") or "").strip()
+        slot = (e.get("slot") or "").strip()
+        url = (e.get("url") or "").strip()
+        if not sci or slot not in PHOTO_SLOTS or not url:
+            continue
+        rows.append((sci, slot, url, e.get("attribution") or "",
+                     e.get("license") or "", e.get("source") or "",
+                     "seed", e.get("taken_on") or "",
+                     int(e.get("rank") or 0), e.get("notes") or ""))
+    if rows:
+        conn.executemany(
+            "INSERT INTO plant_photos (scientific_name, slot, url, attribution,"
+            " license, source, origin, taken_on, rank, notes)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+
+    # Back-fill: every species that still has NO row in this table but does have
+    # the legacy single `plants.image_url` gets it as a `flower` row. That is
+    # honest about what those photos are — iNaturalist's leading photo is nearly
+    # always a flower macro, which is exactly the diagnosis behind F70 — and it
+    # makes this table the single place `coverage()` has to look. Nothing is
+    # lost by the upgrade, and the 111 species with no photo at all become a
+    # counted, visible gap instead of an invisible one.
+    cur = conn.execute(
+        "INSERT INTO plant_photos "
+        "  (scientific_name, slot, url, attribution, license, source, origin)"
+        " SELECT p.scientific_name, 'flower', p.image_url,"
+        "        COALESCE(p.image_attribution, ''), COALESCE(p.image_license, ''),"
+        "        'inaturalist', 'seed'"
+        "   FROM plants p"
+        "  WHERE p.scientific_name IS NOT NULL AND p.scientific_name <> ''"
+        "    AND p.image_url IS NOT NULL AND p.image_url <> ''"
+        # Dedupe on the PHOTO, not on the species. Scoping it to the species
+        # meant that adding one photograph of your own permanently suppressed
+        # the shipped one for that plant on the next reseed — the row was gone
+        # (wiped as origin='seed') and the back-fill then skipped the species
+        # because it "already had" a photo.
+        "    AND NOT EXISTS (SELECT 1 FROM plant_photos ph"
+        "                     WHERE ph.scientific_name = p.scientific_name"
+        "                       AND ph.url = p.image_url)")
+    conn.commit()
+    return len(rows) + (cur.rowcount or 0)
+
+
+_ECOREGION_RANGES_PATH = resource_path("data", "plant_ecoregions.json")
+
+
+def _seed_plant_ecoregions(conn: sqlite3.Connection) -> int:
+    """Populate ``plant_ecoregions`` from ``data/plant_ecoregions.json``.
+
+    Keyed by scientific name in the file (plant ids are not stable across a
+    reseed) and resolved to ids here, the same shape ``_seed_fauna`` uses for
+    its links. Returns the number of rows inserted.
+
+    A missing or empty file is not an error and never will be: the derivation
+    is a dev-time GBIF run (``scripts/seed_ecoregion_ranges.py``) that has not
+    necessarily happened for every species, and a species with no derived rows
+    keeps the tags in ``plants.ecoregion``. Failing here would take the whole
+    catalogue down over a file whose entire job is to be optional.
+    """
+    import json as _json                                 # noqa: PLC0415
+    try:
+        with open(_ECOREGION_RANGES_PATH, "r", encoding="utf-8") as f:
+            raw = _json.load(f)
+    except (FileNotFoundError, _json.JSONDecodeError, OSError):
+        return 0
+    if not isinstance(raw, dict):
+        return 0
+
+    from src.ecoregion_ranges import parse_document
+    from src.ecoregion import geographic_keys
+
+    ranges = parse_document(raw)
+    if not ranges:
+        return 0
+    source = str(raw.get("source") or "")
+    # A key that is not in the shipped polygon vocabulary would be invisible in
+    # every filter — drop it here rather than storing a row nothing can select.
+    valid = set(geographic_keys())
+    # name -> ALL matching ids, not one. Three scientific names appear twice in
+    # the catalogue (Monarda fistulosa, Geum triflorum, Valeriana sitchensis:
+    # a native row and a garden/duplicate row), and a plain dict comprehension
+    # kept whichever came last. The other row silently lost its derived range
+    # and fell back to the unsourced `plants.ecoregion` tag, so Wild Bergamot's
+    # page said "not from occurrence records" while its twin had six of them.
+    # Found V2.48 by drawing the range maps, which made the gap visible.
+    name_to_ids: dict = {}
+    for row in conn.execute("SELECT id, scientific_name FROM plants").fetchall():
+        name_to_ids.setdefault(
+            (row["scientific_name"] or "").strip(), []).append(row["id"])
+    rows = []
+    for name, entries in ranges.items():
+        for plant_id in name_to_ids.get(name, ()):
+            for entry in entries:
+                if entry["ecoregion"] not in valid:
+                    continue
+                rows.append((plant_id, entry["ecoregion"], entry["occurrences"],
+                             entry["confidence"], source))
+    if not rows:
+        return 0
+    conn.executemany(
+        "INSERT OR REPLACE INTO plant_ecoregions "
+        "(plant_id, ecoregion, occurrences, confidence, source) "
+        "VALUES (?, ?, ?, ?, ?)", rows)
+    conn.commit()
+    return len(rows)
+
+
 def _seed_fauna(conn: sqlite3.Connection) -> int:
     """
     Load ``data/fauna_master.json`` into the ``fauna`` table, then load
@@ -630,6 +1267,7 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     }
 
     link_rows: list[tuple] = []
+    unresolved: list[str] = []
     for entry in link_entries:
         # Skip metadata records (those without a 'plant' / 'fauna' key).
         if "plant" not in entry or "fauna" not in entry:
@@ -637,6 +1275,14 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
         pid = name_to_pid.get(entry["plant"])
         fid = sci_to_fid.get(entry["fauna"])
         if pid is None or fid is None:
+            # V2.42: this used to be a bare `continue`. A typo in a plant or
+            # fauna name deleted an edge with no error, no count and no way to
+            # notice — the data-quality gate never opened this file either, so
+            # the loss was invisible from both ends. The gate now resolves these
+            # names (validate_plant_fauna), and a survivor here is reported so
+            # a reseed cannot quietly shrink the graph.
+            missing = "plant" if pid is None else "fauna"
+            unresolved.append(f"{entry['plant']} ↔ {entry['fauna']} ({missing})")
             continue
         link_rows.append((
             pid,
@@ -647,6 +1293,11 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
             entry.get("notes"),
         ))
 
+    if unresolved:
+        print(f"[seed] WARNING: {len(unresolved)} plant↔fauna link(s) dropped — "
+              f"name did not resolve: {'; '.join(unresolved[:5])}"
+              + (" …" if len(unresolved) > 5 else ""))
+
     if link_rows:
         conn.executemany(
             "INSERT OR IGNORE INTO plant_fauna "
@@ -656,6 +1307,18 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
         )
         conn.commit()
     return len(link_rows)
+
+
+def _opt_int(v):
+    """`int(v)` or None. Keeps "not described" (None) distinct from a real 0 —
+    `eyespot_count` 0 is a genuine value (most butterflies have none) and
+    `metallic` 0 means "checked, and it is not"."""
+    if v is None or v == "":
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
 
 
 def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
@@ -705,6 +1368,19 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
             e.get("conservation_status"),
             e.get("source"),
             e.get("notes"),
+            # Morphology (v58). Absent in a record simply means "not described
+            # yet" — the columns are nullable and the viewer keeps its genus
+            # fallback, so a partly-filled catalogue degrades rather than breaks.
+            e.get("body_length_mm"),
+            e.get("build"),
+            e.get("hair_colour"),
+            e.get("integument_colour"),
+            _opt_int(e.get("metallic")),
+            e.get("scopa_position"),
+            e.get("wing_tint"),
+            e.get("band_pattern"),
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
         ))
 
     if rows:
@@ -712,11 +1388,74 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
             "INSERT OR IGNORE INTO bee_attributes "
             "(fauna_id, genus, nesting_habit, host_genus, tongue_length, "
             " flight_season, floral_host_genera, pollen_specialist, "
-            " conservation_status, source, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " conservation_status, source, notes, "
+            " body_length_mm, build, hair_colour, integument_colour, metallic, "
+            " scopa_position, wing_tint, band_pattern, "
+            " morph_data_source, morph_data_citation) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
         conn.commit()
+    return len(rows)
+
+
+def _seed_bird_morphology(conn: sqlite3.Connection) -> int:
+    """
+    Load ``data/bird_morphology_master.json`` into ``bird_morphology``
+    (schema v63, V2.45) — mass, wingspan and flight style for the 24 birds, so
+    :mod:`src.flight_model` can compute wingbeat frequency instead of the
+    viewer using a hardcoded constant.
+
+    Mirrors :func:`_seed_bee_attributes` exactly, including the dependency:
+    must run *after* ``_seed_fauna`` so scientific_name resolves to fauna_id.
+    Birds not in the fauna registry are skipped rather than inserted orphaned.
+
+    ``verified`` rides along per row (P9). Every row ships 0 — the values are
+    from published literature but were entered without network access to check
+    them against the primary sources, and a number nobody has verified must not
+    be presented as one that has been.
+    """
+    import json as _json
+
+    if not os.path.exists(_BIRD_MORPH_JSON_PATH):
+        return 0
+
+    with open(_BIRD_MORPH_JSON_PATH, "r", encoding="utf-8") as f:
+        entries = _json.load(f)
+
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna WHERE taxon = 'bird'"
+        ).fetchall()
+    }
+
+    rows: list[tuple] = []
+    for e in entries:
+        if "scientific_name" not in e:
+            continue
+        fid = sci_to_fid.get(e["scientific_name"])
+        if fid is None:
+            continue
+        rows.append((
+            fid,
+            e.get("mass_g"),
+            e.get("wingspan_mm"),
+            e.get("wing_area_cm2"),
+            e.get("flight_style") or "unknown",
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
+            1 if e.get("verified") else 0,
+            e.get("notes") or "",
+        ))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO bird_morphology "
+            "  (fauna_id, mass_g, wingspan_mm, wing_area_cm2, flight_style, "
+            "   morph_data_source, morph_data_citation, verified, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
     return len(rows)
 
 
@@ -767,6 +1506,20 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
             e.get("conservation_status"),
             e.get("source"),
             e.get("notes"),
+            # Morphology (v58) — nullable, so a partly-described catalogue
+            # degrades to the viewer's name-table fallback rather than breaking.
+            e.get("wingspan_min_mm"),
+            e.get("wingspan_max_mm"),
+            e.get("forewing_colour"),
+            e.get("hindwing_colour"),
+            e.get("margin_colour"),
+            e.get("wing_shape"),
+            e.get("wing_pattern"),
+            _opt_int(e.get("eyespot_count")),
+            e.get("resting_posture"),
+            e.get("flight_style"),
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
         ))
 
     if rows:
@@ -774,12 +1527,103 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
             "INSERT OR IGNORE INTO lepidoptera_attributes "
             "(fauna_id, kind, activity, flight_season, overwintering_stage, "
             " voltinism, nectar_flower_genera, larval_host_note, "
-            " conservation_status, source, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " conservation_status, source, notes, "
+            " wingspan_min_mm, wingspan_max_mm, forewing_colour, "
+            " hindwing_colour, margin_colour, wing_shape, wing_pattern, "
+            " eyespot_count, resting_posture, flight_style, "
+            " morph_data_source, morph_data_citation) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
         conn.commit()
     return len(rows)
+
+
+def _seed_derived_edges(conn: sqlite3.Connection) -> tuple[int, int]:
+    """
+    Materialise the derived relationship edges (schema v61, V2.42).
+
+    Two products, both computed by ``src.db.derived_edges`` from data already
+    shipped and already cited:
+
+    * ``plant_fauna_derived`` — genus-level host records (``floral_host_genera``
+      on bees, ``nectar_flower_genera`` on lepidoptera) expanded onto the
+      catalogue's members of each genus. Takes plant coverage from 22.6% to
+      ~46%, which is the difference between the relationship features working
+      and not.
+    * ``fauna_fauna`` — the cuckoo bees, whose ``host_genus`` is another BEE and
+      who are therefore unreachable in a plant↔fauna-only graph.
+
+    Must run AFTER ``_seed_bee_attributes`` / ``_seed_lepidoptera_attributes``
+    (it reads the JSON, but the fauna ids it resolves against come from
+    ``_seed_fauna``). Returns ``(plant_edges, fauna_edges)``.
+
+    Nothing here invents a relationship: every row carries the citation of the
+    record it was expanded from, plus the genus it matched on and a confidence
+    band, so a reader can see exactly what was claimed and what this app did
+    with it. See docs/DATA_AUDIT.md §6.
+    """
+    import json as _json
+    from src.db.derived_edges import (           # noqa: PLC0415
+        bee_genus_host_edges, lepidoptera_genus_host_edges, cleptoparasite_edges,
+    )
+
+    def _load(path):
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            return [r for r in _json.load(f)
+                    if isinstance(r, dict) and "_comment" not in r]
+
+    bees = _load(_BEE_ATTR_JSON_PATH)
+    leps = _load(_LEP_ATTR_JSON_PATH)
+    if not bees and not leps:
+        return (0, 0)
+
+    plants = [dict(r) for r in conn.execute(
+        "SELECT common_name, scientific_name FROM plants").fetchall()]
+    name_to_pid = {
+        row["common_name"]: row["id"]
+        for row in conn.execute("SELECT id, common_name FROM plants").fetchall()
+    }
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna").fetchall()
+    }
+
+    edges = (bee_genus_host_edges(plants, bees)[0]
+             + lepidoptera_genus_host_edges(plants, leps)[0])
+    rows = []
+    for e in edges:
+        pid = name_to_pid.get(e["plant"])
+        fid = sci_to_fid.get(e["fauna"])
+        if pid is None or fid is None:
+            continue
+        rows.append((pid, fid, e["relationship"], e["derivation"],
+                     e["basis"], e["confidence"], e["source"]))
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO plant_fauna_derived "
+            "(plant_id, fauna_id, relationship, derivation, basis, "
+            " confidence, source) VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+
+    ff_rows = []
+    for e in cleptoparasite_edges(bees):
+        a = sci_to_fid.get(e["fauna_a"])
+        b = sci_to_fid.get(e["fauna_b"])
+        if a is None or b is None:
+            continue
+        ff_rows.append((a, b, e["relationship"], e["evidence"],
+                        e["confidence"], e["basis"], e["source"], e["notes"]))
+    if ff_rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO fauna_fauna "
+            "(fauna_id_a, fauna_id_b, relationship, evidence, confidence, "
+            " basis, source, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", ff_rows)
+    conn.commit()
+    return (len(rows), len(ff_rows))
 
 
 def _seed_nurseries(conn: sqlite3.Connection) -> int:
@@ -897,9 +1741,36 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("flower_color", ""),
             p.get("flower_form", "none"),
             p.get("fruit_color", ""),
+            p.get("fruit_form", ""),
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
+            p.get("leaf_shape", ""),
+            p.get("leaf_size_cm"),
+            p.get("leaf_arrangement", ""),
+            p.get("bark_color", ""),
+            p.get("fall_color", ""),
+            p.get("branching", ""),
+            p.get("growth_form", ""),
+            p.get("bark_texture", ""),
+            p.get("leaf_surface", ""),
+            p.get("inflorescence_form", ""),
+            p.get("flower_arch", ""),
+            p.get("flower_symmetry", ""),
+            p.get("petal_shape", ""),
+            p.get("petal_count"),
+            p.get("florets_per_head"),
+            p.get("flower_diameter_cm"),
+            p.get("flower_center_color", ""),
+            p.get("flower_height_frac"),
+            p.get("stem_branching", ""),
+            1 if p.get("basal_rosette") else 0,
+            p.get("flowering_stems"),
+            p.get("flower_data_source", ""),
+            p.get("flower_data_citation", ""),
+            p.get("leaf_data_source", ""),
+            p.get("leaf_data_citation", ""),
+            p.get("flower_colour_source", ""),
         ))
 
     conn.executemany(
@@ -917,9 +1788,19 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes, flower_color, flower_form, fruit_color,
-            image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            sourcing_notes, flower_color, flower_form, fruit_color, fruit_form,
+            image_url, image_attribution, image_license,
+            leaf_shape, leaf_size_cm, leaf_arrangement,
+            bark_color, fall_color, branching, growth_form,
+            bark_texture, leaf_surface, inflorescence_form,
+            flower_arch, flower_symmetry, petal_shape, petal_count,
+            florets_per_head, flower_diameter_cm, flower_center_color,
+            flower_height_frac, stem_branching, basal_rosette,
+            flowering_stems, flower_data_source, flower_data_citation,
+            leaf_data_source, leaf_data_citation, flower_colour_source)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1012,6 +1893,50 @@ def init_db() -> None:
             _migrate_to_v35(conn)
         if current_version < 42:
             _migrate_to_v42(conn)
+        if current_version < 46:
+            _migrate_to_v46(conn)
+        if current_version < 47:
+            _migrate_to_v47(conn)
+        if current_version < 48:
+            _migrate_to_v48(conn)
+        if current_version < 49:
+            _migrate_to_v49(conn)
+        if current_version < 52:
+            _migrate_to_v52(conn)
+
+        if current_version < 53:
+            _migrate_to_v53(conn)
+
+        if current_version < 54:
+            _migrate_to_v54(conn)
+
+        if current_version < 55:
+            _migrate_to_v55(conn)
+
+        if current_version < 56:
+            _migrate_to_v56(conn)
+
+        if current_version < 57:
+            _migrate_to_v57(conn)
+
+        if current_version < 58:
+            _migrate_to_v58(conn)
+
+        if current_version < 59:
+            _migrate_to_v59(conn)
+
+        # schema.sql has already recreated relationship_edges by this point, and
+        # that view selects the columns this migration adds. It works because
+        # SQLite binds a view's column references lazily — CREATE VIEW succeeds
+        # against columns that do not exist yet, and only a SELECT would fail.
+        # This must therefore land before anything queries the view, which it
+        # does: nothing reads relationships during init_db. Verified by
+        # tests/test_derived_edges.py:TestUpgradeFromV60.
+        if current_version < 61:
+            _migrate_to_v61(conn)
+
+        if current_version < 64:
+            _migrate_to_v64(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -1022,8 +1947,8 @@ def init_db() -> None:
 
         # Idempotent additive migration — adds layer/functions columns to
         # polyculture_members and backfills them from the existing role.
-        # Kept outside the version-bump reseed path so user-created
-        # plant communities are preserved.
+        # (User-created communities are protected from the reseed itself by
+        # the origin='seed' scoping below, schema v46.)
         _migrate_polyculture_member_layer_functions(conn)
 
         # Idempotent additive migration — adds the pattern-language columns to
@@ -1046,15 +1971,48 @@ def init_db() -> None:
             # they still inform the order we'd want when FK is back on).
             conn.execute("DELETE FROM bee_attributes")   # child of fauna — wipe first
             conn.execute("DELETE FROM lepidoptera_attributes")   # child of fauna
+            conn.execute("DELETE FROM bird_morphology")   # child of fauna
             conn.execute("DELETE FROM plant_fauna")
+            # schema v61 (V2.42): derived edges are recomputed from the attribute
+            # files on every reseed, so they must be wiped like any other seeded
+            # table or they accumulate rows pointing at stale plant/fauna ids.
+            conn.execute("DELETE FROM plant_fauna_derived")
+            conn.execute("DELETE FROM fauna_fauna")
             conn.execute("DELETE FROM plant_uses")
+            conn.execute("DELETE FROM plant_ecoregions")   # reseeded from JSON
             conn.execute("DELETE FROM fauna")
             conn.execute("DELETE FROM uses")
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
             conn.execute("DELETE FROM planting_calendar")
-            conn.execute("DELETE FROM polyculture_members")
-            conn.execute("DELETE FROM polycultures")
+            # Polycultures hold USER-AUTHORED data alongside the shipped
+            # examples (schema v46): wipe only origin='seed' rows. Members
+            # are scoped through their parent (FK is OFF here, so the
+            # CASCADE won't fire — delete children explicitly, then clear
+            # any parent_id that pointed at a wiped seed example so the id
+            # can't be re-used by a freshly seeded row.
+            conn.execute(
+                "DELETE FROM polyculture_members WHERE polyculture_id IN "
+                "(SELECT id FROM polycultures WHERE origin = 'seed')")
+            conn.execute("DELETE FROM polycultures WHERE origin = 'seed'")
+            # Photo sets (schema v55) take the SAME rule, and it is the whole of
+            # F72: a shipped photo is re-seeded, a person's own photograph is
+            # never touched. Writing a user photo into plants.image_url instead
+            # would destroy it here on the next schema bump, which is the trap
+            # the table exists to avoid.
+            conn.execute("DELETE FROM plant_photos WHERE origin = 'seed'")
+            conn.execute(
+                "UPDATE polycultures SET parent_id = NULL WHERE parent_id "
+                "IS NOT NULL AND parent_id NOT IN (SELECT id FROM polycultures)")
+            # Plant ids are NOT stable across a reseed (AUTOINCREMENT, never
+            # reset) — snapshot the names behind every plant id the surviving
+            # user communities reference, so they can be re-pointed at the
+            # reseeded rows afterwards (_remap_user_polyculture_plants).
+            user_plant_refs = conn.execute(
+                "SELECT id, scientific_name, common_name FROM plants "
+                "WHERE id IN (SELECT plant_id FROM polyculture_members) "
+                "   OR id IN (SELECT center_plant_id FROM polycultures "
+                "             WHERE center_plant_id IS NOT NULL)").fetchall()
             conn.execute("DELETE FROM plants")
             # Nurseries are seeded from data/nurseries_master.json — wipe + reseed
             # so directory edits ship on the next schema bump (V2.18).
@@ -1078,6 +2036,13 @@ def init_db() -> None:
             _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
+            # Shipped photo sets (F70). Independent of plant ids — the
+            # table is keyed by scientific_name on purpose.
+            _seed_plant_photos(conn)
+            # Derived ecoregion ranges (schema v59) — depends on plants being
+            # seeded so scientific_name resolves to a plant id. Absent file =
+            # nothing seeded = the read side keeps using plants.ecoregion.
+            _seed_plant_ecoregions(conn)
             # Fauna registry + plant↔fauna links — depends on plants being
             # seeded first so we can resolve common_name → plant_id.
             _seed_fauna(conn)
@@ -1086,8 +2051,17 @@ def init_db() -> None:
             _seed_bee_attributes(conn)
             # Lepidoptera attributes (F37 "fly as a butterfly") — same dependency.
             _seed_lepidoptera_attributes(conn)
+            # Bird morphology (V2.45) — same dependency; feeds flight_model.
+            _seed_bird_morphology(conn)
+            # Derived edges (V2.42) — must run after BOTH attribute seeders and
+            # after _seed_fauna, since it expands their genus lists against the
+            # seeded plants and resolves fauna ids.
+            _seed_derived_edges(conn)
             # Native-plant nursery directory (V2.18) — independent of plants/fauna.
             _seed_nurseries(conn)
+            # Re-point surviving user communities at the reseeded plant rows
+            # (ids shifted) — must run before FK enforcement returns.
+            _remap_user_polyculture_plants(conn, user_plant_refs)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 
@@ -1100,7 +2074,9 @@ def init_db() -> None:
         from src.db.polycultures import seed_example_polycultures
         seed_example_polycultures()
     except Exception:
-        pass  # Non-critical; polycultures can be created manually
+        # Non-critical; polycultures can be created manually — but a broken
+        # seed used to ship silently, so leave the evidence in the log.
+        _log.exception("seeding example polycultures failed")
 
     # One-time import of any pre-existing recipes that lived in
     # ~/.permadesign_config.json. Subsequent runs are no-ops thanks to
@@ -1109,7 +2085,71 @@ def init_db() -> None:
         from src.db.recipes import migrate_qsettings_recipes
         migrate_qsettings_recipes()
     except Exception:
-        pass  # Non-critical; user can recreate recipes from the new tab
+        _log.exception("legacy recipe migration failed")  # user can recreate them
+
+    # Any init may have reseeded/migrated the catalogue — drop the cache.
+    invalidate_plant_cache()
+
+
+def _remap_user_polyculture_plants(conn: sqlite3.Connection,
+                                   old_refs) -> None:
+    """Re-point user communities at the reseeded plant rows (schema v46).
+
+    ``old_refs`` is the pre-wipe snapshot of ``(id, scientific_name,
+    common_name)`` for every plant id referenced by a surviving (user)
+    polyculture. Plant ids shift on every reseed, so each old id is
+    resolved to the new catalogue row by scientific name (falling back to
+    common name). Members whose plant no longer exists in the catalogue
+    are dropped — with a log line, not silently."""
+    if not old_refs:
+        return
+    by_sci = {}
+    by_common = {}
+    for row in conn.execute(
+            "SELECT id, scientific_name, common_name FROM plants"):
+        if row["scientific_name"]:
+            by_sci.setdefault(row["scientific_name"], row["id"])
+        if row["common_name"]:
+            by_common.setdefault(row["common_name"], row["id"])
+
+    remap: dict[int, int] = {}
+    lost: list[str] = []
+    for old in old_refs:
+        new_id = (by_sci.get(old["scientific_name"])
+                  or by_common.get(old["common_name"]))
+        if new_id is not None:
+            remap[old["id"]] = new_id
+        else:
+            lost.append(old["common_name"] or old["scientific_name"]
+                        or str(old["id"]))
+
+    # Two-phase (via negative temp ids) so an old→new pair can never be
+    # re-remapped by a later pair that shares the number. FK is OFF here.
+    for old_id, new_id in remap.items():
+        conn.execute("UPDATE polyculture_members SET plant_id = ? "
+                     "WHERE plant_id = ?", (-new_id, old_id))
+        conn.execute("UPDATE polycultures SET center_plant_id = ? "
+                     "WHERE center_plant_id = ?", (-new_id, old_id))
+    conn.execute("UPDATE polyculture_members SET plant_id = -plant_id "
+                 "WHERE plant_id < 0")
+    conn.execute("UPDATE polycultures SET center_plant_id = -center_plant_id "
+                 "WHERE center_plant_id < 0")
+
+    # Anything still pointing outside the fresh catalogue references a plant
+    # that no longer ships — drop/clear it audibly rather than strand an
+    # FK-invalid row for the next runtime query to trip on.
+    cur = conn.execute(
+        "DELETE FROM polyculture_members "
+        "WHERE plant_id NOT IN (SELECT id FROM plants)")
+    conn.execute(
+        "UPDATE polycultures SET center_plant_id = NULL "
+        "WHERE center_plant_id IS NOT NULL "
+        "AND center_plant_id NOT IN (SELECT id FROM plants)")
+    if lost or cur.rowcount:
+        _log.warning(
+            "reseed: %d member row(s) dropped — plants no longer in the "
+            "catalogue%s", cur.rowcount,
+            (": " + ", ".join(sorted(lost)[:10])) if lost else "")
 
 
 def _insert_companions(conn: sqlite3.Connection,
@@ -1136,13 +2176,19 @@ def _insert_companions(conn: sqlite3.Connection,
         elif rel == "enemy":
             enemies.append((lo, hi))
 
+    # Columns named explicitly (schema v61 added source/notes): a positional
+    # INSERT here breaks the moment the table grows, and these pairings are
+    # deliberately seeded WITHOUT a source — that is what makes them read
+    # `recorded` rather than `documented` in relationship_edges.
     if friends:
         conn.executemany(
-            "INSERT OR IGNORE INTO companion_friends VALUES (?,?)", friends
+            "INSERT OR IGNORE INTO companion_friends (plant_id_a, plant_id_b) "
+            "VALUES (?,?)", friends
         )
     if enemies:
         conn.executemany(
-            "INSERT OR IGNORE INTO companion_enemies VALUES (?,?)", enemies
+            "INSERT OR IGNORE INTO companion_enemies (plant_id_a, plant_id_b) "
+            "VALUES (?,?)", enemies
         )
     conn.commit()
 
@@ -1167,6 +2213,142 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return d
 
 
+def _attach_photos(plants: list[dict]) -> None:
+    """Synthesize ``image_url`` / ``image_attribution`` / ``image_license`` from
+    the ``plant_photos`` table (schema v55, F70), and hand the whole set over as
+    ``photos``.
+
+    The same read-side-synthesis shape ``_attach_permaculture_uses`` uses below,
+    and for the same reason: the junction is the source of truth, but every
+    existing consumer reads a single field and must keep working. The plant
+    browser, the 3D dossier card, the bee and lepidoptera panels and
+    ``photo_warm`` all get better photographs here without one line of change at
+    the call site.
+
+    Preference order is ``PHOTO_SLOTS`` — **habit first** — and a person's own
+    photograph (``origin='user'``) beats a shipped one in the same slot, because
+    a picture of the plant in THEIR yard is more use than a stranger's. Where the
+    table has nothing, the row keeps whatever ``plants.image_url`` already held,
+    so a species the photo set doesn't cover renders exactly as it did before.
+    """
+    names = [(p.get("scientific_name") or "").strip() for p in plants]
+    wanted = {n for n in names if n}
+    if not wanted:
+        return
+    conn = get_connection()
+    try:
+        # One query for the whole list, not one per plant — get_all_plants is
+        # 434 rows and render_project_to_map is called on every File→Open.
+        marks = ",".join("?" * len(wanted))
+        rows = conn.execute(
+            f"SELECT scientific_name, slot, url, attribution, license, source,"
+            f"       origin, taken_on, rank"
+            f"  FROM plant_photos WHERE scientific_name IN ({marks})"
+            f" ORDER BY rank, id", tuple(wanted)).fetchall()
+    except sqlite3.OperationalError:
+        return          # pre-v55 DB mid-migration; the column keeps working
+    finally:
+        conn.close()
+
+    by_name: dict[str, list[dict]] = {}
+    for r in rows:
+        by_name.setdefault(r["scientific_name"], []).append(dict(r))
+
+    order = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
+    for p in plants:
+        shots = by_name.get((p.get("scientific_name") or "").strip())
+        if not shots:
+            p.setdefault("photos", [])
+            continue
+        p["photos"] = shots
+        best = min(shots, key=lambda s: (order.get(s["slot"], 99),
+                                         0 if s["origin"] == "user" else 1,
+                                         s["rank"]))
+        p["image_url"] = best["url"]
+        p["image_attribution"] = best["attribution"]
+        p["image_license"] = best["license"]
+
+
+def ecoregion_ranges_for_ids(plant_ids: list[int],
+                             conn: Optional[sqlite3.Connection] = None
+                             ) -> dict[int, list[dict]]:
+    """``{plant_id: [{ecoregion, occurrences, confidence, source}, …]}``.
+
+    The sourced half of a plant's range. Strongest evidence first, so a caller
+    showing one line shows the best-attested region.
+
+    Pass ``conn`` when you already have one open — ``get_all_plants`` and
+    ``search_plants`` both do, and opening a second connection inside a query
+    they are already inside is pure churn on the hottest read path in the app
+    (``render_project_to_map`` calls it on every File→Open and every undo).
+    """
+    if not plant_ids:
+        return {}
+    own = conn is None
+    conn = conn or get_connection()
+    try:
+        marks = ",".join("?" * len(plant_ids))
+        rows = conn.execute(
+            f"SELECT plant_id, ecoregion, occurrences, confidence, source "
+            f"  FROM plant_ecoregions WHERE plant_id IN ({marks}) "
+            f" ORDER BY occurrences DESC, ecoregion", list(plant_ids)).fetchall()
+    finally:
+        if own:
+            conn.close()
+    out: dict[int, list[dict]] = {}
+    for r in rows:
+        out.setdefault(r["plant_id"], []).append({
+            "ecoregion":   r["ecoregion"],
+            "occurrences": r["occurrences"],
+            "confidence":  r["confidence"],
+            "source":      r["source"],
+        })
+    return out
+
+
+def _attach_ecoregions(plants: list[dict],
+                       conn: Optional[sqlite3.Connection] = None) -> None:
+    """Overlay derived ecoregion ranges onto each plant dict (schema v59).
+
+    The same read-side-synthesis shape ``_attach_permaculture_uses`` uses, with
+    one difference that matters: the junction does **not** replace the column
+    wholesale, it replaces the *geographic* half of it.
+
+    ``plants.ecoregion`` mixes two kinds of claim. The geographic tags were
+    generated heuristically and never sourced — those are what the GBIF
+    derivation supersedes. ``riparian`` and ``wet_meadow`` are site-scale
+    moisture niches that no coordinate can assert, so they are carried through
+    untouched from the column.
+
+    A species the derivation has not covered keeps its column value entirely,
+    so the catalogue never gets *smaller* because a download has not been run.
+    Each plant also gains ``ecoregion_evidence`` — the rows with their counts —
+    for anything that wants to show how good the claim is (P9).
+    """
+    ids = [p["id"] for p in plants if p.get("id") is not None]
+    if not ids:
+        return
+    try:
+        derived = ecoregion_ranges_for_ids(ids, conn)
+    except sqlite3.Error:
+        return                      # pre-v59 DB mid-migration: keep the column
+    if not derived:
+        return
+    from src.ecoregion import is_moisture_niche
+    for p in plants:
+        rows = derived.get(p.get("id"))
+        p["ecoregion_evidence"] = rows or []
+        if not rows:
+            continue
+        existing = [t.strip() for t in (p.get("ecoregion") or "").split(",")
+                    if t.strip()]
+        niches = [t for t in existing if is_moisture_niche(t)]
+        geographic = [r["ecoregion"] for r in rows]
+        merged = geographic + [n for n in niches if n not in geographic]
+        p["ecoregion"] = ",".join(merged)
+        p["ab_ecoregion"] = p["ecoregion"]      # frozen agent-API alias (v42)
+
+
 def _attach_permaculture_uses(plants: list[dict]) -> None:
     """Populate each dict's derived ``permaculture_uses`` (comma-joined, sorted)
     from the plant_uses junction. The denormalized column was dropped in schema
@@ -1189,24 +2371,51 @@ def get_all_plants() -> list[dict]:
         ).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_ecoregions(result, conn)
+        _attach_photos(result)
         return result
     finally:
         conn.close()
 
 
+# ── In-memory catalogue cache (V2.22) ────────────────────────────────────────
+# The catalogue is read-only between reseeds, but get_plant() opened a fresh
+# connection and ran two queries per call — and render_project_to_map calls
+# it once per placed plant on every File→Open and every snapshot undo/redo
+# (≈600 queries per Ctrl+Z on a 300-plant design). The first miss loads the
+# whole catalogue (a few hundred rows) into a dict; every plants write path
+# calls invalidate_plant_cache(). Keyed to _DB_PATH so tests that repoint
+# the DB (the temp-DB pattern) can never see another DB's rows.
+
+_plant_cache: Optional[dict] = None
+_plant_cache_db: Optional[str] = None
+
+
+def invalidate_plant_cache() -> None:
+    """Drop the in-memory catalogue cache. Call after ANY write to
+    ``plants`` (reseed, marker colour, USDA import)."""
+    global _plant_cache, _plant_cache_db
+    _plant_cache = None
+    _plant_cache_db = None
+
+
+def _cached_plants() -> dict:
+    global _plant_cache, _plant_cache_db
+    if _plant_cache is None or _plant_cache_db != _DB_PATH:
+        _plant_cache = {p["id"]: p for p in get_all_plants()}
+        _plant_cache_db = _DB_PATH
+    return _plant_cache
+
+
 def get_plant(plant_id: int) -> Optional[dict]:
-    conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM plants WHERE id = ?", (plant_id,)
-        ).fetchone()
-        if not row:
-            return None
-        d = _row_to_dict(row)
-        _attach_permaculture_uses([d])
-        return d
-    finally:
-        conn.close()
+        key = int(plant_id)
+    except (TypeError, ValueError):
+        return None
+    p = _cached_plants().get(key)
+    # Shallow copy per call: callers historically got a fresh dict and some
+    # annotate it in place — they must not be able to poison the cache.
+    return dict(p) if p is not None else None
 
 
 def search_plants(
@@ -1240,10 +2449,21 @@ def search_plants(
     supports_specialist: bool = False,
     soil_ph: Optional[float] = None,
     moisture: str = "",
+    bloom_months: Optional[list] = None,
+    fruit_months: Optional[list] = None,
+    flower_colours: Optional[list] = None,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
     Empty string / None values for a filter means "no restriction".
+
+    ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
+    matches if its recorded window covers ANY of them. See ``_month_filter``
+    below for why these are applied in Python rather than SQL.
+
+    ``flower_colours`` is a list of ``src.flower_colour`` bucket keys ("white",
+    "yellow", …); a plant matches if its hex classifies into ANY of them. Also
+    applied in Python — see ``_colour_filter``.
     """
     sql    = "SELECT * FROM plants WHERE 1=1"
     params: list = []
@@ -1350,11 +2570,50 @@ def search_plants(
     # (legacy) or a list (V1.85). The ``ab_ecoregion`` parameter is the
     # pre-v42 name, kept for back-compat (frozen MCP contract); ``ecoregion`` is
     # the province-neutral name — either (or both) may be supplied.
+    #
+    # Since schema v59 the filter also reads the derived `plant_ecoregions`
+    # junction, and it MUST: the read side overlays derived ranges onto the
+    # column *after* the query, so a filter that looked only at the column would
+    # still hide the species the derivation just corrected. That is the reported
+    # bug — Saskatoon Berry, whose column says mixedgrass but whose occurrence
+    # records say parkland — surviving its own fix.
     ecoregions = _as_filter_list(ecoregion) + _as_filter_list(ab_ecoregion)
     if ecoregions:
-        sql += " AND (" + " OR ".join(
-            "(',' || COALESCE(ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
-        params += [f"%,{e},%" for e in ecoregions]
+        from src.ecoregion import is_moisture_niche          # noqa: PLC0415
+        geographic = [e for e in ecoregions if not is_moisture_niche(e)]
+        moisture   = [e for e in ecoregions if is_moisture_niche(e)]
+        clauses, geo_params, wet_params = [], [], []
+
+        # Geographic regions: the derived rows SUPERSEDE the column for any
+        # species that has them, exactly as `_attach_ecoregions` does on the
+        # read side. ORing the two instead was wrong and visibly so — a plant
+        # whose stale column said parkland but whose occurrence records say
+        # otherwise came back from the parkland filter while its own card
+        # (rendered from the derived rows) did not say parkland. The filter and
+        # the thing it filters have to agree about what a plant's range is.
+        if geographic:
+            marks = ",".join("?" * len(geographic))
+            clauses.append(
+                f"(CASE WHEN EXISTS (SELECT 1 FROM plant_ecoregions pe "
+                f"                    WHERE pe.plant_id = plants.id) "
+                f"      THEN EXISTS (SELECT 1 FROM plant_ecoregions pe "
+                f"                    WHERE pe.plant_id = plants.id "
+                f"                      AND pe.ecoregion IN ({marks})) "
+                f"      ELSE (" + " OR ".join(
+                    "(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
+                    for _ in geographic) + ") END)")
+            geo_params = list(geographic) + [f"%,{e},%" for e in geographic]
+
+        # Moisture niches are never derived — no coordinate can assert "wet
+        # ground" — so they are always read from the column, for every species.
+        if moisture:
+            clauses.append("(" + " OR ".join(
+                "(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
+                for _ in moisture) + ")")
+            wet_params = [f"%,{e},%" for e in moisture]
+
+        sql += " AND (" + " OR ".join(clauses) + ")"
+        params += geo_params + wet_params
 
     # native_province (v42): keep only plants native to the given province code
     # (e.g. "SK"). The province-aware generalization of the native_only flag,
@@ -1460,9 +2719,62 @@ def search_plants(
         rows = conn.execute(sql, params).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_ecoregions(result, conn)
+        _attach_photos(result)
+        result = _month_filter(result, "bloom_period", bloom_months)
+        result = _month_filter(result, "fruit_period", fruit_months)
+        result = _colour_filter(result, flower_colours)
         return result
     finally:
         conn.close()
+
+
+def _colour_filter(plants: list[dict], colours) -> list[dict]:
+    """Keep plants whose flower colour classifies into any of ``colours``.
+
+    Applied in Python for the same reason as ``_month_filter``: the stored value
+    needs a *parser*, not a comparison. ``flower_color`` holds a hex, and the
+    filter is asked in colour NAMES — ``WHERE flower_color IN (…)`` could only
+    be written by enumerating the hexes each bucket happens to contain today,
+    and would stop matching the first time a seeder writes one nobody listed.
+
+    Routing through ``src.flower_colour.classify`` also means the search layer,
+    the directory facet and the static site's colour pages share one classifier,
+    so they cannot disagree about what colour a plant is — including about the
+    grasses, whose ``#cbbd80`` is the absence of a showy flower rather than a
+    colour (see that module).
+
+    A plant with no recorded colour is excluded rather than assumed, matching
+    ``_month_filter``: "we don't know what colour this flowers" is not the claim
+    "it flowers white" (P9).
+    """
+    wanted = {str(c) for c in (colours or []) if str(c).strip()}
+    if not wanted:
+        return plants
+    from src.flower_colour import classify
+    return [p for p in plants if classify(p) in wanted]
+
+
+def _month_filter(plants: list[dict], column: str, months) -> list[dict]:
+    """Keep plants whose ``column`` window covers any of ``months`` (1–12).
+
+    Applied in Python, not SQL, because ``bloom_period`` / ``fruit_period`` are
+    free text ("June–July", "Jun-Jul", "Nov-Feb") rather than integer bounds, so
+    a LIKE cannot answer "does May–August include July?" — and the year-wrapping
+    ranges would defeat a BETWEEN even if it could. ``parse_month_range`` is the
+    parser every other consumer already shares (forage calendar, phenology,
+    habitat score), so a filter built on it can never disagree with the gap
+    months the analysis panel reports.
+
+    A plant with no recorded window is excluded rather than assumed: "we don't
+    know when this blooms" is not the same claim as "it blooms in July" (P9).
+    """
+    wanted = {int(m) for m in (months or []) if str(m).strip()}
+    if not wanted:
+        return plants
+    from src.habitat_score import parse_month_range
+    return [p for p in plants
+            if wanted & set(parse_month_range(p.get(column) or ""))]
 
 
 def get_companions(plant_id: int) -> dict[str, list[dict]]:
@@ -1484,6 +2796,8 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
             ).fetchall()
             result = [_row_to_dict(r) for r in rows]
             _attach_permaculture_uses(result)
+            _attach_ecoregions(result, conn)
+            _attach_photos(result)
             return result
 
         return {
@@ -1644,6 +2958,7 @@ def update_marker_color(plant_id: int, color: Optional[str]) -> None:
         conn.commit()
     finally:
         conn.close()
+    invalidate_plant_cache()
 
 
 # ── Climate cache (schema v14, V1.35) ────────────────────────────────────────

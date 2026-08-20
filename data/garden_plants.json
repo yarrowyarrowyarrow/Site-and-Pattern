@@ -40,7 +40,15 @@
     "availability_class": "big_box",
     "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "bark_color": "#6a5238",
+    "fall_color": "#c8a83e",
+    "branching": "decurrent",
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Norland Apple",
@@ -83,7 +91,15 @@
     "availability_class": "big_box",
     "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 7.5,
+    "leaf_arrangement": "alternate",
+    "bark_color": "#6a5238",
+    "fall_color": "#c4a444",
+    "branching": "decurrent",
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Evans Cherry",
@@ -130,7 +146,15 @@
     "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "fruit_color": "#3a1426"
+    "fruit_color": "#3a1426",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 7.0,
+    "leaf_arrangement": "alternate",
+    "bark_color": "#7a5140",
+    "fall_color": "#d4762e",
+    "branching": "decurrent",
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Nanking Cherry",
@@ -177,7 +201,15 @@
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "fruit_color": "#3a1426"
+    "fruit_color": "#3a1426",
+    "leaf_shape": "obovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "bark_color": "#8a5a3e",
+    "fall_color": "#d98a3a",
+    "branching": "multi_stem",
+    "growth_form": "",
+    "flower_colour_source": "estimated"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
@@ -190,7 +222,7 @@
     "spacing_m": "0.6",
     "mature_height_m": "0.9",
     "native_region": "Native to North America including Canadian prairies",
-    "permaculture_uses": "medicinal,pollinator,wildlife_habitat",
+    "permaculture_uses": "bird_food,medicinal,pollinator,wildlife_habitat",
     "bloom_period": "Jul-Aug",
     "fruit_period": "",
     "edible_parts": "leaves (tea), flowers",
@@ -221,6 +253,14 @@
     "availability_class": "big_box",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#b07fc0",
-    "flower_form": "whorl"
+    "flower_form": "whorl",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "bark_color": "",
+    "fall_color": "",
+    "branching": "",
+    "growth_form": "clump",
+    "flower_colour_source": "estimated"
   }
 ]

@@ -173,7 +173,7 @@ swap-when-writing-GeoJSON example: `[[pt[1], pt[0]] for pt in coords]`.
 python -m unittest tests.test_projection tests.test_shadow_geometry tests.test_wind_shadow -v
 python tests/test_map_features.py          # JS-mirror haversine/shoelace/sector math (script-style)
 python -m unittest tests.test_shade        # circle-model fallback when touching shadow_geometry
-python -m unittest discover -s tests       # full suite before finishing
+python -m unittest discover -s tests -t .       # full suite before finishing
 ```
 
 All pass headlessly; shapely/pyproj-gated cases self-skip when those optional

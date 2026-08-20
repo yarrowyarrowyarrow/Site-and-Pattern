@@ -27,13 +27,19 @@ This project is not a generic plant-placement tool; it is built on a coherent ph
 work that ignores it tends to be technically fine but spiritually off. Before designing a
 feature, skim where it sits in that philosophy. The sources of truth:
 
-- [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the twelve principles, each with a
+- [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the thirteen principles, each with a
   "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
-- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F39) organized by the
+- [`docs/BACKLOG.md`](docs/BACKLOG.md) — **everything not yet built, in one place** (V2.52). Read
+  this before re-deriving the backlog from the two roadmaps; it is the index, and it carries the
+  verified status of every open ID.
+- [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) — the live plan and the *reasoning* per feature,
+  plus the **ID ledger** (F63–F119) and the shipped record. Feature IDs have collided three times;
+  take the next free ID from that ledger, never from memory.
+- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F62) organized by the
   principle they serve, with a "Shipped" section at the top.
 - [`docs/REFERENCES.md`](docs/REFERENCES.md) — the full bibliography.
 
-**The twelve principles, in one line each:**
+**The thirteen principles, in one line each:**
 
 1. Living systems self-organize from the bottom up — encode generative rules, not fixed layouts.
 2. The best designs disappear into their context — aim for "grown, not designed".
@@ -47,6 +53,8 @@ feature, skim where it sits in that philosophy. The sources of truth:
 10. Design for relationships, not objects — plants are nodes in a network.
 11. The body and the site know things the screen does not — drive the user outside.
 12. Indigenous knowledge is honoured through relationship, not extraction.
+13. A native planting has to be loved to survive — beauty is the mechanism the ecology
+    survives contact with people by, not decoration on top of it (adopted V2.33).
 
 **HARD RULE (P12):** Do **not** incorporate Indigenous ecological knowledge, land-management
 practices, plant-use traditions, or design frameworks into the data model, recommendations, seed
@@ -58,7 +66,7 @@ with the user rather than proceeding.
 **Keep the weave intact.** When you build something strongly aligned with a principle, add the
 `Design principle P# — see docs/DESIGN_PHILOSOPHY.md` anchor at the top of the file, and keep the
 doc's State markers and the roadmap's Shipped section honest. `tests/test_philosophy.py` guards
-that the doc documents all twelve themes and that every anchor names a real principle (1–12).
+that the doc documents all thirteen themes and that every anchor names a real principle (1–13).
 
 ## Branch naming convention (READ FIRST)
 
@@ -77,6 +85,23 @@ When starting a new piece of work:
 branch even if the harness suggests one as the default. If the system
 default branch is a codename, override it and use the next `V*.*`.
 
+**Every release also has a TAG of the same name, and that is a trap (V2.72).**
+`V2.71` names both `refs/heads/V2.71` and `refs/tags/V2.71`. If both are in a
+clone, git refuses to guess: `git push -u origin V2.71` fails with *"src refspec
+V2.71 matches more than one"*. A working clone normally has only the branch —
+the tag arrives if you ask for it by name, e.g. `git fetch origin V2.71`, which
+resolves to the tag. Fix a clone once with:
+
+```bash
+git config remote.origin.tagOpt --no-tags   # or a bare fetch drags all 102 back
+git tag -d $(git tag)                       # local refs only; remote untouched
+```
+
+and prefer `git switch <V>` (branches only) over `git checkout <V>`, and
+`git push -u origin HEAD` over naming the branch. **Never delete the remote
+tags**: each anchors a GitHub Release, and `github_releases.parse_release_version`
+reads `tag_name` off those releases to drive the in-app updater.
+
 **This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
 `.claude/settings.json`), so it no longer depends on remembering:
 - On **SessionStart** the hook computes the next V-branch
@@ -90,9 +115,14 @@ default branch is a codename, override it and use the next `V*.*`.
   branch (deletes of codename branches are allowed — that's cleanup). Both hooks
   fail open so a hook bug can never block real work.
 
-The "Check for Updates" button in the app (`src/app.py` → `MainWindow._run_update_flow`)
-relies on this convention to detect new versions on the server. Breaking
-the convention silently breaks that feature.
+The "Check for Updates" button in the app
+(`src/controllers/update_flow.py:_on_check_for_updates`) relies on this
+convention to detect new versions on the server. Breaking the convention
+silently breaks that feature. (V2.25: source checkouts update in-app with
+one click — a stash-aware `git checkout -B <V> origin/<V>` + restart
+prompt; the destructive `reset --hard` path deleted in V2.22 stays dead
+and is pinned out by `tests/test_architecture_guard.py`. Frozen builds
+update via GitHub Releases.)
 
 ## Schema versioning
 
@@ -108,18 +138,204 @@ new rows.
 
 The reseed path (`src/db/plants.py:init_db` → "needs_reseed" block)
 wipes `plants`, `planting_calendar`, `companion_friends`,
-`companion_enemies`, `polyculture_members`, `polycultures`, `uses`,
-`plant_uses`, `fauna`, `plant_fauna` and re-seeds them from the
-shipped JSON. **Add any new dependent tables to that wipe list** or
-they will accumulate stale rows across reseeds.
+`companion_enemies`, `uses`, `plant_uses`, `fauna`, `plant_fauna` (and
+the attribute/nursery/cache tables) and re-seeds them from the shipped
+JSON. **Add any new dependent tables to that wipe list** or they will
+accumulate stale rows across reseeds. **Never wipe a table holding
+user-authored rows**: `polycultures` / `polyculture_members` and `plant_photos` are wiped
+only where `origin='seed'` (schema v46 / v55) so builder-authored communities
+survive upgrades — user member `plant_id`s are re-pointed by name after
+the plants wipe (`_remap_user_polyculture_plants`), because plant ids
+are NOT stable across reseeds.
+
+## Save the plan (READ THIS BEFORE STARTING WORK)
+
+**Every increment leaves a plan behind**, in `docs/plans/`, named
+`V<major>.<minor>-<short-slug>.md` — version first, matching the branch
+convention above, so plans sort in release order and pair with the branch that
+carried them out. Write it before the work, amend it as investigation changes
+your mind, and commit it alongside the code.
+
+A plan records the *reasoning*: what was measured, what was decided and why,
+what was deliberately left alone, and what could not be verified. The commit log
+already says what changed. See [`docs/plans/README.md`](docs/plans/README.md)
+for the house style and the index of past plans — and **add a row to that index
+table** when you add a plan.
+
+## Hand back a test plan (DO THIS AT THE END OF EVERY INCREMENT)
+
+A green test suite tells the *author* the code works. It tells the **user**
+nothing, because they cannot see it, and "I added a relationship web" is not
+something a person can go and check. Every increment therefore ends with a
+short **How to test this** section in the final reply — not in a doc, in the
+reply, where it will actually be read.
+
+For each user-visible thing that was added or changed, give:
+
+1. **Where it is.** The literal click path from a cold start.
+   *"Open the app → right panel → Analysis tab → Relationships sub-tab →
+   tick 'Relationship web'."* Not "in the analysis panel".
+2. **What you need first.** The preconditions, stated plainly — a design with
+   plants placed, a boundary drawn, a site pin, an internet connection. Most
+   "it doesn't work" reports are an unmet precondition.
+3. **What you should see** when it works, concretely enough to disagree with.
+   *"A ring of animal chips appears outside the planting, with lines running
+   to the plants that support them."*
+4. **What tells you it is broken.** The failure mode that is easy to mistake
+   for "working but empty" — an empty list, a stale list, a silent skip.
+5. **The fastest way to check it without the GUI**, when one exists — a
+   `python3 -c` one-liner against `src/permadesign_api.py`, a script in
+   `scripts/`, a single test module. Give the command, ready to paste.
+
+Also say plainly **what you could not test yourself** and why (no display, no
+network, needs a real desktop, needs data nobody has yet). An untested claim
+labelled as tested is worse than an admitted gap.
+
+Keep it to the things a person can actually see. Internal refactors, schema
+bumps and guard tests do not need a click path — say in one line what would
+have broken if it went wrong, and move on.
+
+## Explain every command you hand over (ADOPTED V2.61)
+
+**The owner of this repo is learning the tooling by using it.** So a command
+is never handed over bare. Whenever you give a shell command to run — git,
+a fetch script, a one-liner probe — say **what it does, why that one, and what
+its output will mean** before they run it, in a sentence or two each.
+
+This is not padding. It has already paid for itself three times in one week:
+
+- `--observations` typed as `-- observations` silently ran a *different mode*
+  for two hours and produced an identical uncited file, because nobody had
+  explained that the space made it two arguments.
+- `git pull` alone could not fetch a new release branch, which is not obvious
+  and cost a round trip to discover.
+- A `git diff --stat` reading `24 insertions, 1 deletion` was unreadable
+  without knowing the tracked file was a single `[]` line — and that one fact
+  turned "some noise in a data file" into "those are photos you imported,
+  keep them".
+
+What to cover, briefly:
+
+1. **What it does**, in plain words — not the man page, the intent.
+2. **Why this command and not the obvious one.** `git pull --rebase` rather
+   than `git pull` is a choice with a reason; say the reason.
+3. **How to read the output.** What the numbers mean, and which one is the
+   number that matters.
+4. **What failure looks like**, when a wrong-but-plausible outcome exists —
+   the run that appears to work and did not.
+5. **Anything destructive, flagged before the command**, never after.
+   `git restore` discards work with no undo; `--force` and `reset --hard`
+   likewise. If a safe alternative exists (`git stash` over `git restore`),
+   lead with it and explain the difference.
+
+Prefer explaining a real command they are about to run over teaching git in
+the abstract. The concrete case is what sticks.
 
 ## Running tests
 
 ```bash
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
+
+**The `-t .` is load-bearing (V2.38).** Without it `unittest discover` makes
+`tests/` the top-level directory, its modules import as top-level names, and
+`tests/__init__.py` is **never imported** — which is where the suite's offline
+guard lives. Run it bare and the guard silently does not install, so the tests
+go back to reaching the internet. `tests/test_ecoregion_ranges.py` fails loudly
+with the right command when that happens.
+
+**`rasterio` and `pyproj` unlock 42 more (found V2.38).** Without them the
+raster paths — HRDEM elevation sampling, the offline soil pack — skip. That is
+how `hrdem._rasterio_sampler` shipped unable to open a *local* GeoTIFF: it
+prefixed GDAL's `/vsicurl/` HTTP reader onto file paths, so its test failed on
+every machine with rasterio and skipped, therefore passed, on every machine
+without.
+
+```bash
+pip install rasterio pyproj    # +42 tests actually run
+```
+
+**The suite is offline.** A measured run made **771 live requests** — 465 to
+`api.open-meteo.com` from the design generator fetching a real elevation grid,
+306 to iNaturalist from the photo warmer — and *nothing needed any of them*:
+every fetcher already degrades gracefully. It made the suite slow, flaky and
+dependent on somebody else's uptime, and a user on Windows started getting
+`HTTP 429` back mid-run. `tests/__init__.py` now raises `URLError` for anything
+past the machine (`file://` and localhost still work, since neither is the
+internet). `SITEANDPATTERN_ALLOW_NETWORK=1` lifts it; nothing needs it today.
+
+**The suite needs PyQt6 *and* the Qt runtime libs**, or ~156 widget tests skip
+*silently* — which is how a `NameError` on every PDF export survived four minor
+versions behind a green suite. On a bare container:
+
+```bash
+pip install PyQt6
+apt-get update && apt-get install -y --no-install-recommends libegl1
+```
+
+The wheel alone is not enough (`ImportError: libEGL.so.1`), and the apt install
+404s without the `update` first. A skipped test proves nothing — check the skip
+count, not just the OK.
+
+**And that is still not everything (found V2.38).** Without `PyQt6-WebEngine`
+*every* test that drives a real `MainWindow` skips — 47 of them across
+`test_undo_redo.py` and `test_app_smoke.py`, including the whole undo/redo
+characterisation suite and the only tests that execute `app.py`'s signal
+wiring. They skip with a message that reads like an environment limitation
+(`No module named 'PyQt6.QtWebEngineWidgets'`) rather than a gap:
+
+```bash
+pip install PyQt6-WebEngine        # +47 tests actually run
+```
+
+With it installed the process **exits 139 (segfault) at teardown**, after the
+summary — `Release of profile requested but WebEnginePage still not deleted`.
+It fires even on a run where zero tests execute, so it is WebEngine shutdown,
+not test code. **Read the `Ran N tests … OK` line, not the exit code** — and do
+not confuse it with the V2.37 segfault, which was a real use-after-free
+(worker threads emitting into deleted widgets, fixed in `src/qt_safety.py`) and
+appeared *mid*-run.
+
+**As root in a container, add `--no-sandbox`** or QtWebEngine's zygote refuses
+to start and takes the process with it, with no summary line:
+
+```bash
+QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox python -m unittest discover -s tests -t .
+```
+
+### When the run dies with no summary at all (V2.40)
+
+Three distinct process aborts hid behind each other here, each printing in a
+*later* module than the one at fault and naming no test. Two are now guarded by
+`tests/test_architecture_guard.py:TestTheTestSuiteCanReachItsOwnSummary` — when
+one fires, read the guard, not the abort.
+
+| What you see | Cause |
+|---|---|
+| `Argument list is empty, the program name is not passed to QCoreApplication` | Some module built `QApplication([])`. The first one wins for the whole process, and the next `QWebEngineView` anywhere aborts. Pass a name. |
+| `Running as root without --no-sandbox is not supported` | The env var above. |
+| `QThread: Destroyed while thread '' is still running` | A teardown called `deleteLater()` on a window without `close()`, so `closeEvent` never stopped its workers. Nothing happens until the *next* event loop runs — some unrelated later test opening a dialog. |
+
+`python -X faulthandler -m unittest …` is what actually locates these: it prints
+the Python frame the abort came from, including the parked worker's stack.
+
+**The one that is not fixable in code:** with the three above cleared,
+`tests/test_undo_redo.py` segfaults (139) *mid-run* in its own `tearDown`, at
+`processEvents()` after `deleteLater()` — Chromium tearing a `QWebEngineView`
+down in a GPU-less, dbus-less container, once per test. Reproduces identically
+on a stashed tree, so it is the environment, not the diff. To get a number out
+of a container, run everything else:
+
+```bash
+MODS=$(ls tests/test_*.py | sed 's#tests/##; s#\.py##' \
+       | grep -v '^test_undo_redo$' | sed 's/^/tests./' | tr '\n' ' ')
+QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox python -m unittest $MODS
+```
+
+and run `tests.test_undo_redo` on a real desktop.
+
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
 tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 
@@ -137,7 +353,18 @@ only, doesn't affect real commits.
 | `src/controllers/` | MainWindow's extracted behaviour: map-event router, persistence/undo, mode, generation, area fill, update flow. |
 | `src/db/schema.sql` | Authoritative DDL. Loaded on every `init_db`. |
 | `src/db/plants.py` | Database access layer + migration logic + seed helpers. |
-| `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+). |
+| `src/db/photos.py` | **Photo sets with named slots (F70, V2.35).** Many photos per species — habit / flower / leaf / fruit / bark_stem / winter / seedling — keyed by `scientific_name` (ids are not stable across a reseed) with `origin='seed'` vs `'user'` deciding what a reseed destroys. `plants.image_url` is synthesized on read from the best slot, so every existing screen improves without a change at the call site. |
+| `src/photo_import.py` | Bringing a photograph in (F72, V2.35): downscale, re-encode, and **strip EXIF unconditionally** — a photo of your own yard carries your home's GPS coordinates and these get committed. The stripper is stdlib so it cannot be skipped by Pillow being absent. |
+| `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+), plus the schema-v58 morphology loaders (`bee_morphology`, `lep_morphology`). |
+| `html/botany/diagrams.js` + `html/botany/fauna.js` | **The vocabularies, drawn (V2.36).** Every term a bench asks you to choose — 33 botanical (leaf shape, inflorescence architecture, leaf arrangement) and 31 zoological (wing shape/pattern, resting posture, flight style, bee build, scopa) — as generated inline SVG, plus a glossary line each. A word you cannot picture is not a control. Also the source for `docs/*_FIELD_GUIDE.md` via `scripts/render_botany_diagrams.js`. |
+| `scripts/tune_morphology.py` + `scripts/tune_fauna.py` | The catalogue benches (dev tools, not app panels): plants and animals, each with a drawn vocabulary beside every dropdown, provenance that travels with the values, and out-of-vocabulary refusal at the save endpoint. Shared scaffolding in `scripts/_bench_common.py`. |
+| `src/scene_wildlife.py` | Which animals appear in a design, where they sit, and what they look like. **Appearance is data since schema v58** — the genus/name tables here are the fallback for a species nobody has described, not the only answer. |
+| `src/confidence.py` | **One vocabulary for "how sure are we?" and "who says so?" (F8/F13/F14/F28, V2.53).** Bands (three rungs plus `UNKNOWN`) and marks (one table over the edges layer's `documented/recorded/derived` and the seed data's `measured/flora/photo/checked/name/epithet/estimated`). Two rules are load-bearing: **absent is not estimated** — a blank field is the app knowing it does not know, `estimated` is a genus default that looks like a measurement — and **a band needs evidence**, so `known=False` gives `UNKNOWN`, never a middle rung. It does *not* own thresholds another module already owns: establishment floors come from `ecoregion_ranges` and a test asserts they agree. |
+| `src/establishment.py` + `src/reference_fidelity.py` | The two bands (V2.53). *Has anyone recorded this species growing here* — off the schema-v59/v60 occurrence records, where no record bands as **unknown rather than unlikely**, because under-collected and absent are indistinguishable below the floor. And *does this design have the shape of the natural community* — structure per layer, not species, with low explicitly not a failure. |
+| `src/db/relationships.py` | **The unified edges layer (F7, V2.31).** One query API + one edge vocabulary (`EDGE_KINDS`) over the schema-v51 `relationship_edges` view, which unions `plant_fauna`, both companion tables and shared polyculture membership. Ask "what is connected to this plant?" here, not table by table. Every edge carries `evidence` — `documented` (seeded record + `source`) vs `derived` (computed, e.g. two plants feeding the same animal). |
+| `src/relationship_graph.py` | Relationship-web overlay core (F5, V2.31): the design as a drawable graph — species at their planting centroid, wildlife on a ring outside it. All geometry Python-side; `html/map/07-network.js` only renders. |
+| `src/site_prep.py` + `src/planting_map.py` + `src/maintenance_calendar.py` | The take-it-outside document (F43/F41/F42, V2.31), assembled in job order by `src/planting_plan_export.py` and drawn as PDF pages by `src/pdf_export.py`: prep the ground → buy it (F40) → dig it in the right places → phase it (F17) → keep it alive. The planting map is a **scale drawing**, not a map screenshot; numbers are per species and key to the F40 buy list. |
+| `src/onboarding.py` + `src/onboarding_flow.py` | Cold-start path (F44/F45, V2.31): the three-step progress model (pin → boundary → plants) read from the project, the beginner Generate defaults, and the worked example — authored as species *names* + metre offsets and resolved against the live catalogue at open time (never a shipped `.perma.geojson`, because plant ids aren't stable across reseeds). Surfaced by `src/welcome_dialog.py` + `src/first_step_bar.py`. |
 | `src/db/polycultures.py` | Polyculture CRUD + seeded example communities. |
 | `src/db/recipes.py` | Ratio-only polyculture recipes (separate from spatial polycultures). |
 | `src/db/structures.py` | Hard-coded list of habitat structures (bee hotels, brush piles, etc.). |
@@ -145,10 +372,23 @@ only, doesn't affect real commits.
 | `src/github_releases.py` | Qt-free GitHub Releases lookup + installer download for the frozen-build in-app updater (V1.73). |
 | `src/app_version.py` | Reads the build's `version.txt` so a frozen `.dmg`/`.exe` knows its own V-version (V1.73). |
 | `.github/workflows/release-macos.yml` | Builds the macOS DMG on a cloud Mac and publishes it to a GitHub Release on every `V*` push, feeding the in-app updater (V1.73). |
+| `src/flower_colour.py` | **Flower colour as something you can filter on (F108, V2.47).** The hex→bucket classifier behind `search_plants(flower_colours=…)`, the directory facet and the website's colour pages — one parser, so the three cannot disagree. The grasses/sedges/rushes bucket is *not* a bloom colour and is labelled so: they are wind-pollinated and `#cbbd80` is the absence of a showy flower, not an observation of one. |
+| `src/site_facets.py` | **What the website can be searched by (V2.48).** 21 facets in six groups as ONE table, each declaring whether its own ticked values AND or OR (`combine`; safety and role are `all`, everything else `any`), driving the sidebar controls, the values baked into each browse-index row, and the landing pages generated per value. Deliberately *not* `search_plants` parameters: the site filters client-side, so an axis costs a derivation function rather than a thirty-first query parameter. `WITHHELD_ROLES` keeps `medicinal` off the public web (P12). |
+| `src/ecoregion_map.py` + `src/ecoregion_basemap.py` + `src/ecoregion_palette.py` | **The ecoregions, drawn (V2.48, redrawn V2.49, reprojected V2.66).** Inline SVG, no script, no dependency. `_map.py` projects the thematic layer through an Albers equal-area conic; `_basemap.py` draws the ground under it from `data/basemap_prairie.geojson` (Natural Earth 1:10m: real province outlines, major lakes and rivers, generated by `tools/ecoregions/basemap.py`, superseding the hand-typed `data/provinces_prairie.geojson`); `_palette.py` says what a colour asserts and carries the hatch rule. **Below the ecozone, identity is a number, not a colour (V2.69)** — hue is the ecozone and lightness the ecoregion inside it, which collapses at ten siblings (Boreal Transition vs Clear Hills Upland: ΔE 0.3). A search over lightness, chroma and hue rotation together found the best sibling separation that still clears the cross-ecozone colour-vision floor is ΔE 1.7, so focus maps carry numbered discs keyed to a numbered legend, both ordered by one `numbered_order`. A subregion map also draws its **parent underneath**: Alberta surveys subregions and Saskatchewan does not, so without it a cross-border ecoregion showed a hard split down the provincial boundary. **The polygons are surveyed since V2.67** — National Ecological Framework v2.2, 24 ecoregions in 6 ecozones, built by `tools/ecoregions/`; `scripts/draw_ecoregions.py` drew the six that came before and is now history, not the source. `CAVEAT` still travels with every drawing but now discloses the ~900 m simplification instead of calling the outlines a diagram: **it kept saying "not surveyed boundaries" for a whole increment after that became false**, on 432 public pages, so its test checks the caption against the polygon file's own provenance rather than against a remembered string. |
+| `src/static_site_regions.py` | **The website's pages about *places* (V2.69).** The ecoregion map is a **drill-down**: `/map/` colours 6 ecozones, an ecozone's page colours the ecoregions inside it, an ecoregion's page colours the Alberta subregions overlapping it, and each of the 21 subregions has a page. Chosen over three side-by-side maps because the reader's question is sequential and 24 regions do not fit on one 700px map — that crowding is what once shipped "Parkland" as the name of Aspen Parkland. **A subregion page is a locator, not a filter result**: no species is tagged at that level and none should be, so the page borrows its dominant ecoregion's list only when one accounts for two thirds of it, and otherwise lists the overlaps with their measured shares. Alberta's subregions are a *parallel* classification, not a third tier — Montane is 42% of Northern Continental Divide across six ecoregions. |
+| `src/ecoregion_tree.py` | **The vocabulary has three levels (V2.68).** ecozone (6) → ecoregion (24) → Alberta natural subregion (21), all *read from the polygon file* rather than declared beside it — the one hand-transcribed copy that existed was already wrong about Interlake Plain. Drives the collapsible filter (`filter_widgets.build_ecoregion_tree`) so the first choice is six-way, not twenty-four-way. **Matching runs both ways along a lineage**: a plant tagged only "Boreal Plains" answers a Mid-Boreal Uplands query, because its evidence was never finer than the ecozone and that is *unknown*, not no (P9). Keys are prefixed `zone_`/`sub_` — "Athabasca Plain" is both an ELC ecoregion in Saskatchewan and an Alberta subregion, and they are different ground. |
+| `src/static_site.py` + `src/static_site_render.py` + `src/static_site_species.py` + `src/static_site_wildlife.py` + `html/site/` | **The catalogue as a public website, branded GrowNativePlants (F109, V2.47; renamed V2.70).** The site is **not** called Site & Pattern: it got its own domain (grownativeplants.ca) and its own name, for what somebody typing it into a phone is trying to do. The desktop app keeps the old name and `src/branding.py` still owns it; `static_site_render.SITE_NAME` owns the website's. `--base-url` is load-bearing now — it writes the `CNAME` GitHub Pages reads, so publishing without it silently reverts the custom domain. `python -m src.cli build-site <dir>` → **432 species pages, 1,138 wildlife pages** ("which plants feed this animal", over the 7,574 published edges), colour/month/role hubs, client-side filtering over an embedded JSON index. **Every count on the site is computed at build time, never written down** — the fauna work of V2.59-V2.65 took wildlife pages from 86 to 1,138 without a line of site code changing. Model and renderer are split so a test can assert the link graph without rendering. Every species page is the same `plant_directory.species_entry` the desktop window calls. **Notes are withheld by default (P12)** and no photo is published without its credit. **Sources render through `src/citations.py`** (V2.65) - a page shows "Acorn & Sheldon 2006", never the `globi_...` database key, and the About page publishes the whole 114-work bibliography with its disclaimer. **No em dashes reach a page**: normalised in `_esc` and guarded by a test, because most of the prose comes out of the database. V2.71: the **wildlife index is a filtered search too** (`static_site_wildlife.py`, its own facet vocabulary — an animal is not a row in `site_facets`), sharing `browse.js`, which reads whatever `data-f` attributes a page rendered and so knows neither vocabulary; the 58 credited animal photographs are published for the first time. **Analytics is off unless `--analytics-token` is passed** — the site otherwise makes no external request at all — and when it is on, every page says so in its footer and a malformed token raises rather than landing in 2,000 pages. |
 | `src/plant_panel.py` | Right-side plant browser + custom delegate. |
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
-| `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into six sequential classic scripts (V1.64) — shared-global model, NOT ES modules; load order matters. |
+| `src/learn_panel.py` | Learn side tab: Field Study quiz, guided Lessons, Present/docent mode (V2.25). |
+| `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into seven sequential classic scripts (V1.64, +`07-network.js` in V2.31) — shared-global model, NOT ES modules; load order matters. |
+| `html/scene3d/01b-surface.js` | **Plant surfaces + `plantMaterial` (F63, V2.33).** Ten procedural surface classes (bark smooth/furrowed/papery/shaggy/scaly, leaf matte/glossy/pubescent/glaucous, needle) sampled triplanar in object space — no UVs, no textures in the GLBs, both of which are contract. Also owns the wind shader and `applySceneWind`. |
+| `html/scene3d/14-layers.js` | The four procedural layer tufts (groundcover / grass / aquatic / vine), split out of `04-quality.js` in V2.34. The permanent fallback for the layer archetypes — Stylised skips the GLBs on purpose, so these run every session and cannot rot. |
+| `html/scene3d/15-florets.js` | **The bloom as geometry (F80, V2.34).** A floret built from petal count × petal shape × radial/bilateral symmetry, plus a separate disc in its own colour, placed by one of nine inflorescence architectures (`solitary·raceme·spike·panicle·corymb·umbel·head·cyme·whorl`) — and **lit**, where the old billboard was `MeshBasicMaterial`. Reads the ten schema-v53 columns; an empty `flower_arch` falls back to the 05-flowers.js billboard, and Stylised keeps the billboard on purpose. |
+| `html/scene3d/13-stylised.js` | **Stylised bodies (F79, V2.34).** Detail level 0 is a STYLE, not a thinning: no baked models, no surface grain, flat-shaded, forbs as faceted masses. The levels are **Stylised / Balanced / Lifelike**. Own the argument here, not in the quality knob. |
+| `src/wind_scene.py` | The site's real seasonal wind + a rasterised shelter grid, as the 3D scene consumes it (F68, V2.33). Joins `wind.py` and `wind_shadow.py` — both years old — to the viewer that never read them. |
+| `src/presentation_still.py` | The render you put in a proposal (F69, V2.33; `Design principle P13`). Turns the docent's beats — whose `year`/`season_month`/`camera` nothing had ever read — into still specs the 3D window renders at print resolution and `pdf_export` lays out. |
 | `src/llm_design.py` | Generate Design: LLM spec → deterministic placement (scored cells, zones, keep-out, density). |
 | `src/design_critic.py` | Evaluate→revise→repair loop for generated designs (V1.62). |
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |
@@ -163,6 +403,7 @@ only, doesn't affect real commits.
 | `src/permadesign_api.py` + `src/mcp_server.py` | Scripting facade + MCP tools (contract frozen by `test_architecture_guard.py`). |
 | `src/terrain.py` etc. | DEM fetch + slope grid + contour rendering. |
 | `data/*.json` | Shipped seed data (plants, fauna, plant↔fauna links). |
+| `tools/ecoregions/` | **Dev-only ecoregion rebuild pipeline (V2.66).** Six stages: fetch → inspect schema → harmonize (ELC geometry + Alberta subregions as a spatial-join attribute) → validate (blocking point probes) → render (publication map with hillshade) → export (GeoPackage + GeoJSON). Two of its three classification sources need a machine with open egress; `python -m tools.ecoregions.fetch` prints exactly what to download. Reads `src/ecoregion_palette.py` so the printed map and the website cannot drift. See `tools/ecoregions/README.md`. |
 
 ## Architectural conventions worth knowing
 
@@ -192,8 +433,10 @@ only, doesn't affect real commits.
   `data_quality` validation.
 - **The map only stores `(lat, lon)`.** Distance/area math goes through
   `src/projection.py` — default backend is the legacy cosLat metric
-  (~1% error at <2 km); an optional UTM backend (pyproj) exists behind
-  the per-project `use_utm_projection` flag.
+  (~1% error at <2 km — centimetres at yard scale, the app's real domain).
+  A parallel UTM backend existed until V2.22 but no code path ever enabled
+  it; it was deleted. A future accurate backend belongs behind the same
+  `Projector` interface.
 - **Placed-plant state has ONE write path:** `src/project_store.py`
   (V1.62). The project dict's plant features and the `_placed_plants`
   index are kept in sync by the store; `tests/test_project_store.py`
@@ -209,7 +452,7 @@ only, doesn't affect real commits.
    `_seed_uses_lookup` / `_seed_fauna` pattern.
 5. Add tests under `tests/` using the temp-DB pattern from
    `test_polycultures.py` / `test_uses_junction.py`.
-6. Run `python -m unittest discover -s tests`.
+6. Run `python -m unittest discover -s tests -t .`.
 
 ## Do not
 

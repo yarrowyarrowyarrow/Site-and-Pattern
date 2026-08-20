@@ -40,15 +40,22 @@ _SUN_LABEL = {"full_sun": "full sun", "partial_shade": "part shade",
 _WATER_ORDER = ["low", "medium", "high"]
 _WATER_LABEL = {"low": "dry", "medium": "moist", "high": "wet"}
 
-_ECOREGION_LABEL = {
-    "aspen_parkland": "aspen parkland",
-    "mixedgrass_prairie": "mixedgrass prairie",
-    "fescue_foothills": "fescue foothills",
-    "boreal_mixedwood": "boreal mixedwood",
-    "riparian": "riparian",
-    "wet_meadow": "wet meadow",
-    "subalpine_montane": "subalpine/montane",
-}
+def _ecoregion_label(key: str) -> str:
+    """Lowercase prose name for a region key, or ``""`` if it is not one.
+
+    V2.68: this was a hand-typed dict of the six regions that existed when it
+    was written. The survey took the vocabulary to 24 ecoregions plus 6
+    ecozones, and a key absent from the dict produced no label at all — so a
+    boreal or montane plant simply contributed nothing to the pattern's facts,
+    silently, for 20 of the 24 regions.
+
+    Derived now, so the two cannot drift again. Keeping the lowercase is
+    deliberate: these land mid-sentence in generated prose.
+    """
+    from src.ecoregion import ecoregion_display                # noqa: PLC0415
+
+    name, _where = ecoregion_display(key)
+    return name.lower() if name and name != key else ""
 
 _MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -100,7 +107,7 @@ def _context_facts(plant_rows: list, footprint_m: float) -> list[str]:
     for r in plant_rows:
         for tag in (r.get("ab_ecoregion") or "").split(","):
             tag = tag.strip()
-            label = _ECOREGION_LABEL.get(tag)
+            label = _ecoregion_label(tag)
             if label and label not in ecoregions:
                 ecoregions.append(label)
     if ecoregions:

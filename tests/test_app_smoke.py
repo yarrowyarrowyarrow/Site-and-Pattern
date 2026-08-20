@@ -89,8 +89,11 @@ class TestMainWindowSmoke(unittest.TestCase):
 
     def test_constructed(self):
         self.assertIsNotNone(self._win)
-        self.assertEqual(self._win.windowTitle(),
-                         "PermaDesign — Native Habitat Designer")
+        # Against branding.APP_TITLE (what app.py sets), not a literal: the
+        # old literal went stale at the V1.69 rebrand and nobody noticed
+        # because this module only runs on a full Qt stack (CI skips it).
+        from src.branding import APP_TITLE
+        self.assertEqual(self._win.windowTitle(), APP_TITLE)
 
     def test_initial_project_state(self):
         self.assertEqual(self._win._project["type"], "FeatureCollection")
@@ -161,15 +164,33 @@ class TestMainWindowSmoke(unittest.TestCase):
     # ── Update-flow surface ──────────────────────────────────────────────────
 
     def test_required_update_flow_methods_exist(self):
+        # V2.22 deleted the git-mutation flows; V2.25 restored a one-click
+        # updater by user request — but as controller methods
+        # (UpdateFlowController._perform_source_update) over Qt-free helpers
+        # (version_branch.update_to_branch), not as MainWindow shims. Only
+        # the long-standing MainWindow surface is pinned here.
         for name in (
-            "_on_check_for_updates", "_run_update_flow",
+            "_on_check_for_updates",
             "_newest_remote_version_branch", "_is_newer_version",
-            "_offer_branch_switch", "_open_releases_page",
-            "_maybe_restore_stash",
+            "_open_releases_page",
         ):
             self.assertTrue(
                 callable(getattr(self._win, name, None)),
                 f"MainWindow.{name} should remain reachable after Chunk 5",
+            )
+
+    def test_git_mutation_flows_removed(self):
+        # The V1.x git working-tree manager's MainWindow shims stay dead.
+        # The V2.25 one-click updater lives on UpdateFlowController with new
+        # names; MainWindow itself never grew the surface back. (The
+        # destructive reset---hard path is pinned out separately in
+        # tests/test_architecture_guard.py.)
+        for name in ("_run_update_flow", "_maybe_restore_stash",
+                     "_offer_branch_switch"):
+            self.assertFalse(
+                hasattr(self._win, name),
+                f"MainWindow.{name} was deleted in V2.22 — the one-click "
+                f"updater belongs on UpdateFlowController, not MainWindow.",
             )
 
     # ── Legacy plant-API surface is gone ─────────────────────────────────────

@@ -21,6 +21,7 @@ the architecture guard's method ceiling stays meaningful).
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
@@ -32,13 +33,33 @@ from src.map3d_widget import Map3DWidget
 from src.scene_contract import build_scene
 from src.branding import APP_NAME
 
-_MAX_YEAR = 25
+# V2.44: these three now live in src/scene3d_toolbar.py, which is the module
+# the *reference* window builds its controls from. Two windows drive one viewer
+# and the author asked for their controls to match — so the numbers and labels
+# have exactly one home, and `tests/test_scene3d_toolbar.py` fails the build if
+# the two windows stop offering the same viewer controls.
+#
+# This window keeps its own hand-built bar rather than embedding the widget:
+# `self._year` / `self._month` / `self._hour` / `self._detail` are read from a
+# dozen places here (`_when`, `_push_scene`, `_update_labels`, the flyover's
+# month stepping), and swapping them for the widget is a mechanical but wide
+# change to a working 868-line file that this increment does not need to make.
+# The guard test is what stops the two drifting; the extraction is available
+# when this file next needs splitting anyway.
+from src.scene3d_toolbar import (
+    MAX_YEAR as _MAX_YEAR,
+    DETAIL_KEY as _DETAIL_KEY,
+    DETAIL_LABELS as _DETAIL_LABELS,
+    Scene3DToolBar,
+)
+# V2.46: plant / remove / net in the design itself. The buttons, the mode and
+# the bridge slots all live there, so this window gains one layout call.
+from src import scene3d_edit_flow as edit_flow
+
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
-_DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared w/ gallery)
-_DETAIL_LABELS = ["Low", "Medium", "High"]
 
 
 class _TerrainWorker(QObject):
@@ -60,6 +81,59 @@ class _TerrainWorker(QObject):
         self.done.emit(elev)
 
 
+class _PhotoWarmWorker(QObject):
+    """Fill the species-photo cache off the UI thread (src/photo_warm.py).
+
+    Emits ``batch`` every so often rather than per photo: the only thing the
+    window does with it is re-push the dossier so newly-cached photos appear, and
+    doing that ~380 times would rebuild the whole dossier for each one.
+    """
+    batch = pyqtSignal()
+    done = pyqtSignal()
+    _BATCH = 12
+
+    def __init__(self):
+        super().__init__()
+        # Owned here, not by the warmer: closeEvent can fire before run() has
+        # built one (the catalogue query happens first), and a cancel that landed
+        # in that window would be lost.
+        self._cancel = threading.Event()
+
+    def run(self):
+        try:
+            from src.photo_warm import PhotoWarmer, catalogue_photo_rows
+            rows = catalogue_photo_rows()
+            PhotoWarmer(rows, on_progress=self._progress,
+                        cancel_event=self._cancel).run()
+        except Exception:      # noqa: BLE001 — photos are a nicety, never a dep
+            pass
+        self.done.emit()
+
+    def _progress(self, done, _total, newly_cached):
+        if newly_cached and done % self._BATCH == 0:
+            self.batch.emit()
+
+    def cancel(self):
+        self._cancel.set()
+
+
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December")
+
+
+def _save_data_url(url: str, path: str) -> bool:
+    """Write a ``data:image/...;base64,`` URL to disk. False if there isn't one."""
+    import base64
+    if not url or "," not in url:
+        return False
+    try:
+        with open(path, "wb") as fh:
+            fh.write(base64.b64decode(url.split(",", 1)[1]))
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 class Scene3DWindow(QWidget):
     """3D preview of the current design (growth year + sun controls)."""
 
@@ -69,6 +143,8 @@ class Scene3DWindow(QWidget):
         self._elevation = None
         self._thread = None
         self._worker = None
+        self._photo_thread = None
+        self._photo_worker = None
         self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
 
@@ -104,7 +180,11 @@ class Scene3DWindow(QWidget):
         self._detail = QComboBox()
         self._detail.addItems(_DETAIL_LABELS)
         self._detail.setToolTip(
-            "Geometry detail — lower it if the 3D view is sluggish on this machine")
+            "Stylised — faceted low-poly plants: a clear diagram of the "
+            "planting, and by far the fastest\n"
+            "Balanced — the built-in geometry\n"
+            "Lifelike — the full modelled library: real leaves, bark grain "
+            "and species silhouettes")
         self._detail.setCurrentIndex(
             max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
         self._detail.currentIndexChanged.connect(self._on_detail)
@@ -128,6 +208,24 @@ class Scene3DWindow(QWidget):
             "as a personal satellite layer")
         self._bake_btn.setEnabled(False)
         self._bake_btn.clicked.connect(self._on_bake_yard_photo)
+
+        # A render you can put in a proposal (F69). The docent's beats have
+        # carried a camera, a year and a season since V2.13 and nothing read
+        # them; this places the camera at the beat's own preset, renders the
+        # real viewer offscreen at print resolution, and saves a PNG.
+        self._still_btn = QPushButton("🖼 Presentation still…")
+        self._still_btn.setToolTip(
+            "Render this design at print resolution — pick the moment and the "
+            "viewpoint, and save an image for a proposal or a printout")
+        self._still_btn.clicked.connect(self._on_presentation_still)
+
+        # Before / after / in five years (F76) — the argument a single still
+        # cannot make, because a planting is judged on what it becomes.
+        self._ba_btn = QPushButton("⏳ Before / after…")
+        self._ba_btn.setToolTip(
+            "Render your yard now, at year 1 and at year 5 as one page — "
+            "included in the next PDF you export")
+        self._ba_btn.clicked.connect(self._on_before_after)
 
         # "Fly as a pollinator" — first-person fly-through (F37 increment 2; V2.12
         # adds butterflies & moths). Pick a native bee, butterfly or moth, then
@@ -225,29 +323,69 @@ class Scene3DWindow(QWidget):
         bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
+        bar.addWidget(self._still_btn)
+        bar.addWidget(self._ba_btn)
 
-        # Row 2 — pick a creature, then the view modes + overlays. Grouped and
-        # labelled so seven controls don't read as one undifferentiated strip.
+        # Row 2 — how you move through the scene first, then whose eyes you
+        # borrow. The old order led with "Creature: [combo]", so the strip
+        # opened by asking you to pick a bee before anything had said why you
+        # would want one; walking your own garden is the thing most people came
+        # for and it needs no setup (V2.37 user feedback: "walk the garden
+        # should be the first option, fly as creature should be second and
+        # choosing the creature should be 3rd").
+        #
+        # The grouping follows the real dependency: Walk / Flyover / Identify
+        # stand alone, while Fly / Tour / Show its plants all read the creature
+        # combo, so the combo sits with them rather than ahead of everything.
         bar2 = QHBoxLayout()
-        bar2.addWidget(QLabel("Creature:"))
-        bar2.addWidget(self._bee_combo)
-        bar2.addWidget(self._bee_btn)
-        bar2.addWidget(self._tour_btn)
-        bar2.addWidget(self._spot_btn)
-        bar2.addSpacing(16)
         bar2.addWidget(QLabel("View:"))
         bar2.addWidget(self._walk_btn)
         bar2.addWidget(self._fly_btn)
         bar2.addWidget(self._id_btn)
+        bar2.addSpacing(16)
+        bar2.addWidget(self._bee_btn)
+        bar2.addWidget(self._bee_combo)
+        bar2.addWidget(self._tour_btn)
+        bar2.addWidget(self._spot_btn)
         bar2.addStretch(1)
+
+        # Row 3 — the trowel, the same three verbs the reference sandbox has
+        # had since V2.43/V2.44 (V2.46). *"I want the 3D view and the tour a
+        # reference ecosystem to have the same functionality."* The viewer was
+        # already capable of all of it — 16-editing.js does not know which
+        # window it is in — so this is the missing Python side, and it lives in
+        # src/scene3d_edit_flow.py because a design edit is not a sandbox edit:
+        # it goes on the undo stack, redraws the map, and counts toward the
+        # score.
+        bar3 = edit_flow.build_tools(self)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
         root.addLayout(bar)
         root.addLayout(bar2)
+        root.addLayout(bar3)
         root.addWidget(self.viewer, 1)
 
         self._update_labels()
+        self._editable = edit_flow.connect_bridge(self)
+
+    def _current_plant_pick(self) -> dict | None:
+        """What the Plants panel has selected, as ``{plant_id, common_name}``.
+
+        Deliberately the *same* selection the map's "Place" button uses rather
+        than a second species combo in this window: picking a plant in one
+        place and planting it in another is one decision, and two pickers that
+        can disagree is how a user ends up planting something they did not
+        choose.
+        """
+        try:
+            sel = self._main.plant_panel.selected_plant()
+        except Exception:      # noqa: BLE001
+            return None
+        if not sel or not sel.get("id"):
+            return None
+        return {"plant_id": int(sel["id"]),
+                "common_name": sel.get("common_name") or "plant"}
 
     # ── scene plumbing ────────────────────────────────────────────────────
 
@@ -286,6 +424,15 @@ class Scene3DWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # Click-to-inspect content (V2.29): the sourced ecology behind every
+        # species on screen, pushed with the scene so a click opens a card with
+        # no round trip. Re-pushed each time because the growth/season sliders
+        # change what the card says ("size over time" marks the current year).
+        try:
+            from src.scene_dossier import build_dossier
+            self.viewer.set_dossier(build_dossier(scene))
+        except Exception:      # noqa: BLE001 — the card is a read nicety
+            self.viewer.set_dossier({})
         # Keep an active "show its plants" spotlight in sync with the new scene.
         if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
             self._push_spotlight()
@@ -313,6 +460,84 @@ class Scene3DWindow(QWidget):
                     "3D, then try again.", 6000)
 
         self.viewer.capture_ortho(rect, _done)
+
+    # ── the presentation still (F69) ────────────────────────────────────────
+
+    def _on_presentation_still(self):
+        """Render the design at print resolution and save it.
+
+        The stills come from the docent script, so the choices on offer are the
+        ones the app already knows how to narrate — "the design at year 12, in
+        August, from the sidewalk" — rather than a bare year/month/camera form.
+        """
+        from PyQt6.QtWidgets import QFileDialog, QInputDialog
+        from src import presentation_still as ps
+
+        stills = ps.presentation_stills(self._main._project)
+        cover = ps.cover_still(self._main._project)
+        options, specs = [], []
+        for st in ([cover] if cover else []) + stills:
+            label = (f"{st['title']} — year {st['year']}, "
+                     f"{_MONTHS[st['month'] - 1]}, {st['camera']}")
+            if label in options:
+                continue
+            options.append(label)
+            specs.append(st)
+        if not options:
+            return
+        choice, ok = QInputDialog.getItem(
+            self, "Presentation still", "Moment and viewpoint:",
+            options, 0, False)
+        if not ok:
+            return
+        spec = specs[options.index(choice)]
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save presentation still",
+            f"design-year{spec['year']}.png", "PNG image (*.png)")
+        if not path:
+            return
+        self._render_still(spec, path)
+
+    def _on_before_after(self):
+        """Before / after / in five years (F76) — see before_after_flow."""
+        from src import before_after_flow
+        return before_after_flow.on_before_after(self)
+
+    def _render_still(self, spec, path):
+        """Set the scene to the still's moment, then capture it.
+
+        Two QTimer hops rather than one call: the sliders have to re-push the
+        scene and the camera preset has to land in the viewer before the
+        renderer is asked for a frame, and the bridge is one-directional so
+        there is nothing to await. The sprite gallery's contact sheet chains
+        the same way.
+        """
+        from PyQt6.QtCore import QTimer
+        from src import presentation_still as ps
+        req = ps.render_request(spec)
+        for widget, value in ((self._year, spec["year"]),
+                              (self._month, spec["month"])):
+            widget.blockSignals(True)
+            widget.setValue(value)
+            widget.blockSignals(False)
+        self._update_labels()
+        self._push_scene()
+        self.viewer.set_camera_preset(req["camera"])
+
+        def _capture():
+            def _done(url):
+                if _save_data_url(url, path):
+                    self._main.statusBar().showMessage(
+                        f"Presentation still saved to {path}", 6000)
+                else:
+                    self._main.statusBar().showMessage(
+                        "Could not render the still — let the 3D view finish "
+                        "loading and try again.", 6000)
+            self.viewer.snapshot(_done, px=req["width"], height=req["height"],
+                                 pixel_ratio=req["pixel_ratio"],
+                                 mime="image/png", quality=1.0)
+
+        QTimer.singleShot(450, _capture)
 
     def _on_controls_changed(self, *_):
         self._update_labels()
@@ -437,6 +662,8 @@ class Scene3DWindow(QWidget):
                 if b.isChecked():
                     b.setChecked(False)
         self.viewer.set_walk_mode(on)
+        # The net is the walker's tool, so its button follows him (V2.46d).
+        edit_flow.set_walking(self, on)
 
     # ── "Show its plants" spotlight (V2.12) ───────────────────────────────
 
@@ -598,6 +825,7 @@ class Scene3DWindow(QWidget):
             feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
+        self._start_photo_warm()
 
     # ── terrain (cache-first, off-thread) ─────────────────────────────────
 
@@ -625,6 +853,42 @@ class Scene3DWindow(QWidget):
             self._elevation = elevation
             self._push_scene()
 
+    # ── species photos (cache warm, off-thread) ───────────────────────────────
+
+    def _start_photo_warm(self):
+        """Warm the whole catalogue's photos in the background.
+
+        The dossier only ever sends photos that are already cached (it must not
+        block a push), so without this the first click on a species shows no
+        photo and the second one does. Runs once per window; failures are silent.
+        """
+        if self._photo_thread is not None:
+            return
+        self._photo_thread = QThread(self)
+        self._photo_worker = _PhotoWarmWorker()
+        self._photo_worker.moveToThread(self._photo_thread)
+        self._photo_thread.started.connect(self._photo_worker.run)
+        self._photo_worker.batch.connect(self._on_photos_warmed)
+        self._photo_worker.done.connect(self._photo_thread.quit)
+        self._photo_thread.finished.connect(self._cleanup_photo_thread)
+        self._photo_thread.start()
+
+    def _on_photos_warmed(self):
+        """Re-push the dossier so photos that just landed show on the next click."""
+        try:
+            from src.scene_dossier import build_dossier
+            scene = getattr(self, "_scene", None)
+            if scene:
+                self.viewer.set_dossier(build_dossier(scene))
+        except Exception:      # noqa: BLE001 — the card is a read nicety
+            pass
+
+    def _cleanup_photo_thread(self):
+        if self._photo_thread is not None:
+            self._photo_thread.deleteLater()
+        self._photo_thread = None
+        self._photo_worker = None
+
     def _cleanup_thread(self):
         if self._thread is not None:
             self._thread.deleteLater()
@@ -640,6 +904,14 @@ class Scene3DWindow(QWidget):
         if t is not None and t.isRunning():
             t.quit()
             t.wait(2000)
+        # The warmer sleeps between requests on a cancellable wait, so this
+        # returns promptly rather than blocking on an in-flight download.
+        if self._photo_worker is not None:
+            self._photo_worker.cancel()
+        pt = self._photo_thread
+        if pt is not None and pt.isRunning():
+            pt.quit()
+            pt.wait(3000)
         super().closeEvent(event)
 
 

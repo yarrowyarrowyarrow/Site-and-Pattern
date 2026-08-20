@@ -58,4 +58,4 @@ them; they are part of the change, not an afterthought.
 - The P12 hard rule (no operationalizing Indigenous knowledge without
   free, prior, informed consent) applies to data, recommendations, and UI
   content — `philosophy-check` has the full statement.
-- The suite is stdlib `unittest`: `python -m unittest discover -s tests`.
+- The suite is stdlib `unittest`: `python -m unittest discover -s tests -t .`.

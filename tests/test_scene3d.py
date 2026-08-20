@@ -124,6 +124,25 @@ class TestPlant3DState(unittest.TestCase):
         self.assertEqual(cl["spread_rate"], 0.0)
 
 
+    def test_woody_plants_never_scatter_a_colony(self):
+        # A tree or shrub tagged with a spreading habit must NOT scatter a
+        # visible clonal colony in the scene (spread_factor 1.0, spread_rate 0),
+        # while a herbaceous plant with the same habit does. Woody plants filling
+        # the yard with duplicates is exactly the artefact being fixed.
+        for ptype in ("tree", "shrub"):
+            woody = {"plant_type": ptype, "years_to_maturity": 10,
+                     "growth_curve": "steady", "mature_height_meters": 4.0,
+                     "mature_canopy_m": 3.0, "spread_habit": "aggressive_rhizomatous"}
+            st = plant_3d_state(woody, 0, 0, 100)   # mature
+            self.assertEqual(st["spread_factor"], 1.0, msg=ptype)
+            self.assertEqual(st["spread_rate"], 0.0, msg=ptype)
+        herb = {"plant_type": "wildflower", "years_to_maturity": 10,
+                "growth_curve": "steady", "mature_height_meters": 0.6,
+                "mature_canopy_m": 0.5, "spread_habit": "aggressive_rhizomatous"}
+        hs = plant_3d_state(herb, 0, 0, 100)
+        self.assertGreater(hs["spread_factor"], 1.0)
+        self.assertGreater(hs["spread_rate"], 0.0)
+
     def test_scales_height_and_canopy(self):
         tree = {"plant_type": "tree", "years_to_maturity": 20,
                 "growth_curve": "steady", "mature_height_meters": 10.0,

@@ -20,7 +20,7 @@ parent, status bar messages, the undo/redo QAction widgets created in
 
 from __future__ import annotations
 
-import copy
+import json
 import os
 from contextlib import contextmanager
 
@@ -29,6 +29,60 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 import src.project as project_io
 from src.branding import APP_NAME
+from src.log import get_logger
+
+_log = get_logger(__name__)
+
+
+_LEGACY_AUTOSAVE = os.path.join(
+    os.path.expanduser("~"), ".site-and-pattern_autosave.perma.geojson")
+
+
+def autosave_path() -> str:
+    """The single crash-recovery autosave file. Fixed path (not per-project)
+    so the startup recovery check knows where to look; the design's real
+    path is stamped inside (``properties._autosave_source_path``).
+
+    Lives in the app's data dir since V2.39. It used to be a **hidden dotfile
+    in the home directory**, which is nobody's mental model of where their work
+    lives — and the one moment it matters is the moment a user is most upset.
+    """
+    from src.user_paths import user_data_dir
+    return os.path.join(user_data_dir(), "autosave.perma.geojson")
+
+
+def migrate_legacy_autosave() -> bool:
+    """Move a pre-V2.39 home-directory autosave into the data dir. Once.
+
+    Copy, verify, then unlink — never a bare rename. A person hitting this is
+    by definition mid-recovery from a crash, and losing the recovery file to a
+    refactor would be the worst possible moment for a clever one-liner. If
+    anything goes wrong the legacy file is left exactly where it was, so the
+    worst case is that this runs again next launch.
+
+    Returns whether anything moved. Same shape, and the same reasoning, as
+    ``user_paths.migrate_legacy_into`` for the data folder itself.
+    """
+    target = autosave_path()
+    if os.path.exists(target) or not os.path.exists(_LEGACY_AUTOSAVE):
+        return False
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(_LEGACY_AUTOSAVE, "rb") as src:
+            payload = src.read()
+        with open(target, "wb") as dst:
+            dst.write(payload)
+            dst.flush()
+            os.fsync(dst.fileno())
+        if os.path.getsize(target) != len(payload):
+            return False                     # keep the original; try next time
+        os.unlink(_LEGACY_AUTOSAVE)
+        _log.info("moved the crash-recovery autosave into the data dir")
+        return True
+    except OSError:
+        _log.warning("could not move the legacy autosave — leaving it in place",
+                     exc_info=True)
+        return False
 
 
 class PersistenceController:
@@ -58,21 +112,65 @@ class PersistenceController:
         self._main._modified = True
         if not self._main.windowTitle().endswith(' *'):
             self._main.setWindowTitle(self._main.windowTitle() + ' *')
-        # Shade-tab caster inventory (V2.13): every feature mutation lands
-        # here, so the "Casting shade: …" line stays live after imports,
-        # marks, draws, removals and undo. Cheap pure feature scan.
+        # V2.44: keep the split view's 3D pane in step. Every feature mutation
+        # in the app lands here, which is exactly why it is the hook — a
+        # per-call-site wiring would miss one within a release. Debounced
+        # inside, and a no-op when the split is closed, so a plant drag pays
+        # nothing extra.
+        try:
+            from src.controllers import split_view
+            split_view.request_sync(self._main)
+        except Exception:                                  # noqa: BLE001
+            pass
+        # Caster inventory (V2.13): every feature mutation lands here, so the
+        # "Casting shade: …" line stays live after imports, marks, draws,
+        # removals and undo. Cheap pure feature scan. Both surfaces show it
+        # (V2.38) — Site → Features, where the casters are entered, and
+        # Analysis → Sun & Shade, where they are about to be used.
         try:
             self._main.site_panel.update_caster_summary(self._main._project)
+            self._main.analysis_panel.update_caster_summary(self._main._project)
+            sc = (self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+            self._main.analysis_panel.set_site_location(
+                sc.get("latitude"), sc.get("longitude"))
         except Exception:  # noqa: BLE001 — a status line must never block a save flag
+            pass
+        # Getting-started guidance (F44): the same reasoning — every feature
+        # mutation lands here, so dropping a pin, closing a boundary or
+        # placing a plant ticks its step off without each call site knowing.
+        try:
+            from src import onboarding_flow
+            onboarding_flow.refresh(self._main)
+        except Exception:  # noqa: BLE001 — guidance must never block a save flag
             pass
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 
     def _on_save(self):
+        """Save, without asking where (F87, V2.39).
+
+        A design with no path used to open the OS file dialog, so every first
+        save was a decision about folders that nobody wanted to make and few
+        could retrace. It now goes to the saves folder under a name derived
+        from the project, and the browser lists it. ``Save As…`` still opens
+        the dialog for anyone who wants their designs somewhere specific — this
+        adds a default, it does not remove the choice.
+        """
         if self._main._project_path:
             self._save_to_path(self._main._project_path)
-        else:
+            return
+        from src import saves
+        try:
+            directory = saves.ensure_saves_dir()
+        except OSError:
+            # No writable data dir (a locked-down machine, a full disk): fall
+            # back to asking rather than failing silently.
             self._on_save_as()
+            return
+        name = (self._main._project.get("properties", {})
+                .get("project_name") or "Untitled Design")
+        self._save_to_path(saves.unique_save_path(name, directory))
 
     def _on_save_as(self):
         path, _ = QFileDialog.getSaveFileName(
@@ -89,13 +187,25 @@ class PersistenceController:
             project_io.save_project(self._main._project, path)
             self._main._project_path = path
             self._main._modified     = False
+            from src import saves
+            saves.remember_last_design(path)
             name = self._main._project["properties"].get("project_name", "Design")
             self._main.setWindowTitle(f"{APP_NAME} — {name}")
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
+            # The design is now durably on disk — a crash-recovery copy from
+            # before this save would only offer to roll the user back.
+            self.clear_autosave()
         except Exception as exc:
+            _log.exception("save failed: %s", path)
             QMessageBox.critical(self._main, "Save failed", str(exc))
 
-    # ── Autosave timer ────────────────────────────────────────────────────────
+    # ── Autosave + crash recovery ─────────────────────────────────────────────
+    # The timer writes a recovery copy (with the design's real path stamped
+    # inside) whenever there are unsaved changes; a clean save or clean exit
+    # deletes it. If it's still there at the next launch, the previous
+    # session died with unsaved work — maybe_offer_autosave_recovery (wired
+    # to the map bridge's map_ready in app.py, so the restore can render)
+    # offers it back exactly once.
 
     def _start_autosave(self):
         self._main._autosave_timer = QTimer(self._main)
@@ -106,11 +216,84 @@ class PersistenceController:
     def _autosave(self):
         if not self._main._modified:
             return
-        tmp = os.path.join(os.path.expanduser("~"), ".site-and-pattern_autosave.perma.geojson")
+        # Stamp the source path on shallow copies so the live project (and
+        # therefore real saves) never carry the recovery-only key.
+        data = dict(self._main._project)
+        props = dict(data.get("properties") or {})
+        props["_autosave_source_path"] = self._main._project_path or ""
+        data["properties"] = props
         try:
-            project_io.save_project(self._main._project, tmp)
+            project_io.save_project(data, autosave_path())
         except Exception:
+            _log.warning("autosave failed", exc_info=True)
+
+    def clear_autosave(self):
+        try:
+            os.unlink(autosave_path())
+        except FileNotFoundError:
             pass
+        except OSError:
+            _log.warning("could not remove autosave file", exc_info=True)
+
+    def maybe_offer_autosave_recovery(self):
+        """If the last session left an autosave behind, offer to restore it.
+        One-shot per launch; the file is consumed (deleted) either way —
+        declining means the user chose the on-disk version."""
+        if getattr(self, "_recovery_checked", False):
+            return
+        # A pre-V2.39 autosave still sits in the home directory. Move it before
+        # looking, or the one launch that most needs it would find nothing.
+        migrate_legacy_autosave()
+        path = autosave_path()
+        if not os.path.exists(path):
+            self._recovery_checked = True
+            return
+        try:
+            data = project_io.load_project(path)
+            props = data.get("properties") or {}
+            source = props.pop("_autosave_source_path", "") or ""
+            name = props.get("project_name", "Untitled Design")
+        except Exception:
+            # Discarded here whatever the start menu is doing, because this
+            # branch asks the user nothing. The menu draws no Recover row for a
+            # file it could not read, so standing aside for it would leave a
+            # corrupt autosave that nothing ever cleans up.
+            _log.warning("unreadable autosave file — discarding", exc_info=True)
+            self._recovery_checked = True
+            self.clear_autosave()
+            return
+        # Past here a *dialog* is involved, and that is the only part the start
+        # menu competes with: when the menu is on it offers recovery as its top
+        # row, so this prompt would be the second dialog of the launch. Stand
+        # aside — without marking the check done, so the menu's Recover row can
+        # still call back in. When the menu is OFF this is the only offer there
+        # is; unsaved work must not be conditional on a preference about
+        # greetings (V2.40).
+        try:
+            from src.onboarding_flow import should_show_welcome
+            if should_show_welcome() and not getattr(
+                    self, "_recovery_from_menu", False):
+                return
+        except Exception:                                  # noqa: BLE001
+            pass
+        self._recovery_checked = True
+        r = QMessageBox.question(
+            self._main, "Restore autosaved design?",
+            f"Site & Pattern closed without saving last time.\n\n"
+            f"An autosaved copy of “{name}” was recovered"
+            + (f" (last saved to:\n{source})" if source else "")
+            + ".\n\nRestore it now?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if r == QMessageBox.StandardButton.Yes:
+            m = self._main
+            m._project = data          # → ProjectStore.set_project
+            m._project_path = source if source and os.path.exists(source) else None
+            m._modified = True         # recovered work is unsaved by definition
+            self.render_project_to_map(fit_view=True)
+            m.setWindowTitle(f"{APP_NAME} — {name} *")
+            m.statusBar().showMessage("Recovered autosaved design", 5000)
+            _log.info("restored autosave (source=%s)", source or "unsaved")
+        self.clear_autosave()
 
     # ── Undo / redo ───────────────────────────────────────────────────────────
     # V1.63: the full undo/redo engine lives here (the Chunk 5c docstring
@@ -235,16 +418,33 @@ class PersistenceController:
                                          "before": before, "after": after})
 
     # ── captured state = features + a compact analysis-overlay view-state ─────
+    # Features are snapshotted as ONE canonical JSON string, not a deepcopy
+    # tree (V2.22). Same information (features are JSON by definition — they
+    # ARE the saved file), but: ~several× less memory per entry than a
+    # Python object graph, immune to aliasing by construction (strings are
+    # immutable), before/after comparison is a string compare, and identical
+    # consecutive snapshots share one string object (the interning below) —
+    # so a 50-deep stack over a large imported project no longer holds up to
+    # 100 full deep copies of every feature.
 
     def _capture_state(self) -> dict:
+        feats_json = json.dumps(
+            self._main._project.get("features", []),
+            separators=(",", ":"), sort_keys=True, default=str)
+        # Chain-share: consecutive captures of unchanged features reuse the
+        # previous string object instead of holding a duplicate.
+        if feats_json == getattr(self, "_last_feats_json", None):
+            feats_json = self._last_feats_json
+        else:
+            self._last_feats_json = feats_json
         return {
-            "features": copy.deepcopy(self._main._project.get("features", [])),
+            "features_json": feats_json,
             "view": self._capture_view_state(),
         }
 
     def _capture_view_state(self) -> dict:
         """The transient analysis overlays that aren't part of project features
-        (shade, live wind-shadow, sun path, sun sectors, site pin). Scalars are
+        (shade, live wind-shadow, sun path, site pin). Scalars are
         read fresh; the shade payload is held by reference (never mutated in
         place), so this is cheap to call on every checkpoint."""
         m = self._main
@@ -260,7 +460,6 @@ class PersistenceController:
                 "angle": getattr(m, "_wind_shadow_angle", None),
             },
             "sun": getattr(m, "_active_sun_state", None),
-            "sectors": getattr(m, "_active_sector_state", None),
             "pin": {"lat": sc.get("latitude"), "lng": sc.get("longitude"),
                     "label": sc.get("pin_label")},
         }
@@ -309,10 +508,16 @@ class PersistenceController:
                 sc.pop(sc_key, None)
             else:
                 sc[sc_key] = val
-        m._project["features"] = copy.deepcopy(side["features"])
+        # Decode a fresh feature tree (the JSON string in the entry stays
+        # pristine no matter what later gestures do to the live objects).
+        m._project["features"] = json.loads(side["features_json"])
+        self._last_feats_json = side["features_json"]
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
         self._apply_view_state(view)
+        # Feature-derived panel readouts (incl. the Planning → Notes map-note
+        # list) track the restored features.
+        m._sync_planning_panel()
 
     def _apply_view_state(self, target: dict):
         """Re-apply the transient overlays to ``target``. Called right after
@@ -343,14 +548,6 @@ class PersistenceController:
         else:
             m.map_widget.clear_sun_path()
             m._active_sun_state = None
-
-        tsec = target.get("sectors")
-        if tsec:
-            m.map_widget.draw_sectors(tsec[0], tsec[1], tsec[2])
-            m._active_sector_state = tsec
-        else:
-            m.map_widget.clear_sectors()
-            m._active_sector_state = None
 
     def _redraw_shade(self, payload, opacity):
         """Redraw a cached shade overlay synchronously (no worker) — raster or
@@ -470,7 +667,13 @@ class PersistenceController:
         m = self._main
         pid, lat, lng = entry["plant_id"], entry["lat"], entry["lng"]
         m.map_widget.undo_place_plant(pid, lat, lng)
-        m._store.remove_plant(pid, lat, lng, newest_first=True)
+        removed = m._store.remove_plant(pid, lat, lng, newest_first=True)
+        # Carry the removed plant's identity on the undo entry so redo can put
+        # THAT plant back rather than an identical-looking new one. Without
+        # this the feature_id changes across an undo/redo round-trip and
+        # anything holding it dangles.
+        if removed and removed.get("feature_id"):
+            entry["feature_id"] = removed["feature_id"]
         m.plant_panel.on_plant_removed(pid)
         m.statusBar().showMessage("Undo: removed plant", 2000)
 
@@ -484,7 +687,8 @@ class PersistenceController:
             pid, name, lat, lng, spacing_m, plant_type, custom_color,
             group_id)
         m._store.add_plant(pid, name, lat, lng,
-                           placement_group_id=group_id)
+                           placement_group_id=group_id,
+                           feature_id=entry.get("feature_id", ""))
         m.plant_panel.on_plant_placed(pid, name)
         m.statusBar().showMessage("Redo: placed plant", 2000)
 

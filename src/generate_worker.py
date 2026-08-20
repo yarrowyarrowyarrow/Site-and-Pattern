@@ -73,6 +73,14 @@ class GenerateWorker(QObject):
                         fauna_ids=self._fauna_ids, match_site=self._match_site,
                         density=self._density,
                         existing_features=self._existing_features)
+                    # P9: the fallback must stay legible after the progress
+                    # text is gone — the Design-notes dialog is where the
+                    # user learns which engine actually built this design.
+                    from src.llm_design import _add_warning
+                    _add_warning(project,
+                                 "The local AI wasn't reachable — this design "
+                                 "was built by the deterministic offline "
+                                 f"generator instead. ({exc})")
             self.finished.emit(project)
         except PermaDesignError as exc:
             self.failed.emit(str(exc))

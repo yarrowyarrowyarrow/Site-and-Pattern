@@ -26,6 +26,15 @@ from typing import Callable, Optional
 _TAXON_CAP = {"bee": 8, "lepidoptera": 7, "bird": 6, "other_insect": 5, "mammal": 3}
 _TOTAL_CAP = 26
 
+# Home-range patrol (V2.24). Ranging fliers forage over the whole yard, so they
+# get scene-wide route waypoints and stop clumping in the one bed their anchor
+# plant happens to sit in (the reported "insects cluster on one part of the map").
+# Movement only — the documented host and identity stay put (P9). Ground / crawling
+# critters keep to their patch.
+_RANGING = frozenset({"bee", "fly", "butterfly", "moth", "bird"})
+_PATROL_MIN_M = 3.0      # only patrol to plants at least this far from the anchor
+_PATROL_WAYPOINTS = 2    # extra scene-wide legs added to a ranger's route
+
 # Relationships that make sense to *stand an animal on*, best-first per taxon —
 # a bird on a fruiting shrub, a bee on a nectar flower, a mammal by cover.
 _REL_PRIORITY = {
@@ -51,8 +60,26 @@ def _hash(*parts) -> int:
 # Each returns a compact dict the viewer turns into low-poly geometry. Colours
 # encode the real look; the viewer never hard-codes a species.
 
-def _bee_appearance(genus: str, name: str) -> dict:
-    """Bee look by genus — the field marks that separate our native bees."""
+# Which BODY PLAN a genus is modelled with (F67). `shape` was already a
+# round/stout/slender word but nothing baked it — every bee was one mesh in a
+# different colour. It is the mesh now (assetlib/fauna_variants.BEE_VARIANTS),
+# and this is the one place a genus needs a build that is not just its shape:
+# a leafcutter's broad head and flat scopa-bearing abdomen is the build a
+# non-specialist actually notices, and "stout" does not say it.
+_BEE_BUILD = {"megachile": "leafcutter"}
+
+
+def _bee_appearance(genus: str, name: str, morph: dict = None) -> dict:
+    """Bee look — the species' OWN record first, this genus table as the
+    fallback (schema v58).
+
+    The table below is what the catalogue had before v58, and it is kept rather
+    than deleted for the same reason `03-herbs.js` keeps its genus profile
+    behind `growth_form`: it is the honest answer for a species nobody has
+    described yet, and 69 bees minus the ones anybody gets round to is a large
+    number for a long time. What changed is that a recorded value now WINS,
+    where before there was no way to record one.
+    """
     g = (genus or "").lower()
     # (fuzz, dark, bands, shape, size, metallic)
     table = {
@@ -71,21 +98,97 @@ def _bee_appearance(genus: str, name: str) -> dict:
     }
     cuckoo = {"nomada", "triepeolus", "epeolus", "melecta", "xeromelecta", "zacosmia"}
     if g in cuckoo:
-        return {"kind": "bee", "fuzz": "#b5462e", "dark": "#241a16", "bands": 2,
-                "shape": "slender", "size": 0.6, "metallic": False, "cuckoo": True}
-    fuzz, dark, bands, shape, size, metallic = table.get(
-        g, ("#e0a92a", "#2a231c", 2, "round", 0.7, False))       # generic bee
-    return {"kind": "bee", "fuzz": fuzz, "dark": dark, "bands": bands,
-            "shape": shape, "size": size, "metallic": metallic}
+        # Cuckoo bees are nearly hairless and wasp-like — narrow, and the one
+        # group where "not furry" is itself the field mark.
+        out = {"kind": "bee", "fuzz": "#b5462e", "dark": "#241a16", "bands": 2,
+               "shape": "slender", "build": "slender", "size": 0.6,
+               "metallic": False, "cuckoo": True}
+    else:
+        fuzz, dark, bands, shape, size, metallic = table.get(
+            g, ("#e0a92a", "#2a231c", 2, "round", 0.7, False))   # generic bee
+        out = {"kind": "bee", "fuzz": fuzz, "dark": dark, "bands": bands,
+               "shape": shape, "build": _BEE_BUILD.get(g, shape), "size": size,
+               "metallic": metallic}
+    return _apply_bee_morph(out, morph)
 
 
-def _lep_appearance(name: str, sci: str, kind: str) -> dict:
-    """Butterfly/moth wing colourway keyed off the well-known species."""
+def _apply_bee_morph(out: dict, morph: dict) -> dict:
+    """Overlay a species' recorded morphology onto the genus fallback."""
+    if not morph:
+        return out
+    if morph.get("hair_colour"):
+        out["fuzz"] = morph["hair_colour"]
+    if morph.get("integument_colour"):
+        out["dark"] = morph["integument_colour"]
+    if morph.get("build"):
+        out["build"] = morph["build"]
+        # `shape` is the abdomen rescale and `build` the mesh; a leafcutter has
+        # its own mesh but a stout abdomen, so they are not the same field.
+        out["shape"] = "stout" if morph["build"] == "leafcutter" else morph["build"]
+    if morph.get("metallic") is not None:
+        out["metallic"] = bool(morph["metallic"])
+    if morph.get("scopa_position"):
+        out["scopa"] = morph["scopa_position"]
+        # No pollen brush at all IS the cuckoo mark — see docs/FAUNA_FIELD_GUIDE.
+        out["cuckoo"] = morph["scopa_position"] == "none"
+    if morph.get("wing_tint"):
+        out["wing_tint"] = morph["wing_tint"]
+    if morph.get("band_pattern"):
+        # Thorax + T1..T6, resolved to HEX here rather than sent as tokens.
+        # The viewer then needs no colour vocabulary at all — the same contract
+        # `fore`/`hind`/`edge` already follow — and BAND_COLOUR_HEX stays the
+        # one definition instead of being mirrored into JS.
+        from src.data_quality import (BAND_COLOUR_HEX,  # noqa: PLC0415
+                                      band_pattern_tokens)
+        toks = band_pattern_tokens(morph["band_pattern"])
+        cols = [BAND_COLOUR_HEX.get(t) for t in toks]
+        if cols and cols[0]:
+            out["fuzz"] = cols[0]                    # thorax drives the pile
+        # An unknown token would be None; drop it rather than paint it black,
+        # so a typo shows as a missing segment instead of a plausible bee.
+        out["band_colours"] = [c for c in cols[1:] if c]
+        # How many of T1..T6 are a contrasting (non-black) colour — the number
+        # a person means by "a two-banded bee", and what the GLB's Band0/1/2
+        # toggles still key off.
+        out["bands"] = min(3, sum(1 for t in toks[1:] if t != "black"))
+    if morph.get("body_length_mm"):
+        # Real millimetres, compressed. A linear map would make a 6 mm
+        # Lasioglossum four pixels beside a 22 mm Bombus; the square root keeps
+        # the ORDER honest and every animal visible, which is the trade P9
+        # asks for when precision would be useless rather than wrong.
+        mm = float(morph["body_length_mm"])
+        out["size"] = round(min(1.6, max(0.35, (mm / 13.0) ** 0.5)), 3)
+        out["body_length_mm"] = mm
+    return out
+
+
+def _lep_appearance(name: str, sci: str, kind: str, morph: dict = None) -> dict:
+    """Butterfly/moth look — the species' OWN record first (schema v58), with
+    the name-keyed table below as the fallback.
+
+    That table is seventeen substring tests on a COMMON NAME, which collapsed 31
+    species into 16 appearances and matched `"blue" in name` for anything with
+    blue in it. It stays as the fallback for an undescribed species and is no
+    longer the only answer available.
+    """
     n = (name or "").lower()
-    def spec(fore, hind, edge, size=1.0):
-        return {"kind": kind, "fore": fore, "hind": hind, "edge": edge, "size": size}
+
+    def spec(fore, hind, edge, size=1.0, build=None):
+        # `build` is the silhouette (assetlib/fauna_variants.LEP_VARIANTS);
+        # `kind` stays the day/night behaviour the roster and the flight code
+        # already use. A skipper flies by day like a butterfly and looks
+        # nothing like one, which is exactly why they are two fields.
+        #
+        # The recorded morphology is overlaid HERE rather than at each of the
+        # seventeen `return spec(...)` branches below, so a species' own record
+        # wins on every path without restructuring the table.
+        return _apply_lep_morph(
+            {"kind": kind, "fore": fore, "hind": hind, "edge": edge,
+             "size": size,
+             "build": build or ("moth" if kind == "moth" else "butterfly")},
+            morph)
     if "monarch" in n:                 return spec("#e2711d", "#e2711d", "#1c140e", 1.2)
-    if "swallowtail" in n:             return spec("#f2d64b", "#f2d64b", "#1c140e", 1.25)
+    if "swallowtail" in n:             return spec("#f2d64b", "#f2d64b", "#1c140e", 1.25, "swallowtail")
     if "mourning cloak" in n:          return spec("#5a3420", "#5a3420", "#e8d18a", 1.1)
     if "tortoiseshell" in n:           return spec("#c9531f", "#3a2414", "#e0b25a", 0.95)
     if "painted lady" in n:            return spec("#d98a3d", "#caa06a", "#2a1c12", 0.95)
@@ -96,18 +199,63 @@ def _lep_appearance(name: str, sci: str, kind: str) -> dict:
     if "azure" in n or "blue" in n:    return spec("#7fa6e0", "#9fc0ea", "#2a2c34", 0.6)
     if "sulphur" in n:                 return spec("#eddc4b", "#e6d24a", "#3a3a1e", 0.75)
     if "crescent" in n:                return spec("#d0782c", "#a85f24", "#2a1c10", 0.7)
-    if "skipper" in n:                 return spec("#c08a3a", "#7a5228", "#2a1c10", 0.7)
+    if "skipper" in n:                 return spec("#c08a3a", "#7a5228", "#2a1c10", 0.7, "skipper")
     if "clearwing" in n or "hummingbird" in n: return spec("#5a7a3a", "#8a5a3a", "#2a1c12", 0.85)
     if "sphinx" in n or "hawk" in n or "white-lined" in n: return spec("#7a6a4a", "#b06a4a", "#2a1c12", 1.1)
     if kind == "moth":                 return spec("#8a7a5a", "#6a5a44", "#3a3020", 1.0)
     return spec("#c88a3a", "#a8702c", "#2a1c10", 0.9)
 
 
+def _apply_lep_morph(out: dict, morph: dict) -> dict:
+    """Overlay a lepidopteran's recorded morphology onto the name-keyed
+    fallback (schema v58)."""
+    if not morph:
+        return out
+    for src, dst in (("forewing_colour", "fore"), ("hindwing_colour", "hind"),
+                     ("margin_colour", "edge")):
+        if morph.get(src):
+            out[dst] = morph[src]
+    if morph.get("wing_shape"):
+        out["wing_shape"] = morph["wing_shape"]
+        # A tailed hind wing is the one shape with its own baked silhouette.
+        if morph["wing_shape"] == "tailed":
+            out["build"] = "swallowtail"
+    for key in ("wing_pattern", "resting_posture", "flight_style"):
+        if morph.get(key):
+            out[key] = morph[key]
+    if morph.get("eyespot_count") is not None:
+        out["eyespots"] = int(morph["eyespot_count"])
+    lo, hi = morph.get("wingspan_min_mm"), morph.get("wingspan_max_mm")
+    if lo and hi:
+        # The catalogue keeps the published RANGE; the viewer has to draw one
+        # animal, so it takes the mid — the single place that collapse happens,
+        # and it is a rendering decision rather than a data one.
+        mm = (float(lo) + float(hi)) / 2.0
+        out["wingspan_mm"] = mm
+        # Compressed like the bees': true ratio would put a 22 mm azure at a
+        # sixth of a 140 mm Cecropia and lose it entirely. Square root keeps
+        # the order right and everything visible.
+        out["size"] = round(min(1.8, max(0.4, (mm / 55.0) ** 0.5)), 3)
+    return out
+
+
+# Body plan by name (assetlib/fauna_variants.BIRD_VARIANTS). A woodpecker
+# propped on a trunk by its stiff tail and a chickadee on a twig are not the
+# same bird, and the roster routinely holds both.
+_BIRD_BUILD_WORDS = (("woodpecker", "woodpecker"), ("sapsucker", "woodpecker"),
+                     ("flicker", "woodpecker"), ("hummingbird", "hummer"))
+
+
 def _bird_appearance(name: str) -> dict:
     n = (name or "").lower()
     def spec(body, belly, wing, size=1.0, hummer=False):
+        build = "passerine"
+        for word, plan in _BIRD_BUILD_WORDS:
+            if word in n:
+                build = plan
+                break
         return {"kind": "bird", "body": body, "belly": belly, "wing": wing,
-                "size": size, "hummer": hummer}
+                "size": size, "hummer": hummer, "build": build}
     if "hummingbird" in n:          return spec("#2f7d4f", "#d8cbb0", "#3a2a20", 0.5, True)
     if "goldfinch" in n:            return spec("#e8c72e", "#f0e6b0", "#1c1c14", 0.7)
     if "waxwing" in n:              return spec("#b79a72", "#d8c8a0", "#3a2c22", 0.85)
@@ -150,6 +298,236 @@ def _mammal_appearance(name: str) -> dict:
     return {"kind": "mammal", "body": "#8a6f52", "form": "mouse", "size": 0.5}
 
 
+def _flight_for(row: dict, bee_m: dict = None, lep_m: dict = None,
+                bird_m: dict = None) -> dict:
+    """Flight parameters for one creature, in the shape the viewer wants.
+
+    Thin: :mod:`src.flight_model` owns every number and every band; this only
+    picks which morphology row to hand it. Never raises — a creature with no
+    morphology still flies, just on a wider band, and a scene must not fail to
+    render because an allometry could not be evaluated.
+    """
+    try:
+        from src.flight_model import animation_hz, flight_for
+    except Exception:      # noqa: BLE001
+        return {}
+    taxon = (row.get("taxon") or "").strip().lower()
+    sci = row.get("scientific_name") or ""
+    name = (row.get("common_name") or "").lower()
+    try:
+        if taxon == "lepidoptera":
+            lo = (lep_m or {}).get("wingspan_min_mm") or 0
+            hi = (lep_m or {}).get("wingspan_max_mm") or 0
+            span = (float(lo) + float(hi)) / 2.0 if (lo or hi) else 0
+            kind = ("moth" if ("moth" in name or "sphinx" in name
+                               or "clearwing" in name) else "butterfly")
+            f = flight_for("lepidoptera", scientific_name=sci,
+                           wingspan_mm=span or None, kind=kind,
+                           flight_style=(lep_m or {}).get("flight_style") or "")
+        elif taxon == "bee":
+            f = flight_for("bee", scientific_name=sci,
+                           body_length_mm=(bee_m or {}).get("body_length_mm"))
+        elif taxon == "bird":
+            bm = bird_m or {}
+            f = flight_for("bird", scientific_name=sci,
+                           mass_g=bm.get("mass_g"),
+                           span_mm=bm.get("wingspan_mm"),
+                           wing_area_cm2=bm.get("wing_area_cm2"),
+                           style=bm.get("flight_style") or "")
+        else:
+            f = flight_for(taxon, scientific_name=sci)
+    except Exception:      # noqa: BLE001
+        return {}
+    hz = (f.get("hz") or {}).get("mid") or 0
+    return {
+        # What to animate at — never above Nyquist, so a wing is either drawn
+        # truthfully or drawn as the blur a human actually sees.
+        "hz": round(animation_hz(hz), 2),
+        "true_hz": round(hz, 1),
+        "render": f.get("render", "discrete"),
+        "style": f.get("style", ""),
+        "basis": f.get("basis", ""),
+        "burst": int((f.get("burst_beats") or {}).get("mid") or 0),
+        "pause_s": round((f.get("pause_s") or {}).get("mid") or 0.0, 2),
+        "dip_m": round((f.get("bound_dip_m") or {}).get("mid") or 0.0, 3),
+    }
+
+
+# ── Real size (V2.46) ────────────────────────────────────────────────────────
+#
+# Author's report: *"the relative size of the bees, butterflies, birds to the
+# person that walks the scene is all wrong."* Measured against the models, it
+# was not slightly wrong:
+#
+#     bee        0.54 m rendered   vs ~0.02 m real   —  27x too big
+#     butterfly  0.83 m            vs ~0.10 m        —   8x
+#     bird       0.74 m            vs ~0.13 m        —   6x
+#     hoverfly   0.47 m            vs ~0.012 m       —  39x
+#
+# A bee was being drawn the size of a cat beside a 1.75 m walker. The scales
+# came from per-kind constants in the viewer (`0.9 * size`, `0.46 * 1.15`) that
+# were chosen by eye before there was any morphology to check them against.
+#
+# There is morphology now — bee `body_length_mm` (69/69), lep wingspan (31/31)
+# and, since schema v63, bird `wingspan_mm` (24/24). So a creature is scaled to
+# the size it actually is, and the viewer no longer decides how big an animal
+# is (P9, and the realism half of P13).
+#
+# Each kind names WHICH axis of its model carries the measurement, because the
+# models are not all built the same way — a bee's length runs down Z, a
+# butterfly's wingspan across X. Measured from the shipped .glb files; see
+# tests/test_creature_scale.py, which re-measures them.
+_SIZE_AXIS = {
+    "bee": "z",          # body length, nose to sting
+    "butterfly": "x",    # wingspan, tip to tip
+    "moth": "x",
+    "bird": "x",         # wingspan — the model's Z is body+tail, which is
+                         # authored long relative to a real passerine
+    "fly": "x",
+    "beetle": "z",
+    "bat": "x",
+    "mammal": "z",
+}
+
+#: Fallback real sizes, metres, for creatures with no measurement. Deliberately
+#: small and honest rather than "visible": a hoverfly IS 12 mm.
+_SIZE_FALLBACK_M = {
+    "bee": 0.011, "butterfly": 0.045, "moth": 0.040, "bird": 0.230,
+    "fly": 0.015, "beetle": 0.008, "bat": 0.250, "mammal": 0.200,
+}
+
+
+#: **The visibility floor** (V2.46c), in metres.
+#:
+#: V2.46 drew every animal at life size and offered a *Creatures:* multiplier —
+#: Life size / x3 / x6 / x12 — to make the small ones findable. Both halves of
+#: that were wrong, and the author said so precisely:
+#:
+#:     *"I don't want the birds changing size to x3 or more, they look
+#:     ridiculous. The bugs are not visible unless x3, which is acceptable as a
+#:     default I think. I don't know if we need this size changing as a
+#:     changeable drop down menu."*
+#:
+#: A **global multiplier is the wrong shape** for the problem. The thing that
+#: needs help is not "creatures", it is *creatures below a few centimetres*: a
+#: goldfinch at 22 cm was always perfectly visible and x3 makes it a goose. Any
+#: flat per-taxon boost has the same fault one level down — x3 on insects puts a
+#: swallowtail at 24 cm, which is a goldfinch, and re-creates exactly the
+#: confusion being complained about.
+#:
+#: So this is not a multiplier at all. It is a statement about **the screen**:
+#: in walk mode, at a typical two-to-four metre viewing distance, one pixel is
+#: roughly four millimetres of world. Under about three centimetres an animal
+#: stops being a shape and becomes a speck, whatever it is.
+#:
+#: Applied as a *soft* floor — ``sqrt(m^2 + FLOOR^2)`` — rather than
+#: ``max(m, FLOOR)``, which matters for three reasons:
+#:
+#: * it **never shrinks** anything;
+#: * it **preserves ordering**. A hard floor collapses bee, beetle and hoverfly
+#:   to one identical size; the soft one keeps the beetle smaller than the bee
+#:   smaller than the fly, so the scene still reads as different animals;
+#: * it **decays to nothing**. The exaggeration is largest where it is needed
+#:   and vanishes where it is not — and that is the property the author actually
+#:   asked for, in one line rather than a control they have to think about.
+VISIBLE_FLOOR_M = 0.032
+
+#: Never claim a boost below this in the label — 1.05x is not worth a sentence.
+_BOOST_WORTH_SAYING = 1.15
+
+
+def size_sentence(size: dict) -> str:
+    """One honest line about how big this animal is, and whether the screen is
+    lying about it (P5 + P9).
+
+    This is what the removed dropdown was really for. A control that says
+    "x3" tells you the scene is exaggerated but not *which* animals or *by how
+    much*; a creature that says *"11 mm — shown 3x life size"* when you look at
+    it tells you exactly, only when it matters, and teaches the real number in
+    passing. An animal drawn life size says only its size.
+    """
+    try:
+        true_m = float(size.get("true_m") or size.get("m") or 0)
+        boost = float(size.get("boost") or 1.0)
+    except (TypeError, ValueError):
+        return ""
+    if true_m <= 0:
+        return ""
+    measure = (f"{true_m * 1000:.0f} mm" if true_m < 0.1
+               else f"{true_m * 100:.0f} cm")
+    if boost >= _BOOST_WORTH_SAYING:
+        return f"{measure} — shown {boost:.0f}× life size so you can see it"
+    return f"{measure} — shown life size"
+
+
+def _drawn_size(m: float) -> float:
+    """The size to *draw* an animal of real size ``m`` at. See
+    :data:`VISIBLE_FLOOR_M`.
+
+    ==============  ========  =======  ==========
+    animal          real      drawn    boost
+    ==============  ========  =======  ==========
+    ladybeetle      8 mm      33 mm    4.1x
+    leafcutter bee  11 mm     34 mm    3.1x
+    hoverfly        15 mm     35 mm    2.4x
+    a moth          40 mm     51 mm    1.3x
+    swallowtail     79 mm     85 mm    1.08x
+    chickadee       203 mm    206 mm   1.01x
+    northern flicker 500 mm   501 mm   1.002x
+    ==============  ========  =======  ==========
+
+    The birds are the point: they move by one percent, which is nothing, so
+    "don't change the birds" and "make the bugs visible" stop being in tension.
+    """
+    m = max(0.0, float(m))
+    return math.sqrt(m * m + VISIBLE_FLOOR_M * VISIBLE_FLOOR_M)
+
+
+def _size_for(row: dict, app: dict, bee_m: dict = None, lep_m: dict = None,
+              bird_m: dict = None) -> dict:
+    """``{m, true_m, axis, boost}`` — how big to draw this animal, how big it
+    really is, and along which model axis to measure that.
+
+    ``m`` is the *drawn* size (the visibility floor applied); ``true_m`` is the
+    measurement. Both travel, because the viewer needs the first and the label
+    has to be able to admit the second (P9) — a creature shown at three times
+    life size must say so rather than teach somebody that a leafcutter bee is
+    the size of a walnut.
+
+    Never raises and never returns zero: a creature with no morphology gets its
+    kind's fallback, which is still far closer to life than the constant it
+    replaces.
+    """
+    kind = (app or {}).get("kind") or ""
+    taxon = (row.get("taxon") or "").strip().lower()
+    m = None
+    try:
+        if taxon == "bee":
+            v = (bee_m or {}).get("body_length_mm")
+            m = float(v) / 1000.0 if v else None
+        elif taxon == "lepidoptera":
+            lo = (lep_m or {}).get("wingspan_min_mm") or 0
+            hi = (lep_m or {}).get("wingspan_max_mm") or 0
+            if lo or hi:
+                m = ((float(lo) + float(hi)) / 2.0) / 1000.0
+        elif taxon == "bird":
+            v = (bird_m or {}).get("wingspan_mm")
+            m = float(v) / 1000.0 if v else None
+    except (TypeError, ValueError):
+        m = None
+    if not m or m <= 0:
+        m = _SIZE_FALLBACK_M.get(kind, 0.05)
+    drawn = _drawn_size(m)
+    return {
+        "m": round(drawn, 4),
+        "true_m": round(m, 4),
+        "axis": _SIZE_AXIS.get(kind, "z"),
+        # 1.0 means "drawn life size" — the viewer only labels a boost above
+        # _BOOST_WORTH_SAYING, but the number itself is always here.
+        "boost": round(drawn / m, 2) if m > 0 else 1.0,
+    }
+
+
 def support_by_taxon(plant_ids: list) -> dict:
     """``{taxon: distinct-species-count}`` of native fauna the given plants
     support — the design's total ecological reach, shown as the 3D roster's
@@ -178,22 +556,52 @@ def appearance_for_fauna(fauna_id: int) -> Optional[dict]:
     """The per-species appearance spec for one fauna id — reused by the
     fly-through so the flown avatar looks like the chosen species (a green sweat
     bee, a leafcutter, a mining bee…). Returns None for taxa without a look."""
-    from src.db.fauna import get_fauna
+    from src.db.fauna import bee_morphology, get_fauna, lep_morphology
     row = get_fauna(fauna_id)
-    return _appearance_for(row) if row else None
+    if not row:
+        return None
+    # One creature, so fetch only the table it needs.
+    if row.get("taxon") == "bee":
+        morph = bee_morphology().get(fauna_id)
+    elif row.get("taxon") == "lepidoptera":
+        morph = lep_morphology().get(fauna_id)
+    else:
+        morph = None
+    app = _appearance_for(row, morph)
+    if app is not None:
+        # How big the flown creature REALLY is (V2.46c / F110). The avatar in
+        # front of the fly camera was a hand-picked 0.46 scale parked 1.5 m out
+        # — roughly half a metre of butterfly against flowers that were
+        # correctly 7 cm, which is why the flora read as miniature:
+        #
+        #     *"the fly as a bee/butterfly mode will need to be altered to be
+        #     the appropriate size relative to the flora."*
+        #
+        # Under `real_size`, NOT `size` — `app["size"]` is already a relative
+        # style scalar (0.35–1.8) that the avatar builders multiply by, and
+        # quietly changing its meaning would rescale every procedural body.
+        taxon = row.get("taxon")
+        app["real_size"] = _size_for(
+            row, app,
+            bee_m=morph if taxon == "bee" else None,
+            lep_m=morph if taxon == "lepidoptera" else None)
+    return app
 
 
-def _appearance_for(row: dict) -> Optional[dict]:
+def _appearance_for(row: dict, morph: dict = None) -> Optional[dict]:
+    """`morph` is this species' schema-v58 morphology row, or None. When it is
+    None every branch falls back to the pre-v58 name tables, which is what an
+    undescribed species — or a pre-v58 database — gets."""
     taxon = row.get("taxon")
     name = row.get("common_name", "")
     sci = row.get("scientific_name", "")
     if taxon == "bee":
         genus = sci.split(" ")[0] if sci else ""
-        return _bee_appearance(genus, name)
+        return _bee_appearance(genus, name, morph)
     if taxon == "lepidoptera":
         kind = "moth" if "moth" in name.lower() or "sphinx" in name.lower() \
             or "clearwing" in name.lower() else "butterfly"
-        return _lep_appearance(name, sci, kind)
+        return _lep_appearance(name, sci, kind, morph)
     if taxon == "bird":
         return _bird_appearance(name)
     if taxon == "other_insect":
@@ -233,11 +641,19 @@ def _season_months(taxon: str, fid: int,
                    bee_seasons: dict, lep_seasons: dict) -> frozenset:
     """The months (1-12) this creature is out; empty = no seasonal gate."""
     from src.habitat_score import parse_month_range
+    # An UNRECORDED flight season falls back to the warm months, not to "no
+    # gate" (V2.63). Only 69 bees and 31 lepidoptera have an attributes row, so
+    # `bee_seasons.get(fid)` is empty for most of the catalogue — and empty
+    # used to mean unrestricted, which put a solitary bee in an Alberta yard in
+    # January. F127's 159 new animals made that visible by arriving without
+    # attribute rows; the bug was always there, waiting for a bee nobody had
+    # measured. Absence of a season is not evidence of a winter flier (P9).
     if taxon == "bee":
-        return frozenset(parse_month_range(bee_seasons.get(fid) or ""))
+        return (frozenset(parse_month_range(bee_seasons.get(fid) or ""))
+                or _WARM_MONTHS)
     if taxon == "lepidoptera":
         _act, season = lep_seasons.get(fid, (None, None))
-        return frozenset(parse_month_range(season or ""))
+        return frozenset(parse_month_range(season or "")) or _WARM_MONTHS
     if taxon in ("other_insect", "mammal"):
         return _WARM_MONTHS
     return frozenset()                        # birds: year-round
@@ -260,17 +676,32 @@ def _active_now(taxon: str, name: str, fid: int, month: int, is_night: bool,
 # ── Placement height above the anchor plant's base (metres) ───────────────────
 
 def _perch_height(kind: str, height_m: float, rel: str) -> float:
+    """Where on the plant this kind sits, in metres above the plant's base.
+
+    The plant's rendered top is exactly ``ground + height_m`` (the archetypes are
+    normalised to height 1 and scaled by it), so anything returned here that is
+    ``>= height_m`` puts the animal in open air ABOVE the plant. That is what the
+    old formulas did for small plants — bird ``h * 1.05`` and bee ``h * 0.9 +
+    0.15`` both exceed ``h`` under ~1.5 m — and it is why a user saw creatures
+    hovering well clear of the flowers they are supposed to be using.
+
+    Everything is now clamped strictly inside the plant.
+    """
     h = max(0.1, height_m)
     if kind == "bird":
-        return h * (0.72 if h > 1.0 else 1.05)      # in the crown, or just above a herb
+        # Perched IN the crown: the upper-middle of a tree, and low enough on a
+        # herb that the bird is among the stems rather than balanced on the tip.
+        return h * (0.72 if h > 1.0 else 0.80)
     if kind == "beetle":
         return h * 0.45
     if kind == "mammal":
         return 0.06                                  # on the ground
+    # Flower visitors sit AT the bloom, which is the top of the plant — just
+    # inside it, never floating over it.
     if kind in ("bee", "fly"):
-        return h * 0.9 + 0.15                         # hovering at the flowers
+        return min(h * 0.95, h - 0.02)
     # butterfly / moth
-    return h * 0.92 + 0.1
+    return min(h * 0.93, h - 0.02)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -288,6 +719,13 @@ def wildlife_for_scene(scene: dict, *,
     if not plants:
         return []
     by_id = {p["plant_id"]: p for p in plants}
+    # Every plant position in the design — a ranger's home-range patrol samples
+    # these so it forages across the whole yard, not just its anchor's bed.
+    # The whole plant record, not just its position: a patrol waypoint's HEIGHT
+    # has to come from the plant it is over. Keeping only (x, y) here is what
+    # made a bird anchored on a 5 m saskatoon rest 3.6 m above a 0.4 m
+    # coneflower — it carried its anchor's perch height to every waypoint.
+    all_pl = list(plants)
     if fauna_edges is None:
         from src.db.fauna import fauna_for_plants as fauna_edges
 
@@ -300,11 +738,20 @@ def wildlife_for_scene(scene: dict, *,
     month = int(scene.get("month") or 0)
     is_night = bool(scene.get("is_night"))
     try:
-        from src.db.fauna import bee_flight_seasons, lep_activity_seasons
+        from src.db.fauna import (bee_flight_seasons, bee_morphology,
+                                  lep_activity_seasons, lep_morphology)
         bee_seasons = bee_flight_seasons()
         lep_seasons = lep_activity_seasons()
+        # Two queries for the whole roster (schema v58) rather than one per
+        # creature — the same shape as the season lookups above.
+        bee_morph = bee_morphology()
+        lep_morph = lep_morphology()
+        # V2.45: mass + wingspan + flight style, the input to flight_model.
+        from src.db.fauna import bird_morphology
+        bird_morph = bird_morphology()
     except Exception:      # noqa: BLE001
         bee_seasons, lep_seasons = {}, {}
+        bee_morph, lep_morph, bird_morph = {}, {}, {}
 
     # Per species, keep ALL its best-rank (plant, relationship) candidates, so a
     # species that uses several present plants can be spread across them rather
@@ -341,7 +788,10 @@ def wildlife_for_scene(scene: dict, *,
         cap = _TAXON_CAP.get(taxon, 3)
         if per_taxon.get(taxon, 0) >= cap:
             continue
-        app = _appearance_for(r)
+        _fid = r.get("id")
+        app = _appearance_for(
+            r, bee_morph.get(_fid) if taxon == "bee"
+            else lep_morph.get(_fid) if taxon == "lepidoptera" else None)
         if app is None:
             continue
         seed = _hash(r.get("id"), r.get("plant_id"))
@@ -352,10 +802,13 @@ def wildlife_for_scene(scene: dict, *,
         p = by_id[pid]
         canopy = max(0.3, float(p.get("canopy_m") or 0.5))
         ang = (seed % 360) * math.pi / 180.0
-        # A wider ring with a real floor so animals sit *around* the plant, not
-        # inside it; the k-th animal on a plant steps further out.
+        # A ring INSIDE the crown, so an animal sits among the foliage it is
+        # there to use. `canopy_m` is the full width, so the old `canopy * 0.55`
+        # was 1.1x the crown RADIUS — always just outside the leaves — and its
+        # flat 0.7 m floor put a bee that far from a 0.3 m aster. The k-th
+        # animal on one plant still steps outward so they don't stack.
         k = load[pid] - 1
-        rad = max(0.7, canopy * 0.55) + 0.5 * k
+        rad = max(0.15, canopy * 0.30) + 0.35 * k
         def _ph(pl):
             bh = _perch_height(app["kind"], float(pl.get("height_m") or 0.5),
                                r.get("relationship", ""))
@@ -374,17 +827,56 @@ def wildlife_for_scene(scene: dict, *,
         for q in others[:3]:
             pq = by_id[q]
             route.append([pq["x"], pq["y"], round(_ph(pq), 2)])
+        # Home-range patrol: a ranging flier (bee/fly/butterfly/moth/bird) also
+        # visits spread-out plants across the design so it roams the whole yard
+        # instead of orbiting its anchor — the fix for wildlife clumping in one
+        # bed. Walk the plant list at a seed-dependent stride so different
+        # creatures head to different corners rather than all to the same plant.
+        if app["kind"] in _RANGING and len(all_pl) > 2:
+            stride = 1 + (seed % (len(all_pl) - 1))
+            j = seed % len(all_pl)
+            added = 0
+            for _ in range(len(all_pl)):
+                pq = all_pl[j]
+                qx, qy = pq["x"], pq["y"]
+                j = (j + stride) % len(all_pl)
+                if (qx - p["x"]) ** 2 + (qy - p["y"]) ** 2 >= _PATROL_MIN_M ** 2:
+                    # _ph of the plant being VISITED — same as the host loop
+                    # above. Using base_h (the anchor's) here was the bug.
+                    route.append([round(qx, 2), round(qy, 2), round(_ph(pq), 2)])
+                    added += 1
+                    if added >= _PATROL_WAYPOINTS:
+                        break
         creatures.append({
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),
             "y": round(p["y"] + math.sin(ang) * rad, 2),
-            # Small per-animal height jitter separates same-plant, same-band animals.
-            "h": round(base_h + ((seed >> 6) % 20 - 10) / 100.0 * base_h, 2),
+            # Small per-animal height jitter separates same-plant, same-band
+            # animals — but only DOWNWARD. A symmetric ±10% put a bee 1.03 m up
+            # a 1.0 m cinquefoil, undoing the clamp _perch_height just applied;
+            # there is room below a perch and never any above it.
+            "h": round(base_h * (1.0 - ((seed >> 6) % 20) / 100.0), 2),
             "name": r.get("common_name", ""),
             "on": p.get("common_name", ""),
+            # The anchor plant's id as well as its name: the 3D inspector draws
+            # food-web threads from a clicked plant to the animals that use it,
+            # and matching on a display name would tie two plantings of the same
+            # species together (V2.29).
+            "on_id": pid,
             "rel": r.get("relationship", ""),
             "seed": seed % 100000,
             "app": app,
+            # How this species' wings actually move (V2.45). Real hertz from
+            # published allometry, the bout structure they beat in, and whether
+            # the beat is renderable at all — see src/flight_model.py. The
+            # viewer had hardcoded per-taxon constants before this.
+            "flight": _flight_for(r, bee_morph.get(_fid),
+                                  lep_morph.get(_fid), bird_morph.get(_fid)),
+            # How big it really is (V2.46). The viewer scales the built model
+            # so this axis measures this many metres — so it no longer decides
+            # how big an animal is from a constant chosen by eye.
+            "size": _size_for(r, app, bee_morph.get(_fid),
+                              lep_morph.get(_fid), bird_morph.get(_fid)),
             "route": route,
             "_ax": p["x"], "_ay": p["y"],
         })

@@ -71,6 +71,49 @@ def capture_ortho(rect: dict, width: int = 2048) -> str:
             f"{json.dumps(opts)});")
 
 
+def set_camera_preset(name: str) -> str:
+    """JS placing the camera at a named preset (V2.33, F69).
+
+    'overview' | 'orbit' | 'walk' | 'sidewalk' — the docent's own camera
+    vocabulary, which its beats have carried since V2.13 and nothing has read
+    until now, plus the neighbour's-eye view (F77)."""
+    return ("window.permaSetCameraPreset && window.permaSetCameraPreset("
+            f"{json.dumps(str(name))});")
+
+
+def snapshot(px: int = 320, *, height: int = 0, pixel_ratio: int = 0,
+             mime: str = "", quality: float = 0.0) -> str:
+    """JS to render the CURRENT scene from the CURRENT camera into a ``px``-square
+    frame and return a JPEG data URL.
+
+    Drives the sprite gallery's contact sheet: push a specimen, snapshot it,
+    repeat. Every thumbnail is drawn by the real viewer, so the sheet can never
+    drift from what the app renders — which is the whole point of looking at
+    them side by side. Guarded with ``&&`` so it's a no-op (undefined → ``''``
+    via the caller) until the viewer registers ``permaSnapshot``."""
+    opts = {"width": int(px), "height": int(height or px)}
+    if pixel_ratio:
+        # The drawing buffer is width x pixelRatio. Without this the capture's
+        # real resolution depends on the display the app happens to be on,
+        # which is why a print still asks for it explicitly (F69).
+        opts["pixelRatio"] = int(pixel_ratio)
+    if mime:
+        opts["mime"] = str(mime)
+    if quality:
+        opts["quality"] = float(quality)
+    return ("(window.permaSnapshot ? window.permaSnapshot("
+            f"{json.dumps(opts)}) : '');")
+
+
+def models_ready() -> str:
+    """JS asking whether the baked GLB archetypes have finished loading.
+
+    The contact sheet waits on this: models load asynchronously and rebuild the
+    scene when they land, so thumbnails taken too early would be a sheet of the
+    procedural *fallback* geometry presented as the finished article."""
+    return "(window.permaModelsReady ? window.permaModelsReady() : true);"
+
+
 def clear_splat() -> str:
     """JS to remove the Gaussian-splat backdrop from the scene. Guarded with
     ``&&`` so it's a no-op until the viewer registers ``permaClearSplat``."""
@@ -143,6 +186,19 @@ def set_plant_spotlight(items: list, appearance: dict = None) -> str:
             f"{json.dumps(items or [])}, {json.dumps(appearance or None)});")
 
 
+def set_dossier(dossier: dict) -> str:
+    """JS to hand the viewer the learning content behind a click (V2.29) —
+    ``src.scene_dossier.build_dossier`` output, ``{plants: {...}, fauna: {...}}``.
+
+    Pushed alongside each scene so a click needs no round trip: the 3D bridge is
+    one-directional (no QWebChannel), and shipping the card's content with the
+    geometry is what lets the inspector work in walk / fly / bee modes too.
+    Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetDossier``."""
+    return ("window.permaSetDossier && window.permaSetDossier("
+            f"{json.dumps(dossier or {})});")
+
+
 def set_wildlife_labels(on: bool) -> str:
     """JS to toggle the "who lives here" roster + always-on name labels over the
     ambient wildlife (V2.13) — identify the scene without hovering. Guarded with
@@ -186,9 +242,22 @@ def set_bee_tour(on: bool) -> str:
 
 
 def set_quality(level: int) -> str:
-    """JS to set the viewer's geometry detail (0 Low · 1 Medium · 2 High). The
+    """JS to set the viewer's geometry detail (0 Stylised · 1 Balanced · 2 Lifelike). The
     viewer drops its archetype caches and re-renders the current scene at the new
     density (build-time only). Guarded with ``&&`` so it's a no-op until the scene
     registers ``window.permaSetQuality``."""
     return ("window.permaSetQuality && window.permaSetQuality("
             f"{int(level)});")
+
+
+def set_edit_mode(mode: str, pick: dict = None) -> str:
+    """JS to put the trowel in the user's hand (V2.43, ``16-editing.js``).
+
+    ``mode`` is ``'plant'``, ``'pull'`` or ``''`` (off); ``pick`` is the
+    ``{plant_id, common_name}`` on the trowel, needed only for ``'plant'``.
+    Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetEditMode`` — and permanently a no-op in the web3d/dist
+    fork build, which does not carry that chunk.
+    """
+    return ("window.permaSetEditMode && window.permaSetEditMode("
+            f"{json.dumps(str(mode or ''))}, {json.dumps(pick or None)});")

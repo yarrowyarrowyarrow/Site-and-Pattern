@@ -36,6 +36,7 @@ from src.plant_list_view import (
     _RESULTS_LIST_STYLE,
     _PLANT_MIME,
     _type_icon,
+    _colour_icon,
 )
 
 # The multi-select facet dropdown and the shared filter QSS moved to
@@ -47,67 +48,20 @@ from src.filter_widgets import (  # noqa: F401  (re-export)
     TOGGLE_STYLE as _TOGGLE_STYLE,
 )
 
-# ── PlantPanel-only vocabulary labels ────────────────────────────────────────
-# V1.87: full botanical split. "herb" was a 231-plant catch-all; it's now split
-# into Wildflower (flowering forbs) and Herb / Foliage (foliage / medicinal),
-# grasses/sedges/rushes/ferns/aquatics get their own colours + filter entries,
-# and the dead "Root / Bulb" (0 plants) is retired. Order: woody → forbs →
-# graminoids → ground/fern/water. Each key matches a plant_type colour swatch
-# (the dropdown doubles as the map legend).
-_TYPE_LABELS: dict[str, str] = {
-    "tree":        "Tree",
-    "shrub":       "Shrub",
-    "vine":        "Vine",
-    "wildflower":  "Wildflower",
-    "herb":        "Herb / Foliage",
-    "groundcover": "Groundcover",
-    "grass":       "Grass",
-    "sedge":       "Sedge",
-    "rush":        "Rush",
-    "fern":        "Fern",
-    "aquatic":     "Aquatic / Wetland",
-}
+# ── Facet vocabularies ───────────────────────────────────────────────────────
+# Moved to the Qt-free src/plant_facets.py (V2.46) when the architecture guard
+# fired on this file — the same move src/ecoregion.py was for the same reason.
+# Re-exported here so every existing importer keeps resolving.
+from src.plant_facets import (      # noqa: E402  (re-export, not a use)
+    _TYPE_LABELS, _DECIDUOUS_LABELS, _LIFECYCLE_LABELS, _MONTH_LABELS,
+    _ECOREGION_CHOICES, _ECOREGION_DISPLAY, _AB_ECOREGION_CHOICES,
+)
+from src.ecoregion_tree import expand_for_filter
+from src.filter_widgets import build_ecoregion_tree
 
-_DECIDUOUS_LABELS: dict[str, str] = {
-    "deciduous":  "Deciduous",
-    "evergreen":  "Evergreen",
-    "herbaceous": "Herbaceous (dies back)",
-}
-
-_LIFECYCLE_LABELS: dict[str, str] = {
-    "perennial": "Perennial",
-    "annual":    "Annual",
-    "biennial":  "Biennial",
-}
-
-
-# ── Alberta ecoregion choices (Reference Ecosystem picker, N1) ────────────────
-# Order matches the dropdown; the empty-string id is "any ecoregion" (no
-# filter).  Keep the ids in sync with the comma-separated tags stored in
-# plants.ab_ecoregion (see data/plants_master.json + src/db/plants.py
-# heuristic tagging pass).
-#
-# Ecoregion keys are shared across the prairie provinces where the ecoregion is
-# the same (Design principle P1/P2 — nature does not respect borders); the SK
-# Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
-# keeps its historical _AB_ name for back-compat; the province-neutral rename
-# lands in the Phase B schema refactor.
-_ECOREGION_CHOICES: list[tuple[str, str]] = [
-    ("Any ecoregion",          ""),
-    ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
-    ("Mixedgrass Prairie (south AB / SK)", "mixedgrass_prairie"),
-    ("Moist Mixed Grassland (Regina / Saskatoon)", "moist_mixedgrass"),
-    ("Fescue / Foothills (SW AB)",    "fescue_foothills"),
-    ("Boreal Mixedwood / Plain (north AB / SK)",   "boreal_mixedwood"),
-    ("Riparian (streamside)",         "riparian"),
-    ("Wet Meadow / Marsh",            "wet_meadow"),
-    ("Subalpine / Montane (mountains)", "subalpine_montane"),
-]
-
-# Back-compat alias — the constant was province-scoped (_AB_ECOREGION_CHOICES)
-# before the V2.15 province-neutral rename. Kept so external imports and the
-# data_quality key loader's fallback keep resolving.
-_AB_ECOREGION_CHOICES = _ECOREGION_CHOICES
+# Flower colour (V2.48). Imported rather than restated: the panel, the
+# directory and the website all read one vocabulary.
+from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS  # noqa: E402
 
 
 # NOTE: calendar constants, plant list-item roles, compact row geometry
@@ -170,6 +124,7 @@ class PlantPanel(QWidget):
     # quantity spinner value (used when pattern["kind"]=="single"); the
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
+    placement_cancelled = pyqtSignal()                        # user stood the map down (V2.37)
     fill_area_requested = pyqtSignal(object, float, str, bool)  # members [(pid,weight)], spacing_m, name, matrix (F3/F22)
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
     # Emitted when "Save as Plant Community" creates a new community from
@@ -201,6 +156,14 @@ class PlantPanel(QWidget):
         # 2-click gesture (otherwise changing the mix mid-gesture would
         # use the wrong recipe). Cleared after consumption.
         self._pending_polyculture: Optional[dict] = None
+
+        # True while the map is armed to place what this panel has selected.
+        # MainWindow calls set_armed(False) when placement ends (Esc, another
+        # tool), so the chip can never claim the map is listening when it isn't.
+        self._armed = False
+
+        from src.placement_arming import rearm_timer
+        self._rearm_timer = rearm_timer(self, self._auto_arm)
 
         # Debounce timer for local search
         self._search_timer = QTimer(self)
@@ -235,12 +198,19 @@ class PlantPanel(QWidget):
     def set_autodetected_ecoregion(self, key):
         """Live update from a property pin dropped this session (V1.87).
 
-        ``key`` is the detected AB ecoregion id (or ``""``/``None`` when the pin
-        is cleared or sits outside known regions). Selecting it is session-only
-        — nothing is persisted, so a region never carries over to an unrelated
-        later session. Setting it silently (no ``_on_ecoregion_changed``) then
-        re-running the search keeps the list in sync without a double query."""
-        keys = [key] if key else []
+        ``key`` is the detected ecoregion id, or a *list* of them since V2.38 —
+        a site near a boundary is in more than one, and checking both is the
+        difference between seeing that region's species and not. ``""``/``None``
+        /``[]`` clears it (pin removed, or outside known regions).
+
+        Session-only: nothing is persisted, so a region never carries over to
+        an unrelated later session. Setting it silently (no
+        ``_on_ecoregion_changed``) then re-running the search keeps the list in
+        sync without a double query."""
+        if isinstance(key, (list, tuple, set)):
+            keys = [k for k in key if k]
+        else:
+            keys = [key] if key else []
         if self._ecoregion_combo.checked_keys() == keys:
             return
         self._ecoregion_combo.set_checked_keys(keys)
@@ -337,22 +307,66 @@ class PlantPanel(QWidget):
             "Show only plants you can source from the checked tiers.\n"
             "Leave all unchecked to see everything."
         )
-        # Ecoregion choices are (label, key) tuples with a leading "Any" sentinel
-        # (empty key); the multi-select combo uses its placeholder for "any", so
-        # drop the sentinel and feed the real regions in display order.
-        _eco_labels = {key: lbl for lbl, key in _ECOREGION_CHOICES if key}
+        # Three levels, collapsed to six (V2.67). The surveyed vocabulary has
+        # 24 ecoregions and 21 Alberta subregions, which is not a list anybody
+        # can read: the top level is the six ecozones, and each opens.
         self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
-        for key, lbl in _eco_labels.items():
-            self._ecoregion_combo.add_check_item(lbl, key)
+        build_ecoregion_tree(self._ecoregion_combo)
         self._ecoregion_combo.setStyleSheet(_combo_style)
         self._ecoregion_combo.setToolTip(
-            "Restore toward one or more Alberta ecoregions — shows plants\n"
-            "documented from any of them. Leave unchecked to see everything."
+            "Restore toward one or more ecoregions. Click the arrow to open a\n"
+            "system and see the regions inside it, and again for Alberta's\n"
+            "natural subregions.\n\n"
+            "Checking a system includes everything inside it, so you do not\n"
+            "have to tick them one by one. Leave unchecked to see everything."
         )
         self._ecoregion_combo.selectionChanged.connect(self._on_ecoregion_changed)
         row3.addWidget(self._rarity_combo, 1)
         row3.addWidget(self._ecoregion_combo, 1)
         top_layout.addLayout(row3)
+
+        # Row 4 — phenology (V2.37). The app has always been able to tell you
+        # WHICH months your design leaves without bloom (Analysis → Habitat,
+        # Bees, This Month all name the gap months) and never had a way to act
+        # on the answer: "gap months are shown for a design but there is no
+        # option to choose plants that flower or fruit a particular month."
+        # 428 of 434 plants record a bloom window and 287 a fruit window.
+        row4 = QHBoxLayout()
+        row4.setSpacing(4)
+        self._bloom_combo = self._make_multi_combo(
+            "Blooms in…", _MONTH_LABELS, _combo_style)
+        self._bloom_combo.setToolTip(
+            "Show only plants flowering in any of the checked months —\n"
+            "the direct way to fill a nectar gap. Plants with no recorded\n"
+            "bloom window are left out rather than guessed at.")
+        self._fruit_combo = self._make_multi_combo(
+            "Fruits in…", _MONTH_LABELS, _combo_style)
+        self._fruit_combo.setToolTip(
+            "Show only plants fruiting in any of the checked months —\n"
+            "for staggering bird food or a harvest across the season.")
+        row4.addWidget(self._bloom_combo, 1)
+        row4.addWidget(self._fruit_combo, 1)
+        top_layout.addLayout(row4)
+
+        # Row 5 — flower colour (V2.48). The directory got this in V2.47 and the
+        # picker beside the map did not, which is backwards: choosing a plant
+        # because of how it will look is a PLACEMENT decision, and this is the
+        # panel you place from (P13). Vocabulary imported, never restated, so
+        # the panel, the directory and the website cannot disagree about what
+        # colour a plant is.
+        row5 = QHBoxLayout()
+        row5.setSpacing(4)
+        self._colour_combo = self._make_multi_combo(
+            "Any flower colour", dict(_COLOUR_LABELS), _combo_style,
+            icon_for=_colour_icon)
+        self._colour_combo.setToolTip(
+            "Show only plants flowering in any of the checked colours.\n"
+            "Grasses, sedges and rushes are grouped separately: they are\n"
+            "wind-pollinated, so what you see is the seed head rather than\n"
+            "a bloom. A plant with no recorded colour is left out rather\n"
+            "than guessed at.")
+        row5.addWidget(self._colour_combo, 1)
+        top_layout.addLayout(row5)
 
         # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
         # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
@@ -455,6 +469,7 @@ class PlantPanel(QWidget):
         from src.placement_controls import PlacementControlsWidget
         self._placement = PlacementControlsWidget(show_canopy_base=True)
         self._placement.patternKindChanged.connect(self._on_pattern_kind_changed)
+        self._placement.patternChanged.connect(self._on_pattern_params_changed)
         bot_layout.addWidget(self._placement)
         self._build_polyculture_controls(bot_layout)
 
@@ -499,11 +514,13 @@ class PlantPanel(QWidget):
         # Show the rainbow default until a plant is selected with a custom colour.
         self._update_color_btn("")
 
-        # Place on Map button
+        # Place on Map — a toggle and a status readout, not a commit button.
+        # Selecting a plant arms the map on its own (see _auto_arm); this shows
+        # what is armed and clicking it stands the map down again.
         self._place_btn = QPushButton("Place on Map")
         self._place_btn.setEnabled(False)
         self._place_btn.setToolTip("Click to enter plant-placement mode on the map")
-        self._place_btn.clicked.connect(self._on_place_clicked)
+        self._place_btn.clicked.connect(self._on_place_btn_clicked)
         self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
         place_row.addWidget(self._place_btn)
 
@@ -597,9 +614,17 @@ class PlantPanel(QWidget):
                 edible_only = self._edible_btn.isChecked(),
                 perennial_only = self._perennial_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
-                ab_ecoregion    = self._ecoregion_combo.checked_keys(),
+                # Expanded along the lineage: checking one ecozone has to match
+                # plants tagged with any region inside it, and checking one
+                # region has to match plants only ever tagged at the ecozone.
+                # See src/ecoregion_tree.py for why both directions.
+                ab_ecoregion    = expand_for_filter(
+                    self._ecoregion_combo.checked_keys()),
                 availability_in = self._rarity_combo.checked_keys(),
                 soil_ph         = self._soil_ph,
+                bloom_months    = self._bloom_combo.checked_keys(),
+                fruit_months    = self._fruit_combo.checked_keys(),
+                flower_colours  = self._colour_combo.checked_keys(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")
@@ -616,14 +641,14 @@ class PlantPanel(QWidget):
     def _on_view_current_changed(self, current: QModelIndex, _prev: QModelIndex):
         """QListView equivalent of the old QListWidget currentItemChanged.
 
-        Selecting a row enables the Place button and updates the colour-
-        picker preview. The compact-list flow doesn't surface a separate
-        bottom detail group — the inline expand chevron is the discovery
-        path.
+        Selecting a row **arms the map with that plant** and updates the
+        colour-picker preview. The compact-list flow doesn't surface a separate
+        bottom detail group — the inline expand chevron is the discovery path.
         """
         if not current.isValid():
             self._selected_plant = None
             self._place_btn.setEnabled(False)
+            self._update_place_btn()
             return
         plant = current.data(_PLANT_OBJ_ROLE)
         if not plant:
@@ -631,10 +656,67 @@ class PlantPanel(QWidget):
             # A built mix can still be Placed (incl. Fill Area) without a
             # current list selection.
             self._place_btn.setEnabled(len(self._mix_species) >= 2)
+            self._update_place_btn()
             return
         self._selected_plant = plant
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
+        self._auto_arm()
+
+    # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _on_pattern_params_changed(self):
+        from src.placement_arming import request_rearm
+        request_rearm(self)
+
+    def _auto_arm(self):
+        """Re-arm the map with whatever is selected now.
+
+        Selecting *is* the arming gesture (V2.37, user feedback: "selecting a
+        plant or plant community should be sufficient to then place that unit on
+        the map... often I end up placing the wrong thing (the last thing)
+        because I haven't hit the button"). The separate press meant the map
+        stayed armed with the previous choice until you pressed again, and the
+        cost of forgetting was a plant in the ground that you did not pick.
+
+        Fill Area is deliberately excluded: it does not arm a click, it enters
+        polygon-draw mode immediately, so auto-arming it would hijack the map
+        every time you arrow-key through the results list.
+        """
+        if self._current_pattern().get("kind") == "fill":
+            return
+        if not self._selected_plant and len(self._mix_species) < 2:
+            return
+        self._on_place_clicked()
+
+    def set_armed(self, armed: bool):
+        """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if self._armed == bool(armed):
+            return
+        self._armed = bool(armed)
+        self._update_place_btn()
+
+    def _update_place_btn(self):
+        """Render the button as a live status chip while armed."""
+        if not hasattr(self, "_place_btn"):
+            return
+        from src.placement_arming import apply_chip
+        n = len(self._mix_species)
+        apply_chip(
+            self._place_btn, armed=self._armed,
+            what=("the mix" if n >= 2
+                  else (self._selected_plant or {}).get("common_name", "")),
+            kind=self._placement.kind,
+            idle_text="Place Mix on Map" if n >= 2 else "Place on Map",
+            idle_style=_PLACE_BTN_STYLE,
+            idle_tooltip="Click to enter plant-placement mode on the map")
+
+    def _on_place_btn_clicked(self):
+        """The button toggles: arm what's selected, or stand the map down."""
+        if self._armed:
+            self.placement_cancelled.emit()
+            return
+        self._on_place_clicked()
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -659,6 +741,15 @@ class PlantPanel(QWidget):
             return ([(int(self._selected_plant["id"]), 1.0)],
                     self._selected_plant.get("common_name", ""))
         return [], ""
+
+    def selected_plant(self) -> Optional[dict]:
+        """The species currently selected here, or ``None``.
+
+        Public since V2.46 so the 3D preview can plant *the same* selection the
+        map's Place button uses, rather than carrying a second species picker
+        that could disagree with this one.
+        """
+        return self._selected_plant
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -700,6 +791,10 @@ class PlantPanel(QWidget):
             "padding: 2px 8px; font-size: 11px; }"
             "QPushButton:hover { border-color: #8a4a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._mix_clear_btn.setToolTip(
+            "Empty the current mix. Plants already placed on the map stay\n"
+            "where they are — use Undo (Ctrl+Z) to take those back."
         )
         self._mix_clear_btn.clicked.connect(self._clear_mix)
         self._mix_clear_btn.setEnabled(False)
@@ -744,6 +839,18 @@ class PlantPanel(QWidget):
     def _on_pattern_kind_changed(self, kind: str):
         # Burst quantity only applies in Single mode.
         self._qty_spin.setEnabled(kind == "single")
+        # Switching Row → Grid is choosing what to place, exactly like picking a
+        # different species, so it re-arms rather than leaving the map holding
+        # the old pattern. Leaving Fill Area stands the map down instead: the
+        # user is no longer drawing a polygon.
+        if kind == "fill":
+            if self._armed:
+                self.placement_cancelled.emit()
+            return
+        if self._armed:
+            self._auto_arm()
+        else:
+            self._update_place_btn()
 
     def _current_pattern(self) -> dict:
         """Build the pattern dict to pass to the map-placement signal.
@@ -905,13 +1012,16 @@ class PlantPanel(QWidget):
         n = len(self._mix_species)
 
         # Place button label tracks the active mix; a built mix is placeable
-        # (incl. Fill Area) even when nothing is selected in the list.
+        # (incl. Fill Area) even when nothing is selected in the list. Changing
+        # the mix re-arms for the same reason changing the species does — the
+        # map should be holding what you are looking at.
         if hasattr(self, "_place_btn"):
-            self._place_btn.setText(
-                "Place Mix on Map" if n >= 2 else "Place on Map"
-            )
             if n >= 2:
                 self._place_btn.setEnabled(True)
+            if self._armed:
+                self._auto_arm()
+            else:
+                self._update_place_btn()
 
         if n == 0:
             self._mix_status.setText(
@@ -1215,6 +1325,8 @@ class PlantPanel(QWidget):
             self._qty_spin.value(),
             pattern,
         )
+        self._armed = True
+        self._update_place_btn()
 
     def _on_plant_context_menu(self, pos):
         """Right-click context menu for plant results list."""
@@ -1423,6 +1535,9 @@ QPushButton:hover  { background: #388e3c; }
 QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
+
+# The armed chip's look and wording live in src/placement_arming.py — the
+# community panel shows the same state and the two must not diverge.
 
 _QTY_SPIN_STYLE = """
 QSpinBox {

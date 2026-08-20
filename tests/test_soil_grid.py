@@ -33,6 +33,13 @@ def _write_tif(path, value, crs="EPSG:4326", bounds=(-114.0, 53.0, -113.0, 54.0)
         ds.write(data, 1)
 
 
+try:
+    import pyproj  # noqa: F401
+    _HAVE_PYPROJ = True
+except ImportError:
+    _HAVE_PYPROJ = False
+
+
 @unittest.skipUnless(_HAVE_RASTERIO, "rasterio not installed")
 class TestSampleSoil(unittest.TestCase):
 
@@ -66,9 +73,14 @@ class TestSampleSoil(unittest.TestCase):
     def test_none_when_no_pack(self):
         self.assertIsNone(soil_grid.sample_soil(53.5, -113.5, self.pack))
 
+    @unittest.skipUnless(_HAVE_PYPROJ, "pyproj not installed")
     def test_reprojects_from_projected_crs(self):
         # A raster in a metres CRS (Web Mercator) must still sample at the
         # lat/lng point — build its bounds around the point's mercator coords.
+        #
+        # Guarded on pyproj SEPARATELY from the class's rasterio guard: the two
+        # are independent installs, and rasterio-without-pyproj made this the
+        # only test in the file to error rather than skip.
         from pyproj import Transformer
         tr = Transformer.from_crs(4326, 3857, always_xy=True)
         x, y = tr.transform(-113.5, 53.5)
