@@ -655,7 +655,14 @@ class TestTheWildlifeIndexIsSearchable(unittest.TestCase):
 class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
     """V2.71. The site made no external request of any kind; a beacon is a real
     change to that promise, so it is off by default, refuses a malformed token
-    rather than pasting it into every page, and says so where a reader looks."""
+    rather than pasting it into every page, and says so where a reader looks.
+
+    V2.73 adds a second provider on the same terms. What is checked here is
+    that both reach *every page* and that neither can leak into a later build;
+    the validation table itself is in `tests/test_site_analytics.py`, where it
+    does not cost a site render per case."""
+
+    _UID = "0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8"
 
     @classmethod
     def setUpClass(cls):
@@ -667,21 +674,63 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
                                     **kw)
         return out, summary
 
+    def _assert_clean(self, out):
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertNotIn("cloudflareinsights", text, str(page))
+            self.assertNotIn("umami", text.lower(), str(page))
+
     def test_no_beacon_unless_asked_for(self):
         out, summary = self._build()
         self.assertFalse(summary["analytics"])
-        for page in out.rglob("*.html"):
-            self.assertNotIn("cloudflareinsights",
-                             page.read_text(encoding="utf-8"))
+        self.assertEqual(summary["analytics_providers"], ())
+        self._assert_clean(out)
 
     def test_the_beacon_and_its_disclosure_land_on_every_page(self):
         token = "a" * 32
         out, summary = self._build(analytics_token=token)
         self.assertTrue(summary["analytics"])
+        self.assertEqual(summary["analytics_providers"],
+                         ("Cloudflare Web Analytics",))
         for page in out.rglob("*.html"):
             text = page.read_text(encoding="utf-8")
             self.assertIn(token, text, str(page))
             self.assertIn("sets no cookies", text, str(page))
+
+    def test_umami_and_its_disclosure_land_on_every_page(self):
+        """V2.73. Cloudflare's free tier answers "is anyone reading this" and
+        keeps a short window; Umami is the one that keeps history."""
+        out, summary = self._build(umami_website_id=self._UID)
+        self.assertEqual(summary["analytics_providers"], ("Umami",))
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(f'data-website-id="{self._UID}"', text, str(page))
+            self.assertIn("cloud.umami.is/script.js", text, str(page))
+            self.assertIn("sets no cookies", text, str(page))
+            self.assertNotIn("cloudflareinsights", text, str(page))
+
+    def test_both_providers_can_run_together(self):
+        """The switchover case: the old numbers and the new ones side by side
+        is how you find out the new one is recording before dropping the old."""
+        token = "c" * 32
+        out, summary = self._build(analytics_token=token,
+                                   umami_website_id=self._UID)
+        self.assertEqual(summary["analytics_providers"],
+                         ("Cloudflare Web Analytics", "Umami"))
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(token, text, str(page))
+            self.assertIn(self._UID, text, str(page))
+            self.assertIn("sets no cookies", text, str(page))
+
+    def test_a_self_hosted_umami_url_is_what_gets_published(self):
+        """`cloud.umami.is` is on the common blocklists, so serving the script
+        from the site's own domain is a real migration, not a preference."""
+        src = "https://grownativeplants.ca/u.js"
+        out, _ = self._build(umami_website_id=self._UID, umami_src=src)
+        text = (out / "index.html").read_text(encoding="utf-8")
+        self.assertIn(f'src="{src}"', text)
+        self.assertNotIn("cloud.umami.is", text)
 
     def test_a_malformed_token_is_refused(self):
         """It lands inside a quoted JSON attribute on 2,000 pages. A loose
@@ -690,20 +739,23 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
                     "tok'en"):
             with self.assertRaises(ValueError, msg=bad):
                 self._build(analytics_token=bad)
+        for bad in ("not-a-uuid", 'x" onload="alert(1)'):
+            with self.assertRaises(ValueError, msg=bad):
+                self._build(umami_website_id=bad)
 
     def test_a_build_cannot_inherit_the_previous_one_s_token(self):
-        """The token is module state for the length of one build, so the seam
-        that matters is what a *later* build sees. It is assigned on the way in
-        rather than restored on the way out, so neither a rejected token nor a
-        build that raised half way can put a beacon on the next one's pages."""
+        """The configuration is module state for the length of one build, so
+        the seam that matters is what a *later* build sees. It is assigned on
+        the way in rather than restored on the way out, so neither a rejected
+        value nor a build that raised half way can put a beacon on the next
+        one's pages."""
         with self.assertRaises(ValueError):
             self._build(analytics_token="nope")
         self._build(analytics_token="b" * 32)
+        self._build(umami_website_id=self._UID)
         out, summary = self._build()
         self.assertFalse(summary["analytics"])
-        for page in out.rglob("*.html"):
-            self.assertNotIn("cloudflareinsights",
-                             page.read_text(encoding="utf-8"), str(page))
+        self._assert_clean(out)
 
 
 if __name__ == "__main__":

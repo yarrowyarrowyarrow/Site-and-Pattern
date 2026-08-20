@@ -168,15 +168,50 @@ existing link breaks.
 
 ## Step 4: find out whether anyone is reading it (optional)
 
-Off unless you ask for it. With no token the site makes **no request to
-anywhere else at all**, which is how it has always shipped and the default this
-step does not change.
+Off unless you ask for it. With no analytics argument the site makes **no
+request to anywhere else at all**, which is how it has always shipped and the
+default this step does not change.
 
-**Why Cloudflare Web Analytics and not Google Analytics.** It is free, it needs
-no cookie banner because it sets no cookies, it keeps no per-visitor
-identifier, and your domain is already on Cloudflare so there is no new account
-to open. Google Analytics would give more numbers than you need and would put a
-consent obligation on a catalogue that currently has none.
+There are two counters you can turn on, separately or together. Both are free,
+neither sets a cookie, neither keeps a per-visitor identifier, and either one
+adds a line to the footer of every page saying it is there. That is the price
+of admission: a script that needed a consent banner would not be in here.
+
+| | Answers | Keeps history |
+|---|---|---|
+| **Cloudflare Web Analytics** | *is anybody reading this at all* | free tier holds roughly the last day |
+| **Umami** | *which pages, and is it growing* | months |
+
+**Turn on Umami if you only turn on one.** Cloudflare's short window is the
+whole reason this step gained a second option in V2.73: a 24-hour snapshot
+cannot show you that March had twice February's readers, or that one species
+page is where most people arrive.
+
+**Why not Google Analytics.** It would give far more numbers than you need and
+would put a consent obligation on a catalogue that currently has none.
+
+### 4a. Umami — the one that keeps history
+
+1. Sign up at **[cloud.umami.is](https://cloud.umami.is)** (there is a free
+   tier; check their pricing page for the current event limit).
+2. **Add a website**, name it and enter `grownativeplants.ca`.
+3. Open that website's **Settings**. Copy the **Website ID** — a UUID, five
+   groups of hex digits separated by hyphens, like
+   `0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8`.
+
+Copy the **ID**, not the tracking-code snippet and not the share URL. The build
+writes the snippet for you, and the share URL is a different thing entirely.
+
+```bash
+python -m src.cli build-site public --base-url https://grownativeplants.ca/ \
+  --umami-website-id 0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8
+```
+
+If you signed up in Umami's **EU region**, add
+`--umami-src https://eu.umami.is/script.js` — the ID alone will not find it,
+and the symptom is a dashboard that stays at zero.
+
+### 4b. Cloudflare — keep it as the control
 
 Get the token once:
 
@@ -186,26 +221,49 @@ Get the token once:
 3. You do not need the snippet. Copy only the long value after `"token":` —
    32 characters, letters and digits.
 
-Then build with it:
+You can pass both flags at once, and for the first fortnight you should:
 
 ```bash
 python -m src.cli build-site public --base-url https://grownativeplants.ca/ \
-  --analytics-token PASTE_THE_TOKEN_HERE
+  --analytics-token PASTE_THE_TOKEN_HERE \
+  --umami-website-id 0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8
 ```
 
-**What it does.** Adds one `<script>` to the end of every page, pointing at
-Cloudflare's beacon, and adds a line to the footer saying so. **How to read the
-output.** The last line of the build now reads either `analytics: Cloudflare
-beacon embedded, disclosed in the footer` or `analytics: none (the site makes
-no external request)`. Read that line — it is the only way to know which kind
-of build you just made. **What failure looks like:** a mistyped token is
-*refused* with an error rather than published, because the value goes into
-2,000 pages and a broken one would be silent. A token that is well-formed but
-belongs to a different site will not error; it will just record nothing, so
-check Cloudflare shows traffic within a day of publishing.
+Two counters on the same pages should report roughly the same traffic. If Umami
+shows nothing while Cloudflare shows visitors, the problem is the Umami setup,
+not the audience. Once the two agree, drop `--analytics-token` and Cloudflare
+is off with no other change.
 
-Numbers show up under the same **Web Analytics** page in Cloudflare, usually
-within a few minutes of the first visit.
+### 4c. Reading the build output
+
+**What these flags do.** Each adds one `<script>` to the end of every page and
+adds a sentence to the footer naming what is there.
+
+**How to read the output.** The last line of the build now names the providers
+it embedded:
+
+```
+  analytics: Cloudflare Web Analytics + Umami embedded, disclosed in the footer
+  analytics: Umami embedded, disclosed in the footer
+  analytics: none (the site makes no external request)
+```
+
+Read that line. It is the only way to know which kind of build you just made,
+and it is why the line names them rather than saying "yes".
+
+**What failure looks like.** A mistyped token or a website ID that is not a
+UUID is *refused with an error* rather than published, because the value goes
+into 2,000 pages and a broken one would be silent. But a value that is
+well-formed and belongs to somebody else's site will **not** error: it will
+build cleanly and record nothing. So after publishing, visit the site yourself
+and check the number moves. Cloudflare usually shows it within a few minutes;
+Umami shows the visit almost immediately, on its **Realtime** page.
+
+**The one that will confuse you later:** `cloud.umami.is/script.js` is on the
+common ad-blocker lists, so some of your visitors are never counted and the
+number is a floor, not a total. The fix is to serve the script from your own
+domain, and that is what `--umami-src` is for — it takes any https URL, so if
+you ever self-host Umami, only the build command changes.
 
 ---
 

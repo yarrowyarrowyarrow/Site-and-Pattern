@@ -8,12 +8,15 @@ kind. That is the discipline ``html/`` already follows for the map and the 3D
 viewer, and here it also means the site keeps working when a CDN does not and
 can be read straight off a disk with ``file://``.
 
-**One opt-in exception, since V2.71:** ``write_site(analytics_token=...)``
-embeds the Cloudflare Web Analytics beacon so the site's owner can find out
-whether anyone is reading it. Off unless asked for, disclosed in the footer of
-every page it appears on, and chosen because it sets no cookie and keeps no
-per-visitor identifier. Everything above still holds for a build without it,
-which is the default.
+**One opt-in exception, since V2.71:** ``write_site`` can embed a page-view
+counter so the site's owner can find out whether anyone is reading it. Off
+unless asked for, disclosed in the footer of every page it appears on, and
+limited to scripts that set no cookie and keep no per-visitor identifier.
+Everything above still holds for a build without it, which is the default.
+The vocabulary, the validation and the footer sentence live in
+:mod:`src.site_analytics`; this module holds one value and asks it things.
+V2.73 added a second provider (Umami, which keeps history where Cloudflare's
+free tier keeps a day), and the two can be on together.
 
 Links are **relative**, computed per page from its depth, so the output can be
 published at a domain root, in a subdirectory, or opened locally without a
@@ -41,10 +44,10 @@ import html
 import json
 import os
 import pathlib
-import re
 import shutil
 from typing import Callable, Optional
 
+from src.site_analytics import Analytics, NONE as ANALYTICS_NONE, configure
 from src.site_facets import FACETS, GROUPS
 from src.static_site import _first_photo
 
@@ -73,48 +76,27 @@ TAGLINE = ("Native plants of Alberta and the Canadian prairies, and the "
 _NAV = (("plants/", "Plants"), ("map/", "Ecoregions"),
         ("wildlife/", "Wildlife"), ("about/", "About"))
 
-#: Cloudflare Web Analytics site token for this build, or ``""`` for none
-#: (V2.71). Off by default and set for the length of one ``write_site`` call:
+#: What this build phones home to, if anything (V2.71; a second provider in
+#: V2.73). Off by default and set for the length of one ``write_site`` call:
 #: it is a property of the *publish*, not of any page, and threading it through
 #: `_page`'s fifteen call sites in five modules to say one thing would be worse.
 #:
 #: Turning it on is the single exception to this module's "no external request
-#: of any kind" rule, so it is opt-in, it is validated (a token that is not
-#: plain alphanumerics is refused rather than pasted into 2,000 pages), and it
-#: is **disclosed in the footer of every page it appears on**. Cloudflare's
-#: beacon sets no cookie and stores no per-visitor identifier, which is why it
-#: is the one worth the exception; a script that did would not be.
-_ANALYTICS: str = ""
-
-#: What a valid Cloudflare beacon token looks like. Deliberately strict: the
-#: value lands inside a quoted JSON attribute on every page, and the failure
-#: mode of a loose check is markup injection across the whole site.
-_TOKEN_OK = re.compile(r"^[A-Za-z0-9]{16,64}$")
+#: of any kind" rule. What that exception costs — opt-in, validated rather than
+#: pasted into 2,000 pages, no cookie, no per-visitor identifier, and disclosed
+#: in the footer of every page it appears on — is enforced in
+#: :mod:`src.site_analytics`, which is also where a third provider would go.
+_ANALYTICS: Analytics = ANALYTICS_NONE
 
 
 def _beacon() -> str:
-    """The analytics snippet, or ``""``. Never emitted unless asked for.
-
-    Mirrors the snippet Cloudflare's own dashboard hands out, attribute for
-    attribute, including ``type="module"``. The first cut wrote ``defer``,
-    which is what Cloudflare's *older* snippet used; the beacon is shipped as
-    an ES module now, and loading a module as a classic script is the kind of
-    failure that records nothing and reports no error. There is no reason to
-    paraphrase a vendor's tag.
-    """
-    if not _ANALYTICS:
-        return ""
-    return ('<script type="module" src="https://static.cloudflareinsights.com/'
-            'beacon.min.js" data-cf-beacon=\'{"token": "'
-            + _ANALYTICS + '"}\'></script>')
+    """The analytics script tags, or ``""``. Never emitted unless asked for."""
+    return _ANALYTICS.tags()
 
 
 def _privacy_line() -> str:
-    if not _ANALYTICS:
-        return ""
-    return ('\n    <p>Page views are counted by Cloudflare Web Analytics, '
-            'which sets no cookies and records nothing that identifies you. '
-            'It is the only request this site makes to anywhere else.</p>')
+    """The footer's disclosure of those tags, or ``""``."""
+    return _ANALYTICS.disclosure()
 
 
 def _asset(name: str) -> str:
@@ -500,6 +482,8 @@ def write_site(model: dict, out_dir: str, *,
                copy_photos: bool = True,
                include_notes: bool = False,
                analytics_token: str = "",
+               umami_website_id: str = "",
+               umami_src: str = "",
                progress: Optional[Callable] = None) -> dict:
     """Render ``model`` into ``out_dir``. Returns a summary dict.
 
@@ -507,10 +491,12 @@ def write_site(model: dict, out_dir: str, *,
     generator that deletes a directory the user pointed at is one bad argument
     away from removing something else.
 
-    ``analytics_token`` opts this build into the Cloudflare Web Analytics
-    beacon (see :data:`_ANALYTICS`). Empty means no analytics and no external
-    request, which is the default and the state every build before V2.71 was
-    in. A malformed token raises rather than being written into 2,000 pages.
+    ``analytics_token`` (Cloudflare Web Analytics) and ``umami_website_id``
+    (+ optional ``umami_src`` for a self-hosted instance or the EU region) opt
+    this build into a page-view counter; see :mod:`src.site_analytics`. Either,
+    both or neither. Neither means no analytics and no external request, which
+    is the default and the state every build before V2.71 was in. A malformed
+    value raises rather than being written into 2,000 pages.
     """
     # Imported here, not at module scope: static_site_species imports the shell
     # and the shared pieces back from this module, so a top-level import would
@@ -529,17 +515,15 @@ def write_site(model: dict, out_dir: str, *,
                                           render_wildlife_index)
 
     global _ANALYTICS
-    token = (analytics_token or "").strip()
-    if token and not _TOKEN_OK.match(token):
-        raise ValueError(
-            "analytics token must be 16-64 plain alphanumeric characters; "
-            "got something else, and this value is written into every page")
-    # Set unconditionally, and never restored afterwards. Restoring on the way
-    # out would leak the token if a build raised half way; assigning on the way
-    # IN cannot, because the next build's own argument overwrites it whatever
+    # Validated before anything is written, and set unconditionally — never
+    # restored afterwards. Restoring on the way out would leak the previous
+    # build's configuration if a build raised half way; assigning on the way IN
+    # cannot, because the next build's own arguments overwrite it whatever
     # happened to the last one. Fail-closed for the value that decides whether
     # a page phones home.
-    _ANALYTICS = token
+    _ANALYTICS = configure(cloudflare_token=analytics_token,
+                           umami_website_id=umami_website_id,
+                           umami_src=umami_src)
 
     say = progress or (lambda _m: None)
     root = pathlib.Path(out_dir)
@@ -612,7 +596,11 @@ def write_site(model: dict, out_dir: str, *,
 
     copied = sum(1 for v in photo_src.values() if not v.startswith("http"))
     return {"out_dir": str(root),
-            "analytics": bool(token),
+            "analytics": bool(_ANALYTICS),
+            # Named, not just counted: "did this build have analytics in it"
+            # and "which one" are different questions, and the second became
+            # a real one the moment there were two providers.
+            "analytics_providers": _ANALYTICS.providers(),
             # Pages plus the photo files staged beside them: the number the
             # operator is about to upload, not just the number rendered.
             "files": len(written) + copied,

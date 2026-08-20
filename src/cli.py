@@ -199,14 +199,18 @@ def _cmd_build_site(args) -> int:
                          copy_photos=not args.no_photos,
                          include_notes=args.include_notes,
                          analytics_token=getattr(args, "analytics_token", ""),
+                         umami_website_id=getattr(args, "umami_website_id", ""),
+                         umami_src=getattr(args, "umami_src", ""),
                          progress=say)
     print(f"\n{summary['files']} files written to {summary['out_dir']}")
     print(f"  {summary['species']} species pages, "
           f"{summary['wildlife']} wildlife pages")
-    # Said out loud either way. "Did this build have analytics in it?" is not a
-    # question anyone should have to answer by grepping the output.
-    print("  analytics: Cloudflare beacon embedded, disclosed in the footer"
-          if summary.get("analytics") else
+    # Said out loud either way, and since V2.73 it names WHICH: "did this build
+    # have analytics in it" is not a question anyone should have to answer by
+    # grepping the output, and with two providers "yes" stopped being an answer.
+    names = summary.get("analytics_providers") or ()
+    print(f"  analytics: {' + '.join(names)} embedded, disclosed in the footer"
+          if names else
           "  analytics: none (the site makes no external request)")
     if summary["photos_hotlinked"]:
         print(f"  {summary['photos_copied']} photographs copied from the local "
@@ -345,11 +349,31 @@ def _build_parser() -> argparse.ArgumentParser:
                          "free, prior and informed consent (see CLAUDE.md)")
     bs.add_argument("--analytics-token", default="", dest="analytics_token",
                     help="Cloudflare Web Analytics site token. OFF by default: "
-                         "with no token the site makes no external request at "
-                         "all. With one, every page loads Cloudflare's beacon "
-                         "(no cookies, no per-visitor identifier) and says so "
-                         "in its footer. Get the token from the Cloudflare "
-                         "dashboard under Analytics & Logs > Web Analytics")
+                         "with no analytics argument the site makes no external "
+                         "request at all. With one, every page loads "
+                         "Cloudflare's beacon (no cookies, no per-visitor "
+                         "identifier) and says so in its footer. Get the token "
+                         "from the Cloudflare dashboard under Analytics & Logs "
+                         "> Web Analytics. Answers 'is anyone reading this'; "
+                         "the free tier keeps a short window, so for history "
+                         "use --umami-website-id as well or instead")
+    bs.add_argument("--umami-website-id", default="", dest="umami_website_id",
+                    help="Umami website ID (a UUID, from the website's "
+                         "Settings page in Umami). OFF by default, same terms "
+                         "as --analytics-token: no cookies, no per-visitor "
+                         "identifier, disclosed in the footer. Unlike "
+                         "Cloudflare it keeps history, so it is the one that "
+                         "answers 'which pages, and is this growing'. Both "
+                         "flags together is fine and is how you check a "
+                         "switchover before dropping the old one")
+    bs.add_argument("--umami-src", default="", dest="umami_src",
+                    help="URL of Umami's script.js. Defaults to Umami Cloud "
+                         "(https://cloud.umami.is/script.js); use "
+                         "https://eu.umami.is/script.js for their EU region, "
+                         "or your own host if you self-host. Worth doing "
+                         "eventually: cloud.umami.is is on the common "
+                         "blocklists, so some visitors go uncounted. Ignored "
+                         "without --umami-website-id")
     bs.set_defaults(func=_cmd_build_site)
 
     # validate-data

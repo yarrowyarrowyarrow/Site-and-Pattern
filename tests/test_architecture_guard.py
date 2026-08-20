@@ -210,7 +210,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # page that answers "where?" (the map page, the per-region maps, the
         # subregion pages) and this module keeps the ones that answer "what?".
         # Third split off this file, after the species page and the About page.
-        (_SRC / "static_site_render.py", 800),         # 713 now
+        (_SRC / "static_site_render.py", 800),         # 709 now
+        # V2.73 — the fifth split off the renderer, and the only one that is
+        # not a page. `static_site_render.py` sat at 721 of 800 and growing one
+        # analytics provider into two in place would have spent most of the
+        # remaining headroom on a concern that is not rendering. The seam is
+        # real either way: "which counters is this build carrying, what tags do
+        # they emit, and what does the footer therefore have to say" is one
+        # question, and it was three globals and two functions scattered among
+        # the page shells. Opted in on arrival, the V2.41 precedent.
+        (_SRC / "site_analytics.py", 220),             # 187 now
         (_SRC / "static_site_regions.py", 320),        # 246 now
         (_SRC / "static_site_species.py", 340),        # 256 now
         # V2.71 — the fourth split, on the same rule as the three above. The
