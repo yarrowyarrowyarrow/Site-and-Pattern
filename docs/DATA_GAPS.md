@@ -81,6 +81,8 @@ of its species. That is the right trade for a warning.
 
 ## Photographs and provenance (V2.35)
 
+> **Catalogue size, V2.75: 430 species.** The `/434` denominators below are as-measured at V2.42 and are left as they were written — this repo corrects its ledger in place rather than rewriting history, and a table describing a past measurement is not a stale reference. Two species have been removed since (*Rudbeckia hirta* V2.74, *Helianthus giganteus* V2.75, both introduced or eastern) and two garden rows reclassified. **The live figures are printed by `python scripts/check_plant_data.py`**, which counts rather than remembers.
+
 **Photo coverage.** `src/data_quality.py:validate_photo_coverage` counts this on
 every run of the gate, so the numbers below are live rather than a snapshot:
 
@@ -333,3 +335,41 @@ allowlist mode is ever wanted.
   matching — the single biggest lever for making the no-LLM path precise.
 - Optional: a canonical `edible` / `food` use-key in the `plant_uses` junction
   to distinguish human-edible from merely bird-food, refining `food_producing`.
+
+---
+
+## Taxonomy: no backbone, and the names that show it (V2.75)
+
+**Status: the catalogue has no authority field, no synonym list and no taxon
+key of any kind.** A `scientific_name` is a free string checked by one regex
+(`data_quality._SCI_NAME_RE`). There is no mechanism by which the app could
+know that two rows are one taxon, or that a binomial has been superseded.
+
+An outside botanical review named this directly: *"A lot of species are listed
+using out-of-date names (e.g.: the Old World species, instead of the separate
+North American species)."* Checked, and true. The confirmed cases:
+
+| Shipped as | The problem |
+|---|---|
+| `Achillea millefolium` | Ships **beside its own segregate**, `Achillea borealis` ("Boreal Yarrow"), and a third row `Achillea alpina` — all three claiming AB,SK. The North American plant is usually treated as `var. occidentalis` / formerly `A. lanulosa`; the bare Eurasian binomial standing next to its own segregate is the clearest case in the catalogue |
+| `Fragaria vesca` | No infraspecific rank. North American material is `subsp. americana` / `bracteata`; the bare name is the European type |
+| `Prunella vulgaris` | No infraspecific rank. The native North American plant is `ssp. lanceolata`; the type is European and introduced here |
+| `Juniperus communis` | No infraspecific rank. North American material is `var. depressa`. Circumboreal, so the species-level claim is defensible; the rank is still missing |
+| `Aster alpinus` | *Aster* s.str. is legitimately retained, but this is a widely sold Eurasian rock-garden plant, and it carries **72 Aspen Parkland occurrence records** — a montane species with parkland records, which is exactly the pattern a garden escape makes |
+| `Deschampsia caespitosa` | An orthographic variant. FNA and POWO use `cespitosa`, and the accepted spelling appears **nowhere in this repo**, so any lookup keyed on it misses silently |
+| `Solidago rigida` / `Oligoneuron rigidum` | One taxon, two published species pages, **disagreeing about nativity**. See the Backlog |
+
+**What the catalogue got right, and it is most of the work.** The genus-level
+segregations are done: Aster → *Symphyotrichum* (10 rows) with *Eurybia*,
+*Doellingeria* and *Canadanthus* split out correctly; Polygonum →
+*Persicaria*; Zigadenus → *Anticlea*; Disporum → *Prosartes*; Potentilla →
+*Comarum*. `Pulsatilla nuttalliana` is the correct North American name, not
+`Anemone patens` or `Pulsatilla patens`. No `Agropyron`, no `Elytrigia`, no
+`Bromus inermis` and no `Poa pratensis` anywhere. This is a species-level
+residue on a genus-level job that was done properly.
+
+**Next step:** `scripts/fetch_flora_nativity.py` (V2.75). VASCAN returns the
+accepted name and synonym status in the same request that answers nativity, so
+one ~430-request run produces the whole list. **Renaming is not a data job** —
+it moves plant ids, the `plant_fauna_master.json` keys that name a plant by
+common name, and public URLs people may have linked to. Its own increment.
