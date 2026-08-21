@@ -60,6 +60,19 @@ def confidence_for(occurrences: int) -> str:
     return ""
 
 
+def _containment_lookup(lat: float, lng: float) -> list[str]:
+    """The regions a coordinate is *inside*, with no proximity buffer.
+
+    Separated from ``src.ecoregion.lookup_ecoregions`` by one keyword rather
+    than duplicated, so the geometry has one implementation and the two
+    questions asked of it stay visibly different. See
+    :func:`ranges_for_species` for why range derivation must not use the
+    buffered answer.
+    """
+    from src.ecoregion import lookup_ecoregions                 # noqa: PLC0415
+    return lookup_ecoregions(lat, lng, near_m=0.0)
+
+
 def ranges_for_species(
     occurrences: Iterable[Sequence[float]],
     *,
@@ -72,13 +85,31 @@ def ranges_for_species(
     ``{"ecoregion", "occurrences", "confidence"}`` sorted commonest first,
     excluding regions under ``min_records``.
 
-    A point in an overlap counts for **both** regions it falls in. That is not
-    double-counting — the species really is recorded from a place that is in
-    both, and the alternative (first match wins) is the bug this whole rebuild
-    exists to undo.
+    **A record counts for the region it is IN, and for no other (V2.75).**
+
+    This docstring used to say the opposite — "a point in an overlap counts for
+    both regions it falls in" — and it was true when it was written: V2.38's
+    hand-traced placeholders deliberately overlapped at their shared edges, so
+    a point really could be inside two. The surveyed ELC polygons adopted in
+    V2.67 *tile*, and the overlap trick was replaced the same day by
+    ``ecoregion._NEAR_BOUNDARY_M``, a 5 km proximity buffer written for a
+    different question: *which ecoregion is this yard in*, where the outlines'
+    ~1 km accuracy makes a near-boundary answer genuinely plural.
+
+    This function inherited that buffer by defaulting its ``lookup``, and the
+    shipped counts in ``data/plant_ecoregions.json`` were derived with it live.
+    Measured over 4,000 random points inside the layer: **16.4% are credited to
+    two or more ecoregions**. A record is evidence about one place; crediting
+    it to every region within 5 km manufactures range, and it manufactures it
+    in the direction that looks most like a real finding — a montane species
+    acquiring parkland records at the mountain front.
+
+    So the default lookup is now pinned to containment. Callers may still pass
+    their own ``lookup``; what they may not do is get the site-detection
+    behaviour here by accident.
     """
     if lookup is None:
-        from src.ecoregion import lookup_ecoregions as lookup   # noqa: PLW0127
+        lookup = _containment_lookup
 
     counts: dict[str, int] = {}
     for point in occurrences:
@@ -119,7 +150,7 @@ def dropped_regions(
     that only prints what it kept cannot be audited (P9).
     """
     if lookup is None:
-        from src.ecoregion import lookup_ecoregions as lookup   # noqa: PLW0127
+        lookup = _containment_lookup
     counts: dict[str, int] = {}
     for point in occurrences:
         if point is None or len(point) < 2:

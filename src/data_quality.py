@@ -286,6 +286,19 @@ def _load_ecoregion_keys() -> set[str]:
     from src.ecoregion_tree import tree                 # noqa: PLC0415
     keys = set(ecoregion_keys())
 
+    # Refuse BEFORE widening. The empty-vocabulary guard below is the whole
+    # safety property of this function, and adding a second source of keys
+    # would have quietly defeated it: with `ecoregion_keys()` returning
+    # nothing, the tree walk still produces 51 keys, so the check would pass
+    # and the validator would go on accepting every token in the catalogue.
+    # `tests/test_ecoregion.py:test_the_validator_refuses_an_empty_vocabulary`
+    # caught exactly that.
+    if not keys:
+        raise RuntimeError(
+            "No ecoregion vocabulary — data/ecoregions_canada.geojson is "
+            "missing or unreadable. Refusing to validate against an empty "
+            "key set, which would accept anything.")
+
     # V2.75: the vocabulary has three levels, and this gate only knew one.
     #
     # V2.68 put an ecozone above the ecoregion and an Alberta natural subregion
@@ -306,12 +319,6 @@ def _load_ecoregion_keys() -> set[str]:
             _walk(children)
 
     _walk(tree())
-
-    if not keys:
-        raise RuntimeError(
-            "No ecoregion vocabulary — data/ecoregions_canada.geojson is "
-            "missing or unreadable. Refusing to validate against an empty "
-            "key set, which would accept anything.")
     return keys
 
 

@@ -196,24 +196,49 @@ def _distance_to_ring_m(lat: float, lng: float, ring, per_lat, per_lng) -> float
     return best ** 0.5
 
 
-def lookup_ecoregions(lat: float, lng: float) -> list[str]:
+def lookup_ecoregions(lat: float, lng: float, *,
+                      near_m: float | None = None) -> list[str]:
     """Every geographic ecoregion key at (lat, lng), containing ones first.
 
-    A region whose boundary passes within :data:`_NEAR_BOUNDARY_M` is included
-    too — see that constant for why. De-duplicated, and containing regions
-    always sort ahead of merely-near ones so ``lookup_ecoregion`` still answers
-    with the region the site is actually in.
+    A region whose boundary passes within ``near_m`` is included too — see
+    :data:`_NEAR_BOUNDARY_M` for why that is the right answer for a *site*.
+    De-duplicated, and containing regions always sort ahead of merely-near ones
+    so ``lookup_ecoregion`` still answers with the region the site is in.
 
     Empty when the point is outside every polygon and near none, which is the
     honest answer for a site the data does not cover and is what the caller
     should say rather than guessing the nearest.
+
+    **``near_m=0`` asks a different question, and V2.75 is where that became
+    two questions.** This function has two kinds of caller and they want
+    opposite things:
+
+    * *Where is this yard?* — a buffer is correct. The outlines are accurate to
+      about a kilometre and a garden near an edge genuinely belongs to both
+      lists. That is the case :data:`_NEAR_BOUNDARY_M` was written for.
+    * *Which region is this record evidence for?* — a buffer is a **bug**. A
+      herbarium sheet is one observation of one place; crediting it to every
+      region within 5 km manufactures range.
+
+    ``src.ecoregion_ranges`` inherited the buffer silently when V2.67
+    introduced it, and the shipped occurrence counts were derived with it live:
+    over 4,000 random points inside the layer, **16.4% are credited to two or
+    more ecoregions**. That is a montane species acquiring parkland records,
+    which is exactly what an outside review noticed on the published site and
+    attributed to the ~900 m simplification. The simplification was the smaller
+    half.
+
+    The default is unchanged on purpose. Every existing caller is asking the
+    first question, and changing the default would break the thing V2.67 built
+    the buffer for while fixing something none of them do.
     """
     if lat is None or lng is None:
         return []
     from src.projection import metres_per_deg                    # noqa: PLC0415
 
+    near_m = _NEAR_BOUNDARY_M if near_m is None else max(0.0, float(near_m))
     per_lat, per_lng = metres_per_deg(lat)
-    pad_deg = _NEAR_BOUNDARY_M / max(per_lat, per_lng, 1.0)
+    pad_deg = near_m / max(per_lat, per_lng, 1.0)
     inside: list[str] = []
     near: list[str] = []
     for key, rings, box in _feature_index():
@@ -224,11 +249,11 @@ def lookup_ecoregions(lat: float, lng: float) -> list[str]:
         if _point_in_polygon(lat, lng, rings):
             inside.append(key)
             continue
-        if key in near:
+        if not near_m or key in near:
             continue
         gap = min(_distance_to_ring_m(lat, lng, ring, per_lat, per_lng)
                   for ring in rings)
-        if gap <= _NEAR_BOUNDARY_M:
+        if gap <= near_m:
             near.append(key)
     return inside + [key for key in near if key not in inside]
 

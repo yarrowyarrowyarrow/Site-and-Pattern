@@ -89,6 +89,7 @@ import urllib.error
 import urllib.request
 from datetime import date
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import urlencode
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -117,6 +118,56 @@ RETRY_WAITS = (5, 15, 45, 120)
 # Records from these bases are places a person put the plant, not places it
 # grows. Leaving them in is how a botanical garden becomes an ecoregion.
 EXCLUDED_BASES = {"LIVING_SPECIMEN", "MATERIAL_SAMPLE", "FOSSIL_SPECIMEN"}
+
+# NOT filtered: identification quality. GBIF's
+# `identificationVerificationStatus` is populated by a minority of publishers
+# and is absent on most herbarium records, so requiring it would discard the
+# best-determined material in the harvest to exclude nothing in particular.
+# The decision is deliberate and is disclosed on the website's Method page
+# rather than left for a reader to discover. `basisOfRecord` IS cached per
+# record (below), so a future pass can weigh a determined specimen against a
+# phone photograph without re-fetching.
+
+#: Where the raw points go, so a re-derivation never needs the network again.
+CACHE_PATH = PROJECT_ROOT / "data" / "fetched" / "plant_occurrences.json"
+CACHE_VERSION = 1
+
+#: A record whose own stated uncertainty is larger than this cannot place a
+#: plant in a *region*, so it is not counted as evidence for one.
+#:
+#: 10 km is chosen against the geography rather than picked round: the
+#: narrowest of the 24 ELC ecoregions is a few tens of kilometres across, so a
+#: record uncertain to 10 km can still say which one it is in near the middle
+#: and is refused near the edges by nothing at all — which is why this is a
+#: floor and not the whole answer. Records with NO stated uncertainty are
+#: KEPT: absent is not estimated (src/confidence.py), most herbarium sheets
+#: state none, and dropping them would silently prefer phone photographs to
+#: museum specimens.
+MAX_COORD_UNCERTAINTY_M = 10_000.0
+
+
+class Occurrence(NamedTuple):
+    """One georeferenced record, with the provenance a re-run would need.
+
+    **A NamedTuple, and lat/lng first, on purpose.** ``ranges_for_species``
+    reads ``point[0]`` and ``point[1]``, so these drop straight into the
+    existing derivation and into every test double that yields plain
+    ``(lat, lng)`` pairs. The extra fields ride along for the cache.
+
+    Why the cache exists at all (V2.75): until now the pipeline kept only the
+    derived *counts*. That made every question about the derivation — a
+    changed threshold, a corrected polygon, a boundary rule, or simply "where
+    in the region are those records?" — cost a fresh harvest of ~400,000 GBIF
+    records. It is why the 5 km buffer bug could be found here and not fixed
+    here, and why the site could report a count and never a map.
+    """
+
+    lat: float
+    lng: float
+    uncertainty_m: float | None = None
+    year: int | None = None
+    basis: str = ""
+    dataset_key: str = ""
 
 
 def polygon_bbox(pad: float = 0.5) -> tuple[float, float, float, float]:
@@ -288,7 +339,7 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
     throttle = throttle or _Throttle()
     lat_min, lat_max, lng_min, lng_max = bbox or polygon_bbox()
 
-    points: list[tuple[float, float]] = []
+    points: list[Occurrence] = []
     offset = 0
     while offset < MAX_RECORDS_PER_SPECIES:
         query = urlencode({
@@ -311,7 +362,18 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
             lat, lng = rec.get("decimalLatitude"), rec.get("decimalLongitude")
             if lat is None or lng is None:
                 continue
-            points.append((float(lat), float(lng)))
+            unc = rec.get("coordinateUncertaintyInMeters")
+            year = rec.get("year")
+            points.append(Occurrence(
+                # 4 dp is ~11 m, matching the shipped polygons' own rounding.
+                # Storing more would be precision the join cannot use.
+                lat=round(float(lat), 4),
+                lng=round(float(lng), 4),
+                uncertainty_m=float(unc) if unc is not None else None,
+                year=int(year) if year else None,
+                basis=(rec.get("basisOfRecord") or ""),
+                dataset_key=(rec.get("datasetKey") or ""),
+            ))
         if data.get("endOfRecords") or not results:
             break
         offset += PAGE_SIZE
@@ -319,12 +381,140 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
     return points
 
 
+# ── The point cache, and what a point has to be worth ───────────────────────
+
+def usable_points(points, *, max_uncertainty_m: float = MAX_COORD_UNCERTAINTY_M
+                  ) -> tuple[list, int]:
+    """``(points that can place a plant in a region, how many were refused)``.
+
+    A record that states its own coordinate uncertainty is telling you what it
+    can and cannot support, and the pipeline had never read it. A specimen
+    georeferenced to "the county" carries an uncertainty in the tens of
+    kilometres, and counting it toward one ecoregion asserts something its own
+    metadata denies.
+
+    This is the honest instrument for the objection a botanical review raised
+    about boundaries — better than any threshold on *counts*, because it acts
+    per record and for a stated reason rather than hoping errors average out.
+
+    Records with no stated uncertainty are kept; see
+    :data:`MAX_COORD_UNCERTAINTY_M`.
+    """
+    kept, refused = [], 0
+    for point in points:
+        unc = getattr(point, "uncertainty_m", None)
+        if unc is not None and unc > max_uncertainty_m:
+            refused += 1
+            continue
+        kept.append(point)
+    return kept, refused
+
+
+def write_cache(by_species: dict, *, path=CACHE_PATH, generated: str = "",
+                source: str = "") -> dict:
+    """Write the raw points, so no future question needs the network.
+
+    Compact on purpose: a run is ~400,000 records, and one JSON object per
+    record with six keys is several times the size of one array per record
+    with two interned lookup tables. Both `basis` and `dataset_key` repeat
+    across tens of thousands of rows, so they are stored once and referenced by
+    index. The shape is documented in the file's own ``columns`` field, so it
+    reads without this docstring.
+    """
+    bases: list[str] = []
+    datasets: list[str] = []
+    base_ix: dict[str, int] = {}
+    ds_ix: dict[str, int] = {}
+
+    def intern(value, table, index):
+        if value not in index:
+            index[value] = len(table)
+            table.append(value)
+        return index[value]
+
+    species: dict[str, list] = {}
+    for name in sorted(by_species):
+        rows = []
+        for pt in by_species[name]:
+            unc = getattr(pt, "uncertainty_m", None)
+            rows.append([
+                round(float(pt[0]), 4), round(float(pt[1]), 4),
+                None if unc is None else round(float(unc)),
+                getattr(pt, "year", None),
+                intern(getattr(pt, "basis", ""), bases, base_ix),
+                intern(getattr(pt, "dataset_key", ""), datasets, ds_ix),
+            ])
+        species[name] = rows
+
+    blob = {
+        "version": CACHE_VERSION,
+        "generated": generated or date.today().isoformat(),
+        "source": source or "GBIF occurrence search",
+        "comment": (
+            "Raw georeferenced points behind data/plant_ecoregions.json, kept "
+            "so a re-derivation costs nothing. Before V2.75 only the derived "
+            "counts survived a run, so changing the threshold, correcting a "
+            "polygon or drawing the records on a map all required re-fetching "
+            "~400,000 records. Dev cache: the app never reads this."),
+        "columns": ["lat", "lng", "uncertainty_m", "year",
+                    "basis_index", "dataset_index"],
+        "basis": bases,
+        "datasets": datasets,
+        "species": species,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(blob, f, separators=(",", ":"))
+        f.write("\n")
+    return blob
+
+
+def read_cache(path=CACHE_PATH) -> dict:
+    """``{scientific_name: [Occurrence, ...]}`` from the cache, or ``{}``.
+
+    The inverse of :func:`write_cache`, and the entry point for every offline
+    consumer — ``scripts/plot_occurrences.py`` and any future re-derivation.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            blob = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    bases = blob.get("basis") or []
+    datasets = blob.get("datasets") or []
+
+    def name_at(table, i):
+        return table[i] if isinstance(i, int) and 0 <= i < len(table) else ""
+
+    out: dict[str, list] = {}
+    for name, rows in (blob.get("species") or {}).items():
+        points = []
+        for row in rows or []:
+            if not isinstance(row, list) or len(row) < 2:
+                continue
+            row = list(row) + [None] * (6 - len(row))
+            points.append(Occurrence(
+                lat=float(row[0]), lng=float(row[1]),
+                uncertainty_m=None if row[2] is None else float(row[2]),
+                year=row[3] if isinstance(row[3], int) else None,
+                basis=name_at(bases, row[4]),
+                dataset_key=name_at(datasets, row[5]),
+            ))
+        out[name] = points
+    return out
+
+
 # ── The run ─────────────────────────────────────────────────────────────────
 
 def derive(names: list[str], *, min_records: int, verbose: bool,
            fetch=fetch_occurrences, throttle: "_Throttle | None" = None,
-           on_progress=None) -> tuple[dict, dict, list, list]:
+           on_progress=None, collect=None) -> tuple[dict, dict, list, list]:
     """``(species_ranges, dropped, no_records, failed)`` for a list of species.
+
+    ``collect`` is an optional dict that receives ``{name: points}`` as they
+    arrive — the raw harvest, before the uncertainty filter, so the cache holds
+    what GBIF actually returned and the filter stays a derivation-time decision
+    that can be revisited without re-fetching.
 
     ``failed`` is separate from ``no_records`` on purpose: a species GBIF
     refused to answer for has NOT been shown to grow nowhere, and the run
@@ -356,12 +546,20 @@ def derive(names: list[str], *, min_records: int, verbose: bool,
             throttle.wait()
             continue
 
+        if collect is not None:
+            collect[name] = list(points)
+
         if not points:
             no_records.append(name)
             if verbose:
                 print(f"[{i}/{len(names)}] {name}: no records in range")
             throttle.wait()
             continue
+
+        points, refused = usable_points(points)
+        if refused and verbose:
+            print(f"[{i}/{len(names)}] {name}: {refused} record(s) too "
+                  f"coarsely georeferenced to place in a region")
 
         rows = ranges_for_species(points, min_records=min_records)
         thin = dropped_regions(points, min_records=min_records)
@@ -458,9 +656,10 @@ def main(argv: list[str] | None = None) -> int:
         merged.update(partial)
         _write(merged, min_records)
 
+    harvest: dict[str, list] = {}
     ranges, dropped, no_records, failed = derive(
         names, min_records=min_records, verbose=verbose,
-        throttle=throttle, on_progress=checkpoint)
+        throttle=throttle, on_progress=checkpoint, collect=harvest)
 
     merged = dict(existing)
     merged.update(ranges)
@@ -495,6 +694,21 @@ def main(argv: list[str] | None = None) -> int:
     _write(merged, min_records)
     print(f"\nWrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)} "
           f"({len(merged)} species)")
+
+    # The raw points, so nothing after this needs the network (V2.75). A
+    # partial run still writes what it got: the cache is a strict improvement
+    # on nothing, and --resume merges the next run into it.
+    if harvest:
+        previous = read_cache()
+        previous.update(harvest)
+        write_cache(previous,
+                    source=f"GBIF occurrence search, retrieved {date.today()}")
+        records = sum(len(v) for v in previous.values())
+        size_mb = CACHE_PATH.stat().st_size / 1_000_000
+        print(f"Wrote {CACHE_PATH.relative_to(PROJECT_ROOT)} "
+              f"({records:,} records over {len(previous)} species, "
+              f"{size_mb:.1f} MB). Re-deriving from it needs no network — see "
+              f"scripts/plot_occurrences.py.")
     if failed:
         print("Re-run with --resume before committing — some species are "
               "missing because GBIF refused, not because they grow nowhere.")
