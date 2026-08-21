@@ -152,6 +152,39 @@ class TestBufferArtefacts(unittest.TestCase):
         self.assertEqual((total, artefacts), (0, 0))
 
 
+class TestTheContactSheet(unittest.TestCase):
+    """The mode for looking at many species at once, which is how the colour
+    backlog got worked (`scripts/colour_worklist.py --sheet`) and how a range
+    audit would be."""
+
+    def setUp(self):
+        self._real = P._cache
+        P._cache = lambda: {
+            "Aster alpinus": [_O(*MONTANE_NEAR_PARKLAND, 30.0)] * 6,
+            "Amelanchier alnifolia": [_O(*EDMONTON, 20.0)] * 30,
+        }
+
+    def tearDown(self):
+        P._cache = self._real
+
+    def test_it_writes_one_figure_per_species_worst_first(self):
+        out = Path(tempfile.mkdtemp()) / "sheet.html"
+        self.assertEqual(P.main(["--sheet", str(out), "--limit", "2"]), 0)
+        html = out.read_text(encoding="utf-8")
+        self.assertEqual(html.count("<figure>"), 2)
+        self.assertEqual(html.count("class=\"occ\""), 2)
+        # Ordered by record count, so the species with most to look at is first.
+        self.assertLess(html.index("Amelanchier alnifolia"),
+                        html.index("Aster alpinus"))
+
+    def test_the_record_count_travels_with_each_thumbnail(self):
+        """A dot map with no count is the same failure the site had: the
+        picture cannot distinguish six records from six hundred."""
+        out = Path(tempfile.mkdtemp()) / "sheet.html"
+        P.main(["--sheet", str(out), "--limit", "2"])
+        self.assertIn("30 records", out.read_text(encoding="utf-8"))
+
+
 class TestTheMissingCacheIsLoud(unittest.TestCase):
     def test_it_refuses_rather_than_drawing_an_empty_map(self):
         """An empty map of a species with 400 records is the failure that
