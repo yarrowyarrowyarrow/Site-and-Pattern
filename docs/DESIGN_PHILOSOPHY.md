@@ -258,9 +258,17 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > `flower_colour_source` (schema v64) now separates a colour checkable against the species' own
 > name or Latin epithet from the genus default, the species page and the website print
 > **not verified** on the 359 that are still a guess, and
-> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band
-> while captioning that the region outlines themselves are hand-drawn boxes rather than surveyed
-> boundaries.
+> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band.
+> **V2.75 corrected this sentence, which had gone false and is worth leaving the scar on**: it
+> said the outlines were "hand-drawn boxes rather than surveyed boundaries", which stopped being
+> true in V2.67 when the National Ecological Framework polygons were adopted. Understating
+> confidence is still a false claim about the evidence, and it is the harder one to notice
+> because it sounds humble. `CAVEAT` now discloses the ~900 m simplification and nothing more.
+> The same release found the sharper version of the same fault: an outside botanical review read
+> the published catalogue and asked what a shaded region *claims*, and the honest answers -- the
+> retrieval date, the three-record floor, that unshaded means uncollected rather than absent --
+> all existed in the repo and reached no page. They are on `/method/` now, computed rather than
+> written down.
 > V2.65 added the other half of the same discipline — *not claiming less than the evidence
 > supports*. The Habitat Value Score read use tags while the citations lived in edges, so the app
 > held a sourced larval-host record for Chokecherry and told the user their chokecherry planting

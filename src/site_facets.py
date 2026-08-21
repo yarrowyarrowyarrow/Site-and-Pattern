@@ -42,6 +42,29 @@ def _tokens(plant: dict, column: str) -> list:
     return [t.strip() for t in (plant.get(column) or "").split(",") if t.strip()]
 
 
+#: The provinces this site is a catalogue OF. Not every province a plant may be
+#: native to: `native_provinces` records what is true about the plant, and this
+#: records what the site can answer questions about.
+SUBJECT_PROVINCES = ("AB", "SK")
+
+
+def _provinces(plant: dict) -> list:
+    """``native_provinces``, clipped to what this site actually covers.
+
+    V2.75: dropping Manitoba from the facet's *options* was not enough. One row
+    in the catalogue carries ``SK,MB`` (a genuine eastern-prairie native), so
+    the extractor kept emitting an ``MB`` value with no label behind it — and
+    an unlabelled value renders as an empty checkbox, which is the silent
+    failure `test_every_value_in_use_has_a_label` exists to catch. It caught it.
+
+    Clipping here rather than editing the row, because the row is right: that
+    plant *is* native to Manitoba. What is not true is that this catalogue can
+    tell you anything about Manitoba, and a filter is a promise that it can.
+    """
+    return [t for t in _tokens(plant, "native_provinces")
+            if t.upper() in SUBJECT_PROVINCES]
+
+
 def _months(plant: dict, column: str) -> list:
     try:
         from src.habitat_score import parse_month_range      # noqa: PLC0415
@@ -356,8 +379,14 @@ FACETS: tuple = (
     Facet("photo", "Photograph",
           (("photo", "Has a photograph"), ("no-photo", "No photograph yet")),
           _photo, group="Looks",
-          note="323 of 434 species have an openly-licensed photograph we can "
-               "credit. The rest are the gap."),
+          # {with_photo}/{species} rather than a written-down number (V2.75).
+          # This said "323 of 434" while the About page computed the same
+          # sentence from the catalogue, so two pages of one site disagreed --
+          # and the true figure had been wrong since the last species was
+          # added. Every count on this site is computed at build time; this
+          # one had quietly opted out.
+          note="{with_photo} of {species} species have an openly-licensed "
+               "photograph we can credit. The rest are the gap."),
     Facet("type", "Plant type", tuple(_TYPE.items()), _single("plant_type"),
           group="Plant", hub=True, hub_dir="plants/type",
           blurb="The growth form, which is the first thing that decides where "
@@ -448,9 +477,24 @@ FACETS: tuple = (
                "also listed under the native nursery, because a specialist "
                "grower stocks it too. Seed-or-plug species and the rare ones "
                "are not: those you order, or go looking for."),
+    # Manitoba was an option here and is not one any more (V2.75).
+    #
+    # An outside review asked why the prairie provinces stopped at two, which
+    # is a fair question with a real answer: `tools/ecoregions/common.py` sets
+    # `SUBJECT_PROVINCES = ("Alberta", "Saskatchewan")`, so no polygon, no
+    # occurrence query and no species list has ever covered Manitoba. What
+    # could not be defended is offering the filter anyway -- exactly ONE row
+    # in the catalogue carries MB, so ticking it returned a single species and
+    # implied a coverage that does not exist.
+    #
+    # Removing the chip is the honest half. Adding Manitoba for real is a
+    # polygon rebuild plus a full re-fetch, and it is a backlog row.
     Facet("province", "Native to",
-          (("AB", "Alberta"), ("SK", "Saskatchewan"), ("MB", "Manitoba")),
-          lambda p: _tokens(p, "native_provinces"), group="Site"),
+          (("AB", "Alberta"), ("SK", "Saskatchewan")),
+          _provinces, group="Site",
+          note="This catalogue covers Alberta and Saskatchewan. Manitoba "
+               "shares several of these ecoregions and is not surveyed here "
+               "yet."),
     Facet("edible", "Edible", (("edible", "Has edible parts"),), _edible,
           group="Practical",
           note="Identification is yours to confirm. This is a catalogue, not "

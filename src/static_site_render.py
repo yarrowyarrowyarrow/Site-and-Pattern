@@ -74,7 +74,7 @@ TAGLINE = ("Native plants of Alberta and the Canadian prairies, and the "
 #: page and the map page, both of which build their links from the model and so
 #: cannot outrun it.
 _NAV = (("plants/", "Plants"), ("map/", "Ecoregions"),
-        ("wildlife/", "Wildlife"), ("about/", "About"))
+        ("wildlife/", "Wildlife"), ("method/", "Method"), ("about/", "About"))
 
 #: What this build phones home to, if anything (V2.71; a second provider in
 #: V2.73). Off by default and set for the length of one ``write_site`` call:
@@ -312,8 +312,11 @@ def render_home(model: dict, photo_src: dict) -> str:
   <div>
     <h2>Where things grow</h2>
     <p>Pick a region to see the plants recorded there. Every species page
-    carries this map too, shaded to show where that plant has been found.</p>
-    <p class="note">{_esc(CAVEAT)}</p>
+    carries this map too, with each region shaded when the plant has been
+    recorded somewhere inside it.</p>
+    <p class="note">These are ecoregions, not range maps: a shaded region
+    means records exist in it, not that the plant grows throughout it.
+    {_esc(CAVEAT)} <a href="method/">How this is made</a>.</p>
     <p><a class="more" href="map/">The full map</a></p>
   </div>
   <figure class="mapfig">{eco}</figure>
@@ -388,8 +391,19 @@ def render_browse(model: dict, photo_src: dict) -> str:
                 f'<span>{_esc(label)}</span></label>'
                 for value, label in facet.options
                 if value in in_use[facet.key])
-            note = (f'<p class="fnote">{_esc(facet.note)}</p>'
-                    if facet.note else "")
+            # A facet note may name a count, and if it does the count comes
+            # from the build rather than from the source (V2.75): the photo
+            # note read "323 of 434" while the About page computed the same
+            # sentence, so one site contradicted itself on two pages.
+            text = facet.note
+            if text and "{" in text:
+                try:
+                    text = text.format(**model["stats"])
+                except (KeyError, IndexError, ValueError) as exc:
+                    raise ValueError(
+                        f"facet {facet.key!r} note names a statistic the "
+                        f"build does not compute: {exc}") from exc
+            note = f'<p class="fnote">{_esc(text)}</p>' if text else ""
             blocks.append(
                 f'<details class="facet" data-facet="{_esc(facet.key)}" '
                 f'data-combine="{_esc(facet.combine)}">'
@@ -506,6 +520,7 @@ def write_site(model: dict, out_dir: str, *,
     # V2.68 adds a third: the pages about *places*, once the ecoregion map
     # became a three-level drill-down. Same seam, same cycle, same fix.
     from src.static_site_about import render_about           # noqa: PLC0415
+    from src.static_site_method import render_method         # noqa: PLC0415
     from src.static_site_regions import (_hub_extra,         # noqa: PLC0415
                                          render_map_page, render_subregion)
     from src.static_site_species import render_species       # noqa: PLC0415
@@ -541,6 +556,7 @@ def write_site(model: dict, out_dir: str, *,
     emit("assets/browse.js", _asset("browse.js"))
     emit("index.html", render_home(model, photo_src))
     emit("about/index.html", render_about(model))
+    emit("method/index.html", render_method(model))
     emit("map/index.html", render_map_page(model))
     emit("plants/index.html", render_browse(model, photo_src))
 

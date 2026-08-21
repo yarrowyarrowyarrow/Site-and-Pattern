@@ -221,7 +221,17 @@ class TestStructuralCeilings(unittest.TestCase):
         # the page shells. Opted in on arrival, the V2.41 precedent.
         (_SRC / "site_analytics.py", 220),             # 187 now
         (_SRC / "static_site_regions.py", 320),        # 246 now
-        (_SRC / "static_site_species.py", 340),        # 256 now
+        # V2.75: the species page hit 351 against 340 when the range block
+        # learned to say what it claims, and the seam was already named in the
+        # module's own docstring -- "a range map with its evidence" is one of
+        # its four parts, and the part an outside botanical review spent most
+        # of its words on. Split rather than raised.
+        (_SRC / "static_site_species.py", 340),        # 240 now
+        (_SRC / "static_site_range.py", 260),          # 168 now
+        # The Method page is a page, not another paragraph in the renderer --
+        # the same call V2.73 made for analytics, and the renderer has 90
+        # lines of headroom left, not 190.
+        (_SRC / "static_site_method.py", 260),         # 184 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in

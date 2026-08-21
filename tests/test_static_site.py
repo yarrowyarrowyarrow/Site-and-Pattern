@@ -39,6 +39,8 @@ _plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
 
 from src import static_site                                # noqa: E402
 from src import static_site_render as render               # noqa: E402
+from src import static_site_method as method              # noqa: E402
+from src import static_site_range as rangemod             # noqa: E402
 
 _LINK = re.compile(r'(?:href|src)="([^"]+)"')
 
@@ -530,9 +532,22 @@ class TestTheRenderedSite(unittest.TestCase):
         stages them into ``assets/photos/``. V2.71 added an opt-in analytics
         beacon, which this build does not ask for and therefore must not have
         — `TestAnalyticsIsOptInAndDisclosed` covers both states.
+
+        **The allowlist is a list of destinations, not of requests.** Every
+        entry is an `<a href>` a reader may choose to follow; none is fetched
+        while the page loads, which is the promise this test exists to keep.
+
+        GBIF and iNaturalist joined it in V2.75 (F135). A species page's range
+        is a snapshot of a database that changes daily, and an outside review
+        asked how current it was; linking out is the honest answer, and it is
+        also the only answer available to *where in the region are the
+        records* — those coordinates are not ours to republish, and for rare
+        taxa they are deliberately obscured at source. Two named hosts, still
+        no third-party script, still nothing loaded.
         """
         allowed = ("https://github.com/", "https://example.org/p.jpg",
-                   "https://example.org/monarch.jpg")
+                   "https://example.org/monarch.jpg",
+                   "https://www.gbif.org/", "https://www.inaturalist.org/")
         for page in self.out.rglob("*.html"):
             for link in _LINK.findall(page.read_text(encoding="utf-8")):
                 if link.startswith(("http://", "https://")):
@@ -756,6 +771,142 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
         out, summary = self._build()
         self.assertFalse(summary["analytics"])
         self._assert_clean(out)
+
+
+class TestNoEmDashReachesAPage(unittest.TestCase):
+    """The rule CLAUDE.md said was guarded, and was not (V2.75).
+
+    `_esc` normalises em dashes, and every string that passes through it is
+    safe. What nothing checked is the *templates*: a dash written straight into
+    an f-string in one of the six page modules never meets `_esc` and lands on
+    the page. That is not hypothetical -- it is how this test came to exist,
+    after the V2.75 range copy shipped an `&mdash;` in exactly that position and
+    the suite stayed green.
+
+    Both spellings, because the HTML entity is the one a normaliser looking for
+    U+2014 will miss.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = pathlib.Path(tempfile.mkdtemp(prefix="site_dashes_"))
+        render.write_site(_model(), str(cls.out), copy_photos=False)
+
+    def test_no_page_carries_one(self):
+        offenders = []
+        for page in sorted(self.out.rglob("*.html")):
+            text = page.read_text(encoding="utf-8")
+            if "\u2014" in text or "&mdash;" in text or "&#8212;" in text:
+                offenders.append(page.relative_to(self.out).as_posix())
+        self.assertEqual(offenders, [], f"em dash on: {offenders}")
+
+    def test_the_normaliser_still_does_its_half(self):
+        self.assertNotIn("\u2014", render._esc("a \u2014 b"))
+
+
+class TestTheMethodPage(unittest.TestCase):
+    """What a shaded region claims, in the reader's words (F135, V2.75).
+
+    An outside botanical review asked five things the site could not answer
+    from any page on it -- what a record is, as of when, where in the region,
+    why a region with two records is missing, and what the shading means. Each
+    answer already existed in the repo and reached no reader.
+
+    The numbers here are computed, never written down. A page about honesty
+    that had gone stale would be the worst one on the site to hand-type.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _model()
+        cls.html = method.render_method(cls.model)
+
+    def test_it_states_the_floor_from_the_module_that_owns_it(self):
+        from src.ecoregion_ranges import MIN_RECORDS
+        self.assertIn(f"{MIN_RECORDS} records", self.html)
+
+    def test_the_bands_come_from_the_module_that_owns_them(self):
+        from src.ecoregion_ranges import CONFIDENCE_BANDS
+        for floor, label in CONFIDENCE_BANDS:
+            self.assertIn(label, self.html)
+            self.assertIn(str(floor), self.html)
+
+    def test_it_says_unshaded_is_not_absent(self):
+        self.assertIn("not absence", self.html.replace("\n", " "))
+
+    def test_it_says_recorded_is_not_native(self):
+        self.assertIn("not native", self.html.replace("\n", " "))
+
+    def test_it_discloses_the_buffer_this_build_still_carries(self):
+        """The shipped counts were derived with the 5 km buffer and can only
+        be corrected by a re-fetch. Saying so is the whole point."""
+        flat = " ".join(self.html.split())
+        self.assertIn("within five kilometres of it", flat)
+        self.assertIn("one point in six", flat)
+
+    def test_it_names_what_is_not_filtered(self):
+        self.assertIn("identification-verified", self.html)
+
+    def test_it_is_reachable_from_the_nav(self):
+        from src.static_site_about import render_about
+        self.assertIn('href="../method/"', render_about(self.model))
+
+    def test_the_build_emits_it(self):
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_method_"))
+        render.write_site(self.model, str(out), copy_photos=False)
+        self.assertTrue((out / "method" / "index.html").exists())
+
+
+class TestTheRangeSectionSaysWhatItClaims(unittest.TestCase):
+    """The copy an outside review quoted back (F135, V2.75)."""
+
+    def _section(self, **over):
+        entry = {"name": "Test Plant", "scientific_name": "Testus plantus",
+                 "ranges": [{"key": "aspen_parkland", "name": "Aspen Parkland",
+                             "where": "central AB / SK", "occurrences": 312,
+                             "confidence": "high",
+                             "source": "GBIF occurrence search, "
+                                       "retrieved 2026-08-18"}]}
+        entry.update(over)
+        return rangemod.range_section(entry, {"hubs": []}, 2)
+
+    def test_it_no_longer_calls_one_region_a_range(self):
+        """"A range seen three times" used *range* to mean one region entry,
+        where a range is the area a species is documented to occupy. The
+        review quoted this line and asked for terms to be defined."""
+        self.assertNotIn("A range seen", self._section())
+
+    def test_it_prints_the_retrieval_date(self):
+        """On the row since schema v59, printed by the desktop, dropped by the
+        website -- against a source that changes daily."""
+        self.assertIn("retrieved 2026-08-18", self._section())
+
+    def test_a_range_with_no_source_says_nothing_rather_than_guessing(self):
+        section = self._section(ranges=[{"key": "aspen_parkland",
+                                         "name": "Aspen Parkland",
+                                         "where": "central AB / SK",
+                                         "occurrences": 5,
+                                         "confidence": "low"}])
+        self.assertNotIn("Source:", section)
+
+    def test_it_says_the_region_is_shaded_whole(self):
+        self.assertIn("shaded whole", self._section())
+
+    def test_it_says_unshaded_is_not_absent(self):
+        self.assertIn("not the same as the plant being absent",
+                      " ".join(self._section().split()))
+
+    def test_it_links_out_to_the_live_maps(self):
+        """The review's own suggestion: our snapshot is one day old the day
+        after it is taken, and these are always current."""
+        section = self._section()
+        self.assertIn("gbif.org/species/search", section)
+        self.assertIn("inaturalist.org/taxa/search", section)
+        self.assertIn("Testus+plantus", section)
+
+    def test_a_species_with_no_name_gets_no_broken_links(self):
+        self.assertNotIn("gbif.org",
+                         self._section(scientific_name="", row={}))
 
 
 if __name__ == "__main__":

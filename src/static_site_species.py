@@ -17,15 +17,14 @@ markup have exactly one definition each.
 from __future__ import annotations
 
 from src import citations
-from src.static_site import _first_photo, hub_slug, species_ecoregions
+from src.static_site import _first_photo, hub_slug
+from src.static_site_range import range_section
 from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
                                     _swatch, _up)
 
 
 def render_species(entry: dict, model: dict, photo_src: dict,
                    include_notes: bool = False) -> str:
-    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
-                                   map_svg, region_fill)
     from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES, classify
     depth = 2
     row = entry.get("row") or {}
@@ -44,69 +43,28 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))
 
-    regions = species_ecoregions(entry)
-    eco_block = ""
-    if regions:
-        # A species' recorded range can name a region no hub page exists for:
-        # the moisture niches (riparian, wet_meadow) have no polygon, and a
-        # region nothing is filed under gets no page. Link when there is
-        # somewhere to go and print plain text when there is not, rather than
-        # emitting a link per range and hoping.
-        eco_pages = {p["value"]: p["slug"]
-                     for h in model["hubs"] if h["key"] == "ecoregion"
-                     for p in h["pages"]}
-        rows = []
-        for r in entry.get("ranges") or []:
-            n = int(r.get("occurrences") or 0)
-            evidence = (f"{n} occurrence records" if n else
-                        "from the catalogue's regional tag, not from "
-                        "occurrence records")
-            conf = (f', {_esc(r["confidence"])} confidence'
-                    if r.get("confidence") else "")
-            name = f'<strong>{_esc(r.get("name"))}</strong>'
-            slug = eco_pages.get(r.get("key") or "")
-            if slug:
-                name = (f'<a href="{_up(depth)}plants/ecoregion/'
-                        f'{_esc(slug)}/">{name}</a>')
-            # The swatch is what connects this line to the shape on the map,
-            # now that each region has a colour of its own. It carries the
-            # confidence band too, so it matches the fill exactly rather than
-            # being an approximation of it.
-            keyed = r.get("key") in regions
-            fill, _ = region_fill(r.get("key") or "", r.get("confidence") or "")
-            dot = (f'<span class="ecokey-sw" style="background:{fill}"></span>'
-                   if keyed else "")
-            cls = ' class="haskey"' if keyed else ""
-            rows.append(
-                f'<li{cls}>{dot}{name}'
-                f'<span class="src"> {_esc(r.get("where") or "")}: '
-                f'{evidence}{conf}</span></li>')
-        eco_block = f"""
-<section>
-  <h2>Where it has been recorded</h2>
-  <div class="ecowrap">
-    <figure class="mapfig">{map_svg(regions, width=420, height=frame_height(420),
-                                    title=f'Range of {entry.get("name")}')}</figure>
-    <div>
-      <ul class="ranges">{"".join(rows)}</ul>
-      <p class="note">A range seen three times is not the same claim as one
-      seen three hundred, so the count travels with the region.
-      {_esc(CAVEAT)}</p>
-    </div>
-  </div>
-</section>"""
+    eco_block = range_section(entry, model, depth)
 
+    # The provenance word comes from the entry, which got it from
+    # `src.confidence` via `plant_directory._bloom_colour` (V2.75).
+    #
+    # This block used to re-derive it from the raw row with three hard-coded
+    # cases, and the entry it was handed had carried the answer all along. Two
+    # consequences, both live on the published site:
+    #
+    # * **81 grass, sedge and rush pages read "not verified"**, because
+    #   `classify` returns `straw` from the plant's TYPE and never looks at the
+    #   hex whose `estimated` provenance this was reporting. A grass is not an
+    #   unverified purple: it is wind-pollinated, so there is no showy flower
+    #   to have got wrong. The desktop has said so since V2.48 and only the
+    #   website did not.
+    # * Any provenance word added later (`measured`, `flora`, `photo`) would
+    #   have rendered no mark at all here and read as verified, which is the
+    #   silent-default failure `src.confidence` exists to prevent.
     colour_cell = ""
     if colour:
-        src = (row.get("flower_colour_source") or "").strip()
-        mark = ""
-        if src in ("name", "epithet"):
-            why = ("the species' own common name"
-                   if src == "name" else "the Latin epithet")
-            mark = f'<span class="src" title="Checkable against {why}">checked</span>'
-        elif src == "estimated":
-            mark = ('<span class="src" title="A genus-level default, not '
-                    'observed for this species">not verified</span>')
+        note = (entry.get("bloom_colour_note") or "").strip()
+        mark = f'<span class="src">{_esc(note)}</span>' if note else ""
         colour_cell = (
             f'<a class="chip" href="{_up(depth)}plants/colour/'
             f'{_esc(hub_slug("colour", colour))}/">'
