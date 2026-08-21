@@ -537,5 +537,203 @@ class TestExcludedTaxaStayExcluded(unittest.TestCase):
         self.assertIn("SENTINEL_EXCLUDED", errors)
 
 
+class TestNativityGate(unittest.TestCase):
+    """The claim the public catalogue leads with, which had no gate at all.
+
+    An outside botanical review of grownativeplants.ca said many species listed
+    as native to AB and SK are native to only one. They were right, and nothing
+    in the repo could have told them apart: `native_provinces` is generated,
+    plants carry no citation field, and no check compared the claim to anything.
+    """
+
+    def setUp(self):
+        import src.data_quality as dq
+        self.dq = dq
+        self._orig_dir = dq.DATA_DIR
+        self.tmp = Path(tempfile.mkdtemp())
+        for name in ("plants_master.json", "garden_plants.json",
+                     "plant_ecoregions.json"):
+            (self.tmp / name).write_text(
+                (self._orig_dir / name).read_text(encoding="utf-8"),
+                encoding="utf-8")
+        dq.DATA_DIR = self.tmp
+
+    def tearDown(self):
+        self.dq.DATA_DIR = self._orig_dir
+
+    def _write(self, name, blob):
+        (self.tmp / name).write_text(json.dumps(blob), encoding="utf-8")
+
+    # ── consistency ────────────────────────────────────────────────────────
+    def test_the_shipped_catalogue_has_no_unrecorded_contradiction(self):
+        self.dq.DATA_DIR = self._orig_dir
+        errors, _w = self.dq.validate_nativity_consistency()
+        self.assertEqual(errors, [])
+
+    def test_two_rows_with_one_common_name_may_not_disagree(self):
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Fictitia exempla",
+                        "common_name": "Invented Sage",
+                        "native_to_alberta": 1, "native_provinces": "AB,SK"})
+        records.append({"scientific_name": "Exempla fictitia",
+                        "common_name": "Invented Sage",
+                        "native_to_alberta": 0, "native_provinces": "SK"})
+        self._write("plants_master.json", records)
+        errors, _w = self.dq.validate_nativity_consistency()
+        self.assertTrue(any("Invented Sage".lower() in e for e in errors),
+                        errors)
+
+    def test_two_rows_that_agree_are_fine(self):
+        """A shared common name is not itself the defect. Two rows saying the
+        same thing is a duplicate; two rows saying opposite things is a lie on
+        one of two published pages."""
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        for sci in ("Fictitia exempla", "Exempla fictitia"):
+            records.append({"scientific_name": sci,
+                            "common_name": "Invented Sage",
+                            "native_to_alberta": 1,
+                            "native_provinces": "AB,SK"})
+        self._write("plants_master.json", records)
+        errors, _w = self.dq.validate_nativity_consistency()
+        self.assertEqual(errors, [])
+
+    def test_the_known_pair_is_a_warning_and_carries_its_reason(self):
+        """Stiff Goldenrod ships twice and the rows disagree. Resolving it means
+        choosing an accepted name, which waits on the taxonomic backbone — so it
+        is recorded with the reason rather than silenced."""
+        self.dq.DATA_DIR = self._orig_dir
+        _e, warnings = self.dq.validate_nativity_consistency()
+        hits = [w for w in warnings if "stiff goldenrod" in w]
+        self.assertEqual(len(hits), 1, warnings)
+        self.assertIn("Oligoneuron rigidum", hits[0])
+        self.assertIn("F137", hits[0])
+
+    def test_an_unlisted_pair_is_an_error_not_a_warning(self):
+        """The allowlist buys silence for one named pair, not for the class."""
+        self.assertIn("stiff goldenrod", self.dq.KNOWN_NATIVITY_CONFLICTS)
+
+    # ── evidence ───────────────────────────────────────────────────────────
+    def test_a_claim_with_no_occurrence_record_anywhere_is_named(self):
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Fictitia exempla",
+                        "common_name": "Invented Sage",
+                        "native_to_alberta": 1, "native_provinces": "AB,SK"})
+        self._write("plants_master.json", records)
+        _e, warnings = self.dq.validate_nativity_evidence()
+        self.assertTrue(any("Fictitia exempla" in w for w in warnings),
+                        warnings)
+
+    def test_it_is_a_warning_because_occurrence_is_not_nativity(self):
+        """The check must never read as an occurrence gate. A species with 215
+        records can still be introduced — that is exactly what V2.74 removed —
+        so absence of records is a prompt to look, never a verdict."""
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Fictitia exempla",
+                        "common_name": "Invented Sage",
+                        "native_to_alberta": 1})
+        self._write("plants_master.json", records)
+        errors, _w = self.dq.validate_nativity_evidence()
+        self.assertEqual(errors, [])
+
+    def test_a_row_claiming_nothing_is_not_flagged(self):
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Fictitia exempla",
+                        "common_name": "Invented Sage"})
+        self._write("plants_master.json", records)
+        _e, warnings = self.dq.validate_nativity_evidence()
+        self.assertFalse(any("Fictitia exempla" in w for w in warnings),
+                         warnings)
+
+    # ── generator drift ────────────────────────────────────────────────────
+    def test_the_shipped_generator_speaks_the_current_vocabulary(self):
+        self.dq.DATA_DIR = self._orig_dir
+        errors, _w = self.dq.validate_provenance_generator()
+        self.assertEqual(errors, [])
+
+    def test_a_drifted_key_is_an_error(self):
+        """The fault this exists for: V2.72 replaced the ecoregion vocabulary
+        and four of the generator's six keys stopped existing, so the field the
+        website publishes was the output of a routine that would no longer
+        produce it. 237 of 431 species would have moved on a re-run."""
+        import src.data_quality as dq
+        real = dq._load_ecoregion_keys
+        try:
+            dq._load_ecoregion_keys = lambda: {"aspen_parkland"}
+            errors, _w = dq.validate_provenance_generator()
+        finally:
+            dq._load_ecoregion_keys = real
+        self.assertTrue(errors)
+        self.assertIn("no longer defines", errors[0])
+
+    def test_not_finding_the_constant_fails_rather_than_passing(self):
+        """A parser that quietly finds nothing is how the previous AST-based
+        vocabulary loader failed. Not checking is reported as not checking."""
+        import src.data_quality as dq
+        script = self.tmp / "tag_prairie_provenance.py"
+        script.write_text("SK_SHARED_RENAMED = {'aspen_parkland'}\n",
+                          encoding="utf-8")
+        real_root = dq.PROJECT_ROOT
+        fake_root = self.tmp / "root"
+        (fake_root / "scripts").mkdir(parents=True)
+        (fake_root / "scripts" / "tag_prairie_provenance.py").write_text(
+            "SK_SHARED_RENAMED = {'aspen_parkland'}\n", encoding="utf-8")
+        try:
+            dq.PROJECT_ROOT = fake_root
+            errors, _w = dq.validate_provenance_generator()
+        finally:
+            dq.PROJECT_ROOT = real_root
+        self.assertTrue(any("could not be checked" in e for e in errors),
+                        errors)
+
+    def test_the_generator_refuses_to_run(self):
+        """A comment saying 'do not run this' does not stop anybody running it.
+        Re-running it moves 237 of 431 species."""
+        import subprocess
+        proc = subprocess.run(
+            [sys.executable, "scripts/tag_prairie_provenance.py"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("REFUSING TO RUN", proc.stderr)
+
+    # ── wiring ─────────────────────────────────────────────────────────────
+    def test_the_gate_runs_all_three(self):
+        self.dq.DATA_DIR = self._orig_dir
+        for name in ("validate_nativity_consistency",
+                     "validate_nativity_evidence",
+                     "validate_provenance_generator"):
+            orig = getattr(self.dq, name)
+            try:
+                setattr(self.dq, name, lambda n=name: ([f"SENTINEL_{n}"], []))
+                errors, _w = self.dq.validate_all()
+            finally:
+                setattr(self.dq, name, orig)
+            self.assertIn(f"SENTINEL_{name}", errors)
+
+
+class TestTheEcoregionVocabularyIsThreeLevels(unittest.TestCase):
+    """The gate knew one level of a three-level vocabulary (V2.75).
+
+    V2.68 put an ecozone above the ecoregion and an Alberta subregion below it;
+    V2.73's migration then wrote `zone_prairies` onto 303 species. This
+    validator, reading only the 24 bare ecoregion keys, called every one of them
+    unknown — 303 of 430 warnings were the gate disagreeing with a migration the
+    same release shipped, and the noise buried everything else in the file.
+    """
+
+    def test_ecozone_and_subregion_keys_are_accepted(self):
+        import src.data_quality as dq
+        keys = dq._load_ecoregion_keys()
+        self.assertIn("zone_prairies", keys)
+        self.assertIn("aspen_parkland", keys)
+        self.assertTrue(any(k.startswith("sub_") for k in keys), sorted(keys)[:5])
+
+    def test_the_shipped_catalogue_no_longer_trips_it(self):
+        import src.data_quality as dq
+        _e, warnings = dq.validate_all()
+        stale = [w for w in warnings if "unknown ecoregion key" in w]
+        self.assertEqual(stale, [])
+
+
 if __name__ == "__main__":
     unittest.main()

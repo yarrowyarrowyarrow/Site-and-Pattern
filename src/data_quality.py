@@ -33,6 +33,7 @@ asserts ``validate_all()`` returns no errors against the live data.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -282,7 +283,30 @@ def _load_ecoregion_keys() -> set[str]:
     worse than a loud failure in a data gate.
     """
     from src.ecoregion import ecoregion_keys            # noqa: PLC0415
+    from src.ecoregion_tree import tree                 # noqa: PLC0415
     keys = set(ecoregion_keys())
+
+    # V2.75: the vocabulary has three levels, and this gate only knew one.
+    #
+    # V2.68 put an ecozone above the ecoregion and an Alberta natural subregion
+    # below it, with the upper and lower keys prefixed ``zone_``/``sub_``
+    # because "Athabasca Plain" names both an ecoregion and a subregion and
+    # they are different ground. V2.73's own migration then wrote
+    # ``zone_prairies`` onto 303 species — and this validator, reading only the
+    # 24 bare ecoregion keys, called every one of them unknown. 303 of 430
+    # warnings were the gate disagreeing with a migration the same release
+    # shipped, and the volume buried everything else in the file.
+    #
+    # Walk the tree rather than listing the prefixes: a key is valid if the
+    # shipped polygon file puts it somewhere in the hierarchy, so adding a
+    # level would widen this with nothing to remember here.
+    def _walk(nodes) -> None:
+        for key, _name, _level, children in nodes:
+            keys.add(key)
+            _walk(children)
+
+    _walk(tree())
+
     if not keys:
         raise RuntimeError(
             "No ecoregion vocabulary — data/ecoregions_canada.geojson is "
@@ -653,6 +677,16 @@ def validate_all() -> tuple[list[str], list[str]]:
                                 validate_host_genus_coverage,
                                 validate_use_tags_against_edges):
         e, w = validate_provenance()
+        errors.extend(e)
+        warnings.extend(w)
+
+    # Nativity (V2.75). The claim the public catalogue leads with, and the one
+    # thing in the seed data that had no gate of any kind — not the value, not
+    # its consistency, not the generator that writes it.
+    for validate_nativity in (validate_nativity_consistency,
+                              validate_nativity_evidence,
+                              validate_provenance_generator):
+        e, w = validate_nativity()
         errors.extend(e)
         warnings.extend(w)
     return errors, warnings
@@ -1571,3 +1605,226 @@ def _load_json_list(path) -> list:
     except (FileNotFoundError, json.JSONDecodeError):
         return []
     return data if isinstance(data, list) else []
+
+
+# ── Nativity: the claim the public site leads with (V2.75) ──────────────────
+#
+# An outside review of the published catalogue asked, in effect, why the site
+# is sure. It was not sure; it had four fields that looked like four
+# corroborating sources and were one editorial claim wearing four coats
+# (`native_to_alberta` -> `native_provinces` -> `native_region` -> the row's
+# prose). V2.74 named that shape when *Rudbeckia hirta* came out. These three
+# checks are the parts of it a machine can hold an opinion about.
+#
+# None of them decides nativity. This repo does not ship an authority and will
+# not infer one (see `data/excluded_taxa.json:_scope`). They check that the
+# catalogue does not contradict itself, that a claim is not floating free of
+# every other record in the repo, and that the generator behind the claim is
+# still speaking the vocabulary the app uses.
+
+#: Same taxon under two names, disagreeing about where it is native, where the
+#: disagreement is KNOWN and the resolution is a taxon merge rather than a
+#: nativity call. Modelled on ``scripts/seed_flower_colour.KEEP``: an entry
+#: buys silence for one specific pair and costs a written reason, so the check
+#: stays loud for every pair nobody has looked at.
+#:
+#: Merging is deliberately not done here. It moves plant ids, the
+#: ``plant_fauna_master.json`` keys that name a plant by common name, and a
+#: public URL — and picking which name survives needs the taxonomic backbone
+#: F137 fetches. Recorded in docs/DATA_GAPS.md.
+KNOWN_NATIVITY_CONFLICTS: dict[str, str] = {
+    "stiff goldenrod":
+        "Solidago rigida and Oligoneuron rigidum are one taxon under two "
+        "names, and the two rows disagree: AB,SK native versus "
+        "native_to_alberta=0, SK,MB. Known since V2.69, which called merging "
+        "them 'a data decision' and left both live. It is now two published "
+        "species pages making opposite claims about one plant. Resolving it "
+        "means choosing an accepted name, which waits on F137 (VASCAN).",
+}
+
+
+def validate_nativity_consistency() -> tuple[list[str], list[str]]:
+    """One plant, one answer about where it is native (V2.75).
+
+    Two rows that are the same taxon under different names must not disagree
+    about nativity. The catalogue has no synonym field — ``scientific_name``
+    is a free string checked by one regex — so the signal available here is a
+    **shared common name**, which is exactly how the live case presents:
+    *Stiff Goldenrod* ships twice, as ``Solidago rigida`` (native to AB and SK)
+    and ``Oligoneuron rigidum`` (``native_to_alberta = 0``, SK and MB).
+
+    A common name is a weaker key than a binomial and that is the point. It is
+    the key the *reader* uses, and two pages titled the same thing saying
+    opposite things is a defect whatever the taxonomy turns out to be.
+
+    An ERROR, because the site publishes both claims. Known unresolved pairs
+    live in ``KNOWN_NATIVITY_CONFLICTS`` with their reason.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    rows: list[dict] = []
+    for name in ("plants_master.json", "garden_plants.json"):
+        rows.extend(r for r in _load_json_list(DATA_DIR / name)
+                    if isinstance(r, dict))
+
+    by_common: dict[str, list[dict]] = {}
+    for record in rows:
+        common = (record.get("common_name") or "").strip().lower()
+        if common:
+            by_common.setdefault(common, []).append(record)
+
+    for common, group in sorted(by_common.items()):
+        if len(group) < 2:
+            continue
+        claims = {
+            (str(r.get("native_to_alberta")).strip(),
+             (r.get("native_provinces") or "").strip())
+            for r in group
+        }
+        if len(claims) < 2:
+            continue
+        names = ", ".join(sorted(
+            (r.get("scientific_name") or "?") for r in group))
+        if common in KNOWN_NATIVITY_CONFLICTS:
+            warnings.append(
+                f"nativity: {common!r} ({names}) disagree about nativity — "
+                f"known: {KNOWN_NATIVITY_CONFLICTS[common]}")
+            continue
+        detail = "; ".join(
+            f"native_to_alberta={ab!r} native_provinces={prov!r}"
+            for ab, prov in sorted(claims))
+        errors.append(
+            f"nativity: {common!r} ships as {names} and the rows disagree "
+            f"about where it is native ({detail}). Same common name, opposite "
+            "claims, both published. Fix the rows, or record the pair in "
+            "data_quality.KNOWN_NATIVITY_CONFLICTS with the reason it cannot "
+            "be resolved yet.")
+    return errors, warnings
+
+
+def validate_nativity_evidence() -> tuple[list[str], list[str]]:
+    """A published nativity claim that nothing in the repo agrees or disagrees
+    with (V2.75).
+
+    **This is not an occurrence gate, and must never be read as one.**
+    Occurrence is not nativity — that distinction is the whole of
+    ``src/establishment.py`` and it is what V2.74's exclusion note rests on: the
+    black-eyed Susan had 215 georeferenced records across eight prairie
+    ecoregions and was still introduced. Records cannot confirm a native claim.
+
+    What they can do is *fail to be there at all*. A row asserting AB or SK
+    nativity with no entry in ``data/plant_ecoregions.json`` — not a low count,
+    no entry — is a claim standing entirely alone: no occurrence record, no
+    authority (plants carry no citation field), nothing that could disagree
+    with it. That is precisely the position *Rudbeckia hirta* held for eleven
+    releases, and it is the shortlist a human should read.
+
+    A WARNING, naming every species, because the correct response is a look
+    rather than an edit.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        blob = json.loads(
+            (DATA_DIR / "plant_ecoregions.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return errors, ["plant_ecoregions.json: not found — nativity evidence "
+                        "not checked"]
+    except json.JSONDecodeError as e:
+        return [f"plant_ecoregions.json: JSON parse error: {e}"], warnings
+
+    have = {name for name, rows in (blob.get("species") or {}).items() if rows}
+
+    missing: list[str] = []
+    for record in _load_json_list(DATA_DIR / "plants_master.json"):
+        if not isinstance(record, dict):
+            continue
+        claims = bool(record.get("native_to_alberta")) or bool(
+            (record.get("native_provinces") or "").strip())
+        sci = (record.get("scientific_name") or "").strip()
+        if claims and sci and sci not in have:
+            missing.append(sci)
+
+    if missing:
+        warnings.append(
+            f"nativity: {len(missing)} published rows assert nativity with no "
+            "occurrence record of any kind behind them (no entry in "
+            "plant_ecoregions.json — not a low count, no entry). Occurrence "
+            "does not prove nativity, but nothing here disagrees with these "
+            f"either: {', '.join(sorted(missing))}")
+    return errors, warnings
+
+
+def validate_provenance_generator() -> tuple[list[str], list[str]]:
+    """The generator behind ``native_provinces`` still speaks the app's
+    vocabulary (V2.75).
+
+    ``scripts/tag_prairie_provenance.py`` derives the SK half of every
+    ``native_provinces`` value from a set of ecoregion keys that run unbroken
+    across the AB/SK border. It is honest about being a heuristic. What nothing
+    could say is that **the vocabulary changed underneath it**: V2.72 adopted
+    the 24 surveyed ELC regions and V2.73 migrated the tags, and four of the
+    generator's six keys stopped existing. A simulated re-run at V2.75 moved
+    237 of 431 species — so the field the public site publishes as "Native to"
+    was the output of a generator that would no longer produce it, and every
+    downstream check read the field rather than the generator.
+
+    An ERROR. A generator whose input vocabulary has drifted is not a stale
+    comment; it is a live routine that will silently rewrite the catalogue the
+    next time somebody runs it.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        vocabulary = _load_ecoregion_keys()
+    except RuntimeError as e:                       # no polygon file
+        return [f"provenance generator: {e}"], warnings
+
+    path = PROJECT_ROOT / "scripts" / "tag_prairie_provenance.py"
+    if not path.exists():
+        return errors, warnings                     # retired outright: fine
+
+    # Read the constant, do not run the module. This validator must never
+    # execute a script whose day job is rewriting data/plants_master.json, and
+    # importing it would run its module-level path setup for no benefit.
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"), str(path))
+    except (OSError, SyntaxError) as e:
+        return ([f"provenance generator: {path.name} could not be read: {e}"],
+                warnings)
+
+    declared: set[str] | None = None
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "_SK_SHARED"
+                   for t in node.targets):
+            continue
+        try:
+            value = ast.literal_eval(node.value)
+        except ValueError:
+            break                                   # computed, not a literal
+        declared = {str(v) for v in value}
+        break
+
+    # A parser that quietly finds nothing is how the *previous* AST-based
+    # vocabulary loader failed (see _load_ecoregion_keys). Not finding the
+    # constant is a failure to check, and says so.
+    if declared is None:
+        return ([f"provenance generator: {path.name} no longer declares "
+                 "_SK_SHARED as a literal, so its vocabulary could not be "
+                 "checked. Update this validator or retire the generator — "
+                 "silently not checking is the failure mode this guards."],
+                warnings)
+
+    stale = sorted(k for k in declared if k not in vocabulary)
+    if stale:
+        errors.append(
+            f"provenance generator: {path.name} keys off ecoregion tokens that "
+            f"data/ecoregions_canada.geojson no longer defines: "
+            f"{', '.join(stale)}. Running it would rewrite native_provinces "
+            "from a vocabulary that does not exist. Update the keys or retire "
+            "the generator; do not leave it runnable and wrong.")
+    return errors, warnings
