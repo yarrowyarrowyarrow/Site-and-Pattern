@@ -41,7 +41,7 @@ from src.db.plants import (PHOTO_SLOTS, get_all_plants,  # noqa: E402
                            get_connection, init_db)
 from src import photo_import                             # noqa: E402
 
-_SCI = "Rudbeckia hirta"
+_SCI = "Ratibida columnifera"
 
 
 def _reseed():
@@ -265,7 +265,7 @@ class TestPhotoImport(unittest.TestCase):
             photo_import.import_photo(bad, _SCI, "habit", d)
 
     def test_filenames_are_keyed_by_name_not_by_id(self):
-        self.assertEqual(photo_import.slugify("Rudbeckia hirta"), "rudbeckia_hirta")
+        self.assertEqual(photo_import.slugify("Ratibida columnifera"), "ratibida_columnifera")
         self.assertEqual(photo_import.slugify("Aster × versicolor"), "aster_versicolor")
 
 

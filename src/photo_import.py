@@ -50,8 +50,9 @@ _SAFE = re.compile(r"[^a-z0-9]+")
 
 
 def slugify(name: str) -> str:
-    """`Rudbeckia hirta` → `rudbeckia_hirta`. Filenames are keyed by scientific
-    name for the same reason the table is (ids are not stable across a reseed)."""
+    """`Ratibida columnifera` → `ratibida_columnifera`. Filenames are keyed by
+    scientific name for the same reason the table is (ids are not stable across
+    a reseed)."""
     return _SAFE.sub("_", (name or "").strip().lower()).strip("_") or "unknown"
 
 

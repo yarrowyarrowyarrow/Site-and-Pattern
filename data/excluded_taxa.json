@@ -1,0 +1,19 @@
+{
+  "_comment": "Species deliberately kept OUT of the native-plant catalogue, with the reason and the authority for each. src/data_quality.py:validate_excluded_taxa fails the build if one reappears in data/plants_master.json, data/garden_plants.json or as the `plant` of an edge in data/plant_fauna_master.json.",
+  "_why_this_file_exists": "A plant is removed once and can come back many times. Rudbeckia hirta shipped flagged `native_to_alberta = 1` and noted 'Classic prairie wildflower', so nothing in the app disagreed with it — and data/fetched/fauna_edges_candidates.json still holds 389 GloBI records naming it, ready to be re-proposed by the next sourcing pass. A deletion with no record of the decision is an invitation to redo it.",
+  "_scope": "This is NOT a nativity gate. It is a list of specific calls that were made, each with its evidence. A species absent from the catalogue and absent from here has simply never been considered.",
+  "_p9": "`authority` names who says so. Where the authorities disagree the entry says so rather than picking one silently — see docs/DESIGN_PHILOSOPHY.md P9.",
+  "taxa": [
+    {
+      "scientific_name": "Rudbeckia hirta",
+      "common_names": ["Black-eyed Susan"],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN (Database of Vascular Plants of Canada) records Rudbeckia hirta as introduced in AB, SK, MB and BC, and native from Ontario eastward. Moss, Flora of Alberta, agrees: introduced. It is a garden and wildflower-mix escape here, not a member of any Alberta plant community.",
+      "disagreement": "Occurrence data does not settle this and should not be read as if it did — the plant_ecoregions entry removed with this row carried 215 georeferenced GBIF records across eight prairie ecoregions, 102 of them in Aspen Parkland. That is what a widely-planted self-seeder looks like. Presence is not nativity; see src/establishment.py.",
+      "removed_in": "V2.74",
+      "removed_on": "2026-08-21",
+      "took_with_it": "150 documented plant-fauna edges, 1 plant_ecoregions entry, 2 seeded polyculture memberships and 1 worked-example fallback.",
+      "substitute": "Ratibida columnifera (Prairie Coneflower) — the native yellow-rayed, dark-coned composite it was standing in for, at a similar height and bloom window."
+    }
+  ]
+}

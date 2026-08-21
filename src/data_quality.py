@@ -648,6 +648,7 @@ def validate_all() -> tuple[list[str], list[str]]:
     # only by the care of whoever last edited them. docs/DATA_AUDIT.md.
     for validate_provenance in (validate_sources, validate_plant_fauna,
                                 validate_plant_images,
+                                validate_excluded_taxa,
                                 validate_safety_provenance,
                                 validate_host_genus_coverage,
                                 validate_use_tags_against_edges):
@@ -1219,6 +1220,99 @@ def validate_plant_images() -> tuple[list[str], list[str]]:
                 errors.append(
                     f"plant image: {who}: {lic} photo needs a non-empty "
                     "attribution")
+    return errors, warnings
+
+
+def validate_excluded_taxa() -> tuple[list[str], list[str]]:
+    """A species removed on purpose must stay removed.
+
+    ``data/excluded_taxa.json`` records the calls that have been made and the
+    authority behind each. This gate is the half that makes the record load
+    bearing: without it a removal is a one-time edit that the next data pass
+    can quietly undo, and *Rudbeckia hirta* has a live route back in —
+    ``data/fetched/fauna_edges_candidates.json`` still holds 389 GloBI records
+    naming it, and re-adding the plant row is all it would take for the next
+    sourcing run to re-propose its 150 edges.
+
+    Matched on **both** names, because the two catalogues key on different
+    ones: the plant files carry ``scientific_name``, and every edge in
+    ``plant_fauna_master.json`` names its plant by ``common_name``. Checking
+    only the binomial would have let all 150 edges back with nothing said.
+
+    The list is deliberately narrow — specific taxa with specific evidence, not
+    a nativity rule. Absent from the catalogue and absent from the list means
+    nobody has considered the species, which is a different statement.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        blob = json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return ["excluded_taxa.json: not found"], warnings
+    except json.JSONDecodeError as e:
+        return [f"excluded_taxa.json: JSON parse error: {e}"], warnings
+
+    by_sci: dict[str, dict] = {}
+    by_common: dict[str, dict] = {}
+    for entry in blob.get("taxa") or []:
+        if not isinstance(entry, dict):
+            errors.append("excluded_taxa.json: each taxa entry must be an "
+                          "object")
+            continue
+        sci = (entry.get("scientific_name") or "").strip()
+        if not sci:
+            errors.append("excluded_taxa.json: an entry has no scientific_name")
+            continue
+        # The entry is the evidence. An exclusion with no authority is a
+        # preference, and this file is not for those.
+        for field in ("reason", "authority", "removed_in"):
+            if not (entry.get(field) or "").strip():
+                errors.append(
+                    f"excluded_taxa.json: {sci} has no {field}")
+        by_sci[sci.lower()] = entry
+        for name in entry.get("common_names") or []:
+            if (name or "").strip():
+                by_common[name.strip().lower()] = entry
+
+    def _flag(who: str, entry: dict, where: str) -> None:
+        errors.append(
+            f"excluded taxon: {who} is back in {where} — it was removed in "
+            f"{entry.get('removed_in')} ({entry.get('reason')}). "
+            f"{entry.get('authority')} If that call has changed, edit "
+            f"data/excluded_taxa.json first and say why.")
+
+    for name in ("plants_master.json", "garden_plants.json"):
+        try:
+            records = json.loads(
+                (DATA_DIR / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            sci = (rec.get("scientific_name") or "").strip().lower()
+            common = (rec.get("common_name") or "").strip().lower()
+            entry = by_sci.get(sci) or by_common.get(common)
+            if entry is not None:
+                _flag(rec.get("scientific_name") or rec.get("common_name")
+                      or "?", entry, name)
+
+    try:
+        edges = json.loads(
+            (DATA_DIR / "plant_fauna_master.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        edges = []
+    seen: set[str] = set()
+    for rec in edges:
+        if not isinstance(rec, dict):
+            continue
+        plant = (rec.get("plant") or "").strip()
+        key = plant.lower()
+        if key and key not in seen and (key in by_common or key in by_sci):
+            seen.add(key)
+            _flag(plant, by_common.get(key) or by_sci[key],
+                  "plant_fauna_master.json")
     return errors, warnings
 
 

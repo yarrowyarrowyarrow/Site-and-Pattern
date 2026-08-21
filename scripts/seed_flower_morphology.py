@@ -157,8 +157,6 @@ GENUS = {
     # — Asteraceae, ray + disc —
     "Echinacea":     F("head", "radial", "narrow", 15, 90, 8.0, "#a4622a",
                        branching="unbranched", rosette=1, stems=5),
-    "Rudbeckia":     F("head", "radial", "oval", 12, 70, 7.0, "#3b2412",
-                       branching="branched_above", rosette=1),
     "Ratibida":      F("head", "radial", "narrow", 6, 60, 5.0, "#6b4a20",
                        branching="branched_above"),
     "Gaillardia":    F("head", "radial", "notched", 12, 80, 6.0, "#7d2b1c",

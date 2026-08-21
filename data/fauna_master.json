@@ -3601,16 +3601,6 @@
   "description": "Rapid Plant Bug — native to North America, and the reason its genus gets no blanket rule."
  },
  {
-  "scientific_name": "Agalliopsis ancistra",
-  "common_name": "Agalliopsis ancistra",
-  "taxon": "other_insect",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Native leafhoppers.",
-  "icon": "🪲",
-  "description": "Native leafhoppers."
- },
- {
   "scientific_name": "Agapostemon femoratus",
   "common_name": "Agapostemon femoratus",
   "taxon": "bee",
@@ -5099,16 +5089,6 @@
   "range_notes": "Fern gall flies, native.",
   "icon": "🪲",
   "description": "Fern gall flies, native."
- },
- {
-  "scientific_name": "Chlorochlamys chloroleucaria",
-  "common_name": "Chlorochlamys chloroleucaria",
-  "taxon": "lepidoptera",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Native emerald geometrids.",
-  "icon": "🦋",
-  "description": "Native emerald geometrids."
  },
  {
   "scientific_name": "Chlosyne acastus",
@@ -7291,16 +7271,6 @@
   "description": "Native pyraloids."
  },
  {
-  "scientific_name": "Herpetogramma pertextalis",
-  "common_name": "Herpetogramma pertextalis",
-  "taxon": "lepidoptera",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Native pyraloids.",
-  "icon": "🦋",
-  "description": "Native pyraloids."
- },
- {
   "scientific_name": "Herpetogramma thestealis",
   "common_name": "Herpetogramma thestealis",
   "taxon": "lepidoptera",
@@ -8851,16 +8821,6 @@
   "description": "Muscid flies."
  },
  {
-  "scientific_name": "Neoneides muticus",
-  "common_name": "Neoneides muticus",
-  "taxon": "other_insect",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Native stilt bugs.",
-  "icon": "🪲",
-  "description": "Native stilt bugs."
- },
- {
   "scientific_name": "Neophasia menapia",
   "common_name": "Neophasia menapia",
   "taxon": "lepidoptera",
@@ -8889,16 +8849,6 @@
   "range_notes": "Bronzed Cutworm, native.",
   "icon": "🦋",
   "description": "Bronzed Cutworm, native."
- },
- {
-  "scientific_name": "Nephrotoma ferruginea",
-  "common_name": "Nephrotoma ferruginea",
-  "taxon": "other_insect",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Crane flies, native.",
-  "icon": "🪲",
-  "description": "Crane flies, native."
  },
  {
   "scientific_name": "Neurocolpus nubilus",
@@ -10229,16 +10179,6 @@
   "range_notes": "Pollen wasps — a vespid that provisions with pollen rather than prey, and a genuine Penstemon pollinator in the dry west.",
   "icon": "🪲",
   "description": "Pollen wasps — a vespid that provisions with pollen rather than prey, and a genuine Penstemon pollinator in the dry west."
- },
- {
-  "scientific_name": "Pseudopanurgus albitarsis",
-  "common_name": "Pseudopanurgus albitarsis",
-  "taxon": "bee",
-  "ab_native": 0,
-  "native_provinces": "SK",
-  "range_notes": "Small andrenid bees, composite specialists.",
-  "icon": "🐝",
-  "description": "Small andrenid bees, composite specialists."
  },
  {
   "scientific_name": "Pseudopanurgus parvus",

@@ -20,9 +20,9 @@ licence question that blocks everything else does not arise.
 NAMING
 One file per photo, named for its species and slot::
 
-    Rudbeckia_hirta_habit.jpg          Genus_species_slot.ext
-    rudbeckia hirta - flower.jpg       spaces and dashes are fine
-    Rudbeckia_hirta_habit_2.jpg        a trailing number is ignored
+    Ratibida_columnifera_habit.jpg     Genus_species_slot.ext
+    ratibida columnifera - flower.jpg  spaces and dashes are fine
+    Ratibida_columnifera_habit_2.jpg   a trailing number is ignored
 
 Slots (see src/db/photos.py for what each one is FOR):
 
@@ -84,15 +84,16 @@ def _catalogue_names() -> dict:
 
 
 def parse_filename(name: str, names: dict) -> tuple:
-    """``('Rudbeckia hirta', 'habit')`` from a filename, or ``(None, reason)``.
+    """``('Ratibida columnifera', 'habit')`` from a filename, or
+    ``(None, reason)``.
 
     Matches the LONGEST species prefix so that a two-word name followed by a
-    slot is unambiguous, and so `Rudbeckia_hirta_var_pulcherrima_habit` works if
-    the catalogue carries that name.
+    slot is unambiguous, and so `Ratibida_columnifera_var_pulcherrima_habit`
+    works if the catalogue carries that name.
     """
     stem = os.path.splitext(os.path.basename(name))[0]
     slug = slugify(stem)
-    # Drop a trailing sequence number: rudbeckia_hirta_habit_2
+    # Drop a trailing sequence number: ratibida_columnifera_habit_2
     slug = re.sub(r"_\d+$", "", slug)
     for slot in SLOTS:
         if not slug.endswith("_" + slugify(slot)):

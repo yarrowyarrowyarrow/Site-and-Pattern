@@ -1603,15 +1603,6 @@
   "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
  },
  {
-  "scientific_name": "Chlorochlamys chloroleucaria",
-  "kind": "moth",
-  "activity": "night",
-  "flight_season": "unknown",
-  "overwintering_stage": "unknown",
-  "source": "globi",
-  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
- },
- {
   "scientific_name": "Chlosyne acastus",
   "kind": "butterfly",
   "activity": "day",
@@ -2369,15 +2360,6 @@
  },
  {
   "scientific_name": "Herpetogramma aquilonalis",
-  "kind": "moth",
-  "activity": "night",
-  "flight_season": "unknown",
-  "overwintering_stage": "unknown",
-  "source": "globi",
-  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
- },
- {
-  "scientific_name": "Herpetogramma pertextalis",
   "kind": "moth",
   "activity": "night",
   "flight_season": "unknown",

@@ -178,7 +178,6 @@ GENUS = {
     "Monarda":        ("lanceolate", 8.0, "opposite", "clump"),
     "Phacelia":       ("pinnatifid", 8.0, "alternate", "clump"),
     "Prosartes":      ("ovate", 8.0, "alternate", "clump"),
-    "Rudbeckia":      ("lanceolate", 12.0, "alternate", "clump"),
     "Sphaeralcea":    ("lobed", 5.0, "alternate", "clump"),
     "Symphyotrichum": ("lanceolate", 8.0, "alternate", "clump"),
     "Valeriana":      ("compound_pinnate", 15.0, "opposite", "clump"),

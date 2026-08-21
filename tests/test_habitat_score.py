@@ -363,7 +363,7 @@ class TestLayersScoredAgainstTheReference(unittest.TestCase):
             return out
         cls.grassland = ids(["Big Bluestem", "Blue Grama Grass",
                              "Prairie Crocus", "Common Yarrow",
-                             "Wild Bergamot", "Black-eyed Susan",
+                             "Wild Bergamot", "Prairie Coneflower",
                              "Purple Prairie Clover", "Canada Goldenrod",
                              "Smooth Aster", "Prairie Sage"])
         conn.close()

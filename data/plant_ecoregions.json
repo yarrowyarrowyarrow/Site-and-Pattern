@@ -17540,48 +17540,6 @@
         "confidence": "low"
       }
     ],
-    "Rudbeckia hirta": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 102,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 42,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 32,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 12,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 11,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 10,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Sagittaria cuneata": [
       {
         "ecoregion": "aspen_parkland",

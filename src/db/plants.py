@@ -321,7 +321,29 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # Mixedwood is 31% of Mid-Boreal Uplands across nine. Without the shares the
 # app has to pick a parent, and every place that picked one picked it
 # alphabetically and was wrong about Montane.
-_SCHEMA_VERSION = 74
+# v75 (V2.74): no DDL — the first time a species has ever been REMOVED from the
+# catalogue. *Rudbeckia hirta* (Black-eyed Susan) is introduced in Alberta, not
+# native: VASCAN records it as introduced in AB (native ON and eastward), and
+# Moss's *Flora of Alberta* says the same. It was seeded flagged
+# `native_to_alberta = 1` and noted "Classic prairie wildflower", which is how
+# it reached the public native-plant website. Removing the row takes 150
+# documented plant↔fauna edges and one `plant_ecoregions` entry with it, and
+# without this bump every existing install keeps serving all of them.
+#
+# Six animals go too (fauna 1,156 → 1,150; two `lepidoptera_attributes` rows
+# with them). Each held exactly one documented edge and it was to this plant,
+# so leaving them would have left six rows in `fauna` connected to nothing —
+# the state V2.64 stopped writing rather than tolerating, and the state
+# `test_derived_edges`' orphan ceiling exists to catch. It caught it.
+#
+# The reseed's own machinery covers the fallout that could not be edited in the
+# seed files: `_remap_user_polyculture_plants` drops user community members
+# whose plant no longer ships, audibly. That branch has existed since v46 and
+# this is the first release to exercise it. What it does NOT cover is a saved
+# `.perma.geojson` that placed one — the feature stores a plant id, ids shift on
+# every reseed, and `_plant_info` resolves by id. That hazard predates this
+# change and applies to every bump; it is merely visible now.
+_SCHEMA_VERSION = 75
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -2032,7 +2054,7 @@ def init_db() -> None:
             # Seed the uses lookup first so _seed_from_json_file can populate
             # plant_uses for each freshly inserted plant in the same pass.
             _seed_uses_lookup(conn)
-            _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 433 native plants
+            _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 431 native plants
             _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)

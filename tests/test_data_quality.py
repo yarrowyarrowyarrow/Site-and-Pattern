@@ -451,5 +451,91 @@ class TestUseTagsAgainstEdges(unittest.TestCase):
         self.assertEqual(result["needed"], {})
 
 
+class TestExcludedTaxaStayExcluded(unittest.TestCase):
+    """A species removed on purpose (V2.74) must not drift back in.
+
+    The first entry is *Rudbeckia hirta*, which VASCAN and Moss's *Flora of
+    Alberta* both record as introduced in Alberta and which nonetheless shipped
+    flagged `native_to_alberta = 1`, all the way onto the public website. It
+    has a live route back: `data/fetched/fauna_edges_candidates.json` still holds 389
+    GloBI records naming it, and re-adding the plant row is all it would take
+    for the next sourcing pass to re-propose its 150 edges."""
+
+    def setUp(self):
+        import src.data_quality as dq
+        self.dq = dq
+        self._orig_dir = dq.DATA_DIR
+        self.tmp = Path(tempfile.mkdtemp())
+        for name in ("excluded_taxa.json", "plants_master.json",
+                     "garden_plants.json", "plant_fauna_master.json"):
+            (self.tmp / name).write_text(
+                (self._orig_dir / name).read_text(encoding="utf-8"),
+                encoding="utf-8")
+        dq.DATA_DIR = self.tmp
+
+    def tearDown(self):
+        self.dq.DATA_DIR = self._orig_dir
+
+    def _write(self, name, records):
+        (self.tmp / name).write_text(json.dumps(records), encoding="utf-8")
+
+    def test_the_shipped_catalogue_carries_none_of_them(self):
+        self.dq.DATA_DIR = self._orig_dir
+        errors, _w = self.dq.validate_excluded_taxa()
+        self.assertEqual(errors, [])
+
+    def test_the_binomial_coming_back_is_an_error(self):
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Rudbeckia hirta",
+                        "common_name": "Black-eyed Susan"})
+        self._write("plants_master.json", records)
+        errors, _w = self.dq.validate_excluded_taxa()
+        self.assertTrue(any("Rudbeckia hirta" in e for e in errors), errors)
+
+    def test_an_edge_naming_it_is_an_error_too(self):
+        """Edges key on `common_name`, not on the binomial, so a check that
+        only knew scientific names would have let all 150 back silently."""
+        edges = json.loads((self.tmp / "plant_fauna_master.json").read_text())
+        edges.append({"plant": "Black-eyed Susan", "fauna": "Bombus ternarius",
+                      "relationship": "nectar", "source": "globi_ecdysis_org"})
+        self._write("plant_fauna_master.json", edges)
+        errors, _w = self.dq.validate_excluded_taxa()
+        self.assertTrue(
+            any("plant_fauna_master.json" in e for e in errors), errors)
+
+    def test_the_error_names_the_authority(self):
+        """The point of the file is the reasoning, so the failure has to carry
+        it — a bare "not allowed" sends the next person to re-derive the call
+        from scratch, which is how it got in the first time."""
+        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records.append({"scientific_name": "Rudbeckia hirta",
+                        "common_name": "Black-eyed Susan"})
+        self._write("plants_master.json", records)
+        errors, _w = self.dq.validate_excluded_taxa()
+        self.assertTrue(any("VASCAN" in e and "V2.74" in e for e in errors),
+                        errors)
+
+    def test_an_exclusion_without_an_authority_is_an_error(self):
+        """An entry here removes a species from a public reference work. It has
+        to say who says so."""
+        self._write("excluded_taxa.json",
+                    {"taxa": [{"scientific_name": "Fictitia exempla",
+                               "reason": "because"}]})
+        errors, _w = self.dq.validate_excluded_taxa()
+        self.assertTrue(any("has no authority" in e for e in errors), errors)
+        self.assertTrue(any("has no removed_in" in e for e in errors), errors)
+
+    def test_the_gate_runs_it(self):
+        """Wired into validate_all, not only reachable from its own test."""
+        self.dq.DATA_DIR = self._orig_dir
+        orig = self.dq.validate_excluded_taxa
+        try:
+            self.dq.validate_excluded_taxa = lambda: (["SENTINEL_EXCLUDED"], [])
+            errors, _w = self.dq.validate_all()
+        finally:
+            self.dq.validate_excluded_taxa = orig
+        self.assertIn("SENTINEL_EXCLUDED", errors)
+
+
 if __name__ == "__main__":
     unittest.main()

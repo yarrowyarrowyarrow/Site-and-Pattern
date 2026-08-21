@@ -179,7 +179,7 @@ EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
     (("Showy Milkweed",), (6.4, 4.5)),
     (("Showy Milkweed",), (7.2, 5.1)),
     (("Canada Goldenrod",), (9.3, 4.8)),
-    (("Blanketflower", "Black-eyed Susan"), (8.5, 3.6)),
+    (("Blanketflower", "Prairie Coneflower"), (8.5, 3.6)),
     (("Purple Prairie Clover", "Wild Blue Flax"), (2.2, 3.1)),
     (("Wild Blue Flax", "Harebell"), (6.0, 3.2)),
     # Front edge — short things you can see over, plus the grass matrix.

@@ -319,7 +319,7 @@ def _specimens():
 
 # Display order and headings for the sidebar. Every entry carries its `group`, so
 # a consumer inserts a heading whenever the group changes and never has to sniff
-# key prefixes — which stopped scaling the moment "every species" was 436 entries.
+# key prefixes — which stopped scaling the moment "every species" was 435 entries.
 GROUP_GEOMETRY = "Plant-body geometry"
 GROUP_FLOWER = "Flower sprites"
 GROUP_COMBO = "Body × flower combos"
@@ -357,12 +357,12 @@ def _species_specimen(row: dict) -> dict:
 
 def _combo_specs():
     """One specimen per (growth form × flower form) pair the catalogue actually
-    uses — 75 of them across 436 species.
+    uses — 75 of them across 435 species.
 
     A sprite in this app is a **combination**: a plant body from one small set
     of growth forms, wearing a flower head from another small set. Neither list
     on its own tells you what the app looks like, and the full species list is
-    436 entries of mostly-repeats. This is the real vocabulary, deduplicated:
+    435 entries of mostly-repeats. This is the real vocabulary, deduplicated:
     if two combos look the same here, every species built from them looks the
     same in a design, which is exactly the kind of thing that is invisible until
     you put them side by side.
@@ -471,7 +471,7 @@ def gallery_scenes(include_species: bool = True) -> dict:
                   "example": "", "group": GROUP_GEOMETRY, "scene": all_scene}
 
     # The real sprite vocabulary: every body × bloom pair the catalogue uses,
-    # once each, so repeats across 436 species collapse to the ~75 things that
+    # once each, so repeats across 435 species collapse to the ~75 things that
     # are actually distinguishable.
     cbase = len(out) + 1
     for j, (key, name, desc, example, plant) in enumerate(_combo_specs()):

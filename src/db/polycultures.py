@@ -1427,13 +1427,13 @@ EXAMPLE_POLYCULTURES = [
                 "name": "Tall Prairie Meadow",
                 "description": "Taller prairie pollinator variant featuring sunflowers and "
                                "penstemons. Giant sunflower anchors the centre, providing seeds "
-                               "for birds. Maximilian sunflower, black-eyed Susan, and smooth "
+                               "for birds. Maximilian sunflower, meadow blazingstar, and smooth "
                                "blue beardtongue create a dramatic mid-to-late summer display. "
                                "Wild blue flax adds early blue blooms that attract mason bees.",
                 "members": [
                     ("Giant Sunflower",           "pollinator",          0,    0),
                     ("Maximilian Sunflower",      "pollinator",          0.8,  0.5),
-                    ("Black-eyed Susan",          "pollinator",         -0.7,  0.6),
+                    ("Meadow Blazingstar",        "pollinator",         -0.7,  0.6),
                     ("Smooth Blue Beardtongue",   "pollinator",          0.5, -0.8),
                     ("Wild Blue Flax",            "pollinator",         -0.8, -0.5),
                     ("Purple Prairie Clover",     "nitrogen_fixer",      0,    0.9),
@@ -1746,13 +1746,13 @@ EXAMPLE_POLYCULTURES = [
         "description": "A tough, low-growing nectar strip for hellstrips and "
                        "boulevards — sun-baked, salt- and drought-tolerant natives "
                        "kept short for sightlines. Blue grama forms a fine "
-                       "warm-season matrix; blanketflower, black-eyed Susan and wild "
+                       "warm-season matrix; blanketflower, prairie coneflower and wild "
                        "bergamot carry summer bloom; purple prairie clover fixes "
                        "nitrogen and prairie goldenrod extends nectar into fall.",
         "members": [
             ("Wild Bergamot",          "pollinator",      0,    0),
             ("Blanketflower",          "pollinator",      1.0,  0.6),
-            ("Black-eyed Susan",       "pollinator",     -1.0,  0.6),
+            ("Prairie Coneflower",     "pollinator",     -1.0,  0.6),
             ("Purple Prairie Clover",  "nitrogen_fixer",  0.0, -0.8),
             ("Blue Grama Grass",       "groundcover",     1.2, -0.6),
             ("Prairie Goldenrod",      "pollinator",     -1.2, -0.5),

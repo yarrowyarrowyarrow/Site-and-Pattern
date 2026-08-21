@@ -116,7 +116,6 @@ _SPREAD_BY_SPECIES = {
     "Tanacetum vulgare":     "aggressive_rhizomatous",
     "Achillea millefolium":  "self_seeding",
     "Gaillardia aristata":   "self_seeding",
-    "Rudbeckia hirta":       "self_seeding",
     "Cornus sericea":        "slow_spreader",
     "Monarda fistulosa":     "slow_spreader",
 }

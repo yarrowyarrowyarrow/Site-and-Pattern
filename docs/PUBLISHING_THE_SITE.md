@@ -21,8 +21,8 @@ because serving a file is nearly free for them.
 python -m src.cli build-site public
 ```
 
-That writes about 1,660 files into a new folder called `public`: 432 species
-pages, 1,138 wildlife pages, the ecoregion map, the browse page and its search
+That writes about 1,680 files into a new folder called `public`: 431 species
+pages, 1,132 wildlife pages, the ecoregion map, the browse page and its search
 index. The counts are computed at build time and printed at the end, so the
 numbers in this paragraph are illustrative and the ones on your screen are
 real.
