@@ -33,9 +33,20 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 75`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 76`.
 
-**Removing a species is a seed-data change too (V2.74).** *Rudbeckia hirta*
+**Nativity is the weakest claim in the seed data, and V2.75 retired the thing
+that generated it.** `native_provinces` was written by
+`scripts/tag_prairie_provenance.py` from a hand-authored `native_to_alberta`
+boolean plus the plant's ecoregion tags — and V2.72/73 replaced that vocabulary
+underneath it, so a re-run would have moved **237 of 431 species**. The script
+now refuses to run without an explicit override, and
+`data_quality.validate_provenance_generator` fails the build if its vocabulary
+drifts again. Do not hand-edit `native_provinces` to "fix" a row: the
+replacement is `scripts/fetch_flora_nativity.py` (VASCAN, per-province), which
+needs egress and **reports rather than applies**.
+
+**Removing a species is a seed-data change too (V2.74, and again in V2.75).** *Rudbeckia hirta*
 came out because VASCAN and Moss's *Flora of Alberta* both record it as
 introduced in Alberta, and a removal has a wider blast radius than an
 addition: it took 150 documented edges, a `plant_ecoregions` entry, two seeded

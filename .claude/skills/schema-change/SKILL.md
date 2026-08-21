@@ -19,14 +19,22 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.74`,
-`_SCHEMA_VERSION = 75` (in `src/db/plants.py`) — v75 is a reseed only, and the
-first time a species has ever been **removed** from the catalogue: *Rudbeckia
-hirta* is introduced in Alberta, and the row took 150 documented edges, a
-`plant_ecoregions` entry and six now-edgeless animals with it. Note what a
-removal exercises that an addition does not — `_remap_user_polyculture_plants`
-dropping user community members whose plant no longer ships, a branch that had
-existed unexercised since v46. v71 is a reseed only: 26
+**Current facts (verify before quoting):** branch `V2.75`,
+`_SCHEMA_VERSION = 76` (in `src/db/plants.py`) — v76 is a reseed only, and the
+**second** species removal in as many releases: *Helianthus giganteus* is an
+eastern plant (VASCAN records it from Ontario eastward; Moss does not treat
+it) that shipped `native_provinces = "AB,SK"`. It took 11 documented edges and
+one seeded polyculture membership, and orphaned no animal.
+**The two removals have different evidence shapes and the difference is the
+lesson**: v75's *Rudbeckia hirta* was removed *against* 215 georeferenced
+occurrence records, because presence is not nativity; v76's had no occurrence
+entry at all, which is weaker than it looks — the derived file records only
+species WITH rows, so an absence there means either no records or a fetch GBIF
+refused, and it cannot tell them apart afterwards. `data/excluded_taxa.json`
+carries that distinction per entry.
+v75 was the first removal ever, and note what one exercises that an addition
+does not — `_remap_user_polyculture_plants` dropping user community members
+whose plant no longer ships, a branch that had existed unexercised since v46. v71 is a reseed only: 26
 recovered `larval_host` edges and the 9 animals they connect (F131), plus 80
 species gaining a `host_plant` or `bird_food` use tag the cited edges already
 justified (F120). v70 is a reseed only too: the

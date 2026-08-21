@@ -75,13 +75,19 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: below doing its job: the removal was made in `data/`, and the only thing
     #: that said so out loud was this snapshot.
     #:
+    #: V2.75: yellow 83 -> 82, and it is the same species of removal for the
+    #: second release running. *Helianthus giganteus* is an eastern plant —
+    #: VASCAN records it from Ontario eastward and Moss does not treat it — and
+    #: it shipped `native_provinces = "AB,SK"` with a yellow floret. Twice now
+    #: this snapshot has been the thing that noticed a catalogue row leaving.
+    #:
     #: The distribution as measured after the V2.48 per-species correction. A
     #: change here is either a data change worth noticing or a classifier
     #: regression; both should stop the build rather than quietly re-file 81
     #: grasses. (V2.47 shipped 79/77/75/61/43/26/16/8/3/2 off genus-level
     #: seeding, which is what put a red flower on the blue columbine.)
     EXPECTED = {
-        "yellow": 83, "straw": 81, "white": 72, "purple": 53, "pink": 42,
+        "yellow": 82, "straw": 81, "white": 72, "purple": 53, "pink": 42,
         "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
     }
 

@@ -128,9 +128,9 @@ are simply not published as claims.</p>
 re-identified continuously. What these pages show is a <strong>snapshot</strong>,
 taken once and shipped. The counts here were retrieved on:</p>
 {_currency(model)}
-<p>They will drift from the live database from that day onward. For the
-current picture of any species, follow the GBIF and iNaturalist links on its
-page, which are always up to date, and this is not.</p>
+<p>They will drift from the live database from that day onward. This page is
+not live; the GBIF and iNaturalist links on every species page are. For the
+current picture of a species, follow those.</p>
 
 <h2>What we do not filter</h2>
 <p>We do not require records to have been identification-verified.
