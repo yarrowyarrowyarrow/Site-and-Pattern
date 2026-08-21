@@ -343,7 +343,33 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # `.perma.geojson` that placed one — the feature stores a plant id, ids shift on
 # every reseed, and `_plant_info` resolves by id. That hazard predates this
 # change and applies to every bump; it is merely visible now.
-_SCHEMA_VERSION = 75
+# v76 (V2.75): no DDL — a second removal, and a different evidence shape from
+# the first. *Helianthus giganteus* (Giant Sunflower) is an eastern species:
+# VASCAN records it from Ontario eastward and Moss's *Flora of Alberta* does
+# not treat it. It shipped `native_provinces = "AB,SK"`.
+#
+# Where v75 removed a species the occurrence data actively defended — 215
+# georeferenced records, because presence is not nativity — this one had no
+# entry in `plant_ecoregions` at all. That is weaker evidence than it looks and
+# `data/excluded_taxa.json` says so: the derived file records only species WITH
+# rows, so an absence there means either no records inside the polygons or a
+# fetch GBIF refused, and it cannot tell them apart afterwards.
+#
+# Takes 11 documented edges with it. No animal is orphaned this time — every
+# one of the 11 has other records — so `fauna` is untouched. The seeded "Tall
+# Prairie Meadow" loses its centre plant: Maximilian Sunflower moves in (at
+# 2.5 m it is the tallest member, which is what the centre of that variation
+# means) and Nuttall's Sunflower, the prairie's own tall sunflower, takes the
+# slot it left. The community's *description* is edited too, not only its
+# member list.
+#
+# Also in this release, and the reason a bump is needed even where the data is
+# unchanged: species ranges are now derived by containment rather than by a 5
+# km proximity buffer (`ecoregion.lookup_ecoregions(near_m=)`). The shipped
+# `plant_ecoregions.json` still carries buffered counts and can only be
+# corrected by a re-fetch with egress — which is stated on the website's
+# Method page rather than left for a reader to discover.
+_SCHEMA_VERSION = 76
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

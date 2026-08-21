@@ -6,7 +6,9 @@
   "taxa": [
     {
       "scientific_name": "Rudbeckia hirta",
-      "common_names": ["Black-eyed Susan"],
+      "common_names": [
+        "Black-eyed Susan"
+      ],
       "reason": "introduced_to_alberta",
       "authority": "VASCAN (Database of Vascular Plants of Canada) records Rudbeckia hirta as introduced in AB, SK, MB and BC, and native from Ontario eastward. Moss, Flora of Alberta, agrees: introduced. It is a garden and wildflower-mix escape here, not a member of any Alberta plant community.",
       "disagreement": "Occurrence data does not settle this and should not be read as if it did — the plant_ecoregions entry removed with this row carried 215 georeferenced GBIF records across eight prairie ecoregions, 102 of them in Aspen Parkland. That is what a widely-planted self-seeder looks like. Presence is not nativity; see src/establishment.py.",
@@ -14,6 +16,20 @@
       "removed_on": "2026-08-21",
       "took_with_it": "150 documented plant-fauna edges, 1 plant_ecoregions entry, 2 seeded polyculture memberships and 1 worked-example fallback.",
       "substitute": "Ratibida columnifera (Prairie Coneflower) — the native yellow-rayed, dark-coned composite it was standing in for, at a similar height and bloom window."
+    },
+    {
+      "scientific_name": "Helianthus giganteus",
+      "common_names": [
+        "Giant Sunflower"
+      ],
+      "reason": "not_native_to_alberta_or_saskatchewan",
+      "authority": "VASCAN (Database of Vascular Plants of Canada) records Helianthus giganteus from eastern Canada — Ontario eastward through Quebec and the Maritimes — and not from Alberta or Saskatchewan. Moss, Flora of Alberta, does not treat it. The prairies' tall native sunflowers are H. nuttallii and H. maximiliani, both already in the catalogue; the seed row's own note ('Tall perennial sunflower... major late-season pollinator and bird food') describes those equally well, which is how the wrong binomial went unquestioned.",
+      "disagreement": "The internal evidence is CONSISTENT with this but does not settle it, and the difference from Rudbeckia hirta is worth keeping. That removal was made against 215 georeferenced records: occurrence disagreed and lost, because presence is not nativity. Here there is no entry in data/plant_ecoregions.json at all — and the derived file records only species WITH rows, so an absence there means either no records inside the polygons or a fetch GBIF refused, and the file cannot tell them apart after the fact (see seed_ecoregion_ranges.FetchFailed). So the call rests on the authority, with the internal silence noted as agreeing rather than as proving.",
+      "not_machine_verified": "This container's egress policy answers 403 to CONNECT for data.canadensys.net, so VASCAN was cited here and not queried. From a machine with open egress, https://data.canadensys.net/vascan/api/0.1/search.json?q=Helianthus+giganteus returns the record in one request — and scripts/fetch_flora_nativity.py (F137) asks it for the whole catalogue at once, which is the point.",
+      "removed_in": "V2.75",
+      "removed_on": "2026-08-21",
+      "took_with_it": "11 documented plant-fauna edges (10 nectar, 1 seed_food; 8 from iNaturalist via GloBI, 2 Bumble Bee Watch, 1 Cornell Birds of the World) and 1 seeded polyculture membership. No animal was left without an edge, unlike V2.74, which orphaned six.",
+      "substitute": "Nuttall's Sunflower (Helianthus nuttallii) — the native tall sunflower of prairie wet meadows and sloughs, same August-September bloom, same bird_food / keystone_species / pollinator uses."
     }
   ]
 }

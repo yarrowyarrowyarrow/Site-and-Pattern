@@ -515,6 +515,53 @@ class TestExcludedTaxaStayExcluded(unittest.TestCase):
         self.assertTrue(any("VASCAN" in e and "V2.74" in e for e in errors),
                         errors)
 
+    def test_the_second_removal_is_recorded_with_its_own_evidence_shape(self):
+        """*Helianthus giganteus* (V2.75), and the difference from the first.
+
+        V2.74 removed a species the occurrence data actively defended -- 215
+        georeferenced records -- because presence is not nativity. This one had
+        no occurrence entry at all, which is weaker evidence than it looks: the
+        derived file records only species WITH rows, so an absence there means
+        either no records or a fetch GBIF refused, and it cannot tell them
+        apart afterwards. The entry has to say that rather than let a silence
+        read as a finding."""
+        self.dq.DATA_DIR = self._orig_dir
+        blob = json.loads(
+            (self._orig_dir / "excluded_taxa.json").read_text(encoding="utf-8"))
+        entry = next(t for t in blob["taxa"]
+                     if t["scientific_name"] == "Helianthus giganteus")
+        self.assertIn("VASCAN", entry["authority"])
+        self.assertIn("cannot tell them apart", entry["disagreement"])
+        self.assertTrue(entry.get("not_machine_verified"))
+
+    def test_the_removed_sunflower_is_gone_from_every_file(self):
+        """Both names, because the two catalogues key on different ones."""
+        self.dq.DATA_DIR = self._orig_dir
+        for name in ("plants_master.json", "garden_plants.json",
+                     "plant_fauna_master.json"):
+            text = (self._orig_dir / name).read_text(encoding="utf-8")
+            self.assertNotIn("Helianthus giganteus", text, name)
+            self.assertNotIn("Giant Sunflower", text, name)
+
+    def test_the_community_it_anchored_names_only_plants_it_contains(self):
+        """A community whose prose names a plant its member list no longer has
+        is the drift V2.74 went looking for, and it is invisible."""
+        from src.db.polycultures import EXAMPLE_POLYCULTURES
+        for poly in EXAMPLE_POLYCULTURES:
+            for variation in poly.get("variations") or []:
+                if variation["name"] != "Tall Prairie Meadow":
+                    continue
+                members = {m[0] for m in variation["members"]}
+                self.assertIn("Maximilian Sunflower", members)
+                self.assertIn("Nuttall's Sunflower", members)
+                self.assertNotIn("Giant Sunflower", members)
+                self.assertNotIn("Giant sunflower",
+                                 variation["description"])
+                self.assertIn("Maximilian sunflower",
+                              variation["description"])
+                return
+        self.fail("Tall Prairie Meadow not found")
+
     def test_an_exclusion_without_an_authority_is_an_error(self):
         """An entry here removes a species from a public reference work. It has
         to say who says so."""

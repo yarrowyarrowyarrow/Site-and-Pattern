@@ -742,13 +742,6 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Giant Sunflower",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "specificity": "generalist",
-  "source": "cornell_birds_of_the_world"
- },
- {
   "plant": "Stiff Sunflower (Rhombic-leaved Sunflower)",
   "fauna": "Spinus tristis",
   "relationship": "seed_food",
@@ -6468,41 +6461,6 @@
  {
   "plant": "Giant Hyssop",
   "fauna": "Bombus melanopygus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Danaus plexippus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Bombus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Bombus vagans",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Bombus griseocollis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Bombus ternarius",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
   "notes": "GloBI flowersVisitedBy"
@@ -24192,27 +24150,6 @@
  {
   "plant": "Giant Hyssop",
   "fauna": "Colias interior",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Agapostemon splendens",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Strymon melinus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Halictus ligatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"
@@ -42056,20 +41993,6 @@
  {
   "plant": "Giant Hyssop",
   "fauna": "Rhingia nasica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Vespula germanica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Giant Sunflower",
-  "fauna": "Andrena helianthi",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"

@@ -1425,14 +1425,24 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Tall Prairie Meadow",
+                # V2.75: "Giant Sunflower" (Helianthus giganteus) anchored the
+                # centre and is an eastern species that was never native here
+                # (data/excluded_taxa.json). The centre of this variation is
+                # the tallest plant in it, so Maximilian moves in from (0.8,
+                # 0.5) — at 2.5 m it is now the tallest — and Nuttall's
+                # Sunflower, the prairie's own tall sunflower, takes the slot
+                # it left. The description is edited too: a community whose
+                # prose names a plant its member list no longer contains is
+                # the drift V2.74 went looking for.
                 "description": "Taller prairie pollinator variant featuring sunflowers and "
-                               "penstemons. Giant sunflower anchors the centre, providing seeds "
-                               "for birds. Maximilian sunflower, meadow blazingstar, and smooth "
-                               "blue beardtongue create a dramatic mid-to-late summer display. "
+                               "penstemons. Maximilian sunflower anchors the centre, providing "
+                               "seeds for birds well into autumn. Nuttall's sunflower, meadow "
+                               "blazingstar, and smooth blue beardtongue create a dramatic "
+                               "mid-to-late summer display. "
                                "Wild blue flax adds early blue blooms that attract mason bees.",
                 "members": [
-                    ("Giant Sunflower",           "pollinator",          0,    0),
-                    ("Maximilian Sunflower",      "pollinator",          0.8,  0.5),
+                    ("Maximilian Sunflower",      "pollinator",          0,    0),
+                    ("Nuttall's Sunflower",       "pollinator",          0.8,  0.5),
                     ("Meadow Blazingstar",        "pollinator",         -0.7,  0.6),
                     ("Smooth Blue Beardtongue",   "pollinator",          0.5, -0.8),
                     ("Wild Blue Flax",            "pollinator",         -0.8, -0.5),
