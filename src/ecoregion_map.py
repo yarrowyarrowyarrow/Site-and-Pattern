@@ -49,7 +49,7 @@ from src.resources import resource_path
 
 #: Re-exported so callers keep one import for "the ecoregions, drawn".
 __all__ = ["CAVEAT", "HATCHED", "REGION_COLOUR", "frame_height", "legend_html",
-           "map_svg", "region_fill", "region_geometry"]
+           "map_svg", "projector", "region_fill", "region_geometry"]
 
 #: Lon/lat window the map draws. Slightly wider than the polygons' own bounds so
 #: nothing sits flush against the frame.
@@ -161,6 +161,18 @@ def _projector(width: float, height: float):
     return project
 
 
+def projector(width: float, height: float):
+    """``(lon, lat) -> (x, y)`` for a map drawn at this size.
+
+    Public since V2.75 so an overlay can be placed in the *same* projection the
+    shading uses. Anything drawing on top of :func:`map_svg` — occurrence
+    points, a site pin — must go through this rather than reimplementing the
+    conic, because a second projector that is 2% off produces dots that sit
+    just outside their own region and look like a data error.
+    """
+    return _projector(width, height)
+
+
 def region_geometry(level: str = "", within: str = "") -> dict:
     """``{key: [ring, ...]}`` merged across the file's duplicate entries.
 
@@ -213,7 +225,8 @@ def map_svg(highlight: Optional[dict] = None, *,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
             link_for=None, reference: bool = False,
-            level: str = "", within: str = "", numbered: bool = False) -> str:
+            level: str = "", within: str = "", numbered: bool = False,
+            overlay: str = "") -> str:
     """The ecoregion map as inline SVG.
 
     ``level`` and ``within`` draw one level of the vocabulary, optionally
@@ -244,6 +257,13 @@ def map_svg(highlight: Optional[dict] = None, *,
     ``link_for`` is an optional ``key -> href`` callable; when given, each
     region becomes a link. Used by the standalone map page and deliberately not
     by the per-species maps, where the region is a fact rather than a control.
+
+    ``overlay`` is raw SVG emitted last, above every other layer, positioned
+    with :func:`projector` at the same ``width``/``height``. It is the seam for
+    drawing *records* rather than *regions* — see
+    ``scripts/plot_occurrences.py``. Deliberately a string this module does not
+    interpret: the alternative was a point-plotting API here, and where the
+    records are is not this file's concern.
     """
     highlight = highlight or {}
     regions = region_geometry(level, within)
@@ -423,6 +443,8 @@ def map_svg(highlight: Optional[dict] = None, *,
                 f'text-anchor="middle" dominant-baseline="central">'
                 f'{index}</text></g>')
 
+    if overlay:
+        parts.append(overlay)
     parts.append("</svg>")
     return "".join(parts)
 
