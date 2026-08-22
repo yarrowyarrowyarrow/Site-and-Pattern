@@ -92,12 +92,13 @@ def render_about(model: dict) -> str:
 <h1>About this catalogue</h1>
 <p class="lede">{s['species']} plants, {s['animals']} animals with documented
 plant relationships, {s['edges']} relationships between them, and
-{s['facets']} searchable fields. Built for Alberta and the Canadian
-prairies.</p>
+{s['facets']} searchable fields. Built for Alberta and Saskatchewan.</p>
 
 <h2>What it is</h2>
-<p>A reference to the native plants of Alberta and the Canadian prairies, and
-the animals that depend on them.</p>
+<p>A reference to the native plants of Alberta and Saskatchewan, and the
+animals that depend on them. That is the whole of what it covers: the
+ecoregions mapped here stop at the Saskatchewan border, and they are not all
+prairie. A third of these species are recorded from boreal or montane ground.</p>
 <p>It is the catalogue behind <a
 href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">{_esc(APP_NAME)}</a>,
 a desktop application for lawn-to-habitat conversion, pollinator gardens and

@@ -96,7 +96,7 @@ the map.</p>
 <ul class="ranges cols">{rows}</ul>
 """
     return _page(f"Ecoregion map | {SITE_NAME}",
-                 "The prairie ecoregions this catalogue records plant ranges "
+                 "The ecoregions of Alberta and Saskatchewan this catalogue "
                  "against.", body, 1, wide=True)
 
 

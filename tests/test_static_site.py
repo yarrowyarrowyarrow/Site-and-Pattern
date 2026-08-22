@@ -773,6 +773,80 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
         self._assert_clean(out)
 
 
+class TestThePagesClaimTheGroundTheyActuallyCover(unittest.TestCase):
+    """The site said "prairie" and covers more and less than that (V2.76).
+
+    Two errors in one word, and the author caught both by reading the site.
+
+    **Geographically it claimed too much.** "Alberta and the Canadian prairies"
+    reads as including Manitoba, and the layer stops at the Saskatchewan
+    border -- `tools/ecoregions/common.py` sets `SUBJECT_PROVINCES =
+    ("Alberta", "Saskatchewan")`. V2.75 removed the Manitoba filter chip for
+    exactly this reason and left the prose saying it anyway.
+
+    **Biologically it claimed the wrong thing.** Of 420 species with ranges,
+    381 are in the Prairies ecozone -- but 341 are in Boreal Plains and 339 in
+    Montane Cordillera. A third of the catalogue is boreal or montane ground.
+    Worst of all, the map page called all 24 regions "the prairie ecoregions"
+    when roughly four of them are; the rest are boreal, taiga and cordilleran.
+
+    `Prairies` as the ecozone's own name is a proper noun from the National
+    Ecological Framework and stays.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = pathlib.Path(tempfile.mkdtemp(prefix="site_scope_"))
+        render.write_site(_model(), str(cls.out), copy_photos=False)
+
+    #: The phrases that make the false claim. Banning the *word* is wrong and
+    #: the first draft of this test did it: "Grande Prairie" is a city on the
+    #: map, "Prairie Bee" is an animal's name, and the About page's own
+    #: correction contains "not all prairie". What is forbidden is describing
+    #: the CATALOGUE or the LAYER as prairie, which is the claim that is false.
+    FALSE_CLAIMS = (
+        "canadian prairies",
+        "prairie ecoregion",
+        "prairie natives",
+        "prairie plants",
+        "prairie animals",
+        "prairie habitat",
+        "and the prairies",
+    )
+
+    def _prose(self, text):
+        return " ".join(re.sub(r"<[^>]+>", " ", text).split()).lower()
+
+    def test_no_page_describes_the_catalogue_as_prairie(self):
+        offenders = []
+        for page in sorted(self.out.rglob("*.html")):
+            prose = self._prose(page.read_text(encoding="utf-8"))
+            for claim in self.FALSE_CLAIMS:
+                if claim in prose:
+                    offenders.append(
+                        f"{page.relative_to(self.out).as_posix()}: {claim!r}")
+        self.assertEqual(offenders, [], f"false scope claim: {offenders}")
+
+    def test_the_word_itself_is_allowed_where_it_is_true(self):
+        """Grande Prairie is a real city and Prairies is a real ecozone. A
+        guard that banned the word would have to be worked around, and a guard
+        people work around stops being read."""
+        for legitimate in ("Grande Prairie", "Prairies"):
+            self.assertNotIn(legitimate.lower(),
+                             [c for c in self.FALSE_CLAIMS])
+
+    def test_the_tagline_names_both_provinces_and_only_those(self):
+        self.assertIn("Alberta and Saskatchewan", render.TAGLINE)
+        self.assertNotIn("prairies", render.TAGLINE.lower())
+
+    def test_the_about_page_states_the_limit_rather_than_implying_it(self):
+        from src.static_site_about import render_about
+        # `_prose` lowercases, so the needles must too.
+        flat = self._prose(render_about(_model()))
+        self.assertIn("stop at the saskatchewan border", flat)
+        self.assertIn("boreal or montane ground", flat)
+
+
 class TestNoEmDashReachesAPage(unittest.TestCase):
     """The rule CLAUDE.md said was guarded, and was not (V2.75).
 

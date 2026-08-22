@@ -226,7 +226,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
 </div>
 <script id="catalogue" type="application/json">{payload}</script>
 """
-    return _page(f"Search {listed} prairie animals | {SITE_NAME}",
+    return _page(f"Search {listed} animals | {SITE_NAME}",
                  "Native bees, butterflies, moths, birds and mammals, and the "
                  "documented plants each one depends on.", body, 1, wide=True,
                  scripts=f'<script src="{_up(1)}assets/browse.js"></script>')

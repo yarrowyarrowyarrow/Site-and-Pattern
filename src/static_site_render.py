@@ -63,7 +63,7 @@ from src.static_site import _first_photo
 #: only thing they need to share is the data.
 SITE_NAME = "GrowNativePlants"
 SITE_SUB = "Plant Directory"
-TAGLINE = ("Native plants of Alberta and the Canadian prairies, and the "
+TAGLINE = ("Native plants of Alberta and Saskatchewan, and the "
            "animals that depend on them.")
 
 #: Every nav target is a page ``write_site`` emits unconditionally. Linking the
@@ -174,7 +174,7 @@ def _page(title: str, description: str, body: str, depth: int,
   <div class="foot-inner">
     <p class="foot-lede">{_esc(TAGLINE)}</p>
     <p>Generated from an <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">open
-    catalogue</a> of prairie natives. Photographs are open-licensed and credited
+    catalogue</a> of native plants. Photographs are open-licensed and credited
     individually to their photographers. Every other figure carries its source
     on the page it appears on, and where a fact is unknown the page says so
     rather than filling the gap.</p>
@@ -291,7 +291,7 @@ def render_home(model: dict, photo_src: dict) -> str:
 
     body = f"""
 <section class="hero">
-  <p class="kicker">A reference work for prairie habitat</p>
+  <p class="kicker">A reference work for Alberta and Saskatchewan</p>
   <h1>{s['species']} native plants, and the {s['animals']} animals
   documented to use them.</h1>
   <p class="lede">{_esc(TAGLINE)} Every relationship here is a
@@ -351,7 +351,7 @@ def render_home(model: dict, photo_src: dict) -> str:
   <p><a class="button" href="wildlife/">{s['animals']} animals</a></p>
 </section>
 """
-    return _page(f"{s['species']} native plants of Alberta and the prairies",
+    return _page(f"{s['species']} native plants of Alberta and Saskatchewan",
                  TAGLINE, body, 0)
 
 
@@ -447,7 +447,7 @@ def render_browse(model: dict, photo_src: dict) -> str:
 </div>
 <script id="catalogue" type="application/json">{payload}</script>
 """
-    return _page(f"Search {len(briefs)} native prairie plants", TAGLINE, body, 1,
+    return _page(f"Search {len(briefs)} native plants", TAGLINE, body, 1,
                  wide=True,
                  scripts=f'<script src="{_up(1)}assets/browse.js"></script>')
 
