@@ -837,12 +837,41 @@ class TestTheMethodPage(unittest.TestCase):
     def test_it_says_recorded_is_not_native(self):
         self.assertIn("not native", self.html.replace("\n", " "))
 
-    def test_it_discloses_the_buffer_this_build_still_carries(self):
-        """The shipped counts were derived with the 5 km buffer and can only
-        be corrected by a re-fetch. Saying so is the whole point."""
+    def test_it_discloses_the_correction_rather_than_restating_the_numbers(self):
+        """V2.75 asserted this page disclosed a buffer the build still carried;
+        V2.76 corrected the data, so that disclosure became false and was
+        replaced. **The test changed with it rather than being deleted**, and
+        the reason is the whole point of the page.
+
+        A caveat that stops being true is not a caveat you delete quietly --
+        that is precisely the fault the outside review found (a philosophy doc
+        calling surveyed polygons "hand-drawn boxes" for a whole increment
+        after it became false). So the obligation moves rather than lapsing:
+        the page must now say what was wrong, how big it was, and that it was
+        fixed. Anyone comparing this site against an earlier copy sees a large
+        change in the numbers and is entitled to an explanation on the site
+        rather than in a commit message.
+        """
         flat = " ".join(self.html.split())
+        # It still explains the fault in the reader's language...
         self.assertIn("within five kilometres of it", flat)
-        self.assertIn("one point in six", flat)
+        # ...but as something corrected, with its size, not as a live limit.
+        self.assertIn("re-derived by containment", flat)
+        self.assertIn("489,546", flat)
+        self.assertIn("361,447", flat)
+
+    def test_it_names_the_sliver_that_caused_most_of_it(self):
+        """The finding nobody predicted, and the one a returning reader would
+        actually notice: one clipped region went from 135 species to 15."""
+        flat = " ".join(self.html.split())
+        self.assertIn("Western Continental Ranges", flat)
+        self.assertIn("135 species", flat)
+
+    def test_it_does_not_claim_the_buffer_is_still_present(self):
+        """The specific false sentence, pinned so it cannot come back by a
+        copy-paste from an older draft."""
+        flat = " ".join(self.html.split())
+        self.assertNotIn("which has not happened yet in this build", flat)
 
     def test_it_names_what_is_not_filtered(self):
         self.assertIn("identification-verified", self.html)
