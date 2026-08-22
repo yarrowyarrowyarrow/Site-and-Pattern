@@ -369,7 +369,40 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # `plant_ecoregions.json` still carries buffered counts and can only be
 # corrected by a re-fetch with egress — which is stated on the website's
 # Method page rather than left for a reader to discover.
-_SCHEMA_VERSION = 76
+# v77 (V2.76): no DDL — a reseed to carry the **re-derived** species ranges,
+# and the first time this catalogue has corrected a number rather than added
+# one. Without the bump nobody who already has the app installed would ever
+# receive them.
+#
+# V2.75 fixed the derivation: `ranges_for_species` had inherited
+# `ecoregion._NEAR_BOUNDARY_M`, a 5 km proximity buffer written for *which
+# ecoregion is this yard in*, and credited every record to every region within
+# five kilometres of it. The data could only be corrected by re-fetching from
+# GBIF, which happened on 2026-08-21. Measured against the old file:
+#
+#     species with rows   422 -> 420
+#     region rows        4215 -> 3643
+#     records          489,546 -> 361,447      (-26%)
+#
+# **The error was concentrated, not scattered, and that is the finding.** Of
+# 4,218 region claims in the old file, 493 (11.7%) had fewer than the floor of
+# records actually inside the region. Nearly all of them were one region:
+# `western_continental_ranges` is the BC interior ranges, and only a hairline of
+# it falls inside Alberta — 0.02% of the layer, 36x smaller than Northern
+# Continental Divide. A sliver that thin has an enormous buffer-to-area ratio,
+# so every montane record near the BC border was swept into it. It was claimed
+# by **135 species and is now claimed by 15**.
+#
+# Two species lost every row: *Panicum virgatum* (3 records) and
+# *Symphyotrichum campestre* (6). Both sat at the floor and both now band as
+# `unknown` rather than `unlikely` — under-collected and absent are
+# indistinguishable from here, and `establishment.py` refuses to guess between
+# them. They keep their heuristic ecozone tag, so they are still findable.
+#
+# The interior regions barely moved (Cypress Upland 231 -> 228, Selwyn Lake
+# Upland 10 -> 8), which is the signature a boundary fix should have: it bites
+# at edges, not in the middle.
+_SCHEMA_VERSION = 77
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

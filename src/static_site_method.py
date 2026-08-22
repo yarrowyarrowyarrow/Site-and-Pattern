@@ -148,15 +148,25 @@ would assert something its own metadata denies.</p>
 
 <h2>Known limits of this build</h2>
 <ul>
-  <li><strong>The shipped counts were derived with a proximity buffer.</strong>
-  Until recently a record was credited to every ecoregion within five
-  kilometres of it, not only the one containing it. That rule was
-  written for deciding which region a <em>garden</em> is in, which reached the range
-  derivation by accident. Roughly one point in six inside the layer falls
-  within that distance of a second region, so some low-confidence regions on
-  these pages are records from next door. The derivation is fixed; the
-  published counts are corrected by re-retrieving from GBIF, which has not
-  happened yet in this build.</li>
+  <li><strong>Until recently these counts were inflated, and we corrected
+  them rather than quietly restating them.</strong> A record used to be
+  credited to every ecoregion within five kilometres of it, not only the one
+  containing it. That rule was written for deciding which region a
+  <em>garden</em> is in, where a nearby second answer is useful, and it reached
+  the range derivation by accident. Every range on this site was re-retrieved
+  from GBIF and re-derived by containment on 21 August 2026. The effect was
+  large: <strong>489,546 attributed records became 361,447</strong>, and 493 of
+  4,218 region claims turned out to have almost no records actually inside
+  them. Two species lost every region and are now shown as not having enough
+  evidence, which is the honest answer rather than a smaller one.</li>
+  <li><strong>One region in the map is a sliver, and it was doing most of the
+  damage.</strong> Western Continental Ranges is a British Columbia region, and
+  only a hairline of it crosses into Alberta: two hundredths of one per cent
+  of the mapped area. A shape that thin has a five-kilometre apron many
+  times its own size, so nearly every mountain record near the border was being
+  filed under it. It was listed for 135 species and is now listed for 15. If
+  you compared this site against an earlier copy of it, that is the difference
+  you would see.</li>
   <li><strong>Flower colour is mostly unverified.</strong>
   {s['verified_colour']} of {s['species']} species have a colour checkable
   against the plant's own name; the rest are a genus-level default and every

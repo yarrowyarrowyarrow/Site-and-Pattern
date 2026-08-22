@@ -19,9 +19,17 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.75`,
-`_SCHEMA_VERSION = 76` (in `src/db/plants.py`) — v76 is a reseed only, and the
-**second** species removal in as many releases: *Helianthus giganteus* is an
+**Current facts (verify before quoting):** branch `V2.76`,
+`_SCHEMA_VERSION = 77` (in `src/db/plants.py`) — v77 is a reseed only, and the
+first time this catalogue has **corrected** a number rather than added one.
+Species ranges were re-derived after V2.75 found that `ranges_for_species` had
+inherited a 5 km proximity buffer meant for site detection: attributed records
+489,546 → **361,447**, and the error was **concentrated in one region** rather
+than scattered (`western_continental_ranges` is clipped to 0.02% of the mapped
+area inside Alberta and went from 135 species to 15). Note the shape of a good
+boundary fix: interior regions barely moved.
+
+v76 was the **second** species removal in as many releases: *Helianthus giganteus* is an
 eastern plant (VASCAN records it from Ontario eastward; Moss does not treat
 it) that shipped `native_provinces = "AB,SK"`. It took 11 documented edges and
 one seeded polyculture membership, and orphaned no animal.
