@@ -75,7 +75,30 @@ def render_map_page(model: dict) -> str:
 
     levels = {p["value"]: level_of(p["value"]) for p in hub["pages"]}
     n_zones = sum(1 for lv in levels.values() if lv == ECOZONE)
-    n_regions = sum(1 for lv in levels.values() if lv == ECOREGION)
+    n_listed = sum(1 for lv in levels.values() if lv == ECOREGION)
+
+    # V2.76: the map DRAWS every ecoregion in the layer; the list below it can
+    # only hold the ones with a page, and a region with no species recorded in
+    # it gets none. Those were the same number until they were not:
+    # `interlake_plain` is a Manitoba ecoregion clipped to a fragment of
+    # Saskatchewan and has never had a species. So the page said "23 finer
+    # ecoregions" over a picture of 24 shapes, and a reader who counted would
+    # have found the extra one and had no way to learn why.
+    #
+    # Both numbers, and the difference explained in the same breath. The
+    # alternative -- quietly printing the smaller one -- is the habit this
+    # release exists to break.
+    from src.ecoregion_tree import tree                      # noqa: PLC0415
+    n_drawn = 0
+
+    def _count(nodes):
+        nonlocal n_drawn
+        for key, _name, lv, children in nodes:
+            if lv == ECOREGION:
+                n_drawn += 1
+            _count(children)
+
+    _count(tree())
     # The list is already in tree order (each ecozone followed by what is inside
     # it), so the nesting only needs saying in the markup for it to be visible.
     _CLASS = {ECOZONE: " class=\"eco-zone\"", ECOREGION: " class=\"eco-region\""}
@@ -89,8 +112,8 @@ def render_map_page(model: dict) -> str:
 {_crumb([("", "Ecoregion map")], 1)}
 <h1>The ecoregions</h1>
 <p class="lede">Alberta and Saskatchewan in {n_zones} broad ecozones. Click one
-for its plants. The {n_regions} finer ecoregions inside them are listed under
-the map.</p>
+for its plants. The map draws {n_drawn} finer ecoregions inside them; the
+{n_listed} with plants recorded in them are listed below.</p>
 <figure class="mapfig wide-map">{svg}{legend_html(link, level=ECOZONE)}</figure>
 <p class="note">{_esc(CAVEAT)}</p>
 <ul class="ranges cols">{rows}</ul>
