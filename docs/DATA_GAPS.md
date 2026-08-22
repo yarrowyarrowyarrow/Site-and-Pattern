@@ -338,6 +338,51 @@ allowlist mode is ever wanted.
 
 ---
 
+## The occurrence harvest is capped, and the cap is not neutral (V2.77)
+
+`scripts/seed_ecoregion_ranges.py` stops asking GBIF after
+`MAX_RECORDS_PER_SPECIES = 6000` records per species. That was written as a
+politeness bound, and it is: the first run got rate-limited and this is part of
+why the second did not. What nobody checked is **what falls outside the
+window**.
+
+GBIF's default result order is newest-first. So for a plant with tens of
+thousands of records, six thousand is the last few years and nothing before
+them. Measured on the cache:
+
+| | records | specimens | year range |
+|---|---|---|---|
+| the 16 species at the cap | 89,964 | **31** | **2021-2026** |
+| the other 418 | 401,877 | 54,238 | full historical record |
+
+*Amelanchier alnifolia* holds 6,000 records, **two** of them herbarium
+specimens, none dated before 2024. Saskatoon Berry has been collected in this
+province for a century; the harvest simply never reached any of it.
+
+**The species affected**, by cached count at or above 5,998: *Achillea
+millefolium, Amelanchier alnifolia, Arctostaphylos uva-ursi, Chamaenerion
+angustifolium, Cornus canadensis, Cornus sericea, Elaeagnus commutata, Fragaria
+virginiana, Gaillardia aristata, Geum triflorum, Maianthemum stellatum, Populus
+tremuloides, Prunus virginiana, Pulsatilla nuttalliana, Shepherdia canadensis,
+Thermopsis rhombifolia.* Every one is a common, widely photographed plant,
+which is exactly why it hit the cap.
+
+**What this does and does not affect.** Each of these still has ~5,600
+georeferenced records, which is far past the three-record floor everywhere they
+grow, so the *shipped ranges* are unlikely to move — but "unlikely" is not
+"checked", and `--from-cache` exists so the check costs no network. What it
+plainly does affect is any map drawn from specimens: sixteen of the catalogue's
+best-known plants would render blank, and blank for our reason rather than the
+herbaria's.
+
+**Two things changed rather than one.** `--specimen-pass` asks GBIF for
+`PRESERVED_SPECIMEN` records as their own query, which is the only way to reach
+records the cap cut; and `fetch_occurrences(truncated=...)` now reports when a
+harvest stopped because *we* stopped asking rather than because GBIF ran out.
+The second is the more important: a truncated harvest and a complete one looked
+identical once cached, which is how this went unnoticed through two increments
+of work on exactly this data.
+
 ## Taxonomy: no backbone, and the names that show it (V2.75)
 
 **Status: the catalogue has no authority field, no synonym list and no taxon

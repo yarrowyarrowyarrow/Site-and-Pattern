@@ -44,28 +44,38 @@ Running it
     python scripts/plot_occurrences.py --species "Aster alpinus" --out aa.svg
     python scripts/plot_occurrences.py --buffer-artefacts
     python scripts/plot_occurrences.py --sheet worst-first.html --limit 40
+    python scripts/plot_occurrences.py --sheet specimens.html --specimens --publishable
 
 The cache is a dev artefact and may be absent on a fresh clone; every mode
 says so plainly rather than drawing an empty map, because an empty map of a
 species with 400 records is the failure that looks most like a finding.
 
-Publishing these is a separate decision
----------------------------------------
-Two constraints, and the second can cause harm:
+Publishing these is a separate decision, and specimens are the near half
+------------------------------------------------------------------------
+Two constraints stood in the way, and V2.77 found that ``--specimens
+--publishable`` clears both rather than arguing with them:
 
-1. **Licence.** ``docs/DATA_SOURCES.md`` currently rests the GBIF position on
-   storing "only the derived counts, never GBIF's records themselves". Drawing
-   coordinates on a public page changes that sentence, and GBIF records carry
-   per-record licences.
-2. **Sensitive species.** iNaturalist obscures coordinates for rare,
-   threatened and collectible taxa precisely so that publishing them does not
-   lead a collector to the plant. Orchids and cacti in this catalogue are that
-   category. A published map must never plot a point at finer precision than
-   its source published it.
+1. **Licence.** ``scripts/fetch_dataset_licences.py`` asked GBIF per dataset.
+   **90.1% of specimen records are CC0 or CC-BY** — and for a herbarium the
+   dataset licence IS the record's licence, because a collection is published
+   under one. For ``HUMAN_OBSERVATION`` it is only the publisher's default:
+   iNaturalist observers each choose their own, so that number sizes the layer
+   and does not authorise plotting an individual point.
+2. **Sensitive species.** iNaturalist obscures coordinates for rare, threatened
+   and collectible taxa precisely so that publishing them does not lead a
+   collector to the plant. Orchids and cacti in this catalogue are that
+   category. Specimen records do not carry that problem: the plant is already
+   a pressed sheet in a cabinet with a locality on its label, and this is why
+   the printed regional floras plot specimens.
 
 Note the irony, because it bears on the review's other point: the rare species
-the three-record floor under-serves are the same ones whose coordinates must
-stay coarse.
+the three-record floor under-serves are the same ones whose *observation*
+coordinates must stay coarse.
+
+**What is still not decided here.** Nothing this draws is published. Whether
+the dots reach grownativeplants.ca, and whether the CC-BY-NC observation layer
+joins them, is a call made after looking at these — which is what this mode is
+for.
 """
 
 from __future__ import annotations
@@ -115,6 +125,77 @@ def _require(cache: dict) -> None:
     raise SystemExit(1)
 
 
+# ── Which records may be drawn ──────────────────────────────────────────────
+
+class NoLicenceTable(RuntimeError):
+    """No ``dataset_licences.json``. Refused rather than defaulted.
+
+    Treating an unknown licence as permissive publishes what we may not, and
+    treating it as withheld draws an empty map that reads as "the herbaria have
+    nothing" — both are worse than saying which command is missing.
+    """
+
+
+def licences(path=None) -> dict:
+    """``{dataset_key: licence token}`` from the dataset licence table."""
+    import json                                              # noqa: PLC0415
+    from scripts.fetch_dataset_licences import OUTPUT_PATH   # noqa: PLC0415
+    path = path or OUTPUT_PATH
+    try:
+        with open(path, encoding="utf-8") as f:
+            blob = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+        raise NoLicenceTable(
+            f"No dataset licence table at {path}.\n\n"
+            "It is a dev artefact, written on a machine with egress by\n"
+            "    python scripts/fetch_dataset_licences.py\n"
+            "Without it nothing here can say what may be redrawn, and drawing\n"
+            "an empty map instead would be the failure that looks most like a\n"
+            "finding.") from exc
+    return {k: (r.get("licence") or "UNSPECIFIED")
+            for k, r in (blob.get("datasets") or {}).items()}
+
+
+def specimens(points) -> list:
+    """Only the herbarium sheets — the basis the printed floras plot."""
+    from scripts.seed_ecoregion_ranges import SPECIMEN_BASIS  # noqa: PLC0415
+    return [p for p in points if getattr(p, "basis", "") == SPECIMEN_BASIS]
+
+
+def publishable(points, table: dict) -> list:
+    """Only records whose dataset licence permits redrawing the coordinate.
+
+    Reuses ``fetch_dataset_licences.PUBLISHABLE`` rather than restating it, so
+    a change to what this project considers publishable cannot apply in one
+    place and not the other. A ``dataset_key`` absent from the table is
+    dropped: absent is not permissive, which is the same rule the photo
+    pipeline runs on.
+    """
+    from scripts.fetch_dataset_licences import PUBLISHABLE   # noqa: PLC0415
+    return [p for p in points
+            if table.get(getattr(p, "dataset_key", "")) in PUBLISHABLE]
+
+
+def drawable(points, *, only_specimens: bool, only_publishable: bool,
+             table: dict | None = None) -> tuple[list, dict]:
+    """``(points to draw, {why: how many were dropped})``.
+
+    The counts come back rather than being swallowed, because "we drew four of
+    three hundred records" is the finding and a quiet blank map is not.
+    """
+    kept = list(points)
+    why: dict[str, int] = {}
+    if only_specimens:
+        after = specimens(kept)
+        why["not a specimen"] = len(kept) - len(after)
+        kept = after
+    if only_publishable:
+        after = publishable(kept, table or {})
+        why["licence does not permit redrawing"] = len(kept) - len(after)
+        kept = after
+    return kept, {k: v for k, v in why.items() if v}
+
+
 def _radius(uncertainty_m: float | None, scale: float) -> float:
     """Dot radius: the record's own stated uncertainty, in map units.
 
@@ -150,8 +231,35 @@ def points_svg(points, project, *, scale: float = 0.0) -> str:
     return f'<g class="occ">{"".join(out)}</g>'
 
 
-def species_svg(name: str, points, *, width: int = 720) -> str:
-    """One species: the derived shading, with the records that produced it."""
+def caption(name: str, shading_n: int, dots_n: int, dropped: dict) -> str:
+    """The sentence without which a filtered map is a lie by omission.
+
+    A region shaded from three hundred records and showing four dots reads as
+    broken. It is not broken — it is two different statements drawn on one
+    picture, and the only way that is honest is to say so on the picture.
+    """
+    if dots_n == shading_n and not dropped:
+        return f"{shading_n:,} records, all drawn."
+    bits = [f"{dots_n:,} of {shading_n:,} records drawn"]
+    for why, n in sorted(dropped.items(), key=lambda kv: -kv[1]):
+        bits.append(f"{n:,} {why}")
+    tail = "; ".join(bits)
+    if dots_n:
+        return (f"{tail}. The shading below is derived from all "
+                f"{shading_n:,}, not from the dots.")
+    return (f"{tail}. No dot is drawable here — the shading below still comes "
+            f"from all {shading_n:,} records, so this is a gap in what may be "
+            f"drawn, not in what is known.")
+
+
+def species_svg(name: str, points, *, width: int = 720, dots=None) -> str:
+    """One species: the derived shading, with the records that produced it.
+
+    ``dots`` draws a *subset* while the shading stays derived from every point
+    — the published range is a claim about all the evidence, and filtering the
+    picture must not quietly filter the claim. Callers that filter are
+    responsible for printing :func:`caption` beside it.
+    """
     from src.ecoregion_map import frame_height, map_svg, projector
     from src.ecoregion_ranges import ranges_for_species
 
@@ -159,6 +267,7 @@ def species_svg(name: str, points, *, width: int = 720) -> str:
     project = projector(width, height)
     rows = ranges_for_species(points)
     highlight = {r["ecoregion"]: r["confidence"] for r in rows}
+    drawn = points if dots is None else dots
 
     # Metres -> map units, so an uncertainty radius means what it says. Taken
     # off the projection itself rather than assumed: two points a known
@@ -172,7 +281,7 @@ def species_svg(name: str, points, *, width: int = 720) -> str:
 
     return map_svg(highlight, width=width, height=height,
                    title=f"Records behind the range of {name}",
-                   overlay=points_svg(points, project, scale=scale))
+                   overlay=points_svg(drawn, project, scale=scale))
 
 
 def buffer_artefacts(cache: dict) -> tuple[int, int, list]:
@@ -207,6 +316,34 @@ def buffer_artefacts(cache: dict) -> tuple[int, int, list]:
     return total, artefacts, worst
 
 
+def _report_filters(args, cache: dict, filtered) -> None:
+    """The whole-catalogue arithmetic behind a sheet, printed once.
+
+    Whether a layer is worth publishing is not a question about twenty-four
+    thumbnails. It is "how many species does this leave with nothing", and that
+    number has to be looked at rather than inferred from the pictures that
+    happen to be on the page.
+    """
+    if not (args.specimens or args.publishable):
+        return
+    total = sum(len(v) for v in cache.values())
+    kept = 0
+    empty = 0
+    reasons: dict[str, int] = {}
+    for points in cache.values():
+        dots, why = filtered(points)
+        kept += len(dots)
+        empty += 0 if dots else 1
+        for k, n in why.items():
+            reasons[k] = reasons.get(k, 0) + n
+    share = (100.0 * kept / total) if total else 0.0
+    print(f"\nAcross the whole cache: {kept:,} of {total:,} records "
+          f"({share:.1f}%) are drawable under these filters.")
+    for why, n in sorted(reasons.items(), key=lambda kv: -kv[1]):
+        print(f"      {n:8,}  {why}")
+    print(f"  {empty} of {len(cache)} species have no drawable record at all.")
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -219,10 +356,29 @@ def main(argv: list[str] | None = None) -> int:
                    help="Species on the contact sheet (default 24).")
     p.add_argument("--buffer-artefacts", action="store_true",
                    help="Count region claims no record actually falls inside.")
+    p.add_argument("--specimens", action="store_true",
+                   help="Draw only PRESERVED_SPECIMEN records — the basis the "
+                        "printed regional floras plot, and the one with no "
+                        "rare-taxa coordinate obscuring.")
+    p.add_argument("--publishable", action="store_true",
+                   help="Draw only records whose dataset licence permits "
+                        "redrawing the coordinate (CC0 / CC-BY).")
     args = p.parse_args(argv)
 
     cache = _cache()
     _require(cache)
+
+    table: dict = {}
+    if args.publishable:
+        try:
+            table = licences()
+        except NoLicenceTable as exc:
+            print(exc, file=sys.stderr)
+            return 1
+
+    def filtered(points):
+        return drawable(points, only_specimens=args.specimens,
+                        only_publishable=args.publishable, table=table)
 
     if args.buffer_artefacts:
         total, bad, worst = buffer_artefacts(cache)
@@ -238,22 +394,37 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.sheet:
-        names = sorted(cache, key=lambda n: -len(cache[n]))[:args.limit]
-        blocks = []
+        # Ordered by what the sheet is *of*: with a filter on, the species
+        # worth looking at are the ones with the most DRAWABLE records, not the
+        # most records. Sorting by the latter is how a contact sheet of the
+        # specimen layer would have opened on sixteen blank maps.
+        ranked = sorted(cache, key=lambda n: -len(filtered(cache[n])[0]))
+        names = ranked[:args.limit]
+        blocks, blank = [], []
         for name in names:
             pts = cache[name]
+            dots, why = filtered(pts)
+            if not dots:
+                blank.append(name)
             blocks.append(
-                f'<figure><figcaption>{html.escape(name)} '
-                f'<small>{len(pts)} records</small></figcaption>'
-                f'{species_svg(name, pts, width=360)}</figure>')
+                f'<figure><figcaption>{html.escape(name)}</figcaption>'
+                f'{species_svg(name, pts, width=360, dots=dots)}'
+                f'<p>{html.escape(caption(name, len(pts), len(dots), why))}</p>'
+                f'</figure>')
         Path(args.sheet).write_text(
             "<meta charset='utf-8'><title>Occurrence contact sheet</title>"
             "<style>body{font:14px system-ui;background:#fff;margin:2rem}"
-            "figure{display:inline-block;margin:0 1rem 1.5rem 0;width:360px}"
+            "figure{display:inline-block;margin:0 1rem 1.5rem 0;width:360px;"
+            "vertical-align:top}"
             "figcaption{font-style:italic;margin-bottom:.3rem}"
-            "small{font-style:normal;color:#666}</style>"
+            "p{color:#555;font-size:12px;margin:.3rem 0 0}</style>"
             + "".join(blocks), encoding="utf-8")
         print(f"Wrote {args.sheet} ({len(names)} species).")
+        _report_filters(args, cache, filtered)
+        if blank:
+            print(f"  {len(blank)} of them have nothing drawable and render as "
+                  f"a shaded map with no dots: {', '.join(blank[:8])}"
+                  f"{' ...' if len(blank) > 8 else ''}")
         return 0
 
     if not args.species:
@@ -265,10 +436,12 @@ def main(argv: list[str] | None = None) -> int:
               f"{len(cache)} species.", file=sys.stderr)
         return 1
 
-    svg = species_svg(args.species, points, width=args.width)
+    dots, why = filtered(points)
+    svg = species_svg(args.species, points, width=args.width, dots=dots)
     if args.out:
         Path(args.out).write_text(svg, encoding="utf-8")
-        print(f"Wrote {args.out} ({len(points)} records).")
+        print(f"Wrote {args.out}. "
+              f"{caption(args.species, len(points), len(dots), why)}")
     else:
         print(svg)
     return 0

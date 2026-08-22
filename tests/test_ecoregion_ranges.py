@@ -994,6 +994,220 @@ class TestThePointCache(unittest.TestCase):
         self.assertEqual([r["ecoregion"] for r in rows], ["aspen_parkland"])
 
 
+class TestTheSpecimenPass(unittest.TestCase):
+    """The herbarium half, asked for as its own query (F140, V2.77).
+
+    ``MAX_RECORDS_PER_SPECIES`` bounds the harvest and GBIF orders newest
+    first, so for a common plant the six-thousand-record window is the last few
+    years of phone observations and the century of specimens behind it never
+    arrives. Sixteen species in this catalogue sit at that cap holding 89,964
+    records and thirty-one specimens between them. Nobody noticed, because a
+    truncated harvest and a complete one look identical once cached.
+    """
+
+    def setUp(self):
+        import pathlib
+        import scripts.seed_ecoregion_ranges as seeder
+        self.seeder = seeder
+        self.O = seeder.Occurrence
+        self.tmp = pathlib.Path(tempfile.mkdtemp()) / "plant_occurrences.json"
+
+    def test_it_asks_gbif_for_specimens_and_not_for_everything(self):
+        """The whole point: filtering the answer cannot reach what the cap cut."""
+        seen = {}
+
+        def fake(name, *, verbose=False, throttle=None, basis_of_record="",
+                 **_kw):
+            seen[name] = basis_of_record
+            return [self.O(53.55, -113.49, 30.0, 1911, basis_of_record, "herb")]
+
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False, fetch=fake)
+        self.assertEqual(seen["Testus plantus"], "PRESERVED_SPECIMEN")
+        self.assertEqual(len(harvest["Testus plantus"]), 1)
+        self.assertEqual(failed, [])
+
+    def test_a_refusal_is_not_recorded_as_having_no_specimens(self):
+        """Same rule the main harvest learned in V2.75, in the new code path."""
+        def flaky(name, **_kw):
+            raise self.seeder.FetchFailed("HTTP 429")
+
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False, fetch=flaky)
+        self.assertEqual(harvest, {})
+        self.assertEqual([n for n, _why in failed], ["Testus plantus"])
+
+    def test_a_genuine_absence_is_recorded_as_an_empty_list(self):
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False,
+            fetch=lambda name, **_kw: [])
+        self.assertEqual(harvest, {"Testus plantus": []})
+        self.assertEqual(failed, [])
+
+    def test_hitting_the_cap_is_reported_rather_than_looking_like_the_end(self):
+        """The bug's mechanism, pinned. A harvest that stopped because we
+        stopped asking must not be indistinguishable from one GBIF ended."""
+        pages = {"n": 0}
+
+        def _get_json(url, timeout, throttle):
+            pages["n"] += 1
+            return {"results": [{"decimalLatitude": 53.55,
+                                 "decimalLongitude": -113.49,
+                                 "basisOfRecord": "HUMAN_OBSERVATION"}]
+                                * self.seeder.PAGE_SIZE,
+                    "endOfRecords": False}
+
+        original = self.seeder._get_json
+        self.seeder._get_json = _get_json
+        try:
+            truncated = []
+            self.seeder.fetch_occurrences("Testus plantus", throttle=_NoWait(),
+                                          truncated=truncated)
+            self.assertEqual(truncated, ["Testus plantus"])
+        finally:
+            self.seeder._get_json = original
+
+    def test_a_harvest_gbif_ended_is_not_reported_as_truncated(self):
+        def _get_json(url, timeout, throttle):
+            return {"results": [{"decimalLatitude": 53.55,
+                                 "decimalLongitude": -113.49,
+                                 "basisOfRecord": "PRESERVED_SPECIMEN"}],
+                    "endOfRecords": True}
+
+        original = self.seeder._get_json
+        self.seeder._get_json = _get_json
+        try:
+            truncated = []
+            self.seeder.fetch_occurrences("Testus plantus", throttle=_NoWait(),
+                                          truncated=truncated)
+            self.assertEqual(truncated, [])
+        finally:
+            self.seeder._get_json = original
+
+    # ── merging into the cache ──────────────────────────────────────────────
+
+    def test_the_same_sheet_twice_is_counted_once(self):
+        """A duplicate inflates the number a confidence band is computed from,
+        which is the one number the whole pipeline exists to keep honest."""
+        sheet = self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")
+        self.seeder.write_cache({"Testus plantus": [sheet]}, path=self.tmp)
+        merged, added = self.seeder.merge_into_cache(
+            {"Testus plantus": [sheet]}, path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 1)
+        self.assertEqual(added, {})
+
+    def test_two_collectors_at_one_trailhead_stay_two_records(self):
+        """De-duplicating on coordinates alone would collapse exactly what a
+        dot map is drawn to show."""
+        self.seeder.write_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1974, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 2)
+        self.assertEqual(added, {"Testus plantus": 1})
+
+    def test_a_restated_uncertainty_is_still_the_same_record(self):
+        """GBIF exports re-state these; the sheet in the cabinet is one sheet."""
+        self.seeder.write_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 250.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 1)
+        self.assertEqual(added, {})
+
+    def test_a_species_the_cache_never_held_is_added_whole(self):
+        self.seeder.write_cache({"Testus plantus": []}, path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Novus sp.": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(added, {"Novus sp.": 1})
+        self.assertIn("Novus sp.", merged)
+
+    def test_merging_never_drops_what_was_already_there(self):
+        old = [self.O(50.0, -110.0, None, 2000, "HUMAN_OBSERVATION", "inat")]
+        self.seeder.write_cache({"Testus plantus": old}, path=self.tmp)
+        merged, _added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertIn(old[0], merged["Testus plantus"])
+
+
+class TestDerivingWithoutTheNetwork(unittest.TestCase):
+    """``--from-cache`` (F140, V2.77).
+
+    The cache was built so no later question about this derivation would need
+    egress, and until now nothing read it that way: a changed threshold or a
+    corrected polygon still meant a fresh harvest on somebody's laptop. This is
+    the seam that makes the derivation, and its diff, reproducible anywhere.
+    """
+
+    def test_it_derives_the_same_rows_the_network_run_would(self):
+        from scripts.seed_ecoregion_ranges import cache_fetcher, derive
+        O = __import__("scripts.seed_ecoregion_ranges",
+                       fromlist=["Occurrence"]).Occurrence
+        points = [O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "h")] * 5
+        live, _d, _n, _f = derive(
+            ["Testus plantus"], min_records=3, verbose=False,
+            fetch=lambda name, **_kw: points, throttle=_NoWait())
+        cached, _d, _n, _f = derive(
+            ["Testus plantus"], min_records=3, verbose=False,
+            fetch=cache_fetcher({"Testus plantus": points}),
+            throttle=_NoWait())
+        self.assertEqual(live, cached)
+        self.assertEqual([r["ecoregion"] for r in cached["Testus plantus"]],
+                         ["aspen_parkland"])
+
+    def test_a_species_absent_from_the_cache_derives_to_nothing(self):
+        """And the CLI says so before writing, because "no rows" reads as
+        "grows nowhere" and the cache is not the catalogue."""
+        from scripts.seed_ecoregion_ranges import cache_fetcher, derive
+        ranges, _d, none, failed = derive(
+            ["Absent sp."], min_records=3, verbose=False,
+            fetch=cache_fetcher({}), throttle=_NoWait())
+        self.assertEqual(ranges, {})
+        self.assertEqual(none, ["Absent sp."])
+        self.assertEqual(failed, [])
+
+    def test_the_committed_points_agree_with_the_committed_ranges(self):
+        """A spot check on the real pair, cheap enough to run every time.
+
+        The full re-derivation over 555,477 points takes about forty minutes of
+        CPU and was run once (V2.77: 420 species, zero differing rows). This
+        samples it, so a cache and a shipped file that drift apart -- a
+        re-fetch committed without a re-derivation, or the reverse -- fails
+        here rather than being discovered by somebody reading a map.
+        """
+        import scripts.seed_ecoregion_ranges as seeder
+        cache = seeder.read_cache()
+        if not cache:
+            self.skipTest("the point cache is a dev artefact")
+        with open(seeder.OUTPUT_PATH, encoding="utf-8") as f:
+            shipped = R.parse_document(json.load(f))
+        # The ten largest: most records, most chances to disagree, and they
+        # cover every ecoregion between them.
+        sample = sorted(shipped, key=lambda n: -len(cache.get(n) or []))[:10]
+        self.assertTrue(sample)
+        for name in sample:
+            points, _refused = seeder.usable_points(cache[name])
+            got = {(r["ecoregion"], r["occurrences"], r["confidence"])
+                   for r in R.ranges_for_species(points)}
+            want = {(r["ecoregion"], r["occurrences"], r["confidence"])
+                    for r in shipped[name]}
+            self.assertEqual(got, want, name)
+
+    def test_it_makes_no_request(self):
+        """The suite's offline guard would fail this if it reached the network,
+        but stating it is what makes the guarantee readable."""
+        from scripts.seed_ecoregion_ranges import cache_fetcher
+        fetch = cache_fetcher({"Testus plantus": [(53.55, -113.49)]})
+        self.assertEqual(len(fetch("Testus plantus")), 1)
+        self.assertEqual(fetch("Nobody sp."), [])
+
+
 class TestCoordinateUncertainty(unittest.TestCase):
     """A record states what it can support, and the pipeline had never read it.
 

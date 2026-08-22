@@ -11,10 +11,17 @@ scripts/fetch_dataset_licences.py — may we redraw these records?
 Why this exists
 ---------------
 `scripts/plot_occurrences.py` can draw the occurrence records; nothing publishes
-them, and the blocker is licensing. `docs/DATA_SOURCES.md` currently rests the
-GBIF position on storing *"only the derived counts, never GBIF's records
-themselves"*. Drawing coordinates on a public page changes that sentence, and
-the records carry per-publisher licences that have to be honoured.
+them, and the blocker is licensing. `docs/DATA_SOURCES.md` used to rest the GBIF
+position on storing *"only the derived counts, never GBIF's records
+themselves"*, which V2.76 quietly falsified by committing 555,477 of GBIF's
+records to a public repository. Drawing coordinates on a public page goes
+further still, and the records carry per-publisher licences that have to be
+honoured either way.
+
+**This run is what replaced that sentence with a fact** (V2.76 ran it; V2.77
+corrected the row): 224 datasets, **61 CC0, 82 CC-BY, 81 CC-BY-NC**. All three
+permit redistribution with attribution; only the last restricts commercial use,
+which this repository's PolyForm Noncommercial licence already does.
 
 **Why per dataset and not per record.** The obvious move is to re-fetch every
 occurrence with its ``license`` field, which is ~555,000 records and a couple of
