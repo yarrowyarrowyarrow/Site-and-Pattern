@@ -1,0 +1,1801 @@
+{
+ "version": 1,
+ "generated": "2026-08-22",
+ "source": "GBIF /v1/dataset, retrieved 2026-08-22",
+ "comment": "Dataset-level licences for the cached occurrence points. EXACT for specimen data; for iNaturalist this is the publisher default and not a per-record licence.",
+ "failed": [],
+ "datasets": {
+  "50c9509d-22c7-4a22-a47d-8c48425ef4a7": {
+   "title": "iNaturalist Research-grade Observations",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "28eb1a3f-1c15-4a95-931a-4af90ecb574d",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "2429287b-ef65-4cfd-afcc-11cc3ba95cca": {
+   "title": "University of Alberta Vascular Plant Herbarium (ALTA-VP)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "03cb9700-6cee-11d8-922d-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "2d18c666-ee2b-40a3-a708-280ea19c0fbc": {
+   "title": "Royal BC Museum - Herbarium (V)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "cc6110c7-f75c-47c8-8931-f7dd3f324777",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "07fd0d79-4883-435f-bba1-58fef110cd13": {
+   "title": "University of British Columbia Herbarium (UBC) - Vascular Plant Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "b542788f-0dc2-4a2b-b652-fceced449591",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "14d5676a-2c54-4f94-9023-1e8dcd822aa0": {
+   "title": "Pl@ntNet automatically identified occurrences",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "da86174a-a605-43a4-a5e8-53d484152cd3",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1e61b812-b2ec-43d0-bdbb-8534a761f74c": {
+   "title": "Canadian Museum of Nature Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "a41250f0-7c3e-11d8-a19c-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "8310f570-f762-11e1-a439-00145eb45e9a": {
+   "title": "University of Washington Herbarium (WTU) - Vascular Plant Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "06fcbbf0-0562-11d8-b851-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5678b0b3-450b-4513-82e1-2b32c3c50b54": {
+   "title": "University of Lethbridge Herbarium (LEA)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "e18ccd87-6e1d-4e4d-850d-b3138d007eb7",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "fb178827-516d-4baa-adb1-4e06fd3883f9": {
+   "title": "University of Montana Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7b742032-9940-4da3-8c1a-3eaceaed4f1f": {
+   "title": "Washington State University Marion Ownbey Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "df281c91-b391-4154-8cf9-5185d4e6715f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "8aa57fb1-a290-467f-a578-77ec8cbe76b6": {
+   "title": "University of Idaho, Stillinger Herbarium Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "07044577-bd82-4089-9f3a-f4a9d2170b2e": {
+   "title": "A global database for the distributions of crop wild relatives",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "fee3882f-5360-4f01-a1ca-767c48fa629c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b22b10e7-86da-4b80-8f49-f3f958a2463d": {
+   "title": "University of Manitoba Herbarium (WIN) - Vascular Plant Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "38105fdf-4886-4c2e-9c7c-2bcb091411a5",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "2fd02649-fc08-4957-9ac5-2830e072c097": {
+   "title": "Herbier Louis-Marie (QFA) - Collection de plantes vasculaires",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "b52e9a80-8cb7-4d37-9324-46032fd69237",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7a3679ef-5582-4aaa-81f0-8c2545cafc81": {
+   "title": "Pl@ntNet observations",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "da86174a-a605-43a4-a5e8-53d484152cd3",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d415c253-4d61-4459-9d25-4015b9084fb0": {
+   "title": "The New York Botanical Garden Herbarium (NY)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "ae447c50-b8a8-11d8-92a4-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d7c0e1e4-2e93-4e87-8a85-d88b89a4a782": {
+   "title": "Montana State University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "95c938a8-f762-11e1-a439-00145eb45e9a": {
+   "title": "R. L. McGregor Herbarium Vascular Plants Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "b554c320-0560-11d8-b851-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "aea65dea-9908-41f7-bc9b-e9d18064ad28": {
+   "title": "Laboratory of Tree-Ring Research Natural History Collection",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "dc9ffd5f-8c6a-4cf5-bf37-447243885fc6",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0348540a-e644-4496-89d3-c257da9ad776": {
+   "title": "Marie-Victorin Herbarium (MT) - Plantes vasculaires",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "ff7bd5db-b724-4932-b496-10ea298851f9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "821cc27a-e3bb-4bc5-ac34-89ada245069d": {
+   "title": "NMNH Extant Specimen Records (USNM, US)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "bc092ff0-02e4-11dc-991f-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "f3f03cbf-1a01-4739-ae15-c1355b8c2dbf": {
+   "title": "Carnegie Museum of Natural History Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "c1da06f0-580e-11dc-8a9e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "90c853e6-56bd-480b-8e8f-6285c3f8d42b": {
+   "title": "Field Museum of Natural History (Botany) Seed Plant Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "7b8aff00-a9f8-11d8-944b-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d8cd16ba-bb74-4420-821e-083f2bac17c2": {
+   "title": "INSDC Sequences",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "ada9d123-ddb4-467d-8891-806ea8d94230",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d9522343-146c-4d6b-b312-543d4d8ca0e8": {
+   "title": "Royal Ontario Museum - Botany",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "ff418020-1d67-11d9-8435-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7827f68d-c981-4023-bace-288a03434044": {
+   "title": "Intermountain Herbarium (Vasc. & Algae)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "4c0e9f60-c489-11d8-bf60-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "15f819bd-6612-4447-854b-14d12ee1022d": {
+   "title": "Naturalis Biodiversity Center (NL) - Botany",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "396d5f30-dea9-11db-8ab4-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "13dacd48-5790-4b99-bf04-08b23922e8aa": {
+   "title": "Wisconsin State Herbarium, Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "d6bd7c74-ff29-48f8-b5f5-e9dc1afff3db",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "902c8fe7-8f38-45b0-854e-c324fed36303": {
+   "title": "Moscow University Herbarium (MW)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "f5fc4e61-b7a0-414b-ab68-b41cb23e7fdc",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "845bc5c2-f762-11e1-a439-00145eb45e9a": {
+   "title": "Brassicaceae of Canada",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "09871350-0a23-11d8-b854-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "39c43f87-ad33-48f6-867c-29768e1f06d1": {
+   "title": "Indiana University Herbarium, Deam Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "26a503f6-b337-424b-8d7a-b3ab11d2597f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b5cdf794-8fa4-4a85-8b26-755d087bf531": {
+   "title": "The vascular plants collection (P) at the Herbarium of the Muséum national d'Histoire Naturelle (MNHN - Paris)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "2cd829bb-b713-433d-99cf-64bef11e5b3e",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e5b8f927-9763-418c-a404-6bf052d14b1a": {
+   "title": "Brigham Young University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "10ca3fed-0c61-4112-abe1-b5b6f53d5bb0",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "dfe29309-9f9f-493b-95e7-68f4563a3cdb": {
+   "title": "Snake River Plain Herbarium (Boise State University, Idaho, USA)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7bd65a7a-f762-11e1-a439-00145eb45e9a": {
+   "title": "Tropicos MO Specimen Data",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "90fd6680-349f-11d8-aa2d-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "ae33dc82-0bc2-43b5-b69b-65bf858f1e7a": {
+   "title": "CHSC - Ahart Herbarium, CSU Chico - Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "c6e100e2-7568-4f96-aea1-ff0ea0430212",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "05bf3655-ef2e-46ba-8732-60517beb3567": {
+   "title": "University of Calgary Herbarium - Lycophytes and Monilophytes",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "0b141ebd-0723-41d6-be05-6302e403b473",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "08502f36-77c5-4fca-aeda-3c306b5179f9": {
+   "title": "Bruce Bennett Herbarium (BABY)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cd6e21c8-9e8a-493a-8a76-fbf7862069e5": {
+   "title": "Royal Botanic Gardens, Kew - Herbarium Specimens",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "061b4f20-f241-11da-a328-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0b8c492d-e69a-4d2a-81f2-dc4ea94f6b08": {
+   "title": "Quaternary Environments Collections (Royal Alberta Museum)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "a7864b3e-c474-44b6-8cb5-cc9e4a4f1e1d",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0943f690-fde5-11dd-83f4-b8a03c50a862": {
+   "title": "Phanerogamic Botanical Collections (S)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6ba9a8cc-513a-4a51-bf93-6f5de8040a96",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b9f2645b-a5e0-4f24-aa97-eef1f6968fe8": {
+   "title": "Oregon State University Vascular Plant Collection",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "ac5e8480-3714-11da-bc2e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "8a863029-f435-446a-821e-275f4f641165": {
+   "title": "Observation.org, Nature data from around the World",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "c8d737e0-2ff8-42e8-b8fc-6b805d26fc5f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1edd3c3f-cfd7-4fd5-bfba-2c67737a17ba": {
+   "title": "University of Tennessee Vascular Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "61c539d8-47e0-4b82-875f-b95aad66dcd4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "af491056-6376-4973-bf06-86860d686bb6": {
+   "title": "Eastern Washington University Herbarium Vascular Plants.",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "85802736-f762-11e1-a439-00145eb45e9a": {
+   "title": "United States National Plant Germplasm System Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "9ae75ccd-0ee8-4dd4-a412-3bbcc3ed4b26",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "f873ef66-231a-4ea3-bd4d-a16f182bf337": {
+   "title": "Academy of Natural Sciences of Drexel University",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "f9b67ad0-9c9b-11d9-b9db-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "aab0cf80-0c64-11dd-84d1-b8a03c50a862": {
+   "title": "Lund University Biological Museum - Botanical collection (LD)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "c0758a16-296b-4ec3-97fd-8a057d9060f3",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e5d9d04e-ffd1-4395-9b10-76034f0c619c": {
+   "title": "Deaver Herbarium (Northern Arizona University)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "218f5cbc-bc3e-4a8e-84ee-9281a54cd9e3",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "26d72d3b-4544-4645-aa56-27aa8a669c6f": {
+   "title": "A Distribution and Taxonomic Reference Dataset of Geranium (Geraniaceae) in the New World",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "0363cbd4-f666-455e-8e86-0bbddcf51950",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e8a25a42-f125-476c-8554-3ec21cd51a84": {
+   "title": "E. C. Smith Herbarium (ACAD)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "6491ad8c-8e49-4bd4-a089-0ddb3bbe0890",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "8bd8c361-c96b-40c9-91a0-eb3c0e7e0135": {
+   "title": "Eastern Illinois University, Stover-Ebinger Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "b4f35cba-20d6-4266-90b5-8e7f0ac91325",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a36438d0-bec7-4b7b-9bfa-2c31e7610c39": {
+   "title": "Bell Museum plants",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "927f1e70-cf74-11d8-bf68-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7f5260c2-f762-11e1-a439-00145eb45e9a": {
+   "title": "Natural History Museum, Vienna - Herbarium W",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "4e11d750-bafb-11d9-8e53-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c8d12f8a-7e39-4e2c-92d7-825d590ad15b": {
+   "title": "University of Michigan Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "174c6da2-e002-42fe-9f56-2f9d670240f4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a92f4b3c-ae5c-45af-8dac-4a6a88d35ddd": {
+   "title": "Pittsburg State University, Theodore M. Sperry Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "ae23c0f2-f322-408e-8d0d-024a96443acf",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "55a29b7c-9cb3-4721-b1e3-40561c955e21": {
+   "title": "McGill University Herbarium Database",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "182287da-fe0f-457f-ac06-2b8f4c7680fd",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b6d66b0c-d2eb-44b5-be52-62171411c5ad": {
+   "title": "Black Hills State University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "4344230d-c4cd-4103-87d5-dd6e56730530",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b740eaa0-0679-41dc-acb7-990d562dfa37": {
+   "title": "Meise Botanic Garden Herbarium (BR)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "a344ee9f-f1b7-4761-be2c-58ee6d741395",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c28b1109-d9cb-49e7-aa11-f5bd7327f4b0": {
+   "title": "SHTC - CSU Stanislaus Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "66bd2d78-d9c1-46f4-82ff-d681c71307f2",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c4a5efee-4c61-45d8-bd7a-6275b2388308": {
+   "title": "Herbier du Québec (QUE) - Collection de plantes vasculaires",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "19d3786d-5f8c-4309-995f-646ed5934089",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b8811bf9-abcf-4600-9245-eda1017c3978": {
+   "title": "University of Nevada, Reno (UNR) Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "470365d0-812d-11de-86fe-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "ed6ee121-1b4c-4382-bd4d-2128aa47c202": {
+   "title": "Herbier Boreal Confluence (BOUM)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "32b45fb7-1992-4f30-95c8-1604a38a57fa",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "453e3294-97ef-4e1c-87cb-1ef7c5351d8e": {
+   "title": "Northern Illinois University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "4c98b431-30f9-4a9e-9eae-94aca04c191a",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "3b64407b-12fd-406e-a996-4a87994fcfc9": {
+   "title": "MACF - MacFadden Herbarium, California State University Fullerton",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "0bc2981f-f6c7-4ee7-8e78-f3cf3c506cc9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "af1b4db0-c8ce-4a95-b700-8a6a02bed9d6": {
+   "title": "University of South Florida Herbarium (USF)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "253fc67c-c7fb-4c85-88f5-43ac6d9dc8a9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7b4543e2-437d-4635-ac11-6a38007f6287": {
+   "title": "TRTE Herbarium (TRTE)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "95aba44b-121f-41fe-9f16-4515b826ce54",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "10cf770a-282a-41dd-9e19-83b7c894b956": {
+   "title": "National Collection of Vascular Plants (DAO)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "055bd978-2daa-4543-b3f0-44e0e87e86ca",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5d562555-3f19-4da6-9a37-556aa70f691b": {
+   "title": "University of Northern Colorado Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "de87dd9e-172b-468e-86f8-6caa01f1bd43",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "008fea21-b463-44de-b142-23b6285100ce": {
+   "title": "North Dakota State University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "58704b8a-4e99-40a1-b266-18e4afd65cd8",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "ee747f7d-daf9-4613-92f3-d7c2a356cae6": {
+   "title": "University of Puget Sound, Slater Museum Herbarium Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5766cfff-b03e-4d3e-961c-1e196c3d01e7": {
+   "title": "Pacific Northwest Herbarium (Western Washington University, Washington, USA)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "63045997-4e44-49b8-9957-9f9456bf2adc": {
+   "title": "Saint Ambrose University Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "758986ae-bf71-4c6d-a2de-b40b5667f579",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "6ac3f774-d9fb-4796-b3e9-92bf6c81c084": {
+   "title": "NABU|naturgucker",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "bb646dff-a905-4403-a49b-6d378c2cf0d9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1357f50f-ae5c-4813-a8b2-5be49c604857": {
+   "title": "Auburn University, John D. Freeman Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "34cc6c50-812c-11de-86fe-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5c1fdaf6-4a18-4c5d-a84b-a4ba41f077c9": {
+   "title": "UAM Herbarium (ALA), Vascular Plant Collection (Arctos)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "d9699a79-4736-45c2-925c-f4033ac67d52",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "49e223ed-ab24-478f-b5e8-4a15af5a8f6c": {
+   "title": "CSLA - Cal State LA Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "f614387b-c7aa-4a3f-95bf-acb4d0b83e97",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "abba37fc-a9c3-4de2-bba2-7f929abc937d": {
+   "title": "Baylor University Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "471aeb39-799a-44c5-9824-dfe65413b83c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7efaf3c5-bd1a-42b9-852e-fd39fbc6c5b8": {
+   "title": "Richard Staniforth Herbarium (UWPG)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "0bcc0651-08b6-4562-85e1-985aae8a07a1",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c1a13bf0-0c71-11dd-84d4-b8a03c50a862": {
+   "title": "Botany (UPS)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "8879085f-09ed-4780-bc1b-b69a8acaa8b9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e053ff53-c156-4e2e-b9b5-4462e9625424": {
+   "title": "Tropicos Specimens Non-MO",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "90fd6680-349f-11d8-aa2d-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9781ce05-2379-4a10-ab3b-c91346510df8": {
+   "title": "RSA - California Botanic Garden Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "55807027-6d78-46bd-b2cb-301295ee35aa",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "678fd32b-c331-4f5a-83c6-48f26912dceb": {
+   "title": "College of Idaho Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e05fd4c2-4d77-4c50-880e-1b22096af300": {
+   "title": "Arizona State University Vascular Plant Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "814cdfb5-d4f8-4453-815f-ea5df98e76bf",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "861e6afe-f762-11e1-a439-00145eb45e9a": {
+   "title": "Harvard University Herbaria: All Records",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "485ff490-e3b7-11db-9acc-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "832cb04e-f762-11e1-a439-00145eb45e9a": {
+   "title": "Fairchild Tropical Botanic Garden (FTG)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "bd561840-efdc-11d9-a329-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a92de2e1-647c-43f2-a8b7-ab1c1a6453dd": {
+   "title": "University of South Carolina, A. C. Moore Herbarium Vascular Plant Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "3124bdd8-b38c-46f0-b354-5e1d2c2cd9d2",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "27b4ff4b-29c3-4017-9c48-3750861392f7": {
+   "title": "University of North Carolina at Chapel Hill Herbarium: Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "0eabc674-8106-401e-9613-5f10164b562d",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e523cf2d-4fc2-48d8-aa75-80ecbc90b3f5": {
+   "title": "UCR - University of California, Riverside Herbarium - Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "53e59855-7653-4d3e-87cc-162021713823",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "bb0366a9-2a7e-44f8-9c9a-e49c23dae2f8": {
+   "title": "University of Louisiana at Monroe Herbarium, R. Dale Thomas Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "c4cbb860-e9c7-11da-8113-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7c5e863f-3f70-4933-b05d-fc57c66dd3f3": {
+   "title": "University of Colorado Museum of Natural History Herbarium Vascular Plant Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "4cadac10-3e7b-11d9-8439-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "689d12fc-aac8-4203-bace-4e64d3d61b89": {
+   "title": "Idaho State University, Ray J. Davis Herbarium Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "f934f8e2-32ca-46a7-b2f8-b032a4740454": {
+   "title": "CAS Botany (BOT)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "66522820-055c-11d8-b84e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "89c53edb-0fac-4118-bdc0-d70ca50953dc": {
+   "title": "Kathryn Kalmbach Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "36488347-eceb-40ed-b687-406f3601d8cb",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5b1129a0-0461-46e5-a55c-9195be29c0ff": {
+   "title": "Natural History Museum of Utah, Garrett Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "2d6267a0-0561-11d8-b851-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "729fed8c-9c94-4e13-b680-799ea9ebc112": {
+   "title": "New Brunswick Museum - Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "9c7737c0-359c-11da-9a82-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "eda63f13-cdbb-417f-9085-ce31eb5f3c28": {
+   "title": "KRA Vascular Plant Collection",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "97a3ce10-3e54-11d9-8439-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "905daf20-04fd-11df-8c28-b8a03c50a862": {
+   "title": "Herbarium of Umeå University (UME)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "065e3c2a-35f3-44f6-9ae0-ee5d1f19eec5",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "744edc21-8dd2-474e-8a0b-b8c3d56a3c2d": {
+   "title": "Taxon occurrence data for the FungalRoot database",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "0870a77b-587c-4369-a8ed-bc3d347b8e1c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0afba960-be3b-4202-a7de-736ae05aec9e": {
+   "title": "University of Vienna, Institute for Botany - Herbarium WU",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "58520c30-bafb-11d9-8e53-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7e380070-f762-11e1-a439-00145eb45e9a": {
+   "title": "Natural History Museum (London) Collection Specimens",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "19456090-b49a-11d8-abeb-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "962f59bc-f762-11e1-a439-00145eb45e9a": {
+   "title": "Collections and observation data National Museum of Natural History Luxembourg",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "75642970-f855-11dd-8235-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "878efabd-55b2-46b5-83a9-b861e49dcb2e": {
+   "title": "Herbier Campagna - Dubé (QSA) - Collection de plantes vasculaires",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "19d3786d-5f8c-4309-995f-646ed5934089",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5288946d-5fcf-4b53-8fd3-74f4cc6b53fc": {
+   "title": "G. S. Torrey Herbarium at the University of Connecticut (CONN)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "1ef55060-54da-11dd-9d47-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "707e1918-0999-4f2f-9ad1-22c0be104861": {
+   "title": "North Carolina State University Vascular Plant Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "0f0c387a-64ec-4eaa-b590-e09b0f11c94f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "17efa320-7312-4b55-bf0a-a4cfc4613169": {
+   "title": "SP - Herbário do Estado \"Maria Eneyda P. Kaufmann Fidalgo\" - Coleção de Fanerógamas",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "2437c128-bf8c-4f53-b668-da95fb2e40b7",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "84c00a71-0735-4a47-bf55-8556dcafa5c2": {
+   "title": "BLM - National Landscape Monitoring Framework - Plants",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "c3ad790a-d426-4ac1-8e32-da61f81f0117",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "838475f4-f762-11e1-a439-00145eb45e9a": {
+   "title": "Institut Botanic de Barcelona (IBB), CSIC-CMCNB – BC-Plantae",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "6f3ccc65-0a54-4e65-ae7e-13b92d618e7c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "3c59bd42-7bfd-421b-8da4-275780390e4c": {
+   "title": "Desert Botanical Garden Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "e1f6195c-b21b-4601-809e-bdf0488ee9a4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b929f23d-290f-4e85-8f17-764c55b3b284": {
+   "title": "Bernice P. Bishop Museum",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "90cc71b0-055b-11d8-b84e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "39823865-ffce-4315-ada0-2e739fb852d2": {
+   "title": "University of Nebraska State Museum, C.E. Bessey Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "9b049850-d958-11da-9047-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "f5bae1eb-92c3-4cd1-8b0d-4c6d42963cb7": {
+   "title": "Eastern Michigan University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "a1c64281-91e8-4b3f-a9d2-ec0427cfe9d9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "defb9a47-c1a7-4fb2-9a0b-2da7c5260cad": {
+   "title": "Botanical Research Institute of Texas, Philecology Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "c4cbb860-e9c7-11da-8113-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1f7cf7e5-777c-4229-8411-19f3c4c1f68f": {
+   "title": "Central Oregon Community College",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "064508e2-255e-4d82-9f13-05d73476cc03": {
+   "title": "United Herbaria of the University and ETH Zurich",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "605e7170-1123-11d9-8433-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "963f12d0-f762-11e1-a439-00145eb45e9a": {
+   "title": "Botany Division, Yale Peabody Museum",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "2e167bb0-4441-11db-9ba2-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1e81eb56-22e3-482f-85ce-70ae9573724a": {
+   "title": "KTU Herbarium - General collection",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "4668d6a0-130d-11db-a7d3-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b42c906d-28ef-4456-8fd6-d13d34bd50a7": {
+   "title": "Albion R. Hodgdon Herbarium, University of New Hampshire",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "04070a2c-4604-4264-9c72-31d3f29a41f2",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e958291a-cd9a-484f-b7bd-72d7ee03246c": {
+   "title": "South Dakota State University, C. A. Taylor Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "14cb4225-a2b5-47b8-849e-eb86ed93e548",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9f747cff-839f-4485-83a1-f10317a92a82": {
+   "title": "Field Museum of Natural History (Botany) Pteridophyte Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "7b8aff00-a9f8-11d8-944b-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "def631ef-af53-4e18-8de1-8e3bde92a673": {
+   "title": "Genus Salix s.l. in M.G. Popov Herbarium (NSK)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "bf2a4bf0-5f31-11de-b67e-b8a03c50a862": {
+   "title": "Edinburgh (E) Herbarium Specimens",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "98e934b0-5f31-11de-b67e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d29d79fd-2dc4-4ef5-89b8-cdf66994de0d": {
+   "title": "Vascular plant herbarium TRH, NTNU University Museum",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "a8144f37-5ff7-4137-9400-94b5b2ea4ec4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "61a9ca38-b62f-11e2-afcb-00145eb45e9a": {
+   "title": "Fungus Collections at Staatliches Museum für Naturkunde Karlsruhe (Herbarium KR)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "0674aea0-a7e1-11d8-9534-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "83ae84cf-88e4-4b5c-80b2-271a15a3e0fc": {
+   "title": "Auckland Museum Botany Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "32e82a64-c9b4-4b2f-9fbd-d446309b973f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cd096ec0-a8a0-4c65-92cc-48b00fb934ce": {
+   "title": "Plant Resources Center",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "3c6ad080-bdbe-11da-ac59-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b0515413-6d32-490a-83a0-f8c08f002c70": {
+   "title": "CDA - California Department of Food and Agriculture",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "a8a2b5b7-4683-4566-8e95-3fb3adaeff39",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d0aa984e-c6d3-45ee-8fc0-df1df8f4126b": {
+   "title": "Vascular plant herbarium, The Arctic University Museum of Norway (TROM)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "689b40c4-ff31-4cd0-83a5-a7a828f1cd92",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "02058ecd-1f96-4940-9504-d3e1c7b7e434": {
+   "title": "Utah Valley University Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "4b37eb40-10e6-11db-939a-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7fd265dd-82b5-4202-ad04-0cc90aef89a7": {
+   "title": "University of Idaho, Erickson Weed Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "df582950-3b58-11dc-8c19-b8a03c50a862": {
+   "title": "Allan Herbarium (CHR)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6b2f029b-7823-4b84-9c30-31ff364238fe",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "769dbaf7-8238-43fa-9717-90973e41706d": {
+   "title": "Family Primulaceae in Digital Herbaria of CSBG SB RAS (NSK)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1e837919-112c-40ad-abb9-5ca74b044742": {
+   "title": "UQTR-herbarium (Herbier Estelle-Lacoursière)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "9b39ec23-ce4d-4601-ad50-26c4b3f542ac",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "56e9c560-bd2a-11dd-b15e-b8a03c50a862": {
+   "title": "Louisiana State University, Shirley C. Tucker Herbarium - Vascular Plants",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "38a69420-bd2a-11dd-b15e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9b7d1acf-b22f-4a1f-b6e8-f1ddd744dc07": {
+   "title": "SD - SD Herbarium, San Diego Natural History Museum",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "8a471700-4ce8-11db-b80e-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1672a8ae-1e9c-4620-8314-a6da5202eb4e": {
+   "title": "Brock University Herbarium (BU)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "b35e2d16-5a39-486f-82ee-61662e45c665",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e17d2584-dbc9-4a47-8743-a4e3a379fb33": {
+   "title": "Genus Galium L. at the CSBG SB RAS collections (NS, NSK)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "415f72e6-190e-4e71-80de-d376f4ae084d": {
+   "title": "Genus Hedysarum in CSBG SB RAS Digital herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c13173f5-f372-4b1b-815f-2cd4f6f963a0": {
+   "title": "Mejoramiento de los modelos de distribución de especies de plantas amenazadas de México (Orchidaceae, Pinaceae, Cupressaceae, Taxaceae, Podocarpaceae) a través de información de sensores remotos y medidas espaciales de incertidumbre en los modelos-conUFZ*",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "ff90b050-c256-11db-b71b-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e1beb83c-9b83-4d17-ac5e-d24e09507ec5": {
+   "title": "BoBO - Botanic Garden and Botanical Museum Berlin Observations",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "57254bd0-8256-11d8-b7ed-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "fcab85b5-5341-41b3-aa59-24432ea805b2": {
+   "title": "Morris Arboretum of University of Pennsylvania",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "2f586028-344b-4e28-94e5-15dcccf971e5",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c45ad8ca-a406-4430-8c61-f5afbe29e3b4": {
+   "title": "SFSU - Vascular Plants of the Harry D. Thiers Herbarium at San Francisco State University",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "2bf0edbe-8dbe-4c9b-b3c5-296777b32996",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b3f19159-21c3-4535-86bd-1fee5d561bed": {
+   "title": "Portland State Universtiy Herbarium Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1804436b-6a12-4fcc-a372-531cc23a41c4": {
+   "title": "Rutgers University, Chrysler Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "eb126411-e092-4abc-a0b9-a2e1c98c6578",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "15738fee-78b1-4751-bcc1-cbf7139c68de": {
+   "title": "Centre for Australian National Biodiversity Research (CANB) AVH data",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "9d615537-c4d9-40fe-bf74-0e4dc9b42078",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5325ba61-44e7-4d92-ac11-868b3294b3bb": {
+   "title": "H.A. Stephens Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "9bcba4e4-a10d-4484-9c5e-36a059a0c9cd",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "85714c48-f762-11e1-a439-00145eb45e9a": {
+   "title": "Herbarium Berolinense, Berlin (B)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "57254bd0-8256-11d8-b7ed-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "85367cb1-90fa-4c1b-8a22-0aa5d4b6f61f": {
+   "title": "Mecklenburg County Park and Recreation Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "bb557d54-3e6f-4b74-bdc6-4c85a7fabd29",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cd4cd181-ae56-4595-8c80-d4311654ad03": {
+   "title": "Agnes Marion Ayre Herbarium (NFLD)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "11fafc78-3da8-4ac8-8f8e-fc5af5de3d8e",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c65575cf-862f-448b-bef2-fc158fb2e225": {
+   "title": "Family Geraniaceae in CSBG SB RAS herbarium collections (NS, NSK)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1a9d08bb-9e2c-4540-8f7f-3205846b6ddc": {
+   "title": "UTEP Plants (Arctos)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "52c8f620-1816-11da-9544-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "877b8fd1-9391-4526-a5e0-f483a5565524": {
+   "title": "University of Maryland, Norton-Brown Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "82237a34-c969-4906-a337-b65fb75d4729",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "affc68d7-ed25-4168-96f7-8bed49b44aa2": {
+   "title": "New Mexico State University Herbaria",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "034868da-211f-4238-ad89-dfd5675f44c9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "808d54a7-9884-4b1c-8112-39522fe004d4": {
+   "title": "Miami University Turrell Herbarium - Vascular Plants",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "b81636e9-2a0d-4020-a7a7-6e13f2721db1",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "fb5afc23-2c83-4f79-9cc4-30c4636f3bec": {
+   "title": "Herbarium UGDA - Orchidaceae Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "e3f07310-a215-11da-beae-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "834a4794-f762-11e1-a439-00145eb45e9a": {
+   "title": "Colección de plantas vasculares del herbario de la Universitat de València (VAL)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "8209258a-80e8-4094-aba2-a3febe5ed45b",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a0bc258b-932b-47ba-af1e-746ec9cd634a": {
+   "title": "Ohio State University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "5ffa575c-fcd4-4583-9611-545f67b04316",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "dc383f1f-6456-40bd-9ef1-0780cdb0c66d": {
+   "title": "Genus Allium in CSBG SB RAS herbarium collections (NS,NSK)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cafff6a5-1fa4-4a90-a2b3-f3db78b93d02": {
+   "title": "WELT Herbarium at Museum of New Zealand Te Papa Tongarewa",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "afae4f45-b85e-4a0e-9d93-f30f044e8140",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0f6a3163-4efb-47ab-a4f1-2f548098665f": {
+   "title": "University of Cincinnati, Margaret H. Fulford Herbarium - Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "925267b2-870b-409e-8a81-d044d6eb6c2f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0fd9d08c-63c4-4b9a-8d0f-15a6202d88e2": {
+   "title": "Clemson University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "a56a5876-198a-4fc0-89be-df951637a0e2",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "50cd0754-79a7-4ab6-9fd0-38181851bc64": {
+   "title": "Mississippi Museum of Natural Science Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "5c28b8bf-bb63-472f-8989-1f9c54bcb5eb",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "834c9918-f762-11e1-a439-00145eb45e9a": {
+   "title": "CSIC-Real Jardín Botánico-Colección de Plantas Vasculares (MA)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "0363cbd4-f666-455e-8e86-0bbddcf51950",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "22eb589c-f5f2-48f0-9fc4-6dd2ff76f51d": {
+   "title": "The Dr. Laurie L. Consaul Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "9337a721-306c-4f3d-a961-ff47e38a4538",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "563f2aec-fcb1-491b-9788-e97bed1376ae": {
+   "title": "Angelo State University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "9c0a8aa8-4ce7-49ba-aac7-21a97234f886",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0c56af33-2b10-48af-a87b-f67b6881f036": {
+   "title": "John T. Waterhouse Herbarium (UNSW) AVH data",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "1deb09e1-ded6-469a-a46e-f6329cb03b6a",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "52b78a58-c84a-4370-bb14-b27a007d5da6": {
+   "title": "HUCS - Herbário da Universidade de Caxias do Sul",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "7cf67ac2-f2f2-42bd-92e4-c2eac0b21039",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "95aef98e-f762-11e1-a439-00145eb45e9a": {
+   "title": "Colorado State University, Charles Maurer Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "0da0bbb0-633f-11dd-9199-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a6f37a35-cb18-4395-9a0c-5be222c8e6c8": {
+   "title": "Texas Tech University, E. L. Reed Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "5d529043-70c1-4670-83ae-e70aad48bec4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cca05dd0-9f88-4d0a-b90a-d3f8f3a3f367": {
+   "title": "University of Arkansas at Monticello",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "bd57e3a4-e6db-4d48-b278-a7b8319ab746",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "648e3756-5dff-462b-9323-41e3214d9c3c": {
+   "title": "University of Georgia Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "feb9cabe-c069-45b5-a6f0-2c74d773f441",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0b0735e0-624d-4abb-abba-91a2733adea4": {
+   "title": "Charles University Prague - Herbarium PRC",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "75ed8583-8bd8-4f82-9346-75b234fe4682",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e3ce628e-9683-4af7-b7a9-47eef785d3bb": {
+   "title": "Earth Guardians Weekly Feed",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "17726825-3aa2-4fbc-b0e3-303d3fc5702f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0c7a975e-9f63-4a0f-b8ce-e37f8f70e777": {
+   "title": "Weber State University Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "28ff3b3d-8805-40a7-8df7-234123f47e58",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "f8b3dfc3-e0d9-4173-a63b-436aedce0469": {
+   "title": "Family Primulaceae in Digital Herbaria of CSBG SB RAS (NS)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c267909d-184f-4138-9e67-a074d478d52b": {
+   "title": "DAV - University of California, Davis Center for Plant Diversity - Vascular Plants",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "f0b6a090-a4c6-11d8-9534-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "99d41129-cb39-48e8-aad8-94666ab13871": {
+   "title": "University of Wisconsin-LaCrosse",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "11ebe79d-0ead-48ef-81eb-ef010f8cc9f8",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9d875241-2f83-4e52-be03-57329ec7dbe5": {
+   "title": "J. B. Wallis / R. E. Roughley Museum of Entomology",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "38105fdf-4886-4c2e-9c7c-2bcb091411a5",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "b89d52a2-861d-4388-adad-c0da3d55fc78": {
+   "title": "University of Florida Herbarium (FLAS)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "8483a1f0-1032-11db-ae00-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c884e1d8-8cc4-444f-880c-db87a0f7fce1": {
+   "title": "University of Washington, Bothell Vascular Plant Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a64932c7-b7cd-4b00-b19c-f99efebc6f31": {
+   "title": "Genus Corydalis DC. at the CSBG SB RAS Digital herbarium (NS, NSK collections)",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8f6232c3-5523-44ad-825c-e066fc6b15ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1a09688f-920a-44e8-b759-4cc71b4669c2": {
+   "title": "Herbarium SUNY Oswego",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "ff762382-d5b4-4801-b547-56ee6b8228be",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "ed3d96f2-db7b-48cd-9960-f871e7df7286": {
+   "title": "SBBG - Clifton Smith Herbarium, Santa Barbara Botanic Garden",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "48558fd5-e402-4362-ba91-7c742c96a26c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "6d5caf30-7ee4-4e03-9197-fe652ae67e55": {
+   "title": "West Virginia University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "749e007a-17ec-41f1-a964-19619174d79f",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c01696db-a5fe-4d3a-8b26-90760604774b": {
+   "title": "Michigan State University",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "41d6acb0-48b5-11db-a1c2-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "2273e40d-26c2-4959-aea2-b6abcce16d09": {
+   "title": "ICN - Herbário do Instituto de Ciências Naturais",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "04481953-6112-489f-bb8d-9703d787e3ea",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "ce899b3c-5ee0-4d05-a7f0-28cd29eb8894": {
+   "title": "Putnam Museum and Science Center",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "9dd60925-f054-495a-82f9-09ee229315d4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "4ce8e3f9-2546-4af1-b28d-e2eadf05dfd4": {
+   "title": "National Herbarium of Victoria (MEL) AVH data",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "215fad6d-884d-4127-9635-fad209824cdf",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "7c4d2e24-6e2e-40c4-823f-062de238d144": {
+   "title": "Flora Polonica",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "04665d80-7e5f-11d8-a1a0-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "456d9e9d-43e4-47f6-acba-6a66cb2a7f05": {
+   "title": "Mississippi State University",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "a8eebb01-7a3c-4aac-9e30-f24605977f10",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "44ae3412-2854-4021-8ac4-8e898ba656be": {
+   "title": "FSC - Fresno State Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "57dfeac6-ce7d-4e5c-b6de-d8b7c0cd17ce",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "4c122e6f-b2a4-4f91-aff5-449e9afb57b3": {
+   "title": "LA - University of California, Los Angeles Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "8d94469a-1582-4098-bf02-aa11d30608a3",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "46239994-a621-4d41-9556-e53e0e9bed63": {
+   "title": "Tallinn Botanic Garden",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "867a53f4-2f2d-4932-be6a-f46566255371",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "97695324-8a6d-4a1c-98aa-16dbac2eb167": {
+   "title": "Chadron State College, High Plains Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "aed6e2ef-f986-4113-911b-05a455f48945",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "d0963cee-1a29-47a2-b9bf-fb0e7690077c": {
+   "title": "Botanical Database of Southern Africa (BODATSA): Botanical Collections",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "c5f7ef70-e233-11d9-a4d6-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "202cdfcf-0eac-4696-9e48-4797c562ff41": {
+   "title": "Vascular Plant Herbarium: Herbarium Generale",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "e5585950-488e-11db-a1c2-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "62cccd4d-eafc-4287-a070-5701aa6ef4a2": {
+   "title": "UCSB - University of California Santa Barbara Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "cae7b6c7-669a-4261-9a34-6e8cdc16a125",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9aba7c73-533c-4366-a984-061fec0ebed7": {
+   "title": "CSUSB - California State University San Bernardino",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "bd19f918-65b0-419f-a9f8-d67aa2c8d5bf",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1060a696-f6a2-4341-92ef-47a63babbea1": {
+   "title": "SJSU - Carl W. Sharsmith Herbarium, San Jose State University",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "75bf5fec-40fa-43ae-919f-c43bd7ce25c9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a2b44cf1-ac2f-409f-8eb6-85f01438ba70": {
+   "title": "Pacific Lutheran University Vascular Plants",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "a8e22479-28d2-4a8a-ae1c-2d40d80c1f9a": {
+   "title": "Western Carolina University Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "abab411b-cce0-4bb2-b808-354dadeb1eee",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "69c47699-3edb-4cba-ae57-a331011c31e8": {
+   "title": "College of Southern Nevada; Wesley E. Niles Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "0013cf92-0e5a-4ca6-95e2-ad288ce83a0b",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "5a8cd069-8096-4918-9d61-d63f8e71a17c": {
+   "title": "Royal Botanical Gardens Herbarium (HAM)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "faa5dc7a-3524-4a99-8a10-f259631c7827",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "6eb6e590-affe-4d40-b36c-d7fa8b22b1d9": {
+   "title": "INF - Inyo National Forest Herbarium, Bishop",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "db1caa92-ba0f-4c2f-b213-a71a883c9760",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "9ed207ca-4994-4a15-9994-66b19bffb3ee": {
+   "title": "University of Tennessee, Chattanooga Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "efcf5460-a06a-11d9-8ec2-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "aae443d2-58c3-4bc7-9ddf-c92f2066080e": {
+   "title": "Keene State College Herbarium",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "04070a2c-4604-4264-9c72-31d3f29a41f2",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "c1da8605-c43a-4c79-9755-5a3ddb50a563": {
+   "title": "Loyola University Chicago Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "6a5c57fc-2543-4db7-9693-7b0321244cdc",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "cc09386c-43a4-4a12-8ae4-d25610645250": {
+   "title": "University of New Mexico Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "f19ae5e0-3886-4c1e-b557-f4413f8fca86",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0d1f9cee-7cb7-4d3a-a8c4-d2ca6edcd23b": {
+   "title": "NHMD Vascular Plants Collection",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "2e7df380-8356-4533-bcb3-5459e23c794e",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1b9eaa10-8441-481c-b50a-391ba168a86f": {
+   "title": "CHAS Botany Collection (Arctos)",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "f2489500-dbab-4fbc-95ed-19eead127483",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "4bda7e86-c7c0-440e-bed4-bde6c52a28c2": {
+   "title": "ICN herbarium - Universidade Federal do Rio Grande do Sul - Herbário Virtual REFLORA",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "838537fc-4aeb-4980-8b58-97fbdcd1d91a",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "1064b787-c882-493e-b17d-4ffba363b776": {
+   "title": "IAC - Herbário do Instituto Agronômico de Campinas",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "c47cd3b0-2178-4a4b-87a6-740b482970a9",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "24f1ac6a-8f1d-4d23-8453-e5ce18bff54c": {
+   "title": "Biological Collection of the National Taiwan Museum, Taipei, Taiwan",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "c57cd401-ff9e-43bd-9403-089b88a97dea",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "25e0e1bb-e9b4-4391-8d05-c0a4aea66684": {
+   "title": "Towson University",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "2ef0412e-712c-4a9e-aafe-941604479f2a",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "e42c4be9-dc6d-466b-8df2-60ac8c47fadd": {
+   "title": "University of Vermont, Pringle Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "fee1eb85-53bb-4edb-91cc-de55f11b3cee",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "4de6de07-6f32-4b72-8289-b9a68bffaf94": {
+   "title": "Wartburg College",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "68578014-c06e-47e0-a541-84d302c0cdd4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "8a5a9853-4418-4cad-bad0-705a33c25a9a": {
+   "title": "Fort Lewis College Herbarium",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "c89cd5c2-2784-434f-a73e-03a8f15b5f1c",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "af088739-6329-413e-867b-dccd58844522": {
+   "title": "WRSL Vascular Plant Collection",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "218534d0-925e-11da-8900-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "0f41bf31-a72d-47ca-928a-398e812cdc80": {
+   "title": "Bureau of Land Management, Medford District (Oregon, USA) Vascular Plants",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "6567af74-d231-4588-a123-5d0b7a095fda",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "10cfe1fe-ea15-4b73-b495-66c20d839bef": {
+   "title": "Herbarium, Biodiversity Research Museum, Academia Sinica (HAST)",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "fec00ed1-a0f3-440b-b10c-d6dca979ade1",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "833db434-f762-11e1-a439-00145eb45e9a": {
+   "title": "The AAU Herbarium Database",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "8e1a97a0-3ca8-11d9-8439-b8a03c50a862",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "989befd8-6125-4b6a-8f58-51eca5354ae1": {
+   "title": "E. C. Smith Herbarium (ACAD) - Cape Breton University Collection",
+   "licence": "CC0",
+   "licence_raw": "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+   "publisher": "6491ad8c-8e49-4bd4-a089-0ddb3bbe0890",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "595b50ad-d31f-471a-82c9-c9ff631db3e3": {
+   "title": "Western Illinois University, ​R. M. Myers Herbarium",
+   "licence": "CC_BY",
+   "licence_raw": "http://creativecommons.org/licenses/by/4.0/legalcode",
+   "publisher": "26b1b249-1145-4fd4-ae38-0544700224ad",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  },
+  "3dedd874-1c74-487c-9fb3-48dcaf922bab": {
+   "title": "SFV - California State University, Northridge",
+   "licence": "CC_BY_NC",
+   "licence_raw": "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+   "publisher": "2ebbf9e5-146f-47cf-8c1b-9d117d2860e4",
+   "type": "OCCURRENCE",
+   "_slug": "legalcode"
+  }
+ }
+}
