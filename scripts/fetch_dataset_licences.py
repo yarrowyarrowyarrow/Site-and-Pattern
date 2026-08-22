@@ -146,7 +146,7 @@ def report(licences: dict, counts: collections.Counter) -> None:
     spec = by_basis.get("PRESERVED_SPECIMEN", {})
     spec_ok = sum(n for l, n in spec.items() if l in PUBLISHABLE)
     print("\n=== the decision ===")
-    print(f"PRESERVED_SPECIMEN is the half where a dataset licence is exact:")
+    print("PRESERVED_SPECIMEN is the half where a dataset licence is exact:")
     print(f"   {spec_ok:,} of {sum(spec.values()):,} specimen records are "
           f"redrawable under CC0/CC-BY.")
     print("HUMAN_OBSERVATION dataset licences are the publisher's default and "
@@ -167,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     mod = _seeder()
     counts = dataset_keys()
     if not counts:
-        print(f"No point cache. Run scripts/seed_ecoregion_ranges.py first.",
+        print("No point cache. Run scripts/seed_ecoregion_ranges.py first.",
               file=sys.stderr)
         return 1
     keys = [k for k in counts if k and k != "(none)"]
