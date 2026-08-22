@@ -145,6 +145,16 @@ def land_svg(project, *, css: str = "ecomap-land") -> list[str]:
 SUBJECT_CLIP_ID = "ecomap-subject-clip"
 
 
+def in_subject_provinces(lat: float, lng: float) -> bool:
+    """Back-compat shim. The implementation lives in :mod:`src.subject_area`,
+    extracted in V2.78 when it put this file over its line ceiling -- and the
+    split is the right one anyway: this module draws the ground, that one
+    decides whether a piece of evidence is on it.
+    """
+    from src.subject_area import in_subject_provinces as impl  # noqa: PLC0415
+    return impl(lat, lng)
+
+
 def subject_clip_defs(project) -> str:
     """A ``<clipPath>`` covering Alberta and Saskatchewan.
 

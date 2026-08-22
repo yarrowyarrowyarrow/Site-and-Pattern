@@ -97,6 +97,51 @@ def render_species(entry: dict, model: dict, photo_src: dict,
                  desc, body, depth)
 
 
+def _native(entry: dict) -> str:
+    """The nativity claim with the mark it never had.
+
+    This is the outside review's actual criticism, and the retired generator
+    that produced the field says so in its own docstring: *"many species listed
+    as native to AB and SK are native to only one. They are reading the output
+    of this file."* Flower colour has carried a provenance note since V2.48 and
+    the field a reference work is named after has not. `src.nativity` explains
+    what replaces this (VASCAN, F144) and why the note is derived rather than
+    stored until then.
+    """
+    from src.nativity import provenance
+    value = _esc(_tokens(entry.get("native")))
+    if not value:
+        return ""
+    note = provenance(entry).get("note") or ""
+    if not note:
+        return value
+    # `.src` is the class the flower-colour note has used since V2.48. Reusing
+    # it rather than adding one keeps the two provenance marks on this page
+    # looking like the same kind of statement, which is what they are.
+    return f'{value} <span class="src">\u2248 {_esc(note)}</span>'
+
+
+def _phenology(entry: dict) -> str:
+    """The bloom-and-fruit bar, or ``""`` when nothing is recorded.
+
+    The page already carried this three times in words -- "Jun-Sep" in a cell,
+    twelve month chips, and a sentence -- and none of them answer the question
+    a person reading a plant list actually has, which is *what is flowering in
+    July*. Six of 430 species have no bloom window and draw nothing rather than
+    an empty calendar, which would assert that we checked and they never
+    flower (P9).
+    """
+    from src.phenology_bar import CAVEAT, alt_text, parse_period, phenology_svg
+    bloom = parse_period(entry.get("bloom") or "")
+    fruit = parse_period(entry.get("fruit") or "")
+    svg = phenology_svg(bloom, fruit)
+    if not svg:
+        return ""
+    return (f'<div class="phenology" title="{_esc(CAVEAT)}">{svg}'
+            f'<span class="phenology-alt">{_esc(alt_text(bloom, fruit))}'
+            f'</span></div>')
+
+
 def _facts_table(entry: dict, colour_cell: str, depth: int,
                  model: dict) -> str:
     facets = entry.get("facets") or {}
@@ -110,6 +155,7 @@ def _facts_table(entry: dict, colour_cell: str, depth: int,
         for m in months if m in month_pages)
 
     rows = [
+        ("When", _phenology(entry)),
         ("Type", _esc(entry.get("plant_type"))),
         ("Sun", _esc(_tokens(entry.get("sun")))),
         ("Water", _esc(_tokens(entry.get("water")))),
@@ -123,7 +169,7 @@ def _facts_table(entry: dict, colour_cell: str, depth: int,
         ("Flower colour", colour_cell),
         ("In bloom", month_links),
         ("Fruit", _esc(entry.get("fruit"))),
-        ("Native to", _esc(_tokens(entry.get("native")))),
+        ("Native to", _native(entry)),
     ]
     cells = "".join(f"<tr><th>{_esc(label)}</th><td>{value}</td></tr>"
                     for label, value in rows if value)

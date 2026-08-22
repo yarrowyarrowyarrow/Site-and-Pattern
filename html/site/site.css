@@ -264,6 +264,17 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
 .ecowrap { display: grid; gap: 1.2rem;
            grid-template-columns: minmax(14rem, 20rem) 1fr; align-items: start; }
 
+/* ── Phenology bar ──────────────────────────────────────────────────────── */
+/* Like .mapfig above, this keeps its own light ground in both themes. The
+   fills mean something specific -- bloom, fruit, growing season, nothing
+   recorded -- and four colours re-mixed against a dark background stop
+   reading as the same four. */
+.phenology { display: block; max-width: 17rem; }
+.phenology svg { display: block; background: #f6f5f0; border-radius: 3px; }
+.phenology-alt {
+  display: block; color: var(--muted); font-size: .78rem; margin-top: .2rem;
+}
+
 /* ── Chips ──────────────────────────────────────────────────────────────── */
 
 .chips { display: flex; flex-wrap: wrap; gap: .45rem; margin: .9rem 0; }

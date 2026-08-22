@@ -226,7 +226,7 @@ def map_svg(highlight: Optional[dict] = None, *,
             cities: Optional[bool] = None,
             link_for=None, reference: bool = False,
             level: str = "", within: str = "", numbered: bool = False,
-            overlay: str = "") -> str:
+            overlay: str = "", chrome: str = "") -> str:
     """The ecoregion map as inline SVG.
 
     ``level`` and ``within`` draw one level of the vocabulary, optionally
@@ -258,12 +258,19 @@ def map_svg(highlight: Optional[dict] = None, *,
     region becomes a link. Used by the standalone map page and deliberately not
     by the per-species maps, where the region is a fact rather than a control.
 
-    ``overlay`` is raw SVG emitted last, above every other layer, positioned
-    with :func:`projector` at the same ``width``/``height``. It is the seam for
+    ``overlay`` is raw SVG emitted above every other layer, positioned with
+    :func:`projector` at the same ``width``/``height``, and **clipped to the
+    subject provinces like everything else thematic**. It is the seam for
     drawing *records* rather than *regions* — see
     ``scripts/plot_occurrences.py``. Deliberately a string this module does not
     interpret: the alternative was a point-plotting API here, and where the
     records are is not this file's concern.
+
+    ``chrome`` is emitted last and **not** clipped: a legend, a scale bar, a
+    title block. The distinction is not fussiness. Anything placed by the
+    projector is a claim about ground and must stop at the border; a key sits
+    in the corner of the *frame*, which on this projection is over British
+    Columbia, so putting one through ``overlay`` deletes it.
     """
     highlight = highlight or {}
     regions = region_geometry(level, within)
@@ -444,7 +451,16 @@ def map_svg(highlight: Optional[dict] = None, *,
                 f'{index}</text></g>')
 
     if overlay:
-        parts.append(overlay)
+        # Inside the subject clip, like everything else thematic. The overlay
+        # used to sit outside it, so `plot_occurrences` drew records from
+        # British Columbia and Montana over ground this layer does not speak
+        # for (F142, V2.78). The caller drops those records itself and says how
+        # many; this is the backstop for the remaining case the caller cannot
+        # settle -- a dot a few hundred metres over a simplified border, which
+        # should be trimmed by the picture rather than deleted from the data.
+        parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">{overlay}</g>')
+    if chrome:
+        parts.append(chrome)
     parts.append("</svg>")
     return "".join(parts)
 

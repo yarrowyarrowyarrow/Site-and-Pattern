@@ -116,7 +116,8 @@ class TestUncertaintyIsVisible(unittest.TestCase):
     def test_a_huge_uncertainty_is_capped(self):
         """One county-level record must not cover a fifth of the map and read
         as a claim rather than a caveat."""
-        self.assertEqual(P._radius(10_000_000.0, scale=1.0), P._MAX_R)
+        self.assertEqual(P._radius(10_000_000.0, scale=1.0),
+                         P._MAX_R_FRAC * 720.0)
 
     def test_the_tooltip_says_when_nothing_was_recorded(self):
         from src.ecoregion_map import frame_height, projector
@@ -197,6 +198,77 @@ class TestTheMissingCacheIsLoud(unittest.TestCase):
         P._require({"Testus": [_O(*EDMONTON)]})
 
 
+class TestTheDotsScaleWithTheMap(unittest.TestCase):
+    """The clamps were absolute SVG units (V2.78).
+
+    360 of 422 dots on a real species sit at the minimum radius, so in practice
+    every dot was one fixed size while the map around it scaled: a 360px
+    contact-sheet thumbnail drew its dots two and a half times larger relative
+    to the ground than the 900px version of the same map. Two renderings of one
+    species that disagree about how crowded it is, and nothing said so.
+    """
+
+    def test_the_floor_is_a_fraction_of_the_width(self):
+        small = P._radius(None, 0.0, 360.0)
+        large = P._radius(None, 0.0, 900.0)
+        self.assertAlmostEqual(large / small, 2.5, places=6)
+
+    def test_the_ceiling_scales_too(self):
+        huge = 10_000_000.0
+        self.assertAlmostEqual(P._radius(huge, 1.0, 900.0) /
+                               P._radius(huge, 1.0, 360.0), 2.5, places=6)
+
+    def test_a_stated_uncertainty_still_means_metres(self):
+        """Between the clamps the radius is the record's own number through the
+        projection's own scale, which is the whole point of the encoding."""
+        r = P._radius(2000.0, 0.004, 720.0)
+        self.assertAlmostEqual(r, 8.0, places=6)
+
+    def test_an_unrecorded_uncertainty_is_still_hollow_at_any_size(self):
+        for width in (360.0, 900.0):
+            svg = P.points_svg([_O(53.55, -113.49, None, 2019, "", "")],
+                               lambda lon, lat: (10.0, 10.0), width=width)
+            self.assertIn('fill="none"', svg)
+
+
+class TestTheKey(unittest.TestCase):
+    """There was none, for two versions (V2.78).
+
+    A reader met a picture running three independent encodings at once --
+    region fill for confidence, dot colour for the kind of record, dot size for
+    how precisely that record knows where it is -- and no statement of any of
+    them. The one that misleads hardest unexplained is the hollow dot: it means
+    *this record stated no accuracy* and looks like a circle drawn for emphasis.
+    """
+
+    def test_it_explains_all_three_dot_encodings(self):
+        key = P.legend_svg(width=720)
+        self.assertIn("specimen", key)
+        self.assertIn("coarser location", key)
+        self.assertIn("no location accuracy", key)
+
+    def test_a_specimens_only_map_does_not_key_a_colour_it_never_draws(self):
+        self.assertNotIn("an observation", P.legend_svg(specimens_only=True))
+        self.assertIn("an observation", P.legend_svg(specimens_only=False))
+
+    def test_the_key_is_not_clipped_away(self):
+        """It sits in the corner of the *frame*, which on this projection is
+        over British Columbia. Through `overlay` the subject clip deletes it,
+        which is why `map_svg` grew a separate `chrome` seam."""
+        from src.ecoregion_map import map_svg
+        svg = map_svg({}, width=720, height=664,
+                      overlay='<g class="occ"/>',
+                      chrome=P.legend_svg(width=720))
+        self.assertIn("occ-legend", svg)
+        self.assertGreater(svg.index("occ-legend"), svg.rindex("clip-path"))
+
+    def test_a_real_map_carries_it(self):
+        svg = P.species_svg("Testus", [_O(53.55, -113.49, 30.0, 1954,
+                                          "PRESERVED_SPECIMEN", "h")] * 4,
+                            width=360)
+        self.assertIn("occ-legend", svg)
+
+
 class TestOnlyTheRecordsWeMayDraw(unittest.TestCase):
     """The specimen and licence filters (F141, V2.77).
 
@@ -269,10 +341,78 @@ class TestOnlyTheRecordsWeMayDraw(unittest.TestCase):
             "UNSPECIFIED"}, sorted(set(table.values())))
 
 
+class TestOnlyGroundThisCatalogueSpeaksFor(unittest.TestCase):
+    """No dot outside Alberta and Saskatchewan (F142, V2.78).
+
+    The GBIF harvest is bounded by the polygons' *bounding box* plus half a
+    degree, which reaches into British Columbia, Montana, Manitoba and the
+    Northwest Territories. The derivation ignores those records correctly; the
+    drawing did not, because `map_svg`'s overlay seam sits outside its subject
+    clip group. **551 of 1,251 records for one species** were being drawn over
+    ground the layer has no authority over, on a map whose entire argument is
+    about what a shaded region claims.
+    """
+
+    GOLDEN_BC = (51.30, -116.97)
+    REVELSTOKE_BC = (50.998, -118.196)
+    BANFF_AB = (51.18, -115.57)          # mountains, near the coarse border
+    GREAT_FALLS_MT = (47.50, -111.30)
+    BRANDON_MB = (49.85, -99.95)
+
+    def test_a_british_columbia_record_is_not_drawn(self):
+        from src.subject_area import in_subject_provinces
+        self.assertFalse(in_subject_provinces(*self.GOLDEN_BC))
+        self.assertFalse(in_subject_provinces(*self.REVELSTOKE_BC))
+
+    def test_montana_and_manitoba_are_not_drawn_either(self):
+        """The bbox reaches past three borders, not one."""
+        from src.subject_area import in_subject_provinces
+        self.assertFalse(in_subject_provinces(*self.GREAT_FALLS_MT))
+        self.assertFalse(in_subject_provinces(*self.BRANDON_MB))
+
+    def test_a_mountain_record_on_the_alberta_side_survives(self):
+        """The province outline is Natural Earth at 193 vertices. Dropping a
+        real Banff specimen because our basemap cut a corner would be the same
+        class of error as the 5 km buffer."""
+        from src.subject_area import in_subject_provinces
+        self.assertTrue(in_subject_provinces(*self.BANFF_AB))
+        self.assertTrue(in_subject_provinces(49.05, -113.91))   # Waterton
+        self.assertTrue(in_subject_provinces(51.42, -116.18))   # Lake Louise
+
+    def test_the_filter_is_unconditional(self):
+        """A licence or a basis decides whether a record we counted may be
+        drawn. A record in British Columbia was never counted at all, so no
+        filter setting should put it on the map."""
+        pts = [_O(*self.BANFF_AB, 30.0, 1954, "HUMAN_OBSERVATION", "i"),
+               _O(*self.GOLDEN_BC, 30.0, 1955, "HUMAN_OBSERVATION", "i")]
+        kept, why = P.drawable(pts, only_specimens=False,
+                               only_publishable=False)
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(why[P.OUT_OF_SUBJECT], 1)
+
+    def test_the_basemap_shim_still_answers(self):
+        """`ecoregion_basemap` kept a re-export when V2.78 extracted this, in
+        the same shape as its `_point_in_ring` shim. A silent break here would
+        look like a geography bug rather than a moved import."""
+        from src.ecoregion_basemap import in_subject_provinces as shim
+        from src.subject_area import in_subject_provinces as impl
+        for point in (self.GOLDEN_BC, self.BANFF_AB, self.BRANDON_MB):
+            self.assertEqual(shim(*point), impl(*point), point)
+
+    def test_the_overlay_is_clipped_to_the_subject_provinces(self):
+        """The backstop, for the dot a few hundred metres over a simplified
+        border that the caller cannot settle either way."""
+        from src.ecoregion_basemap import SUBJECT_CLIP_ID
+        from src.ecoregion_map import map_svg
+        svg = map_svg({}, width=360, height=332, overlay='<g class="occ"/>')
+        self.assertIn(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">'
+                      f'<g class="occ"/></g>', svg)
+
+
 class TestAFilteredMapSaysSo(unittest.TestCase):
     """A region shaded from 300 records showing four dots reads as broken.
 
-    It is not broken -- it is two statements on one picture -- and the only
+    It is not broken -- it is several statements on one picture -- and the only
     thing that makes it honest is the sentence beside it.
     """
 
@@ -280,23 +420,42 @@ class TestAFilteredMapSaysSo(unittest.TestCase):
            _O(53.56, -113.48, 30.0, 2024, "HUMAN_OBSERVATION", "i"),
            _O(53.57, -113.47, 30.0, 2025, "HUMAN_OBSERVATION", "i")]
 
-    def test_the_caption_states_both_counts_and_the_reason(self):
-        text = P.caption("Testus", 3, 1, {"not a specimen": 2})
-        self.assertIn("1 of 3", text)
-        self.assertIn("2 not a specimen", text)
+    def test_the_numbers_close(self):
+        """Every record is in exactly one tier. The first two drafts each lost
+        a group -- 551 records to a wrong denominator, then 9 to the floor."""
+        text = P.caption("Testus", held=1251, counted=691, drawn=422,
+                         dropped={P.OUT_OF_SUBJECT: 551,
+                                  "not a specimen": 268,
+                                  "licence does not permit redrawing": 10})
+        self.assertIn("422 of the 700", text)        # 422 + 268 + 10
+        self.assertIn("derived from 691 of them", text)
+        self.assertIn("other 9", text)               # 700 - 691, the floor
+        self.assertIn("further 551", text)
 
     def test_it_says_the_shading_is_not_the_dots(self):
-        text = P.caption("Testus", 3, 1, {"not a specimen": 2})
-        self.assertIn("derived from all 3", text)
+        text = P.caption("Testus", 3, 1, 1, {"not a specimen": 2})
+        self.assertIn("not from the dots", text)
 
     def test_an_unfiltered_map_gets_no_apology(self):
-        self.assertEqual(P.caption("Testus", 3, 3, {}), "3 records, all drawn.")
+        text = P.caption("Testus", 3, 3, 3, {})
+        self.assertIn("all of them", text)
+        self.assertNotIn("further", text)
+
+    def test_records_elsewhere_are_named_even_when_nothing_is_filtered(self):
+        """The out-of-province count is not a publishing decision, so it is
+        reported whether or not the caller filtered anything."""
+        text = P.caption("Testus", 10, 4, 4, {P.OUT_OF_SUBJECT: 6})
+        self.assertIn("further 6", text)
+        self.assertIn("neither counted nor drawn", text)
 
     def test_zero_drawable_is_named_as_a_publishing_gap_not_an_absence(self):
-        """The failure that looks most like a finding, in words."""
-        text = P.caption("Testus", 3, 0, {"not a specimen": 3})
+        text = P.caption("Testus", 3, 3, 0, {"not a specimen": 3})
         self.assertIn("gap in what may be drawn", text)
-        self.assertNotIn("all drawn", text)
+        self.assertIn("No dot is drawable", text)
+        # The shading is still a full claim about the three records; only the
+        # drawing is empty. And with no dots there is nothing to contrast.
+        self.assertIn("derived from all of them.", text)
+        self.assertNotIn("not from the dots", text)
 
     def test_the_shading_survives_a_filter_that_empties_the_dots(self):
         """The published range is a claim about ALL the evidence. Filtering the
@@ -305,18 +464,37 @@ class TestAFilteredMapSaysSo(unittest.TestCase):
         full = P.species_svg("Testus", self.PTS, width=360)
         thin = P.species_svg("Testus", self.PTS, width=360, dots=[])
         self.assertGreater(full.count("<circle"), thin.count("<circle"))
-        self.assertEqual(0, thin.count("<circle"))
         # Everything that is not a dot is byte-identical, which is a stronger
         # claim than "the region is still mentioned": it pins the shading, the
         # confidence band and the tooltip text all at once.
-        strip = lambda svg: re.sub(r'<g class="occ">.*?</g>', "", svg, flags=re.S)
+        strip = lambda svg: re.sub(r'<g clip-path="[^"]*"><g class="occ">.*?</g></g>',
+                                   "", svg, flags=re.S)
         self.assertEqual(strip(full), strip(thin))
         self.assertIn("Aspen Parkland", strip(thin))
+
+    def test_no_record_dot_survives_an_emptied_filter(self):
+        """Counted inside the records group, not over the whole file: the key
+        draws circles too, and it is chrome rather than evidence."""
+        import re
+        thin = P.species_svg("Testus", self.PTS, width=360, dots=[])
+        group = re.search(r'<g class="occ">(.*?)</g>', thin, re.S)
+        self.assertEqual(group.group(1).count("<circle"), 0)
+        self.assertIn("occ-legend", thin)
 
     def test_dots_default_to_every_point(self):
         a = P.species_svg("Testus", self.PTS, width=360)
         b = P.species_svg("Testus", self.PTS, width=360, dots=self.PTS)
         self.assertEqual(a, b)
+
+    def test_the_counted_number_is_not_the_held_number(self):
+        """`len(points)` was the caption's denominator and was wrong: records
+        outside every region are held and shade nothing."""
+        pts = list(self.PTS) + [_O(51.30, -116.97, 30.0, 1970,
+                                   "PRESERVED_SPECIMEN", "h")] * 4
+        _svg, counted = P.species_svg("Testus", pts, width=360,
+                                      with_counted=True)
+        self.assertEqual(counted, 3)
+        self.assertEqual(len(pts), 7)
 
 
 class TestTheCacheItIsBuiltOn(unittest.TestCase):

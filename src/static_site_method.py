@@ -173,8 +173,14 @@ would assert something its own metadata denies.</p>
   one of them says <em>not verified</em> on its page.</li>
   <li><strong>Nativity is the weakest claim on this site.</strong> The
   province a plant is listed as native to was generated from its regional
-  tags rather than read from a flora, and is being replaced with per-province
-  records from a taxonomic authority. Until then, treat "native to Alberta and
+  tags rather than read from a flora: Saskatchewan was inferred from
+  ecoregions that continue across the border, and Alberta from an editorial
+  flag in the catalogue's first data file. Neither is a range map for the
+  species. <strong>Every species page now says so beside the claim</strong>
+  rather than leaving it to this page: the field this site is named for was
+  the one field carrying no provenance mark, which is exactly backwards.
+  It is being replaced with per-province records from a
+  taxonomic authority; until that lands, treat "native to Alberta and
   Saskatchewan" as the catalogue's assertion and not as a sourced fact.</li>
   <li><strong>Coverage stops at the Saskatchewan border.</strong> The
   ecoregions surveyed here are Alberta's and Saskatchewan's. Manitoba shares

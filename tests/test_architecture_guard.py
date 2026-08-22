@@ -232,6 +232,14 @@ class TestStructuralCeilings(unittest.TestCase):
         # the same call V2.73 made for analytics, and the renderer has 90
         # lines of headroom left, not 190.
         (_SRC / "static_site_method.py", 260),         # 184 now
+        # V2.78: `ecoregion_basemap` hit 271/260 when it grew the
+        # point-in-subject-provinces test. Answered with a split rather than a
+        # bigger number, and the split is the right one anyway: that module
+        # draws the ground, `subject_area` decides whether a piece of evidence
+        # is on it. A shim keeps the old import working.
+        (_SRC / "subject_area.py", 180),               # 105 now
+        (_SRC / "phenology_bar.py", 220),              # 184 now
+        (_SRC / "nativity.py", 180),                   # 116 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in

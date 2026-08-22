@@ -101,7 +101,18 @@ BASIS_COLOUR = {
 
 #: A record's stated uncertainty, drawn. A 30 m GPS fix and a 5 km "near the
 #: lake" are different observations and the old pipeline treated them as one.
-_MIN_R, _MAX_R = 1.6, 9.0
+#:
+#: **As a fraction of the map's width, not in SVG units (V2.78).** They were
+#: absolute, and 360 of 422 dots on a real species sit at the minimum, so in
+#: practice every dot was a fixed size while the map around it scaled: a 360px
+#: contact-sheet thumbnail drew its dots two and a half times larger relative
+#: to the ground than the 900px version of the same map. Two renderings of one
+#: species that disagree about how crowded it is.
+_MIN_R_FRAC, _MAX_R_FRAC = 0.0035, 0.014
+
+#: Dot styling. A hairline at 0.9 against a 1.6-unit radius was mostly stroke,
+#: which is why the layer read as grey rather than as its own colour.
+_STROKE = 0.6
 
 
 def _cache() -> dict:
@@ -156,6 +167,19 @@ def licences(path=None) -> dict:
             for k, r in (blob.get("datasets") or {}).items()}
 
 
+def in_subject(points) -> list:
+    """Only records on ground this catalogue speaks for (Alberta, Saskatchewan).
+
+    The harvest is bounded by the polygons' *bounding box* plus half a degree,
+    which reaches into BC, Montana, Manitoba and the NWT. The derivation
+    ignores those correctly and the drawing did not, because the overlay seam
+    sits outside `map_svg`'s subject clip. See
+    `src.subject_area` for why the province outline alone is not the test.
+    """
+    from src.subject_area import in_subject_provinces        # noqa: PLC0415
+    return [p for p in points if in_subject_provinces(p[0], p[1])]
+
+
 def specimens(points) -> list:
     """Only the herbarium sheets — the basis the printed floras plot."""
     from scripts.seed_ecoregion_ranges import SPECIMEN_BASIS  # noqa: PLC0415
@@ -182,9 +206,22 @@ def drawable(points, *, only_specimens: bool, only_publishable: bool,
 
     The counts come back rather than being swallowed, because "we drew four of
     three hundred records" is the finding and a quiet blank map is not.
+
+    The subject-area filter is unconditional; the other two are the caller's
+    choice. That asymmetry is the point: a licence or a basis is a decision
+    about what to publish, and a record in British Columbia is simply not
+    evidence about the ground this map draws.
     """
     kept = list(points)
     why: dict[str, int] = {}
+    # Always, and first. A record outside the two provinces is not a licence
+    # question or a basis question -- it is a record about somewhere else, and
+    # no filter setting should put it on this map. Doing it first also means
+    # the two optional filters report drops within the subject area rather than
+    # crediting themselves with records that were never drawable.
+    after = in_subject(kept)
+    why["outside Alberta and Saskatchewan"] = len(kept) - len(after)
+    kept = after
     if only_specimens:
         after = specimens(kept)
         why["not a specimen"] = len(kept) - len(after)
@@ -196,28 +233,32 @@ def drawable(points, *, only_specimens: bool, only_publishable: bool,
     return kept, {k: v for k, v in why.items() if v}
 
 
-def _radius(uncertainty_m: float | None, scale: float) -> float:
+def _radius(uncertainty_m: float | None, scale: float,
+            width: float = 720.0) -> float:
     """Dot radius: the record's own stated uncertainty, in map units.
 
-    Clamped at both ends. Below ``_MIN_R`` a dot stops being visible; above
-    ``_MAX_R`` one county-level record would cover a fifth of the map and
-    read as a claim rather than as a caveat. A record stating no uncertainty
-    gets the minimum and is drawn hollow, because "not recorded" and
-    "recorded as precise" must not look the same (P9).
+    Clamped at both ends, and the clamps scale with the map (see
+    ``_MIN_R_FRAC``). Below the minimum a dot stops being visible; above the
+    maximum one county-level record would cover a fifth of the map and read as
+    a claim rather than as a caveat. A record stating no uncertainty gets the
+    minimum and is drawn hollow, because "not recorded" and "recorded as
+    precise" must not look the same (P9).
     """
+    lo, hi = _MIN_R_FRAC * width, _MAX_R_FRAC * width
     if uncertainty_m is None:
-        return _MIN_R
-    return max(_MIN_R, min(_MAX_R, uncertainty_m * scale))
+        return lo
+    return max(lo, min(hi, uncertainty_m * scale))
 
 
-def points_svg(points, project, *, scale: float = 0.0) -> str:
+def points_svg(points, project, *, scale: float = 0.0,
+               width: float = 720.0) -> str:
     """The occurrence overlay for :func:`src.ecoregion_map.map_svg`."""
     out = []
     for pt in points:
         x, y = project(pt[1], pt[0])
         unc = getattr(pt, "uncertainty_m", None)
         colour = BASIS_COLOUR.get(getattr(pt, "basis", ""), BASIS_COLOUR[""])
-        r = _radius(unc, scale)
+        r = _radius(unc, scale, width)
         year = getattr(pt, "year", None)
         tip = (f"{pt[0]:.4f}, {pt[1]:.4f}"
                f"{f' · {year}' if year else ''}"
@@ -226,39 +267,136 @@ def points_svg(points, project, *, scale: float = 0.0) -> str:
         fill = "none" if unc is None else colour
         out.append(
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{fill}" '
-            f'stroke="{colour}" stroke-width="0.9" fill-opacity="0.55">'
+            f'stroke="{colour}" stroke-width="{_STROKE}" '
+            f'fill-opacity="0.55">'
             f'<title>{html.escape(tip)}</title></circle>')
     return f'<g class="occ">{"".join(out)}</g>'
 
 
-def caption(name: str, shading_n: int, dots_n: int, dropped: dict) -> str:
+#: The one drop reason that is not about publishing. Pulled out of the list in
+#: :func:`caption` because it belongs to a different sentence: a licence or a
+#: basis decides whether a record we counted may be *drawn*, and a record in
+#: British Columbia was never counted in the first place.
+OUT_OF_SUBJECT = "outside Alberta and Saskatchewan"
+
+
+def legend_svg(*, width: float = 720.0, specimens_only: bool = False) -> str:
+    """The key. Drawn inside the SVG, because the SVG travels alone.
+
+    There was none, for two versions. A reader met a picture with three
+    independent encodings running at once -- region fill for confidence, dot
+    colour for what kind of record it is, dot size for how precisely that
+    record knows where it is -- and no statement of any of them. The one that
+    misleads hardest without a key is the hollow dot: it means *this record
+    did not state its uncertainty*, and it looks exactly like a small circle
+    somebody drew for emphasis.
+
+    `ecoregion_map.legend_html` covers the region fills and is HTML so it can
+    wrap on a phone. This one is SVG and covers only the dots, so that a
+    standalone `.svg` handed to somebody is self-describing.
+    """
+    r_min = _MIN_R_FRAC * width
+    r_max = _MAX_R_FRAC * width
+    pad = width * 0.012
+    row = width * 0.026
+    font = max(7.0, width * 0.0145)
+    entries = [
+        (BASIS_COLOUR["PRESERVED_SPECIMEN"], True, r_min,
+         "a herbarium specimen"),
+    ]
+    if not specimens_only:
+        entries.append((BASIS_COLOUR["HUMAN_OBSERVATION"], True, r_min,
+                        "an observation"))
+    entries += [
+        (BASIS_COLOUR["PRESERVED_SPECIMEN"], True, r_max,
+         "larger = the record states a coarser location"),
+        (BASIS_COLOUR["PRESERVED_SPECIMEN"], False, r_min,
+         "hollow = the record states no location accuracy"),
+    ]
+
+    out = [f'<g class="occ-legend" font-size="{font:.1f}" '
+           f'fill="#3d3a33" font-family="system-ui, sans-serif">']
+    y = pad + row
+    for colour, filled, r, label in entries:
+        out.append(
+            f'<circle cx="{pad + r_max:.1f}" cy="{y - font * 0.32:.1f}" '
+            f'r="{r:.1f}" fill="{colour if filled else "none"}" '
+            f'stroke="{colour}" stroke-width="{_STROKE}" '
+            f'fill-opacity="0.55"/>')
+        out.append(f'<text x="{pad + r_max * 2 + pad:.1f}" y="{y:.1f}">'
+                   f'{html.escape(label)}</text>')
+        y += row
+    out.append("</g>")
+    return "".join(out)
+
+
+def caption(name: str, held: int, counted: int, drawn: int,
+            dropped: dict) -> str:
     """The sentence without which a filtered map is a lie by omission.
 
     A region shaded from three hundred records and showing four dots reads as
-    broken. It is not broken — it is two different statements drawn on one
+    broken. It is not broken -- it is several different statements drawn on one
     picture, and the only way that is honest is to say so on the picture.
+
+    **Four tiers, and they must all close.** ``held`` is every cached record.
+    Inside it sit the records in Alberta and Saskatchewan; inside those, the
+    ones the shading counted; and the dots are a filtered subset. The first
+    draft said "derived from all 1,251" when 551 of those were in British
+    Columbia, and the second closed that gap and opened another: 422 dots
+    against 691 counted, minus 278 refused, leaves nine records unexplained.
+    They are real -- records inside a region that never reached the
+    three-record floor, so they are held, are ours, and shade nothing. Nine
+    records is a rounding error and losing them silently is the precise habit
+    this catalogue exists to correct.
     """
-    if dots_n == shading_n and not dropped:
-        return f"{shading_n:,} records, all drawn."
-    bits = [f"{dots_n:,} of {shading_n:,} records drawn"]
-    for why, n in sorted(dropped.items(), key=lambda kv: -kv[1]):
-        bits.append(f"{n:,} {why}")
-    tail = "; ".join(bits)
-    if dots_n:
-        return (f"{tail}. The shading below is derived from all "
-                f"{shading_n:,}, not from the dots.")
-    return (f"{tail}. No dot is drawable here — the shading below still comes "
-            f"from all {shading_n:,} records, so this is a gap in what may be "
-            f"drawn, not in what is known.")
+    elsewhere = dropped.get(OUT_OF_SUBJECT, 0)
+    reasons = [(why, n) for why, n in dropped.items()
+               if why != OUT_OF_SUBJECT and n]
+    subject = drawn + sum(n for _why, n in reasons)
+    detail = "; ".join(f"{n:,} {why}" for why, n in
+                       sorted(reasons, key=lambda kv: -kv[1]))
+
+    bits = []
+    if drawn:
+        bits.append(f"{drawn:,} of the {subject:,} records this species has "
+                    f"in Alberta and Saskatchewan"
+                    + (f" ({detail})." if detail else ", all of them."))
+    else:
+        bits.append(f"No dot is drawable of the {subject:,} records this "
+                    f"species has in Alberta and Saskatchewan"
+                    + (f": {detail}." if detail else "."))
+
+    # "not from the dots" only makes sense when there are dots to contrast.
+    versus = ", not from the dots" if drawn else ""
+    if counted == subject:
+        bits.append(f"The shading is derived from all of them{versus}.")
+    else:
+        thin = subject - counted
+        bits.append(f"The shading is derived from {counted:,} of them{versus}"
+                    f"; the other {thin:,} fall in regions with too few "
+                    f"records to shade.")
+    if not drawn:
+        bits.append("So this is a gap in what may be drawn, not in what is "
+                    "known.")
+    if elsewhere:
+        bits.append(f"A further {elsewhere:,} records fall outside the two "
+                    f"provinces and are neither counted nor drawn.")
+    return " ".join(bits)
 
 
-def species_svg(name: str, points, *, width: int = 720, dots=None) -> str:
+def species_svg(name: str, points, *, width: int = 720, dots=None,
+                with_counted: bool = False, specimens_only: bool = False):
     """One species: the derived shading, with the records that produced it.
 
     ``dots`` draws a *subset* while the shading stays derived from every point
     — the published range is a claim about all the evidence, and filtering the
     picture must not quietly filter the claim. Callers that filter are
     responsible for printing :func:`caption` beside it.
+
+    ``with_counted`` returns ``(svg, records the shading counted)`` instead of
+    the string. That number is not ``len(points)`` and the caption needs the
+    difference: records outside every region are held, are not counted, and
+    were being described as part of the shading's evidence until F142.
     """
     from src.ecoregion_map import frame_height, map_svg, projector
     from src.ecoregion_ranges import ranges_for_species
@@ -268,6 +406,11 @@ def species_svg(name: str, points, *, width: int = 720, dots=None) -> str:
     rows = ranges_for_species(points)
     highlight = {r["ecoregion"]: r["confidence"] for r in rows}
     drawn = points if dots is None else dots
+    # What the shading actually counted. Containment means a record is credited
+    # to at most one region (V2.76), so summing the rows counts records, not
+    # claims -- and it is the honest denominator for the caption, where "all
+    # the records" is not.
+    counted = sum(r["occurrences"] for r in rows)
 
     # Metres -> map units, so an uncertainty radius means what it says. Taken
     # off the projection itself rather than assumed: two points a known
@@ -279,9 +422,13 @@ def species_svg(name: str, points, *, width: int = 720, dots=None) -> str:
     y1 = project(-110.5, 54.0 + one_km_in_degrees)[1]
     scale = abs(y1 - y0) / 1000.0          # map units per metre
 
-    return map_svg(highlight, width=width, height=height,
-                   title=f"Records behind the range of {name}",
-                   overlay=points_svg(drawn, project, scale=scale))
+    svg = map_svg(highlight, width=width, height=height,
+                  title=f"Records behind the range of {name}",
+                  overlay=points_svg(drawn, project, scale=scale,
+                                    width=width),
+                  chrome=legend_svg(width=width,
+                                    specimens_only=specimens_only))
+    return (svg, counted) if with_counted else svg
 
 
 def buffer_artefacts(cache: dict) -> tuple[int, int, list]:
@@ -314,6 +461,32 @@ def buffer_artefacts(cache: dict) -> tuple[int, int, list]:
                 worst.append((name, key, n))
     worst.sort(key=lambda row: -row[2])
     return total, artefacts, worst
+
+
+def _phenology(name: str) -> str:
+    """The bloom bar for the contact sheet: the atlas page's other half.
+
+    Every regional flora prints these together -- where it grows, and when it
+    does the thing you are planting it for -- and reading twenty-four dot maps
+    without them is reading half of each page. Looked up by scientific name
+    against the shipped catalogue; a species the catalogue does not carry, or
+    one of the six with no bloom window, draws nothing.
+    """
+    from src.phenology_bar import alt_text, parse_period, phenology_svg
+    try:
+        from src.db.plants import search_plants                # noqa: PLC0415
+        rows = [r for r in search_plants(query=name)
+                if (r.get("scientific_name") or "") == name]
+    except Exception:                                          # noqa: BLE001
+        return ""
+    if not rows:
+        return ""
+    bloom = parse_period(rows[0].get("bloom_period") or "")
+    fruit = parse_period(rows[0].get("fruit_period") or "")
+    svg = phenology_svg(bloom, fruit, width=360, height=30)
+    if not svg:
+        return ""
+    return f'<div class="pheno">{svg}<small>{html.escape(alt_text(bloom, fruit))}</small></div>'
 
 
 def _report_filters(args, cache: dict, filtered) -> None:
@@ -406,18 +579,23 @@ def main(argv: list[str] | None = None) -> int:
             dots, why = filtered(pts)
             if not dots:
                 blank.append(name)
+            svg, counted = species_svg(name, pts, width=360, dots=dots,
+                                       with_counted=True,
+                                       specimens_only=args.specimens)
+            text = caption(name, len(pts), counted, len(dots), why)
             blocks.append(
                 f'<figure><figcaption>{html.escape(name)}</figcaption>'
-                f'{species_svg(name, pts, width=360, dots=dots)}'
-                f'<p>{html.escape(caption(name, len(pts), len(dots), why))}</p>'
-                f'</figure>')
+                f'{svg}{_phenology(name)}<p>{html.escape(text)}</p></figure>')
         Path(args.sheet).write_text(
             "<meta charset='utf-8'><title>Occurrence contact sheet</title>"
             "<style>body{font:14px system-ui;background:#fff;margin:2rem}"
             "figure{display:inline-block;margin:0 1rem 1.5rem 0;width:360px;"
             "vertical-align:top}"
             "figcaption{font-style:italic;margin-bottom:.3rem}"
-            "p{color:#555;font-size:12px;margin:.3rem 0 0}</style>"
+            "p{color:#555;font-size:12px;margin:.3rem 0 0}"
+            ".pheno{margin:.4rem 0 0}"
+            ".pheno svg{display:block;background:#f6f5f0;border-radius:3px}"
+            ".pheno small{color:#666;font-size:11px}</style>"
             + "".join(blocks), encoding="utf-8")
         print(f"Wrote {args.sheet} ({len(names)} species).")
         _report_filters(args, cache, filtered)
@@ -437,11 +615,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     dots, why = filtered(points)
-    svg = species_svg(args.species, points, width=args.width, dots=dots)
+    svg, counted = species_svg(args.species, points, width=args.width,
+                               dots=dots, with_counted=True,
+                               specimens_only=args.specimens)
     if args.out:
         Path(args.out).write_text(svg, encoding="utf-8")
         print(f"Wrote {args.out}. "
-              f"{caption(args.species, len(points), len(dots), why)}")
+              f"{caption(args.species, len(points), counted, len(dots), why)}")
     else:
         print(svg)
     return 0
