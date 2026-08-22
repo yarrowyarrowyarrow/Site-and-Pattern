@@ -98,9 +98,31 @@ git tag -d $(git tag)                       # local refs only; remote untouched
 ```
 
 and prefer `git switch <V>` (branches only) over `git checkout <V>`, and
-`git push -u origin HEAD` over naming the branch. **Never delete the remote
-tags**: each anchors a GitHub Release, and `github_releases.parse_release_version`
-reads `tag_name` off those releases to drive the in-app updater.
+`git push -u origin HEAD` over naming the branch.
+
+**To get a release branch that is not in the clone yet** — the case that bites
+first, because the obvious command is the broken one:
+
+```bash
+git fetch origin refs/heads/V2.78:refs/remotes/origin/V2.78
+git switch V2.78
+```
+
+Both halves of that refspec are load-bearing. `refs/heads/` says *the branch,
+not the tag*, and without it git may resolve the tag instead. The
+`:refs/remotes/origin/...` half says where to put it, and without it even a
+correctly resolved branch lands only in `FETCH_HEAD`, leaving `git switch`
+nothing to find. Two failure messages, so the next person can match rather than
+re-diagnose:
+
+| message | what happened |
+|---|---|
+| `fatal: invalid reference: V2.78` | no local ref of that name at all; the fetch went to `FETCH_HEAD` only. Use the refspec above. |
+| `fatal: a branch is expected, got tag 'V2.78'` | a local tag of that name exists. Run the `git tag -d` cleanup above. |
+
+**Never delete the remote tags**: each anchors a GitHub Release, and
+`github_releases.parse_release_version` reads `tag_name` off those releases to
+drive the in-app updater.
 
 **This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
 `.claude/settings.json`), so it no longer depends on remembering:
