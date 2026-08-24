@@ -486,6 +486,56 @@ class TestAFilteredMapSaysSo(unittest.TestCase):
         b = P.species_svg("Testus", self.PTS, width=360, dots=self.PTS)
         self.assertEqual(a, b)
 
+    def test_the_tiers_never_go_negative_on_real_data(self):
+        """The V2.78 caption printed *"the other -5 fall in regions with too
+        few records to shade"* on Blanketflower.
+
+        `counted` was `sum(r["occurrences"])`, a count of **claims**, and it was
+        being subtracted from a count of **records**. V2.76 established that
+        containment credits a record to one region, and that is very nearly
+        true: the surveyed polygons are simplified to ~900 m independently, so
+        adjacent regions overlap by a sliver and 0.81% of in-region points match
+        two. Calgary is 587 of the first 692, where aspen_parkland and
+        fescue_grassland cross.
+        """
+        import scripts.seed_ecoregion_ranges as seeder
+        cache = seeder.read_cache()
+        if not cache:
+            self.skipTest("the point cache is a dev artefact")
+        # The species it actually happened on, plus the largest few.
+        names = ["Gaillardia aristata"] + sorted(
+            cache, key=lambda n: -len(cache[n]))[:4]
+        for name in names:
+            points = cache.get(name)
+            if not points:
+                continue
+            dots, why = P.drawable(points, only_specimens=True,
+                                   only_publishable=False)
+            _svg, counted = P.species_svg(name, points, width=360, dots=dots,
+                                          with_counted=True)
+            subject = len(dots) + sum(
+                n for w, n in why.items() if w != P.OUT_OF_SUBJECT)
+            self.assertLessEqual(
+                counted, subject,
+                f"{name}: the shading counts {counted} of {subject} records, "
+                f"which prints a negative remainder")
+            self.assertIn(f"other {subject - counted:,}",
+                          P.caption(name, len(points), counted, len(dots), why)
+                          if counted != subject else
+                          f"other {subject - counted:,}")
+
+    def test_counted_is_records_not_claims(self):
+        """A point inside two overlapping polygons is one record. Counting the
+        rows instead counts it twice, which is what went negative."""
+        overlap = _O(51.1206, -114.0966, 4.0, 2026, "HUMAN_OBSERVATION", "i")
+        from src.ecoregion_ranges import _containment_lookup
+        if len(_containment_lookup(*overlap[:2])) < 2:
+            self.skipTest("polygons no longer overlap at Calgary")
+        points = [overlap] * 6
+        _svg, counted = P.species_svg("Testus", points, width=360,
+                                      with_counted=True)
+        self.assertEqual(counted, 6, "counted claims, not records")
+
     def test_the_counted_number_is_not_the_held_number(self):
         """`len(points)` was the caption's denominator and was wrong: records
         outside every region are held and shade nothing."""

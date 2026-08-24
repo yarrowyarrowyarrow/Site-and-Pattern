@@ -399,18 +399,28 @@ def species_svg(name: str, points, *, width: int = 720, dots=None,
     were being described as part of the shading's evidence until F142.
     """
     from src.ecoregion_map import frame_height, map_svg, projector
-    from src.ecoregion_ranges import ranges_for_species
+    from src.ecoregion_ranges import _containment_lookup, ranges_for_species
 
     height = frame_height(width)
     project = projector(width, height)
     rows = ranges_for_species(points)
     highlight = {r["ecoregion"]: r["confidence"] for r in rows}
     drawn = points if dots is None else dots
-    # What the shading actually counted. Containment means a record is credited
-    # to at most one region (V2.76), so summing the rows counts records, not
-    # claims -- and it is the honest denominator for the caption, where "all
-    # the records" is not.
-    counted = sum(r["occurrences"] for r in rows)
+    # How many RECORDS the shading rests on -- not `sum(r["occurrences"])`,
+    # which is what this used to be and which is a count of *claims*.
+    #
+    # V2.76 established that containment credits a record to one region and the
+    # V2.78 caption trusted that. It is very nearly true and not quite: the
+    # surveyed polygons are simplified to ~900 m independently of each other, so
+    # adjacent regions overlap by a sliver and a point inside one matches both.
+    # 0.81% of in-region points do, 587 of the first 692 found being Calgary,
+    # where aspen_parkland and fescue_grassland cross. Summing the rows counted
+    # those twice, which printed "the other -5 fall in regions with too few
+    # records to shade" on a real species -- a negative number in a sentence
+    # about honesty.
+    shaded = {r["ecoregion"] for r in rows}
+    counted = sum(1 for p in points
+                  if shaded & set(_containment_lookup(p[0], p[1])))
 
     # Metres -> map units, so an uncertainty radius means what it says. Taken
     # off the projection itself rather than assumed: two points a known
