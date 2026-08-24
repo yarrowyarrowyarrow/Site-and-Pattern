@@ -403,7 +403,7 @@ def _version_line() -> str:
         repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         out = subprocess.run(
             ["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=3)
+            capture_output=True, text=True, timeout=3, encoding="utf-8")
         branch = (out.stdout or "").strip().split("/")[-1]
         return branch if branch.startswith("V") else ""
     except Exception:                                      # noqa: BLE001

@@ -116,7 +116,7 @@ def _old_polygons():
     try:
         blob = subprocess.run(
             ["git", "show", f"{OLD_REF}:data/ecoregions_canada.geojson"],
-            cwd=PROJECT_ROOT, capture_output=True, text=True, check=True).stdout
+            cwd=PROJECT_ROOT, capture_output=True, text=True, check=True, encoding="utf-8").stdout
     except (subprocess.CalledProcessError, FileNotFoundError) as exc:
         raise SystemExit(
             f"Could not read the old polygons from {OLD_REF}.\n"

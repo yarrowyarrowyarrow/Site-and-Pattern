@@ -64,7 +64,7 @@ _BATCH = 25
 
 
 def _git(*args: str) -> str:
-    out = subprocess.run(["git", *args], capture_output=True, text=True)
+    out = subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8")
     if out.returncode != 0:
         sys.exit(f"git {' '.join(args)} failed:\n{out.stderr.strip()}")
     return out.stdout
@@ -86,7 +86,7 @@ def _remote_refs(kind: str) -> dict:
 
 def _subject(sha: str) -> str:
     out = subprocess.run(["git", "log", "--format=%s", "-1", sha],
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, encoding="utf-8")
     return out.stdout.strip()[:64] if out.returncode == 0 else "(not fetched)"
 
 

@@ -259,7 +259,7 @@ class TestPhotoImport(unittest.TestCase):
     def test_a_non_image_is_refused_rather_than_stored(self):
         d = tempfile.mkdtemp()
         bad = os.path.join(d, "notes.txt")
-        with open(bad, "w") as fh:
+        with open(bad, "w", encoding="utf-8") as fh:
             fh.write("x" * 500)
         with self.assertRaises(ValueError):
             photo_import.import_photo(bad, _SCI, "habit", d)

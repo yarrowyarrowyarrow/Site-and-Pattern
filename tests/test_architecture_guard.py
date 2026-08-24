@@ -658,6 +658,204 @@ class TestAgentApiContract(unittest.TestCase):
         )
 
 
+class TestEveryTextFileReadPinsItsEncoding(unittest.TestCase):
+    """Bare `read_text()` / `open()` use the *locale* codec, not UTF-8.
+
+    On Windows that is cp1252, which cannot decode this repo's own data: the
+    seed JSON is full of en dashes and accented names, and
+    ``plants_master.json`` dies at byte 0x8f.
+
+    **This project has now learned it twice.** V1.95 hit it in
+    ``src/sprite_gallery.py`` and answered with a guard --
+    ``test_seed_reads_pin_utf8_encoding`` -- that reads exactly one file. So
+    when V2.75's data-quality tests read the same seed JSON the same bare way,
+    nothing objected, and **seven tests errored on the author's machine while
+    passing on every Linux box** for two releases. A guard scoped to the file
+    where the bug was found does not stop the bug; it stops that instance of it.
+
+    Scoped precisely so it stays worth reading:
+
+    * ``.read_text()`` / ``.write_text()`` are pathlib text I/O and always need
+      an encoding.
+    * the **builtin** ``open()`` in text mode needs one. ``rasterio.open``,
+      ``Image.open``, ``fiona.open``, ``webbrowser.open`` and
+      ``QIODevice.open`` are attribute calls on something else and are none of
+      this test's business -- an earlier draft flagged all eleven of them and
+      would have been switched off within a week.
+    * binary mode is exempt: there is no encoding to pin.
+    """
+
+    #: Everything that ships or runs. Not `docs/` or the plans, which are data.
+    ROOTS = ("src", "scripts", "tests", "tools")
+
+    @staticmethod
+    def _offenders(path: Path):
+        """``[(lineno, source line)]`` for calls with no ``encoding=``."""
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if "encoding" in {k.arg for k in node.keywords}:
+                continue
+            if isinstance(fn, ast.Attribute) and fn.attr in ("read_text",
+                                                             "write_text"):
+                found.append((node.lineno, lines[node.lineno - 1].strip()))
+            elif isinstance(fn, ast.Name) and fn.id == "open":
+                mode = ""
+                if len(node.args) > 1 and isinstance(node.args[1], ast.Constant):
+                    mode = str(node.args[1].value)
+                for kw in node.keywords:
+                    if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                        mode = str(kw.value.value)
+                if "b" not in mode:
+                    found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_text_file_call_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "text file opened without encoding=\"utf-8\" — this is the "
+                "cp1252 crash on Windows, and it passes on Linux:\n  "
+                + "\n  ".join(offenders))
+
+    @staticmethod
+    def _subprocess_offenders(path: Path):
+        """Text-mode ``subprocess`` calls with no ``encoding=``.
+
+        The same bug wearing different clothes, and
+        ``PYTHONWARNDEFAULTENCODING=1`` is what surfaced it while checking the
+        fix for the first one. ``text=True`` decodes the child's output with the
+        locale codec, so on Windows ``git log --format=%s`` over this repo's own
+        history dies on the first em dash in a commit subject.
+        """
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if not isinstance(fn, ast.Attribute):
+                continue
+            if getattr(fn.value, "id", "") != "subprocess":
+                continue
+            if fn.attr not in ("run", "check_output", "Popen", "call",
+                               "check_call"):
+                continue
+            kw = {k.arg: k.value for k in node.keywords}
+            if "encoding" in kw:
+                continue
+            if any(isinstance(kw.get(flag), ast.Constant) and kw[flag].value
+                   for flag in ("text", "universal_newlines")):
+                found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_subprocess_text_mode_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._subprocess_offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "subprocess text=True with no encoding=\"utf-8\" — decodes "
+                "the child's output with the locale codec:\n  "
+                + "\n  ".join(offenders))
+
+    #: stdlib helpers that open text with the locale codec unless told
+    #: otherwise. `tempfile.NamedTemporaryFile(mode="w")` is the one that
+    #: actually appeared here; the rest are listed because they are the same
+    #: shape and cost nothing to hold.
+    STDLIB_TEXT = {("tempfile", "NamedTemporaryFile"),
+                   ("tempfile", "TemporaryFile"),
+                   ("tempfile", "SpooledTemporaryFile"),
+                   ("io", "TextIOWrapper"), ("io", "open")}
+
+    @classmethod
+    def _stdlib_offenders(cls, path: Path):
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if not isinstance(fn, ast.Attribute):
+                continue
+            if (getattr(fn.value, "id", ""), fn.attr) not in cls.STDLIB_TEXT:
+                continue
+            kw = {k.arg: k.value for k in node.keywords}
+            if "encoding" in kw:
+                continue
+            mode = kw.get("mode")
+            mode = str(mode.value) if isinstance(mode, ast.Constant) else ""
+            # tempfile defaults to binary; only an explicit text mode matters.
+            if "b" in (mode or "b"):
+                continue
+            found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_stdlib_text_helper_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._stdlib_offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "stdlib text-mode helper with no encoding=\"utf-8\":\n  "
+                + "\n  ".join(offenders))
+
+    def test_our_own_commit_subjects_are_what_makes_that_bite(self):
+        """Not hypothetical either: this repo's history is full of em dashes,
+        and `scripts/retag_releases.py` reads commit subjects through exactly
+        that call."""
+        import subprocess                                   # noqa: PLC0415
+        out = subprocess.run(
+            ["git", "log", "--format=%s", "-400"],
+            capture_output=True, text=True, encoding="utf-8",
+            cwd=str(_SRC.parent), check=False)
+        if out.returncode != 0:
+            self.skipTest("not a git checkout")
+        self.assertTrue(any(ord(ch) > 0x7F for ch in out.stdout),
+                        "no non-ASCII in 400 commit subjects — check why")
+
+    def test_the_seed_json_is_what_makes_this_bite(self):
+        """Not hypothetical. If the seed data were ASCII this guard would be
+        pedantry; it is not, and the byte that killed seven tests is in there."""
+        blob = (_SRC.parent / "data" / "plants_master.json").read_bytes()
+        self.assertTrue(any(b > 0x7F for b in blob),
+                        "plants_master.json is pure ASCII — check why")
+        with self.assertRaises(UnicodeDecodeError):
+            blob.decode("cp1252")
+
+
 class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
     """Guards against two ways a module has aborted the whole run rather than
     failing a test. Both cost hours to find, because the abort happens in a

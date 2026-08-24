@@ -70,7 +70,8 @@ class TestRoundTrip(unittest.TestCase):
 
     def setUp(self):
         self._tmp = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".perma.geojson", delete=False
+            mode="w", suffix=".perma.geojson", delete=False,
+            encoding="utf-8",
         )
         self._tmp.close()
         self.path = self._tmp.name

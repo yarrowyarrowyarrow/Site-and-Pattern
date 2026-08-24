@@ -558,7 +558,7 @@ class TestTheLastDesignMemory(unittest.TestCase):
     def test_it_round_trips(self):
         from src import saves
         path = os.path.join(self.dir, "a.perma.geojson")
-        open(path, "w").close()
+        open(path, "w", encoding="utf-8").close()
         saves.remember_last_design(path)
         self.assertEqual(saves.last_design(), os.path.abspath(path))
 
@@ -567,7 +567,7 @@ class TestTheLastDesignMemory(unittest.TestCase):
         dead control."""
         from src import saves
         path = os.path.join(self.dir, "gone.perma.geojson")
-        open(path, "w").close()
+        open(path, "w", encoding="utf-8").close()
         saves.remember_last_design(path)
         os.unlink(path)
         self.assertEqual(saves.last_design(), "")
@@ -575,7 +575,7 @@ class TestTheLastDesignMemory(unittest.TestCase):
     def test_a_corrupt_config_is_survivable(self):
         import src.settings as settings_mod
         from src import saves
-        with open(settings_mod._CONFIG_PATH, "w") as f:
+        with open(settings_mod._CONFIG_PATH, "w", encoding="utf-8") as f:
             f.write("{not json")
         self.assertEqual(saves.last_design(), "")
         saves.remember_last_design("/tmp/x")      # must not raise

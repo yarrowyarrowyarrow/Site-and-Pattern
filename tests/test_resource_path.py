@@ -75,7 +75,7 @@ class TestResourcePathFrozen(unittest.TestCase):
         # Mirror the spec's datas layout inside the fake bundle root.
         os.makedirs(os.path.join(self._meipass, "src", "db"))
         os.makedirs(os.path.join(self._meipass, "data"))
-        open(os.path.join(self._meipass, "src", "db", "schema.sql"), "w").close()
+        open(os.path.join(self._meipass, "src", "db", "schema.sql"), "w", encoding="utf-8").close()
 
     def tearDown(self):
         if self._orig_frozen is None:

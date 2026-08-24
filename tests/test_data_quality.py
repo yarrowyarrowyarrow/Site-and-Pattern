@@ -485,7 +485,7 @@ class TestExcludedTaxaStayExcluded(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_the_binomial_coming_back_is_an_error(self):
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Rudbeckia hirta",
                         "common_name": "Black-eyed Susan"})
         self._write("plants_master.json", records)
@@ -495,7 +495,7 @@ class TestExcludedTaxaStayExcluded(unittest.TestCase):
     def test_an_edge_naming_it_is_an_error_too(self):
         """Edges key on `common_name`, not on the binomial, so a check that
         only knew scientific names would have let all 150 back silently."""
-        edges = json.loads((self.tmp / "plant_fauna_master.json").read_text())
+        edges = json.loads((self.tmp / "plant_fauna_master.json").read_text(encoding="utf-8"))
         edges.append({"plant": "Black-eyed Susan", "fauna": "Bombus ternarius",
                       "relationship": "nectar", "source": "globi_ecdysis_org"})
         self._write("plant_fauna_master.json", edges)
@@ -507,7 +507,7 @@ class TestExcludedTaxaStayExcluded(unittest.TestCase):
         """The point of the file is the reasoning, so the failure has to carry
         it — a bare "not allowed" sends the next person to re-derive the call
         from scratch, which is how it got in the first time."""
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Rudbeckia hirta",
                         "common_name": "Black-eyed Susan"})
         self._write("plants_master.json", records)
@@ -618,7 +618,7 @@ class TestNativityGate(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_two_rows_with_one_common_name_may_not_disagree(self):
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Fictitia exempla",
                         "common_name": "Invented Sage",
                         "native_to_alberta": 1, "native_provinces": "AB,SK"})
@@ -634,7 +634,7 @@ class TestNativityGate(unittest.TestCase):
         """A shared common name is not itself the defect. Two rows saying the
         same thing is a duplicate; two rows saying opposite things is a lie on
         one of two published pages."""
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         for sci in ("Fictitia exempla", "Exempla fictitia"):
             records.append({"scientific_name": sci,
                             "common_name": "Invented Sage",
@@ -661,7 +661,7 @@ class TestNativityGate(unittest.TestCase):
 
     # ── evidence ───────────────────────────────────────────────────────────
     def test_a_claim_with_no_occurrence_record_anywhere_is_named(self):
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Fictitia exempla",
                         "common_name": "Invented Sage",
                         "native_to_alberta": 1, "native_provinces": "AB,SK"})
@@ -674,7 +674,7 @@ class TestNativityGate(unittest.TestCase):
         """The check must never read as an occurrence gate. A species with 215
         records can still be introduced — that is exactly what V2.74 removed —
         so absence of records is a prompt to look, never a verdict."""
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Fictitia exempla",
                         "common_name": "Invented Sage",
                         "native_to_alberta": 1})
@@ -683,7 +683,7 @@ class TestNativityGate(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_a_row_claiming_nothing_is_not_flagged(self):
-        records = json.loads((self.tmp / "plants_master.json").read_text())
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
         records.append({"scientific_name": "Fictitia exempla",
                         "common_name": "Invented Sage"})
         self._write("plants_master.json", records)
@@ -739,7 +739,7 @@ class TestNativityGate(unittest.TestCase):
         proc = subprocess.run(
             [sys.executable, "scripts/tag_prairie_provenance.py"],
             cwd=str(Path(__file__).resolve().parent.parent),
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
         self.assertIn("REFUSING TO RUN", proc.stderr)
 

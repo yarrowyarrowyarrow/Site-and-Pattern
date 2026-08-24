@@ -125,7 +125,7 @@ def main():
             f"--virtual-time-budget=3000",
             harness_path.as_uri(),
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90, encoding="utf-8")
         if not OUT.exists() or OUT.stat().st_size < 2000:
             sys.stderr.write(res.stdout + "\n" + res.stderr + "\n")
             raise SystemExit("Screenshot failed or produced an empty file.")

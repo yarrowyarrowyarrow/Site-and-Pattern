@@ -79,7 +79,7 @@ class TestReaders(unittest.TestCase):
     def test_ascii_ply_round_trip(self):
         from src.scan_import import read_points
         p = self._path("a.ply")
-        with open(p, "w") as f:
+        with open(p, "w", encoding="utf-8") as f:
             f.write("ply\nformat ascii 1.0\nelement vertex 2\n"
                     "property float x\nproperty float y\nproperty float z\n"
                     "end_header\n1.0 2.0 3.0\n-4.5 0.0 9.25\n")
@@ -109,7 +109,7 @@ class TestReaders(unittest.TestCase):
     def test_xyz_text_with_comments_and_commas(self):
         from src.scan_import import read_points
         p = self._path("c.xyz")
-        with open(p, "w") as f:
+        with open(p, "w", encoding="utf-8") as f:
             f.write("# scan export\n1 2 3\n4,5,6\n\n")
         pts = read_points(p)
         self.assertEqual(pts.shape, (2, 3))
@@ -117,7 +117,7 @@ class TestReaders(unittest.TestCase):
     def test_y_up_swap(self):
         from src.scan_import import read_points
         p = self._path("d.xyz")
-        with open(p, "w") as f:
+        with open(p, "w", encoding="utf-8") as f:
             f.write("1 5 2\n")     # x=1, y_up=5, z_fwd=2
         pts = read_points(p, up="y")
         # z-up frame: (x, -z_fwd, y_up)
@@ -219,7 +219,7 @@ class TestEndToEnd(unittest.TestCase):
         scan = _distort(true_pts)
         tmp = tempfile.mkdtemp(prefix="permadesign_scan_e2e_")
         ply = os.path.join(tmp, "yard.ply")
-        with open(ply, "w") as f:
+        with open(ply, "w", encoding="utf-8") as f:
             f.write("ply\nformat ascii 1.0\n"
                     f"element vertex {len(scan)}\n"
                     "property float x\nproperty float y\nproperty float z\n"

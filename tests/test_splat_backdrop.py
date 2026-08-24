@@ -68,7 +68,7 @@ class TestSplatPlyDetection(unittest.TestCase):
 
     def test_non_ply_is_not_splat(self):
         p = self._path("notes.txt")
-        with open(p, "w") as f:
+        with open(p, "w", encoding="utf-8") as f:
             f.write("hello")
         self.assertFalse(sb_is_splat(p))
 

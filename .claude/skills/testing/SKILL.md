@@ -48,6 +48,32 @@ python3 -m unittest tests.test_architecture_guard tests.test_philosophy \
   tests.test_skill_library -v
 ```
 
+### The suite is green on Linux and that is evidence about Linux (V2.78)
+
+The author ran the full suite on Windows and got **seven errors nobody here
+could see**: `Path.read_text()` and the builtin `open()` decode with the
+*locale* codec, which is cp1252 on Windows, and `data/plants_master.json`
+carries 966 non-ASCII bytes that cp1252 cannot decode. Every one passed on
+every Linux machine.
+
+Python ships the instrument for this. Run it before believing a green suite:
+
+```bash
+PYTHONWARNDEFAULTENCODING=1 python3 -W error::EncodingWarning \
+  -m unittest discover -s tests -t .
+```
+
+`PYTHONWARNDEFAULTENCODING=1` makes every locale-default text operation emit
+`EncodingWarning`; `-W error::EncodingWarning` turns those into hard errors, so
+a latent Windows crash fails here instead of on the author's machine. It found
+**three separate shapes** of the same bug — bare `read_text`/`open`,
+`subprocess(text=True)`, and `tempfile.NamedTemporaryFile(mode="w")` — of which
+only the first was actually crashing.
+
+All three are now guarded statically by
+`TestEveryTextFileReadPinsItsEncoding`, so the strict run should stay clean;
+reach for it when adding code that touches files or spawns processes.
+
 ## The temp-DB pattern (copy-paste template)
 
 Every DB-touching test redirects `src.db.plants` module globals **before**
@@ -123,6 +149,7 @@ to the snapshot the test defends.
 
 | Guard test | Protects | When it fails, you… |
 |---|---|---|
+| `tests/test_architecture_guard.py` `TestEveryTextFileReadPinsItsEncoding` | Every text file read/write, `subprocess(text=True)` and text-mode `tempfile` pins `encoding="utf-8"` | …**add the encoding**, never suppress. The locale codec is never the right answer here: it is UTF-8 on Linux and cp1252 on Windows, and the seed JSON and this repo's own commit subjects both break cp1252. Note the guard is tree-wide on purpose — V1.95 fixed this in one file with a one-file guard and it came back in V2.75. |
 | `tests/test_architecture_guard.py` `TestStructuralCeilings` | Per-file line ceilings + MainWindow method cap (decomposition won't backslide) | …**extract** the new logic into a module/controller. Don't just raise the ceiling — see `add-feature`. Raise it only with a written reason, as prior bumps did. |
 | `tests/test_architecture_guard.py` `TestAgentApiContract` | The frozen scripting/MCP surface (`EXPECTED_*` maps) | …if the API change was intended, **deliberately** update the map; if not, you broke the surface — revert. See `agent-api`. |
 | `tests/test_architecture_guard.py` `TestAnalysisPanelTabsRegistered` | Every `_build_*_tab` actually calls `addTab` (a real regression where a tab vanished) | …make your `_build_*_tab` register its tab; don't move `addTab` into a setter. |

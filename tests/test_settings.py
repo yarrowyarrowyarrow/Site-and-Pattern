@@ -31,6 +31,7 @@ class _PatchConfigPath:
     def __init__(self):
         self._tmp = tempfile.NamedTemporaryFile(
             mode="w", suffix="_config.json", delete=False,
+            encoding="utf-8",
         )
         self._tmp.close()
         # File is created empty; settings.load_config should treat it as

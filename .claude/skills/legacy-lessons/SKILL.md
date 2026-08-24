@@ -340,6 +340,61 @@ before trusting a proposed guard, measure what it would actually have
 reported on the real bug; a guard that would have passed is worse than
 none, because it will be believed.
 
+## 19. The cp1252 crash, twice (V1.95, then V2.78)
+
+The author ran the full suite on Windows and got **seven errors, all the
+same**:
+
+```
+records = json.loads((self.tmp / "plants_master.json").read_text())
+...
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 899031
+```
+
+`Path.read_text()` and the builtin `open()` decode with the **locale**
+codec, not UTF-8. On Linux that is UTF-8 and everything works; on Windows
+it is cp1252, and `data/plants_master.json` carries 966 non-ASCII bytes
+(en dashes, accented names) that cp1252 cannot decode at all.
+
+**This project had already learned this.** V1.95 hit it in
+`src/sprite_gallery.py`, fixed it, left an explanatory comment beside the
+fix, and wrote a guard — `test_seed_reads_pin_utf8_encoding` — which reads
+**exactly one file**. So when V2.75's data-quality tests read the same seed
+JSON the same bare way, nothing objected. Two releases shipped a suite that
+was green on every Linux machine and had seven errors on the only machine
+whose owner reads the output.
+
+Chasing the fix surfaced a second dress of the same bug.
+`PYTHONWARNDEFAULTENCODING=1` with `-W error::EncodingWarning` turned up
+**17 `subprocess(text=True)` calls** with no encoding — including
+`scripts/retag_releases.py` reading `git log --format=%s`, i.e. this
+repo's own commit subjects, which are full of em dashes. It would have
+died on the first one.
+
+**Scars:** 37 text-file call sites and 17 subprocess calls pinned to
+`encoding="utf-8"`; `TestEveryTextFileReadPinsItsEncoding` in
+`tests/test_architecture_guard.py` covering `src/`, `scripts/`, `tests/`
+and `tools/`.
+
+**Rules:**
+
+1. **Never open a text file or a text-mode subprocess without an explicit
+   encoding.** There is no case in this repo where the locale codec is the
+   right answer.
+2. **A guard scoped to the file where the bug was found does not stop the
+   bug — it stops that instance of it.** The V1.95 guard was correct, tested,
+   green, and useless, because the second occurrence was in a different file.
+   When writing a guard, ask what *class* of thing is wrong and scope it to
+   the tree.
+3. **Scope a tree-wide guard precisely or it gets switched off.** An earlier
+   draft flagged `rasterio.open`, `Image.open`, `fiona.open` and
+   `webbrowser.open` — eleven false positives that have nothing to do with
+   text encoding. It checks pathlib's `read_text`/`write_text` and the
+   *builtin* `open` in text mode, and nothing else.
+4. **A green suite on one OS is evidence about one OS.** Both the tests and
+   `PYTHONWARNDEFAULTENCODING=1` are cheap; the author's machine was the only
+   instrument that could see this.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

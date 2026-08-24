@@ -94,7 +94,7 @@ for (const [dx, dz] of %s) {
 console.log(JSON.stringify(out));
 """ % json.dumps(_DIRECTIONS)
         proc = subprocess.run([_node(), "-e", script],
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, timeout=60, encoding="utf-8")
         if proc.returncode != 0:
             raise AssertionError(f"node failed: {proc.stderr}")
         cls.noses = json.loads(proc.stdout)

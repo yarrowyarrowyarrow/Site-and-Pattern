@@ -85,7 +85,7 @@ console.log(JSON.stringify({
 }));
 """ % {"frames": json.dumps(_FRAMES), "stalled": json.dumps(_STALLED)}
         proc = subprocess.run([_node(), "-e", script],
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, timeout=60, encoding="utf-8")
         if proc.returncode != 0:
             raise AssertionError(f"node failed: {proc.stderr}")
         cls.runs = json.loads(proc.stdout)

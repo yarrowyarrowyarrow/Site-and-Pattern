@@ -108,7 +108,7 @@ class Scene3DRenderTest(unittest.TestCase):
                 [chrome, "--headless", "--no-sandbox", "--disable-gpu-sandbox",
                  "--enable-unsafe-swiftshader", "--use-angle=swiftshader",
                  "--virtual-time-budget=45000", "--dump-dom", url],
-                capture_output=True, text=True, timeout=240)
+                capture_output=True, text=True, timeout=240, encoding="utf-8")
         except (OSError, subprocess.TimeoutExpired) as exc:
             server.stop()
             raise unittest.SkipTest(f"Chromium would not run headlessly: {exc}")
