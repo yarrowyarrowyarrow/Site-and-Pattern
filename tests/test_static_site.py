@@ -960,6 +960,26 @@ class TestTheMethodPage(unittest.TestCase):
         self.assertTrue((out / "method" / "index.html").exists())
 
 
+    def test_it_discloses_the_overlap_at_shared_borders(self):
+        """V2.78: 0.81% of in-region records fall in the sliver where two
+        simplified polygons overlap and are counted for both. The author's call
+        was to leave it and say so -- picking a side would assert which side of
+        a line we know we drew imprecisely, which is the mistake the buffer
+        correction was about."""
+        page = self.html
+        self.assertIn("counted in both", page)
+        self.assertIn("eight records in every thousand", page)
+        self.assertIn("Calgary", page)
+
+    def test_the_simplification_distance_is_not_typed_here(self):
+        """It comes out of `ecoregion_map.CAVEAT`, which is itself checked
+        against the polygon file's provenance. V2.69 shipped a caveat that had
+        become false and left it on 432 pages for a whole increment."""
+        from src.ecoregion_map import CAVEAT
+        from src.static_site_method import _simplification
+        self.assertIn(_simplification(), CAVEAT)
+        self.assertIn(_simplification(), self.html)
+
 class TestTheRangeSectionSaysWhatItClaims(unittest.TestCase):
     """The copy an outside review quoted back (F135, V2.75)."""
 

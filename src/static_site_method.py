@@ -70,12 +70,27 @@ def _currency(model: dict) -> str:
         f"<strong>{_esc(s)}</strong>" for s in sorted(sources)) + "</p>")
 
 
+def _simplification() -> str:
+    """How coarse the drawn outlines are, in the words the caveat already uses.
+
+    Read out of :data:`src.ecoregion_map.CAVEAT` rather than restated, because
+    that string is itself checked against the polygon file's own provenance --
+    and because V2.69 shipped a caveat that had quietly become false and stayed
+    on 432 public pages for a whole increment.
+    """
+    import re                                               # noqa: PLC0415
+    from src.ecoregion_map import CAVEAT                    # noqa: PLC0415
+    m = re.search(r"(\d[\d,]*\s*(?:m|km|metres|kilometres))", CAVEAT)
+    return m.group(1) if m else "a kilometre"
+
+
 def render_method(model: dict) -> str:
     """The Method page."""
     from src.ecoregion_map import CAVEAT
     from src.ecoregion_ranges import MIN_RECORDS
 
     s = model["stats"]
+    simplify = _simplification()
     body = f"""
 {_crumb([("", "Method")], 1)}
 <h1>How these pages are made</h1>
@@ -167,6 +182,16 @@ would assert something its own metadata denies.</p>
   filed under it. It was listed for 135 species and is now listed for 15. If
   you compared this site against an earlier copy of it, that is the difference
   you would see.</li>
+  <li><strong>Where two regions meet, a few records are counted in both.</strong>
+  The region outlines are simplified to roughly {simplify}, and each one is
+  simplified on its own, so along a shared border two neighbours overlap by a
+  sliver. A record inside that sliver is counted for both, which inflates the
+  totals by <strong>about eight records in every thousand</strong>. It is not
+  spread evenly: most of it is Calgary, where Aspen Parkland and Fescue
+  Grassland cross. We have left it rather than picking a side, because deciding
+  which region such a record belongs to would mean asserting which side of a
+  line we know we drew imprecisely, and that is the mistake the correction
+  above was about. It is well inside the accuracy the outlines claim.</li>
   <li><strong>Flower colour is mostly unverified.</strong>
   {s['verified_colour']} of {s['species']} species have a colour checkable
   against the plant's own name; the rest are a genus-level default and every

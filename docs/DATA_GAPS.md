@@ -338,6 +338,36 @@ allowlist mode is ever wanted.
 
 ---
 
+## Two regions can claim the same record, at their shared border (V2.78)
+
+The surveyed polygons are simplified to about 900 m **independently of each
+other**, so along a boundary two neighbours overlap by a sliver, and a record
+inside that sliver satisfies containment for both. **0.81% of in-region points
+do**, measured over the twenty largest species (692 of 85,311).
+
+It is concentrated the way the V2.76 buffer error was, and in the same shape:
+
+| pair | points |
+|---|---|
+| `aspen_parkland` + `fescue_grassland` | 587 |
+| `northern_continental_divide` + `western_alberta_upland` | 51 |
+| `eastern_continental_ranges` + `northern_continental_divide` | 38 |
+| five other pairs | 16 |
+
+**Eighty-five per cent of it is Calgary**, where the parkland meets the fescue
+grassland.
+
+**Left in place deliberately**, on the author's call, and disclosed on
+`/method/` rather than corrected. Deciding which of the two a record belongs to
+would mean asserting a side of a line we know we drew imprecisely, which is the
+mistake V2.76 was about at five kilometres. Eight records in a thousand is well
+inside the accuracy the outlines themselves claim.
+
+**What it does affect:** published counts are inflated by that fraction, and
+`sum(occurrences)` over a species' rows is a count of *claims*, not records.
+`plot_occurrences.species_svg` learned that the hard way in V2.78, printing
+*"the other -5 fall in regions with too few records to shade"*.
+
 ## The occurrence harvest is capped, and the cap is not neutral (V2.77)
 
 `scripts/seed_ecoregion_ranges.py` stops asking GBIF after
