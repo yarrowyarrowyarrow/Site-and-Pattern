@@ -306,3 +306,75 @@ def _stronger(candidate: str, current: str) -> bool:
                 return i
         return _ORDER.index("")
     return rank(candidate) < rank(current)
+
+
+def explain(taxa: dict, dist: dict, name: str, provinces) -> str:
+    """Why one species got the answer it did, as text for a person.
+
+    Added V2.80. The real archive resolved *Amelanchier alnifolia* but left
+    nine species with no distribution at all -- fireweed, stinging nettle and
+    wild mint among them, which are not plants anybody doubts are in Alberta.
+    A verdict that is wrong about those is a bug in this reader, not a finding
+    about the flora, and the difference is only visible from inside the
+    archive: which taxon the name matched, which accepted taxa hang under it,
+    and what distribution rows each of those carries.
+
+    Prints every candidate the name matched, not just the winner, because
+    picking the wrong one of several is the failure this cannot otherwise
+    distinguish from the archive simply having no rows.
+    """
+    target = _canonical(name).lower()
+    hits = [tid for tid, row in taxa.items()
+            if _canonical(row["name"]).lower() == target]
+    out = [f"=== {name} ===",
+           f"canonical: {target!r}",
+           f"{len(hits)} taxa in the checklist share that binomial:"]
+    for tid in sorted(hits, key=lambda t: taxa[t]["name"]):
+        row = taxa[tid]
+        rows = dist.get(tid) or {}
+        out.append(f"  [{tid}] {row['name']}")
+        out.append(f"        rank={row['rank'] or '-'} "
+                   f"status={row['status'] or '-'} "
+                   f"parent={row['parent'] or '-'} "
+                   f"accepted_id={row['accepted_id'] or '-'}")
+        out.append(f"        distribution in {'/'.join(provinces)}: "
+                   f"{rows or '(none)'}")
+    if not hits:
+        out.append("  (none -- the checklist does not carry this binomial)")
+        return "\n".join(out)
+
+    got = lookup(taxa, dist, name, provinces)
+    chosen = [tid for tid in hits
+              if taxa[tid]["name"] == got["accepted_name"]]
+    root = chosen[0] if chosen else None
+    if root is None:
+        for tid, row in taxa.items():
+            if row["name"] == got["accepted_name"]:
+                root = tid
+                break
+    out.append("")
+    out.append(f"rolled up from [{root}] {got['accepted_name']}")
+    kin = sorted(descendants(taxa, root), key=lambda t: taxa[t]["name"]) \
+        if root else []
+    out.append(f"{len(kin)} accepted taxa at or beneath it:")
+    for tid in kin:
+        rows = dist.get(tid) or {}
+        mark = "  <-- has distribution" if rows else ""
+        out.append(f"  [{tid}] {taxa[tid]['name']} "
+                   f"({taxa[tid]['rank'] or '-'}) {rows or ''}{mark}")
+    out.append("")
+    out.append(f"result: provinces={got['provinces'] or '(none)'}")
+    if not got["provinces"]:
+        # The two shapes this can take, so the reader knows which they have.
+        childless = len(kin) <= 1
+        out.append(
+            "  NOTHING FOUND. " + (
+                "The roll-up found no accepted taxa beneath this one, so "
+                "either the archive links infraspecific taxa to their species "
+                "some other way than parentNameUsageID, or there genuinely "
+                "are none."
+                if childless else
+                "Accepted taxa were found beneath it and none carries a row "
+                "for these provinces -- so the distribution really is absent "
+                "from the archive for this lineage."))
+    return "\n".join(out)

@@ -447,7 +447,7 @@ download URL: fetching the wrong dataset and parsing it successfully is the
 failure that would be hardest to notice."""
 
 
-def _run_archive(path: str, *, verbose: bool = True) -> int:
+def _run_archive(path: str, *, verbose: bool = True, explain=None) -> int:
     """``--from-archive``: build the same output file from the checklist."""
     from scripts import vascan_archive as archive          # noqa: PLC0415
 
@@ -465,6 +465,16 @@ def _run_archive(path: str, *, verbose: bool = True) -> int:
     except archive.ArchiveProblem as exc:
         print(f"{exc}\n\n{ARCHIVE_HINT}", file=sys.stderr)
         return 1
+
+    if explain:
+        # Diagnostic only: prints and writes nothing, so it can be run against
+        # a shipped file's puzzling row without disturbing it.
+        print(f"Read {len(taxa):,} taxa and {len(dist):,} distribution rows "
+              f"from {source.name}. No network.\n")
+        for name in explain:
+            print(archive.explain(taxa, dist, name, PROVINCES))
+            print()
+        return 0
 
     names = catalogue_species()
     print(f"Reading {len(taxa):,} taxa and {len(dist):,} distribution rows "
@@ -517,6 +527,11 @@ def main(argv: list[str] | None = None) -> int:
                    help="Read VASCAN's Darwin Core Archive instead of the API "
                         "(a .zip or an unpacked directory). With no PATH, "
                         "print what to download and where to put it.")
+    p.add_argument("--explain", action="append", default=None,
+                   metavar="NAME",
+                   help="With --from-archive: show why ONE species got its "
+                        "answer (matched taxa, the roll-up, the distribution "
+                        "rows). Writes nothing. Repeatable.")
     p.add_argument("--reassess", action="store_true",
                    help="Re-run the verdicts over the already-fetched file "
                         "with NO network. Use after a parser fix.")
@@ -524,7 +539,8 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     if args.from_archive is not None:
-        return _run_archive(args.from_archive, verbose=not args.quiet)
+        return _run_archive(args.from_archive, verbose=not args.quiet,
+                            explain=args.explain)
 
     if args.reassess:
         if not OUTPUT_PATH.exists():

@@ -155,12 +155,18 @@ def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
                   "review's actual complaint, and the field it disagrees with "
                   "was generated rather than read from a flora.",
         "undetermined": "VASCAN matched the name and publishes no "
-                        "distribution for it, because it records distribution "
-                        "on the LOWEST accepted taxon and these have accepted "
-                        "varieties or subspecies. NOT a finding about the "
-                        "plant: `Amelanchier alnifolia` is here and returns "
-                        "AB/SK/MB native at `var. alnifolia`. Needs the "
-                        "infraspecific lookup, not a decision.",
+                        "distribution for it. STILL NOT A FINDING ABOUT THE "
+                        "PLANT. Against the API this bucket held 173 species "
+                        "and meant 'distribution lives on the lowest accepted "
+                        "taxon'; the archive roll-up answers those. Whatever "
+                        "is left is a lineage the roll-up could not follow, "
+                        "and the way to see which is:\n"
+                        "    python scripts/fetch_flora_nativity.py "
+                        "--from-archive <path> --explain \"<species>\"\n"
+                        "  which prints the taxa the name matched, what hangs "
+                        "under the one it chose, and the rows each carries. "
+                        "Decide nothing from this bucket until it is empty or "
+                        "explained.",
         "confirm": "VASCAN agrees with the catalogue.",
     }
     for bucket in order:

@@ -266,5 +266,61 @@ class TestItFeedsTheExistingJudgement(unittest.TestCase):
         self.assertEqual(assess(got)["origin"], "undetermined")
 
 
+class TestItCanExplainOneAnswer(unittest.TestCase):
+    """The real archive left nine species with no distribution -- fireweed and
+    stinging nettle among them, which nobody doubts are in Alberta. A verdict
+    that is wrong about those is a bug in this reader, and the difference is
+    only visible from inside the archive."""
+
+    @classmethod
+    def setUpClass(cls):
+        src = _archive(TAXA, DISTS)
+        cls.taxa = A.read_taxa(src)
+        cls.dist = A.read_distribution(src, PROV)
+
+    def _explain(self, name):
+        return A.explain(self.taxa, self.dist, name, PROV)
+
+    def test_it_shows_the_child_the_distribution_actually_came_from(self):
+        text = self._explain("Amelanchier alnifolia")
+        self.assertIn("var. alnifolia", text)
+        self.assertIn("has distribution", text)
+        self.assertIn("'AB': 'native'", text)
+
+    def test_it_lists_every_taxon_the_binomial_matched_not_just_the_winner(self):
+        """Picking the wrong one of several is the failure this cannot
+        otherwise be told apart from the archive having no rows."""
+        text = self._explain("Alnus incana")
+        self.assertIn("subsp. tenuifolia", text)
+        self.assertIn("subsp. incana", text)
+
+    def test_a_name_the_checklist_does_not_carry_says_so(self):
+        text = self._explain("Nonexistus fakus")
+        self.assertIn("does not carry", text)
+
+    def test_an_empty_result_says_which_of_the_two_shapes_it_is(self):
+        """No descendants at all is a different problem from descendants that
+        carry no row, and the fix is different."""
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "taxon.txt").write_text(
+            "taxonID\tparentNameUsageID\tscientificName\ttaxonRank\t"
+            "taxonomicStatus\n"
+            "1\t\tLonelius solus\tspecies\taccepted", encoding="utf-8")
+        (tmp / "distribution.txt").write_text(
+            "id\tlocality\testablishmentMeans\n", encoding="utf-8")
+        taxa = A.read_taxa(tmp)
+        dist = A.read_distribution(tmp, PROV)
+        text = A.explain(taxa, dist, "Lonelius solus", PROV)
+        self.assertIn("NOTHING FOUND", text)
+        self.assertIn("no accepted taxa beneath", text)
+
+    def test_it_writes_nothing(self):
+        """It is a diagnostic, run against a puzzling row in a file somebody
+        has already generated."""
+        before = A.read_distribution(_archive(TAXA, DISTS), PROV)
+        self._explain("Amelanchier alnifolia")
+        self.assertEqual(len(before), len(self.dist))
+
+
 if __name__ == "__main__":
     unittest.main()
