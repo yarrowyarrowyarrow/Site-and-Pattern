@@ -346,5 +346,125 @@ class TestTheGeneratorItReplaces(unittest.TestCase):
         self.assertIn("fetch_flora_nativity", mod.__doc__)
 
 
+
+class TestTheApplyWritesOnlyWhatVascanEarns(unittest.TestCase):
+    """V2.80. `--apply` is the first thing in this pipeline that writes to the
+    seed files, and three earlier applies in this repo went wrong on their
+    first run (23 Monarch caterpillars on goldenrod, 62 good bird edges
+    binned, 20 animals connected to nothing). What is pinned here is mostly
+    what it must NOT touch."""
+
+    def setUp(self):
+        import scripts.ingest_flora_nativity as I
+        self.I = I
+        self.buckets = {
+            "narrow": [{"scientific_name": "Yucca glauca", "vascan": "AB"},
+                       {"scientific_name": "Echinacea angustifolia",
+                        "vascan": "SK"}],
+            "confirm": [{"scientific_name": "Amelanchier alnifolia"}],
+            "not_here": [{"scientific_name": "Helianthus annuus"}],
+            "name": [{"scientific_name": "Andropogon gerardii"}],
+            "undetermined": [{"scientific_name": "Urtica dioica"}],
+        }
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "data").mkdir()
+        self.rows = [
+            {"scientific_name": "Yucca glauca", "native_provinces": "AB,SK",
+             "native_to_alberta": 1},
+            {"scientific_name": "Echinacea angustifolia",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+            {"scientific_name": "Amelanchier alnifolia",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+            {"scientific_name": "Helianthus annuus",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+            {"scientific_name": "Andropogon gerardii",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+            {"scientific_name": "Urtica dioica", "native_provinces": "AB,SK",
+             "native_to_alberta": 1},
+        ]
+        (self.tmp / "data" / "plants_master.json").write_text(
+            json.dumps(self.rows), encoding="utf-8")
+        self._root = I.PROJECT_ROOT
+        self._files = I.PLANT_FILES
+        I.PROJECT_ROOT = self.tmp
+        I.PLANT_FILES = ("plants_master.json",)
+
+    def tearDown(self):
+        self.I.PROJECT_ROOT = self._root
+        self.I.PLANT_FILES = self._files
+
+    def _run(self):
+        out = self.I._apply(self.buckets)
+        rows = json.loads(
+            (self.tmp / "data" / "plants_master.json").read_text(
+                encoding="utf-8"))
+        return out, {r["scientific_name"]: r for r in rows}
+
+    def test_a_narrowed_species_loses_the_province_vascan_has_no_row_for(self):
+        _, by = self._run()
+        self.assertEqual(by["Yucca glauca"]["native_provinces"], "AB")
+        self.assertEqual(by["Echinacea angustifolia"]["native_provinces"],
+                         "SK")
+
+    def test_losing_alberta_also_clears_the_alberta_flag(self):
+        """`native_to_alberta` is a separate column and the app's actual native
+        filter and habitat-score input. Narrowing the string and leaving the
+        flag set puts two fields in one row in contradiction, and the score
+        reads the one that would still be wrong."""
+        _, by = self._run()
+        self.assertEqual(by["Echinacea angustifolia"]["native_to_alberta"], 0)
+        self.assertEqual(by["Yucca glauca"]["native_to_alberta"], 1)
+
+    def test_an_uncertain_alberta_flag_is_read_not_crashed_on(self):
+        """Some rows carry "1?" -- native to Alberta, editorially uncertain --
+        and `db/plants.py` has always read it as truthy. A plain int() raises
+        on it, in an apply that walks every row in the catalogue."""
+        self.assertTrue(self.I._ab_flag({"native_to_alberta": "1?"}))
+        self.assertTrue(self.I._ab_flag({"native_to_alberta": 1}))
+        self.assertFalse(self.I._ab_flag({"native_to_alberta": 0}))
+        self.assertFalse(self.I._ab_flag({}))
+
+    def test_an_uncertain_flag_vascan_agrees_with_is_left_alone(self):
+        """The question mark is an editorial hedge about Alberta that
+        `src/nativity.py` reads as one. Replacing it with a clean 1 because a
+        flora happens to agree would destroy something somebody meant."""
+        self.rows[0]["native_to_alberta"] = "1?"      # Yucca, narrowed to AB
+        (self.tmp / "data" / "plants_master.json").write_text(
+            json.dumps(self.rows), encoding="utf-8")
+        out, by = self._run()
+        self.assertEqual(by["Yucca glauca"]["native_to_alberta"], "1?")
+        # Only Yucca. Echinacea legitimately loses Alberta in this fixture.
+        self.assertNotIn("Yucca glauca", [n for n, _ in out["ab_flag"]])
+
+    def test_a_confirmed_species_is_sourced_but_not_rewritten(self):
+        _, by = self._run()
+        row = by["Amelanchier alnifolia"]
+        self.assertEqual(row["native_provinces"], "AB,SK")
+        self.assertEqual(row[self.I.SOURCE_KEY], "flora")
+
+    def test_the_three_unresolved_buckets_are_left_completely_alone(self):
+        """A removal, a rename, and a lineage the reader could not follow.
+        Stamping any of them would publish "read from a published flora" over
+        an answer no flora gave."""
+        _, by = self._run()
+        for name in ("Helianthus annuus", "Andropogon gerardii",
+                     "Urtica dioica"):
+            self.assertEqual(by[name]["native_provinces"], "AB,SK", name)
+            self.assertNotIn(self.I.SOURCE_KEY, by[name], name)
+
+    def test_the_source_key_is_the_one_nativity_actually_reads(self):
+        """Spelling it a second time here would make the write a silent no-op:
+        it would succeed, and every page would go on saying "inferred"."""
+        from src.nativity import SOURCE_FIELD
+        self.assertEqual(self.I.SOURCE_KEY, SOURCE_FIELD)
+
+    def test_running_it_twice_changes_nothing_the_second_time(self):
+        self._run()
+        again, _ = self._run()
+        self.assertEqual(again["narrowed"], [])
+        self.assertEqual(again["sourced"], 0)
+        self.assertEqual(again["ab_flag"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

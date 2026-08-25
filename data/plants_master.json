@@ -63,7 +63,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alberta Penstemon",
@@ -129,7 +130,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -182,7 +184,8 @@
     "fall_color": "#c8a842",
     "branching": "decurrent",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alkali Bulrush",
@@ -236,7 +239,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alkali Cord Grass",
@@ -287,7 +291,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "one_sided_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Aster",
@@ -353,7 +358,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Bistort",
@@ -406,7 +412,8 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Bluegrass",
@@ -460,7 +467,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Forget-me-not",
@@ -526,7 +534,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -589,7 +598,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Alpine Rock Jasmine",
@@ -656,7 +666,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "American Brooklime",
@@ -709,7 +720,8 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
     "growth_form": "sprawling",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Arctic Aster",
@@ -754,7 +766,7 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
@@ -772,7 +784,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Arum-leaved Arrowhead",
@@ -839,7 +852,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -908,7 +922,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Awned Sedge",
@@ -962,7 +977,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ball Cactus",
@@ -1028,7 +1044,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Balsam Fir",
@@ -1084,7 +1101,8 @@
     "fall_color": "",
     "branching": "excurrent",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Balsam Poplar",
@@ -1137,7 +1155,8 @@
     "fall_color": "#d8b83e",
     "branching": "excurrent",
     "bark_texture": "furrowed",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Balsamroot",
@@ -1185,7 +1204,7 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "sagittate",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
@@ -1203,7 +1222,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Basket Willow",
@@ -1272,7 +1292,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Beaked Hazelnut",
@@ -1328,7 +1349,8 @@
     "fall_color": "#d0a83c",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Beaked Sedge",
@@ -1382,7 +1404,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bearberry",
@@ -1451,7 +1474,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1502,7 +1526,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bebb's Willow",
@@ -1568,7 +1593,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Big Bluestem",
@@ -1667,7 +1693,7 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lobed",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
@@ -1689,7 +1715,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Big-head Rush",
@@ -1743,7 +1770,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "rush_umbel",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Birch-leaved Spirea",
@@ -1791,7 +1819,7 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "ovate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
@@ -1812,7 +1840,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bishop's Cap",
@@ -1879,7 +1908,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Black Hawthorn",
@@ -1949,7 +1979,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Black Spruce",
@@ -2005,7 +2036,8 @@
     "fall_color": "",
     "branching": "excurrent",
     "bark_texture": "scaly",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Blanketflower",
@@ -2069,7 +2101,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Blue Clematis",
@@ -2132,7 +2165,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Blue Columbine",
@@ -2199,7 +2233,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -2253,7 +2288,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "one_sided_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -2319,7 +2355,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -2373,7 +2410,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bluejoint Reed Grass",
@@ -2427,7 +2465,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bog Blueberry",
@@ -2499,7 +2538,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bog Cranberry",
@@ -2567,7 +2607,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2636,7 +2677,8 @@
     "flowering_stems": 16,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -2687,7 +2729,7 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
@@ -2705,7 +2747,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -2777,7 +2820,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2849,7 +2893,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2915,7 +2960,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Broad-leaved Arrowhead",
@@ -2982,7 +3028,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -3045,7 +3092,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bronze Bells",
@@ -3114,7 +3162,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Broomweed",
@@ -3183,7 +3232,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Buckbean",
@@ -3251,7 +3301,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bunchberry",
@@ -3316,7 +3367,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bur Oak",
@@ -3350,7 +3402,7 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "slow",
     "years_to_maturity": "30",
     "growth_curve": "slow_start",
@@ -3364,7 +3416,7 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "lobed",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "alternate",
@@ -3372,7 +3424,8 @@
     "fall_color": "#a8823a",
     "branching": "decurrent",
     "bark_texture": "furrowed",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Butte Primrose",
@@ -3501,7 +3554,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -3561,7 +3615,8 @@
     "fruit_form": "berry",
     "bark_texture": "smooth",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Goldenrod",
@@ -3595,7 +3650,7 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
@@ -3611,7 +3666,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
@@ -3629,7 +3684,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -3698,7 +3754,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Rice Grass",
@@ -3749,7 +3806,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Waterweed",
@@ -3815,7 +3873,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Wild Rye",
@@ -3869,7 +3928,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cattail",
@@ -3923,7 +3983,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
     "inflorescence_form": "cattail_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Chokecherry",
@@ -3997,7 +4058,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Alumroot",
@@ -4064,7 +4126,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Bladderwort",
@@ -4130,7 +4193,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Horsetail",
@@ -4184,7 +4248,8 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
     "growth_form": "emergent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Juniper",
@@ -4240,7 +4305,8 @@
     "fall_color": "",
     "branching": "prostrate",
     "bark_texture": "shaggy",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Mare's-tail",
@@ -4303,7 +4369,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Scouring-rush",
@@ -4354,7 +4421,8 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
     "growth_form": "emergent",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Snowberry",
@@ -4428,7 +4496,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Sunflower",
@@ -4548,7 +4617,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Twinpod",
@@ -4615,7 +4685,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -4685,7 +4756,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Creeping Juniper",
@@ -4738,7 +4810,8 @@
     "leaf_size_cm": 0.8,
     "leaf_arrangement": "whorled",
     "growth_form": "mat",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Creeping Oregon Grape",
@@ -4807,7 +4880,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4873,7 +4947,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Creeping Spikerush",
@@ -4927,7 +5002,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -4993,7 +5069,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -5060,7 +5137,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -5127,7 +5205,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -5183,7 +5262,8 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "sprawling",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Cyperus-like Sedge",
@@ -5234,7 +5314,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Desert Shooting Star",
@@ -5300,7 +5381,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Dewberry",
@@ -5369,7 +5451,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -5435,7 +5518,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Douglas Fir",
@@ -5492,7 +5576,8 @@
     "branching": "excurrent",
     "bark_texture": "furrowed",
     "leaf_surface": "glaucous",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Douglas Maple",
@@ -5540,7 +5625,7 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
@@ -5548,7 +5633,8 @@
     "fall_color": "#d1502e",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Drooping Wood-reed",
@@ -5602,7 +5688,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "nodding_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Drummond's Milkvetch",
@@ -5671,7 +5758,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Drummond's Rush",
@@ -5725,7 +5813,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "rush_umbel",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Dwarf Birch",
@@ -5781,7 +5870,8 @@
     "fall_color": "#d8a83c",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Dwarf Raspberry",
@@ -5850,7 +5940,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Early Blue Violet",
@@ -5916,7 +6007,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Early Yellow Oxytropis",
@@ -5983,7 +6075,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -6017,7 +6110,7 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
@@ -6034,7 +6127,7 @@
     "image_license": "cc-by",
     "flower_color": "#d6453a",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
@@ -6053,7 +6146,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -6116,7 +6210,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Evening Primrose",
@@ -6183,7 +6278,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -6254,7 +6350,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "False Dragonhead",
@@ -6317,7 +6414,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
@@ -6381,7 +6479,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "False Solomon's Seal",
@@ -6519,7 +6618,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Field Pussytoes",
@@ -6586,7 +6686,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fireweed",
@@ -6652,7 +6753,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Flat-topped Goldenrod",
@@ -6718,7 +6820,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -6785,7 +6888,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Floating Marsh-marigold",
@@ -6855,7 +6959,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -6909,7 +7014,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fowl Manna Grass",
@@ -6963,7 +7069,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -7022,7 +7129,8 @@
     "fruit_form": "flat_cluster",
     "bark_texture": "smooth",
     "leaf_surface": "glossy",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fringed Brome",
@@ -7076,7 +7184,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "nodding_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fringed Loosestrife",
@@ -7142,7 +7251,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -7187,7 +7297,7 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
@@ -7205,7 +7315,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Giant Bur-reed",
@@ -7268,7 +7379,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Giant Hyssop",
@@ -7334,7 +7446,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Giant Wild Rye",
@@ -7388,7 +7501,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Glacier Lily",
@@ -7451,7 +7565,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Golden Bean",
@@ -7520,7 +7635,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -7592,7 +7708,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Golden Draba",
@@ -7658,7 +7775,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Golden Sedge",
@@ -7712,7 +7830,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Golden Tickseed",
@@ -7778,7 +7897,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Gray Goldenrod",
@@ -7897,7 +8017,8 @@
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Greater Northern Aster",
@@ -7961,7 +8082,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Green Alder",
@@ -8014,7 +8136,8 @@
     "fall_color": "#9a8a3e",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Green Milkweed",
@@ -8084,7 +8207,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Green Needle Grass",
@@ -8138,7 +8262,8 @@
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ground Plum",
@@ -8207,7 +8332,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Gumweed",
@@ -8270,7 +8396,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hairy Arnica",
@@ -8336,7 +8463,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -8403,7 +8531,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -8457,7 +8586,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Harebell",
@@ -8520,7 +8650,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
@@ -8588,7 +8719,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -8651,7 +8783,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Highbush Cranberry",
@@ -8722,7 +8855,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hoary Aster",
@@ -8789,7 +8923,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -8856,7 +8991,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Hooker's Oat Grass",
@@ -8907,7 +9043,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Indigenous Ricegrass",
@@ -8961,7 +9098,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ivy-leaved Duckweed",
@@ -9024,7 +9162,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Jack Pine",
@@ -9080,7 +9219,8 @@
     "fall_color": "",
     "branching": "decurrent",
     "bark_texture": "scaly",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Jerusalem Artichoke",
@@ -9114,7 +9254,7 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
@@ -9128,7 +9268,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
@@ -9146,7 +9286,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -9212,7 +9353,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "June Grass",
@@ -9266,7 +9408,8 @@
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Knotted Rush",
@@ -9317,7 +9460,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "rush_umbel",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Labrador Tea",
@@ -9384,7 +9528,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lakeshore Sedge",
@@ -9438,7 +9583,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -9506,7 +9652,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Large-leaved Avens",
@@ -9573,7 +9720,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Late Goldenrod",
@@ -9639,7 +9787,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -9705,7 +9854,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Leafy Arnica",
@@ -9772,7 +9922,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Leafy Aster",
@@ -9820,7 +9971,7 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
@@ -9838,7 +9989,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lilac Penstemon",
@@ -9904,7 +10056,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lindley's Aster",
@@ -9971,7 +10124,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Little Bluestem",
@@ -10025,7 +10179,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "turkey_foot",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Little-leaved Alumroot",
@@ -10091,7 +10246,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lodgepole Pine",
@@ -10147,7 +10303,8 @@
     "fall_color": "",
     "branching": "excurrent",
     "bark_texture": "scaly",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Long-fruited Anemone",
@@ -10217,7 +10374,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Low Bilberry",
@@ -10266,7 +10424,7 @@
     "flower_color": "#e58fb0",
     "flower_form": "bell",
     "fruit_color": "#3b4f8c",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "ovate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
@@ -10289,7 +10447,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Low Townsendia",
@@ -10356,7 +10515,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -10427,7 +10587,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -10490,7 +10651,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "MacKenzie's Hedysarum",
@@ -10553,7 +10715,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
@@ -10617,7 +10780,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Aster",
@@ -10683,7 +10847,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Cinquefoil",
@@ -10750,7 +10915,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Hedge Nettle",
@@ -10816,7 +10982,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
@@ -10953,7 +11120,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -11020,7 +11188,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Violet",
@@ -11083,7 +11252,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Maximilian Sunflower",
@@ -11146,7 +11316,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Meadow Arnica",
@@ -11213,7 +11384,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Meadow Blazingstar",
@@ -11280,7 +11452,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Meadow Sedge",
@@ -11334,7 +11507,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Meadowsweet",
@@ -11403,7 +11577,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Missouri Milkvetch",
@@ -11472,7 +11647,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Moss Campion",
@@ -11539,7 +11715,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Moss Phlox",
@@ -11602,7 +11779,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Mountain Brome",
@@ -11656,7 +11834,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "nodding_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Mountain Gentian",
@@ -11722,7 +11901,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Mountain Hollyhock",
@@ -11767,7 +11947,7 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lobed",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
@@ -11785,7 +11965,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Mountain Sweet Cicely",
@@ -11838,7 +12019,8 @@
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Narrow-leaf Willow",
@@ -11886,7 +12068,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
@@ -11908,7 +12090,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Narrow-leaved Hawkweed",
@@ -11971,7 +12154,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Narrowleaf Cotton-grass",
@@ -12022,7 +12206,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "bristly",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Needle and Thread Grass",
@@ -12076,7 +12261,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "bristly",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -12127,7 +12313,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Nodding Onion",
@@ -12196,7 +12383,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Northern Bedstraw",
@@ -12262,7 +12450,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Northern Black Currant",
@@ -12330,7 +12519,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Northern Gentian",
@@ -12397,7 +12587,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Northern Hedysarum",
@@ -12463,7 +12654,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Northern Wheat Grass",
@@ -12517,7 +12709,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Nuttall's Sunflower",
@@ -12584,7 +12777,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
@@ -12651,7 +12845,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ostrich Fern",
@@ -12704,7 +12899,8 @@
     "leaf_size_cm": 90.0,
     "leaf_arrangement": "basal",
     "growth_form": "fern",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pale Agoseris",
@@ -12772,7 +12968,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -12827,7 +13024,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Paper Birch",
@@ -12883,7 +13081,8 @@
     "fall_color": "#edc84e",
     "branching": "excurrent",
     "bark_texture": "papery",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Parry's Oatgrass",
@@ -12937,7 +13136,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -13001,7 +13201,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pearly Everlasting",
@@ -13069,7 +13270,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -13136,7 +13338,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pin Cherry",
@@ -13210,7 +13413,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pink Corydalis",
@@ -13273,7 +13477,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pink Monkey Flower",
@@ -13321,7 +13526,7 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
@@ -13339,7 +13544,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pink Pussytoes",
@@ -13407,7 +13613,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pink Pyrola",
@@ -13475,7 +13682,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pink Spirea",
@@ -13611,7 +13819,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Plains Muhly",
@@ -13665,7 +13874,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Plains Prickly Pear Cactus",
@@ -13731,7 +13941,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Plains Wormwood",
@@ -13798,7 +14009,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Porcupine Grass",
@@ -13852,7 +14064,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "bristly",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Porcupine Sedge",
@@ -13906,7 +14119,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Poverty Oat Grass",
@@ -13960,7 +14174,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Buttercup",
@@ -14030,7 +14245,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -14096,7 +14312,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
@@ -14163,7 +14380,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Coneflower",
@@ -14229,7 +14447,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -14280,7 +14499,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "one_sided_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Crocus",
@@ -14350,7 +14570,8 @@
     "flowering_stems": 3,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Dropseed",
@@ -14384,7 +14605,7 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
@@ -14398,13 +14619,14 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Gentian",
@@ -14470,7 +14692,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -14533,7 +14756,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -14603,7 +14827,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Rose",
@@ -14675,7 +14900,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Sage",
@@ -14729,7 +14955,8 @@
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Sagewort",
@@ -14793,7 +15020,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Thistle",
@@ -14857,7 +15085,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Turnip",
@@ -14920,7 +15149,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prairie Wedge Grass",
@@ -14974,7 +15204,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Prickly Wild Rose",
@@ -15046,7 +15277,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -15113,7 +15345,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Coneflower",
@@ -15147,7 +15380,7 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
@@ -15158,7 +15391,7 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "rays",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
@@ -15176,7 +15409,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Oat Grass",
@@ -15227,7 +15461,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "nodding_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Peavine",
@@ -15293,7 +15528,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -15356,7 +15592,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple Reed Grass",
@@ -15407,7 +15644,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
@@ -15474,7 +15712,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Pussy Willow",
@@ -15543,7 +15782,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rabbitbrush",
@@ -15613,7 +15853,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rat Root",
@@ -15679,7 +15920,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Raymond's Sedge",
@@ -15730,7 +15972,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Red Baneberry",
@@ -15801,7 +16044,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Red Columbine",
@@ -15871,7 +16115,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Common Paintbrush",
@@ -15937,7 +16182,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Red Osier Dogwood",
@@ -16010,7 +16256,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -16061,7 +16308,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "bristly",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "River Beauty",
@@ -16109,7 +16357,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#d6457e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
@@ -16127,7 +16375,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "River Bulrush",
@@ -16181,7 +16430,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
@@ -16248,7 +16498,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rocky Mountain Beeplant",
@@ -16311,7 +16562,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rocky Mountain Fescue",
@@ -16365,7 +16617,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rocky-Ledge Beardtongue",
@@ -16431,7 +16684,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Roseroot",
@@ -16498,7 +16752,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -16566,7 +16821,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rough Fescue",
@@ -16617,7 +16873,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Rough-fruited Fairy Bells",
@@ -16672,7 +16929,8 @@
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
     "leaf_surface": "glossy",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Round-leaved Alumroot",
@@ -16736,7 +16994,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Round-leaved Sundew",
@@ -16790,7 +17049,8 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Round-leaved Yellow Violet",
@@ -16853,7 +17113,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sago Pondweed",
@@ -16920,7 +17181,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Saline Shooting Star",
@@ -16986,7 +17248,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Saltgrass",
@@ -17040,7 +17303,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sand Grass",
@@ -17091,7 +17355,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sandbar Willow",
@@ -17161,7 +17426,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sandberg Bluegrass",
@@ -17215,7 +17481,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sartwell's Sedge",
@@ -17266,7 +17533,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Saskatoon Berry",
@@ -17337,7 +17605,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -17403,7 +17672,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Scorpion Weed",
@@ -17467,7 +17737,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Self-heal",
@@ -17533,7 +17804,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Seneca Snakeroot",
@@ -17583,7 +17855,8 @@
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sheep Fescue",
@@ -17700,7 +17973,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -17833,7 +18107,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Aster",
@@ -17896,7 +18171,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Fleabane",
@@ -17944,7 +18220,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "spatulate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
@@ -17962,7 +18238,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -18028,7 +18305,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Locoweed",
@@ -18095,7 +18373,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Milkweed",
@@ -18165,7 +18444,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -18232,7 +18512,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -18298,7 +18579,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sideoats Grama",
@@ -18352,7 +18634,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "one_sided_raceme",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silky Lupine",
@@ -18422,7 +18705,8 @@
     "flowering_stems": 6,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -18482,7 +18766,8 @@
     "fruit_form": "berry",
     "bark_texture": "shaggy",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silver Sagebrush",
@@ -18552,7 +18837,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silverberry",
@@ -18610,7 +18896,8 @@
     "branching": "suckering",
     "bark_texture": "shaggy",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silverweed",
@@ -18673,7 +18960,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Silvery Lupine",
@@ -18743,7 +19031,8 @@
     "flowering_stems": 6,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sitka Valerian",
@@ -18791,7 +19080,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
@@ -18809,7 +19098,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Skunk Currant",
@@ -18877,7 +19167,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -18943,7 +19234,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -19010,7 +19302,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Slender Nettle",
@@ -19062,7 +19355,8 @@
     "leaf_arrangement": "opposite",
     "growth_form": "erect",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Slender Wheatgrass",
@@ -19116,7 +19410,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Slough Grass",
@@ -19170,7 +19465,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Small Bottle Sedge",
@@ -19220,7 +19516,8 @@
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Small-fruited Bulrush",
@@ -19274,7 +19571,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Small-leaved Everlasting (Small-leaved Pussytoes)",
@@ -19339,7 +19637,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Smooth Aster",
@@ -19405,7 +19704,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Smooth Blue Beardtongue",
@@ -19471,7 +19771,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
@@ -19535,7 +19836,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Smooth Sweet Cicely",
@@ -19601,7 +19903,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Smooth Wild Rye",
@@ -19655,7 +19958,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sneezeweed",
@@ -19718,7 +20022,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Soapweed Yucca",
@@ -19766,7 +20071,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "bell",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 50.0,
     "leaf_arrangement": "basal",
@@ -19787,7 +20092,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Spear-leaved Arnica",
@@ -19850,7 +20156,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Spike Trisetum",
@@ -19904,7 +20211,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -19970,7 +20278,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Spreading Dogbane",
@@ -20040,7 +20349,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -20094,7 +20404,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Spring Beauty",
@@ -20147,7 +20458,8 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
     "growth_form": "grassy",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Square-stem Monkeyflower",
@@ -20213,7 +20525,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -20272,7 +20585,8 @@
     "growth_form": "erect",
     "fruit_form": "berry",
     "leaf_surface": "glossy",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -20335,7 +20649,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -20468,7 +20783,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -20534,7 +20850,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -20598,7 +20915,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Stinging Nettle",
@@ -20706,7 +21024,8 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sulphur Hedysarum",
@@ -20754,7 +21073,7 @@
     "image_license": "cc-by",
     "flower_color": "#d6457e",
     "flower_form": "pea",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
@@ -20772,7 +21091,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Swamp Horsetail",
@@ -20826,7 +21146,8 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
     "growth_form": "emergent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sweet Broom (Alpine Sweetvetch)",
@@ -20890,7 +21211,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -20956,7 +21278,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Sweetgrass",
@@ -21010,7 +21333,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Switchgrass",
@@ -21044,7 +21368,7 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
@@ -21058,13 +21382,14 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -21134,7 +21459,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Goldenrod",
@@ -21200,7 +21526,8 @@
     "flowering_stems": 5,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -21249,7 +21576,7 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
@@ -21267,7 +21594,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Larkspur",
@@ -21336,7 +21664,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -21403,7 +21732,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Meadow Rue",
@@ -21470,7 +21800,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -21539,7 +21870,8 @@
     "flowering_stems": 16,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tamarack",
@@ -21595,7 +21927,8 @@
     "fall_color": "#d9a72e",
     "branching": "excurrent",
     "bark_texture": "scaly",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Thimbleberry",
@@ -21645,7 +21978,7 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#a82a47",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lobed",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
@@ -21667,7 +22000,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Thinleaf Alder",
@@ -21723,7 +22057,8 @@
     "fall_color": "#9a8a3e",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Three-square Rush",
@@ -21777,7 +22112,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Ticklegrass",
@@ -21831,7 +22167,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Torrey's Rush",
@@ -21885,7 +22222,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "rush_umbel",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Trailing Raspberry",
@@ -21932,7 +22270,7 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#a82a47",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
@@ -21951,7 +22289,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Trembling Aspen",
@@ -22007,7 +22346,8 @@
     "fall_color": "#e8c33a",
     "branching": "excurrent",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tufted Hairgrass",
@@ -22106,13 +22446,14 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Turned Sedge",
@@ -22163,7 +22504,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Twin Arnica",
@@ -22229,7 +22571,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Twinflower",
@@ -22296,7 +22639,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -22365,7 +22709,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -22428,7 +22773,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Variegated Horsetail",
@@ -22482,7 +22828,8 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
     "growth_form": "emergent",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Veiny Meadow-Rue",
@@ -22550,7 +22897,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -22622,7 +22970,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -22689,7 +23038,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Water Birch",
@@ -22745,7 +23095,8 @@
     "fall_color": "#e8c34a",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Water Parsnip",
@@ -22808,7 +23159,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Water Sedge",
@@ -22862,7 +23214,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Water Smartweed",
@@ -22929,7 +23282,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Blue Iris",
@@ -22980,7 +23334,7 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 45.0,
     "leaf_arrangement": "basal",
@@ -22998,7 +23352,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Canada Violet",
@@ -23118,7 +23473,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Meadow Aster",
@@ -23166,7 +23522,7 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
@@ -23184,7 +23540,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Meadowrue",
@@ -23251,7 +23608,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Mountain Ash",
@@ -23323,7 +23681,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -23374,7 +23733,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "bristly",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Snowberry",
@@ -23448,7 +23808,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -23499,7 +23860,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "contracted_spike",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Willow Aster",
@@ -23563,7 +23925,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Wood Lily",
@@ -23626,7 +23989,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Camas",
@@ -23695,7 +24059,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Evening Primrose",
@@ -23758,7 +24123,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Geranium",
@@ -23825,7 +24191,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Mountain Avens",
@@ -23892,7 +24259,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Prairie Clover",
@@ -23958,7 +24326,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White Spruce",
@@ -24015,7 +24384,8 @@
     "branching": "excurrent",
     "bark_texture": "scaly",
     "leaf_surface": "glaucous",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "White-grained Mountain Rice Grass",
@@ -24066,7 +24436,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "open_panicle",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Bergamot",
@@ -24133,7 +24504,8 @@
     "flowering_stems": 28,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Black Currant",
@@ -24201,7 +24573,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Blue Flax",
@@ -24267,7 +24640,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Chives",
@@ -24336,7 +24710,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Clematis",
@@ -24402,7 +24777,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Gooseberry",
@@ -24471,7 +24847,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Licorice",
@@ -24538,7 +24915,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -24611,7 +24989,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Mint",
@@ -24747,7 +25126,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Red Currant",
@@ -24818,7 +25198,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -24871,7 +25252,8 @@
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
     "growth_form": "clump",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Strawberry",
@@ -24940,7 +25322,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Vetch",
@@ -25009,7 +25392,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Willow Aster",
@@ -25075,7 +25459,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Winterfat",
@@ -25132,7 +25517,8 @@
     "branching": "decurrent",
     "bark_texture": "shaggy",
     "leaf_surface": "pubescent",
-    "flower_colour_source": ""
+    "flower_colour_source": "",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wire Rush",
@@ -25186,7 +25572,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "rush_umbel",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
@@ -25235,7 +25622,7 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
@@ -25253,7 +25640,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Woodland Strawberry",
@@ -25322,7 +25710,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Woods' Rose",
@@ -25394,7 +25783,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -25461,7 +25851,8 @@
     "flowering_stems": 14,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Woolly Sedge",
@@ -25515,7 +25906,8 @@
     "leaf_arrangement": "basal",
     "growth_form": "tussock",
     "inflorescence_form": "sedge_cluster",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yarrow",
@@ -25648,7 +26040,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Avens",
@@ -25715,7 +26108,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -25781,7 +26175,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Buckwheat",
@@ -25848,7 +26243,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Columbine",
@@ -25919,7 +26315,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Flax",
@@ -25985,7 +26382,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -26051,7 +26449,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Monkey Flower",
@@ -26117,7 +26516,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -26184,7 +26584,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -26250,7 +26651,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Paintbrush",
@@ -26295,7 +26697,7 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
@@ -26313,7 +26715,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "epithet"
+    "flower_colour_source": "epithet",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Pond-lily",
@@ -26380,7 +26783,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Pucoon",
@@ -26446,7 +26850,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow Rattle",
@@ -26495,7 +26900,7 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "opposite",
@@ -26513,7 +26918,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellow-flowered Locoweed",
@@ -26583,7 +26989,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name"
+    "flower_colour_source": "name",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellowbells",
@@ -26631,7 +27038,7 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f0a818",
     "flower_form": "lily",
-    "native_provinces": "AB,SK",
+    "native_provinces": "AB",
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
@@ -26649,7 +27056,8 @@
     "flowering_stems": 4,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Yellowstone Draba",
@@ -26712,7 +27120,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Scarlet Globemallow",
@@ -26775,7 +27184,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Bastard Toadflax",
@@ -26839,7 +27249,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -26965,7 +27376,8 @@
     "flowering_stems": 40,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Woolly Groundsel",
@@ -27029,7 +27441,8 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tufted Fleabane",
@@ -27093,6 +27506,7 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   }
 ]

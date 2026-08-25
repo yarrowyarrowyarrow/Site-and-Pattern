@@ -445,7 +445,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # catalogue systematically under-reported northern occurrence for its sixteen
 # most-recorded species, and nothing could see it, because a truncated harvest
 # and a complete one look identical once cached.
-_SCHEMA_VERSION = 78
+_SCHEMA_VERSION = 79
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -820,6 +820,30 @@ def _migrate_to_v64(conn: sqlite3.Connection):
     try:
         conn.execute(
             "ALTER TABLE plants ADD COLUMN flower_colour_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
+    conn.commit()
+
+
+def _migrate_to_v79(conn: sqlite3.Connection):
+    """Where the province list came from (V2.80).
+
+    `native_provinces` was the one claim on a species page with no source
+    column, while flower colour and safety both had one -- and it is the claim
+    the outside botanical review actually objected to. F144 shipped the reader
+    side of this (`src.nativity.SOURCE_FIELD`) and left the column for the day
+    VASCAN could be read; that day is now.
+
+    Additive and idempotent, like every migration in this chain. The column
+    exists here rather than only in `schema.sql` so an *existing* install picks
+    it up without a rebuild, and it defaults to blank because blank is the
+    honest answer for a row nobody has checked -- `nativity.provenance` reads
+    a missing source as "inferred" and names the heuristic, which is right.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants "
+            "ADD COLUMN native_provinces_source TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass                              # column already present
     conn.commit()
@@ -1895,6 +1919,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("leaf_data_source", ""),
             p.get("leaf_data_citation", ""),
             p.get("flower_colour_source", ""),
+            p.get("native_provinces_source", ""),
         ))
 
     conn.executemany(
@@ -1921,10 +1946,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
             flowering_stems, flower_data_source, flower_data_citation,
-            leaf_data_source, leaf_data_citation, flower_colour_source)
+            leaf_data_source, leaf_data_citation, flower_colour_source,
+            native_provinces_source)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -2061,6 +2087,9 @@ def init_db() -> None:
 
         if current_version < 64:
             _migrate_to_v64(conn)
+
+        if current_version < 79:
+            _migrate_to_v79(conn)
 
         # Add parent_id to polycultures if missing
         try:

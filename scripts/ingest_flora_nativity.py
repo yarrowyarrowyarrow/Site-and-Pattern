@@ -51,6 +51,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 FETCHED = PROJECT_ROOT / "data" / "fetched" / "flora_nativity.json"
 PLANT_FILES = ("plants_master.json", "garden_plants.json")
 
+#: Read from `src.nativity` rather than spelled again here. That module decides
+#: whether a page calls a claim inferred by looking for exactly this key, and a
+#: second copy of the string is a silent no-op waiting to happen: the write
+#: would succeed, and every page would go on saying "inferred" with nothing
+#: anywhere to show it had gone wrong.
+from src.nativity import SOURCE_FIELD as SOURCE_KEY  # noqa: E402
+
 
 def _short(path) -> str:
     """A repo-relative path when it is inside the repo, the full path when not.
@@ -193,6 +200,103 @@ def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
               f"of anything. Re-run the fetch for them.")
 
 
+#: What `--apply` writes into `native_provinces_source`. `flora` is
+#: `src/confidence.py`'s existing word for "read from a published flora", and
+#: VASCAN is exactly that -- the national vascular checklist. Using the shared
+#: vocabulary rather than inventing "vascan" is what lets `nativity.provenance`
+#: stop calling the claim inferred without knowing where it came from.
+SOURCE_VALUE = "flora"
+
+
+def _ab_flag(row: dict) -> bool:
+    """`native_to_alberta` as a boolean, tolerating ``"1?"``.
+
+    Some rows carry ``"1?"`` -- native to Alberta, editorially uncertain -- and
+    `db/plants.py` has always read it as truthy (``in ("1", "1?")``). A plain
+    ``int()`` here raises on it, in an apply that walks every row in the
+    catalogue.
+
+    Comparison is by BOOLEAN on purpose, so a ``"1?"`` that VASCAN agrees with
+    is left exactly as it is. The question mark is an editorial signal about
+    Alberta specifically, `src/nativity.py` reads it as one, and overwriting it
+    with a clean ``1`` would quietly destroy a hedge somebody meant.
+    """
+    return str(row.get("native_to_alberta", 0)).strip() in ("1", "1?", "true",
+                                                            "True")
+
+
+def _apply(buckets: dict) -> dict:
+    """Write the two changes VASCAN earns, and only those.
+
+    **narrow** -> the province list becomes VASCAN's. This is the outside
+    review's actual complaint: 354 of 430 species publish "AB,SK" from an
+    inference about ecoregions continuing across the 110th meridian, and for
+    these 34 a published flora disagrees.
+
+    **narrow + confirm** -> `native_provinces_source` is stamped, which is the
+    seam `src/nativity.py` has carried since F144 waiting for this. Until a
+    species has it, every page says the claim is inferred; the 414 species
+    VASCAN answered can now name a flora instead.
+
+    Three buckets are deliberately NOT applied, and each for its own reason:
+    `not_here` is a removal, which V2.74 routes through `excluded_taxa.json`
+    with an authority string; `name` is a rename, which moves plant ids,
+    `plant_fauna_master.json` keys and a public URL; `undetermined` is the
+    reader failing to resolve a lineage, which is not a finding about a plant.
+    Those keep no source field, so their pages keep saying inferred -- which
+    for them is still true.
+    """
+    changed = {"narrowed": [], "sourced": 0, "ab_flag": []}
+    wanted = {}
+    for row in buckets["narrow"]:
+        wanted[row["scientific_name"]] = row["vascan"]
+    sourced = {row["scientific_name"]
+               for row in buckets["narrow"] + buckets["confirm"]}
+
+    for filename in PLANT_FILES:
+        path = PROJECT_ROOT / "data" / filename
+        try:
+            with open(path, encoding="utf-8") as f:
+                rows = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(rows, list):
+            continue
+
+        touched = False
+        for row in rows:
+            name = row.get("scientific_name") if isinstance(row, dict) else None
+            if not name or name not in sourced:
+                continue
+            if name in wanted:
+                before = row.get("native_provinces") or ""
+                after = wanted[name]
+                if before != after:
+                    row["native_provinces"] = after
+                    changed["narrowed"].append((name, before, after))
+                    touched = True
+                # `native_to_alberta` is a SEPARATE column and the app's actual
+                # native filter and habitat-score input. Narrowing the province
+                # string while leaving the flag set would leave two fields in
+                # one row contradicting each other, and the one the score reads
+                # would be the wrong one.
+                flag = "AB" in after.split(",")
+                if _ab_flag(row) != flag:
+                    row["native_to_alberta"] = 1 if flag else 0
+                    changed["ab_flag"].append((name, int(flag)))
+                    touched = True
+            if row.get(SOURCE_KEY) != SOURCE_VALUE:
+                row[SOURCE_KEY] = SOURCE_VALUE
+                changed["sourced"] += 1
+                touched = True
+
+        if touched:
+            path.write_text(
+                json.dumps(rows, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8")
+    return changed
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -200,6 +304,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--limit", type=int, default=40,
                    help="Rows printed per bucket (default 40).")
     p.add_argument("--json", help="Also write the buckets here, for review.")
+    p.add_argument("--apply", action="store_true",
+                   help="Write the narrowings and stamp the source field. "
+                        "Report only without it.")
     args = p.parse_args(argv)
 
     # `FETCHED` read here rather than taken from `load_fetched`'s default,
@@ -227,9 +334,32 @@ def main(argv: list[str] | None = None) -> int:
                                    encoding="utf-8")
         print(f"\nWrote {args.json}")
 
-    print("\nNOTHING HAS BEEN CHANGED. Removals go through "
-          "data/excluded_taxa.json with an authority; province narrowing is a "
-          "seed-file edit; renames are their own increment.")
+    if not args.apply:
+        print("\nNOTHING HAS BEEN CHANGED. Removals go through "
+              "data/excluded_taxa.json with an authority; renames are their "
+              "own increment. Province narrowing and the source stamp are "
+              "what --apply writes.")
+        return 0
+
+    done = _apply(buckets)
+    print(f"\n=== applied ===")
+    for name, before, after in done["narrowed"]:
+        print(f"  {name:34s} {before or '-':8s} -> {after}")
+    print(f"\n  {len(done['narrowed'])} province lists narrowed")
+    if done["ab_flag"]:
+        # Called out separately because it is the one that changes app
+        # BEHAVIOUR rather than a published string: `native_to_alberta` feeds
+        # the native filter and the Habitat Value Score.
+        print(f"  {len(done['ab_flag'])} native_to_alberta flags corrected "
+              f"(this moves the Habitat Value Score):")
+        for name, flag in done["ab_flag"]:
+            print(f"      {name:34s} -> {flag}")
+    print(f"  {done['sourced']} rows stamped {SOURCE_KEY}={SOURCE_VALUE!r}")
+    print("\nNOT applied, on purpose: removals (excluded_taxa.json with an "
+          "authority), renames (their own increment), and undetermined (a "
+          "lineage this reader could not follow, not a finding about a plant)."
+          "\n\nNow bump _SCHEMA_VERSION in src/db/plants.py, or no existing "
+          "install will ever see this.")
     return 0
 
 

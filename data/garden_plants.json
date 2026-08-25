@@ -261,6 +261,7 @@
     "fall_color": "",
     "branching": "",
     "growth_form": "clump",
-    "flower_colour_source": "estimated"
+    "flower_colour_source": "estimated",
+    "native_provinces_source": "flora"
   }
 ]

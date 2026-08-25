@@ -40,7 +40,12 @@ ecoregions. V2.79 replaces that with a **0.25° occupancy grid**
 publishing a *missing* distribution field as an **absence** for 173 species.
 V2.80 made the new map legible — and found that the range wash it was supposed
 to be tuning had **never been drawn**, because the province outlines are
-redrawn over it with an opaque white fill.
+redrawn over it with an opaque white fill. **V2.80 also landed VASCAN**: the
+author downloaded the Darwin Core Archive, two parser bugs came out of meeting
+real data, and 414 of 434 species now carry
+`native_provinces_source='flora'` with 34 province lists narrowed (schema
+v79). That closes F137/F144 and the review's original complaint about the
+nativity claim.
 
 Two threads are open, in this order:
 
@@ -51,9 +56,13 @@ Two threads are open, in this order:
 2. **F147** — publish the occurrence points with a specimen/observation toggle.
    `range_svg(..., marks="all")` is the switch it needs.
 
-Plus **VASCAN**: waiting on the author to download the Darwin Core Archive and
-run `scripts/fetch_flora_nativity.py --from-archive`. The canary is *Amelanchier
-alnifolia* landing in `confirm`, and the `review` bucket collapsing from 182.
+Plus what VASCAN left behind, all of it **report-only on purpose**: 11 removals
+(route through `data/excluded_taxa.json` with an authority, per V2.74), 3 + 2
+renames (*Urtica dioica* → *U. gracilis*, *Oligoneuron rigidum* → *Solidago
+rigida* subsp. *rigida* — these move plant ids, `plant_fauna_master.json` keys
+and public URLs, so each is its own increment), and 6 `undetermined` that want
+`fetch_flora_nativity.py --from-archive <path> --explain "<species>"` run on
+them before anybody decides anything.
 
 **This section is stale the moment this work ships.** Delete it then; the plan
 files and the F145–F149 ledger row in `docs/ROADMAP_NEXT.md` are the permanent

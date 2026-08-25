@@ -211,6 +211,43 @@ On `plants(plant_type)`, `plants(zone range)`, `plants(native_to_alberta)`,
 
 ---
 
+### `plants.native_provinces_source` (schema v79, V2.80)
+
+Where a species' `native_provinces` came from. It was the one claim on a
+species page with **no** source column, while flower colour and safety both had
+one -- and it is the claim an outside botanical review actually objected to,
+because 354 of 430 species published "AB, SK" from an inference about
+ecoregions continuing across the 110th meridian rather than from any flora.
+
+```sql
+plants.native_provinces_source TEXT DEFAULT ''
+  -- 'flora'   read from VASCAN's published national checklist
+  -- ''        nobody checked; src/nativity.py names the heuristic instead
+```
+
+**Blank is a real answer and must stay blank** for the ~20 species VASCAN could
+not settle -- a removal, a rename, or a lineage the archive reader could not
+follow. Stamping those would publish "read from a published flora" over an
+answer no flora gave, which is the overstatement this line of work exists to
+remove. `src.nativity.provenance` reads a missing source as *inferred* and
+prints the actual heuristic, which for them is still true.
+
+* **Authored by `scripts/ingest_flora_nativity.py --apply`**, over
+  `data/fetched/flora_nativity.json`. It applies exactly two things -- the
+  narrowings and the stamp -- and refuses removals, renames and undetermined.
+* **Read by `src/nativity.py`**, whose `SOURCE_FIELD` constant the apply
+  imports rather than re-spelling. A second copy of that string would make the
+  write a silent no-op: it succeeds, and every page goes on saying "inferred".
+* **`native_to_alberta` moves with it.** Separate column, and the one the
+  native filter and the Habitat Value Score actually read; V2.80 cleared seven.
+  Note `"1?"` is a legal value (native, editorially uncertain) that
+  `db/plants.py` reads as truthy and a plain `int()` raises on.
+* Additive and empty in `_migrate_to_v79`; the version bump forces the reseed
+  that carries the values in. Without the bump the column arrives empty and
+  stays empty forever -- and nothing raises.
+
+---
+
 ### `plants.flower_colour_source` (schema v64, V2.48)
 
 Where a species' `flower_color` hex came from. One column, three values, and it

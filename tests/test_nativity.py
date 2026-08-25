@@ -11,10 +11,14 @@ shape has one. The field a site called GrowNativePlants is named for had none,
 which is exactly backwards, and 354 of 430 species publish "AB, SK" from a
 heuristic about ecoregion continuity.
 
-The sourced replacement is VASCAN (F137), whose fetcher is written and tested
-and has never run because the project's sessions cannot reach
-data.canadensys.net. These tests pin the interim answer and the seam the real
-one arrives through.
+The sourced replacement is VASCAN (F137). **It has now run** (V2.80): the
+author downloaded the Darwin Core Archive on a machine with egress, and 414
+species carry `native_provinces_source = "flora"` while ~20 that VASCAN
+could not settle -- a removal, a rename, or a lineage the reader could not
+follow -- deliberately carry nothing and keep the derived note.
+
+These tests pin both halves, and the seam test that used to count down to
+this day is inverted rather than deleted.
 """
 
 import json
@@ -25,6 +29,19 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src import nativity as N                        # noqa: E402
+
+
+def _shipped() -> list:
+    """The shipped plant rows. Both files, because `garden_plants.json` also
+    carries `native_provinces` and a guard that reads only the master would
+    pass while half the catalogue drifted."""
+    out = []
+    for name in ("plants_master.json", "garden_plants.json"):
+        path = os.path.join(os.path.dirname(__file__), "..", "data", name)
+        with open(path, encoding="utf-8") as fh:
+            rows = json.load(fh)
+        out += rows if isinstance(rows, list) else rows.get("plants", [])
+    return out
 
 
 class TestTheClaimSaysWhatItRestsOn(unittest.TestCase):
@@ -87,32 +104,52 @@ class TestTheSeamVascanArrivesThrough(unittest.TestCase):
         row = {"native_provinces": "AB,SK", N.SOURCE_FIELD: "flora"}
         self.assertNotIn("ecoregions", N.provenance(row)["note"])
 
-    def test_the_column_does_not_exist_yet_and_that_is_recorded(self):
-        """If this starts failing, VASCAN has landed and `provenance` should
-        read the column rather than infer from the shape of the value."""
-        with open(os.path.join(os.path.dirname(__file__), "..", "data",
-                               "plants_master.json"), encoding="utf-8") as fh:
-            rows = json.load(fh)
-        rows = rows if isinstance(rows, list) else rows.get("plants", [])
-        have = [r for r in rows if r.get(N.SOURCE_FIELD)]
-        self.assertEqual(have, [], "VASCAN has run: read the column, not the "
-                                   "shape of the value")
+    def test_vascan_has_landed_and_most_species_carry_a_real_source(self):
+        """This test used to assert the column was EMPTY, as a countdown: *"if
+        this starts failing, VASCAN has landed"*. It started failing in V2.80,
+        when the author ran the Darwin Core Archive and 414 species gained a
+        source read from a published flora. Inverted rather than deleted, so
+        the invariant it was protecting -- that nothing writes this field by
+        accident -- keeps a guard."""
+        rows = _shipped()
+        sourced = [r for r in rows if r.get(N.SOURCE_FIELD)]
+        self.assertGreater(len(sourced), 400)
+        for row in sourced:
+            self.assertEqual(row[N.SOURCE_FIELD], "flora",
+                             f"{row.get('scientific_name')} carries an "
+                             f"unexpected source value")
+
+    def test_the_species_vascan_could_not_settle_keep_no_source(self):
+        """~20 species are a removal, a rename, or a lineage the archive
+        reader could not follow. Stamping those would publish "read from a
+        published flora" over an answer no flora gave, which is the exact
+        overstatement this whole line of work exists to remove."""
+        blank = [r.get("scientific_name") for r in _shipped()
+                 if not r.get(N.SOURCE_FIELD)]
+        self.assertTrue(blank, "every species sourced: check nothing stamped "
+                               "the unresolved ones")
+        for name in ("Urtica dioica", "Helianthus annuus", "Andropogon "
+                     "gerardii"):
+            self.assertIn(name, blank)
 
 
 class TestEveryPublishedClaimIsMarked(unittest.TestCase):
     """The failure mode is silent: a note that renders nowhere looks exactly
     like a catalogue whose claims are all sourced."""
 
-    def test_every_shipped_species_with_a_claim_gets_a_note(self):
-        with open(os.path.join(os.path.dirname(__file__), "..", "data",
-                               "plants_master.json"), encoding="utf-8") as fh:
-            rows = json.load(fh)
-        rows = rows if isinstance(rows, list) else rows.get("plants", [])
-        claimed = [r for r in rows if (r.get("native_provinces") or "").strip()]
+    def test_every_shipped_species_with_a_claim_is_sourced_or_marked(self):
+        """Before V2.80 this read "gets a note", because nothing was sourced
+        and an unmarked claim could only be an unmarked inference. Now 414
+        species are read from a flora and correctly carry NO note -- a checked
+        value is not marked, or the eye learns to skip the mark. So the
+        invariant generalises rather than relaxes: a published claim is either
+        sourced or marked, and never silently neither."""
+        claimed = [r for r in _shipped()
+                   if (r.get("native_provinces") or "").strip()]
         self.assertGreater(len(claimed), 400)
-        unmarked = [r.get("scientific_name") for r in claimed
-                    if not N.provenance(r)["note"]]
-        self.assertEqual(unmarked, [])
+        naked = [r.get("scientific_name") for r in claimed
+                 if not r.get(N.SOURCE_FIELD) and not N.provenance(r)["note"]]
+        self.assertEqual(naked, [])
 
     def test_the_species_page_renders_it(self):
         from src.static_site_species import _native

@@ -403,7 +403,43 @@ and refuses, following the rule `tools/ecoregions/fetch.py` already sets for
 unreachable sources: never substitute a different dataset, never write a
 placeholder.
 
-**What the fetch did settle**, unaffected by the above:
+### Resolved: the archive ran (V2.80)
+
+The author downloaded VASCAN v37.17 and it took two more fixes to read, both
+invisible to the synthetic archive V2.79 tested against:
+
+- **`distribution.txt` joins on `id`, not `taxonID`.** It is a Darwin Core
+  *extension*, and an extension references the core row through the column
+  `meta.xml` declares as `<coreid>`. The synthetic archive wrote `taxonID` in
+  both files, so the fixture and the parser shared the assumption under test.
+- **A hybrid formula is filed at rank species.** `_canonical` reduces a name to
+  its first two words, so *Chamaenerion angustifolium* tied with
+  *C. angustifolium* subsp. *angustifolium* x *C. latifolium* and the winner was
+  **dict iteration order**. The hybrid won and fireweed was published as
+  unrecorded in Alberta, while two AB/SK/MB-native subspecies hung off the real
+  species unvisited.
+
+`--explain "<species>"` prints the archive's own rows for one name -- the taxa
+it matched, what hangs beneath the chosen one, and the distribution each
+carries. It is what found the second bug, and it is what the remaining
+`undetermined` species should be pointed at.
+
+**Final tally over 434 catalogue species:**
+
+| bucket | count | |
+|---|---|---|
+| `confirm` | **380** | VASCAN agrees |
+| `narrow` | **34** | we claim more provinces than VASCAN records |
+| `not_here` | **11** | recorded introduced, or from neither province |
+| `undetermined` | **6** | matched, no distribution the roll-up could reach |
+| `name` | **3** | not in the checklist at all |
+
+The 34 narrowings and 414 source stamps are applied (schema v79). The other
+three buckets are **not**, each by its own route -- see
+[`plans/V2.80-the-inference-gets-a-source.md`](plans/V2.80-the-inference-gets-a-source.md).
+
+**What the first, API-only fetch had settled** (superseded by the table above,
+kept because the numbers are quoted elsewhere):
 
 | | count |
 |---|---|

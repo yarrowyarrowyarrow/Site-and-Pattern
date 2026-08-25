@@ -496,6 +496,67 @@ written down confidently, in a plan, twice.
    arithmetic about the wrong layer is indistinguishable from a root cause
    until you look.
 
+## 22. The fixture agreed with the parser (V2.80)
+
+**What happened.** V2.79 built a Darwin Core Archive reader for VASCAN and,
+unable to reach `data.canadensys.net`, verified it against a **synthetic
+archive it also wrote**. The plan said so honestly: *"tested against a synthetic
+archive and has never met the real one."*
+
+The author downloaded the real archive and it was refused outright:
+
+```
+the distribution file has no taxonID column; header was
+['id', 'locationID', 'locality', 'countryCode', ...]
+```
+
+`distribution.txt` is a Darwin Core *extension*, and an extension joins on the
+column `meta.xml` declares as `<coreid>` — `id` — rather than repeating
+`taxonID`. The synthetic archive had written `taxonID` in both files. **The
+fixture and the parser shared one assumption, so the tests could only ever
+confirm it.** Nine tests passed against a reader that could not open the file
+it exists to read.
+
+A second bug survived the same way. `_canonical` reduces a name to its first
+two words, and VASCAN files a hybrid formula at rank *species* — so
+`Chamaenerion angustifolium` and `C. angustifolium subsp. angustifolium ×
+C. latifolium` scored identically, and the winner was **dict iteration order**.
+The hybrid won, the roll-up began at a nothotaxon with no children, and
+fireweed was published as unrecorded in Alberta while two AB/SK/MB-native
+subspecies hung off the real species, unvisited. No synthetic fixture contained
+a hybrid, because nobody writing one thinks to.
+
+**The scar.** Both bugs were invisible to a green suite, and the second was
+invisible even to the *real* run — it produced a plausible answer, not an
+error. What found it was a diagnostic (`--explain`) that printed the archive's
+own rows, and the person who knew fireweed grows in Alberta.
+
+Then the fix's own regression test **passed without the fix**: the plant's name
+happened to be shorter than the hybrid's, so an unrelated length tiebreak
+carried it and the new rule was doing nothing.
+
+**Rules:**
+
+1. **A fixture you wrote cannot test an assumption you made.** When the real
+   input is unreachable, the fixture's *shape* is the thing least likely to be
+   right, and it is the thing under test. Build fixtures from a real header,
+   real names and real ids the moment any arrive — the tests here now carry
+   VASCAN's eight-column header verbatim, trailing columns included.
+2. **Always break the fix and watch the test fail.** Twice in this increment a
+   new test passed against the unfixed code, for an incidental reason. A test
+   written after a fix is a hypothesis until it has been seen to fail.
+3. **Ship the diagnostic, not just the fix.** `--explain` cost twenty minutes,
+   found the cause in one run, and is what the next unexplainable species will
+   be pointed at. Where the failure is a *plausible answer* rather than an
+   error, a way to print the intermediate state is the only tool that works.
+4. **Sort keys need a total order.** Ties broken by dict iteration are a bug
+   that changes between runs, between Python versions, and between the machine
+   that reproduces it and the one that does not.
+5. **An empty result should say which kind of empty it is.** "No descendants
+   found" and "descendants found, none carrying a row" have different fixes,
+   and a diagnostic that cannot tell them apart sends the reader looking in the
+   wrong place.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS plants (
     --   estimated | the genus default, i.e. not observed for this species
     -- See scripts/seed_flower_colour.py, which is the provenance record.
     flower_colour_source TEXT DEFAULT '',
+    -- Where the province list came from (v79, V2.80). `native_provinces` was
+    -- the one claim on the page with no source column, while flower colour and
+    -- safety both had one -- and it is the claim the outside botanical review
+    -- actually objected to, because 354 of 430 species published "AB,SK" from
+    -- an inference about ecoregions continuing across the 110th meridian.
+    --   flora | read from VASCAN's published national checklist
+    --   ''    | nobody checked; src/nativity.py names the heuristic instead
+    -- Blank is the honest default and must stay blank for the ~20 species
+    -- VASCAN could not settle. See scripts/ingest_flora_nativity.py --apply.
+    native_provinces_source TEXT DEFAULT '',
     flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
     fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
     -- Fruit SHAPE (v49, V2.29) — the companion to fruit_color. Every fleshy

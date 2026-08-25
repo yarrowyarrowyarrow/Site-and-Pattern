@@ -19,8 +19,18 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.78`,
-`_SCHEMA_VERSION = 78` (in `src/db/plants.py`).
+**Current facts (verify before quoting):** branch `V2.80`,
+`_SCHEMA_VERSION = 79` (in `src/db/plants.py`).
+
+v79 adds `plants.native_provinces_source` (V2.80) and reseeds. It is the worked
+example of the half of a seed change that fails **silently**: the apply wrote
+the field into `data/plants_master.json` for 414 species, the report said so,
+the JSON diff looked right -- and with no column behind it the value is dropped
+on load, so `nativity.provenance` saw nothing and all 430 published pages went
+on saying the claim was inferred. Nothing raised. The column, the migration,
+the seed INSERT and the version bump are one change, not four, and
+`tests/test_nativity_source_column.py` asserts it through a real reseed rather
+than against the JSON.
 
 v78 is a reseed only. The GBIF harvest is capped at 6,000 records per species
 and GBIF orders newest-first, so for a common plant that window was recent
