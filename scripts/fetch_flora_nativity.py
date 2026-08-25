@@ -424,6 +424,85 @@ def reassess(path=OUTPUT_PATH) -> dict:
     return {"blob": blob, "moved": moved}
 
 
+#: Where the checklist comes from. **No download URL here on purpose.** This
+#: project's sessions cannot reach data.canadensys.net to check one, and a URL
+#: asserted from memory that quietly fetches the wrong thing is worse than no
+#: URL -- the rule `tools/ecoregions/fetch.py` already states for its own
+#: unreachable sources.
+ARCHIVE_LANDING = "https://data.canadensys.net/vascan/"
+ARCHIVE_HINT = f"""VASCAN's full checklist is needed, not the API.
+
+The search endpoint attaches distribution to the LOWEST accepted taxon and
+cannot enumerate a taxon's children (probed: `Amelanchier alnifolia var`
+returns numMatches 0), so 173 of 434 species cannot be resolved through it.
+The published Darwin Core Archive carries every taxon at every rank with its
+parent and its distribution.
+
+  1. Open {ARCHIVE_LANDING} and find its download / Darwin Core Archive link.
+  2. Save the archive anywhere, for example data/fetched/vascan-dwca.zip
+  3. Re-run:  python scripts/fetch_flora_nativity.py --from-archive <path>
+
+An unpacked directory works as well as the .zip. This script will not guess a
+download URL: fetching the wrong dataset and parsing it successfully is the
+failure that would be hardest to notice."""
+
+
+def _run_archive(path: str, *, verbose: bool = True) -> int:
+    """``--from-archive``: build the same output file from the checklist."""
+    from scripts import vascan_archive as archive          # noqa: PLC0415
+
+    if not path:
+        print(ARCHIVE_HINT)
+        return 2
+    source = Path(path)
+    if not source.exists():
+        print(f"No archive at {source}.\n\n{ARCHIVE_HINT}", file=sys.stderr)
+        return 1
+
+    try:
+        taxa = archive.read_taxa(source)
+        dist = archive.read_distribution(source, PROVINCES)
+    except archive.ArchiveProblem as exc:
+        print(f"{exc}\n\n{ARCHIVE_HINT}", file=sys.stderr)
+        return 1
+
+    names = catalogue_species()
+    print(f"Reading {len(taxa):,} taxa and {len(dist):,} distribution rows "
+          f"for {len(names)} catalogue species. No network.\n")
+
+    results, unmatched = {}, []
+    for name in names:
+        got = archive.lookup(taxa, dist, name, PROVINCES)
+        got.update(assess(got))
+        results[name] = got
+        if not got["matched"]:
+            unmatched.append(name)
+
+    verdicts: dict = {}
+    for row in results.values():
+        verdicts[row["verdict"]] = verdicts.get(row["verdict"], 0) + 1
+    for verdict, n in sorted(verdicts.items(), key=lambda kv: -kv[1]):
+        print(f"  {n:4d}  {verdict}")
+    if unmatched and verbose:
+        print(f"\n  {len(unmatched)} names the checklist does not carry:")
+        for name in unmatched[:20]:
+            print(f"      {name}")
+        if len(unmatched) > 20:
+            print(f"      ... and {len(unmatched) - 20} more")
+
+    blob = write(results, [])
+    blob["source"] = (f"VASCAN Darwin Core Archive, read from "
+                      f"{source.name} on {date.today().isoformat()}")
+    OUTPUT_PATH.write_text(
+        json.dumps(blob, indent=1, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    print(f"\nWrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)} "
+          f"({len(results)} species).")
+    print("Next: python scripts/ingest_flora_nativity.py   (reports; "
+          "applies nothing)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -434,11 +513,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--species", action="append", default=None,
                    help="Only this scientific name (repeatable).")
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--from-archive", metavar="PATH", nargs="?", const="",
+                   help="Read VASCAN's Darwin Core Archive instead of the API "
+                        "(a .zip or an unpacked directory). With no PATH, "
+                        "print what to download and where to put it.")
     p.add_argument("--reassess", action="store_true",
                    help="Re-run the verdicts over the already-fetched file "
                         "with NO network. Use after a parser fix.")
     p.add_argument("--quiet", action="store_true")
     args = p.parse_args(argv)
+
+    if args.from_archive is not None:
+        return _run_archive(args.from_archive, verbose=not args.quiet)
 
     if args.reassess:
         if not OUTPUT_PATH.exists():

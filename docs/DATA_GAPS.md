@@ -382,11 +382,26 @@ subspecies:
 | `Alnus incana` | species | **none** |
 | `Alnus incana subsp. tenuifolia` | subspecies | AB, SK native, MB excluded |
 
-Those 173 are **undetermined, not absent**, and the report says so. Reaching
-the answer means querying the infraspecific taxa and unioning their
-distributions, which needs a way to enumerate a taxon's children -- the
-species-level response does not list them, and `parentNameUsageID` points the
-wrong way. Open.
+Those 173 are **undetermined, not absent**, and the report says so.
+
+**The API cannot resolve them and the route is the bulk checklist (V2.79).**
+`search.json` is exact-name only -- `Amelanchier alnifolia var` returns
+`numMatches: 0` -- and `parentNameUsageID` points the wrong way, so a taxon's
+children cannot be enumerated from it.
+
+**The autonym shortcut was considered and rejected.** Guessing
+`<species> var. <epithet>` resolves *Amelanchier alnifolia var. alnifolia* and
+misses *Alnus incana* entirely, whose Alberta taxon is `subsp. tenuifolia`
+rather than the autonym `subsp. incana`. A rule that answers some species and
+silently skips others produces a result that looks complete and is not.
+
+`scripts/vascan_archive.py` reads the published Darwin Core Archive instead,
+rolling each species up over its accepted descendants. It needs the archive
+downloaded by hand -- the project's sessions cannot reach
+`data.canadensys.net`, so `--from-archive` with no path prints what to fetch
+and refuses, following the rule `tools/ecoregions/fetch.py` already sets for
+unreachable sources: never substitute a different dataset, never write a
+placeholder.
 
 **What the fetch did settle**, unaffected by the above:
 
