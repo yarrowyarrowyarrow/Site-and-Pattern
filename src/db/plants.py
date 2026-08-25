@@ -402,7 +402,50 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # The interior regions barely moved (Cypress Upland 231 -> 228, Selwyn Lake
 # Upland 10 -> 8), which is the signature a boundary fix should have: it bites
 # at edges, not in the middle.
-_SCHEMA_VERSION = 77
+# ── v78 (V2.78): the specimen pass, and what the harvest cap was hiding ─────
+#
+# No DDL. A reseed, because `data/plant_ecoregions.json` changed again — and
+# this time it is a gain rather than a correction.
+#
+# `MAX_RECORDS_PER_SPECIES = 6000` bounds the GBIF harvest per species, and
+# GBIF orders newest-first, so for a common plant that window was the last few
+# years of phone observations and nothing before them. Sixteen species sat at
+# the cap holding 89,964 records dated 2021-2026 and **thirty-one herbarium
+# specimens between them**. `--specimen-pass` asks for PRESERVED_SPECIMEN as
+# its own query, which is the only way to reach what the cap cut:
+#
+#     Amelanchier alnifolia      2 specimens ->  246   (oldest now 1898)
+#     Achillea millefolium       ? specimens ->  531
+#     Populus tremuloides        ? specimens ->  158   (oldest now 1820)
+#     cache total          56,124 specimens -> 62,770
+#
+# Measured against v77:
+#
+#     species with rows    420 -> 420        (unchanged)
+#     region rows         3643 -> 3658       (+15, none dropped)
+#     records          361,447 -> 363,302
+#     confidence bands      13 up, 0 down
+#
+# **Purely additive, and the shape of it is the finding.** Every one of the 15
+# new rows belongs to a capped species, and every new region is northern:
+# hay_river_lowland, athabasca_plain, tazin_lake_upland, churchill_river_upland,
+# wabasca_lowland, slave_river_lowland, northern_alberta_uplands,
+# mid_boreal_uplands. That is not a coincidence — it is a sampling bias made
+# visible. Specimen share of in-region records, by region:
+#
+#     athabasca_plain        35 obs / 423 spec   92.4% specimen
+#     tazin_lake_upland      61 obs / 579 spec   90.5%
+#     hay_river_lowland      94 obs / 259 spec   73.4%
+#     aspen_parkland     80,129 obs / 4,134 spec  4.9%
+#     fescue_grassland   43,635 obs / 1,203 spec  2.7%
+#
+# The observation layer maps where people live. In the remote north the
+# herbarium record is very nearly the *only* record, so a newest-first cap did
+# not merely drop old material — it dropped the north. Until this bump, the
+# catalogue systematically under-reported northern occurrence for its sixteen
+# most-recorded species, and nothing could see it, because a truncated harvest
+# and a complete one look identical once cached.
+_SCHEMA_VERSION = 78
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

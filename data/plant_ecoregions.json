@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-08-21",
-  "source": "GBIF occurrence search, retrieved 2026-08-21",
+  "generated": "2026-08-25",
+  "source": "GBIF occurrence search, retrieved 2026-08-25",
   "min_records": 3,
   "comment": "Per-species ecoregion membership derived from georeferenced occurrence records by scripts/seed_ecoregion_ranges.py. Keyed by scientific name because plant ids are not stable across a reseed. Geographic ecoregions only — riparian and wet_meadow are site-scale moisture niches and are not derivable from a coordinate.",
   "species": {
@@ -186,76 +186,86 @@
     "Achillea millefolium": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 593,
+        "occurrences": 618,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 386,
+        "occurrences": 445,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 382,
+        "occurrences": 391,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 301,
+        "occurrences": 341,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 229,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 183,
+        "occurrences": 233,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 175,
+        "occurrences": 196,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 192,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 109,
+        "occurrences": 131,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 97,
+        "occurrences": 112,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 91,
+        "occurrences": 92,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 39,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "wabasca_lowland",
-        "occurrences": 21,
+        "occurrences": 46,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
+        "occurrences": 27,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "wabasca_lowland",
+        "occurrences": 26,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "athabasca_plain",
         "occurrences": 13,
         "confidence": "medium"
       },
       {
         "ecoregion": "western_boreal",
-        "occurrences": 7,
-        "confidence": "low"
+        "occurrences": 9,
+        "confidence": "medium"
       },
       {
         "ecoregion": "churchill_river_upland",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "tazin_lake_upland",
         "occurrences": 6,
         "confidence": "low"
       },
@@ -471,12 +481,12 @@
     "Agrimonia striata": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 359,
+        "occurrences": 360,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 80,
+        "occurrences": 81,
         "confidence": "high"
       },
       {
@@ -922,67 +932,67 @@
     "Amelanchier alnifolia": [
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 1557,
+        "occurrences": 1561,
         "confidence": "high"
       },
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1168,
+        "occurrences": 1190,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 341,
+        "occurrences": 342,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 288,
+        "occurrences": 324,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 220,
+        "occurrences": 223,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 145,
+        "occurrences": 162,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 110,
+        "occurrences": 111,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 74,
+        "occurrences": 78,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 68,
+        "occurrences": 70,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 59,
+        "occurrences": 61,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 56,
+        "occurrences": 60,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 20,
+        "occurrences": 22,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 12,
+        "occurrences": 17,
         "confidence": "medium"
       },
       {
@@ -1916,42 +1926,42 @@
     "Arctostaphylos uva-ursi": [
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 728,
+        "occurrences": 766,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 688,
+        "occurrences": 696,
         "confidence": "high"
       },
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 678,
+        "occurrences": 684,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 484,
+        "occurrences": 502,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 435,
+        "occurrences": 469,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 127,
+        "occurrences": 138,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 112,
+        "occurrences": 117,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 97,
+        "occurrences": 99,
         "confidence": "high"
       },
       {
@@ -1961,22 +1971,27 @@
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 47,
+        "occurrences": 49,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 13,
+        "occurrences": 19,
         "confidence": "medium"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 9,
+        "occurrences": 10,
         "confidence": "medium"
       },
       {
         "ecoregion": "churchill_river_upland",
-        "occurrences": 5,
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "tazin_lake_upland",
+        "occurrences": 6,
         "confidence": "low"
       },
       {
@@ -1985,13 +2000,13 @@
         "confidence": "low"
       },
       {
-        "ecoregion": "tazin_lake_upland",
-        "occurrences": 3,
+        "ecoregion": "hay_river_lowland",
+        "occurrences": 4,
         "confidence": "low"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 3,
+        "occurrences": 4,
         "confidence": "low"
       }
     ],
@@ -4539,7 +4554,7 @@
     "Castilleja miniata": [
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 416,
+        "occurrences": 417,
         "confidence": "high"
       },
       {
@@ -4653,32 +4668,37 @@
     "Chamaenerion angustifolium": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 933,
+        "occurrences": 936,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 651,
+        "occurrences": 661,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 560,
+        "occurrences": 586,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 349,
+        "occurrences": 359,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 213,
+        "occurrences": 224,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 172,
+        "occurrences": 176,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 108,
         "confidence": "high"
       },
       {
@@ -4687,37 +4707,37 @@
         "confidence": "high"
       },
       {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 106,
-        "confidence": "high"
-      },
-      {
         "ecoregion": "peace_lowland",
-        "occurrences": 67,
+        "occurrences": 69,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 57,
+        "occurrences": 61,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 47,
+        "occurrences": 48,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 18,
-        "confidence": "medium"
+        "occurrences": 20,
+        "confidence": "high"
       },
       {
         "ecoregion": "churchill_river_upland",
-        "occurrences": 15,
+        "occurrences": 16,
         "confidence": "medium"
       },
       {
         "ecoregion": "mixed_grassland",
+        "occurrences": 10,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "tazin_lake_upland",
         "occurrences": 9,
         "confidence": "medium"
       },
@@ -4728,17 +4748,17 @@
       },
       {
         "ecoregion": "hay_river_lowland",
-        "occurrences": 7,
-        "confidence": "low"
+        "occurrences": 8,
+        "confidence": "medium"
       },
       {
-        "ecoregion": "tazin_lake_upland",
-        "occurrences": 6,
+        "ecoregion": "athabasca_plain",
+        "occurrences": 4,
         "confidence": "low"
       },
       {
         "ecoregion": "clear_hills_upland",
-        "occurrences": 3,
+        "occurrences": 4,
         "confidence": "low"
       },
       {
@@ -5113,37 +5133,37 @@
     "Cornus canadensis": [
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 1309,
+        "occurrences": 1329,
         "confidence": "high"
       },
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 846,
+        "occurrences": 859,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 750,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 482,
+        "occurrences": 760,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 481,
+        "occurrences": 496,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 492,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 402,
+        "occurrences": 425,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 93,
+        "occurrences": 95,
         "confidence": "high"
       },
       {
@@ -5153,17 +5173,17 @@
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 69,
+        "occurrences": 71,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 26,
         "confidence": "high"
       },
       {
         "ecoregion": "churchill_river_upland",
         "occurrences": 21,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 20,
         "confidence": "high"
       },
       {
@@ -5178,21 +5198,21 @@
       },
       {
         "ecoregion": "clear_hills_upland",
-        "occurrences": 4,
+        "occurrences": 5,
         "confidence": "low"
       },
       {
         "ecoregion": "hay_river_lowland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mid_boreal_lowland",
-        "occurrences": 3,
+        "occurrences": 5,
         "confidence": "low"
       },
       {
         "ecoregion": "tazin_lake_upland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "mid_boreal_lowland",
         "occurrences": 3,
         "confidence": "low"
       }
@@ -5200,47 +5220,47 @@
     "Cornus sericea": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1825,
+        "occurrences": 1854,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 1185,
+        "occurrences": 1188,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 394,
+        "occurrences": 401,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 239,
+        "occurrences": 259,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 179,
+        "occurrences": 194,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 109,
+        "occurrences": 113,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 106,
+        "occurrences": 109,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 58,
+        "occurrences": 62,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 55,
+        "occurrences": 58,
         "confidence": "high"
       },
       {
@@ -5250,18 +5270,18 @@
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 49,
+        "occurrences": 52,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 45,
+        "occurrences": 51,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 6,
-        "confidence": "low"
+        "occurrences": 16,
+        "confidence": "medium"
       },
       {
         "ecoregion": "western_boreal",
@@ -5270,6 +5290,16 @@
       },
       {
         "ecoregion": "mid_boreal_lowland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "churchill_river_upland",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "hay_river_lowland",
         "occurrences": 3,
         "confidence": "low"
       }
@@ -6029,37 +6059,37 @@
     "Elaeagnus commutata": [
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 1853,
+        "occurrences": 1856,
         "confidence": "high"
       },
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1653,
+        "occurrences": 1658,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 676,
+        "occurrences": 681,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 457,
+        "occurrences": 472,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 287,
+        "occurrences": 295,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 207,
+        "occurrences": 214,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 158,
+        "occurrences": 168,
         "confidence": "high"
       },
       {
@@ -6069,13 +6099,18 @@
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 71,
+        "occurrences": 73,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 41,
+        "occurrences": 44,
         "confidence": "high"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 14,
+        "confidence": "medium"
       },
       {
         "ecoregion": "mid_boreal_uplands",
@@ -6083,7 +6118,7 @@
         "confidence": "medium"
       },
       {
-        "ecoregion": "slave_river_lowland",
+        "ecoregion": "wabasca_lowland",
         "occurrences": 5,
         "confidence": "low"
       }
@@ -7625,63 +7660,73 @@
     "Fragaria virginiana": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1073,
+        "occurrences": 1104,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 733,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 536,
+        "occurrences": 790,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 535,
+        "occurrences": 573,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 560,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 230,
+        "occurrences": 234,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 177,
+        "occurrences": 193,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 171,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 116,
+        "occurrences": 186,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 116,
+        "occurrences": 120,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "cypress_upland",
+        "occurrences": 117,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 110,
+        "occurrences": 113,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 32,
+        "occurrences": 35,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 22,
+        "occurrences": 24,
         "confidence": "high"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 12,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "western_boreal",
+        "occurrences": 8,
+        "confidence": "medium"
       },
       {
         "ecoregion": "churchill_river_upland",
@@ -7689,17 +7734,17 @@
         "confidence": "low"
       },
       {
-        "ecoregion": "western_boreal",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
+        "ecoregion": "mid_boreal_lowland",
         "occurrences": 5,
         "confidence": "low"
       },
       {
-        "ecoregion": "mid_boreal_lowland",
+        "ecoregion": "hay_river_lowland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "tazin_lake_upland",
         "occurrences": 4,
         "confidence": "low"
       }
@@ -7729,48 +7774,53 @@
     "Gaillardia aristata": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1032,
+        "occurrences": 1045,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 775,
+        "occurrences": 828,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 578,
+        "occurrences": 585,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 450,
+        "occurrences": 462,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 401,
+        "occurrences": 406,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 325,
+        "occurrences": 337,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 181,
+        "occurrences": 185,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 116,
+        "occurrences": 123,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 74,
+        "occurrences": 78,
         "confidence": "high"
+      },
+      {
+        "ecoregion": "mid_boreal_uplands",
+        "occurrences": 4,
+        "confidence": "low"
       }
     ],
     "Galium boreale": [
@@ -8301,61 +8351,61 @@
     "Geum triflorum": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 976,
+        "occurrences": 989,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 655,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 511,
+        "occurrences": 659,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 504,
+        "occurrences": 538,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 513,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 377,
+        "occurrences": 382,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 321,
+        "occurrences": 325,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 232,
+        "occurrences": 235,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 113,
+        "occurrences": 115,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 50,
+        "occurrences": 52,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 49,
+        "occurrences": 50,
         "confidence": "high"
       },
       {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 7,
-        "confidence": "low"
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 9,
+        "confidence": "medium"
       },
       {
-        "ecoregion": "slave_river_lowland",
+        "ecoregion": "mid_boreal_uplands",
         "occurrences": 7,
         "confidence": "low"
       }
@@ -10756,8 +10806,8 @@
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 7,
-        "confidence": "low"
+        "occurrences": 8,
+        "confidence": "medium"
       }
     ],
     "Lupinus sericeus": [
@@ -10968,63 +11018,68 @@
     "Maianthemum stellatum": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1700,
+        "occurrences": 1743,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 1012,
+        "occurrences": 1021,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 357,
+        "occurrences": 407,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 334,
+        "occurrences": 343,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 282,
+        "occurrences": 300,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 189,
+        "occurrences": 216,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 166,
+        "occurrences": 183,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 147,
+        "occurrences": 151,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 105,
+        "occurrences": 106,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 65,
+        "occurrences": 70,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 57,
+        "occurrences": 62,
         "confidence": "high"
       },
       {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 9,
+        "confidence": "medium"
+      },
+      {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 4,
-        "confidence": "low"
+        "occurrences": 9,
+        "confidence": "medium"
       },
       {
         "ecoregion": "mid_boreal_lowland",
@@ -12213,7 +12268,7 @@
     "Pedicularis bracteosa": [
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 474,
+        "occurrences": 475,
         "confidence": "high"
       },
       {
@@ -12429,7 +12484,7 @@
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 74,
+        "occurrences": 75,
         "confidence": "high"
       },
       {
@@ -13324,57 +13379,57 @@
     "Populus tremuloides": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1611,
+        "occurrences": 1622,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 333,
+        "occurrences": 340,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 326,
+        "occurrences": 329,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 255,
+        "occurrences": 258,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 222,
+        "occurrences": 229,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 208,
+        "occurrences": 210,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 195,
+        "occurrences": 199,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 118,
+        "occurrences": 121,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 82,
+        "occurrences": 97,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 78,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
         "occurrences": 78,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 68,
         "confidence": "high"
       },
       {
@@ -13384,12 +13439,17 @@
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 8,
+        "occurrences": 17,
         "confidence": "medium"
       },
       {
         "ecoregion": "hay_river_lowland",
-        "occurrences": 7,
+        "occurrences": 10,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "churchill_river_upland",
+        "occurrences": 6,
         "confidence": "low"
       },
       {
@@ -13398,12 +13458,12 @@
         "confidence": "low"
       },
       {
-        "ecoregion": "churchill_river_upland",
+        "ecoregion": "mid_boreal_lowland",
         "occurrences": 4,
         "confidence": "low"
       },
       {
-        "ecoregion": "mid_boreal_lowland",
+        "ecoregion": "athabasca_plain",
         "occurrences": 3,
         "confidence": "low"
       }
@@ -13916,62 +13976,62 @@
     "Prunus virginiana": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1392,
+        "occurrences": 1416,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 1374,
+        "occurrences": 1378,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 740,
+        "occurrences": 743,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 347,
+        "occurrences": 354,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 160,
+        "occurrences": 173,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 146,
+        "occurrences": 156,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 84,
+        "occurrences": 86,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 57,
+        "occurrences": 58,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 46,
+        "occurrences": 54,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 24,
+        "occurrences": 25,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 24,
+        "occurrences": 25,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 20,
+        "occurrences": 22,
         "confidence": "high"
       },
       {
@@ -13986,7 +14046,7 @@
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 3,
+        "occurrences": 4,
         "confidence": "low"
       }
     ],
@@ -14020,7 +14080,7 @@
     "Pulsatilla nuttalliana": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1860,
+        "occurrences": 1862,
         "confidence": "high"
       },
       {
@@ -14040,7 +14100,7 @@
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 366,
+        "occurrences": 367,
         "confidence": "high"
       },
       {
@@ -14050,7 +14110,7 @@
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 88,
+        "occurrences": 89,
         "confidence": "high"
       },
       {
@@ -14074,12 +14134,12 @@
         "confidence": "medium"
       },
       {
-        "ecoregion": "churchill_river_upland",
-        "occurrences": 4,
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 6,
         "confidence": "low"
       },
       {
-        "ecoregion": "slave_river_lowland",
+        "ecoregion": "churchill_river_upland",
         "occurrences": 4,
         "confidence": "low"
       }
@@ -15692,7 +15752,7 @@
     "Schizachne purpurascens": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 64,
+        "occurrences": 65,
         "confidence": "high"
       },
       {
@@ -16088,67 +16148,82 @@
     "Shepherdia canadensis": [
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1087,
+        "occurrences": 1104,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 755,
+        "occurrences": 795,
         "confidence": "high"
       },
       {
         "ecoregion": "eastern_continental_ranges",
-        "occurrences": 611,
+        "occurrences": 638,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 515,
+        "occurrences": 535,
         "confidence": "high"
       },
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 281,
+        "occurrences": 285,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 126,
+        "occurrences": 144,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 117,
+        "occurrences": 120,
         "confidence": "high"
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 70,
+        "occurrences": 79,
         "confidence": "high"
       },
       {
         "ecoregion": "peace_lowland",
-        "occurrences": 69,
+        "occurrences": 73,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 48,
+        "occurrences": 49,
         "confidence": "high"
       },
       {
         "ecoregion": "wabasca_lowland",
-        "occurrences": 26,
+        "occurrences": 28,
         "confidence": "high"
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 10,
+        "occurrences": 16,
         "confidence": "medium"
       },
       {
         "ecoregion": "western_boreal",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "hay_river_lowland",
         "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "northern_alberta_uplands",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "tazin_lake_upland",
+        "occurrences": 3,
         "confidence": "low"
       }
     ],
@@ -18047,42 +18122,42 @@
     "Thermopsis rhombifolia": [
       {
         "ecoregion": "fescue_grassland",
-        "occurrences": 2528,
+        "occurrences": 2536,
         "confidence": "high"
       },
       {
         "ecoregion": "aspen_parkland",
-        "occurrences": 1390,
+        "occurrences": 1399,
         "confidence": "high"
       },
       {
         "ecoregion": "moist_mixed_grassland",
-        "occurrences": 963,
+        "occurrences": 970,
         "confidence": "high"
       },
       {
         "ecoregion": "mixed_grassland",
-        "occurrences": 527,
+        "occurrences": 533,
         "confidence": "high"
       },
       {
         "ecoregion": "cypress_upland",
-        "occurrences": 250,
+        "occurrences": 251,
         "confidence": "high"
       },
       {
         "ecoregion": "northern_continental_divide",
-        "occurrences": 85,
+        "occurrences": 86,
         "confidence": "high"
       },
       {
         "ecoregion": "boreal_transition",
-        "occurrences": 58,
+        "occurrences": 60,
         "confidence": "high"
       },
       {
         "ecoregion": "western_alberta_upland",
-        "occurrences": 55,
+        "occurrences": 56,
         "confidence": "high"
       },
       {
@@ -18092,7 +18167,7 @@
       },
       {
         "ecoregion": "mid_boreal_uplands",
-        "occurrences": 3,
+        "occurrences": 4,
         "confidence": "low"
       }
     ],

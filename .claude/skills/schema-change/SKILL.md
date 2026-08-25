@@ -19,8 +19,22 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.76`,
-`_SCHEMA_VERSION = 77` (in `src/db/plants.py`) — v77 is a reseed only, and the
+**Current facts (verify before quoting):** branch `V2.78`,
+`_SCHEMA_VERSION = 78` (in `src/db/plants.py`).
+
+v78 is a reseed only. The GBIF harvest is capped at 6,000 records per species
+and GBIF orders newest-first, so for a common plant that window was recent
+observations and nothing before them; sixteen species held 89,964 records and
+**thirty-one herbarium specimens between them**. A separate
+`--specimen-pass` query reached what the cap cut, and the result is **purely
+additive**: 15 new region rows, none dropped, 13 confidence bands up and none
+down. **Every new region is northern**, because specimen share runs 90%+ in the
+remote north (Athabasca Plain 92.4%) against 3-5% in the settled south
+(Fescue Grassland 2.7%) — the observation layer maps where people live, so a
+newest-first cap was dropping the north rather than merely dropping old
+material.
+
+v77 before it was a reseed only, and the
 first time this catalogue has **corrected** a number rather than added one.
 Species ranges were re-derived after V2.75 found that `ranges_for_species` had
 inherited a 5 km proximity buffer meant for site detection: attributed records

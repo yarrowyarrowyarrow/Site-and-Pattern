@@ -397,10 +397,29 @@ tremuloides, Prunus virginiana, Pulsatilla nuttalliana, Shepherdia canadensis,
 Thermopsis rhombifolia.* Every one is a common, widely photographed plant,
 which is exactly why it hit the cap.
 
-**What this does and does not affect.** Each of these still has ~5,600
-georeferenced records, which is far past the three-record floor everywhere they
-grow, so the *shipped ranges* are unlikely to move — but "unlikely" is not
-"checked", and `--from-cache` exists so the check costs no network. What it
+**Checked, and the prediction was wrong (V2.78).** The guess here was that
+~5,600 records per species is far past the three-record floor everywhere they
+grow, so the shipped ranges would not move. The author ran the pass; they moved,
+**purely additively**: 15 new region rows, none dropped, 13 confidence bands up
+and none down. `Amelanchier alnifolia` went from 2 specimens to 246, its oldest
+now 1898; `Populus tremuloides` reaches back to 1820.
+
+**And the shape of the gain is a finding in itself.** Every new region is
+northern. Specimen share of in-region records:
+
+| region | observations | specimens | specimen share |
+|---|---|---|---|
+| `athabasca_plain` | 35 | 423 | **92.4%** |
+| `tazin_lake_upland` | 61 | 579 | **90.5%** |
+| `hay_river_lowland` | 94 | 259 | **73.4%** |
+| `aspen_parkland` | 80,129 | 4,134 | 4.9% |
+| `fescue_grassland` | 43,635 | 1,203 | **2.7%** |
+
+The observation layer maps where people live. In the remote north the herbarium
+record is very nearly the only record, so a newest-first cap was not merely
+dropping old material — **it was dropping the north**, and the catalogue
+under-reported northern occurrence for its sixteen most-recorded species until
+schema v78. What it
 plainly does affect is any map drawn from specimens: sixteen of the catalogue's
 best-known plants would render blank, and blank for our reason rather than the
 herbaria's.
