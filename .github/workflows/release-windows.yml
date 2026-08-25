@@ -76,7 +76,17 @@ jobs:
       - name: Publish to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          # `release-` PREFIX IS LOAD-BEARING (V2.80). Tagging with the bare
+          # branch name gave every release a tag identical to a branch, which
+          # git cannot disambiguate: `git push -u origin V2.79` fails with
+          # "src refspec matches more than one", and `git pull origin V2.79`
+          # silently resolves the TAG and rewinds the working branch to it.
+          # That has cost this project real time more than once. The Release's
+          # display `name` below stays the bare version, so nothing a reader
+          # sees changes. `github_releases._TAG_RE` accepts both spellings and
+          # must keep accepting the old one: ~102 tags use it and each anchors
+          # a release the in-app updater reads.
+          tag_name: release-${{ github.ref_name }}
           # Keep in step with release-macos.yml: whichever workflow gets there
           # first creates the tag, so BOTH have to name the target or the fix
           # only holds half the time. See the long note in that file.

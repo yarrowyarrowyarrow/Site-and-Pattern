@@ -44,7 +44,19 @@ DEFAULT_REPO = "yarrowyarrowyarrow/Site-and-Pattern"
 _API_BASE = "https://api.github.com"
 _USER_AGENT = "SiteAndPattern-Updater"
 
-_TAG_RE = re.compile(r"^[vV]?(\d+)\.(\d+)$")
+#: A release tag, in both spellings this repo has used.
+#:
+#: `V2.79` is the historical form, and it names the branch too -- which is a
+#: trap git cannot resolve for you. `git push -u origin V2.79` fails with *"src
+#: refspec matches more than one"*, `git pull origin V2.79` silently takes the
+#: TAG and rewinds you to whatever commit it points at, and both have now cost
+#: this project real time more than once. From V2.80 the workflows tag
+#: `release-V2.80` instead, which collides with nothing.
+#:
+#: **The old spelling stays accepted forever.** Around 102 remote tags use it,
+#: each anchoring a GitHub Release the in-app updater reads by `tag_name`, and
+#: deleting one would break updates for anybody sitting on that version.
+_TAG_RE = re.compile(r"^(?:release[-_])?[vV]?(\d+)\.(\d+)$")
 
 
 class DownloadCancelled(Exception):
@@ -55,9 +67,10 @@ class DownloadCancelled(Exception):
 def parse_release_version(tag: str) -> Optional[Tuple[int, int]]:
     """Return ``(major, minor)`` for a release tag, else ``None``.
 
-    Accepts ``V1.72``, ``v1.64`` and bare ``1.5`` — anything else (``main``,
-    ``V1``, ``1.2.3``) is rejected so non-release tags never sort into the
-    version list."""
+    Accepts ``release-V2.80`` (the current form), ``V1.72``, ``v1.64`` and
+    bare ``1.5`` — anything else (``main``, ``V1``, ``1.2.3``) is rejected so
+    non-release tags never sort into the version list. See :data:`_TAG_RE` for
+    why there are two forms and why the old one can never be retired."""
     if not tag:
         return None
     m = _TAG_RE.match(tag.strip())

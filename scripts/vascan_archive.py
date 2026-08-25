@@ -243,6 +243,39 @@ def _canonical(name: str) -> str:
     return " ".join((name or "").split()[:2])
 
 
+#: Words that make a scientific name something other than a plain binomial.
+#: The leading space matters -- `f.` would otherwise match inside authorship.
+_INFRASPECIFIC = (" subsp.", " ssp.", " var.", " f. ", " forma ",
+                  " nothosubsp.", " nothovar.")
+
+#: The hybrid sign, in the two code points archives actually use.
+_HYBRID = ("×", "⨯")
+
+
+def _is_plain_binomial(name: str) -> bool:
+    """Is this ``Genus species`` (plus authorship), and nothing more?
+
+    V2.80, from the real archive. `_canonical` reduces a name to its first two
+    words, so nine taxa collapse onto `Chamaenerion angustifolium` -- and two of
+    them are `accepted` at rank `species`:
+
+        [17491] Chamaenerion angustifolium (Linnaeus) Scopoli
+        [29484] Chamaenerion angustifolium subsp. angustifolium
+                  x Chamaenerion latifolium
+
+    The second is a hybrid formula, which VASCAN files at rank species. With
+    both scoring identically, the winner came down to **dict iteration order**,
+    and the hybrid won: the roll-up started from a nothotaxon with no children,
+    found nothing, and published fireweed as having no Alberta distribution.
+    Its two real subspecies -- `subsp. angustifolium` and `subsp. circumvagum`,
+    both AB/SK/MB native -- were never reached.
+    """
+    if any(mark in (name or "") for mark in _HYBRID):
+        return False
+    lowered = " " + (name or "").lower() + " "
+    return not any(word in lowered for word in _INFRASPECIFIC)
+
+
 def lookup(taxa: dict, dist: dict, name: str, provinces) -> dict:
     """The same shape ``fetch_flora_nativity.lookup`` returns, from the archive.
 
@@ -268,7 +301,15 @@ def lookup(taxa: dict, dist: dict, name: str, provinces) -> dict:
     def rank_key(tid):
         row = taxa[tid]
         return (0 if "accepted" in (row["status"] or "") else 1,
-                0 if row["rank"] == "species" else 1)
+                0 if row["rank"] == "species" else 1,
+                # A hybrid formula is filed at rank species and canonicalises
+                # to the same two words, so without this the tie was broken by
+                # dict order -- see `_is_plain_binomial`.
+                0 if _is_plain_binomial(row["name"]) else 1,
+                # Total order, so two runs over the same archive cannot
+                # disagree. An arbitrary winner is still a bug when it is
+                # reproducible; it is a much worse one when it is not.
+                len(row["name"]), row["name"], tid)
 
     tid = sorted(hits, key=rank_key)[0]
     row = taxa[tid]

@@ -123,12 +123,22 @@ When starting a new piece of work:
 branch even if the harness suggests one as the default. If the system
 default branch is a codename, override it and use the next `V*.*`.
 
-**Every release also has a TAG of the same name, and that is a trap (V2.72).**
-`V2.71` names both `refs/heads/V2.71` and `refs/tags/V2.71`. If both are in a
-clone, git refuses to guess: `git push -u origin V2.71` fails with *"src refspec
-V2.71 matches more than one"*. A working clone normally has only the branch —
-the tag arrives if you ask for it by name, e.g. `git fetch origin V2.71`, which
-resolves to the tag. Fix a clone once with:
+**Releases up to V2.79 also have a TAG of the same name, and that is a trap
+(V2.72; fixed for new releases in V2.80).** `V2.71` names both
+`refs/heads/V2.71` and `refs/tags/V2.71`. If both are in a clone, git refuses to
+guess: `git push -u origin V2.71` fails with *"src refspec V2.71 matches more
+than one"*. Worse, **`git pull origin V2.71` does not refuse** — it silently
+resolves the tag, rebases your branch onto it, and rewinds you to whatever
+commit that tag points at. That happened during V2.80 and undid a pushed fix
+without a single error message.
+
+**New releases tag `release-V<major>.<minor>`** (both workflows'
+`tag_name:`), which collides with nothing. `github_releases._TAG_RE` accepts
+both spellings and **must keep accepting the old one**: ~102 remote tags use it
+and each anchors a GitHub Release the in-app updater reads by `tag_name`.
+
+The old tags are still out there, so a clone that has fetched them still has the
+collision for those versions. Fix a clone once with:
 
 ```bash
 git config remote.origin.tagOpt --no-tags   # or a bare fetch drags all 102 back
@@ -157,6 +167,11 @@ re-diagnose:
 |---|---|
 | `fatal: invalid reference: V2.78` | no local ref of that name at all; the fetch went to `FETCH_HEAD` only. Use the refspec above. |
 | `fatal: a branch is expected, got tag 'V2.78'` | a local tag of that name exists. Run the `git tag -d` cleanup above. |
+| `* tag V2.78 -> FETCH_HEAD` then `Successfully rebased` | **the silent one.** `git pull origin V2.78` took the tag, and your branch is now at the tag's commit — behind the branch, with pushed work missing and no error. Recover with the refspec fetch above plus `git switch -C V2.78 origin/V2.78`. |
+
+**Never use `git pull` for a V-branch.** Always the two-line refspec fetch, then
+`git switch`. The tag/branch collision means `pull` has no safe form here for
+any release up to V2.79.
 
 **Never delete the remote tags**: each anchors a GitHub Release, and
 `github_releases.parse_release_version` reads `tag_name` off those releases to

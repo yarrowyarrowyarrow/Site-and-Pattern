@@ -322,5 +322,115 @@ class TestItCanExplainOneAnswer(unittest.TestCase):
         self.assertEqual(len(before), len(self.dist))
 
 
+#: **Straight out of the author's real archive** (VASCAN v37.17), ids and all.
+#: `_canonical` reduces a name to its first two words, so nine taxa collapse
+#: onto "Chamaenerion angustifolium" and two of them are accepted at rank
+#: species -- the plant, and a hybrid formula. The tie was broken by dict
+#: order, the hybrid won, and fireweed was published as having no Alberta
+#: distribution while its two AB/SK/MB-native subspecies went unread.
+FIREWEED_TAXA = [
+    ["17491", "29483", "17491",
+     "Chamaenerion angustifolium (Linnaeus) Scopoli", "species", "accepted"],
+    ["29497", "17491", "29497",
+     "Chamaenerion angustifolium (Linnaeus) Scopoli subsp. angustifolium",
+     "subspecies", "accepted"],
+    ["29484", "29483", "29484",
+     "Chamaenerion angustifolium subsp. angustifolium "
+     "\u00d7 Chamaenerion latifolium", "species", "accepted"],
+    ["29498", "17491", "29498",
+     "Chamaenerion angustifolium subsp. circumvagum (Mosquin) Moldenke",
+     "subspecies", "accepted"],
+    ["29509", "", "29498",
+     "Chamaenerion angustifolium subsp. macrophyllum (Hausskn.) Czerepanov",
+     "subspecies", "synonym"],
+    ["29507", "", "29498",
+     "Chamaenerion angustifolium var. abbreviatum Lunell", "variety",
+     "synonym"],
+]
+
+FIREWEED_DISTS = [
+    ["29497", "ISO 3166-2:CA-AB", "AB", "", "native"],
+    ["29497", "ISO 3166-2:CA-SK", "SK", "", "native"],
+    ["29498", "ISO 3166-2:CA-AB", "AB", "", "native"],
+    ["29498", "ISO 3166-2:CA-MB", "MB", "", "native"],
+]
+
+
+class TestTheHybridDoesNotWinTheName(unittest.TestCase):
+    """V2.80. Found by pointing --explain at the real archive, which is the
+    only place this was visible: nothing raised, and the answer -- fireweed
+    is not recorded from Alberta -- was merely false."""
+
+    @classmethod
+    def setUpClass(cls):
+        src = _archive(FIREWEED_TAXA, FIREWEED_DISTS)
+        cls.taxa = A.read_taxa(src)
+        cls.dist = A.read_distribution(src, PROV)
+
+    def look(self):
+        return A.lookup(self.taxa, self.dist, "Chamaenerion angustifolium",
+                        PROV)
+
+    def test_the_plant_is_found_not_the_hybrid(self):
+        got = self.look()
+        self.assertNotIn("\u00d7", got["accepted_name"])
+        self.assertIn("Scopoli", got["accepted_name"])
+
+    def test_its_subspecies_distribution_rolls_up(self):
+        self.assertEqual(self.look()["provinces"],
+                         {"AB": "native", "SK": "native", "MB": "native"})
+
+    def test_a_hybrid_formula_is_not_a_plain_binomial(self):
+        self.assertFalse(A._is_plain_binomial(
+            "Chamaenerion angustifolium subsp. angustifolium "
+            "\u00d7 Chamaenerion latifolium"))
+        self.assertFalse(A._is_plain_binomial("Salix \u00d7 rubens Schrank"))
+
+    def test_an_ordinary_species_name_is(self):
+        for name in ("Chamaenerion angustifolium (Linnaeus) Scopoli",
+                     "Amelanchier alnifolia (Nuttall) Nuttall ex M. Roemer",
+                     "Urtica dioica Linnaeus"):
+            self.assertTrue(A._is_plain_binomial(name), name)
+
+    def test_an_infraspecific_name_is_not(self):
+        for name in ("Alnus incana subsp. tenuifolia (Nuttall) Breitung",
+                     "Urtica dioica var. gracilis (Aiton) R.L. Taylor",
+                     "Spiraea alba var. latifolia (Aiton) Dippel"):
+            self.assertFalse(A._is_plain_binomial(name), name)
+
+    def test_a_shorter_hybrid_name_still_loses(self):
+        """The first cut of this test passed without the hybrid rule at all,
+        because the plant's name happened to be shorter than the hybrid's and
+        the length tiebreak carried it. A hybrid formula written without
+        authorship is shorter, and then only the rule saves it."""
+        taxa_rows = [
+            ["1", "", "1", "Chamaenerion angustifolium (Linnaeus) Scopoli",
+             "species", "accepted"],
+            ["2", "", "2",
+             "Chamaenerion angustifolium \u00d7 latifolium", "species",
+             "accepted"],
+            ["3", "1", "3",
+             "Chamaenerion angustifolium (Linnaeus) Scopoli subsp. "
+             "angustifolium", "subspecies", "accepted"],
+        ]
+        src = _archive(taxa_rows, [["3", "ISO 3166-2:CA-AB", "AB", "",
+                                    "native"]])
+        taxa, dist = A.read_taxa(src), A.read_distribution(src, PROV)
+        got = A.lookup(taxa, dist, "Chamaenerion angustifolium", PROV)
+        self.assertNotIn("\u00d7", got["accepted_name"])
+        self.assertEqual(got["provinces"], {"AB": "native"})
+
+    def test_the_choice_does_not_depend_on_dict_order(self):
+        """The original tie was broken by whichever taxon Python happened to
+        iterate first. A reproducible wrong answer is bad; an irreproducible
+        one cannot even be diagnosed."""
+        src = _archive(list(reversed(FIREWEED_TAXA)), FIREWEED_DISTS)
+        taxa, dist = A.read_taxa(src), A.read_distribution(src, PROV)
+        flipped = A.lookup(taxa, dist, "Chamaenerion angustifolium", PROV)
+        self.assertEqual(flipped["accepted_name"],
+                         self.look()["accepted_name"])
+        self.assertEqual(flipped["provinces"], self.look()["provinces"])
+
+
 if __name__ == "__main__":
     unittest.main()

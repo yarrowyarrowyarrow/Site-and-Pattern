@@ -25,13 +25,21 @@ class TestParseReleaseVersion(unittest.TestCase):
             "1.5": (1, 5),        # bare
             "V10.100": (10, 100),
             "  V2.0  ": (2, 0),   # stripped
+            # V2.80 onward. The bare form names a BRANCH as well, which git
+            # cannot disambiguate -- `git pull origin V2.79` takes the tag and
+            # rewinds you. The prefix collides with nothing.
+            "release-V2.80": (2, 80),
+            "release-v2.80": (2, 80),
+            "release_V2.80": (2, 80),
         }
         for tag, expected in cases.items():
             with self.subTest(tag=tag):
                 self.assertEqual(ghr.parse_release_version(tag), expected)
 
     def test_invalid(self):
-        for tag in ["main", "V1", "1.2.3", "V1.2-beta", "", "release", None]:
+        for tag in ["main", "V1", "1.2.3", "V1.2-beta", "", "release", None,
+                    "release-", "release-main", "prerelease-V2.80",
+                    "released-V2.80"]:
             with self.subTest(tag=repr(tag)):
                 self.assertIsNone(ghr.parse_release_version(tag))
 
@@ -104,6 +112,33 @@ class TestListReleases(unittest.TestCase):
     def test_non_list_payload_is_safe(self):
         rels = ghr.list_releases(fetch_json=lambda _u: {"message": "Not Found"})
         self.assertEqual(rels, [])
+
+
+class TestThePrefixedTagReachesTheUpdater(unittest.TestCase):
+    """V2.80 renamed the release tag to `release-V<x>.<y>` so it stops
+    colliding with the branch of the same name. The parser accepting it is
+    only half the job -- if `list_releases` did not sort it as a version, the
+    updater would keep offering an older release forever, and nothing would
+    look broken."""
+
+    def _payload(self):
+        rows = _sample_payload()
+        newest = dict(rows[0])
+        newest.update({"tag_name": "release-V2.80", "name": "V2.80",
+                       "body": "prefixed tag",
+                       "html_url": "https://example/release-V2.80"})
+        return [newest] + rows
+
+    def test_it_is_seen_as_the_newest_release(self):
+        got = ghr.list_releases(fetch_json=lambda _u: self._payload())
+        self.assertEqual(got[0].version, (2, 80))
+        self.assertEqual(got[0].tag, "release-V2.80")
+
+    def test_the_old_spelling_still_sorts_beside_it(self):
+        """~102 remote tags use the bare form and each anchors a release the
+        updater reads. Retiring it would break updates for anybody on one."""
+        got = ghr.list_releases(fetch_json=lambda _u: self._payload())
+        self.assertIn((1, 73), [r.version for r in got])
 
 
 class TestAssetSelection(unittest.TestCase):
