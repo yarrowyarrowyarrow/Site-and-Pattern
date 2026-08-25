@@ -920,40 +920,28 @@ class TestTheMethodPage(unittest.TestCase):
             self.assertIn(str(floor), self.html)
 
     def test_it_says_unshaded_is_not_absent(self):
-        self.assertIn("not absence", self.html.replace("\n", " "))
+        self.assertIn("not absent", self.html.replace("\n", " "))
 
     def test_it_says_recorded_is_not_native(self):
         self.assertIn("not native", self.html.replace("\n", " "))
 
-    def test_it_discloses_the_correction_rather_than_restating_the_numbers(self):
-        """V2.75 asserted this page disclosed a buffer the build still carried;
-        V2.76 corrected the data, so that disclosure became false and was
-        replaced. **The test changed with it rather than being deleted**, and
-        the reason is the whole point of the page.
-
-        A caveat that stops being true is not a caveat you delete quietly --
-        that is precisely the fault the outside review found (a philosophy doc
-        calling surveyed polygons "hand-drawn boxes" for a whole increment
-        after it became false). So the obligation moves rather than lapsing:
-        the page must now say what was wrong, how big it was, and that it was
-        fixed. Anyone comparing this site against an earlier copy sees a large
-        change in the numbers and is entitled to an explanation on the site
-        rather than in a commit message.
-        """
-        flat = " ".join(self.html.split())
-        # It still explains the fault in the reader's language...
-        self.assertIn("within five kilometres of it", flat)
-        # ...but as something corrected, with its size, not as a live limit.
-        self.assertIn("re-derived by containment", flat)
-        self.assertIn("489,546", flat)
-        self.assertIn("361,447", flat)
-
-    def test_it_names_the_sliver_that_caused_most_of_it(self):
-        """The finding nobody predicted, and the one a returning reader would
-        actually notice: one clipped region went from 135 species to 15."""
-        flat = " ".join(self.html.split())
-        self.assertIn("Western Continental Ranges", flat)
-        self.assertIn("135 species", flat)
+    # V2.80: two tests were REMOVED here, and this note is the record.
+    #
+    # They required this page to explain the V2.76 buffer correction and name
+    # the sliver region that caused most of it -- 135 species to 15. Their
+    # argument was good: a reader comparing this site against an earlier copy
+    # sees the numbers move and is owed an explanation.
+    #
+    # The author's instruction after reading the page was the other way:
+    # *"you don't have to explain all process getting from past iterations of
+    # the site to this one."* At 1,743 words the page had become a changelog,
+    # and a caveat nobody finishes reading protects nobody.
+    #
+    # What did NOT lapse: the corrections section still links the public
+    # repository, where every derivation, its plan and its numbers live. Move
+    # the disclosure, do not delete it -- that rule is why these tests existed
+    # and it is still the rule. If a future correction moves the numbers
+    # visibly again, it needs a line here, not a section.
 
     def test_it_does_not_claim_the_buffer_is_still_present(self):
         """The specific false sentence, pinned so it cannot come back by a
@@ -980,10 +968,13 @@ class TestTheMethodPage(unittest.TestCase):
         was to leave it and say so -- picking a side would assert which side of
         a line we know we drew imprecisely, which is the mistake the buffer
         correction was about."""
-        page = self.html
-        self.assertIn("counted in both", page)
-        self.assertIn("eight records in every thousand", page)
-        self.assertIn("Calgary", page)
+        # Flattened: the sentence wraps in the source, and a disclosure that
+        # a test can only find when it happens to fit on one line is a test
+        # about line width.
+        flat = " ".join(self.html.split())
+        self.assertIn("counted in both", flat)
+        self.assertIn("eight records in a thousand", flat)
+        self.assertIn("Calgary", flat)
 
     def test_the_simplification_distance_is_not_typed_here(self):
         """It comes out of `ecoregion_map.CAVEAT`, which is itself checked

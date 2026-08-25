@@ -103,128 +103,66 @@ def render_method(model: dict) -> str:
     body = f"""
 {_crumb([("", "Method")], 1)}
 <h1>How these pages are made</h1>
-<p class="lede">What a record is, what a shaded region does and does not
-claim, and where each of these numbers stops being able to tell you
-anything.</p>
+<p class="lede">Where the data comes from, and where it stops being able to
+tell you anything.</p>
 
-<h2>What "recorded here" means</h2>
-<p>Every region on a species page comes from <strong>georeferenced occurrence
-records</strong>: a herbarium sheet, a museum specimen, a photograph
-somebody submitted with a location. They are retrieved from
-<a href="https://www.gbif.org/">GBIF</a>, which aggregates many sources
-including iNaturalist, university herbaria and government collections.</p>
-<p>We ask GBIF only for records inside the bounding box of the ecoregions this
-catalogue covers, and we count each record toward the region its coordinate
-falls <em>inside</em>. Records whose basis is a living specimen, a material
-sample or a fossil are excluded: a plant in a botanical garden is a place
-somebody put it, not a place it grows.</p>
+<h2>What a record is</h2>
+<p>A <strong>georeferenced occurrence record</strong>: a herbarium sheet, a
+museum specimen, or a photograph submitted with a location. All of them come
+from <a href="https://www.gbif.org/">GBIF</a>, which aggregates iNaturalist,
+university herbaria and government collections. Records based on a living
+specimen, a material sample or a fossil are excluded: a plant in a botanical
+garden is a place somebody put it.</p>
 
 {_point_method_sections(counts, MARK_DEG, CELL_DEG, CELL_KM_NS)}
 
 <h2>"Native to", and when we leave it blank</h2>
 <p>Which provinces a species is native to comes from
 <a href="https://data.canadensys.net/vascan/">VASCAN</a>, the Database of
-Vascular Plants of Canada, read from its published checklist. {nativity['sourced']:,} of the
-{nativity['claimed']:,} species in this catalogue carry an answer from it.</p>
-<p>Before this release the other answers were an <strong>inference</strong>:
-the parkland, grassland and boreal plain run unbroken across the border
-between Alberta and Saskatchewan, so a species documented from one of them in
-Alberta was written down as native to the same ecoregion in Saskatchewan.
-That is reasonable and it is not a range map, and this site published it as
-though it were.</p>
-<p>It no longer does. Where no source settles it, the row reads <strong>Not
-established</strong> and no province list is shown. {nativity['withheld']} species are in
-that position: some VASCAN records as introduced here rather than native, some
-it carries only under a name this catalogue does not use, and a few it does
-not carry at all. Each is a decision somebody has to make with a second
-source, and until then a blank is the honest answer.</p>
+Vascular Plants of Canada. {nativity['sourced']:,} of {nativity['claimed']:,}
+species carry an answer from it.</p>
+<p>The other {nativity['withheld']} read <strong>Not established</strong> and
+show no province list. VASCAN records some of them as introduced here, carries
+some only under a name this catalogue does not use, and does not carry a few
+at all. Each needs a second source before we can say anything.</p>
 <p>We would rather show you nothing than show you a guess.</p>
 
-<h2>Why some regions are not listed</h2>
-<p>A region needs at least <strong>{MIN_RECORDS} records</strong> before it is
-listed. Two records is a coincidence, because a misidentified sheet and a
-garden escape will do it. Three is the smallest number that is evidence of
-anything, and it is labelled as the weakest confidence so that nothing reads
-it as a range map.</p>
-<p>This does cut against rare species, which is a real cost and not an
-oversight: the plants with fewest records are often the ones that matter most.
-Regions that fell short are counted on every run and are visible to us; they
-are simply not published as claims.</p>
+<h2>The ecoregion counts</h2>
+<p>Below the map, each species lists the ecoregions its records fall in. A
+region needs at least <strong>{MIN_RECORDS} records</strong> to be listed: two
+can be a misidentified sheet and a garden escape. This cuts against rare
+species, which is a real cost. A region missing from the list means nobody has
+recorded the plant there.</p>
 {_bands_table()}
 
 <h2>How current this is</h2>
-<p>GBIF is a living database: records are added, corrected and
-re-identified continuously. What these pages show is a <strong>snapshot</strong>,
-taken once and shipped. The counts here were retrieved on:</p>
+<p>A <strong>snapshot</strong>, taken once and shipped. Retrieved on:</p>
 {_currency(model)}
-<p>They will drift from the live database from that day onward. This page is
-not live; the GBIF and iNaturalist links on every species page are. For the
-current picture of a species, follow those.</p>
+<p>GBIF changes daily and this page does not. The GBIF and iNaturalist links
+on every species page are live; follow those for the current picture.</p>
 
-<h2>What we do not filter</h2>
-<p>We do not require records to have been identification-verified.
-GBIF's verification field is populated by a minority of publishers and is
-absent from most herbarium material, so requiring it would discard the
-best-determined specimens in order to exclude very little. Misidentifications
-are therefore present in this data, as they are in any occurrence dataset.</p>
-<p>We do refuse records whose own stated coordinate uncertainty is too large
-to place them in a region at all. A specimen georeferenced to a whole county
-is telling you what it cannot support, and counting it toward one ecoregion
-would assert something its own metadata denies.</p>
+<h2>Known limits</h2>
+<ul>
+  <li><strong>Misidentifications are in this data.</strong> We do not require
+  records to be identification-verified: that field is absent from most
+  herbarium material, so requiring it would discard the best-determined
+  specimens to exclude very little.</li>
+  <li><strong>Where two regions meet, a few records are counted in both.</strong>
+  The outlines are simplified to roughly {simplify} and each is simplified on
+  its own, so neighbours overlap by a sliver along a shared border. That
+  inflates the region totals by about <strong>eight records in a
+  thousand</strong>, most of it around Calgary where Aspen Parkland and Fescue
+  Grassland cross.</li>
+  <li><strong>Flower colour is mostly unverified.</strong>
+  {s['verified_colour']} of {s['species']} species have a colour checkable
+  against the plant's own name; the rest are a genus-level default and say
+  <em>not verified</em> on the page.</li>
+  <li><strong>Coverage stops at the Saskatchewan border.</strong> Manitoba
+  shares several of these ecoregions and is not included.</li>
+</ul>
 
 <h2>The region outlines</h2>
 <p>{_esc(CAVEAT)}</p>
-
-<h2>Known limits of this build</h2>
-<ul>
-  <li><strong>Until recently these counts were inflated, and we corrected
-  them rather than quietly restating them.</strong> A record used to be
-  credited to every ecoregion within five kilometres of it, not only the one
-  containing it. That rule was written for deciding which region a
-  <em>garden</em> is in, where a nearby second answer is useful, and it reached
-  the range derivation by accident. Every range on this site was re-retrieved
-  from GBIF and re-derived by containment on 21 August 2026. The effect was
-  large: <strong>489,546 attributed records became 361,447</strong>, and 493 of
-  4,218 region claims turned out to have almost no records actually inside
-  them. Two species lost every region and are now shown as not having enough
-  evidence, which is the honest answer rather than a smaller one.</li>
-  <li><strong>One region in the map is a sliver, and it was doing most of the
-  damage.</strong> Western Continental Ranges is a British Columbia region, and
-  only a hairline of it crosses into Alberta: two hundredths of one per cent
-  of the mapped area. A shape that thin has a five-kilometre apron many
-  times its own size, so nearly every mountain record near the border was being
-  filed under it. It was listed for 135 species and is now listed for 15. If
-  you compared this site against an earlier copy of it, that is the difference
-  you would see.</li>
-  <li><strong>Where two regions meet, a few records are counted in both.</strong>
-  The region outlines are simplified to roughly {simplify}, and each one is
-  simplified on its own, so along a shared border two neighbours overlap by a
-  sliver. A record inside that sliver is counted for both, which inflates the
-  totals by <strong>about eight records in every thousand</strong>. It is not
-  spread evenly: most of it is Calgary, where Aspen Parkland and Fescue
-  Grassland cross. We have left it rather than picking a side, because deciding
-  which region such a record belongs to would mean asserting which side of a
-  line we know we drew imprecisely, and that is the mistake the correction
-  above was about. It is well inside the accuracy the outlines claim.</li>
-  <li><strong>Flower colour is mostly unverified.</strong>
-  {s['verified_colour']} of {s['species']} species have a colour checkable
-  against the plant's own name; the rest are a genus-level default and every
-  one of them says <em>not verified</em> on its page.</li>
-  <li><strong>Nativity is the weakest claim on this site.</strong> The
-  province a plant is listed as native to was generated from its regional
-  tags rather than read from a flora: Saskatchewan was inferred from
-  ecoregions that continue across the border, and Alberta from an editorial
-  flag in the catalogue's first data file. Neither is a range map for the
-  species. <strong>Every species page now says so beside the claim</strong>
-  rather than leaving it to this page: the field this site is named for was
-  the one field carrying no provenance mark, which is exactly backwards.
-  It is being replaced with per-province records from a
-  taxonomic authority; until that lands, treat "native to Alberta and
-  Saskatchewan" as the catalogue's assertion and not as a sourced fact.</li>
-  <li><strong>Coverage stops at the Saskatchewan border.</strong> The
-  ecoregions surveyed here are Alberta's and Saskatchewan's. Manitoba shares
-  several of them, and is not included.</li>
-</ul>
 
 <h2>Corrections</h2>
 <p>These pages are wrong in places, and the useful thing to do with an error

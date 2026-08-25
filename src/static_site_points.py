@@ -196,58 +196,32 @@ def _point_method_sections(counts: dict, MARK_DEG, CELL_DEG, CELL_KM_NS) -> str:
     down -- every count on this site is (V2.47), because a number typed into
     prose is correct once.
     """
-    return f"""<h2>The map on a species page</h2>
-<p>The map draws two things. The <strong>shaded squares</strong> are a
-{CELL_DEG} degree grid, about {CELL_KM_NS:.0f} km north to south, and one square
-means at least one usable record falls inside it. Darker squares hold more
-records. The <strong>dots</strong> are the records themselves.</p>
-<p>Until this release the species map shaded a whole <em>ecoregion</em>
-because records fell somewhere inside it. That is a claim over 100,000 square
-kilometres made from three records, and an outside botanical review said so.
-The region counts are still on the page, below the map, because a count is a
-fact; only the picture drawn from it overclaimed.</p>
-<p><strong>A darker square is not more plant.</strong> It is more collecting.
-The squares holding Calgary and Edmonton are dark for nearly every species in
-this catalogue, because that is where the people with cameras are.</p>
-<p><strong>An empty square is not absence.</strong> It means nobody has
-recorded the plant there. Under-collected ground and genuinely absent ground
-look identical from here, and we will not print the difference we cannot
-see.</p>
-<p><strong>Recorded is not native.</strong> Occurrence says a plant was found
-somewhere; it does not say it belongs there. A widely planted garden escape
-can accumulate hundreds of records. Nativity comes from a published flora, not
-from these counts; see below.</p>
-
-<h2>The two kinds of record, and why you can switch between them</h2>
-<p>A <strong>herbarium specimen</strong> is a pressed sheet in a collection
-with a determination on it. Somebody can go and re-examine it. It is drawn as
-a <strong>filled dot</strong>.</p>
-<p>A <strong>field observation</strong> is a photograph somebody uploaded,
-identified by community agreement. It is drawn as a <strong>hollow
-ring</strong>.</p>
-<p>Filled against hollow rather than two colours, so the distinction survives
-greyscale, printing and red-green colour deficiency. Both are evidence and
-they are not the same evidence, so the map lets you look at either alone.</p>
-<p>Of the {counts["marks"]:,} marks we publish, {counts["s"]:,} are specimens and
-{counts["o"]:,} are observations. The imbalance is real and worth knowing when
-you read a map: for most of this catalogue the dense southern clouds are
-photographs, and the northern dots are usually sheets.</p>
-
-<h2>Which records we can publish</h2>
-<p>Not all of them. A record is drawn here only if:</p>
+    return f"""<h2>The map</h2>
+<p>A <strong>shaded square</strong> is {CELL_DEG} degrees, about
+{CELL_KM_NS:.0f} km north to south, and means at least one usable record falls
+inside it. Darker squares hold more records. A <strong>filled dot</strong> is a
+herbarium specimen: a pressed sheet somebody can re-examine. A <strong>hollow
+ring</strong> is a field observation: a photograph identified by community
+agreement. Use the buttons to show either alone.</p>
+<p>Of {counts["marks"]:,} marks, {counts["s"]:,} are specimens and
+{counts["o"]:,} are observations.</p>
+<p>Three things the map does <em>not</em> say:</p>
 <ul>
-<li>its coordinate is precise to within <strong>10 km</strong>: a dot
-placed from a county centroid is a claim the record does not make;</li>
-<li>it falls inside <strong>Alberta or Saskatchewan</strong>, the ground this
-catalogue speaks for;</li>
-<li>its dataset licence permits redrawing the coordinate.</li>
+<li><strong>Darker is not more plant.</strong> It is more collecting. The
+squares over Calgary and Edmonton are dark for nearly every species here.</li>
+<li><strong>Empty is not absent.</strong> Nobody has recorded the plant there.
+Unsurveyed and absent look identical from here.</li>
+<li><strong>Recorded is not native.</strong> A garden escape can accumulate
+hundreds of records.</li>
 </ul>
-<p>That last one is a judgement we should state. We publish coordinates from
-non-commercial-licensed datasets, which we do <em>not</em> do for photographs.
-A photograph is somebody's work being redistributed; a coordinate is a fact
-about a place. A dataset whose licence we could not determine is dropped
-rather than assumed permissive.</p>
-<p>Records closer together than {MARK_DEG} degrees are drawn once. That is
-under half a pixel at the size these maps are shown, so two records 200 m
-apart were already one dot.</p>"""
+
+<h2>Which records we draw</h2>
+<p>A record is drawn only if its coordinate is precise to within
+<strong>10 km</strong>, it falls inside <strong>Alberta or
+Saskatchewan</strong>, and its dataset licence permits redrawing the
+coordinate. We accept non-commercial licences for coordinates but not for
+photographs: a photograph is somebody's work, a coordinate is a fact about a
+place. An undetermined licence is dropped.</p>
+<p>Records closer together than {MARK_DEG} degrees are drawn once, which is
+under half a pixel at this size.</p>"""
 
