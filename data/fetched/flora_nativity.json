@@ -1,0 +1,6126 @@
+{
+ "version": 1,
+ "generated": "2026-08-24",
+ "source": "VASCAN (Database of Vascular Plants of Canada), retrieved 2026-08-24",
+ "comment": "Per-province establishment means and accepted names for the plant catalogue. Read by scripts/ingest_flora_nativity.py, which PROPOSES changes and does not apply them. `origin: unstated` is a real answer and must not be rounded to a verdict.",
+ "provinces_asked": [
+  "AB",
+  "SK",
+  "MB"
+ ],
+ "failed": [],
+ "results": {
+  "Abies balsamea": {
+   "matched": true,
+   "accepted_name": "Abies balsamea (Linnaeus) Miller",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Acer glabrum": {
+   "matched": true,
+   "accepted_name": "Acer glabrum Torrey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Achillea alpina": {
+   "matched": true,
+   "accepted_name": "Achillea alpina Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Achillea borealis": {
+   "matched": true,
+   "accepted_name": "Achillea borealis Bongard",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Achillea millefolium": {
+   "matched": true,
+   "accepted_name": "Achillea millefolium Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "introduced",
+    "AB": "introduced",
+    "SK": "introduced"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Acorus americanus": {
+   "matched": true,
+   "accepted_name": "Acorus americanus (Rafinesque) Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Actaea rubra": {
+   "matched": true,
+   "accepted_name": "Actaea rubra (Aiton) Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Agastache foeniculum": {
+   "matched": true,
+   "accepted_name": "Agastache foeniculum (Pursh) Kuntze",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Agoseris glauca": {
+   "matched": true,
+   "accepted_name": "Agoseris glauca (Pursh) Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Agoseris parviflora": {
+   "matched": true,
+   "accepted_name": "Agoseris parviflora (Nuttall) D. Dietrich",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "excluded"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in SK.",
+   "vascan_matches": 1
+  },
+  "Agrimonia striata": {
+   "matched": true,
+   "accepted_name": "Agrimonia striata Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Agrostis scabra": {
+   "matched": true,
+   "accepted_name": "Agrostis scabra Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Alisma triviale": {
+   "matched": true,
+   "accepted_name": "Alisma triviale Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Allium cernuum": {
+   "matched": true,
+   "accepted_name": "Allium cernuum Roth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "excluded",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Allium schoenoprasum": {
+   "matched": true,
+   "accepted_name": "Allium schoenoprasum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Allium textile": {
+   "matched": true,
+   "accepted_name": "Allium textile A. Nelson & J.F. Macbride",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Alnus alnobetula": {
+   "matched": true,
+   "accepted_name": "Alnus alnobetula (Ehrhart) K. Koch",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Alnus incana": {
+   "matched": true,
+   "accepted_name": "Alnus incana (Linnaeus) Moench",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Amelanchier alnifolia": {
+   "matched": true,
+   "accepted_name": "Amelanchier alnifolia (Nuttall) Nuttall ex M. Roemer",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Anaphalis margaritacea": {
+   "matched": true,
+   "accepted_name": "Anaphalis margaritacea (Linnaeus) Bentham & Hooker f.",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Andropogon gerardii": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Androsace chamaejasme": {
+   "matched": true,
+   "accepted_name": "Androsace chamaejasme Wulfén ex Host",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Anemonastrum canadense": {
+   "matched": true,
+   "accepted_name": "Anemonastrum canadense (Linnaeus) Mosyakin",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Anemone cylindrica": {
+   "matched": true,
+   "accepted_name": "Anemone cylindrica A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Anemone multifida": {
+   "matched": true,
+   "accepted_name": "Anemone multifida Poiret",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Anemone virginiana": {
+   "matched": true,
+   "accepted_name": "Anemone virginiana Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Angelica dawsonii": {
+   "matched": true,
+   "accepted_name": "Angelica dawsonii S. Watson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Antennaria microphylla": {
+   "matched": true,
+   "accepted_name": "Antennaria microphylla Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Antennaria neglecta": {
+   "matched": true,
+   "accepted_name": "Antennaria neglecta Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Antennaria parvifolia": {
+   "matched": true,
+   "accepted_name": "Antennaria parvifolia Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Antennaria pulcherrima": {
+   "matched": true,
+   "accepted_name": "Antennaria pulcherrima (Hooker) Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Antennaria rosea": {
+   "matched": true,
+   "accepted_name": "Antennaria rosea Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Anthoxanthum hirtum": {
+   "matched": true,
+   "accepted_name": "Anthoxanthum hirtum (Schrank) Y. Schouten & Veldkamp",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Anticlea elegans": {
+   "matched": true,
+   "accepted_name": "Anticlea elegans (Pursh) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Anticlea occidentalis": {
+   "matched": true,
+   "accepted_name": "Anticlea occidentalis (A. Gray) Zomlefer & Judd",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Apocynum androsaemifolium": {
+   "matched": true,
+   "accepted_name": "Apocynum androsaemifolium Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Aquilegia brevistyla": {
+   "matched": true,
+   "accepted_name": "Aquilegia brevistyla Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Aquilegia canadensis": {
+   "matched": true,
+   "accepted_name": "Aquilegia canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Aquilegia flavescens": {
+   "matched": true,
+   "accepted_name": "Aquilegia flavescens S. Watson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Aquilegia formosa": {
+   "matched": true,
+   "accepted_name": "Aquilegia formosa Fischer ex de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Aralia nudicaulis": {
+   "matched": true,
+   "accepted_name": "Aralia nudicaulis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arctostaphylos uva-ursi": {
+   "matched": true,
+   "accepted_name": "Arctostaphylos uva-ursi (Linnaeus) Sprengel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arnica chamissonis": {
+   "matched": true,
+   "accepted_name": "Arnica chamissonis Lessing",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arnica cordifolia": {
+   "matched": true,
+   "accepted_name": "Arnica cordifolia Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arnica fulgens": {
+   "matched": true,
+   "accepted_name": "Arnica fulgens Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arnica lonchophylla": {
+   "matched": true,
+   "accepted_name": "Arnica lonchophylla Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Arnica mollis": {
+   "matched": true,
+   "accepted_name": "Arnica mollis Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Arnica sororia": {
+   "matched": true,
+   "accepted_name": "Arnica sororia Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Artemisia campestris": {
+   "matched": true,
+   "accepted_name": "Artemisia campestris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Artemisia cana": {
+   "matched": true,
+   "accepted_name": "Artemisia cana Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Artemisia frigida": {
+   "matched": true,
+   "accepted_name": "Artemisia frigida Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Artemisia ludoviciana": {
+   "matched": true,
+   "accepted_name": "Artemisia ludoviciana Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Artemisia tridentata": {
+   "matched": true,
+   "accepted_name": "Artemisia tridentata Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Asclepias ovalifolia": {
+   "matched": true,
+   "accepted_name": "Asclepias ovalifolia Decaisne",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Asclepias speciosa": {
+   "matched": true,
+   "accepted_name": "Asclepias speciosa Torrey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Aster alpinus": {
+   "matched": true,
+   "accepted_name": "Aster alpinus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Astragalus canadensis": {
+   "matched": true,
+   "accepted_name": "Astragalus canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Astragalus crassicarpus": {
+   "matched": true,
+   "accepted_name": "Astragalus crassicarpus Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Astragalus drummondii": {
+   "matched": true,
+   "accepted_name": "Astragalus drummondii Douglas",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Astragalus laxmannii": {
+   "matched": true,
+   "accepted_name": "Astragalus laxmannii Jacquin",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Astragalus missouriensis": {
+   "matched": true,
+   "accepted_name": "Astragalus missouriensis Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Avenula hookeri": {
+   "matched": true,
+   "accepted_name": "Avenula hookeri (Scribner) Holub",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Balsamorhiza sagittata": {
+   "matched": true,
+   "accepted_name": "Balsamorhiza sagittata (Pursh) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Beckmannia syzigachne": {
+   "matched": true,
+   "accepted_name": "Beckmannia syzigachne (Steudel) Fernald",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Betula glandulosa": {
+   "matched": true,
+   "accepted_name": "Betula glandulosa Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Betula occidentalis": {
+   "matched": true,
+   "accepted_name": "Betula occidentalis Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Betula papyrifera": {
+   "matched": true,
+   "accepted_name": "Betula papyrifera Marshall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Bistorta vivipara": {
+   "matched": true,
+   "accepted_name": "Bistorta vivipara (Linnaeus) Delarbre",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Blitum capitatum": {
+   "matched": true,
+   "accepted_name": "Blitum capitatum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Bolboschoenus fluviatilis": {
+   "matched": true,
+   "accepted_name": "Bolboschoenus fluviatilis (Torrey) Soják",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Bolboschoenus maritimus": {
+   "matched": true,
+   "accepted_name": "Bolboschoenus maritimus (Linnaeus) Palla",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Bouteloua curtipendula": {
+   "matched": true,
+   "accepted_name": "Bouteloua curtipendula (Michaux) Torrey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Bouteloua gracilis": {
+   "matched": true,
+   "accepted_name": "Bouteloua gracilis (Kunth) Lagasca ex Griffiths",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Bromus ciliatus": {
+   "matched": true,
+   "accepted_name": "Bromus ciliatus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Bromus marginatus": {
+   "matched": true,
+   "accepted_name": "Bromus marginatus Nees ex Steudel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Calamagrostis canadensis": {
+   "matched": true,
+   "accepted_name": "Calamagrostis canadensis (Michaux) Palisot de Beauvois",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Calamagrostis purpurascens": {
+   "matched": true,
+   "accepted_name": "Calamagrostis purpurascens R. Brown",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Calamovilfa longifolia": {
+   "matched": true,
+   "accepted_name": "Calamovilfa longifolia (Hooker) Hackel ex Scribner & Southworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Calla palustris": {
+   "matched": true,
+   "accepted_name": "Calla palustris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Caltha natans": {
+   "matched": true,
+   "accepted_name": "Caltha natans Pallas",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Caltha palustris": {
+   "matched": true,
+   "accepted_name": "Caltha palustris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Campanula alaskana": {
+   "matched": true,
+   "accepted_name": "Campanula alaskana (A. Gray) W. Wight ex J.P. Anderson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Campanula lasiocarpa": {
+   "matched": true,
+   "accepted_name": "Campanula lasiocarpa Chamisso",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Canadanthus modestus": {
+   "matched": true,
+   "accepted_name": "Canadanthus modestus (Lindley) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Capnoides sempervirens": {
+   "matched": true,
+   "accepted_name": "Capnoides sempervirens (Linnaeus) Borkhausen",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex aquatilis": {
+   "matched": true,
+   "accepted_name": "Carex aquatilis Wahlenberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Carex atherodes": {
+   "matched": true,
+   "accepted_name": "Carex atherodes Sprengel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex aurea": {
+   "matched": true,
+   "accepted_name": "Carex aurea Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex bebbii": {
+   "matched": true,
+   "accepted_name": "Carex bebbii (L.H. Bailey) Olney ex Fernald",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex hystericina": {
+   "matched": true,
+   "accepted_name": "Carex hystericina Muhlenberg ex Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex lacustris": {
+   "matched": true,
+   "accepted_name": "Carex lacustris Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex pellita": {
+   "matched": true,
+   "accepted_name": "Carex pellita Muhlenberg ex Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex praticola": {
+   "matched": true,
+   "accepted_name": "Carex praticola Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex pseudocyperus": {
+   "matched": true,
+   "accepted_name": "Carex pseudocyperus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex raymondii": {
+   "matched": true,
+   "accepted_name": "Carex raymondii Calder",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Carex retrorsa": {
+   "matched": true,
+   "accepted_name": "Carex retrorsa Schweinitz",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex rostrata": {
+   "matched": true,
+   "accepted_name": "Carex rostrata Stokes nom. cons.",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 2
+  },
+  "Carex sartwellii": {
+   "matched": true,
+   "accepted_name": "Carex sartwellii Dewey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex sprengelii": {
+   "matched": true,
+   "accepted_name": "Carex sprengelii Dewey ex Sprengel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Carex utriculata": {
+   "matched": true,
+   "accepted_name": "Carex utriculata Boott",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Castilleja lutescens": {
+   "matched": true,
+   "accepted_name": "Castilleja lutescens (Greenman) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Castilleja miniata": {
+   "matched": true,
+   "accepted_name": "Castilleja miniata Douglas ex Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Cerastium arvense": {
+   "matched": true,
+   "accepted_name": "Cerastium arvense Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Chamaenerion angustifolium": {
+   "matched": true,
+   "accepted_name": "Chamaenerion angustifolium (Linnaeus) Scopoli",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Chamaenerion latifolium": {
+   "matched": true,
+   "accepted_name": "Chamaenerion latifolium (Linnaeus) Sweet",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "excluded",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Cinna latifolia": {
+   "matched": true,
+   "accepted_name": "Cinna latifolia (Treviranus ex Göppinger) Grisebach",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Cirsium flodmanii": {
+   "matched": true,
+   "accepted_name": "Cirsium flodmanii (Rydberg) Arthur",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Claytonia lanceolata": {
+   "matched": true,
+   "accepted_name": "Claytonia lanceolata Pallas ex Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Clematis ligusticifolia": {
+   "matched": true,
+   "accepted_name": "Clematis ligusticifolia Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Clematis occidentalis": {
+   "matched": true,
+   "accepted_name": "Clematis occidentalis (Hornemann) de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Comandra umbellata": {
+   "matched": true,
+   "accepted_name": "Comandra umbellata (Linnaeus) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Comarum palustre": {
+   "matched": true,
+   "accepted_name": "Comarum palustre Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Coreopsis tinctoria": {
+   "matched": true,
+   "accepted_name": "Coreopsis tinctoria Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Cornus canadensis": {
+   "matched": true,
+   "accepted_name": "Cornus canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Cornus sericea": {
+   "matched": true,
+   "accepted_name": "Cornus sericea Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Corylus cornuta": {
+   "matched": true,
+   "accepted_name": "Corylus cornuta Marshall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Crataegus douglasii": {
+   "matched": true,
+   "accepted_name": "Crataegus douglasii Lindley",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 2
+  },
+  "Cypripedium parviflorum": {
+   "matched": true,
+   "accepted_name": "Cypripedium parviflorum Salisbury",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Dalea candida": {
+   "matched": true,
+   "accepted_name": "Dalea candida Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Dalea purpurea": {
+   "matched": true,
+   "accepted_name": "Dalea purpurea Ventenat",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Danthonia parryi": {
+   "matched": true,
+   "accepted_name": "Danthonia parryi Scribner",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Danthonia spicata": {
+   "matched": true,
+   "accepted_name": "Danthonia spicata (Linnaeus) P. Beauvois ex Roemer & Schultes",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Dasiphora fruticosa": {
+   "matched": true,
+   "accepted_name": "Dasiphora fruticosa (Linnaeus) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Delphinium glaucum": {
+   "matched": true,
+   "accepted_name": "Delphinium glaucum S. Watson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "introduced",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Deschampsia caespitosa": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Dieteria canescens": {
+   "matched": true,
+   "accepted_name": "Dieteria canescens (Pursh) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Distichlis spicata": {
+   "matched": true,
+   "accepted_name": "Distichlis spicata (Linnaeus) Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Dodecatheon pulchellum": {
+   "matched": true,
+   "accepted_name": "Dodecatheon pulchellum (Rafinesque) Merrill",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Doellingeria umbellata": {
+   "matched": true,
+   "accepted_name": "Doellingeria umbellata (Miller) Nees",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Draba aurea": {
+   "matched": true,
+   "accepted_name": "Draba aurea Vahl ex Hornemann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Draba incerta": {
+   "matched": true,
+   "accepted_name": "Draba incerta Payson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Drosera rotundifolia": {
+   "matched": true,
+   "accepted_name": "Drosera rotundifolia Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Dryas drummondii": {
+   "matched": true,
+   "accepted_name": "Dryas drummondii Richardson ex Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Dryas hookeriana": {
+   "matched": true,
+   "accepted_name": "Dryas hookeriana Juzepczuk",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Drymocallis arguta": {
+   "matched": true,
+   "accepted_name": "Drymocallis arguta (Pursh) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Echinacea angustifolia": {
+   "matched": true,
+   "accepted_name": "Echinacea angustifolia de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "introduced"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Elaeagnus commutata": {
+   "matched": true,
+   "accepted_name": "Elaeagnus commutata Bernhardi ex Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eleocharis acicularis": {
+   "matched": true,
+   "accepted_name": "Eleocharis acicularis (Linnaeus) Roemer & Schultes",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eleocharis palustris": {
+   "matched": true,
+   "accepted_name": "Eleocharis palustris (Linnaeus) Roemer & Schultes",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Elodea canadensis": {
+   "matched": true,
+   "accepted_name": "Elodea canadensis Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Elymus canadensis": {
+   "matched": true,
+   "accepted_name": "Elymus canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Elymus glaucus": {
+   "matched": true,
+   "accepted_name": "Elymus glaucus Buckley",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Elymus lanceolatus": {
+   "matched": true,
+   "accepted_name": "Elymus lanceolatus (Scribner & J.G. Smith) Gould",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Elymus trachycaulus": {
+   "matched": true,
+   "accepted_name": "Elymus trachycaulus (Link) Gould ex Shinners",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Endotropis alnifolia": {
+   "matched": true,
+   "accepted_name": "Endotropis alnifolia (L'Héritier) Hauenschild",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Equisetum arvense": {
+   "matched": true,
+   "accepted_name": "Equisetum arvense Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Equisetum fluviatile": {
+   "matched": true,
+   "accepted_name": "Equisetum fluviatile Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Equisetum hyemale": {
+   "matched": true,
+   "accepted_name": "Equisetum hyemale Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Equisetum variegatum": {
+   "matched": true,
+   "accepted_name": "Equisetum variegatum Schleicher ex F. Weber & D. Mohr",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Ericameria nauseosa": {
+   "matched": true,
+   "accepted_name": "Ericameria nauseosa (Pallas ex Pursh) G.L. Nesom &  G.I.  Baird",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Erigeron caespitosus": {
+   "matched": true,
+   "accepted_name": "Erigeron caespitosus Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Erigeron glabellus": {
+   "matched": true,
+   "accepted_name": "Erigeron glabellus Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Erigeron philadelphicus": {
+   "matched": true,
+   "accepted_name": "Erigeron philadelphicus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Erigeron speciosus": {
+   "matched": true,
+   "accepted_name": "Erigeron speciosus (Lindley) de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "excluded"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Eriocoma hymenoides": {
+   "matched": true,
+   "accepted_name": "Eriocoma hymenoides (Roemer & Schultes) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eriocoma richardsonii": {
+   "matched": true,
+   "accepted_name": "Eriocoma richardsonii (Link) Romaschenko",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eriogonum androsaceum": {
+   "matched": true,
+   "accepted_name": "Eriogonum androsaceum Bentham",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Eriogonum flavum": {
+   "matched": true,
+   "accepted_name": "Eriogonum flavum Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Eriogonum umbellatum": {
+   "matched": true,
+   "accepted_name": "Eriogonum umbellatum Torrey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Eriophorum angustifolium": {
+   "matched": true,
+   "accepted_name": "Eriophorum angustifolium Honckeny",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Erythranthe guttata": {
+   "matched": true,
+   "accepted_name": "Erythranthe guttata (de Candolle) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Erythranthe lewisii": {
+   "matched": true,
+   "accepted_name": "Erythranthe lewisii (Pursh) G.L. Nesom & N.S. Fraga",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Erythronium grandiflorum": {
+   "matched": true,
+   "accepted_name": "Erythronium grandiflorum Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Escobaria vivipara": {
+   "matched": true,
+   "accepted_name": "Escobaria vivipara (Nuttall) Buxbaum",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Eurybia conspicua": {
+   "matched": true,
+   "accepted_name": "Eurybia conspicua (Lindley) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eurybia sibirica": {
+   "matched": true,
+   "accepted_name": "Eurybia sibirica (Linnaeus) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Euthamia graminifolia": {
+   "matched": true,
+   "accepted_name": "Euthamia graminifolia (Linnaeus) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Eutrochium maculatum": {
+   "matched": true,
+   "accepted_name": "Eutrochium maculatum (Linnaeus) E.E. Lamont",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Festuca campestris": {
+   "matched": true,
+   "accepted_name": "Festuca campestris Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Festuca hallii": {
+   "matched": true,
+   "accepted_name": "Festuca hallii (Vasey) Piper",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Festuca idahoensis": {
+   "matched": true,
+   "accepted_name": "Festuca idahoensis Elmer",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Festuca occidentalis": {
+   "matched": true,
+   "accepted_name": "Festuca occidentalis Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "excluded"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Festuca ovina": {
+   "matched": true,
+   "accepted_name": "Festuca ovina Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "excluded",
+    "AB": "excluded"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Festuca saximontana": {
+   "matched": true,
+   "accepted_name": "Festuca saximontana Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Fragaria vesca": {
+   "matched": true,
+   "accepted_name": "Fragaria vesca Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Fragaria virginiana": {
+   "matched": true,
+   "accepted_name": "Fragaria virginiana Miller",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 2
+  },
+  "Fritillaria pudica": {
+   "matched": true,
+   "accepted_name": "Fritillaria pudica (Pursh) Sprengel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Gaillardia aristata": {
+   "matched": true,
+   "accepted_name": "Gaillardia aristata Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Galium boreale": {
+   "matched": true,
+   "accepted_name": "Galium boreale Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Galium triflorum": {
+   "matched": true,
+   "accepted_name": "Galium triflorum Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Gentiana affinis": {
+   "matched": true,
+   "accepted_name": "Gentiana affinis Grisebach",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Gentiana calycosa": {
+   "matched": true,
+   "accepted_name": "Gentiana calycosa Grisebach",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Gentianella amarella": {
+   "matched": true,
+   "accepted_name": "Gentianella amarella (Linnaeus) Börner",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Geranium richardsonii": {
+   "matched": true,
+   "accepted_name": "Geranium richardsonii Fischer & Trautvetter",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Geranium viscosissimum": {
+   "matched": true,
+   "accepted_name": "Geranium viscosissimum Fischer & C.A. Meyer ex C.A. Meyer",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Geum aleppicum": {
+   "matched": true,
+   "accepted_name": "Geum aleppicum Jacquin",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Geum macrophyllum": {
+   "matched": true,
+   "accepted_name": "Geum macrophyllum Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Geum rivale": {
+   "matched": true,
+   "accepted_name": "Geum rivale Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Geum triflorum": {
+   "matched": true,
+   "accepted_name": "Geum triflorum Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Glyceria elata": {
+   "matched": true,
+   "accepted_name": "Glyceria elata (Nash) M.E. Jones",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Glyceria grandis": {
+   "matched": true,
+   "accepted_name": "Glyceria grandis S. Watson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Glyceria striata": {
+   "matched": true,
+   "accepted_name": "Glyceria striata (Lamarck) Hitchcock",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Glycyrrhiza lepidota": {
+   "matched": true,
+   "accepted_name": "Glycyrrhiza lepidota Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Grindelia squarrosa": {
+   "matched": true,
+   "accepted_name": "Grindelia squarrosa (Pursh) Dunal",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Gutierrezia sarothrae": {
+   "matched": true,
+   "accepted_name": "Gutierrezia sarothrae (Pursh) Britton & Rusby",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Hedysarum alpinum": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Hedysarum americanum": {
+   "matched": true,
+   "accepted_name": "Hedysarum americanum (Michaux ex Pursh) Britton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Hedysarum boreale": {
+   "matched": true,
+   "accepted_name": "Hedysarum boreale Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Hedysarum mackenziei": {
+   "matched": true,
+   "accepted_name": "Hedysarum mackenziei Richardson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Hedysarum sulphurescens": {
+   "matched": true,
+   "accepted_name": "Hedysarum sulphurescens Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Helenium autumnale": {
+   "matched": true,
+   "accepted_name": "Helenium autumnale Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Helianthus annuus": {
+   "matched": true,
+   "accepted_name": "Helianthus annuus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "introduced",
+    "MB": "introduced",
+    "AB": "introduced"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Helianthus maximiliani": {
+   "matched": true,
+   "accepted_name": "Helianthus maximiliani Schrader",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Helianthus nuttallii": {
+   "matched": true,
+   "accepted_name": "Helianthus nuttallii Torrey & A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Helianthus pauciflorus": {
+   "matched": true,
+   "accepted_name": "Helianthus pauciflorus Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Helianthus tuberosus": {
+   "matched": true,
+   "accepted_name": "Helianthus tuberosus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Hesperostipa comata": {
+   "matched": true,
+   "accepted_name": "Hesperostipa comata (Trinius & Ruprecht) Barkworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Hesperostipa curtiseta": {
+   "matched": true,
+   "accepted_name": "Hesperostipa curtiseta (Hitchcock) Barkworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Hesperostipa spartea": {
+   "matched": true,
+   "accepted_name": "Hesperostipa spartea (Trinius) Barkworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Heterotheca villosa": {
+   "matched": true,
+   "accepted_name": "Heterotheca villosa (Pursh) Shinners",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Heuchera cylindrica": {
+   "matched": true,
+   "accepted_name": "Heuchera cylindrica Douglas",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Heuchera parvifolia": {
+   "matched": true,
+   "accepted_name": "Heuchera parvifolia Nuttall ex Torrey & A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Heuchera richardsonii": {
+   "matched": true,
+   "accepted_name": "Heuchera richardsonii R. Brown",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Hieracium umbellatum": {
+   "matched": true,
+   "accepted_name": "Hieracium umbellatum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Hippuris vulgaris": {
+   "matched": true,
+   "accepted_name": "Hippuris vulgaris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Iliamna rivularis": {
+   "matched": true,
+   "accepted_name": "Iliamna rivularis (Douglas) Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Iris missouriensis": {
+   "matched": true,
+   "accepted_name": "Iris missouriensis Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "excluded"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Juncus balticus": {
+   "matched": true,
+   "accepted_name": "Juncus balticus Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Juncus drummondii": {
+   "matched": true,
+   "accepted_name": "Juncus drummondii E. Meyer",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Juncus nodosus": {
+   "matched": true,
+   "accepted_name": "Juncus nodosus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Juncus torreyi": {
+   "matched": true,
+   "accepted_name": "Juncus torreyi Coville",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Juncus vaseyi": {
+   "matched": true,
+   "accepted_name": "Juncus vaseyi Engelmann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Juniperus communis": {
+   "matched": true,
+   "accepted_name": "Juniperus communis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Juniperus horizontalis": {
+   "matched": true,
+   "accepted_name": "Juniperus horizontalis Moench",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Koeleria macrantha": {
+   "matched": true,
+   "accepted_name": "Koeleria macrantha (Ledebour) Schultes",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Koeleria spicata": {
+   "matched": true,
+   "accepted_name": "Koeleria spicata (Linnaeus) Barberá, Quintanar, Soreng & P.M. Peterson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Krascheninnikovia lanata": {
+   "matched": true,
+   "accepted_name": "Krascheninnikovia lanata (Pursh) A. Meeuse & A. Smit",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Larix laricina": {
+   "matched": true,
+   "accepted_name": "Larix laricina (Du Roi) K. Koch",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Lathyrus ochroleucus": {
+   "matched": true,
+   "accepted_name": "Lathyrus ochroleucus Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Lathyrus venosus": {
+   "matched": true,
+   "accepted_name": "Lathyrus venosus Muhlenberg ex Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Ledum groenlandicum": {
+   "matched": true,
+   "accepted_name": "Ledum groenlandicum Oeder",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Lemna trisulca": {
+   "matched": true,
+   "accepted_name": "Lemna trisulca Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Leymus cinereus": {
+   "matched": true,
+   "accepted_name": "Leymus cinereus (Scribner & Merrill) Á. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Leymus innovatus": {
+   "matched": true,
+   "accepted_name": "Leymus innovatus (Beal) Pilger",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Liatris ligulistylis": {
+   "matched": true,
+   "accepted_name": "Liatris ligulistylis (A. Nelson) K. Schumann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Liatris punctata": {
+   "matched": true,
+   "accepted_name": "Liatris punctata Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Lilium philadelphicum": {
+   "matched": true,
+   "accepted_name": "Lilium philadelphicum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Linnaea borealis": {
+   "matched": true,
+   "accepted_name": "Linnaea borealis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Linum lewisii": {
+   "matched": true,
+   "accepted_name": "Linum lewisii Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Linum rigidum": {
+   "matched": true,
+   "accepted_name": "Linum rigidum Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Lithospermum ruderale": {
+   "matched": true,
+   "accepted_name": "Lithospermum ruderale Douglas ex Lehmann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Lonicera dioica": {
+   "matched": true,
+   "accepted_name": "Lonicera dioica Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Lonicera involucrata": {
+   "matched": true,
+   "accepted_name": "Lonicera involucrata (Richardson) Banks ex Sprengel",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Lupinus argenteus": {
+   "matched": true,
+   "accepted_name": "Lupinus argenteus Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Lupinus sericeus": {
+   "matched": true,
+   "accepted_name": "Lupinus sericeus Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Lysimachia ciliata": {
+   "matched": true,
+   "accepted_name": "Lysimachia ciliata Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Mahonia repens": {
+   "matched": true,
+   "accepted_name": "Mahonia repens (Lindley) G. Don",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Maianthemum canadense": {
+   "matched": true,
+   "accepted_name": "Maianthemum canadense Desfontaines",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Maianthemum racemosum": {
+   "matched": true,
+   "accepted_name": "Maianthemum racemosum (Linnaeus) Link",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native"
+   },
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Maianthemum stellatum": {
+   "matched": true,
+   "accepted_name": "Maianthemum stellatum (Linnaeus) Link",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Malus domestica 'Goodland'": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Malus domestica 'Norland'": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Matteuccia struthiopteris": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Mentha arvensis": {
+   "matched": true,
+   "accepted_name": "Mentha arvensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Menyanthes trifoliata": {
+   "matched": true,
+   "accepted_name": "Menyanthes trifoliata Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Mertensia paniculata": {
+   "matched": true,
+   "accepted_name": "Mertensia paniculata (Aiton) G. Don",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Mimulus ringens": {
+   "matched": true,
+   "accepted_name": "Mimulus ringens Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Mitella nuda": {
+   "matched": true,
+   "accepted_name": "Mitella nuda Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Monarda fistulosa": {
+   "matched": true,
+   "accepted_name": "Monarda fistulosa Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Muhlenbergia cuspidata": {
+   "matched": true,
+   "accepted_name": "Muhlenbergia cuspidata (Torrey ex Hooker) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Myosotis asiatica": {
+   "matched": true,
+   "accepted_name": "Myosotis asiatica (Vestergren ex Hultén) Schischkin & Sergievskja",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Myriophyllum sibiricum": {
+   "matched": true,
+   "accepted_name": "Myriophyllum sibiricum Komarov",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Nassella viridula": {
+   "matched": true,
+   "accepted_name": "Nassella viridula (Trinius) Barkworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Nuphar variegata": {
+   "matched": true,
+   "accepted_name": "Nuphar variegata Engelmann ex Durand",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oenothera biennis": {
+   "matched": true,
+   "accepted_name": "Oenothera biennis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oenothera caespitosa": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Oenothera nuttallii": {
+   "matched": true,
+   "accepted_name": "Oenothera nuttallii Sweet",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oenothera suffrutescens": {
+   "matched": true,
+   "accepted_name": "Oenothera suffrutescens (Seringe) W.L. Wagner & Hoch",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oligoneuron rigidum": {
+   "matched": true,
+   "accepted_name": "Oligoneuron rigidum (Linnaeus) Small",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Opuntia fragilis": {
+   "matched": true,
+   "accepted_name": "Opuntia fragilis (Nuttall) Haworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Opuntia polyacantha": {
+   "matched": true,
+   "accepted_name": "Opuntia polyacantha Haworth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Orthocarpus luteus": {
+   "matched": true,
+   "accepted_name": "Orthocarpus luteus Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oryzopsis asperifolia": {
+   "matched": true,
+   "accepted_name": "Oryzopsis asperifolia Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Osmorhiza berteroi": {
+   "matched": true,
+   "accepted_name": "Osmorhiza berteroi de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Osmorhiza longistylis": {
+   "matched": true,
+   "accepted_name": "Osmorhiza longistylis (Torrey) de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Oxytropis borealis": {
+   "matched": true,
+   "accepted_name": "Oxytropis borealis de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Oxytropis campestris": {
+   "matched": true,
+   "accepted_name": "Oxytropis campestris (Linnaeus) de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Oxytropis monticola": {
+   "matched": true,
+   "accepted_name": "Oxytropis monticola A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Oxytropis sericea": {
+   "matched": true,
+   "accepted_name": "Oxytropis sericea Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Oxytropis splendens": {
+   "matched": true,
+   "accepted_name": "Oxytropis splendens Douglas ex Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Packera cana": {
+   "matched": true,
+   "accepted_name": "Packera cana (Hooker) W.A. Weber & Á. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Panicum virgatum": {
+   "matched": true,
+   "accepted_name": "Panicum virgatum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Pascopyrum smithii": {
+   "matched": true,
+   "accepted_name": "Pascopyrum smithii (Rydberg) Barkworth & D.R. Dewey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 2
+  },
+  "Paxistima myrsinites": {
+   "matched": true,
+   "accepted_name": "Paxistima myrsinites (Pursh) Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Pedicularis bracteosa": {
+   "matched": true,
+   "accepted_name": "Pedicularis bracteosa Bentham",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Pediomelum esculentum": {
+   "matched": true,
+   "accepted_name": "Pediomelum esculentum (Pursh) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Penstemon albertinus": {
+   "matched": true,
+   "accepted_name": "Penstemon albertinus Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Penstemon confertus": {
+   "matched": true,
+   "accepted_name": "Penstemon confertus Douglas",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Penstemon ellipticus": {
+   "matched": true,
+   "accepted_name": "Penstemon ellipticus J.M. Coulter & Fisher",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Penstemon eriantherus": {
+   "matched": true,
+   "accepted_name": "Penstemon eriantherus Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Penstemon gracilis": {
+   "matched": true,
+   "accepted_name": "Penstemon gracilis Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Penstemon lyallii": {
+   "matched": true,
+   "accepted_name": "Penstemon lyallii (A. Gray) A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Penstemon nitidus": {
+   "matched": true,
+   "accepted_name": "Penstemon nitidus Douglas ex Bentham",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Penstemon procerus": {
+   "matched": true,
+   "accepted_name": "Penstemon procerus Douglas ex Graham",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Peritoma serrulata": {
+   "matched": true,
+   "accepted_name": "Peritoma serrulata (Pursh) de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Persicaria amphibia": {
+   "matched": true,
+   "accepted_name": "Persicaria amphibia (Linnaeus) Delarbre",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 2
+  },
+  "Petasites frigidus": {
+   "matched": true,
+   "accepted_name": "Petasites frigidus (Linnaeus) Fries",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Phacelia sericea": {
+   "matched": true,
+   "accepted_name": "Phacelia sericea (Graham) A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Phlox hoodii": {
+   "matched": true,
+   "accepted_name": "Phlox hoodii Richardson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Physaria didymocarpa": {
+   "matched": true,
+   "accepted_name": "Physaria didymocarpa (Hooker) A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Physostegia ledinghamii": {
+   "matched": true,
+   "accepted_name": "Physostegia ledinghamii (B. Boivin) P.D. Cantino",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Physostegia parviflora": {
+   "matched": true,
+   "accepted_name": "Physostegia parviflora Nuttall ex A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Picea glauca": {
+   "matched": true,
+   "accepted_name": "Picea glauca (Moench) Voss",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Picea mariana": {
+   "matched": true,
+   "accepted_name": "Picea mariana (Miller) Britton, Sterns & Poggenburgh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Pinus banksiana": {
+   "matched": true,
+   "accepted_name": "Pinus banksiana Lambert",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Pinus contorta": {
+   "matched": true,
+   "accepted_name": "Pinus contorta Douglas ex Loudon",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Piptatherum canadense": {
+   "matched": true,
+   "accepted_name": "Piptatherum canadense (Poiret) Dorn",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Poa alpina": {
+   "matched": true,
+   "accepted_name": "Poa alpina Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Poa secunda": {
+   "matched": true,
+   "accepted_name": "Poa secunda J. Presl",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Polemonium acutiflorum": {
+   "matched": true,
+   "accepted_name": "Polemonium acutiflorum Willdenow ex Roemer & Schultes",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Polemonium pulcherrimum": {
+   "matched": true,
+   "accepted_name": "Polemonium pulcherrimum Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Polygala senega": {
+   "matched": true,
+   "accepted_name": "Polygala senega Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 2
+  },
+  "Populus balsamifera": {
+   "matched": true,
+   "accepted_name": "Populus balsamifera Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Populus tremuloides": {
+   "matched": true,
+   "accepted_name": "Populus tremuloides Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Potentilla anserina": {
+   "matched": true,
+   "accepted_name": "Potentilla anserina Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Potentilla gracilis": {
+   "matched": true,
+   "accepted_name": "Potentilla gracilis Douglas ex Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Potentilla hippiana": {
+   "matched": true,
+   "accepted_name": "Potentilla hippiana Lehmann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Potentilla pensylvanica": {
+   "matched": true,
+   "accepted_name": "Potentilla pensylvanica Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Primula conjugens": {
+   "matched": true,
+   "accepted_name": "Primula conjugens (Greene) A.R. Mast & Reveal",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Primula pauciflora": {
+   "matched": true,
+   "accepted_name": "Primula pauciflora (Greene) A.R. Mast & Reveal",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Prosartes trachycarpa": {
+   "matched": true,
+   "accepted_name": "Prosartes trachycarpa S. Watson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Prunella vulgaris": {
+   "matched": true,
+   "accepted_name": "Prunella vulgaris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Prunus cerasus 'Evans'": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Prunus pensylvanica": {
+   "matched": true,
+   "accepted_name": "Prunus pensylvanica Linnaeus f.",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Prunus tomentosa": {
+   "matched": true,
+   "accepted_name": "Prunus tomentosa Thunberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "introduced",
+    "SK": "introduced",
+    "AB": "introduced"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Prunus virginiana": {
+   "matched": true,
+   "accepted_name": "Prunus virginiana Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Pseudotsuga menziesii": {
+   "matched": true,
+   "accepted_name": "Pseudotsuga menziesii (Mirbel) Franco",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Pulsatilla nuttalliana": {
+   "matched": true,
+   "accepted_name": "Pulsatilla nuttalliana (de Candolle) Berchtold ex J. Presl",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 2
+  },
+  "Pyrola asarifolia": {
+   "matched": true,
+   "accepted_name": "Pyrola asarifolia Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Quercus macrocarpa": {
+   "matched": true,
+   "accepted_name": "Quercus macrocarpa Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "introduced"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Ranunculus rhomboideus": {
+   "matched": true,
+   "accepted_name": "Ranunculus rhomboideus Goldie",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Ratibida columnifera": {
+   "matched": true,
+   "accepted_name": "Ratibida columnifera (Nuttall) Wooton & Standley",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Rhinanthus minor": {
+   "matched": true,
+   "accepted_name": "Rhinanthus minor Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rhodiola integrifolia": {
+   "matched": true,
+   "accepted_name": "Rhodiola integrifolia Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rhus aromatica": {
+   "matched": true,
+   "accepted_name": "Rhus aromatica Aiton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Ribes americanum": {
+   "matched": true,
+   "accepted_name": "Ribes americanum Miller",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Ribes aureum": {
+   "matched": true,
+   "accepted_name": "Ribes aureum Pursh",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Ribes glandulosum": {
+   "matched": true,
+   "accepted_name": "Ribes glandulosum Grauer",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Ribes hudsonianum": {
+   "matched": true,
+   "accepted_name": "Ribes hudsonianum Richardson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Ribes lacustre": {
+   "matched": true,
+   "accepted_name": "Ribes lacustre (Persoon) Poiret",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Ribes oxyacanthoides": {
+   "matched": true,
+   "accepted_name": "Ribes oxyacanthoides Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Ribes triste": {
+   "matched": true,
+   "accepted_name": "Ribes triste Pallas",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Rosa acicularis": {
+   "matched": true,
+   "accepted_name": "Rosa acicularis Lindley",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rosa arkansana": {
+   "matched": true,
+   "accepted_name": "Rosa arkansana Porter",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Rosa woodsii": {
+   "matched": true,
+   "accepted_name": "Rosa woodsii Lindley",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rubus arcticus": {
+   "matched": true,
+   "accepted_name": "Rubus arcticus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rubus idaeus": {
+   "matched": true,
+   "accepted_name": "Rubus idaeus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Rubus parviflorus": {
+   "matched": true,
+   "accepted_name": "Rubus parviflorus Nuttall nom. cons.",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "excluded"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Rubus pedatus": {
+   "matched": true,
+   "accepted_name": "Rubus pedatus Smith",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Rubus pubescens": {
+   "matched": true,
+   "accepted_name": "Rubus pubescens Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sagittaria cuneata": {
+   "matched": true,
+   "accepted_name": "Sagittaria cuneata E. Sheldon",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sagittaria latifolia": {
+   "matched": true,
+   "accepted_name": "Sagittaria latifolia Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Salix bebbiana": {
+   "matched": true,
+   "accepted_name": "Salix bebbiana Sargent",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Salix brachycarpa": {
+   "matched": true,
+   "accepted_name": "Salix brachycarpa Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Salix discolor": {
+   "matched": true,
+   "accepted_name": "Salix discolor Muhlenberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Salix exigua": {
+   "matched": true,
+   "accepted_name": "Salix exigua Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Salix interior": {
+   "matched": true,
+   "accepted_name": "Salix interior Rowlee",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Salix petiolaris": {
+   "matched": true,
+   "accepted_name": "Salix petiolaris Smith",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Schizachne purpurascens": {
+   "matched": true,
+   "accepted_name": "Schizachne purpurascens (Torrey) Swallen",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Schizachyrium scoparium": {
+   "matched": true,
+   "accepted_name": "Schizachyrium scoparium (Michaux) Nash",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Schoenoplectus acutus": {
+   "matched": true,
+   "accepted_name": "Schoenoplectus acutus (Muhlenberg ex Bigelow) Á. Löve & D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Schoenoplectus pungens": {
+   "matched": true,
+   "accepted_name": "Schoenoplectus pungens (Vahl) Palla",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Scirpus microcarpus": {
+   "matched": true,
+   "accepted_name": "Scirpus microcarpus J. Presl & C. Presl",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Scutellaria galericulata": {
+   "matched": true,
+   "accepted_name": "Scutellaria galericulata Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sedum lanceolatum": {
+   "matched": true,
+   "accepted_name": "Sedum lanceolatum Torrey",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Shepherdia argentea": {
+   "matched": true,
+   "accepted_name": "Shepherdia argentea (Pursh) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Shepherdia canadensis": {
+   "matched": true,
+   "accepted_name": "Shepherdia canadensis (Linnaeus) Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sibbaldia procumbens": {
+   "matched": true,
+   "accepted_name": "Sibbaldia procumbens Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Silene acaulis": {
+   "matched": true,
+   "accepted_name": "Silene acaulis (Linnaeus) Jacquin",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sisyrinchium montanum": {
+   "matched": true,
+   "accepted_name": "Sisyrinchium montanum Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Sium suave": {
+   "matched": true,
+   "accepted_name": "Sium suave Walter",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Solanum triflorum": {
+   "matched": true,
+   "accepted_name": "Solanum triflorum Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "introduced",
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Solidago altissima": {
+   "matched": true,
+   "accepted_name": "Solidago altissima Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago canadensis": {
+   "matched": true,
+   "accepted_name": "Solidago canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago gigantea": {
+   "matched": true,
+   "accepted_name": "Solidago gigantea Aiton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago glutinosa": {
+   "matched": true,
+   "accepted_name": "Solidago glutinosa Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Solidago lepida": {
+   "matched": true,
+   "accepted_name": "Solidago lepida de Candolle",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago missouriensis": {
+   "matched": true,
+   "accepted_name": "Solidago missouriensis Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Solidago nemoralis": {
+   "matched": true,
+   "accepted_name": "Solidago nemoralis Aiton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native"
+   },
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago rigida": {
+   "matched": true,
+   "accepted_name": "Solidago rigida Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Solidago simplex": {
+   "matched": true,
+   "accepted_name": "Solidago simplex Kunth",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "excluded",
+    "AB": "excluded",
+    "MB": "excluded"
+   },
+   "native_provinces": "",
+   "origin": "introduced",
+   "verdict": "not_here",
+   "why": "VASCAN records it as introduced in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sorbus scopulina": {
+   "matched": true,
+   "accepted_name": "Sorbus scopulina Greene",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sparganium eurycarpum": {
+   "matched": true,
+   "accepted_name": "Sparganium eurycarpum Engelmann",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Spartina gracilis": {
+   "matched": true,
+   "accepted_name": "Spartina gracilis Trinius",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Spartina pectinata": {
+   "matched": true,
+   "accepted_name": "Spartina pectinata Link",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Sphaeralcea coccinea": {
+   "matched": true,
+   "accepted_name": "Sphaeralcea coccinea (Nuttall ) Rydberg",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Sphenopholis obtusata": {
+   "matched": true,
+   "accepted_name": "Sphenopholis obtusata (Michaux) Scribner",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Spiraea alba": {
+   "matched": true,
+   "accepted_name": "Spiraea alba Du Roi",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Spiraea alba var. latifolia": {
+   "matched": true,
+   "accepted_name": "Spiraea alba var. latifolia (Aiton) H.E. Ahles nom. illeg.",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 2
+  },
+  "Spiraea betulifolia": {
+   "matched": false,
+   "accepted_name": "",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "unmatched",
+   "verdict": "review",
+   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
+   "vascan_matches": 0
+  },
+  "Spiraea douglasii": {
+   "matched": true,
+   "accepted_name": "Spiraea douglasii Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Spiranthes romanzoffiana": {
+   "matched": true,
+   "accepted_name": "Spiranthes romanzoffiana Chamisso",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Sporobolus heterolepis": {
+   "matched": true,
+   "accepted_name": "Sporobolus heterolepis (A. Gray) A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK.",
+   "vascan_matches": 1
+  },
+  "Stachys palustris": {
+   "matched": true,
+   "accepted_name": "Stachys palustris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "introduced"
+   },
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Stachys pilosa": {
+   "matched": true,
+   "accepted_name": "Stachys pilosa Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Stuckenia pectinata": {
+   "matched": true,
+   "accepted_name": "Stuckenia pectinata (Linnaeus) Börner",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Symphoricarpos albus": {
+   "matched": true,
+   "accepted_name": "Symphoricarpos albus (Linnaeus) S.F. Blake",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphoricarpos occidentalis": {
+   "matched": true,
+   "accepted_name": "Symphoricarpos occidentalis Hooker",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum boreale": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum boreale (Torrey & A. Gray) Á. Löve & D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum campestre": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum campestre (Nuttall) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum ciliolatum": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum ciliolatum (Lindley) Á. Löve & D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "MB": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum ericoides": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum ericoides (Linnaeus) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum falcatum": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum falcatum (Lindley) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum foliaceum": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum foliaceum (Lindley ex De Candolle) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum hesperium": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum hesperium (A. Gray) Á. Löve and D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum laeve": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum laeve (Linnaeus) Á. Löve & D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum lanceolatum": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum lanceolatum (Willdenow) G.L. Nesom",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Symphyotrichum puniceum": {
+   "matched": true,
+   "accepted_name": "Symphyotrichum puniceum (Linnaeus) Á. Löve & D. Löve",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Thalictrum dasycarpum": {
+   "matched": true,
+   "accepted_name": "Thalictrum dasycarpum Fischer & Avé-Lallemant",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Thalictrum occidentale": {
+   "matched": true,
+   "accepted_name": "Thalictrum occidentale A. Gray",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Thalictrum venulosum": {
+   "matched": true,
+   "accepted_name": "Thalictrum venulosum Trelease",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Thermopsis rhombifolia": {
+   "matched": true,
+   "accepted_name": "Thermopsis rhombifolia (Nuttall ex Pursh) Richardson",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Townsendia exscapa": {
+   "matched": true,
+   "accepted_name": "Townsendia exscapa (Richardson) Porter",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Townsendia parryi": {
+   "matched": true,
+   "accepted_name": "Townsendia parryi D.C. Eaton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Typha latifolia": {
+   "matched": true,
+   "accepted_name": "Typha latifolia Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Urtica dioica": {
+   "matched": true,
+   "accepted_name": "Urtica dioica Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Urtica gracilis": {
+   "matched": true,
+   "accepted_name": "Urtica gracilis Aiton",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Utricularia vulgaris": {
+   "matched": true,
+   "accepted_name": "Utricularia vulgaris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Vaccinium myrtilloides": {
+   "matched": true,
+   "accepted_name": "Vaccinium myrtilloides Michaux",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Vaccinium myrtillus": {
+   "matched": true,
+   "accepted_name": "Vaccinium myrtillus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Vaccinium oxycoccos": {
+   "matched": true,
+   "accepted_name": "Vaccinium oxycoccos Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "SK": "native",
+    "AB": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Vaccinium uliginosum": {
+   "matched": true,
+   "accepted_name": "Vaccinium uliginosum Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "MB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Valeriana sitchensis": {
+   "matched": true,
+   "accepted_name": "Valeriana sitchensis Bongard",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Veronica americana": {
+   "matched": true,
+   "accepted_name": "Veronica americana (Rafinesque) Schweinitz ex Bentham",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Viburnum edule": {
+   "matched": true,
+   "accepted_name": "Viburnum edule (Michaux) Rafinesque",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Viburnum opulus": {
+   "matched": true,
+   "accepted_name": "Viburnum opulus Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Vicia americana": {
+   "matched": true,
+   "accepted_name": "Vicia americana Muhlenberg ex Willdenow",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Viola adunca": {
+   "matched": true,
+   "accepted_name": "Viola adunca Smith",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Viola canadensis": {
+   "matched": true,
+   "accepted_name": "Viola canadensis Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Viola orbiculata": {
+   "matched": true,
+   "accepted_name": "Viola orbiculata (A. Gray) Geyer ex B.D. Jacks",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Viola palustris": {
+   "matched": true,
+   "accepted_name": "Viola palustris Linnaeus",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  },
+  "Viola pedatifida": {
+   "matched": true,
+   "accepted_name": "Viola pedatifida G. Don",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK.",
+   "vascan_matches": 1
+  },
+  "Yucca glauca": {
+   "matched": true,
+   "accepted_name": "Yucca glauca Nuttall",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {
+    "AB": "native",
+    "SK": "excluded"
+   },
+   "native_provinces": "AB",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB.",
+   "vascan_matches": 1
+  },
+  "Zizia aptera": {
+   "matched": true,
+   "accepted_name": "Zizia aptera (A. Gray) Fernald",
+   "is_synonym": false,
+   "taxonomic_status": "",
+   "provinces": {},
+   "native_provinces": "",
+   "origin": "absent",
+   "verdict": "not_here",
+   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
+   "vascan_matches": 1
+  }
+ }
+}
