@@ -52,6 +52,19 @@ FETCHED = PROJECT_ROOT / "data" / "fetched" / "flora_nativity.json"
 PLANT_FILES = ("plants_master.json", "garden_plants.json")
 
 
+def _short(path) -> str:
+    """A repo-relative path when it is inside the repo, the full path when not.
+
+    `Path.relative_to` raises for anything outside, and it was being called in
+    the "the file is missing" error message -- so redirecting the constant to a
+    temp path crashed the one code path whose whole job is to fail politely.
+    """
+    try:
+        return str(Path(path).relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def load_fetched(path=FETCHED) -> dict:
     try:
         with open(path, encoding="utf-8") as f:
@@ -83,7 +96,8 @@ def compare(fetched: dict, rows: dict) -> dict:
     say?". Keeping those apart means a re-fetch never has to know about our
     seed files.
     """
-    buckets: dict = {"confirm": [], "narrow": [], "not_here": [], "name": []}
+    buckets: dict = {"confirm": [], "narrow": [], "not_here": [],
+                     "undetermined": [], "name": []}
     for name, said in sorted((fetched.get("results") or {}).items()):
         record = rows.get(name)
         if record is None:
@@ -108,6 +122,13 @@ def compare(fetched: dict, rows: dict) -> dict:
         if said.get("is_synonym") or said.get("origin") == "unmatched":
             buckets["name"].append(proposal)
             continue
+        # Its own bucket, never folded into `not_here`. VASCAN publishes
+        # distribution on the lowest accepted taxon, so a species with accepted
+        # varieties has none of its own, and reading that as "not here" put
+        # Saskatoon Berry outside the parkland (V2.79).
+        if said.get("origin") == "undetermined":
+            buckets["undetermined"].append(proposal)
+            continue
         if said.get("verdict") == "not_here":
             buckets["not_here"].append(proposal)
             continue
@@ -123,7 +144,7 @@ def compare(fetched: dict, rows: dict) -> dict:
 
 
 def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
-    order = ("not_here", "name", "narrow", "confirm")
+    order = ("not_here", "name", "undetermined", "narrow", "confirm")
     blurb = {
         "not_here": "VASCAN records these introduced here, or from neither "
                     "province. Each needs a data/excluded_taxa.json entry "
@@ -133,6 +154,13 @@ def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
         "narrow": "We claim more provinces than VASCAN records. This is the "
                   "review's actual complaint, and the field it disagrees with "
                   "was generated rather than read from a flora.",
+        "undetermined": "VASCAN matched the name and publishes no "
+                        "distribution for it, because it records distribution "
+                        "on the LOWEST accepted taxon and these have accepted "
+                        "varieties or subspecies. NOT a finding about the "
+                        "plant: `Amelanchier alnifolia` is here and returns "
+                        "AB/SK/MB native at `var. alnifolia`. Needs the "
+                        "infraspecific lookup, not a decision.",
         "confirm": "VASCAN agrees with the catalogue.",
     }
     for bucket in order:
@@ -168,10 +196,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--json", help="Also write the buckets here, for review.")
     args = p.parse_args(argv)
 
-    fetched = load_fetched()
+    # `FETCHED` read here rather than taken from `load_fetched`'s default,
+    # which binds at import and so cannot be redirected -- a wart the V2.79
+    # tests found when the real fetch file landed and the "refuses a missing
+    # file" test turned out to have been asserting a fact about the working
+    # tree instead of about the guard.
+    fetched = load_fetched(FETCHED)
     if not fetched:
         print(
-            f"No {FETCHED.relative_to(PROJECT_ROOT)}.\n\n"
+            f"No {_short(FETCHED)}.\n\n"
             "Write it first, on a machine with internet:\n"
             "    python3 scripts/fetch_flora_nativity.py --probe\n"
             "    python3 scripts/fetch_flora_nativity.py\n\n"

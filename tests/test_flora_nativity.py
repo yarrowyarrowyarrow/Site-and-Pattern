@@ -217,8 +217,121 @@ class TestTheIngestProposesAndDoesNotApply(unittest.TestCase):
         self.assertEqual(sum(len(v) for v in b.values()), 0)
 
     def test_a_missing_fetch_file_refuses_rather_than_reporting_nothing(self):
+        """Point the module at a path that does not exist rather than relying
+        on the repo not having the file. It passed for two releases only
+        because nobody had run the fetch yet, so it was asserting a fact about
+        the working tree instead of about the guard (found V2.79, when the
+        real `flora_nativity.json` landed and it started failing)."""
         self.assertEqual(I.load_fetched(Path("/nonexistent/x.json")), {})
-        self.assertEqual(I.main([]), 1)
+        was = I.FETCHED
+        I.FETCHED = Path(tempfile.mkdtemp()) / "absent.json"
+        try:
+            self.assertEqual(I.main([]), 1)
+        finally:
+            I.FETCHED = was
+
+
+class TestAMissingFieldIsNotAnAbsence(unittest.TestCase):
+    """VASCAN publishes distribution on the LOWEST accepted taxon (F148, V2.79).
+
+    The real responses, probed rather than imagined:
+
+        Amelanchier alnifolia               species     no distribution block
+        Amelanchier alnifolia var. alnifolia variety    AB, SK, MB native
+        Alnus incana                        species     no distribution block
+        Alnus incana subsp. tenuifolia      subspecies  AB, SK native
+
+    `assess()` let a **missing** block fall through to `origin: absent,
+    verdict: not_here`, with a `why` reading *"VASCAN records no Alberta or
+    Saskatchewan distribution."* That sentence is false, and it put **173 of
+    434 species** -- Saskatoon Berry among them, the defining parkland shrub --
+    outside the province they are native to.
+
+    Third instance in this repo of *a failure is not an absence*: the V2.75
+    rate limit logged 208 throttled species as growing nowhere, and the V2.78
+    harvest cap made a truncated fetch indistinguishable from a complete one.
+    """
+
+    #: The real Amelanchier alnifolia shape.
+    NO_BLOCK = {"matched": True, "accepted_name": "Amelanchier alnifolia",
+                "taxon_rank": "species", "has_distribution": False,
+                "provinces": {}}
+
+    def test_a_matched_taxon_with_no_distribution_is_never_not_here(self):
+        self.assertNotEqual(F.assess(self.NO_BLOCK)["verdict"], "not_here")
+        self.assertEqual(F.assess(self.NO_BLOCK)["verdict"], "review")
+
+    def test_it_does_not_claim_vascan_recorded_an_absence(self):
+        why = F.assess(self.NO_BLOCK)["why"]
+        self.assertIn("NOT a statement that the plant is absent", why)
+        self.assertNotIn("records no Alberta or Saskatchewan", why)
+
+    def test_it_names_the_rank_so_the_cause_is_readable(self):
+        self.assertIn("rank species", F.assess(self.NO_BLOCK)["why"])
+
+    def test_it_claims_no_provinces_either(self):
+        """Unknown is not a licence to keep the existing claim: the verdict is
+        `review`, and `native_provinces` stays empty."""
+        self.assertEqual(F.assess(self.NO_BLOCK)["native_provinces"], "")
+        self.assertEqual(F.assess(self.NO_BLOCK)["origin"], "undetermined")
+
+    def test_a_block_naming_neither_province_still_says_no(self):
+        """The fix must not delete the ability to report a real absence -- that
+        would trade one silent failure for another."""
+        row = {"matched": True, "taxon_rank": "species",
+               "has_distribution": True, "provinces": {"MB": "native"}}
+        self.assertEqual(F.assess(row)["verdict"], "not_here")
+        self.assertEqual(F.assess(row)["origin"], "absent")
+
+    def test_the_infraspecific_taxon_reports_native(self):
+        """The var. alnifolia response, which is where the answer lives."""
+        row = {"matched": True, "taxon_rank": "variety",
+               "has_distribution": True,
+               "provinces": {"AB": "native", "SK": "native", "MB": "native"}}
+        self.assertEqual(F.assess(row)["verdict"], "confirm")
+        self.assertEqual(F.assess(row)["native_provinces"], "AB,SK")
+
+    def test_lookup_records_whether_a_block_was_present(self):
+        """`provinces == {}` cannot distinguish "no block" from "a block naming
+        no province we asked about". Those want different verdicts."""
+        def fake(url, timeout, throttle):
+            return {"results": [{"matches": [{
+                "scientificName": "Testus plantus", "taxonRank": "species",
+                "vernacularNames": []}]}]}
+        got = F.lookup("Testus plantus", get_json=fake, throttle=_NoWait())
+        self.assertFalse(got["has_distribution"])
+        self.assertEqual(got["taxon_rank"], "species")
+
+    def test_lookup_records_a_present_block(self):
+        def fake(url, timeout, throttle):
+            return {"results": [{"matches": [{
+                "scientificName": "Testus plantus", "taxonRank": "variety",
+                "distribution": [{"locationID": "ISO 3166-2:CA-AB",
+                                  "locality": "AB",
+                                  "establishmentMeans": "native"}]}]}]}
+        got = F.lookup("Testus plantus", get_json=fake, throttle=_NoWait())
+        self.assertTrue(got["has_distribution"])
+        self.assertEqual(got["provinces"], {"AB": "native"})
+
+    def test_the_ingest_keeps_it_out_of_not_here(self):
+        fetched = {"results": {"Amelanchier alnifolia": dict(
+            self.NO_BLOCK, **F.assess(self.NO_BLOCK))}}
+        rows = {"Amelanchier alnifolia": {"native_provinces": "AB,SK",
+                                          "common_name": "Saskatoon Berry"}}
+        buckets = I.compare(fetched, rows)
+        self.assertEqual(len(buckets["not_here"]), 0)
+        self.assertEqual(len(buckets["undetermined"]), 1)
+
+
+class _NoWait:
+    sleep = 0.0
+    limited = 0
+
+    def wait(self):
+        pass
+
+    def rate_limited(self):
+        pass
 
 
 class TestTheGeneratorItReplaces(unittest.TestCase):

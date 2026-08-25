@@ -395,6 +395,49 @@ and `tools/`.
    `PYTHONWARNDEFAULTENCODING=1` are cheap; the author's machine was the only
    instrument that could see this.
 
+## 20. A failure is not an absence, the third time (V2.79)
+
+The VASCAN nativity fetch ran clean -- 434 species, zero failures -- and
+reported **182 species not recorded from Alberta or Saskatchewan**. Forty-two
+per cent of a native plant catalogue, including *Amelanchier alnifolia*, the
+defining parkland shrub the whole range pipeline was started over.
+
+Two probes found the cause, and it was not about the flora:
+
+| query | rank | distribution |
+|---|---|---|
+| `Amelanchier alnifolia` | species | **absent** |
+| `Amelanchier alnifolia var. alnifolia` | variety | AB, SK, MB native |
+
+**VASCAN attaches distribution to the lowest accepted taxon.** A species with
+recognised varieties carries none on its own record. The parser was reading the
+right key all along; `assess()` let a **missing** block fall through to
+`origin: absent, verdict: not_here`, with a `why` reading *"VASCAN records no
+Alberta or Saskatchewan distribution."* A sentence the data did not support,
+about 173 species.
+
+**Scars:** `lookup()` records `has_distribution` and `taxon_rank`; `assess()`
+has a fourth origin, `undetermined`, that can never reach `not_here`; the
+ingest gives it its own bucket; `--reassess` re-runs verdicts over an
+already-fetched file with no network, so a parser fix costs a re-read rather
+than 434 requests.
+
+**Rules:**
+
+1. **Every external field is three states, not two.** Present-and-says-yes,
+   present-and-says-no, and *not present*. Code that models two will publish
+   the third as whichever of the other two it falls through to. This is now the
+   third instance: V2.75's rate limit logged 208 throttled species as growing
+   nowhere; V2.78's harvest cap made a truncated fetch indistinguishable from a
+   complete one; this one turned a missing field into an absence.
+2. **Cache the raw answer and make re-parsing cheap.** `--reassess` and the
+   occurrence point cache are the same idea. Without it every parser bug costs
+   a re-fetch on somebody's laptop, which is why V2.75 could diagnose a bug it
+   could not fix.
+3. **A result that is plausible in shape is not verified.** 182 absences looked
+   like a finding and read like one in a report. What caught it was checking a
+   single species whose answer was known in advance.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

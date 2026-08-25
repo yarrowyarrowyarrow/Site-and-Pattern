@@ -17,10 +17,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Acer glabrum": {
    "matched": true,
@@ -29,10 +31,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Achillea alpina": {
    "matched": true,
@@ -41,10 +45,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Achillea borealis": {
    "matched": true,
@@ -53,10 +59,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Achillea millefolium": {
    "matched": true,
@@ -72,7 +80,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Acorus americanus": {
    "matched": true,
@@ -88,7 +98,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Actaea rubra": {
    "matched": true,
@@ -97,10 +109,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Agastache foeniculum": {
    "matched": true,
@@ -116,7 +130,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Agoseris glauca": {
    "matched": true,
@@ -125,10 +141,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Agoseris parviflora": {
    "matched": true,
@@ -142,7 +160,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Agrimonia striata": {
    "matched": true,
@@ -158,7 +178,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Agrostis scabra": {
    "matched": true,
@@ -174,7 +196,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Alisma triviale": {
    "matched": true,
@@ -190,7 +214,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Allium cernuum": {
    "matched": true,
@@ -206,7 +232,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Allium schoenoprasum": {
    "matched": true,
@@ -215,10 +243,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Allium textile": {
    "matched": true,
@@ -234,7 +264,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Alnus alnobetula": {
    "matched": true,
@@ -243,10 +275,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Alnus incana": {
    "matched": true,
@@ -255,10 +289,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Amelanchier alnifolia": {
    "matched": true,
@@ -267,10 +303,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Anaphalis margaritacea": {
    "matched": true,
@@ -279,10 +317,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Andropogon gerardii": {
    "matched": false,
@@ -294,7 +334,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Androsace chamaejasme": {
    "matched": true,
@@ -303,10 +345,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Anemonastrum canadense": {
    "matched": true,
@@ -322,7 +366,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Anemone cylindrica": {
    "matched": true,
@@ -338,7 +384,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Anemone multifida": {
    "matched": true,
@@ -347,10 +395,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Anemone virginiana": {
    "matched": true,
@@ -359,10 +409,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Angelica dawsonii": {
    "matched": true,
@@ -376,7 +428,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Antennaria microphylla": {
    "matched": true,
@@ -392,7 +446,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Antennaria neglecta": {
    "matched": true,
@@ -408,7 +464,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Antennaria parvifolia": {
    "matched": true,
@@ -424,7 +482,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Antennaria pulcherrima": {
    "matched": true,
@@ -433,10 +493,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Antennaria rosea": {
    "matched": true,
@@ -445,10 +507,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Anthoxanthum hirtum": {
    "matched": true,
@@ -464,7 +528,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Anticlea elegans": {
    "matched": true,
@@ -480,7 +546,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Anticlea occidentalis": {
    "matched": true,
@@ -494,7 +562,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Apocynum androsaemifolium": {
    "matched": true,
@@ -510,7 +580,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Aquilegia brevistyla": {
    "matched": true,
@@ -526,7 +598,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Aquilegia canadensis": {
    "matched": true,
@@ -541,7 +615,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Aquilegia flavescens": {
    "matched": true,
@@ -555,7 +631,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Aquilegia formosa": {
    "matched": true,
@@ -564,10 +642,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Aralia nudicaulis": {
    "matched": true,
@@ -583,7 +663,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arctostaphylos uva-ursi": {
    "matched": true,
@@ -599,7 +681,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica chamissonis": {
    "matched": true,
@@ -615,7 +699,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica cordifolia": {
    "matched": true,
@@ -631,7 +717,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica fulgens": {
    "matched": true,
@@ -647,7 +735,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica lonchophylla": {
    "matched": true,
@@ -663,7 +753,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica mollis": {
    "matched": true,
@@ -677,7 +769,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Arnica sororia": {
    "matched": true,
@@ -692,7 +786,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Artemisia campestris": {
    "matched": true,
@@ -701,10 +797,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Artemisia cana": {
    "matched": true,
@@ -713,10 +811,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Artemisia frigida": {
    "matched": true,
@@ -732,7 +832,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Artemisia ludoviciana": {
    "matched": true,
@@ -741,10 +843,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Artemisia tridentata": {
    "matched": true,
@@ -753,10 +857,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Asclepias ovalifolia": {
    "matched": true,
@@ -772,7 +878,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Asclepias speciosa": {
    "matched": true,
@@ -788,7 +896,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Aster alpinus": {
    "matched": true,
@@ -797,10 +907,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Astragalus canadensis": {
    "matched": true,
@@ -809,10 +921,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Astragalus crassicarpus": {
    "matched": true,
@@ -821,10 +935,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Astragalus drummondii": {
    "matched": true,
@@ -839,7 +955,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Astragalus laxmannii": {
    "matched": true,
@@ -848,10 +966,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Astragalus missouriensis": {
    "matched": true,
@@ -860,10 +980,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Avenula hookeri": {
    "matched": true,
@@ -872,10 +994,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Balsamorhiza sagittata": {
    "matched": true,
@@ -889,7 +1013,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Beckmannia syzigachne": {
    "matched": true,
@@ -905,7 +1031,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Betula glandulosa": {
    "matched": true,
@@ -921,7 +1049,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Betula occidentalis": {
    "matched": true,
@@ -937,7 +1067,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Betula papyrifera": {
    "matched": true,
@@ -953,7 +1085,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Bistorta vivipara": {
    "matched": true,
@@ -969,7 +1103,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Blitum capitatum": {
    "matched": true,
@@ -978,10 +1114,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Bolboschoenus fluviatilis": {
    "matched": true,
@@ -997,7 +1135,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Bolboschoenus maritimus": {
    "matched": true,
@@ -1006,10 +1146,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Bouteloua curtipendula": {
    "matched": true,
@@ -1018,10 +1160,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Bouteloua gracilis": {
    "matched": true,
@@ -1037,7 +1181,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Bromus ciliatus": {
    "matched": true,
@@ -1053,7 +1199,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Bromus marginatus": {
    "matched": true,
@@ -1062,10 +1210,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Calamagrostis canadensis": {
    "matched": true,
@@ -1074,10 +1224,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Calamagrostis purpurascens": {
    "matched": true,
@@ -1093,7 +1245,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Calamovilfa longifolia": {
    "matched": true,
@@ -1102,10 +1256,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Calla palustris": {
    "matched": true,
@@ -1121,7 +1277,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Caltha natans": {
    "matched": true,
@@ -1137,7 +1295,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Caltha palustris": {
    "matched": true,
@@ -1153,7 +1313,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Campanula alaskana": {
    "matched": true,
@@ -1162,10 +1324,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Campanula lasiocarpa": {
    "matched": true,
@@ -1179,7 +1343,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Canadanthus modestus": {
    "matched": true,
@@ -1195,7 +1361,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Capnoides sempervirens": {
    "matched": true,
@@ -1211,7 +1379,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex aquatilis": {
    "matched": true,
@@ -1220,10 +1390,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Carex atherodes": {
    "matched": true,
@@ -1239,7 +1411,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex aurea": {
    "matched": true,
@@ -1255,7 +1429,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex bebbii": {
    "matched": true,
@@ -1271,7 +1447,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex hystericina": {
    "matched": true,
@@ -1287,7 +1465,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex lacustris": {
    "matched": true,
@@ -1303,7 +1483,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex pellita": {
    "matched": true,
@@ -1319,7 +1501,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex praticola": {
    "matched": true,
@@ -1335,7 +1519,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex pseudocyperus": {
    "matched": true,
@@ -1351,7 +1537,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex raymondii": {
    "matched": true,
@@ -1360,10 +1548,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Carex retrorsa": {
    "matched": true,
@@ -1379,7 +1569,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex rostrata": {
    "matched": true,
@@ -1395,7 +1587,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 2
+   "vascan_matches": 2,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex sartwellii": {
    "matched": true,
@@ -1411,7 +1605,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex sprengelii": {
    "matched": true,
@@ -1427,7 +1623,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Carex utriculata": {
    "matched": true,
@@ -1443,7 +1641,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Castilleja lutescens": {
    "matched": true,
@@ -1457,7 +1657,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Castilleja miniata": {
    "matched": true,
@@ -1466,10 +1668,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Cerastium arvense": {
    "matched": true,
@@ -1478,10 +1682,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Chamaenerion angustifolium": {
    "matched": true,
@@ -1490,10 +1696,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Chamaenerion latifolium": {
    "matched": true,
@@ -1509,7 +1717,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Cinna latifolia": {
    "matched": true,
@@ -1525,7 +1735,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Cirsium flodmanii": {
    "matched": true,
@@ -1541,7 +1753,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Claytonia lanceolata": {
    "matched": true,
@@ -1556,7 +1770,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Clematis ligusticifolia": {
    "matched": true,
@@ -1572,7 +1788,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Clematis occidentalis": {
    "matched": true,
@@ -1581,10 +1799,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Comandra umbellata": {
    "matched": true,
@@ -1593,10 +1813,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Comarum palustre": {
    "matched": true,
@@ -1612,7 +1834,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Coreopsis tinctoria": {
    "matched": true,
@@ -1628,7 +1852,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Cornus canadensis": {
    "matched": true,
@@ -1644,7 +1870,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Cornus sericea": {
    "matched": true,
@@ -1660,7 +1888,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Corylus cornuta": {
    "matched": true,
@@ -1669,10 +1899,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Crataegus douglasii": {
    "matched": true,
@@ -1687,7 +1919,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 2
+   "vascan_matches": 2,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Cypripedium parviflorum": {
    "matched": true,
@@ -1696,10 +1930,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Dalea candida": {
    "matched": true,
@@ -1708,10 +1944,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Dalea purpurea": {
    "matched": true,
@@ -1720,10 +1958,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Danthonia parryi": {
    "matched": true,
@@ -1738,7 +1978,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Danthonia spicata": {
    "matched": true,
@@ -1754,7 +1996,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Dasiphora fruticosa": {
    "matched": true,
@@ -1763,10 +2007,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Delphinium glaucum": {
    "matched": true,
@@ -1782,7 +2028,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Deschampsia caespitosa": {
    "matched": false,
@@ -1794,7 +2042,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Dieteria canescens": {
    "matched": true,
@@ -1803,10 +2053,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Distichlis spicata": {
    "matched": true,
@@ -1822,7 +2074,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Dodecatheon pulchellum": {
    "matched": true,
@@ -1831,10 +2085,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Doellingeria umbellata": {
    "matched": true,
@@ -1843,10 +2099,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Draba aurea": {
    "matched": true,
@@ -1862,7 +2120,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Draba incerta": {
    "matched": true,
@@ -1876,7 +2136,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Drosera rotundifolia": {
    "matched": true,
@@ -1892,7 +2154,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Dryas drummondii": {
    "matched": true,
@@ -1907,7 +2171,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Dryas hookeriana": {
    "matched": true,
@@ -1921,7 +2187,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Drymocallis arguta": {
    "matched": true,
@@ -1937,7 +2205,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Echinacea angustifolia": {
    "matched": true,
@@ -1953,7 +2223,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Elaeagnus commutata": {
    "matched": true,
@@ -1969,7 +2241,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eleocharis acicularis": {
    "matched": true,
@@ -1985,7 +2259,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eleocharis palustris": {
    "matched": true,
@@ -2001,7 +2277,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Elodea canadensis": {
    "matched": true,
@@ -2017,7 +2295,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Elymus canadensis": {
    "matched": true,
@@ -2026,10 +2306,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Elymus glaucus": {
    "matched": true,
@@ -2038,10 +2320,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Elymus lanceolatus": {
    "matched": true,
@@ -2050,10 +2334,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Elymus trachycaulus": {
    "matched": true,
@@ -2062,10 +2348,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Endotropis alnifolia": {
    "matched": true,
@@ -2081,7 +2369,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Equisetum arvense": {
    "matched": true,
@@ -2097,7 +2387,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Equisetum fluviatile": {
    "matched": true,
@@ -2113,7 +2405,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Equisetum hyemale": {
    "matched": true,
@@ -2122,10 +2416,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Equisetum variegatum": {
    "matched": true,
@@ -2141,7 +2437,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ericameria nauseosa": {
    "matched": true,
@@ -2150,10 +2448,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Erigeron caespitosus": {
    "matched": true,
@@ -2169,7 +2469,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Erigeron glabellus": {
    "matched": true,
@@ -2178,10 +2480,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Erigeron philadelphicus": {
    "matched": true,
@@ -2190,10 +2494,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Erigeron speciosus": {
    "matched": true,
@@ -2208,7 +2514,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eriocoma hymenoides": {
    "matched": true,
@@ -2224,7 +2532,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eriocoma richardsonii": {
    "matched": true,
@@ -2240,7 +2550,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eriogonum androsaceum": {
    "matched": true,
@@ -2254,7 +2566,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eriogonum flavum": {
    "matched": true,
@@ -2263,10 +2577,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Eriogonum umbellatum": {
    "matched": true,
@@ -2275,10 +2591,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Eriophorum angustifolium": {
    "matched": true,
@@ -2287,10 +2605,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Erythranthe guttata": {
    "matched": true,
@@ -2305,7 +2625,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Erythranthe lewisii": {
    "matched": true,
@@ -2319,7 +2641,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Erythronium grandiflorum": {
    "matched": true,
@@ -2328,10 +2652,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Escobaria vivipara": {
    "matched": true,
@@ -2340,10 +2666,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Eurybia conspicua": {
    "matched": true,
@@ -2359,7 +2687,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eurybia sibirica": {
    "matched": true,
@@ -2373,7 +2703,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Euthamia graminifolia": {
    "matched": true,
@@ -2389,7 +2721,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Eutrochium maculatum": {
    "matched": true,
@@ -2398,10 +2732,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Festuca campestris": {
    "matched": true,
@@ -2415,7 +2751,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Festuca hallii": {
    "matched": true,
@@ -2431,7 +2769,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Festuca idahoensis": {
    "matched": true,
@@ -2446,7 +2786,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Festuca occidentalis": {
    "matched": true,
@@ -2461,7 +2803,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Festuca ovina": {
    "matched": true,
@@ -2476,7 +2820,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Festuca saximontana": {
    "matched": true,
@@ -2485,10 +2831,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Fragaria vesca": {
    "matched": true,
@@ -2497,10 +2845,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Fragaria virginiana": {
    "matched": true,
@@ -2509,10 +2859,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 2
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 2,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Fritillaria pudica": {
    "matched": true,
@@ -2526,7 +2878,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Gaillardia aristata": {
    "matched": true,
@@ -2542,7 +2896,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Galium boreale": {
    "matched": true,
@@ -2551,10 +2907,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Galium triflorum": {
    "matched": true,
@@ -2570,7 +2928,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Gentiana affinis": {
    "matched": true,
@@ -2579,10 +2939,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Gentiana calycosa": {
    "matched": true,
@@ -2596,7 +2958,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Gentianella amarella": {
    "matched": true,
@@ -2605,10 +2969,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Geranium richardsonii": {
    "matched": true,
@@ -2623,7 +2989,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Geranium viscosissimum": {
    "matched": true,
@@ -2638,7 +3006,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Geum aleppicum": {
    "matched": true,
@@ -2654,7 +3024,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Geum macrophyllum": {
    "matched": true,
@@ -2663,10 +3035,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Geum rivale": {
    "matched": true,
@@ -2682,7 +3056,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Geum triflorum": {
    "matched": true,
@@ -2691,10 +3067,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Glyceria elata": {
    "matched": true,
@@ -2708,7 +3086,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Glyceria grandis": {
    "matched": true,
@@ -2717,10 +3097,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Glyceria striata": {
    "matched": true,
@@ -2729,10 +3111,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Glycyrrhiza lepidota": {
    "matched": true,
@@ -2748,7 +3132,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Grindelia squarrosa": {
    "matched": true,
@@ -2757,10 +3143,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Gutierrezia sarothrae": {
    "matched": true,
@@ -2776,7 +3164,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Hedysarum alpinum": {
    "matched": false,
@@ -2788,7 +3178,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Hedysarum americanum": {
    "matched": true,
@@ -2804,7 +3196,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Hedysarum boreale": {
    "matched": true,
@@ -2813,10 +3207,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Hedysarum mackenziei": {
    "matched": true,
@@ -2825,10 +3221,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Hedysarum sulphurescens": {
    "matched": true,
@@ -2842,7 +3240,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Helenium autumnale": {
    "matched": true,
@@ -2858,7 +3258,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Helianthus annuus": {
    "matched": true,
@@ -2874,7 +3276,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Helianthus maximiliani": {
    "matched": true,
@@ -2890,7 +3294,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Helianthus nuttallii": {
    "matched": true,
@@ -2899,10 +3305,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Helianthus pauciflorus": {
    "matched": true,
@@ -2911,10 +3319,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Helianthus tuberosus": {
    "matched": true,
@@ -2929,7 +3339,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Hesperostipa comata": {
    "matched": true,
@@ -2938,10 +3350,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Hesperostipa curtiseta": {
    "matched": true,
@@ -2957,7 +3371,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Hesperostipa spartea": {
    "matched": true,
@@ -2973,7 +3389,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Heterotheca villosa": {
    "matched": true,
@@ -2982,10 +3400,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Heuchera cylindrica": {
    "matched": true,
@@ -2999,7 +3419,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Heuchera parvifolia": {
    "matched": true,
@@ -3014,7 +3436,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Heuchera richardsonii": {
    "matched": true,
@@ -3030,7 +3454,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Hieracium umbellatum": {
    "matched": true,
@@ -3039,10 +3465,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Hippuris vulgaris": {
    "matched": true,
@@ -3058,7 +3486,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Iliamna rivularis": {
    "matched": true,
@@ -3072,7 +3502,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Iris missouriensis": {
    "matched": true,
@@ -3087,7 +3519,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Juncus balticus": {
    "matched": true,
@@ -3096,10 +3530,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Juncus drummondii": {
    "matched": true,
@@ -3113,7 +3549,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Juncus nodosus": {
    "matched": true,
@@ -3129,7 +3567,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Juncus torreyi": {
    "matched": true,
@@ -3145,7 +3585,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Juncus vaseyi": {
    "matched": true,
@@ -3161,7 +3603,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Juniperus communis": {
    "matched": true,
@@ -3170,10 +3614,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Juniperus horizontalis": {
    "matched": true,
@@ -3189,7 +3635,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Koeleria macrantha": {
    "matched": true,
@@ -3205,7 +3653,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Koeleria spicata": {
    "matched": true,
@@ -3221,7 +3671,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Krascheninnikovia lanata": {
    "matched": true,
@@ -3237,7 +3689,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Larix laricina": {
    "matched": true,
@@ -3253,7 +3707,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Lathyrus ochroleucus": {
    "matched": true,
@@ -3269,7 +3725,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Lathyrus venosus": {
    "matched": true,
@@ -3278,10 +3736,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Ledum groenlandicum": {
    "matched": true,
@@ -3290,10 +3750,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Lemna trisulca": {
    "matched": true,
@@ -3309,7 +3771,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Leymus cinereus": {
    "matched": true,
@@ -3324,7 +3788,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Leymus innovatus": {
    "matched": true,
@@ -3333,10 +3799,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Liatris ligulistylis": {
    "matched": true,
@@ -3352,7 +3820,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Liatris punctata": {
    "matched": true,
@@ -3361,10 +3831,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Lilium philadelphicum": {
    "matched": true,
@@ -3380,7 +3852,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Linnaea borealis": {
    "matched": true,
@@ -3389,10 +3863,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Linum lewisii": {
    "matched": true,
@@ -3401,10 +3877,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Linum rigidum": {
    "matched": true,
@@ -3413,10 +3891,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Lithospermum ruderale": {
    "matched": true,
@@ -3431,7 +3911,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Lonicera dioica": {
    "matched": true,
@@ -3447,7 +3929,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Lonicera involucrata": {
    "matched": true,
@@ -3456,10 +3940,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Lupinus argenteus": {
    "matched": true,
@@ -3468,10 +3954,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Lupinus sericeus": {
    "matched": true,
@@ -3485,7 +3973,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Lysimachia ciliata": {
    "matched": true,
@@ -3501,7 +3991,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Mahonia repens": {
    "matched": true,
@@ -3515,7 +4007,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Maianthemum canadense": {
    "matched": true,
@@ -3524,10 +4018,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Maianthemum racemosum": {
    "matched": true,
@@ -3541,7 +4037,9 @@
    "origin": "absent",
    "verdict": "not_here",
    "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Maianthemum stellatum": {
    "matched": true,
@@ -3557,7 +4055,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Malus domestica 'Goodland'": {
    "matched": false,
@@ -3569,7 +4069,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Malus domestica 'Norland'": {
    "matched": false,
@@ -3581,7 +4083,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Matteuccia struthiopteris": {
    "matched": false,
@@ -3593,7 +4097,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Mentha arvensis": {
    "matched": true,
@@ -3602,10 +4108,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Menyanthes trifoliata": {
    "matched": true,
@@ -3621,7 +4129,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Mertensia paniculata": {
    "matched": true,
@@ -3630,10 +4140,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Mimulus ringens": {
    "matched": true,
@@ -3642,10 +4154,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Mitella nuda": {
    "matched": true,
@@ -3661,7 +4175,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Monarda fistulosa": {
    "matched": true,
@@ -3670,10 +4186,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Muhlenbergia cuspidata": {
    "matched": true,
@@ -3689,7 +4207,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Myosotis asiatica": {
    "matched": true,
@@ -3703,7 +4223,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Myriophyllum sibiricum": {
    "matched": true,
@@ -3719,7 +4241,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Nassella viridula": {
    "matched": true,
@@ -3735,7 +4259,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Nuphar variegata": {
    "matched": true,
@@ -3751,7 +4277,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oenothera biennis": {
    "matched": true,
@@ -3767,7 +4295,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oenothera caespitosa": {
    "matched": false,
@@ -3779,7 +4309,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Oenothera nuttallii": {
    "matched": true,
@@ -3795,7 +4327,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oenothera suffrutescens": {
    "matched": true,
@@ -3811,7 +4345,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oligoneuron rigidum": {
    "matched": true,
@@ -3820,10 +4356,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Opuntia fragilis": {
    "matched": true,
@@ -3839,7 +4377,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Opuntia polyacantha": {
    "matched": true,
@@ -3848,10 +4388,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Orthocarpus luteus": {
    "matched": true,
@@ -3867,7 +4409,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oryzopsis asperifolia": {
    "matched": true,
@@ -3883,7 +4427,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Osmorhiza berteroi": {
    "matched": true,
@@ -3898,7 +4444,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Osmorhiza longistylis": {
    "matched": true,
@@ -3914,7 +4462,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Oxytropis borealis": {
    "matched": true,
@@ -3923,10 +4473,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Oxytropis campestris": {
    "matched": true,
@@ -3935,10 +4487,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Oxytropis monticola": {
    "matched": true,
@@ -3947,10 +4501,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Oxytropis sericea": {
    "matched": true,
@@ -3959,10 +4515,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Oxytropis splendens": {
    "matched": true,
@@ -3978,7 +4536,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Packera cana": {
    "matched": true,
@@ -3994,7 +4554,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Panicum virgatum": {
    "matched": true,
@@ -4009,7 +4571,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Pascopyrum smithii": {
    "matched": true,
@@ -4025,7 +4589,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 2
+   "vascan_matches": 2,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Paxistima myrsinites": {
    "matched": true,
@@ -4039,7 +4605,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Pedicularis bracteosa": {
    "matched": true,
@@ -4048,10 +4616,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Pediomelum esculentum": {
    "matched": true,
@@ -4067,7 +4637,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon albertinus": {
    "matched": true,
@@ -4081,7 +4653,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon confertus": {
    "matched": true,
@@ -4096,7 +4670,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon ellipticus": {
    "matched": true,
@@ -4110,7 +4686,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon eriantherus": {
    "matched": true,
@@ -4119,10 +4697,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Penstemon gracilis": {
    "matched": true,
@@ -4138,7 +4718,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon lyallii": {
    "matched": true,
@@ -4152,7 +4734,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Penstemon nitidus": {
    "matched": true,
@@ -4161,10 +4745,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Penstemon procerus": {
    "matched": true,
@@ -4173,10 +4759,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Peritoma serrulata": {
    "matched": true,
@@ -4192,7 +4780,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Persicaria amphibia": {
    "matched": true,
@@ -4201,10 +4791,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 2
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 2,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Petasites frigidus": {
    "matched": true,
@@ -4213,10 +4805,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Phacelia sericea": {
    "matched": true,
@@ -4230,7 +4824,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Phlox hoodii": {
    "matched": true,
@@ -4239,10 +4835,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Physaria didymocarpa": {
    "matched": true,
@@ -4251,10 +4849,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Physostegia ledinghamii": {
    "matched": true,
@@ -4270,7 +4870,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Physostegia parviflora": {
    "matched": true,
@@ -4286,7 +4888,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Picea glauca": {
    "matched": true,
@@ -4302,7 +4906,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Picea mariana": {
    "matched": true,
@@ -4318,7 +4924,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Pinus banksiana": {
    "matched": true,
@@ -4334,7 +4942,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Pinus contorta": {
    "matched": true,
@@ -4343,10 +4953,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Piptatherum canadense": {
    "matched": true,
@@ -4355,10 +4967,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Poa alpina": {
    "matched": true,
@@ -4367,10 +4981,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Poa secunda": {
    "matched": true,
@@ -4379,10 +4995,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Polemonium acutiflorum": {
    "matched": true,
@@ -4391,10 +5009,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Polemonium pulcherrimum": {
    "matched": true,
@@ -4403,10 +5023,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Polygala senega": {
    "matched": true,
@@ -4415,10 +5037,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 2
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 2,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Populus balsamifera": {
    "matched": true,
@@ -4434,7 +5058,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Populus tremuloides": {
    "matched": true,
@@ -4450,7 +5076,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Potentilla anserina": {
    "matched": true,
@@ -4459,10 +5087,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Potentilla gracilis": {
    "matched": true,
@@ -4471,10 +5101,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Potentilla hippiana": {
    "matched": true,
@@ -4490,7 +5122,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Potentilla pensylvanica": {
    "matched": true,
@@ -4506,7 +5140,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Primula conjugens": {
    "matched": true,
@@ -4515,10 +5151,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Primula pauciflora": {
    "matched": true,
@@ -4527,10 +5165,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Prosartes trachycarpa": {
    "matched": true,
@@ -4546,7 +5186,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Prunella vulgaris": {
    "matched": true,
@@ -4555,10 +5197,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Prunus cerasus 'Evans'": {
    "matched": false,
@@ -4570,7 +5214,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Prunus pensylvanica": {
    "matched": true,
@@ -4586,7 +5232,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Prunus tomentosa": {
    "matched": true,
@@ -4602,7 +5250,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Prunus virginiana": {
    "matched": true,
@@ -4611,10 +5261,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Pseudotsuga menziesii": {
    "matched": true,
@@ -4623,10 +5275,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Pulsatilla nuttalliana": {
    "matched": true,
@@ -4642,7 +5296,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 2
+   "vascan_matches": 2,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Pyrola asarifolia": {
    "matched": true,
@@ -4651,10 +5307,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Quercus macrocarpa": {
    "matched": true,
@@ -4670,7 +5328,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ranunculus rhomboideus": {
    "matched": true,
@@ -4686,7 +5346,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ratibida columnifera": {
    "matched": true,
@@ -4702,7 +5364,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Rhinanthus minor": {
    "matched": true,
@@ -4711,10 +5375,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rhodiola integrifolia": {
    "matched": true,
@@ -4723,10 +5389,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rhus aromatica": {
    "matched": true,
@@ -4735,10 +5403,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Ribes americanum": {
    "matched": true,
@@ -4754,7 +5424,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ribes aureum": {
    "matched": true,
@@ -4763,10 +5435,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Ribes glandulosum": {
    "matched": true,
@@ -4782,7 +5456,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ribes hudsonianum": {
    "matched": true,
@@ -4791,10 +5467,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Ribes lacustre": {
    "matched": true,
@@ -4810,7 +5488,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Ribes oxyacanthoides": {
    "matched": true,
@@ -4819,10 +5499,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Ribes triste": {
    "matched": true,
@@ -4838,7 +5520,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Rosa acicularis": {
    "matched": true,
@@ -4847,10 +5531,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rosa arkansana": {
    "matched": true,
@@ -4866,7 +5552,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Rosa woodsii": {
    "matched": true,
@@ -4875,10 +5563,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rubus arcticus": {
    "matched": true,
@@ -4887,10 +5577,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rubus idaeus": {
    "matched": true,
@@ -4899,10 +5591,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Rubus parviflorus": {
    "matched": true,
@@ -4917,7 +5611,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Rubus pedatus": {
    "matched": true,
@@ -4931,7 +5627,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Rubus pubescens": {
    "matched": true,
@@ -4947,7 +5645,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sagittaria cuneata": {
    "matched": true,
@@ -4963,7 +5663,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sagittaria latifolia": {
    "matched": true,
@@ -4979,7 +5681,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Salix bebbiana": {
    "matched": true,
@@ -4995,7 +5699,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Salix brachycarpa": {
    "matched": true,
@@ -5004,10 +5710,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Salix discolor": {
    "matched": true,
@@ -5023,7 +5731,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Salix exigua": {
    "matched": true,
@@ -5032,10 +5742,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Salix interior": {
    "matched": true,
@@ -5051,7 +5763,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Salix petiolaris": {
    "matched": true,
@@ -5067,7 +5781,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Schizachne purpurascens": {
    "matched": true,
@@ -5076,10 +5792,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Schizachyrium scoparium": {
    "matched": true,
@@ -5088,10 +5806,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Schoenoplectus acutus": {
    "matched": true,
@@ -5100,10 +5820,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Schoenoplectus pungens": {
    "matched": true,
@@ -5112,10 +5834,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Scirpus microcarpus": {
    "matched": true,
@@ -5131,7 +5855,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Scutellaria galericulata": {
    "matched": true,
@@ -5147,7 +5873,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sedum lanceolatum": {
    "matched": true,
@@ -5156,10 +5884,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Shepherdia argentea": {
    "matched": true,
@@ -5175,7 +5905,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Shepherdia canadensis": {
    "matched": true,
@@ -5191,7 +5923,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sibbaldia procumbens": {
    "matched": true,
@@ -5205,7 +5939,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Silene acaulis": {
    "matched": true,
@@ -5220,7 +5956,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sisyrinchium montanum": {
    "matched": true,
@@ -5229,10 +5967,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Sium suave": {
    "matched": true,
@@ -5248,7 +5988,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Solanum triflorum": {
    "matched": true,
@@ -5264,7 +6006,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Solidago altissima": {
    "matched": true,
@@ -5273,10 +6017,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Solidago canadensis": {
    "matched": true,
@@ -5285,10 +6031,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Solidago gigantea": {
    "matched": true,
@@ -5297,10 +6045,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Solidago glutinosa": {
    "matched": true,
@@ -5316,7 +6066,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Solidago lepida": {
    "matched": true,
@@ -5325,10 +6077,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Solidago missouriensis": {
    "matched": true,
@@ -5344,7 +6098,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Solidago nemoralis": {
    "matched": true,
@@ -5358,7 +6114,9 @@
    "origin": "absent",
    "verdict": "not_here",
    "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Solidago rigida": {
    "matched": true,
@@ -5367,10 +6125,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Solidago simplex": {
    "matched": true,
@@ -5386,7 +6146,9 @@
    "origin": "introduced",
    "verdict": "not_here",
    "why": "VASCAN records it as introduced in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sorbus scopulina": {
    "matched": true,
@@ -5401,7 +6163,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sparganium eurycarpum": {
    "matched": true,
@@ -5417,7 +6181,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Spartina gracilis": {
    "matched": true,
@@ -5426,10 +6192,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Spartina pectinata": {
    "matched": true,
@@ -5438,10 +6206,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Sphaeralcea coccinea": {
    "matched": true,
@@ -5450,10 +6220,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Sphenopholis obtusata": {
    "matched": true,
@@ -5469,7 +6241,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Spiraea alba": {
    "matched": true,
@@ -5478,10 +6252,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Spiraea alba var. latifolia": {
    "matched": true,
@@ -5490,10 +6266,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 2
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 2,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Spiraea betulifolia": {
    "matched": false,
@@ -5505,7 +6283,9 @@
    "origin": "unmatched",
    "verdict": "review",
    "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial.",
-   "vascan_matches": 0
+   "vascan_matches": 0,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Spiraea douglasii": {
    "matched": true,
@@ -5514,10 +6294,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Spiranthes romanzoffiana": {
    "matched": true,
@@ -5533,7 +6315,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Sporobolus heterolepis": {
    "matched": true,
@@ -5548,7 +6332,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Stachys palustris": {
    "matched": true,
@@ -5562,7 +6348,9 @@
    "origin": "absent",
    "verdict": "not_here",
    "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Stachys pilosa": {
    "matched": true,
@@ -5571,10 +6359,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Stuckenia pectinata": {
    "matched": true,
@@ -5590,7 +6380,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Symphoricarpos albus": {
    "matched": true,
@@ -5599,10 +6391,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphoricarpos occidentalis": {
    "matched": true,
@@ -5618,7 +6412,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Symphyotrichum boreale": {
    "matched": true,
@@ -5634,7 +6430,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Symphyotrichum campestre": {
    "matched": true,
@@ -5643,10 +6441,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum ciliolatum": {
    "matched": true,
@@ -5662,7 +6462,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Symphyotrichum ericoides": {
    "matched": true,
@@ -5671,10 +6473,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum falcatum": {
    "matched": true,
@@ -5683,10 +6487,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum foliaceum": {
    "matched": true,
@@ -5695,10 +6501,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum hesperium": {
    "matched": true,
@@ -5707,10 +6515,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum laeve": {
    "matched": true,
@@ -5719,10 +6529,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum lanceolatum": {
    "matched": true,
@@ -5731,10 +6543,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Symphyotrichum puniceum": {
    "matched": true,
@@ -5743,10 +6557,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Thalictrum dasycarpum": {
    "matched": true,
@@ -5762,7 +6578,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Thalictrum occidentale": {
    "matched": true,
@@ -5777,7 +6595,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Thalictrum venulosum": {
    "matched": true,
@@ -5793,7 +6613,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Thermopsis rhombifolia": {
    "matched": true,
@@ -5809,7 +6631,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Townsendia exscapa": {
    "matched": true,
@@ -5825,7 +6649,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Townsendia parryi": {
    "matched": true,
@@ -5839,7 +6665,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Typha latifolia": {
    "matched": true,
@@ -5855,7 +6683,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Urtica dioica": {
    "matched": true,
@@ -5864,10 +6694,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Urtica gracilis": {
    "matched": true,
@@ -5876,10 +6708,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Utricularia vulgaris": {
    "matched": true,
@@ -5888,10 +6722,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Vaccinium myrtilloides": {
    "matched": true,
@@ -5907,7 +6743,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Vaccinium myrtillus": {
    "matched": true,
@@ -5921,7 +6759,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Vaccinium oxycoccos": {
    "matched": true,
@@ -5937,7 +6777,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Vaccinium uliginosum": {
    "matched": true,
@@ -5953,7 +6795,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Valeriana sitchensis": {
    "matched": true,
@@ -5967,7 +6811,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Veronica americana": {
    "matched": true,
@@ -5983,7 +6829,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Viburnum edule": {
    "matched": true,
@@ -5999,7 +6847,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Viburnum opulus": {
    "matched": true,
@@ -6008,10 +6858,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Vicia americana": {
    "matched": true,
@@ -6020,10 +6872,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Viola adunca": {
    "matched": true,
@@ -6039,7 +6893,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Viola canadensis": {
    "matched": true,
@@ -6048,10 +6904,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Viola orbiculata": {
    "matched": true,
@@ -6065,7 +6923,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Viola palustris": {
    "matched": true,
@@ -6074,10 +6934,12 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   },
   "Viola pedatifida": {
    "matched": true,
@@ -6093,7 +6955,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Yucca glauca": {
    "matched": true,
@@ -6108,7 +6972,9 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB.",
-   "vascan_matches": 1
+   "vascan_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": ""
   },
   "Zizia aptera": {
    "matched": true,
@@ -6117,10 +6983,13 @@
    "taxonomic_status": "",
    "provinces": {},
    "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution.",
-   "vascan_matches": 1
+   "origin": "undetermined",
+   "verdict": "review",
+   "why": "VASCAN matched this name but publishes no distribution for it. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent.",
+   "vascan_matches": 1,
+   "has_distribution": false,
+   "taxon_rank": ""
   }
- }
+ },
+ "reassessed": "2026-08-25"
 }

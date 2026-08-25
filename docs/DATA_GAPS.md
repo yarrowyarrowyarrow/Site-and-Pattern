@@ -368,6 +368,47 @@ inside the accuracy the outlines themselves claim.
 `plot_occurrences.species_svg` learned that the hard way in V2.78, printing
 *"the other -5 fall in regions with too few records to shade"*.
 
+## VASCAN publishes distribution on the lowest accepted taxon (V2.79)
+
+The nativity fetch ran on 2026-08-24: 434 species, zero failures. **173 of them
+came back with no distribution at all**, because VASCAN records distribution on
+the lowest accepted taxon and those species have accepted varieties or
+subspecies:
+
+| query | rank | distribution |
+|---|---|---|
+| `Amelanchier alnifolia` | species | **none** |
+| `Amelanchier alnifolia var. alnifolia` | variety | AB, SK, MB native |
+| `Alnus incana` | species | **none** |
+| `Alnus incana subsp. tenuifolia` | subspecies | AB, SK native, MB excluded |
+
+Those 173 are **undetermined, not absent**, and the report says so. Reaching
+the answer means querying the infraspecific taxa and unioning their
+distributions, which needs a way to enumerate a taxon's children -- the
+species-level response does not list them, and `parentNameUsageID` points the
+wrong way. Open.
+
+**What the fetch did settle**, unaffected by the above:
+
+| | count |
+|---|---|
+| VASCAN agrees the species is native in AB/SK | **243** |
+| VASCAN records it introduced/excluded, or from neither province | **9** |
+| VASCAN could not match the name | **9** |
+
+The nine `not_here` include *Achillea millefolium*, *Helianthus annuus*,
+*Prunus tomentosa*, *Maianthemum racemosum*, *Solidago nemoralis* and *Stachys
+palustris*. **None has been acted on.** *Achillea millefolium* in particular is
+not a simple removal: the catalogue also carries *Achillea borealis*, and
+whether North America's native yarrow races belong to the same species is a
+live taxonomic dispute.
+
+The nine unmatched are two `Malus domestica` cultivars and `Prunus cerasus
+'Evans'` (expected, cultivars are not in a wild flora) plus *Andropogon
+gerardii*, *Deschampsia caespitosa*, *Hedysarum alpinum*, *Matteuccia
+struthiopteris*, *Oenothera caespitosa* and *Spiraea betulifolia*, which are
+real taxa and probably superseded binomials.
+
 ## The occurrence harvest is capped, and the cap is not neutral (V2.77)
 
 `scripts/seed_ecoregion_ranges.py` stops asking GBIF after

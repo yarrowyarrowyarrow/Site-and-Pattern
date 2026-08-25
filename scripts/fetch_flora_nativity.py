@@ -157,7 +157,16 @@ def lookup(name: str, *, throttle=None, get_json=None) -> dict:
             break
 
     out = {"matched": False, "accepted_name": "", "is_synonym": False,
-           "taxonomic_status": "", "provinces": {}, "raw_matches": len(matches)}
+           "taxonomic_status": "", "provinces": {}, "raw_matches": len(matches),
+           # Was there a distribution block AT ALL? Separate from `provinces`
+           # being empty, which it also is when the block exists and names
+           # neither province. Those are opposite facts and collapsing them is
+           # what published 173 species as "not recorded here" (V2.79).
+           "has_distribution": False,
+           # The diagnostic that explains the whole thing: VASCAN attaches
+           # distribution to the LOWEST accepted taxon, so a species with
+           # recognised varieties carries none on its own record.
+           "taxon_rank": ""}
     if not matches:
         return out
 
@@ -171,8 +180,11 @@ def lookup(name: str, *, throttle=None, get_json=None) -> dict:
     status = str(_first(match, _STATUS_KEYS, "") or "")
     out["taxonomic_status"] = status
     out["is_synonym"] = "synonym" in status.lower()
+    out["taxon_rank"] = str(match.get("taxonRank") or "")
 
-    for row in _first(match, _DIST_KEYS, []) or []:
+    rows = _first(match, _DIST_KEYS, None)
+    out["has_distribution"] = isinstance(rows, list) and bool(rows)
+    for row in rows or []:
         if not isinstance(row, dict):
             continue
         where = str(_first(row, _LOCATION_KEYS, "") or "").upper()
@@ -194,18 +206,48 @@ def assess(result: dict) -> dict:
 
     ``native_provinces``  the codes VASCAN calls native. Measured.
     ``origin``            ``native`` / ``introduced`` / ``unstated`` /
-                          ``absent``. **``unstated`` is a real and expected
-                          answer** and must never be rounded to a verdict.
+                          ``undetermined`` / ``absent``. **``unstated`` and
+                          ``undetermined`` are real and expected answers** and
+                          must never be rounded to a verdict. They differ:
+                          ``unstated`` means VASCAN lists the province and no
+                          establishment means; ``undetermined`` means VASCAN
+                          published no distribution for this taxon at all,
+                          which for a species with accepted varieties is normal
+                          and says nothing about where it grows.
     ``verdict``           what a reviewer should look at: ``confirm``,
                           ``narrow`` (fewer provinces than we claim),
-                          ``not_here`` (VASCAN records it from neither), or
-                          ``review``.
+                          ``not_here`` (VASCAN records it from neither --
+                          which requires a distribution block that names
+                          neither, never a missing one), or ``review``.
     """
     if not result.get("matched"):
         return {"native_provinces": "", "origin": "unmatched",
                 "verdict": "review",
                 "why": "VASCAN returned no match for this name at all, which "
                        "is usually a superseded or misspelled binomial."}
+
+    # VASCAN matched the taxon and published no distribution for it at all.
+    # **Never `not_here`.** VASCAN attaches distribution to the lowest accepted
+    # taxon, so a species with recognised varieties or subspecies carries none
+    # on its own record: `Amelanchier alnifolia` returns nothing while
+    # `Amelanchier alnifolia var. alnifolia` returns AB/SK/MB native. Reporting
+    # that as "records no Alberta or Saskatchewan distribution" made Saskatoon
+    # Berry, the defining parkland shrub, come back absent from the parkland
+    # (V2.79). 173 of 434 species were in this state.
+    #
+    # A failure is not an absence. Third time in this repo: the V2.75 rate
+    # limit logged 208 throttled species as growing nowhere, and the V2.78
+    # harvest cap made a truncated fetch look complete.
+    if not result.get("has_distribution", True):
+        rank = (result.get("taxon_rank") or "").strip()
+        at_rank = f" at rank {rank}" if rank else ""
+        return {"native_provinces": "", "origin": "undetermined",
+                "verdict": "review",
+                "why": f"VASCAN matched this name but publishes no "
+                       f"distribution for it{at_rank}. It records distribution "
+                       f"on the lowest accepted taxon, so this is expected for "
+                       f"a species with accepted varieties or subspecies, and "
+                       f"it is NOT a statement that the plant is absent."}
 
     provinces = result.get("provinces") or {}
     native, introduced, unstated = [], [], []
@@ -347,6 +389,41 @@ def probe(names: list[str]) -> int:
     return 0
 
 
+def reassess(path=OUTPUT_PATH) -> dict:
+    """Re-run :func:`assess` over an already-fetched file. **No network.**
+
+    The fetched file stores `lookup()`'s parsed output, so a corrected verdict
+    costs a re-read rather than 434 requests -- the same bargain the occurrence
+    point cache makes.
+
+    **What cannot be recovered from the stored file**, and is therefore
+    reported honestly rather than guessed: it predates ``has_distribution``, so
+    a matched taxon with empty ``provinces`` might be one VASCAN published no
+    distribution for, or one whose distribution block named neither province.
+    Those want different verdicts. This assumes the first, which is the shape
+    the V2.79 probes found and is overwhelmingly the common case (a real
+    VASCAN block lists every province and territory, eleven rows for *Acorus
+    americanus*), and the verdict it produces -- ``review`` -- is the safe one
+    either way: it asks a human to look, where the bug asserted an absence.
+    """
+    with open(path, encoding="utf-8") as fh:
+        blob = json.load(fh)
+    moved = {"before": {}, "after": {}, "changed": []}
+    for name, row in (blob.get("results") or {}).items():
+        moved["before"][row.get("verdict", "")] = \
+            moved["before"].get(row.get("verdict", ""), 0) + 1
+        if "has_distribution" not in row:
+            row["has_distribution"] = bool(row.get("provinces"))
+        row.setdefault("taxon_rank", "")
+        before = row.get("verdict")
+        row.update(assess(row))
+        moved["after"][row["verdict"]] = moved["after"].get(row["verdict"], 0) + 1
+        if row["verdict"] != before:
+            moved["changed"].append((name, before, row["verdict"]))
+    blob["reassessed"] = date.today().isoformat()
+    return {"blob": blob, "moved": moved}
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -357,8 +434,33 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--species", action="append", default=None,
                    help="Only this scientific name (repeatable).")
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--reassess", action="store_true",
+                   help="Re-run the verdicts over the already-fetched file "
+                        "with NO network. Use after a parser fix.")
     p.add_argument("--quiet", action="store_true")
     args = p.parse_args(argv)
+
+    if args.reassess:
+        if not OUTPUT_PATH.exists():
+            print(f"No {OUTPUT_PATH.relative_to(PROJECT_ROOT)} to re-assess.",
+                  file=sys.stderr)
+            return 1
+        done = reassess()
+        before, after = done["moved"]["before"], done["moved"]["after"]
+        print("verdicts before -> after:")
+        for verdict in sorted(set(before) | set(after)):
+            print(f"   {verdict or '(none)':14s} {before.get(verdict, 0):4d} -> "
+                  f"{after.get(verdict, 0):4d}")
+        print(f"\n   {len(done['moved']['changed'])} species changed verdict")
+        for name, was, now in done["moved"]["changed"][:10]:
+            print(f"      {name}: {was} -> {now}")
+        if len(done["moved"]["changed"]) > 10:
+            print(f"      ... and {len(done['moved']['changed']) - 10} more")
+        OUTPUT_PATH.write_text(
+            json.dumps(done["blob"], indent=1, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        print(f"\nRewrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)}.")
+        return 0
 
     names = args.species or catalogue_species()
     if args.limit:
