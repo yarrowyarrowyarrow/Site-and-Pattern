@@ -270,12 +270,21 @@ class TestTheKey(unittest.TestCase):
 
 
 class TestOnlyTheRecordsWeMayDraw(unittest.TestCase):
-    """The specimen and licence filters (F141, V2.77).
+    """The specimen and licence filters (F141, V2.77; the NC rule V2.80).
 
     Two rules, and both fail dangerously in the permissive direction: an
     unknown licence treated as publishable puts somebody's records on a public
     page without the right, and an absent licence table treated as "nothing is
     publishable" draws a blank map that reads as a finding about the herbaria.
+
+    **V2.80 changed one of them deliberately.** `publishable` now uses
+    `PUBLISHABLE_COORDINATES`, which permits `CC_BY_NC` -- a photograph is
+    redistributed as a work, a coordinate is a fact about a place -- while the
+    photograph pipeline keeps the stricter set. It is not a loosening by
+    accident: of 365,092 drawable records, 329,267 are NC observations, so the
+    old rule drew a map that was 94% herbarium specimens and called it the
+    observation record. `tests/test_occurrence_points.py` pins the two sets
+    against each other; these pin what the filter does with them.
     """
 
     TABLE = {"herbarium": "CC_BY", "public": "CC0", "restricted": "CC_BY_NC"}
@@ -294,9 +303,18 @@ class TestOnlyTheRecordsWeMayDraw(unittest.TestCase):
         self.assertEqual(len(kept), 3)
         self.assertTrue(all(p.basis == "PRESERVED_SPECIMEN" for p in kept))
 
-    def test_a_noncommercial_dataset_is_not_drawable(self):
+    def test_a_noncommercial_dataset_IS_drawable_as_a_coordinate(self):
+        """Reversed in V2.80, on the author's decision. This test asserted the
+        opposite for three releases and was right to until the rule changed."""
         kept = P.publishable(self._points(), self.TABLE)
-        self.assertNotIn("restricted", {p.dataset_key for p in kept})
+        self.assertIn("restricted", {p.dataset_key for p in kept})
+
+    def test_the_photograph_rule_is_not_what_moved(self):
+        """The reason NC is acceptable here is specific to coordinates. If
+        this ever passes for `PUBLISHABLE`, the photo pipeline has been
+        loosened by somebody editing the wrong constant."""
+        from scripts.fetch_dataset_licences import PUBLISHABLE
+        self.assertNotIn("CC_BY_NC", PUBLISHABLE)
 
     def test_a_dataset_absent_from_the_table_is_dropped_not_defaulted(self):
         """Absent is not permissive. The same rule the photo pipeline runs on."""
@@ -306,15 +324,27 @@ class TestOnlyTheRecordsWeMayDraw(unittest.TestCase):
     def test_the_two_filters_compose(self):
         kept, why = P.drawable(self._points(), only_specimens=True,
                                only_publishable=True, table=self.TABLE)
-        self.assertEqual({p.dataset_key for p in kept}, {"herbarium", "public"})
+        # `restricted` is CC_BY_NC and survives now; `unlisted` is absent from
+        # the table and still does not, but it is an observation so the
+        # specimen filter takes it first.
+        self.assertEqual({p.dataset_key for p in kept},
+                         {"herbarium", "public", "restricted"})
         self.assertEqual(why["not a specimen"], 2)
-        self.assertEqual(why["licence does not permit redrawing"], 1)
+        self.assertNotIn("licence does not permit redrawing", why)
 
     def test_nothing_is_dropped_silently(self):
         """Every refusal is counted and reasoned, so a thin map is explicable."""
         _kept, why = P.drawable(self._points(), only_specimens=True,
                                 only_publishable=True, table=self.TABLE)
-        self.assertEqual(sum(why.values()), 3)
+        self.assertEqual(sum(why.values()), 2)
+
+    def test_an_unlisted_licence_is_still_counted_when_it_is_reached(self):
+        """The composition test above never reaches the licence filter for
+        `unlisted`, because it is an observation. Without the specimen filter
+        in the way, absent must still not be permissive."""
+        _kept, why = P.drawable(self._points(), only_specimens=False,
+                                only_publishable=True, table=self.TABLE)
+        self.assertEqual(why["licence does not permit redrawing"], 1)
 
     def test_no_filters_means_no_drop_reasons(self):
         kept, why = P.drawable(self._points(), only_specimens=False,
