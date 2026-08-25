@@ -56,6 +56,15 @@ data/fetched/_checkpoint.json
 data/fetched/_checkpoint_obs.json
 data/fetched/*.tmp
 
+# The downloaded source archives (V2.80). `--from-archive` tells the author to
+# save VASCAN's Darwin Core Archive under data/fetched/, which is a directory
+# whose other contents ARE committed — so without this the obvious `git add -A`
+# commits a ~20 MB third-party zip. The archive is an input, not evidence: what
+# we derive from it (flora_nativity.json) is committed and says which file and
+# which date it came from.
+data/fetched/*.zip
+data/fetched/dwca-*/
+
 # Local run artifacts (V2.61). None of these is ever committed, and a long
 # `git status` is how a real untracked file gets missed — the nativity fetch
 # output sat in a list of eleven the first time it was looked for.

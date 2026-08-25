@@ -38,16 +38,16 @@ OUTPUT_PATH = PROJECT_ROOT / "data" / "plant_ranges.json"
 
 
 def derive(cache: dict, *, step: float, verbose: bool = True) -> tuple:
-    """``({species: cells}, {species: (records kept, refused, outside)})``."""
+    """``({species: {cell: records}}, {species: (kept, refused, outside)})``."""
     from scripts.seed_ecoregion_ranges import usable_points
-    from src.species_range import occupied_cells
+    from src.species_range import cell_counts
     from src.subject_area import in_subject_provinces
 
     ranges, stats = {}, {}
     for i, (name, points) in enumerate(sorted(cache.items()), 1):
         keep, refused = usable_points(points)
         inside = [p for p in keep if in_subject_provinces(p[0], p[1])]
-        cells = occupied_cells(inside, step=step, subject_only=False)
+        cells = cell_counts(inside, step=step, subject_only=False)
         if cells:
             ranges[name] = cells
         stats[name] = (len(inside), refused, len(keep) - len(inside))
@@ -117,6 +117,20 @@ def main(argv: list[str] | None = None) -> int:
         print("\n  widest ranges:")
         for name, cells in biggest:
             print(f"      {len(cells):4d} cells  {name}")
+
+    if verbose:
+        # The distribution the ramp has to survive. If nearly every cell landed
+        # in one band the shading would be doing no work, which is the failure
+        # the single-colour wash already made once.
+        from src.species_range import BAND_LABELS, density_band
+        bands = [0] * len(BAND_LABELS)
+        for counts in ranges.values():
+            for n in counts.values():
+                bands[density_band(n)] += 1
+        print("\n  cells per density band (records in the cell):")
+        for label, n in zip(BAND_LABELS, bands):
+            share = 100.0 * n / total_cells if total_cells else 0.0
+            print(f"      {label:>6s}  {n:7,d}  {share:5.1f}%")
 
     if args.dry_run:
         print("\n--dry-run: nothing written.")

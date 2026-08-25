@@ -843,6 +843,16 @@ class TestEveryTextFileReadPinsItsEncoding(unittest.TestCase):
             cwd=str(_SRC.parent), check=False)
         if out.returncode != 0:
             self.skipTest("not a git checkout")
+        # A shallow clone is not a repo whose history went ASCII. Cloud
+        # sessions land on `--depth 50`-ish checkouts, where this sampled 52
+        # subjects, found none with an accent in them and failed -- a test
+        # asserting a fact about the *clone*, which is the same shape as the
+        # V2.79 ingest guard that was asserting a fact about the working tree.
+        # Below the sample size the claim is not being tested, so say so.
+        subjects = out.stdout.splitlines()
+        if len(subjects) < 200 or (_SRC.parent / ".git" / "shallow").exists():
+            self.skipTest(f"shallow clone: {len(subjects)} subjects is too "
+                          f"small a sample to say the history is ASCII")
         self.assertTrue(any(ord(ch) > 0x7F for ch in out.stdout),
                         "no non-ASCII in 400 commit subjects — check why")
 

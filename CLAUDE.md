@@ -21,13 +21,16 @@ drives the app lives in `docs/DESIGN_PHILOSOPHY.md` — strongly-aligned modules
 one-line `Design principle P#` anchor pointing back to it, guarded by
 `tests/test_philosophy.py`.
 
-## Work in flight (V2.79 — delete this section when it ships)
+## Work in flight (V2.79–V2.80 — delete this section when it ships)
 
-**There is an unfinished increment on branch `V2.79`.** If you are starting cold,
-read [`docs/plans/V2.79-the-range-stops-being-ecoregions.md`](docs/plans/V2.79-the-range-stops-being-ecoregions.md)
+**There is an unfinished increment spanning `V2.79` and `V2.80`.** If you are
+starting cold, read
+[`docs/plans/V2.79-the-range-stops-being-ecoregions.md`](docs/plans/V2.79-the-range-stops-being-ecoregions.md)
+and then
+[`docs/plans/V2.80-the-range-was-never-on-the-page.md`](docs/plans/V2.80-the-range-was-never-on-the-page.md)
 before touching the range maps, the website build or the nativity data —
-especially its **Handing this over** section, which lists decisions the author
-has already made and that should not be reopened.
+especially V2.79's **Handing this over** section, which lists decisions the
+author has already made and that should not be reopened.
 
 In one paragraph: an outside botanical review said the published range maps
 overstate what is known, and V2.75–V2.78 each fixed *how* the ecoregion shading
@@ -35,22 +38,26 @@ was derived while leaving untouched the assumption that a range is made of
 ecoregions. V2.79 replaces that with a **0.25° occupancy grid**
 (`src/species_range.py`, `src/range_map.py`) and fixes a VASCAN parser that was
 publishing a *missing* distribution field as an **absence** for 173 species.
+V2.80 made the new map legible — and found that the range wash it was supposed
+to be tuning had **never been drawn**, because the province outlines are
+redrawn over it with an opaque white fill.
 
-Three threads are open, in this order:
+Two threads are open, in this order:
 
-1. **The map still does not look right.** It is not a palette problem — 10–30
-   record marks land in each grid cell and bury the wash. Shading cells by
-   record count and drawing few or no marks is the strongest move.
-2. **F146** — one shared geometry file instead of 846 KB of ecoregion polygons
-   repeated on all 430 species pages (built site: 421 MB).
-3. **F147** — publish the occurrence points with a specimen/observation toggle.
+1. **F146** — one shared geometry file instead of 846 KB of ecoregion polygons
+   repeated on all 430 species pages (built site: 421 MB). This is now what
+   stands between the new range map and a reader: `src/range_map.py` still has
+   no caller, and the species page still shows the ecoregion map.
+2. **F147** — publish the occurrence points with a specimen/observation toggle.
+   `range_svg(..., marks="all")` is the switch it needs.
 
 Plus **VASCAN**: waiting on the author to download the Darwin Core Archive and
 run `scripts/fetch_flora_nativity.py --from-archive`. The canary is *Amelanchier
-alnifolia* landing in `confirm`.
+alnifolia* landing in `confirm`, and the `review` bucket collapsing from 182.
 
-**This section is stale the moment V2.79 ships.** Delete it then; the plan file
-and the F145–F149 ledger row in `docs/ROADMAP_NEXT.md` are the permanent record.
+**This section is stale the moment this work ships.** Delete it then; the plan
+files and the F145–F149 ledger row in `docs/ROADMAP_NEXT.md` are the permanent
+record.
 
 ## Design philosophy (read this first — weave it through your work)
 

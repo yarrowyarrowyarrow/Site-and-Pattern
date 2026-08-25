@@ -438,6 +438,64 @@ than 434 requests.
    like a finding and read like one in a report. What caught it was checking a
    single species whose answer was known in advance.
 
+## 21. A picture with no test and no caller (V2.80)
+
+**What happened.** V2.79 shipped `src/range_map.py`, a new species range map,
+with three palettes for the author to choose between. The verdict was *"all
+look identical."* The handover explained it with arithmetic — 10-30 record
+marks land in each grid square, so the range wash underneath is buried — and
+recommended shading the squares by record count instead.
+
+The arithmetic was right and it was not the cause. The renderer draws the
+subject provinces, then the range squares, then the province outlines **again**
+so a border stays legible where the wash sits against it. That second pass
+reused `.subj`, whose fill is opaque white. Every build drew all 361 squares and
+then painted a white province over the top of them.
+
+The wash had never been on the page. Three palettes that differ only in the
+wash rendered byte-identically apart from the hex in their stylesheet, and a
+fourth would have too.
+
+Rendering the SVG standalone found a second one immediately: `water_svg` and
+`cities_svg` are shared with the ecoregion maps and emit `ecomap-*` classes,
+styled in `html/site/site.css`. The range map's inline `<style>` did not carry
+them, so every lake drew **black** (SVG's default fill) and every river drew
+nothing (`<polyline fill="none">` with no stroke rule) — in a module whose
+docstring calls its output *"one self-contained ``<svg>`` string"*. The `water`,
+`river` and `city` entries in all three palettes had never been applied to
+anything. They were prose in a table.
+
+**The scar.** Both are pure *paint order and applied colour*. Nothing raises,
+nothing parses wrong, the SVG is well-formed, and the module was well
+documented. `range_map.py` shipped with **no test file and no caller** — it
+existed to produce PNGs to email to the author — so the only check it ever got
+was somebody looking at the picture, and V2.79 recorded that looking at the
+picture was the one thing it could not do.
+
+The fix was one CSS class. It cost an increment because the wrong cause was
+written down confidently, in a plan, twice.
+
+**Rules:**
+
+1. **A renderer with no test asserts nothing.** `tests/test_range_map.py` now
+   checks byte offsets: no filled province polygon may appear after the last
+   range cell, and the palettes must produce distinct output. Both fail against
+   the old renderer. A test that only proves the SVG parses would have passed
+   through every version of this bug.
+2. **Render it and look at it, in the session.** The container's headless
+   Chromium screenshots an SVG in one command
+   (`chrome --headless --no-sandbox --screenshot=out.png file://…`), and Claude
+   can read the PNG. Three renders found both faults in about a minute. "Could
+   not be verified here — renders were sent to the author" was true of the
+   whole V2.75-V2.79 line of work and was never quite true.
+3. **A palette entry nothing applies is not a decision, it is a comment.**
+   Assert that every key in a palette table reaches the output. Three releases
+   of colour choices were being made about water that was rendering black.
+4. **Suspect the confident diagnosis in a handover.** It is the part a fresh
+   session is likeliest to adopt without re-deriving, and correct-looking
+   arithmetic about the wrong layer is indistinguishable from a root cause
+   until you look.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

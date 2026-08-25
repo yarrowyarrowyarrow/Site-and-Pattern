@@ -81,6 +81,48 @@ class TestItDrawsNoGroundWeDoNotSpeakFor(unittest.TestCase):
         self.assertEqual(len(cells), 2)
 
 
+class TestTheCountIsKeptAndSaysWhatItIs(unittest.TestCase):
+    """V2.80. The first build drew presence in one colour and could not be
+    read; shading by count is what makes the picture legible. The count is
+    recording effort as much as it is the plant, and the risk here is not a
+    crash -- it is a reader taking a dark square for abundance."""
+
+    def test_records_in_a_cell_are_counted(self):
+        pts = [EDMONTON, (53.56, -113.48), (53.51, -113.40), CALGARY]
+        counts = R.cell_counts(pts)
+        self.assertEqual(counts[(53.5, -113.5)], 3)
+        self.assertEqual(counts[(51.0, -114.25)], 1)
+
+    def test_presence_and_counts_agree_about_which_cells_exist(self):
+        pts = [EDMONTON, EDMONTON, CALGARY, GOLDEN_BC]
+        self.assertEqual(sorted(R.cell_counts(pts)), R.occupied_cells(pts))
+
+    def test_out_of_province_records_are_not_counted_either(self):
+        self.assertEqual(R.cell_counts([GOLDEN_BC, GREAT_FALLS_MT]), {})
+
+    def test_the_bands_climb_and_a_single_record_is_the_lightest(self):
+        self.assertEqual(R.density_band(1), 0)
+        self.assertEqual(R.density_band(3), 1)
+        self.assertEqual(R.density_band(12), 2)
+        self.assertEqual(R.density_band(60), 3)
+        self.assertEqual(R.density_band(4000), 4)
+
+    def test_every_band_has_a_label_to_read_it_by(self):
+        """A five-step ramp with no key is decoration."""
+        self.assertEqual(len(R.BAND_LABELS), len(R.DENSITY_BREAKS) + 1)
+
+    def test_the_caption_denies_the_ramp_is_an_abundance(self):
+        text = R.caption([(53.5, -113.5, 400)])
+        self.assertIn("roads and towns", text)
+
+    def test_a_presence_only_caption_does_not_explain_a_ramp_nobody_drew(self):
+        self.assertNotIn("roads and towns", R.caption([(53.5, -113.5)]))
+
+    def test_the_shipped_comment_refuses_the_abundance_reading_too(self):
+        doc = R.build_document({"Testus": {(53.5, -113.5): 400}})
+        self.assertIn("not an abundance", doc["comment"])
+
+
 class TestNothingRecordedDrawsNothing(unittest.TestCase):
     """The `phenology_bar` rule (P9). An empty grid would assert that we
     checked everywhere and found it nowhere."""
@@ -122,9 +164,14 @@ class TestTheCaptionRefusesTheClaimsAPictureImplies(unittest.TestCase):
 class TestTheShippedFile(unittest.TestCase):
 
     def test_it_round_trips(self):
-        cells = [(51.0, -114.25), (53.5, -113.5)]
-        doc = R.build_document({"Testus": cells})
-        self.assertEqual(R.parse_document(doc)["Testus"], cells)
+        counts = {(51.0, -114.25): 7, (53.5, -113.5): 1}
+        doc = R.build_document({"Testus": counts})
+        self.assertEqual(R.parse_document(doc)["Testus"],
+                         [(51.0, -114.25, 7), (53.5, -113.5, 1)])
+
+    def test_a_caller_with_only_presence_does_not_have_to_invent_a_count(self):
+        doc = R.build_document({"Testus": [(51.0, -114.25)]})
+        self.assertEqual(R.parse_document(doc)["Testus"], [(51.0, -114.25, 1)])
 
     def test_it_records_the_resolution_it_was_built_at(self):
         """A file that does not say its own cell size cannot be drawn, and
@@ -132,8 +179,15 @@ class TestTheShippedFile(unittest.TestCase):
         self.assertEqual(R.build_document({}, step=0.5)["cell_degrees"], 0.5)
 
     def test_a_malformed_row_is_skipped_not_crashed(self):
-        blob = {"species": {"Testus": [[53.5, -113.5], [1], "nope", None]}}
-        self.assertEqual(R.parse_document(blob)["Testus"], [(53.5, -113.5)])
+        blob = {"species": {"Testus": [[53.5, -113.5, 4], [1], "nope", None]}}
+        self.assertEqual(R.parse_document(blob)["Testus"], [(53.5, -113.5, 4)])
+
+    def test_a_version_1_row_reads_as_one_record_not_as_zero(self):
+        """The file only ever held cells with at least one record in them, so a
+        missing count is one. Reading a missing field as an absence is the
+        mistake this repo has now made three times."""
+        blob = {"version": 1, "species": {"Testus": [[53.5, -113.5]]}}
+        self.assertEqual(R.parse_document(blob)["Testus"], [(53.5, -113.5, 1)])
 
     def test_a_missing_file_parses_to_nothing(self):
         self.assertEqual(R.parse_document({}), {})

@@ -52,6 +52,14 @@ in that square, at least once, somebody recorded this plant.
 is the same distinction `establishment.py` draws between *unlikely* and
 *unknown*. The renderer must never style empty cells as "not here".
 
+**Not an abundance, once it is shaded by count (V2.80).** The first build drew
+every occupied cell in one colour and it could not be read: a well-recorded
+species lands 10-30 marks in each of its cells, so the marks buried the wash and
+all three palettes rendered identically. Shading the cell by how many records it
+holds draws that information once instead of thirty times -- but the number is
+recording effort as much as it is the plant, so `density_band` says so and the
+caption repeats it wherever the ramp appears.
+
 **Not a substitute for the ecoregion rows.** Those still carry counts and
 confidence bands, still drive the filters and the region hub pages, and still
 answer a different question: not *where is it* but *which of the classified
@@ -86,9 +94,9 @@ def cell_of(lat: float, lng: float, *, step: float = CELL_DEG) -> tuple:
     return (math.floor(lat / step) * step, math.floor(lng / step) * step)
 
 
-def occupied_cells(points, *, step: float = CELL_DEG, subject_only: bool = True
-                   ) -> list:
-    """Sorted ``[(lat, lng), ...]`` south-west corners with at least one record.
+def cell_counts(points, *, step: float = CELL_DEG, subject_only: bool = True
+                ) -> dict:
+    """``{(lat, lng): records}`` -- how many records fall in each cell.
 
     ``points`` are ``(lat, lng)`` pairs or :class:`Occurrence` tuples -- the
     same duck type `ranges_for_species` takes, so the cache drops straight in.
@@ -96,51 +104,119 @@ def occupied_cells(points, *, step: float = CELL_DEG, subject_only: bool = True
     ``subject_only`` drops records outside Alberta and Saskatchewan, because a
     range map of ground this catalogue does not speak for is the F142 bug again
     (31.7% of the harvest sits outside the two provinces).
+
+    The count is kept because the *presence* alone could not be drawn (V2.80).
+    A well-recorded species puts 10-30 marks in every cell it occupies, so the
+    marks bury the wash and every palette renders identically. Shading the cell
+    by its count draws the same information once instead of thirty times. What
+    the count is **not** is in :func:`density_band`.
     """
     keep = None
     if subject_only:
         from src.subject_area import in_subject_provinces
         keep = in_subject_provinces
-    cells = set()
+    counts: dict = {}
     for point in points:
         lat, lng = float(point[0]), float(point[1])
         if keep is not None and not keep(lat, lng):
             continue
-        cells.add(cell_of(lat, lng, step=step))
-    return sorted(cells)
+        cell = cell_of(lat, lng, step=step)
+        counts[cell] = counts.get(cell, 0) + 1
+    return counts
+
+
+def occupied_cells(points, *, step: float = CELL_DEG, subject_only: bool = True
+                   ) -> list:
+    """Sorted ``[(lat, lng), ...]`` south-west corners with at least one record.
+
+    Presence only. :func:`cell_counts` is the same pass with the count kept.
+    """
+    return sorted(cell_counts(points, step=step, subject_only=subject_only))
+
+
+#: Lower bounds of density bands 1..4; band 0 is a single record. Log-ish
+#: rather than even, because record counts per cell are heavy-tailed -- a cell
+#: holding a city runs to thousands while the median cell holds one or two, and
+#: even breaks would paint the whole province the lightest colour but Calgary.
+DENSITY_BREAKS = (2, 5, 20, 100)
+
+#: What each band says, for the legend. Plain hyphens on purpose: the site
+#: normalises em dashes and a range label is not the place to test that.
+BAND_LABELS = ("1", "2-4", "5-19", "20-99", "100+")
+
+
+def density_band(count: int) -> int:
+    """Which of the five bands a cell's record count falls in, ``0``-``4``.
+
+    **This is recording effort as much as it is the plant.** A cell containing
+    a city is dark for nearly every species in the catalogue, because that is
+    where the people with cameras are -- the same collection bias
+    `ecoregion_ranges` already discloses in its counts. The band says *how many
+    times this was written down here*, never *how much of it grows here*, and
+    :func:`caption` has to say so wherever the ramp is drawn.
+    """
+    n = int(count or 0)
+    band = 0
+    for i, edge in enumerate(DENSITY_BREAKS, start=1):
+        if n >= edge:
+            band = i
+    return band
 
 
 def build_document(by_species: dict, *, generated: str = "", source: str = "",
                    step: float = CELL_DEG) -> dict:
-    """The shipped file: ``{species: [[lat, lng], ...]}`` plus its provenance.
+    """The shipped file: ``{species: [[lat, lng, records], ...]}`` + provenance.
 
-    Cells are stored as bare pairs rather than objects. There are hundreds of
-    thousands of them across the catalogue and a two-element array is a quarter
-    the size of ``{"lat": .., "lng": ..}``; the shape is documented in the
-    file's own ``columns`` field so it reads without this docstring.
+    ``by_species`` values may be a ``{(lat, lng): count}`` mapping from
+    :func:`cell_counts` or a bare sequence of cells, which counts as one record
+    each -- a caller that only has presence should not have to invent a number.
+
+    Cells are stored as bare arrays rather than objects. There are hundreds of
+    thousands of them across the catalogue and a three-element array is a
+    third the size of ``{"lat": .., "lng": .., "n": ..}``; the shape is
+    documented in the file's own ``columns`` field so it reads without this
+    docstring.
     """
     from datetime import date
     return {
-        "version": 1,
+        "version": 2,
         "generated": generated or date.today().isoformat(),
         "source": source or "derived from the GBIF occurrence cache",
         "cell_degrees": step,
-        "columns": ["cell_lat_sw", "cell_lng_sw"],
+        "columns": ["cell_lat_sw", "cell_lng_sw", "records"],
         "comment": (
             "Occupied cells of a {step} degree grid. A cell means at least one "
             "georeferenced record falls inside it. It does NOT mean the plant "
             "grows throughout the cell, and an empty cell is unrecorded rather "
-            "than absent.".format(step=step)),
-        "species": {name: [[round(a, 4), round(b, 4)] for a, b in cells]
+            "than absent. The record count is how often the plant was written "
+            "down in that square, which follows roads and towns as much as it "
+            "follows the plant; it is not an abundance."
+            .format(step=step)),
+        "species": {name: _rows(cells)
                     for name, cells in sorted(by_species.items()) if cells},
     }
 
 
+def _rows(cells) -> list:
+    """``[[lat, lng, count], ...]`` from either accepted input shape."""
+    items = (sorted(cells.items()) if isinstance(cells, dict)
+             else [(c, 1) for c in sorted(cells)])
+    return [[round(a, 4), round(b, 4), int(n)] for (a, b), n in items]
+
+
 def parse_document(blob: dict) -> dict:
-    """``{species: [(lat, lng), ...]}`` from the shipped file, or ``{}``."""
+    """``{species: [(lat, lng, records), ...]}`` from the shipped file, or ``{}``.
+
+    A version 1 row carried no count. It reads as one record rather than as
+    zero, because the file only ever held cells that had at least one -- and
+    reading a missing field as an absence is the mistake this repo has now made
+    three times (see `docs/DATA_GAPS.md`).
+    """
     out = {}
     for name, cells in ((blob or {}).get("species") or {}).items():
-        rows = [(float(c[0]), float(c[1])) for c in cells or []
+        rows = [(float(c[0]), float(c[1]),
+                 int(c[2]) if len(c) >= 3 else 1)
+                for c in cells or []
                 if isinstance(c, (list, tuple)) and len(c) >= 2]
         if rows:
             out[name] = rows
@@ -154,10 +230,18 @@ def caption(cells, *, step: float = CELL_DEG) -> str:
     `phenology_bar` follows, for the same reason: an empty grid would assert
     that we checked everywhere and found it nowhere.
     """
-    n = len(cells or [])
+    rows = list(cells or [])
+    n = len(rows)
     if not n:
         return ""
-    return (f"{n:,} squares of about {CELL_KM_NS:.0f} km, each holding at least "
+    text = (f"{n:,} squares of about {CELL_KM_NS:.0f} km, each holding at least "
             f"one record. A square is not a claim that the plant grows "
             f"throughout it, and an unshaded square is unrecorded rather than "
             f"empty.")
+    if any(len(row) >= 3 for row in rows):
+        # Only said when the darkness is actually on the page. A caption that
+        # explains a ramp the reader cannot see is noise, and one that leaves
+        # an unexplained ramp on the page invites "dark means lots of it".
+        text += (" Darker squares hold more records, which follows roads and "
+                 "towns as much as it follows the plant.")
+    return text
