@@ -103,5 +103,63 @@ class TestTheNarrowingReachedTheDatabase(unittest.TestCase):
         self.assertEqual(wrong, [])
 
 
+
+class TestItSurvivesEveryLayerOutToThePage(unittest.TestCase):
+    """Where this actually broke, after the column and the reseed were both
+    verified working.
+
+    The seed file had the field, the database had the field, and a test in the
+    class above proved it survived a real reseed -- and every one of the 430
+    built pages still read *"not checked against a published flora"*. The
+    website does not render the database row: it renders
+    `plant_directory.species_entry`, which builds an explicit dict, and the
+    dict never copied the key across.
+
+    `src/nativity.py` already warns about the sibling of this trap for the
+    `native` key itself. Testing one layer short of the page is what let it
+    through, so these go to the page.
+    """
+
+    def _entry(self, **over):
+        from src.plant_directory import species_entry
+        row = {"common_name": "Test Plant", "scientific_name": "Testus sp.",
+               "native_provinces": "SK", "native_to_alberta": 0}
+        row.update(over)
+        return species_entry(
+            1, get_plant=lambda _i: row, fauna_for_plant=lambda _i: [],
+            neighbourhood=lambda *a, **k: {}, ranges_for=lambda *a, **k: [],
+            calendar_for=lambda *a, **k: {}, photos_for=lambda *a, **k: [])
+
+    def test_the_directory_entry_carries_the_source(self):
+        self.assertEqual(self._entry(**{SOURCE_FIELD: "flora"})[SOURCE_FIELD],
+                         "flora")
+
+    def test_a_sourced_entry_gets_no_note(self):
+        self.assertEqual(provenance(self._entry(**{SOURCE_FIELD: "flora"})),
+                         {"note": "", "inferred": False})
+
+    def test_an_unsourced_entry_still_gets_one(self):
+        self.assertTrue(provenance(self._entry())["note"])
+
+    def test_the_rendered_cell_stops_saying_not_checked(self):
+        """The actual published string. This is the assertion that failed
+        against a database, a reseed and a seed file that were all correct."""
+        from src.static_site_species import _native
+        cell = _native(self._entry(**{SOURCE_FIELD: "flora"}))
+        self.assertIn("SK", cell)
+        self.assertNotIn("not checked", cell)
+        self.assertNotIn("ecoregions", cell)
+
+    def test_the_rendered_cell_still_marks_an_unsourced_claim(self):
+        from src.static_site_species import _native
+        self.assertIn("not checked", _native(self._entry()))
+
+    def test_the_inspect_card_carries_it_too(self):
+        """`scene_dossier._plant_entry` is the same shape for the 3D card and
+        had the same gap."""
+        from src.scene_dossier import _NATIVITY_SOURCE
+        self.assertEqual(_NATIVITY_SOURCE, SOURCE_FIELD)
+
+
 if __name__ == "__main__":
     unittest.main()

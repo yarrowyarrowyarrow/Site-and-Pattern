@@ -40,6 +40,7 @@ import datetime
 from typing import Callable, Optional
 
 from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
+from src.nativity import SOURCE_FIELD
 
 # ── The filter vocabulary ────────────────────────────────────────────────────
 #
@@ -268,6 +269,15 @@ def species_entry(plant_id: int, *,
         "badges": ecological_role_summary(plant, fauna_rows=edges),
         "native": (plant.get("native_provinces")
                    or plant.get("native_region") or ""),
+        # Carried, not dropped. This dict is what the website renders, and
+        # `nativity.provenance` decides whether to print "not checked against a
+        # published flora" by looking for exactly this key. V2.80 wrote it onto
+        # 414 species, the seed file had it, the database had it, a test
+        # asserted it survived a reseed -- and all 430 built pages still said
+        # "not checked", because the entry built here never copied it across.
+        # `nativity.py` warns about the sibling of this trap for the `native`
+        # key itself; this is the same trap one field over.
+        SOURCE_FIELD: plant.get(SOURCE_FIELD) or "",
         "native_to_alberta": bool(plant.get("native_to_alberta")),
         "sun": (plant.get("sun_requirement") or "").replace("_", " "),
         "water": plant.get("water_needs") or "",
