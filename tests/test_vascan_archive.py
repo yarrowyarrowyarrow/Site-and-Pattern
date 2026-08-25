@@ -28,15 +28,33 @@ from scripts import vascan_archive as A                # noqa: E402
 
 TAXON = "\t".join(["taxonID", "parentNameUsageID", "acceptedNameUsageID",
                    "scientificName", "taxonRank", "taxonomicStatus"])
-DIST = "\t".join(["taxonID", "locationID", "locality", "occurrenceStatus",
-                  "establishmentMeans"])
+#: **The real VASCAN v37.17 distribution header**, not a convenient one.
+#: `distribution.txt` is a Darwin Core *extension*: it does not repeat
+#: `taxonID`, it references the core row through the column `meta.xml` declares
+#: as `<coreid>`, which here is `id`. The first version of these tests wrote
+#: `taxonID` in both files, so the reader shipped unable to open the archive it
+#: exists to read and refused it outright on the author's machine:
+#:     the distribution file has no taxonID column; header was
+#:     ['id', 'locationID', 'locality', 'countryCode', ...]
+#: The two trailing columns are real too, and are here so a row's fields are
+#: not silently read one position off.
+DIST = "\t".join(["id", "locationID", "locality", "countryCode",
+                  "occurrenceStatus", "establishmentMeans", "source",
+                  "occurrenceRemarks"])
+
+#: Test rows stay written as `(id, locationID, locality, occurrenceStatus,
+#: establishmentMeans)` because those are the five fields the reader uses; the
+#: rest of the real header is filled in around them.
+def _dist_row(row) -> list:
+    tid, loc_id, locality, status, means = row
+    return [tid, loc_id, locality, "CA", status, means, "", ""]
 
 
 def _archive(taxon_rows, dist_rows, *, as_dir=False):
     """A minimal Darwin Core Archive, as a zip or an unpacked directory."""
     tmp = Path(tempfile.mkdtemp())
     taxon = "\n".join([TAXON] + ["\t".join(r) for r in taxon_rows])
-    dist = "\n".join([DIST] + ["\t".join(r) for r in dist_rows])
+    dist = "\n".join([DIST] + ["\t".join(_dist_row(r)) for r in dist_rows])
     if as_dir:
         (tmp / "taxon.txt").write_text(taxon, encoding="utf-8")
         (tmp / "distribution.txt").write_text(dist, encoding="utf-8")
@@ -163,11 +181,21 @@ class TestItRefusesRatherThanGuessing(unittest.TestCase):
         # header written above is the real one, so build a bad one by hand
         tmp = Path(tempfile.mkdtemp())
         (tmp / "taxon.txt").write_text("colA\tcolB\n1\t2", encoding="utf-8")
-        (tmp / "distribution.txt").write_text("taxonID\n1", encoding="utf-8")
+        (tmp / "distribution.txt").write_text("id\n1", encoding="utf-8")
         with self.assertRaises(A.ArchiveProblem) as caught:
             A.read_taxa(tmp)
         self.assertIn("colA", str(caught.exception))
         del src
+
+    def test_a_distribution_file_with_nothing_to_join_on_names_the_header(self):
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "taxon.txt").write_text("taxonID\tscientificName\n1\tTestus sp.",
+                                       encoding="utf-8")
+        (tmp / "distribution.txt").write_text("colA\tcolB\n1\tAB",
+                                              encoding="utf-8")
+        with self.assertRaises(A.ArchiveProblem) as caught:
+            A.read_distribution(tmp, PROV)
+        self.assertIn("colA", str(caught.exception))
 
     def test_an_unpacked_directory_works_too(self):
         """Unzipping first is a reasonable thing for a person to have done."""
@@ -177,6 +205,22 @@ class TestItRefusesRatherThanGuessing(unittest.TestCase):
         self.assertEqual(
             A.lookup(taxa, dist, "Amelanchier alnifolia", PROV)["provinces"],
             {"AB": "native", "SK": "native"})
+
+    def test_an_extension_that_does_repeat_taxonid_still_wins_on_it(self):
+        """`taxonID` is tried before `id`, so an archive published the other
+        way round is not read through a column that happens to be called
+        `id` and means something else."""
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "taxon.txt").write_text("taxonID\tscientificName\n7\tTestus sp.",
+                                       encoding="utf-8")
+        (tmp / "distribution.txt").write_text(
+            "id\ttaxonID\tlocality\testablishmentMeans\n"
+            "999\t7\tAB\tnative", encoding="utf-8")
+        taxa = A.read_taxa(tmp)
+        dist = A.read_distribution(tmp, PROV)
+        self.assertEqual(
+            A.lookup(taxa, dist, "Testus sp.", PROV)["provinces"],
+            {"AB": "native"})
 
     def test_full_uri_column_headers_are_accepted(self):
         """Archives are published with bare terms and with full URIs; guessing

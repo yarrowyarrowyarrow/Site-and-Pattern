@@ -50,6 +50,15 @@ from pathlib import Path
 #: spellings an archive may use in its header row.
 _TERMS = {
     "taxonID": ("taxonID", "http://rs.tdwg.org/dwc/terms/taxonID"),
+    # An extension file does not repeat `taxonID`. It references the core row
+    # by the column `meta.xml` declares as `<coreid>`, which by convention --
+    # and in the published VASCAN archive -- is called `id`. Read against a
+    # synthetic archive that used `taxonID` throughout, this reader refused the
+    # real distribution.txt outright:
+    #     the distribution file has no taxonID column; header was
+    #     ['id', 'locationID', 'locality', 'countryCode', ...]
+    # `taxonID` is still tried first, so an archive that does repeat it wins.
+    "coreID": ("taxonID", "id", "http://rs.tdwg.org/dwc/terms/taxonID"),
     "parentNameUsageID": (
         "parentNameUsageID",
         "http://rs.tdwg.org/dwc/terms/parentNameUsageID"),
@@ -168,12 +177,14 @@ def read_distribution(source, provinces) -> dict:
     """
     header, rows = _rows(_read_member(source, "distribution"))
     idx = {term: _column(header, term) for term in
-           ("taxonID", "locationID", "locality", "occurrenceStatus",
+           ("locationID", "locality", "occurrenceStatus",
             "establishmentMeans")}
+    # `coreID`, not `taxonID`: this is an extension file. See `_TERMS`.
+    idx["taxonID"] = _column(header, "coreID")
     if idx["taxonID"] is None:
         raise ArchiveProblem(
-            f"the distribution file has no taxonID column; header was "
-            f"{header[:8]}")
+            f"the distribution file has no taxonID or id column to join on; "
+            f"header was {header[:8]}")
 
     def cell(row, term):
         i = idx[term]
