@@ -1,0 +1,163 @@
+"""
+species_range.py — where a plant has actually been found, at a stated resolution.
+
+Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
+
+Why this exists, and why it replaces the picture rather than improving it
+------------------------------------------------------------------------
+Since V2.38 this catalogue has drawn a species' range by **shading ecoregions**.
+Everything since V2.75 has improved how that shading is derived -- containment
+instead of a 5 km buffer, the sliver region that was absorbing the mountains,
+the harvest cap that was hiding the north -- and every one of those fixes left
+the assumption underneath untouched.
+
+The assumption is that a range is a set of ecological units coloured in. It is
+not. A range is where the plant has been found; ecoregions are a classification
+laid *over* that. Shading a 100,000 km² region because three records fall in it
+overstates in exactly the way the outside review objected to, one level above
+the bug it named:
+
+    "Listing # of observations in an ecoregion doesn't explain where they are
+    in the ecoregion."
+
+The author put it more plainly after seeing the corrected maps: *"this range
+does not neatly conform to ecoregions."* It does not, because it is not made of
+them.
+
+What this draws instead
+-----------------------
+The occupied cells of a **0.25 degree grid**. One cell asserts exactly one
+thing: *at least one usable record falls inside this square*. Measured on the
+shipped cache that is 206-541 cells for a well-recorded species, about 4 KB.
+
+**A grid and not a hull, deliberately.** An alpha shape or concave hull draws a
+boundary through ground where nothing was recorded -- it interpolates, and the
+interpolation is invisible once it is filled in. That is the review's complaint
+wearing a smoother shape. A cell is a fact with a stated resolution, which is
+the same bargain the occurrence counts already make.
+
+It also needs no new dependency. `shapely` is in `requirements.txt` but every
+`src/` use of it is guarded (`shadow_geometry`, `footprint_ndsm`) because the
+app is expected to run without it, and putting the *website build* behind a
+hull library the desktop deliberately survives without would be a poor trade
+for a smoother edge.
+
+What a cell is not
+------------------
+**Not a claim that the plant grows throughout the cell.** At this latitude a
+0.25 degree cell is roughly 28 km north-south and 16-19 km east-west. Somewhere
+in that square, at least once, somebody recorded this plant.
+
+**Not absence anywhere else.** An empty cell is unsurveyed or unrecorded, which
+is the same distinction `establishment.py` draws between *unlikely* and
+*unknown*. The renderer must never style empty cells as "not here".
+
+**Not a substitute for the ecoregion rows.** Those still carry counts and
+confidence bands, still drive the filters and the region hub pages, and still
+answer a different question: not *where is it* but *which of the classified
+communities is it recorded from*.
+"""
+
+from __future__ import annotations
+
+#: Grid resolution in degrees. 0.25 is the coarsest step that still shows
+#: structure inside Alberta (a species confined to the Cypress Hills reads as
+#: distinct from one across the whole southeast) and the finest that does not
+#: dissolve a sparse species into confetti -- at 0.125 a 1,200-record grass
+#: averages two records per cell, which is a scatter plot with square dots.
+#: Stated on the page, because a resolution nobody can see is false precision.
+CELL_DEG = 0.25
+
+#: About how big a cell is on the ground here, for the caption. Latitude is
+#: ~111 km/degree everywhere; longitude shrinks with the cosine, from ~18.5 km
+#: at the 49th parallel to ~13.9 km at the 60th.
+CELL_KM_NS = 27.8
+
+
+def cell_of(lat: float, lng: float, *, step: float = CELL_DEG) -> tuple:
+    """The grid cell a coordinate falls in, as its south-west corner.
+
+    Floor rather than round, so a cell covers ``[corner, corner + step)`` and
+    every coordinate lands in exactly one. Rounding would make cells straddle
+    their own labels and put a point on a boundary into whichever neighbour won
+    a floating-point comparison.
+    """
+    import math
+    return (math.floor(lat / step) * step, math.floor(lng / step) * step)
+
+
+def occupied_cells(points, *, step: float = CELL_DEG, subject_only: bool = True
+                   ) -> list:
+    """Sorted ``[(lat, lng), ...]`` south-west corners with at least one record.
+
+    ``points`` are ``(lat, lng)`` pairs or :class:`Occurrence` tuples -- the
+    same duck type `ranges_for_species` takes, so the cache drops straight in.
+
+    ``subject_only`` drops records outside Alberta and Saskatchewan, because a
+    range map of ground this catalogue does not speak for is the F142 bug again
+    (31.7% of the harvest sits outside the two provinces).
+    """
+    keep = None
+    if subject_only:
+        from src.subject_area import in_subject_provinces
+        keep = in_subject_provinces
+    cells = set()
+    for point in points:
+        lat, lng = float(point[0]), float(point[1])
+        if keep is not None and not keep(lat, lng):
+            continue
+        cells.add(cell_of(lat, lng, step=step))
+    return sorted(cells)
+
+
+def build_document(by_species: dict, *, generated: str = "", source: str = "",
+                   step: float = CELL_DEG) -> dict:
+    """The shipped file: ``{species: [[lat, lng], ...]}`` plus its provenance.
+
+    Cells are stored as bare pairs rather than objects. There are hundreds of
+    thousands of them across the catalogue and a two-element array is a quarter
+    the size of ``{"lat": .., "lng": ..}``; the shape is documented in the
+    file's own ``columns`` field so it reads without this docstring.
+    """
+    from datetime import date
+    return {
+        "version": 1,
+        "generated": generated or date.today().isoformat(),
+        "source": source or "derived from the GBIF occurrence cache",
+        "cell_degrees": step,
+        "columns": ["cell_lat_sw", "cell_lng_sw"],
+        "comment": (
+            "Occupied cells of a {step} degree grid. A cell means at least one "
+            "georeferenced record falls inside it. It does NOT mean the plant "
+            "grows throughout the cell, and an empty cell is unrecorded rather "
+            "than absent.".format(step=step)),
+        "species": {name: [[round(a, 4), round(b, 4)] for a, b in cells]
+                    for name, cells in sorted(by_species.items()) if cells},
+    }
+
+
+def parse_document(blob: dict) -> dict:
+    """``{species: [(lat, lng), ...]}`` from the shipped file, or ``{}``."""
+    out = {}
+    for name, cells in ((blob or {}).get("species") or {}).items():
+        rows = [(float(c[0]), float(c[1])) for c in cells or []
+                if isinstance(c, (list, tuple)) and len(c) >= 2]
+        if rows:
+            out[name] = rows
+    return out
+
+
+def caption(cells, *, step: float = CELL_DEG) -> str:
+    """What the shaded squares claim, for the page. ``""`` when there are none.
+
+    Nothing recorded draws nothing and says nothing -- the same rule
+    `phenology_bar` follows, for the same reason: an empty grid would assert
+    that we checked everywhere and found it nowhere.
+    """
+    n = len(cells or [])
+    if not n:
+        return ""
+    return (f"{n:,} squares of about {CELL_KM_NS:.0f} km, each holding at least "
+            f"one record. A square is not a claim that the plant grows "
+            f"throughout it, and an unshaded square is unrecorded rather than "
+            f"empty.")
