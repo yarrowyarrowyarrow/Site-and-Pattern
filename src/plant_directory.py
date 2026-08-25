@@ -41,6 +41,10 @@ from typing import Callable, Optional
 
 from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
 from src.nativity import SOURCE_FIELD
+# Re-exported: the start-screen trio moved out in V2.80 when this
+# file hit its line ceiling. Callers import them from here.
+from src.plant_directory_bloom import (  # noqa: F401
+    bloom_line, catalogue_size, in_bloom_now)
 
 # ── The filter vocabulary ────────────────────────────────────────────────────
 #
@@ -269,14 +273,11 @@ def species_entry(plant_id: int, *,
         "badges": ecological_role_summary(plant, fauna_rows=edges),
         "native": (plant.get("native_provinces")
                    or plant.get("native_region") or ""),
-        # Carried, not dropped. This dict is what the website renders, and
-        # `nativity.provenance` decides whether to print "not checked against a
-        # published flora" by looking for exactly this key. V2.80 wrote it onto
-        # 414 species, the seed file had it, the database had it, a test
-        # asserted it survived a reseed -- and all 430 built pages still said
-        # "not checked", because the entry built here never copied it across.
-        # `nativity.py` warns about the sibling of this trap for the `native`
-        # key itself; this is the same trap one field over.
+        # Carried, not dropped. `nativity.provenance` reads exactly this key
+        # to decide whether the claim is published, and V2.80 got the seed
+        # file, the column, the migration and a reseed test all right while
+        # every built page still said "not checked" -- because this dict never
+        # copied it across. Same trap `nativity.py` documents for `native`.
         SOURCE_FIELD: plant.get(SOURCE_FIELD) or "",
         "native_to_alberta": bool(plant.get("native_to_alberta")),
         "sun": (plant.get("sun_requirement") or "").replace("_", " "),
@@ -541,70 +542,3 @@ def _number(value) -> str:
 
 
 # ── What is flowering now ────────────────────────────────────────────────────
-
-def in_bloom_now(*, month: Optional[int] = None,
-                 ecoregion: str = "",
-                 search_fn: Optional[Callable] = None) -> dict:
-    """Species in bloom this month, for the start screen's footer.
-
-    ``{"month": n, "month_name": str, "count": n, "ecoregion": key,
-    "where": str, "plants": [...]}``.
-
-    The existing :mod:`src.phenology` answers this for *your design* — it takes
-    placed plants. This is the catalogue-wide question, which nothing asked
-    before there was a screen you see without opening a design.
-
-    **``where`` is honest about scope.** With no known ecoregion it says so
-    rather than implying the count is local; a number that looks regional and
-    is not would be exactly the false precision P9 forbids.
-    """
-    if search_fn is None:
-        from src.db.plants import search_plants as search_fn   # noqa: PLC0415
-    month = int(month or datetime.date.today().month)
-    criteria = {"bloom_months": [str(month)]}
-    if ecoregion:
-        criteria["ecoregion"] = ecoregion
-    rows = _safely(lambda: search(criteria, search_fn=search_fn), [])
-
-    where = ""
-    if ecoregion:
-        from src.ecoregion import ecoregion_display            # noqa: PLC0415
-        name, _ = ecoregion_display(ecoregion)
-        where = f"in {name}" if name else ""
-    return {"month": month, "month_name": _MONTH_NAMES[month - 1],
-            "count": len(rows), "ecoregion": ecoregion, "where": where,
-            "plants": rows}
-
-
-def bloom_line(summary: dict) -> str:
-    """The footer link, in as few words as it can be said in.
-
-    Names its scope either way. "41 species flowering now" reads as a claim
-    about *here*, and without a known ecoregion it would not be one (P9), so
-    the catalogue-wide case says so rather than staying silent.
-    """
-    count = int(summary.get("count") or 0)
-    if not count:
-        return ""
-    scope = summary.get("where") or "catalogue-wide"
-    return f"{count} species flowering now, {scope}"
-
-
-def catalogue_size(count_fn: Optional[Callable] = None) -> int:
-    """How many species the catalogue holds, for the start screen's directory
-    row. Never raises: a front door must not fail to open over a count."""
-    if count_fn is not None:
-        return int(count_fn())
-    try:
-        from src.db.plants import get_connection             # noqa: PLC0415
-        conn = get_connection()
-        try:
-            return int(conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0])
-        finally:
-            conn.close()
-    except Exception:                                        # noqa: BLE001
-        return 0
-
-
-_MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July",
-                "August", "September", "October", "November", "December")

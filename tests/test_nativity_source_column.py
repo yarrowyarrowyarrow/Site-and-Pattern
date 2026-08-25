@@ -150,9 +150,14 @@ class TestItSurvivesEveryLayerOutToThePage(unittest.TestCase):
         self.assertNotIn("not checked", cell)
         self.assertNotIn("ecoregions", cell)
 
-    def test_the_rendered_cell_still_marks_an_unsourced_claim(self):
+    def test_the_rendered_cell_withholds_an_unsourced_claim(self):
+        """V2.80 stopped annotating the inference and started refusing to
+        publish it: *"I do not want any inference being made... only facts
+        backed by data."* The province list must not reach the page."""
         from src.static_site_species import _native
-        self.assertIn("not checked", _native(self._entry()))
+        cell = _native(self._entry())
+        self.assertIn("Not established", cell)
+        self.assertNotIn(">SK<", cell)
 
     def test_the_inspect_card_carries_it_too(self):
         """`scene_dossier._plant_entry` is the same shape for the 3D card and

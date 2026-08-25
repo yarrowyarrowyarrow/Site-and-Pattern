@@ -37,6 +37,48 @@ light.
 
 ---
 
+
+## Occurrence coordinates (V2.80)
+
+**Source:** GBIF, cached by `scripts/seed_ecoregion_ranges.py`, filtered and
+shipped by `scripts/seed_occurrence_points.py` as
+`data/plant_occurrence_points.json`. 171,896 marks over 426 species, drawn on
+every species page.
+
+**A coordinate is held to a different licence bar than a photograph, and that
+is a deliberate decision the author made in V2.79.**
+
+| | photographs | occurrence coordinates |
+|---|---|---|
+| constant | `fetch_inaturalist_images.ACCEPT_LICENSES` / `PUBLISHABLE` | `PUBLISHABLE_COORDINATES` |
+| CC0, CC BY | published | published |
+| **CC BY-NC** | **withheld** | **published** |
+| unknown / unspecified | withheld | withheld |
+
+The reasoning: *a photograph is redistributed as a work; a coordinate is a fact
+about a place.* Where a plant was recorded is not authored, and a dot on a
+distribution map is not a republication of the observer's creative work, so the
+NonCommercial term — which governs commercial reuse of the work — does not
+reach it. The photograph rule is untouched and a test asserts the coordinate
+set is a strict superset of it.
+
+The split is not academic. Of 365,092 records that are inside Alberta or
+Saskatchewan and precise enough to draw, **329,267 are CC BY-NC observations**:
+the entire iNaturalist layer. Holding coordinates to the photograph bar
+published a map that was 94% herbarium specimens and called it the observation
+record.
+
+**Three filters, all disclosed on `/method/`:** coordinate uncertainty over
+10 km is refused, records outside the two provinces are dropped (F142), and a
+dataset absent from the licence table is dropped rather than assumed
+permissive. Records closer together than 0.01° are drawn once, which is under
+half a pixel at the size the maps are shown.
+
+**Not shipped:** `data/fetched/plant_occurrences.json`, the raw cache. It is a
+dev artefact holding 559,502 unfiltered records including the ones no licence
+permits redrawing.
+
+
 ## Photographs
 
 **Source:** iNaturalist, via `scripts/fetch_inaturalist_images.py`.

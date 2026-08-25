@@ -58,6 +58,39 @@ _AB_EDITORIAL = ("from the catalogue's own Alberta flag, not checked against "
                  "a published flora")
 
 
+#: What a page says instead of an unsourced province list (V2.80).
+#:
+#: The author's instruction, after seeing the marked-but-published claims:
+#: *"I do not want any inference being made... only facts backed by data."*
+#: V2.78 printed the inference with its heuristic named beside it, which was a
+#: real improvement on printing it bare and is still an inference published as
+#: this site's answer to the question it is named after.
+#:
+#: Deliberately vague about WHY, because the ~16 species this covers differ and
+#: a single specific sentence would be false for some of them: VASCAN records
+#: *Achillea millefolium* as introduced here, has *Urtica dioica* only under a
+#: different accepted taxon, and does not carry *Andropogon gerardii* at all.
+#: "Not established" is true of every one of them; "no flora records it" is not.
+WITHHELD_NOTE = ("Not established. No source we have read settles which "
+                 "provinces this species is native to, and this catalogue "
+                 "does not guess.")
+
+
+def publishable(plant: dict) -> bool:
+    """May the province list be shown as this catalogue's claim?
+
+    True only when the value carries a source somebody checked. Everything else
+    -- a genus default, an ecoregion inference, an editorial flag -- is
+    withheld and :data:`WITHHELD_NOTE` is shown instead.
+
+    Separate from :func:`provenance` because they answer different questions:
+    that one asks *how sure are we*, this one asks *may we say it at all*, and
+    collapsing them would make a page's honesty depend on a note's wording.
+    """
+    return not provenance(plant)["inferred"] and bool(
+        provinces(plant.get("native_provinces") or plant.get("native")))
+
+
 def provinces(value) -> list:
     """``"AB,SK"`` -> ``["AB", "SK"]``. Blank in, empty out."""
     if isinstance(value, (list, tuple)):

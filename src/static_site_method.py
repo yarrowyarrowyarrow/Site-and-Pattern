@@ -84,10 +84,19 @@ def _simplification() -> str:
     return m.group(1) if m else "a kilometre"
 
 
+
+
 def render_method(model: dict) -> str:
     """The Method page."""
     from src.ecoregion_map import CAVEAT
     from src.ecoregion_ranges import MIN_RECORDS
+    from src.occurrence_points import MARK_DEG
+    from src.species_range import CELL_DEG, CELL_KM_NS
+    from src.static_site_points import (_nativity_counts,
+                                        _point_method_sections,
+                                        _published_counts)
+    counts = _published_counts()
+    nativity = _nativity_counts()
 
     s = model["stats"]
     simplify = _simplification()
@@ -110,21 +119,26 @@ falls <em>inside</em>. Records whose basis is a living specimen, a material
 sample or a fossil are excluded: a plant in a botanical garden is a place
 somebody put it, not a place it grows.</p>
 
-<h2>What the shading claims, and what it does not</h2>
-<p>A region is shaded <strong>whole</strong>. That is the resolution of the
-evidence, not a statement about the ground: it means records exist somewhere
-inside that region. It does <em>not</em> mean the plant occurs throughout it,
-and an ecoregion is not a range map. A species restricted to ten kilometres of
-mountain front and one spread across the whole region produce the same
-picture, distinguished only by the count.</p>
-<p><strong>Unshaded is not absence.</strong> It means nobody has recorded the
-plant there. Under-collected ground and genuinely absent ground look identical
-from here, and we will not print the difference we cannot see.</p>
-<p><strong>Recorded is not native.</strong> Occurrence says a plant was found
-somewhere; it does not say it belongs there. A widely planted garden escape
-can accumulate hundreds of records. Nativity on this site comes from the
-catalogue, not from these counts, and it is the claim we are working hardest
-on right now.</p>
+{_point_method_sections(counts, MARK_DEG, CELL_DEG, CELL_KM_NS)}
+
+<h2>"Native to", and when we leave it blank</h2>
+<p>Which provinces a species is native to comes from
+<a href="https://data.canadensys.net/vascan/">VASCAN</a>, the Database of
+Vascular Plants of Canada, read from its published checklist. {nativity['sourced']:,} of the
+{nativity['claimed']:,} species in this catalogue carry an answer from it.</p>
+<p>Before this release the other answers were an <strong>inference</strong>:
+the parkland, grassland and boreal plain run unbroken across the border
+between Alberta and Saskatchewan, so a species documented from one of them in
+Alberta was written down as native to the same ecoregion in Saskatchewan.
+That is reasonable and it is not a range map, and this site published it as
+though it were.</p>
+<p>It no longer does. Where no source settles it, the row reads <strong>Not
+established</strong> and no province list is shown. {nativity['withheld']} species are in
+that position: some VASCAN records as introduced here rather than native, some
+it carries only under a name this catalogue does not use, and a few it does
+not carry at all. Each is a decision somebody has to make with a second
+source, and until then a blank is the honest answer.</p>
+<p>We would rather show you nothing than show you a guess.</p>
 
 <h2>Why some regions are not listed</h2>
 <p>A region needs at least <strong>{MIN_RECORDS} records</strong> before it is

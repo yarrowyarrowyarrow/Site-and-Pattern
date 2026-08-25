@@ -199,5 +199,39 @@ class TestTheSvgIsAsSelfContainedAsItClaims(unittest.TestCase):
             self.assertEqual(len(pal["ramp"]), len(R.BAND_LABELS), name)
 
 
+class TestTheLayersCanBeToggled(unittest.TestCase):
+    """F147's control. The two mark kinds go in their own `<g>` so one CSS rule
+    hides a layer -- rendering two whole maps to show one at a time would
+    double the bytes for the same picture."""
+
+    def _svg(self):
+        return M.range_svg(CELLS, specimens=POINTS, observations=POINTS,
+                           marks="all")
+
+    def test_each_kind_gets_its_own_group(self):
+        svg = self._svg()
+        self.assertIn('<g class="layer-spec">', svg)
+        self.assertIn('<g class="layer-obs">', svg)
+
+    def test_an_empty_layer_draws_no_empty_group(self):
+        svg = M.range_svg(CELLS, specimens=POINTS, marks="all")
+        self.assertIn('<g class="layer-spec">', svg)
+        self.assertNotIn('<g class="layer-obs">', svg)
+
+    def test_the_svg_carries_its_own_toggle_rules(self):
+        """Inside the SVG, so a standalone file toggles too rather than only
+        working when the site stylesheet is present."""
+        svg = self._svg()
+        self.assertIn(".rangemap.only-spec .layer-obs{display:none}", svg)
+        self.assertIn(".rangemap.only-obs .layer-spec{display:none}", svg)
+
+    def test_neither_class_shows_both(self):
+        """A viewer with no CSS at all, or no JavaScript, must see everything
+        rather than nothing."""
+        svg = self._svg()
+        self.assertNotIn('class="rangemap only-', svg)
+
+
+
 if __name__ == "__main__":
     unittest.main()

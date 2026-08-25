@@ -61,13 +61,29 @@ GBIF_DATASET = "https://api.gbif.org/v1/dataset"
 OUTPUT_PATH = PROJECT_ROOT / "data" / "fetched" / "dataset_licences.json"
 FILE_VERSION = 1
 
-#: Licences that permit redrawing the coordinate on a public page with credit.
-#: NonCommercial is deliberately NOT here: this project is PolyForm
-#: Noncommercial, but the *website* is a public reference work and an NC licence
-#: on a published map is a claim about downstream use we cannot make for
-#: readers. Same bar the photographs are held to (`ACCEPT_LICENSES` in
-#: scripts/fetch_inaturalist_images.py), for the same reason.
+#: Licences that permit republishing a record **as a work** — the bar a
+#: photograph is held to (`ACCEPT_LICENSES` in
+#: scripts/fetch_inaturalist_images.py). Unchanged, and NonCommercial is
+#: deliberately not here.
 PUBLISHABLE = ("CC0", "CC_BY")
+
+#: Licences that permit redrawing the **coordinate** on a public map.
+#:
+#: The author's V2.79 decision, implemented in V2.80: *a photograph is
+#: redistributed as a work, a coordinate is a fact about a place.* Where a
+#: record was seen is not authored, and a dot on a distribution map is not a
+#: republication of the observer's creative work — so the NC term, which
+#: governs commercial reuse of the work, does not reach it.
+#:
+#: The split is not academic. Of 365,092 in-province, sufficiently precise
+#: records, **329,267 are CC_BY_NC observations** — the entire iNaturalist
+#: layer. Holding coordinates to the photograph bar published a map that was
+#: 94% herbarium specimens and called it the observation record.
+#:
+#: `PUBLISHABLE` above is untouched, so the photograph pipeline keeps the
+#: stricter rule. Anything absent from the licence table is still dropped:
+#: absent is not permissive.
+PUBLISHABLE_COORDINATES = PUBLISHABLE + ("CC_BY_NC",)
 
 #: Counted and reported rather than silently dropped, because "we could not
 #: publish 40% of the records" is the finding, not a footnote.

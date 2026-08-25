@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from src import citations
 from src.static_site import _first_photo, hub_slug
+from src.static_site_points import occurrence_map
 from src.static_site_range import range_section
 from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
                                     _swatch, _up)
@@ -43,7 +44,8 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))
 
-    eco_block = range_section(entry, model, depth)
+    eco_block = occurrence_map(entry, depth) + range_section(
+        entry, model, depth)
 
     # The provenance word comes from the entry, which got it from
     # `src.confidence` via `plant_directory._bloom_colour` (V2.75).
@@ -108,17 +110,19 @@ def _native(entry: dict) -> str:
     what replaces this (VASCAN, F144) and why the note is derived rather than
     stored until then.
     """
-    from src.nativity import provenance
+    from src.nativity import WITHHELD_NOTE, publishable
     value = _esc(_tokens(entry.get("native")))
     if not value:
         return ""
-    note = provenance(entry).get("note") or ""
-    if not note:
+    if publishable(entry):
         return value
-    # `.src` is the class the flower-colour note has used since V2.48. Reusing
-    # it rather than adding one keeps the two provenance marks on this page
-    # looking like the same kind of statement, which is what they are.
-    return f'{value} <span class="src">\u2248 {_esc(note)}</span>'
+    # V2.80: an inferred claim is WITHHELD, not annotated. V2.78 printed it
+    # with the heuristic named beside it, which was a real improvement on
+    # printing it bare -- and it is still an inference published as this site's
+    # answer to the question it is named after. `.src` is the class the
+    # flower-colour note has used since V2.48, reused so the provenance marks
+    # on this page read as the same kind of statement.
+    return f'<span class="src">{_esc(WITHHELD_NOTE)}</span>'
 
 
 def _phenology(entry: dict) -> str:

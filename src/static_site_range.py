@@ -41,15 +41,17 @@ source.
 
 from __future__ import annotations
 
+
 from src.ecoregion_ranges import MIN_RECORDS
 from src.static_site import species_ecoregions
 from src.static_site_render import _esc, _up
 
 
+
+
 def range_section(entry: dict, model: dict, depth: int) -> str:
     """The "Where it has been recorded" section, or "" when nothing is."""
-    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
-                                   map_svg, region_fill)
+    from src.ecoregion_map import region_fill              # noqa: PLC0415
     regions = species_ecoregions(entry)
     eco_block = ""
     if regions:
@@ -87,24 +89,26 @@ def range_section(entry: dict, model: dict, depth: int) -> str:
                 f'<li{cls}>{dot}{name}'
                 f'<span class="src"> {_esc(r.get("where") or "")}: '
                 f'{evidence}{conf}</span></li>')
+        # V2.80: the MAP is gone from here and the counts stay. `map_svg`
+        # shaded a whole ecoregion because records fall somewhere inside it,
+        # which is the overstatement the review objected to; the counts are
+        # facts and answer a different question -- which classified communities
+        # is it recorded from. `occurrence_map` above draws the range now.
         eco_block = f"""
 <section>
-  <h2>Where it has been recorded</h2>
+  <h2>Which ecoregions the records fall in</h2>
   <div class="ecowrap">
-    <figure class="mapfig">{map_svg(regions, width=420, height=frame_height(420),
-                                    title=f'Range of {entry.get("name")}')}</figure>
     <div>
       <ul class="ranges">{"".join(rows)}</ul>
-      <p class="note">Each region is shaded whole because that is the
-      resolution of the evidence: these are counts of records collected
-      <em>somewhere</em> in the region, not a map of where the plant grows
-      inside it. A region with {_esc(str(MIN_RECORDS))} records is not the
-      same claim as one with three hundred, so the count travels with the
-      region. A region left unshaded means nobody has recorded it there,
-      which is not the same as the plant being absent.
+      <p class="note">These are counts of records collected
+      <em>somewhere</em> in the region, which is the resolution of the
+      evidence: the map above shows where inside it. A region with
+      {_esc(str(MIN_RECORDS))} records is not the same claim as one with three
+      hundred, so the count travels with the region. A region missing from
+      this list means nobody has recorded it there, which is not the same as
+      the plant being absent.
       {_esc(_range_source(entry))}
-      {_esc(CAVEAT)}
-      <a href="{_up(depth)}method/">How this map is made</a>.</p>
+      <a href="{_up(depth)}method/">How these counts are made</a>.</p>
       <p class="note">{_observation_links(entry)}</p>
     </div>
   </div>

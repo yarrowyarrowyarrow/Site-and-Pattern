@@ -151,12 +151,29 @@ class TestEveryPublishedClaimIsMarked(unittest.TestCase):
                  if not r.get(N.SOURCE_FIELD) and not N.provenance(r)["note"]]
         self.assertEqual(naked, [])
 
-    def test_the_species_page_renders_it(self):
+    def test_the_species_page_withholds_an_unsourced_claim(self):
+        """V2.80. It used to render "AB, SK" with the heuristic named beside
+        it. The author's instruction was to stop making the inference at all,
+        so the province list is no longer published for an unsourced row --
+        the row says the claim is not established instead."""
+        from src.nativity import WITHHELD_NOTE
         from src.static_site_species import _native
         cell = _native({"native": "AB,SK"})
+        self.assertNotIn("AB, SK", cell)
+        self.assertIn("Not established", cell)
+        self.assertIn(WITHHELD_NOTE.split(".")[0], cell)
+        # `.src` is the class the flower-colour note uses, so the two
+        # provenance statements on a page read as the same kind of thing.
+        self.assertIn('class="src"', cell)
+
+    def test_the_species_page_renders_a_sourced_claim_plainly(self):
+        from src.static_site_species import _native
+        cell = _native({"native": "AB,SK", N.SOURCE_FIELD: "flora"})
         self.assertIn("AB, SK", cell)
-        self.assertIn("ecoregions that continue across", cell)
-        self.assertIn('class="src"', cell)      # the class the colour note uses
+        self.assertNotIn("Not established", cell)
+        # No mark at all: a checked value carries none, or the eye learns to
+        # skip the mark and loses the one case that matters.
+        self.assertNotIn('class="src"', cell)
 
     def test_a_species_with_no_claim_renders_an_empty_cell(self):
         from src.static_site_species import _native

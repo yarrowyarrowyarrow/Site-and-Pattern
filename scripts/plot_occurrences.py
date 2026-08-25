@@ -195,9 +195,15 @@ def publishable(points, table: dict) -> list:
     dropped: absent is not permissive, which is the same rule the photo
     pipeline runs on.
     """
-    from scripts.fetch_dataset_licences import PUBLISHABLE   # noqa: PLC0415
+    # The COORDINATE set, not the work set. See the note on
+    # `PUBLISHABLE_COORDINATES`: a photograph is redistributed as a work, a
+    # coordinate is a fact about a place, and holding the two to one bar
+    # published a map that was 94% herbarium specimens.
+    from scripts.fetch_dataset_licences import (              # noqa: PLC0415
+        PUBLISHABLE_COORDINATES)
     return [p for p in points
-            if table.get(getattr(p, "dataset_key", "")) in PUBLISHABLE]
+            if table.get(getattr(p, "dataset_key", ""))
+            in PUBLISHABLE_COORDINATES]
 
 
 def drawable(points, *, only_specimens: bool, only_publishable: bool,

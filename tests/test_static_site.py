@@ -503,12 +503,15 @@ class TestTheRenderedSite(unittest.TestCase):
         `CAVEAT` itself means the wording can be corrected in one place and
         the test still guards the thing it cares about, which is that no map
         reaches a reader without its provenance."""
-        from src.ecoregion_map import CAVEAT
-
         page = (self.out / "plants" / "wild-bergamot" / "index.html").read_text(
             encoding="utf-8")
         self.assertIn("<svg", page)
-        self.assertIn(render._esc(CAVEAT), page)
+        # V2.80: the map on a species page is the occurrence range map, not
+        # the ecoregion map. `species_range.caption` is its provenance, and
+        # this pins the caption rather than a literal string for the reason
+        # the docstring above gives.
+        self.assertIn(render._esc("unrecorded rather than empty"), page)
+        self.assertIn("records per square", page)
 
     def test_the_map_page_exists_and_is_linked_from_every_header(self):
         self.assertIn("map/index.html", self.files)
@@ -539,15 +542,26 @@ class TestTheRenderedSite(unittest.TestCase):
 
         GBIF and iNaturalist joined it in V2.75 (F135). A species page's range
         is a snapshot of a database that changes daily, and an outside review
-        asked how current it was; linking out is the honest answer, and it is
-        also the only answer available to *where in the region are the
-        records* — those coordinates are not ours to republish, and for rare
-        taxa they are deliberately obscured at source. Two named hosts, still
-        no third-party script, still nothing loaded.
+        asked how current it was; linking out is the honest answer.
+
+        VASCAN joined in V2.80, when the nativity claim stopped being an
+        inference and started citing a published checklist. A claim with a
+        source the reader cannot reach is barely better than one without.
+
+        That V2.75 docstring also said the coordinates were "not ours to
+        republish". **That is no longer true and the note is corrected rather
+        than left standing**: the licence rule was reconsidered per record kind
+        (a coordinate is a fact about a place, a photograph is a work), and
+        171,896 marks are now drawn on the species pages themselves. The rare
+        taxa the old note worried about were raised explicitly and published
+        on the author's decision.
+
+        Three named hosts, still no third-party script, still nothing loaded.
         """
         allowed = ("https://github.com/", "https://example.org/p.jpg",
                    "https://example.org/monarch.jpg",
-                   "https://www.gbif.org/", "https://www.inaturalist.org/")
+                   "https://www.gbif.org/", "https://www.inaturalist.org/",
+                   "https://data.canadensys.net/")
         for page in self.out.rglob("*.html"):
             for link in _LINK.findall(page.read_text(encoding="utf-8")):
                 if link.startswith(("http://", "https://")):
@@ -1012,8 +1026,12 @@ class TestTheRangeSectionSaysWhatItClaims(unittest.TestCase):
                                          "confidence": "low"}])
         self.assertNotIn("Source:", section)
 
-    def test_it_says_the_region_is_shaded_whole(self):
-        self.assertIn("shaded whole", self._section())
+    def test_it_says_a_count_is_for_the_whole_region(self):
+        """V2.80 removed the ecoregion MAP from the species page -- shading a
+        whole region because records fall somewhere inside it is the
+        overstatement the review objected to -- and kept the counts, which are
+        facts. So the sentence is no longer about shading."""
+        self.assertIn("somewhere</em> in the region", self._section())
 
     def test_it_says_unshaded_is_not_absent(self):
         self.assertIn("not the same as the plant being absent",
@@ -1030,6 +1048,62 @@ class TestTheRangeSectionSaysWhatItClaims(unittest.TestCase):
     def test_a_species_with_no_name_gets_no_broken_links(self):
         self.assertNotIn("gbif.org",
                          self._section(scientific_name="", row={}))
+
+
+class TestTheRecordToggle(unittest.TestCase):
+    """F147, V2.80. The author asked for the range picture with a way to
+    switch between the two kinds of record. It is three radios and CSS: no
+    script, so it survives scripting being off, the page being saved to a
+    file, and being printed."""
+
+    def _fig(self):
+        """No database: `occurrence_map` looks the species up in the two
+        shipped files by scientific name, so an entry dict is enough."""
+        from src.static_site_points import occurrence_map
+        return occurrence_map({"scientific_name": "Opuntia polyacantha",
+                               "name": "Plains Prickly Pear Cactus"}, 2)
+
+    def test_it_offers_both_specimens_and_observations(self):
+        fig = self._fig()
+        for label in (">Both<", ">Specimens<", ">Observations<"):
+            self.assertIn(label, fig)
+
+    def test_both_is_the_default(self):
+        self.assertRegex(self._fig(), r'class="rk rk-all"[^>]*checked')
+        self.assertNotRegex(self._fig(), r'class="rk rk-s"[^>]*checked')
+
+    def test_the_inputs_are_siblings_of_the_map_not_nested_in_the_labels(self):
+        """A general-sibling combinator cannot climb out of a wrapper. With the
+        inputs inside `.ranketoggle` the buttons highlighted correctly and hid
+        nothing -- a control that looks like it works and does not."""
+        fig = self._fig()
+        self.assertLess(fig.index('class="rk rk-o"'),
+                        fig.index('class="ranketoggle"'))
+        self.assertLess(fig.index('class="ranketoggle"'),
+                        fig.index('class="rangemapwrap"'))
+
+    def test_the_radio_group_is_named_per_species(self):
+        """Two maps in one document sharing one group name are one group, so
+        checking either unchecks the other."""
+        self.assertIn('name="rk-opuntia-polyacantha"', self._fig())
+
+    def test_the_stylesheet_can_actually_reach_the_layers(self):
+        """The rule and the markup have to agree; they are in different files
+        and nothing else checks that they do."""
+        css = (pathlib.Path(__file__).parent.parent / "html" / "site"
+               / "site.css").read_text(encoding="utf-8")
+        self.assertIn(".rk-s:checked ~ .rangemapwrap .rangemap .layer-obs",
+                      css)
+        self.assertIn(".rk-o:checked ~ .rangemapwrap .rangemap .layer-spec",
+                      css)
+
+    def test_a_species_with_no_records_draws_no_map_and_no_toggle(self):
+        """Nothing recorded draws nothing (P9). An empty frame with a working
+        toggle would assert we looked everywhere."""
+        from src.static_site_points import occurrence_map
+        self.assertEqual(occurrence_map({"scientific_name": "Nothing sp."}, 2),
+                         "")
+
 
 
 if __name__ == "__main__":

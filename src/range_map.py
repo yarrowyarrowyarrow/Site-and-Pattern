@@ -218,6 +218,12 @@ def range_svg(cells, *, specimens=(), observations=(), width: int = 640,
         f'stroke:none}}'
         f'.rangemap .obs{{fill:none;stroke:{pal["observation"]};'
         f'stroke-width:.9;stroke-opacity:.8}}'
+        # The toggle, inside the SVG so it works in a standalone file as well
+        # as in a page. A class on the <svg> hides one layer; with neither
+        # class set both are shown, so a viewer with no JavaScript sees
+        # everything rather than nothing.
+        f'.rangemap.only-spec .layer-obs{{display:none}}'
+        f'.rangemap.only-obs .layer-spec{{display:none}}'
         # The key sits over the neighbours' grey, not over the paper, so it
         # carries its own ground or the labels fight the coastline.
         f'.rangemap .keybg{{fill:{pal["paper"]};fill-opacity:.82;stroke:none}}'
@@ -280,14 +286,22 @@ def range_svg(cells, *, specimens=(), observations=(), width: int = 640,
         # Indexed rather than unpacked, so an `Occurrence` row drops in the way
         # it does everywhere else in this pipeline instead of raising on its
         # third field.
+        #
+        # Each kind goes in its own `<g>` so the page can hide one with a
+        # single CSS rule (V2.80). Splitting the layers at render time and
+        # emitting two whole maps would double the bytes to show the reader one
+        # picture at a time.
         for css, points in (("obs", observations), ("spec", specimens)):
+            drawn = []
             for point in points or ():
                 lat, lng = float(point[0]), float(point[1])
                 if thin is not None and not thin(lat, lng):
                     continue
                 x, y = project(lng, lat)
-                parts.append(f'<circle class="{css}" cx="{x:.1f}" '
+                drawn.append(f'<circle class="{css}" cx="{x:.1f}" '
                              f'cy="{y:.1f}" r="{r:.1f}"/>')
+            if drawn:
+                parts.append(f'<g class="layer-{css}">{"".join(drawn)}</g>')
 
     if cities and width >= 420:
         parts += cities_svg(project)

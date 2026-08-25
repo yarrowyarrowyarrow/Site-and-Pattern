@@ -261,8 +261,44 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
 /* The map keeps its own light palette in both themes: it is a printed figure,
    and a dark-mode map of a light-mode place reads as a different diagram. */
 .mapfig { background: #f6f5f0; }
-.ecowrap { display: grid; gap: 1.2rem;
-           grid-template-columns: minmax(14rem, 20rem) 1fr; align-items: start; }
+.ecowrap { display: grid; gap: 1.2rem; align-items: start; }
+
+/* ── The range map and its record toggle (V2.80) ────────────────────────── */
+/* Like .mapfig, this keeps a light ground in both themes: the wash encodes
+   record density across five steps, and re-mixing five near-neighbours against
+   a dark background stops them reading as a ramp. */
+.rangefig { margin: 0 0 1rem; background: #f6f5f0; border: 1px solid var(--line);
+            border-radius: var(--radius); padding: .7rem; }
+.rangemapwrap { max-width: 36rem; margin: 0 auto; }
+.rangefig .rangemap { display: block; width: 100%; height: auto; }
+.rangefig figcaption { margin-top: .6rem; }
+
+/* Radios, not buttons, and :checked sibling selectors, not JavaScript -- so
+   the control still works with scripting off, saved to a file, or printed. */
+.ranketoggle { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+.rangefig .rk { position: absolute; opacity: 0; pointer-events: none; }
+.ranketoggle label { font: 600 .78rem/1 ui-sans-serif, system-ui, sans-serif;
+                     padding: .38rem .7rem; border-radius: 999px;
+                     border: 1px solid #cfcbbc; color: #4a4a42;
+                     background: #fdfcf9; cursor: pointer; }
+.ranketoggle label:hover { border-color: #8f897a; }
+.rk-all:checked ~ .ranketoggle .lbl-all,
+.rk-s:checked   ~ .ranketoggle .lbl-s,
+.rk-o:checked   ~ .ranketoggle .lbl-o { background: #4a4a42;
+                                        border-color: #4a4a42; color: #fdfcf9; }
+/* Keyboard users must be able to see where they are; the input itself is
+   visually hidden, so the ring goes on its label. */
+.rk-all:focus-visible ~ .ranketoggle .lbl-all,
+.rk-s:focus-visible   ~ .ranketoggle .lbl-s,
+.rk-o:focus-visible   ~ .ranketoggle .lbl-o { outline: 2px solid #4a4a42;
+                                              outline-offset: 2px; }
+/* The layer classes live inside the SVG (src/range_map.py) so a standalone
+   file toggles too; these only drive them from the radios. The inputs are
+   siblings of .rangemapwrap on purpose -- ~ cannot climb out of a wrapper,
+   and nesting them made a control that highlighted correctly and hid
+   nothing. */
+.rk-s:checked ~ .rangemapwrap .rangemap .layer-obs { display: none; }
+.rk-o:checked ~ .rangemapwrap .rangemap .layer-spec { display: none; }
 
 /* ── Phenology bar ──────────────────────────────────────────────────────── */
 /* Like .mapfig above, this keeps its own light ground in both themes. The
