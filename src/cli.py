@@ -201,6 +201,7 @@ def _cmd_build_site(args) -> int:
                          analytics_token=getattr(args, "analytics_token", ""),
                          umami_website_id=getattr(args, "umami_website_id", ""),
                          umami_src=getattr(args, "umami_src", ""),
+                         feedback_url=getattr(args, "feedback_url", ""),
                          progress=say)
     print(f"\n{summary['files']} files written to {summary['out_dir']}")
     print(f"  {summary['species']} species pages, "
@@ -210,8 +211,13 @@ def _cmd_build_site(args) -> int:
     # grepping the output, and with two providers "yes" stopped being an answer.
     names = summary.get("analytics_providers") or ()
     print(f"  analytics: {' + '.join(names)} embedded, disclosed in the footer"
-          if names else
-          "  analytics: none (the site makes no external request)")
+          if names else "  analytics: none")
+    # Said out loud because it is the only other thing that can leave the
+    # page, and because "no external request" stopped being the whole truth
+    # the moment a form could be submitted. Loading a page still makes none.
+    fb = getattr(args, "feedback_url", "")
+    print(f"  feedback form: posts to {fb}" if fb else
+          "  feedback form: none (this build cannot receive reports)")
     if summary["photos_hotlinked"]:
         print(f"  {summary['photos_copied']} photographs copied from the local "
               f"cache; {summary['photos_hotlinked']} still point at their "
@@ -342,6 +348,13 @@ def _build_parser() -> argparse.ArgumentParser:
     bs.add_argument("--no-photos", action="store_true", dest="no_photos",
                     help="do not copy cached photographs into the output; "
                          "reference their original URLs instead")
+    bs.add_argument("--feedback-url", default="", dest="feedback_url",
+                    help="the endpoint the feedback form posts to, normally a "
+                         "Cloudflare Worker on your own domain (see "
+                         "workers/feedback/). OFF by default: without it the "
+                         "Feedback page explains that this build cannot "
+                         "receive reports and points at the repository, rather "
+                         "than showing a button that goes nowhere")
     bs.add_argument("--include-notes", action="store_true", dest="include_notes",
                     help="publish the free-text notes field. OFF by default: "
                          "~43 rows describe traditional medicinal and plant-use "

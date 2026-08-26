@@ -3,10 +3,17 @@ static_site_render.py — the page model of :mod:`src.static_site`, as HTML.
 
 Design principle P5 — see docs/DESIGN_PHILOSOPHY.md.
 
-Plain files: no framework, no build step, no CDN, no external request of any
-kind. That is the discipline ``html/`` already follows for the map and the 3D
-viewer, and here it also means the site keeps working when a CDN does not and
-can be read straight off a disk with ``file://``.
+Plain files: no framework, no build step, no CDN, and **no external request
+when a page loads**. That is the discipline ``html/`` already follows for the
+map and the 3D viewer, and here it also means the site keeps working when a CDN
+does not and can be read straight off a disk with ``file://``.
+
+Two things can leave the page, both opt-in per build and neither on load: the
+analytics beacon below, and the feedback form (V2.80), which posts only when
+somebody presses its button and only to an endpoint the site's own author
+runs. The sentence above is narrowed rather than repeated loosely, because "no
+external request of any kind" was about to become the kind of claim this
+project keeps catching itself making.
 
 **One opt-in exception, since V2.71:** ``write_site`` can embed a page-view
 counter so the site's owner can find out whether anyone is reading it. Off
@@ -74,7 +81,8 @@ TAGLINE = ("Native plants of Alberta and Saskatchewan, and the "
 #: page and the map page, both of which build their links from the model and so
 #: cannot outrun it.
 _NAV = (("plants/", "Plants"), ("map/", "Ecoregions"),
-        ("wildlife/", "Wildlife"), ("method/", "Method"), ("about/", "About"))
+        ("wildlife/", "Wildlife"), ("method/", "Method"), ("about/", "About"),
+        ("feedback/", "Feedback"))
 
 #: What this build phones home to, if anything (V2.71; a second provider in
 #: V2.73). Off by default and set for the length of one ``write_site`` call:
@@ -497,6 +505,7 @@ def write_site(model: dict, out_dir: str, *,
                analytics_token: str = "",
                umami_website_id: str = "",
                umami_src: str = "",
+               feedback_url: str = "",
                progress: Optional[Callable] = None) -> dict:
     """Render ``model`` into ``out_dir``. Returns a summary dict.
 
@@ -519,6 +528,8 @@ def write_site(model: dict, out_dir: str, *,
     # V2.68 adds a third: the pages about *places*, once the ecoregion map
     # became a three-level drill-down. Same seam, same cycle, same fix.
     from src.static_site_about import render_about           # noqa: PLC0415
+    from src.static_site_feedback import (render_feedback,   # noqa: PLC0415
+                                          render_thanks)
     from src.static_site_method import render_method         # noqa: PLC0415
     from src.static_site_regions import (_hub_extra,         # noqa: PLC0415
                                          render_map_page, render_subregion)
@@ -555,6 +566,12 @@ def write_site(model: dict, out_dir: str, *,
     emit("assets/browse.js", _asset("browse.js"))
     emit("index.html", render_home(model, photo_src))
     emit("about/index.html", render_about(model))
+    # Always emitted, with or without an endpoint: the nav links it from every
+    # page, and a header link to a 404 is worse than a page that explains why
+    # there is no form.
+    emit("feedback/index.html", render_feedback(model, feedback_url))
+    if feedback_url:
+        emit("feedback/sent/index.html", render_thanks(model))
     emit("method/index.html", render_method(model))
     emit("map/index.html", render_map_page(model))
     emit("plants/index.html", render_browse(model, photo_src))

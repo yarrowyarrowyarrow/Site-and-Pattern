@@ -419,3 +419,60 @@ def explain(taxa: dict, dist: dict, name: str, provinces) -> str:
                 "for these provinces -- so the distribution really is absent "
                 "from the archive for this lineage."))
     return "\n".join(out)
+
+
+def suggest(taxa: dict, dist: dict, name: str, provinces) -> str:
+    """Which accepted taxa in this genus DO have a distribution here.
+
+    V2.80. `--explain` answers *why did this species get no answer*; this
+    answers the question that follows, which is *then what is the plant
+    called*. The author's instruction after reading the report: **"the names
+    should be correct and the list should only include native not introduced
+    plants that do occur in AB and SK according to VASCAN."**
+
+    Sixteen species are unresolved and eight of them look like this: VASCAN
+    carries the binomial, and records it from nowhere in the two provinces,
+    because the plant that grows here is filed under another accepted name.
+    *Urtica dioica* is the worked case -- every `gracilis` name in the archive
+    is a synonym pointing at *Urtica gracilis*, a separate accepted species.
+
+    Searching by GENUS rather than by binomial is the whole point: the exact
+    name is the thing that is wrong, so it cannot be the thing we look up.
+    Anything in the genus with a native record in the subject provinces is a
+    candidate; ranking them is a decision for a person with a flora.
+    """
+    genus = (_canonical(name).split() or [""])[0].lower()
+    if not genus:
+        return f"=== {name} ===\n  (no genus to search)"
+
+    out = [f"=== {name} ===",
+           f"accepted taxa in {genus.title()} with a record in "
+           f"{'/'.join(provinces)}:"]
+    hits = []
+    for tid, row in taxa.items():
+        if "accepted" not in (row["status"] or ""):
+            continue
+        if (row["name"] or "").split()[:1] != [genus.title()]:
+            continue
+        rows = dist.get(tid) or {}
+        if rows:
+            hits.append((row["name"], row["rank"], rows))
+
+    if not hits:
+        out.append("  (none -- the genus has no accepted taxon recorded here, "
+                   "so this is not a rename: check the genus itself)")
+        return "\n".join(out)
+
+    # Native first: an introduced record answers a different question, and
+    # putting it at the top invites somebody to adopt it by mistake.
+    def rank(item):
+        means = set(item[2].values())
+        return (0 if "native" in means else 1, item[0])
+
+    for taxon, taxon_rank, rows in sorted(hits, key=rank):
+        where = ", ".join(f"{code} {means or 'listed'}"
+                          for code, means in sorted(rows.items()))
+        native = "  <-- native here" if "native" in rows.values() else ""
+        out.append(f"  {taxon}")
+        out.append(f"      rank={taxon_rank or '-'}  {where}{native}")
+    return "\n".join(out)

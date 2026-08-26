@@ -447,7 +447,8 @@ download URL: fetching the wrong dataset and parsing it successfully is the
 failure that would be hardest to notice."""
 
 
-def _run_archive(path: str, *, verbose: bool = True, explain=None) -> int:
+def _run_archive(path: str, *, verbose: bool = True, explain=None,
+                 suggest=None) -> int:
     """``--from-archive``: build the same output file from the checklist."""
     from scripts import vascan_archive as archive          # noqa: PLC0415
 
@@ -465,6 +466,13 @@ def _run_archive(path: str, *, verbose: bool = True, explain=None) -> int:
     except archive.ArchiveProblem as exc:
         print(f"{exc}\n\n{ARCHIVE_HINT}", file=sys.stderr)
         return 1
+
+    if suggest:
+        print(f"Read {len(taxa):,} taxa from {source.name}. No network.\n")
+        for name in suggest:
+            print(archive.suggest(taxa, dist, name, PROVINCES))
+            print()
+        return 0
 
     if explain:
         # Diagnostic only: prints and writes nothing, so it can be run against
@@ -532,6 +540,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="With --from-archive: show why ONE species got its "
                         "answer (matched taxa, the roll-up, the distribution "
                         "rows). Writes nothing. Repeatable.")
+    p.add_argument("--suggest", action="append", default=None,
+                   metavar="NAME",
+                   help="With --from-archive: for a species VASCAN records "
+                        "from nowhere here, list every accepted taxon in its "
+                        "genus that DOES have a record in these provinces. "
+                        "The rename candidates. Writes nothing. Repeatable.")
     p.add_argument("--reassess", action="store_true",
                    help="Re-run the verdicts over the already-fetched file "
                         "with NO network. Use after a parser fix.")
@@ -540,7 +554,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.from_archive is not None:
         return _run_archive(args.from_archive, verbose=not args.quiet,
-                            explain=args.explain)
+                            explain=args.explain, suggest=args.suggest)
 
     if args.reassess:
         if not OUTPUT_PATH.exists():

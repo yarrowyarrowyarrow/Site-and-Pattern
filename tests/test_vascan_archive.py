@@ -432,5 +432,73 @@ class TestTheHybridDoesNotWinTheName(unittest.TestCase):
         self.assertEqual(flipped["provinces"], self.look()["provinces"])
 
 
+class TestItSuggestsTheNameThatIsActuallyHere(unittest.TestCase):
+    """V2.80. `--explain` answers *why did this get no answer*; this answers
+    the question that follows, which is *then what is the plant called*.
+
+    The author, after reading the report: **"the names should be correct and
+    the list should only include native not introduced plants that do occur in
+    AB and SK according to VASCAN."** Eight of the sixteen unresolved species
+    look like *Urtica dioica*: VASCAN carries the binomial, records it from
+    nowhere here, and the plant that grows here is a different accepted
+    species."""
+
+    TAXA = [
+        ["1", "", "1", "Urtica dioica Linnaeus", "species", "accepted"],
+        ["2", "1", "2", "Urtica dioica Linnaeus subsp. dioica", "subspecies",
+         "accepted"],
+        ["3", "", "4", "Urtica dioica subsp. gracilis (Aiton) Selander",
+         "subspecies", "synonym"],
+        ["4", "", "4", "Urtica gracilis Aiton", "species", "accepted"],
+        ["5", "", "5", "Urtica urens Linnaeus", "species", "accepted"],
+    ]
+    DISTS = [
+        ["4", "ISO 3166-2:CA-AB", "AB", "", "native"],
+        ["4", "ISO 3166-2:CA-SK", "SK", "", "native"],
+        ["5", "ISO 3166-2:CA-AB", "AB", "", "introduced"],
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        src = _archive(cls.TAXA, cls.DISTS)
+        cls.taxa = A.read_taxa(src)
+        cls.dist = A.read_distribution(src, PROV)
+
+    def _suggest(self, name="Urtica dioica"):
+        return A.suggest(self.taxa, self.dist, name, PROV)
+
+    def test_it_finds_the_accepted_species_that_is_recorded_here(self):
+        self.assertIn("Urtica gracilis", self._suggest())
+
+    def test_it_searches_by_genus_because_the_binomial_is_the_broken_part(self):
+        """The exact name is the thing that is wrong, so it cannot be the thing
+        we look up."""
+        self.assertIn("Urtica gracilis", self._suggest("Urtica dioica"))
+
+    def test_a_native_candidate_is_listed_before_an_introduced_one(self):
+        """An introduced record answers a different question, and putting it
+        first invites somebody to adopt it by mistake."""
+        out = self._suggest()
+        self.assertLess(out.index("Urtica gracilis"), out.index("Urtica urens"))
+        self.assertIn("<-- native here", out)
+
+    def test_a_synonym_is_not_offered_as_a_new_name(self):
+        """`subsp. gracilis` points at the accepted species; renaming to a
+        synonym would move the problem rather than fix it."""
+        self.assertNotIn("subsp. gracilis", self._suggest())
+
+    def test_a_genus_with_nothing_recorded_here_says_so(self):
+        """Not a rename: something else is wrong, and a silent empty list would
+        read as "no candidates" rather than "wrong question"."""
+        out = A.suggest(self.taxa, self.dist, "Nonexistus fakus", PROV)
+        self.assertIn("not a rename", out)
+
+    def test_it_writes_nothing(self):
+        before = dict(self.taxa)
+        self._suggest()
+        self.assertEqual(before, self.taxa)
+
+
+
 if __name__ == "__main__":
     unittest.main()
