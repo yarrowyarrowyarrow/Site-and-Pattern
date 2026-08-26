@@ -106,9 +106,29 @@ def _lines(geometry: dict) -> list:
     return []
 
 
-def _points(ring, project) -> str:
-    return " ".join(f"{x:.1f},{y:.1f}" for x, y in
-                    (project(float(lon), float(lat)) for lon, lat in ring))
+def _points(ring, project, min_px: float = 0.0) -> str:
+    """One projected ring as an SVG ``points`` string, optionally decimated.
+
+    ``min_px`` drops a vertex landing within that distance of the last one
+    kept. The polygons are simplified to about 900 m for display, which is
+    right for a 900 px region map and about three times finer than a pixel on
+    the 420 px map a species page carries.
+
+    A rendering decision, not a data one -- the same argument as
+    `occurrence_points.MARK_DEG`. First and last vertices are always kept so a
+    ring still closes, and ``min_px=0`` (the default) changes nothing, so every
+    existing map stays byte-identical.
+    """
+    pts = [project(float(lon), float(lat)) for lon, lat in ring]
+    if min_px > 0 and len(pts) > 3:
+        kept = [pts[0]]
+        for x, y in pts[1:-1]:
+            lx, ly = kept[-1]
+            if abs(x - lx) >= min_px or abs(y - ly) >= min_px:
+                kept.append((x, y))
+        kept.append(pts[-1])
+        pts = kept
+    return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
 
 def provinces_svg(project, *, subject_only: bool = False,

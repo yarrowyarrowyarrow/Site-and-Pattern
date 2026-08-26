@@ -39,9 +39,9 @@ import math
 from functools import lru_cache
 from typing import Optional
 
-from src.ecoregion_basemap import (SUBJECT_CLIP_ID, cities_svg, land_svg,
-                                   provinces_svg, subject_clip_defs,
-                                   water_svg)
+from src.ecoregion_basemap import (SUBJECT_CLIP_ID, _points, cities_svg,
+                                   land_svg, provinces_svg,
+                                   subject_clip_defs, water_svg)
 from src.ecoregion_palette import (ABSENT_FILL, DRAW_ORDER, HATCHED,
                                    REGION_COLOUR, hatch_defs, hatch_url,
                                    legend_html, region_fill)
@@ -221,32 +221,6 @@ def region_geometry(level: str = "", within: str = "") -> dict:
 
 
 
-def _ring_points(ring, project, min_px: float = 0.0) -> str:
-    """One projected ring as an SVG ``points`` string, optionally decimated.
-
-    ``min_px`` drops a vertex that lands within that distance of the last one
-    kept. The polygons are simplified to about 900 m for display, which is
-    right for the 900 px map on a region page and roughly three times finer
-    than a pixel on the 420 px map a species page carries: 846 KB of vertices
-    per page, repeated on 430 pages, that nobody can see.
-
-    A rendering decision, not a data one -- the same argument as
-    `occurrence_points.MARK_DEG`. The first and last vertices are always kept
-    so a ring still closes, and `min_px=0` (the default) changes nothing, so
-    every existing map is byte-identical.
-    """
-    pts = [project(float(lon), float(lat)) for lon, lat in ring]
-    if min_px > 0 and len(pts) > 3:
-        kept = [pts[0]]
-        for x, y in pts[1:-1]:
-            lx, ly = kept[-1]
-            if abs(x - lx) >= min_px or abs(y - ly) >= min_px:
-                kept.append((x, y))
-        kept.append(pts[-1])
-        pts = kept
-    return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-
-
 def map_svg(highlight: Optional[dict] = None, *,
             width: int = 460, height: int = 300,
             title: str = "", labels: bool = True,
@@ -371,7 +345,7 @@ def map_svg(highlight: Optional[dict] = None, *,
     parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">')
     for _key, rings in sorted(context.items()):
         for ring in rings:
-            points = _ring_points(ring, project, min_px)
+            points = _points(ring, project, min_px)
             parts.append(f'<polygon class="ecomap-region ecomap-outside" '
                          f'points="{points}" fill="{ABSENT_FILL[0]}" '
                          f'fill-opacity="{ABSENT_FILL[1]}"/>')
@@ -379,7 +353,7 @@ def map_svg(highlight: Optional[dict] = None, *,
         parent_fill, _op = region_fill(parent_key, "high")
         parent_name = ecoregion_display(parent_key)[0]
         for ring in rings:
-            points = _ring_points(ring, project, min_px)
+            points = _points(ring, project, min_px)
             parts.append(
                 f'<polygon class="ecomap-region ecomap-parent" '
                 f'points="{points}" fill="{parent_fill}" fill-opacity="0.45">'
@@ -399,7 +373,7 @@ def map_svg(highlight: Optional[dict] = None, *,
             tip += ", not recorded"
         hatch = hatch_url(key) if (reference or present) else ""
         for ring in rings:
-            points = _ring_points(ring, project, min_px)
+            points = _points(ring, project, min_px)
             shape = (f'<polygon class="ecomap-region" points="{points}" '
                      f'fill="{fill}" fill-opacity="{opacity}">'
                      f'<title>{html.escape(tip)}</title></polygon>')
