@@ -173,7 +173,7 @@ def _page(title: str, description: str, body: str, depth: int,
 <footer class="foot">
   <div class="foot-inner">
     <p class="foot-lede">{_esc(TAGLINE)}</p>
-    <p>Generated from an <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">open
+    <p>Made from an <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">open
     catalogue</a> of native plants. Photographs are open-licensed and credited
     individually to their photographers. Every other figure carries its source
     on the page it appears on, and where a fact is unknown the page says so
@@ -308,20 +308,6 @@ def render_home(model: dict, photo_src: dict) -> str:
   </dl>
 </section>
 
-<section class="split">
-  <div>
-    <h2>Where things grow</h2>
-    <p>Pick a region to see the plants recorded there. Every species page
-    carries this map too, with each region shaded when the plant has been
-    recorded somewhere inside it.</p>
-    <p class="note">These are ecoregions, not range maps: a shaded region
-    means records exist in it, not that the plant grows throughout it.
-    {_esc(CAVEAT)} <a href="method/">How this is made</a>.</p>
-    <p><a class="more" href="map/">The full map</a></p>
-  </div>
-  <figure class="mapfig">{eco}</figure>
-</section>
-
 <section>
   <h2>By flower colour</h2>
   <p>Pick a colour to see the plants that bloom in it.</p>
@@ -349,6 +335,19 @@ def render_home(model: dict, photo_src: dict) -> str:
   tells you which caterpillars eat it, which bees feed on it, and which of them
   have no alternative.</p>
   <p><a class="button" href="wildlife/">{s['animals']} animals</a></p>
+</section>
+
+<section class="split">
+  <div>
+    <h2>Where things grow</h2>
+    <p>Pick a region to see the plants recorded there, and what else grows
+    alongside them.</p>
+    <p class="note">These are ecoregions, not range maps: a shaded region
+    means records exist in it, not that the plant grows throughout it.
+    {_esc(CAVEAT)} <a href="method/">How this is made</a>.</p>
+    <p><a class="more" href="map/">The full map</a></p>
+  </div>
+  <figure class="mapfig">{eco}</figure>
 </section>
 """
     return _page(f"{s['species']} native plants of Alberta and Saskatchewan",

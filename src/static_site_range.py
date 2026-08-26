@@ -51,7 +51,8 @@ from src.static_site_render import _esc, _up
 
 def range_section(entry: dict, model: dict, depth: int) -> str:
     """The "Where it has been recorded" section, or "" when nothing is."""
-    from src.ecoregion_map import region_fill              # noqa: PLC0415
+    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
+                                   map_svg, region_fill)
     regions = species_ecoregions(entry)
     eco_block = ""
     if regions:
@@ -89,15 +90,20 @@ def range_section(entry: dict, model: dict, depth: int) -> str:
                 f'<li{cls}>{dot}{name}'
                 f'<span class="src"> {_esc(r.get("where") or "")}: '
                 f'{evidence}{conf}</span></li>')
-        # V2.80: the MAP is gone from here and the counts stay. `map_svg`
-        # shaded a whole ecoregion because records fall somewhere inside it,
-        # which is the overstatement the review objected to; the counts are
-        # facts and answer a different question -- which classified communities
-        # is it recorded from. `occurrence_map` above draws the range now.
+        # The map came back in V2.80 after the author reviewed the build, and
+        # it sits BELOW the occurrence map rather than instead of it. The two
+        # answer different questions and the order says which is the range:
+        # the dots are where the plant was found, and this is which classified
+        # communities those fall in -- which is how a reader gets from one
+        # species to what else grows alongside it, via the region hub pages.
         eco_block = f"""
 <section>
   <h2>Which ecoregions the records fall in</h2>
   <div class="ecowrap">
+    <figure class="mapfig">{map_svg(regions, width=420,
+                                    height=frame_height(420), min_px=0.5,
+                                    present_only=True,
+                                    title=f'Ecoregions {entry.get("name")} is recorded from')}</figure>
     <div>
       <ul class="ranges">{"".join(rows)}</ul>
       <p class="note">These are counts of records collected
@@ -108,6 +114,7 @@ def range_section(entry: dict, model: dict, depth: int) -> str:
       this list means nobody has recorded it there, which is not the same as
       the plant being absent.
       {_esc(_range_source(entry))}
+      {_esc(CAVEAT)}
       <a href="{_up(depth)}method/">How these counts are made</a>.</p>
       <p class="note">{_observation_links(entry)}</p>
     </div>

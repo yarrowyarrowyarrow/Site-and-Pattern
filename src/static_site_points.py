@@ -196,32 +196,53 @@ def _point_method_sections(counts: dict, MARK_DEG, CELL_DEG, CELL_KM_NS) -> str:
     down -- every count on this site is (V2.47), because a number typed into
     prose is correct once.
     """
+    from src.static_site_render import _esc               # noqa: PLC0415
     return f"""<h2>The map</h2>
-<p>A <strong>shaded square</strong> is {CELL_DEG} degrees, about
-{CELL_KM_NS:.0f} km north to south, and means at least one usable record falls
-inside it. Darker squares hold more records. A <strong>filled dot</strong> is a
-herbarium specimen: a pressed sheet somebody can re-examine. A <strong>hollow
-ring</strong> is a field observation: a photograph identified by community
-agreement. Use the buttons to show either alone.</p>
+<figure class="mapfig methodfig">{_example_range_map()}
+<figcaption class="note">A species page map. Squares are
+{CELL_DEG} degrees, about {CELL_KM_NS:.0f} km north to south.</figcaption></figure>
+<p>A <strong>shaded square</strong> means at least one usable record falls
+inside it, and darker squares hold more records. A <strong>filled dot</strong>
+is a herbarium specimen: a pressed sheet somebody can re-examine. A
+<strong>hollow ring</strong> is a field observation, identified by community
+agreement. The buttons show either alone.</p>
 <p>Of {counts["marks"]:,} marks, {counts["s"]:,} are specimens and
 {counts["o"]:,} are observations.</p>
 <p>Three things the map does <em>not</em> say:</p>
 <ul>
 <li><strong>Darker is not more plant.</strong> It is more collecting. The
 squares over Calgary and Edmonton are dark for nearly every species here.</li>
-<li><strong>Empty is not absent.</strong> Nobody has recorded the plant there.
-Unsurveyed and absent look identical from here.</li>
+<li><strong>Empty is not absent.</strong> Unsurveyed and absent look identical
+from here.</li>
 <li><strong>Recorded is not native.</strong> A garden escape can accumulate
 hundreds of records.</li>
 </ul>
-
-<h2>Which records we draw</h2>
 <p>A record is drawn only if its coordinate is precise to within
 <strong>10 km</strong>, it falls inside <strong>Alberta or
 Saskatchewan</strong>, and its dataset licence permits redrawing the
 coordinate. We accept non-commercial licences for coordinates but not for
 photographs: a photograph is somebody's work, a coordinate is a fact about a
-place. An undetermined licence is dropped.</p>
-<p>Records closer together than {MARK_DEG} degrees are drawn once, which is
-under half a pixel at this size.</p>"""
+place. Records closer together than {MARK_DEG} degrees are drawn once, which
+is under half a pixel."""
+
+
+def _example_range_map() -> str:
+    """One real species' range map, so the words above have a picture.
+
+    Drawn from the shipped data rather than hand-made, so it cannot describe a
+    map the site does not produce. Prickly pear because its range is tight
+    enough to read at this size and it carries both kinds of record.
+    """
+    from src.range_map import range_svg                     # noqa: PLC0415
+    from src.species_range import CELL_DEG                  # noqa: PLC0415
+    name = "Opuntia polyacantha"
+    cells = _range_cells().get(name) or []
+    kinds = _points().get(name) or {}
+    if not cells:
+        return ""
+    return range_svg(cells, specimens=kinds.get("s") or (),
+                     observations=kinds.get("o") or (), width=460,
+                     step=CELL_DEG, marks="all",
+                     title="Example: where Plains Prickly Pear Cactus "
+                           "has been recorded")
 

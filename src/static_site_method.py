@@ -79,7 +79,7 @@ def _simplification() -> str:
     on 432 public pages for a whole increment.
     """
     import re                                               # noqa: PLC0415
-    from src.ecoregion_map import CAVEAT                    # noqa: PLC0415
+    from src.ecoregion_map import CAVEAT                     # noqa: PLC0415
     m = re.search(r"(\d[\d,]*\s*(?:m|km|metres|kilometres))", CAVEAT)
     return m.group(1) if m else "a kilometre"
 
@@ -88,7 +88,7 @@ def _simplification() -> str:
 
 def render_method(model: dict) -> str:
     """The Method page."""
-    from src.ecoregion_map import CAVEAT
+    from src.ecoregion_map import CAVEAT, frame_height, map_svg
     from src.ecoregion_ranges import MIN_RECORDS
     from src.occurrence_points import MARK_DEG
     from src.species_range import CELL_DEG, CELL_KM_NS
@@ -127,12 +127,18 @@ some only under a name this catalogue does not use, and does not carry a few
 at all. Each needs a second source before we can say anything.</p>
 <p>We would rather show you nothing than show you a guess.</p>
 
-<h2>The ecoregion counts</h2>
-<p>Below the map, each species lists the ecoregions its records fall in. A
-region needs at least <strong>{MIN_RECORDS} records</strong> to be listed: two
-can be a misidentified sheet and a garden escape. This cuts against rare
-species, which is a real cost. A region missing from the list means nobody has
-recorded the plant there.</p>
+<h2>The ecoregions</h2>
+<figure class="mapfig methodfig">{map_svg(None, width=520,
+                                          height=frame_height(520),
+                                          reference=True,
+                                          title="The ecoregions this catalogue covers")}
+<figcaption class="note">{_esc(CAVEAT)}</figcaption></figure>
+<p>Below its range map, each species lists the ecoregions its records fall in,
+which is how you get from one plant to what else grows alongside it. A region
+needs at least <strong>{MIN_RECORDS} records</strong> to be listed: two can be
+a misidentified sheet and a garden escape. This cuts against rare species,
+which is a real cost. A region missing from a list means nobody has recorded
+the plant there.</p>
 {_bands_table()}
 
 <h2>How current this is</h2>
@@ -161,8 +167,6 @@ on every species page are live; follow those for the current picture.</p>
   shares several of these ecoregions and is not included.</li>
 </ul>
 
-<h2>The region outlines</h2>
-<p>{_esc(CAVEAT)}</p>
 
 <h2>Corrections</h2>
 <p>These pages are wrong in places, and the useful thing to do with an error

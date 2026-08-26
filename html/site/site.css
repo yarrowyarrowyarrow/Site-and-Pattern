@@ -185,6 +185,11 @@ p { margin: .7rem 0; }
 .mapfig { margin: 0; background: var(--bg-sunk); border: 1px solid var(--line);
           border-radius: var(--radius); padding: .7rem; }
 .mapfig.inline { max-width: 24rem; }
+/* A figure used as an illustration inside prose, not as the
+   subject of the page: capped so it reads as an example. */
+.methodfig { max-width: 30rem; margin: .8rem 0 1.2rem; }
+.methodfig svg { display: block; width: 100%; height: auto; }
+.methodfig figcaption { margin-top: .5rem; }
 .wide-map { padding: 1.2rem; }
 .ecomap { display: block; width: 100%; height: auto; }
 /* Alberta and Saskatchewan are nearly square, so a map that fills a wide page
@@ -261,7 +266,9 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
 /* The map keeps its own light palette in both themes: it is a printed figure,
    and a dark-mode map of a light-mode place reads as a different diagram. */
 .mapfig { background: #f6f5f0; }
-.ecowrap { display: grid; gap: 1.2rem; align-items: start; }
+.ecowrap { display: grid; gap: 1.2rem; align-items: start;
+           grid-template-columns: minmax(14rem, 20rem) 1fr; }
+@media (max-width: 44rem) { .ecowrap { grid-template-columns: 1fr; } }
 
 /* ── The range map and its record toggle (V2.80) ────────────────────────── */
 /* Like .mapfig, this keeps a light ground in both themes: the wash encodes

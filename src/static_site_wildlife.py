@@ -195,8 +195,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
 <div class="searchhead">
   <h1>Search {listed} animals</h1>
   <p class="lede">Pick an animal to see the plants it feeds on, lays eggs on or
-  shelters in. Every one is a documented record with a source. A star marks a
-  specialist: an animal that cannot simply move to another plant.</p>
+  shelters in. Every one is a documented record with a source.</p>
 </div>
 {note}
 

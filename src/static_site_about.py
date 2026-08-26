@@ -96,33 +96,31 @@ plant relationships, {s['edges']} relationships between them, and
 
 <h2>What it is</h2>
 <p>A reference to the native plants of Alberta and Saskatchewan, and the
-animals that depend on them. That is the whole of what it covers: the
-ecoregions mapped here stop at the Saskatchewan border, and they are not all
-prairie. A third of these species are recorded from boreal or montane ground.</p>
+animals that depend on them. The ecoregions mapped here stop at the
+Saskatchewan border, and they are not all prairie: a third of these species
+are recorded from boreal or montane ground.</p>
 <p>It is the catalogue behind <a
 href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">{_esc(APP_NAME)}</a>,
 a desktop application for lawn-to-habitat conversion, pollinator gardens and
-restoration planting. {_esc(APP_NAME)} is for the site analysis, the design and
-the planting plan. These pages are its catalogue, published so you can read it
-without installing anything.</p>
+restoration planting, published so you can read it without installing
+anything.</p>
 
 <h2>What it is honest about</h2>
 <ul>
   <li><strong>Unknowns stay unknown.</strong> A plant with no recorded bloom
-  window appears under no month, and one with no recorded flower colour appears
-  under no colour. A blank is never filled in.</li>
-  <li><strong>Evidence travels with the claim.</strong> Every recorded range
-  carries how many records it rests on, so a region built from three sightings
-  does not look like one built from three hundred.</li>
+  window appears under no month, and one with no recorded flower colour under
+  no colour. A blank is never filled in.</li>
+  <li><strong>Evidence travels with the claim.</strong> A region built from
+  three records does not look like one built from three hundred.</li>
   <li><strong>Relationships are documented, not guessed.</strong> Every animal
   on a plant page comes from a sourced record.</li>
   <li><strong>Photographs are credited or absent.</strong> {s['with_photo']} of
   {s['species']} species have an openly-licensed photograph we can attribute.
   The rest show none.</li>
-  <li><strong>The region outlines are surveyed.</strong> They come from the
-  National Ecological Framework for Canada v2.2, simplified to about 900 m for
-  display, so an outline is accurate to roughly a kilometre rather than to the
-  metre.</li>
+  <li><strong>The occurrence records are not identification-checked.</strong>
+  They come from GBIF as submitted, so misidentifications are present here as
+  they are in any occurrence dataset. Checking them against the regional floras
+  is planned for <strong>winter 2026-2027</strong>.</li>
 </ul>
 
 {_sources_section()}

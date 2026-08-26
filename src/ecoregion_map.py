@@ -220,13 +220,41 @@ def region_geometry(level: str = "", within: str = "") -> dict:
     return out
 
 
+
+def _ring_points(ring, project, min_px: float = 0.0) -> str:
+    """One projected ring as an SVG ``points`` string, optionally decimated.
+
+    ``min_px`` drops a vertex that lands within that distance of the last one
+    kept. The polygons are simplified to about 900 m for display, which is
+    right for the 900 px map on a region page and roughly three times finer
+    than a pixel on the 420 px map a species page carries: 846 KB of vertices
+    per page, repeated on 430 pages, that nobody can see.
+
+    A rendering decision, not a data one -- the same argument as
+    `occurrence_points.MARK_DEG`. The first and last vertices are always kept
+    so a ring still closes, and `min_px=0` (the default) changes nothing, so
+    every existing map is byte-identical.
+    """
+    pts = [project(float(lon), float(lat)) for lon, lat in ring]
+    if min_px > 0 and len(pts) > 3:
+        kept = [pts[0]]
+        for x, y in pts[1:-1]:
+            lx, ly = kept[-1]
+            if abs(x - lx) >= min_px or abs(y - ly) >= min_px:
+                kept.append((x, y))
+        kept.append(pts[-1])
+        pts = kept
+    return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+
+
 def map_svg(highlight: Optional[dict] = None, *,
             width: int = 460, height: int = 300,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
             link_for=None, reference: bool = False,
             level: str = "", within: str = "", numbered: bool = False,
-            overlay: str = "", chrome: str = "") -> str:
+            overlay: str = "", chrome: str = "",
+            min_px: float = 0.0, present_only: bool = False) -> str:
     """The ecoregion map as inline SVG.
 
     ``level`` and ``within`` draw one level of the vocabulary, optionally
@@ -314,6 +342,14 @@ def map_svg(highlight: Optional[dict] = None, *,
     order = sorted(regions.items(),
                    key=lambda kv: (DRAW_ORDER.get(kv[0], 50),) if reference
                    else (kv[0] in highlight,))
+    if present_only:
+        # Draw only the regions this species is recorded from, over the bare
+        # province outline. On a species page the other twenty-one shapes are
+        # 846 KB of polygons per page saying "not here" -- which the caption
+        # already says in words, and which the reader cannot act on. Kept as an
+        # option rather than the default because a region page's map is ABOUT
+        # the layer and needs all of it.
+        order = [(k, v) for k, v in order if k in highlight]
 
     from src.ecoregion import ecoregion_display              # noqa: PLC0415
 
@@ -335,9 +371,7 @@ def map_svg(highlight: Optional[dict] = None, *,
     parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">')
     for _key, rings in sorted(context.items()):
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _ring_points(ring, project, min_px)
             parts.append(f'<polygon class="ecomap-region ecomap-outside" '
                          f'points="{points}" fill="{ABSENT_FILL[0]}" '
                          f'fill-opacity="{ABSENT_FILL[1]}"/>')
@@ -345,9 +379,7 @@ def map_svg(highlight: Optional[dict] = None, *,
         parent_fill, _op = region_fill(parent_key, "high")
         parent_name = ecoregion_display(parent_key)[0]
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _ring_points(ring, project, min_px)
             parts.append(
                 f'<polygon class="ecomap-region ecomap-parent" '
                 f'points="{points}" fill="{parent_fill}" fill-opacity="0.45">'
@@ -367,9 +399,7 @@ def map_svg(highlight: Optional[dict] = None, *,
             tip += ", not recorded"
         hatch = hatch_url(key) if (reference or present) else ""
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _ring_points(ring, project, min_px)
             shape = (f'<polygon class="ecomap-region" points="{points}" '
                      f'fill="{fill}" fill-opacity="{opacity}">'
                      f'<title>{html.escape(tip)}</title></polygon>')
@@ -397,6 +427,11 @@ def map_svg(highlight: Optional[dict] = None, *,
     if labels:
         for key, rings in regions.items():
             if not rings:
+                continue
+            # A label over ground this map no longer shades is a name with
+            # nothing under it. When only the recorded regions are drawn, only
+            # those get named.
+            if present_only and key not in highlight:
                 continue
             ring = max(rings, key=len)
             lon, lat, angle = _label_point(key, ring)
