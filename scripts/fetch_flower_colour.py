@@ -88,6 +88,31 @@ send it back, and the reader gets written for the shape the file actually has
 rather than the shape somebody assumed."""
 
 
+def _header_index(rows: list) -> int:
+    """Which row is the real header.
+
+    USDA PLANTS puts a preamble line above it -- a real export opened with
+    ``--columns`` began ``Search Type: Characteristic`` and the column names
+    were on line 2. Taking row 0 on faith reported *1 column* for a four-column
+    file, which is the same species of mistake ``--columns`` exists to catch, so
+    it should not be the probe making it.
+
+    The header is the first row that is as wide as the file generally is. Width
+    is taken as the **mode** rather than the maximum, because one ragged row
+    with a stray delimiter should not redefine the shape of the file.
+    """
+    widths = {}
+    for row in rows[:200]:
+        widths[len(row)] = widths.get(len(row), 0) + 1
+    if not widths:
+        return 0
+    modal = max(widths, key=lambda w: (widths[w], w))
+    for i, row in enumerate(rows[:200]):
+        if len(row) == modal:
+            return i
+    return 0
+
+
 def _rows(path: Path):
     """Header + rows from a csv/tsv, whichever it turns out to be."""
     text = path.read_text(encoding="utf-8", errors="replace")
@@ -96,10 +121,14 @@ def _rows(path: Path):
     # still parses.
     delim = "\t" if text.count("\t") > text.count(",") else ","
     reader = csv.reader(io.StringIO(text), delimiter=delim)
-    rows = list(reader)
+    rows = [r for r in reader if r]
     if not rows:
         raise SystemExit(f"{path} has no rows.")
-    return rows[0], rows[1:], delim
+    head = _header_index(rows)
+    if head:
+        print(f"(skipped {head} preamble line(s) above the header: "
+              f"{' | '.join(c[:30] for c in rows[0])})\n")
+    return rows[head], rows[head + 1:], delim
 
 
 def columns(path: Path) -> int:
@@ -116,9 +145,26 @@ def columns(path: Path) -> int:
     print("\nfirst three rows:")
     for row in rows[:3]:
         print("  " + " | ".join(c[:24] for c in row[:8]))
-    print("\nWhat is needed: a column of scientific names, and a column of "
-          "flower colour.\nSend this output back and the reader will be "
-          "written for it.")
+
+    # Say outright whether this file can answer the question, rather than
+    # leaving it to be inferred from a column listing. The first real USDA
+    # export was a name list with no colour in it, and that is easy to miss.
+    name_col = next((c for c in header
+                     if "scientificname" in c.lower().replace(" ", "")
+                     or c.lower() in ("scientific name", "taxon", "species")), "")
+    colour_col = next((c for c in header
+                       if "color" in c.lower() or "colour" in c.lower()), "")
+    print("\n--- can this file answer the question? ---")
+    print(f"  scientific name column: {name_col or 'NOT FOUND'}")
+    print(f"  flower colour column:   {colour_col or 'NOT FOUND'}")
+    if name_col and colour_col:
+        print("\nBoth present. Send this output back and the reader gets "
+              "written for it.")
+    else:
+        print("\nThis export cannot be used as-is. In the USDA PLANTS "
+              "advanced search the\ncharacteristics fields are opt-in: tick "
+              "Flower Color before exporting, or the\nfile comes back as a "
+              "name list. Re-export and run --columns again.")
     return 0
 
 
