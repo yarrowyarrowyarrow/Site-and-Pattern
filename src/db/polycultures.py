@@ -1492,19 +1492,23 @@ EXAMPLE_POLYCULTURES = [
     },
     {
         "name": "Aromatic Herb Circle",
-        "description": "A circle of seven hardy native perennials with strong aromatics and "
+        # Six, not seven. The seventh member was "Bee Balm (Wild Bergamot)",
+        # the garden file's duplicate row for Monarda fistulosa, so the circle
+        # had always been six species with one of them planted twice under two
+        # names. V2.80 consolidated the rows, which made the duplication
+        # visible.
+        "description": "A circle of six hardy native perennials with strong aromatics and "
                        "pollinator value. Wild bergamot anchors the centre as a magnet for native "
                        "bumble bees; yarrow, wild mint, giant hyssop, valerian, and self-heal fill "
                        "the surround. All species are Zone 3 proven in Alberta gardens and tolerate "
                        "dry summers once established.",
         "members": [
             ("Wild Bergamot",             "pollinator",      0,    0),
-            ("Boreal Yarrow",                    "soil_builder",    0.8,  0.5),
+            ("Boreal Yarrow",             "soil_builder",    0.8,  0.5),
             ("Wild Mint",                 "pest_deterrent", -0.7,  0.7),
             ("Giant Hyssop",              "pollinator",      0.5, -0.8),
-            ("Sitka Valerian",             "other",          -0.8, -0.3),
+            ("Sitka Valerian",            "other",          -0.8, -0.3),
             ("Self-heal",                 "other",           0.3,  0.9),
-            ("Wild Bergamot",  "pollinator",     -0.4, -0.8),
         ],
         "variations": [
             {

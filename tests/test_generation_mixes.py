@@ -203,8 +203,13 @@ class TestMixPlacement(unittest.TestCase):
         self.assertEqual(len(instances.get(comm["name"], set())), 2,
                          "1-member community mix folds to count instances")
         yarrow = _api.query_plants(query="yarrow")[0]["id"]
+        # Only the ones the PLANT mix placed. The community mix above can also
+        # contain yarrow -- after V2.80 the smallest community does -- and
+        # counting both made this read 6 and look like a fold-down failure
+        # when fold-down was working. A community member carries the community
+        # it came from; a plain plant group does not.
         n_yarrow = sum(1 for p in project.placed_plants
-                       if p["plant_id"] == yarrow)
+                       if p["plant_id"] == yarrow and not p.get("polyculture_name"))
         self.assertEqual(n_yarrow, 4,
                          "1-member plant mix folds to a plain plant group")
 

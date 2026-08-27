@@ -72,7 +72,12 @@ class TestTheColumnExistsAndIsSeeded(unittest.TestCase):
     def test_an_unsourced_species_still_names_its_heuristic(self):
         """~20 species VASCAN could not settle. Blank is the honest answer and
         the derived note is still the right thing to show."""
-        got = provenance(self.rows["Urtica dioica"])
+        # Was Urtica dioica until V2.80 renamed it to the accepted taxon --
+        # which is itself unsourced until the archive is re-read under the new
+        # name, so it still exercises this path, but Spiraea douglasii is the
+        # stabler pin: VASCAN records it and not for these provinces, so no
+        # rename will resolve it.
+        got = provenance(self.rows["Spiraea douglasii"])
         self.assertTrue(got["inferred"])
         self.assertIn("ecoregions that continue across", got["note"])
 

@@ -86,8 +86,14 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: regression; both should stop the build rather than quietly re-file 81
     #: grasses. (V2.47 shipped 79/77/75/61/43/26/16/8/3/2 off genus-level
     #: seeding, which is what put a red flower on the blue columbine.)
+    #: V2.80 removed six coloured rows and the drop is entirely accounted for,
+    #: which is the check worth doing before touching a snapshot like this:
+    #: yellow -4 (Agoseris parviflora, Solidago simplex, Helianthus annuus,
+    #: Oligoneuron rigidum), straw -1 (Festuca ovina), white -1 (Achillea
+    #: millefolium, merged into A. borealis). No bucket moved for any other
+    #: reason, so the classifier is unchanged.
     EXPECTED = {
-        "yellow": 82, "straw": 81, "white": 72, "purple": 53, "pink": 42,
+        "yellow": 78, "straw": 80, "white": 71, "purple": 53, "pink": 42,
         "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
     }
 

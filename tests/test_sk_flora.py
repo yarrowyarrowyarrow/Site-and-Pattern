@@ -76,17 +76,29 @@ class TestSaskatchewanFlora(unittest.TestCase):
 
     def test_curated_species_present(self):
         for sci in ("Sphaeralcea coccinea", "Comandra umbellata",
-                    "Oligoneuron rigidum", "Symphyotrichum falcatum",
+                    "Solidago rigida", "Symphyotrichum falcatum",
                     "Packera cana", "Erigeron caespitosus"):
             self.assertIn(sci, self.by_sci, f"{sci} missing from catalogue")
 
     def test_sk_only_species_not_ab(self):
-        """Stiff Goldenrod is native to SK/MB but not AB — the province model
-        must distinguish it (native_to_alberta stayed at 0)."""
-        sg = self.by_sci["Oligoneuron rigidum"]
+        """The province model must distinguish a Saskatchewan native from an
+        Alberta one.
+
+        This used to be pinned to *Oligoneuron rigidum*, on two claims that
+        V2.80 retired. It was a duplicate of *Solidago rigida* under a second
+        name, and the archive merged them; and it asserted **MB**, which no row
+        carries any more, because VASCAN's narrowing writes only the two
+        subject provinces — the Manitoba filter chip went in V2.75 for the same
+        reason.
+
+        *Echinacea angustifolia* is the replacement and a better one: it is
+        SK-only **because a flora says so**, one of the 34 rows the archive
+        narrowed, rather than because of an inference about ecoregions.
+        """
+        sg = self.by_sci["Echinacea angustifolia"]
         self.assertIn("SK", sg["native_provinces"])
-        self.assertIn("MB", sg["native_provinces"])
         self.assertNotIn("AB", sg["native_provinces"])
+        self.assertFalse(sg["native_to_alberta"])
         self.assertIn(sg, search_plants(native_province="SK"))
         self.assertNotIn(sg, search_plants(native_province="AB"))
 

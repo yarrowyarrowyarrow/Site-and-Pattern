@@ -847,13 +847,6 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Wild Bergamot",
-  "fauna": "Archilochus colubris",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "cornell_birds_of_the_world"
- },
- {
   "plant": "Eastern Red Columbine",
   "fauna": "Archilochus colubris",
   "relationship": "nectar",
@@ -1315,20 +1308,6 @@
  {
   "plant": "Chokecherry",
   "fauna": "Osmia lignaria",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "packer_bees_of_canada"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Bombus borealis",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "packer_bees_of_canada"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Anthophora terminalis",
   "relationship": "nectar",
   "specificity": "generalist",
   "source": "packer_bees_of_canada"
@@ -1944,13 +1923,6 @@
   "source": "pohl_et_al_2018_checklist"
  },
  {
-  "plant": "Wild Bergamot",
-  "fauna": "Hyles lineata",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "pohl_et_al_2018_checklist"
- },
- {
   "plant": "Canada Milk Vetch",
   "fauna": "Epargyreus clarus",
   "relationship": "larval_host",
@@ -2028,13 +2000,6 @@
   "source": "acorn_sheldon_butterflies_ab"
  },
  {
-  "plant": "Wild Bergamot",
-  "fauna": "Epargyreus clarus",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab"
- },
- {
   "plant": "Dotted Blazingstar",
   "fauna": "Colias philodice",
   "relationship": "nectar",
@@ -2074,14 +2039,6 @@
  },
  {
   "plant": "Dotted Blazingstar",
-  "fauna": "Danaus plexippus",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
-  "plant": "Wild Bergamot",
   "fauna": "Danaus plexippus",
   "relationship": "nectar",
   "specificity": "generalist",
@@ -2273,14 +2230,6 @@
   "notes": "Documented adult nectar source (V2.12)."
  },
  {
-  "plant": "Boreal Yarrow",
-  "fauna": "Phyciodes cocyta",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
   "plant": "Smooth Aster",
   "fauna": "Hesperia comma",
   "relationship": "nectar",
@@ -2321,14 +2270,6 @@
   "notes": "Documented adult nectar source (V2.12)."
  },
  {
-  "plant": "Wild Bergamot",
-  "fauna": "Hemaris thysbe",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
   "plant": "Prairie Thistle",
   "fauna": "Hemaris thysbe",
   "relationship": "nectar",
@@ -2339,14 +2280,6 @@
  {
   "plant": "Harebell",
   "fauna": "Hemaris thysbe",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Hemaris diffinis",
   "relationship": "nectar",
   "specificity": "generalist",
   "source": "acorn_sheldon_butterflies_ab",
@@ -2378,14 +2311,6 @@
  },
  {
   "plant": "Prairie Thistle",
-  "fauna": "Papilio canadensis",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
-  "plant": "Wild Bergamot",
   "fauna": "Papilio canadensis",
   "relationship": "nectar",
   "specificity": "generalist",
@@ -2435,14 +2360,6 @@
  {
   "plant": "Boreal Yarrow",
   "fauna": "Coenonympha tullia",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "acorn_sheldon_butterflies_ab",
-  "notes": "Documented adult nectar source (V2.12)."
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Cercyonis pegala",
   "relationship": "nectar",
   "specificity": "generalist",
   "source": "acorn_sheldon_butterflies_ab",
@@ -17765,14 +17682,6 @@
  },
  {
   "plant": "Boreal Yarrow",
-  "fauna": "Phyciodes cocyta",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Achillea millefolium"
- },
- {
-  "plant": "Boreal Yarrow",
   "fauna": "Vanessa cardui",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
@@ -18633,86 +18542,6 @@
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Bombus borealis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Hemaris thysbe",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Danaus plexippus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Hyles lineata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Anthophora terminalis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Epargyreus clarus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Hemaris diffinis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Archilochus colubris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Cercyonis pegala",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
- },
- {
-  "plant": "Wild Bergamot",
-  "fauna": "Papilio canadensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy",
-  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
   "plant": "Alpine Bistort",
@@ -51718,5 +51547,88 @@
   "relationship": "larval_host",
   "source": "globi_inaturalist_org",
   "notes": "GloBI eatenBy"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Archilochus colubris",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "cornell_birds_of_the_world"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Bombus borealis",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "packer_bees_of_canada"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Anthophora terminalis",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "packer_bees_of_canada"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Hyles lineata",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "pohl_et_al_2018_checklist"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Epargyreus clarus",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab"
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Danaus plexippus",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
+ },
+ {
+  "plant": "Boreal Yarrow",
+  "fauna": "Phyciodes cocyta",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Hemaris thysbe",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Hemaris diffinis",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Papilio canadensis",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
+ },
+ {
+  "plant": "Wild Bergamot",
+  "fauna": "Cercyonis pegala",
+  "relationship": "nectar",
+  "specificity": "generalist",
+  "source": "acorn_sheldon_butterflies_ab",
+  "notes": "Documented adult nectar source (V2.12)."
  }
 ]

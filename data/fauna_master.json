@@ -5861,16 +5861,6 @@
   "description": "Stem gall wasps of rose and rubus, native."
  },
  {
-  "scientific_name": "Dicerca divaricata",
-  "common_name": "Dicerca divaricata",
-  "taxon": "other_insect",
-  "ab_native": 0,
-  "native_provinces": "SK",
-  "range_notes": "Native jewel beetles.",
-  "icon": "🪲",
-  "description": "Native jewel beetles."
- },
- {
   "scientific_name": "Dicerca tenebrica",
   "common_name": "Dicerca tenebrica",
   "taxon": "other_insect",
@@ -7571,16 +7561,6 @@
   "description": "Flower longhorns."
  },
  {
-  "scientific_name": "Lacinipolia olivacea",
-  "common_name": "Lacinipolia olivacea",
-  "taxon": "lepidoptera",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Native noctuids of grassland and meadow.",
-  "icon": "🦋",
-  "description": "Native noctuids of grassland and meadow."
- },
- {
   "scientific_name": "Lacinipolia renigera",
   "common_name": "Lacinipolia renigera",
   "taxon": "lepidoptera",
@@ -8641,16 +8621,6 @@
   "description": "Long-horned bees, late-summer composite specialists across the grasslands."
  },
  {
-  "scientific_name": "Melissodes subagilis",
-  "common_name": "Melissodes subagilis",
-  "taxon": "bee",
-  "ab_native": 1,
-  "native_provinces": "AB",
-  "range_notes": "Long-horned bees, late-summer composite specialists across the grasslands.",
-  "icon": "🐝",
-  "description": "Long-horned bees, late-summer composite specialists across the grasslands."
- },
- {
   "scientific_name": "Melissodes utahensis",
   "common_name": "Melissodes utahensis",
   "taxon": "bee",
@@ -9499,16 +9469,6 @@
   "range_notes": "Tumbling flower beetles, native.",
   "icon": "🪲",
   "description": "Tumbling flower beetles, native."
- },
- {
-  "scientific_name": "Perdita albipennis",
-  "common_name": "Perdita albipennis",
-  "taxon": "bee",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Tiny ground-nesting bees, strongly western and dry-country — prairie-typical.",
-  "icon": "🐝",
-  "description": "Tiny ground-nesting bees, strongly western and dry-country — prairie-typical."
  },
  {
   "scientific_name": "Perdita fallax",

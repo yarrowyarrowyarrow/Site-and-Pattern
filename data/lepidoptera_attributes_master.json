@@ -2458,15 +2458,6 @@
   "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
  },
  {
-  "scientific_name": "Lacinipolia olivacea",
-  "kind": "moth",
-  "activity": "night",
-  "flight_season": "unknown",
-  "overwintering_stage": "unknown",
-  "source": "globi",
-  "notes": "Kind and activity assigned by family in scripts/curate_new_fauna.py. Flight season and overwintering stage are not recorded for this species and are not guessed; the scene falls back to the warm-season default."
- },
- {
   "scientific_name": "Lacinipolia renigera",
   "kind": "moth",
   "activity": "night",
