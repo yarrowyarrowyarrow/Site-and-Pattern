@@ -168,6 +168,122 @@ def columns(path: Path) -> int:
     return 0
 
 
+def _canonical(name: str) -> str:
+    """A USDA scientific name reduced to the binomial this catalogue keys on.
+
+    USDA ships the authority (``Abies amabilis (Douglas ex Loudon) Douglas ex
+    Forbes``) and marks hybrids (``Abelia xgrandiflora``). Taking the first two
+    tokens is enough and is what ``vascan_archive`` does for the same reason:
+    an authority is not part of the name for matching purposes, and matching on
+    the full string would miss nearly everything.
+    """
+    text = (name or "").replace("×", "x").strip()
+    parts = [p for p in text.split() if p]
+    if len(parts) < 2:
+        return text.lower()
+    return f"{parts[0]} {parts[1]}".lower()
+
+
+def read_colour_sets(folder: Path) -> dict:
+    """``{binomial: [colour_key, ...]}`` from one CSV per colour.
+
+    Each file is named for the colour it holds -- ``blue.csv``, ``yellow.csv``
+    -- because USDA's export carries no characteristics column, so the *filter*
+    is the only thing that knows the answer. One download per colour turns that
+    filter into a label the file itself carries.
+    """
+    from src.flower_colour import COLOUR_KEYS
+
+    out: dict = {}
+    files = sorted(p for p in folder.iterdir()
+                   if p.suffix.lower() in (".csv", ".tsv", ".txt"))
+    if not files:
+        raise SystemExit(f"No csv files in {folder}.")
+    for path in files:
+        colour = path.stem.strip().lower()
+        if colour not in COLOUR_KEYS:
+            raise SystemExit(
+                f"{path.name}: '{colour}' is not one of this catalogue's "
+                f"colours ({', '.join(COLOUR_KEYS)}). Name each file for the "
+                f"colour it holds.")
+        header, rows, _d = _rows(path)
+        col = next((i for i, c in enumerate(header)
+                    if "scientificname" in c.lower().replace(" ", "")), None)
+        if col is None:
+            raise SystemExit(f"{path.name} has no scientificName column.")
+        seen = set()
+        for row in rows:
+            if col >= len(row):
+                continue
+            key = _canonical(row[col])
+            if key and key not in seen:
+                seen.add(key)
+                out.setdefault(key, []).append(colour)
+        print(f"  {path.name:14s} {len(seen):5d} species -> {colour}")
+    return out
+
+
+def apply_colour_sets(folder: Path, write: bool) -> int:
+    """Match the downloaded colours against the species we are guessing at."""
+    from src.flower_colour import COLOUR_SWATCHES
+
+    usda = read_colour_sets(folder)
+    need = catalogue_needing_colour()
+    by_canon = {_canonical(sci): sci for sci in need}
+
+    hits, multi, missing = {}, {}, []
+    for canon, sci in by_canon.items():
+        colours = usda.get(canon)
+        if not colours:
+            missing.append(sci)
+        elif len(colours) > 1:
+            multi[sci] = colours
+        else:
+            hits[sci] = colours[0]
+
+    print(f"\n{len(need)} species carry a guessed colour")
+    print(f"  {len(hits):4d} matched to exactly one USDA colour")
+    print(f"  {len(multi):4d} matched to more than one (not written)")
+    print(f"  {len(missing):4d} not in the USDA set at all")
+
+    if multi:
+        print("\nMore than one colour recorded -- these need a person, because "
+              "the\ncatalogue stores one hex and USDA is recording real "
+              "variation:")
+        for sci, colours in sorted(multi.items())[:12]:
+            print(f"      {sci:38s} {', '.join(colours)}")
+        if len(multi) > 12:
+            print(f"      ... and {len(multi) - 12} more")
+
+    if not write:
+        print("\n(report only. Add --apply to write these into the seed data.)")
+        return 0
+
+    changed = 0
+    for name in ("plants_master.json", "garden_plants.json"):
+        path = PROJECT_ROOT / "data" / name
+        try:
+            rows = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            colour = hits.get(row.get("scientific_name", ""))
+            if not colour:
+                continue
+            row["flower_color"] = COLOUR_SWATCHES[colour]
+            # A new provenance value beside name/epithet/estimated, so a page
+            # can say a flora recorded this rather than a genus implied it.
+            row["flower_colour_source"] = "usda"
+            changed += 1
+        path.write_text(json.dumps(rows, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8")
+    print(f"\nWrote {changed} colours as flower_colour_source='usda'.")
+    print("Now: bump _SCHEMA_VERSION, then validate-data, then the suite.")
+    return 0
+
+
 def catalogue_needing_colour() -> dict:
     """``{scientific_name: current hex}`` for every guessed colour."""
     out = {}
@@ -196,7 +312,20 @@ def main(argv=None) -> int:
                    help="read colours from a downloaded source file")
     p.add_argument("--needing", action="store_true",
                    help="list the species whose colour is a genus default")
+    p.add_argument("--colour-sets", metavar="FOLDER", dest="colour_sets",
+                   help="folder of one CSV per colour, each named for the "
+                        "colour it holds (blue.csv, yellow.csv, ...). Reports "
+                        "coverage; writes nothing without --apply")
+    p.add_argument("--apply", action="store_true",
+                   help="with --colour-sets, write the matched colours")
     args = p.parse_args(argv)
+
+    if args.colour_sets:
+        folder = Path(args.colour_sets)
+        if not folder.is_dir():
+            print(f"{folder} is not a folder.", file=sys.stderr)
+            return 1
+        return apply_colour_sets(folder, args.apply)
 
     if args.needing:
         need = catalogue_needing_colour()
