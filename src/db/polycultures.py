@@ -1258,7 +1258,7 @@ EXAMPLE_POLYCULTURES = [
             ("Stinging Nettle",       "soil_builder",    1.5,  0.8),
             ("Wild Chives",           "pest_deterrent", -1.2,  1.0),
             ("Purple Prairie Clover", "nitrogen_fixer",  0,    1.5),
-            ("Yarrow",                "pollinator",      1.0, -1.2),
+            ("Boreal Yarrow",                "pollinator",      1.0, -1.2),
             ("Wild Strawberry",       "groundcover",    -0.8, -1.0),
         ],
         "variations": [
@@ -1284,10 +1284,10 @@ EXAMPLE_POLYCULTURES = [
         "members": [
             ("Saskatoon Berry",          "overstory",       0,    0),
             ("Silvery Lupine",           "nitrogen_fixer",  1.0,  0.5),
-            ("Yarrow",                   "soil_builder",   -0.8,  0.8),
+            ("Boreal Yarrow",                   "soil_builder",   -0.8,  0.8),
             ("Wild Strawberry",          "groundcover",     0.5, -0.8),
             ("Wild Chives",              "pest_deterrent", -0.5, -0.6),
-            ("Bee Balm (Wild Bergamot)", "pollinator",      0.8, -0.5),
+            ("Wild Bergamot", "pollinator",      0.8, -0.5),
         ],
         "variations": [
             {
@@ -1300,7 +1300,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Wild Gooseberry",   "understory",     -0.8,  0.8),
                     ("Wild Strawberry",   "groundcover",     0.5, -0.8),
                     ("Wild Red Currant",  "understory",     -0.5, -0.6),
-                    ("Yarrow",            "pollinator",      0.8, -0.5),
+                    ("Boreal Yarrow",            "pollinator",      0.8, -0.5),
                 ],
             },
         ],
@@ -1343,7 +1343,7 @@ EXAMPLE_POLYCULTURES = [
             ("Stinging Nettle",           "soil_builder",    1.8,  0),
             ("Wild Chives",               "pest_deterrent", -1.0,  1.2),
             ("Purple Prairie Clover",     "nitrogen_fixer",  0,    2.0),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+            ("Wild Bergamot",  "pollinator",     -1.5, -1.0),
             ("Wild Strawberry",           "groundcover",     1.0, -1.5),
             ("Prairie Sage",              "pest_deterrent",  0,   -1.3),
         ],
@@ -1356,10 +1356,10 @@ EXAMPLE_POLYCULTURES = [
                                "fixes nitrogen in dappled light; wild bergamot draws native bumble bees.",
                 "members": [
                     ("Evans Cherry",              "overstory",       0,    0),
-                    ("Yarrow",                    "soil_builder",    1.8,  0),
+                    ("Boreal Yarrow",                    "soil_builder",    1.8,  0),
                     ("Nodding Onion",             "pest_deterrent", -1.0,  1.2),
                     ("Silvery Lupine",            "nitrogen_fixer",  0,    2.0),
-                    ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+                    ("Wild Bergamot",  "pollinator",     -1.5, -1.0),
                     ("Wild Strawberry",           "groundcover",     1.0, -1.5),
                     ("Wild Bergamot",             "pollinator",      0,   -1.3),
                 ],
@@ -1396,7 +1396,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Saskatoon Berry",           "understory",      3.0,  1.5),
                     ("Wild Gooseberry",           "understory",     -2.5,  1.0),
                     ("Silvery Lupine",            "nitrogen_fixer", -2.0,  2.5),
-                    ("Yarrow",                    "soil_builder",    2.5, -1.5),
+                    ("Boreal Yarrow",                    "soil_builder",    2.5, -1.5),
                     ("Canada Goldenrod",          "pollinator",     -2.5, -2.0),
                     ("Wild Strawberry",           "groundcover",     1.5, -2.5),
                 ],
@@ -1414,7 +1414,7 @@ EXAMPLE_POLYCULTURES = [
                        "native bees. Group plants in clumps of 3-8 as recommended by pollinator "
                        "habitat guides.",
         "members": [
-            ("Bee Balm (Wild Bergamot)",  "pollinator",          0,    0),
+            ("Wild Bergamot",  "pollinator",          0,    0),
             ("Blanketflower",             "pollinator",          0.8,  0.5),
             ("Purple Prairie Clover",     "nitrogen_fixer",     -0.7,  0.6),
             ("Canada Goldenrod",          "pollinator",          0.5, -0.8),
@@ -1499,12 +1499,12 @@ EXAMPLE_POLYCULTURES = [
                        "dry summers once established.",
         "members": [
             ("Wild Bergamot",             "pollinator",      0,    0),
-            ("Yarrow",                    "soil_builder",    0.8,  0.5),
+            ("Boreal Yarrow",                    "soil_builder",    0.8,  0.5),
             ("Wild Mint",                 "pest_deterrent", -0.7,  0.7),
             ("Giant Hyssop",              "pollinator",      0.5, -0.8),
             ("Sitka Valerian",             "other",          -0.8, -0.3),
             ("Self-heal",                 "other",           0.3,  0.9),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",     -0.4, -0.8),
+            ("Wild Bergamot",  "pollinator",     -0.4, -0.8),
         ],
         "variations": [
             {
@@ -1528,7 +1528,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Rat Root",                  "other",           0.5, -0.8),
                     ("Wild Licorice",             "other",          -0.8, -0.3),
                     ("Seneca Snakeroot",          "other",           0.3,  0.9),
-                    ("Yarrow",                    "soil_builder",   -0.4, -0.8),
+                    ("Boreal Yarrow",                    "soil_builder",   -0.4, -0.8),
                 ],
             },
         ],
@@ -1567,7 +1567,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Western Snowberry",         "understory",          0.8,  0.8),
                     ("Silverberry",               "windbreak",           0.8,  2.2),
                     ("Nanking Cherry",            "understory",         -0.5,  3.8),
-                    ("Bee Balm (Wild Bergamot)",  "pollinator",         -0.5,  1.0),
+                    ("Wild Bergamot",  "pollinator",         -0.5,  1.0),
                 ],
             },
         ],
@@ -1639,7 +1639,7 @@ EXAMPLE_POLYCULTURES = [
             ("Prairie Crocus",             "herbaceous",      1.5,   1.0),
             ("Wild Strawberry",            "groundcover",    -1.0,   1.2),
             ("Golden Bean",                "nitrogen_fixer",  1.8,  -1.0),
-            ("Bee Balm (Wild Bergamot)",   "pollinator",     -1.5,  -0.5),
+            ("Wild Bergamot",   "pollinator",     -1.5,  -0.5),
             ("Dotted Blazingstar",         "pollinator",      0.5,  -1.8),
             ("Canada Goldenrod",           "pollinator",     -2.0,   0.5),
             ("Smooth Aster",               "pollinator",      2.0,   1.8),
@@ -1693,7 +1693,7 @@ EXAMPLE_POLYCULTURES = [
             ("Prairie Crocus",             "herbaceous",      0.8,  -1.0),
             ("Dotted Blazingstar",         "pollinator",     -1.0,  -1.2),
             ("Purple Prairie Clover",      "nitrogen_fixer",  1.2,  -1.8),
-            ("Yarrow",                     "soil_builder",   -1.5,  -0.5),
+            ("Boreal Yarrow",                     "soil_builder",   -1.5,  -0.5),
         ],
     },
     {
@@ -1777,7 +1777,7 @@ EXAMPLE_POLYCULTURES = [
                        "knits the ground layer.",
         "members": [
             ("Little Bluestem",    "matrix_grass",    0,    0),
-            ("Sheep Fescue",       "matrix_grass",    1.2,  0.8),
+            ("Rocky Mountain Fescue", "matrix_grass",    1.2,  0.8),
             ("Prairie Coneflower", "pollinator",     -1.0,  0.8),
             ("Blanketflower",      "pollinator",      1.0, -0.8),
             ("Silvery Lupine",     "nitrogen_fixer", -1.1, -0.7),
@@ -1859,7 +1859,7 @@ EXAMPLE_POLYCULTURES = [
                        'height and bird seed; paintbrush, evening primrose, harebell and '
                        'golden alexanders carry colour and pollen across the season.',
         "members": [
-            ('Common Sunflower', 'pollinator', 0.0, 0.0),
+            ('Maximilian Sunflower', 'pollinator', 0.0, 0.0),
             ('Jerusalem Artichoke', 'pollinator', 1.5, 0.0),
             ('Common Paintbrush', 'pollinator', 1.5, 1.5),
             ('Evening Primrose', 'pollinator', 0.0, 1.5),
@@ -2045,7 +2045,7 @@ EXAMPLE_POLYCULTURES = [
             ('Long-fruited Anemone', 'pollinator', -0.7, 1.3),
             ('Crowfoot Violet', 'pollinator', -2.1, 0.0),
             ('Prairie Onion (Textile Onion)', 'pollinator', -0.8, -1.3),
-            ('Short-beaked Agoseris', 'pollinator', 1.1, -1.8),
+            ('Pale Agoseris', 'pollinator', 1.1, -1.8),
         ],
     },
     {
@@ -2193,7 +2193,7 @@ EXAMPLE_POLYCULTURES = [
             ('Early Yellow Oxytropis', 'nitrogen_fixer', 0.0, 1.5),
             ('Yellow-flowered Locoweed', 'nitrogen_fixer', -1.5, 1.5),
             ('Common Twinpod', 'pollinator', -1.5, 0.0),
-            ('Sticky Goldenrod (Mount Albert Goldenrod)', 'pollinator', -1.5, -1.5),
+            ('Sticky Goldenrod', 'pollinator', -1.5, -1.5),
             ('Moss Phlox', 'groundcover', -0.0, -1.5),
             ('Butte Primrose', 'pollinator', 1.5, -1.5),
         ],

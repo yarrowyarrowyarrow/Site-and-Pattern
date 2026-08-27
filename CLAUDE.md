@@ -53,24 +53,39 @@ nativity claim.
 the species page (the built site went 421 MB → **118 MB**, a species page 888 KB
 → **111 KB**, because 846 KB of it was ecoregion polygons repeated 430 times),
 and 171,896 occurrence marks are published with a specimen/observation toggle.
-The nativity inference is **withheld rather than annotated** — 16 species read
-*Not established* and print no province list.
+The nativity inference is **withheld rather than annotated** — the species VASCAN
+could not settle read *Not established* and print no province list.
 
-One thread is open:
+**Those twenty were then sorted and acted on** — see
+[`V2.80-the-names-were-the-problem.md`](docs/plans/V2.80-the-names-were-the-problem.md).
+They held four different reasons, and only five were the introduced species the
+instruction assumed: **8 were renames** (native all along, filed under a name
+VASCAN does not accept), 4 introduced removals, 1 merge (*A. millefolium* into
+*A. borealis*, 332 edges kept), 1 duplicate, 2 recorded-but-not-for-AB/SK, 4
+cultivars. A rename **clears** `native_provinces_source` on purpose, so
+re-running the archive under the corrected name refills it from the archive
+rather than from a transcription. Unsourced 20 → **14**, and 8 of those clear on
+that run. `scripts/rename_taxon.py` is the tool; `KNOWN_NATIVITY_CONFLICTS` is
+now **empty**, because the archive resolved the Stiff Goldenrod pair it existed
+for.
 
-1. **The desktop app still uses the unsourced nativity value.** Those same 16
-   species keep `native_to_alberta`, which drives the native filter and the
-   Habitat Value Score, so the app still recommends on an inference the website
-   now refuses to publish. Blanking it changes what Generate Design produces,
-   so it is its own increment rather than a quiet edit.
+Three threads are open:
 
-Plus what VASCAN left behind, all of it **report-only on purpose**: 11 removals
-(route through `data/excluded_taxa.json` with an authority, per V2.74), 3 + 2
-renames (*Urtica dioica* → *U. gracilis*, *Oligoneuron rigidum* → *Solidago
-rigida* subsp. *rigida* — these move plant ids, `plant_fauna_master.json` keys
-and public URLs, so each is its own increment), and 6 `undetermined` that want
-`fetch_flora_nativity.py --from-archive <path> --explain "<species>"` run on
-them before anybody decides anything.
+1. **The desktop app still uses the unsourced nativity value.** Those species
+   keep `native_to_alberta`, which drives the native filter and the Habitat
+   Value Score, so the app still recommends on an inference the website now
+   refuses to publish. Blanking it changes what Generate Design produces, so it
+   is its own increment rather than a quiet edit.
+2. **The four fruit cultivars.** Deleting them was asked for and not done: they
+   are the centre plant of a seeded community named after one of them, plus 48
+   calendar rows, and the seeder skips missing plants *silently*. The cheaper
+   rule recommended instead — **publish only what has a nativity source** — drops
+   them from the website and keeps them in a design tool where an apple is
+   useful.
+3. **Two species VASCAN records but not here** (*Solidago nemoralis*, *Spiraea
+   douglasii*). Both have plausible native counterparts already carried, but
+   swapping them is a substitution rather than a rename, which is the argument
+   that kept *Helianthus annuus* from being merged.
 
 **This section is stale the moment this work ships.** Delete it then; the plan
 files and the F145–F149 ledger row in `docs/ROADMAP_NEXT.md` are the permanent

@@ -644,20 +644,49 @@ class TestNativityGate(unittest.TestCase):
         errors, _w = self.dq.validate_nativity_consistency()
         self.assertEqual(errors, [])
 
-    def test_the_known_pair_is_a_warning_and_carries_its_reason(self):
-        """Stiff Goldenrod ships twice and the rows disagree. Resolving it means
-        choosing an accepted name, which waits on the taxonomic backbone — so it
-        is recorded with the reason rather than silenced."""
+    def test_the_known_pair_was_resolved_not_re_excused(self):
+        """Stiff Goldenrod shipped twice from V2.69, allowlisted with the reason
+        'waits on F137 (VASCAN)'. V2.80 ran the archive, which treats
+        *Oligoneuron* as a synonym of *Solidago*, so the duplicate row went.
+
+        The allowlist is now empty, and that is the assertion worth keeping: an
+        entry that outlives the thing it excused turns a temporary silence into
+        a permanent one."""
         self.dq.DATA_DIR = self._orig_dir
         _e, warnings = self.dq.validate_nativity_consistency()
-        hits = [w for w in warnings if "stiff goldenrod" in w]
-        self.assertEqual(len(hits), 1, warnings)
-        self.assertIn("Oligoneuron rigidum", hits[0])
-        self.assertIn("F137", hits[0])
+        self.assertEqual([w for w in warnings if "stiff goldenrod" in w], [])
+        self.assertEqual(self.dq.KNOWN_NATIVITY_CONFLICTS, {})
 
-    def test_an_unlisted_pair_is_an_error_not_a_warning(self):
-        """The allowlist buys silence for one named pair, not for the class."""
-        self.assertIn("stiff goldenrod", self.dq.KNOWN_NATIVITY_CONFLICTS)
+    def test_a_listed_pair_is_a_warning_and_an_unlisted_one_is_an_error(self):
+        """The allowlist buys silence for one named pair, not for the class.
+
+        Tested with an injected pair rather than whichever real one happens to
+        be unresolved. The previous version asserted that *Stiff Goldenrod* was
+        listed, so resolving that pair in V2.80 failed a test of a mechanism
+        that had not changed at all."""
+        records = json.loads((self.tmp / "plants_master.json").read_text(encoding="utf-8"))
+        for sci, ab in (("Fictitia exempla", 1), ("Exempla fictitia", 0)):
+            records.append({"scientific_name": sci,
+                            "common_name": "Invented Sage",
+                            "native_to_alberta": ab,
+                            "native_provinces": "AB,SK" if ab else "SK,MB"})
+        self._write("plants_master.json", records)
+
+        errors, _w = self.dq.validate_nativity_consistency()
+        self.assertTrue(any("invented sage" in e.lower() for e in errors),
+                        errors)
+
+        original = dict(self.dq.KNOWN_NATIVITY_CONFLICTS)
+        try:
+            self.dq.KNOWN_NATIVITY_CONFLICTS["invented sage"] = "Because."
+            errors, warnings = self.dq.validate_nativity_consistency()
+            self.assertFalse(any("invented sage" in e.lower() for e in errors),
+                             errors)
+            self.assertTrue(any("invented sage" in w.lower() for w in warnings),
+                            warnings)
+        finally:
+            self.dq.KNOWN_NATIVITY_CONFLICTS.clear()
+            self.dq.KNOWN_NATIVITY_CONFLICTS.update(original)
 
     # ── evidence ───────────────────────────────────────────────────────────
     def test_a_claim_with_no_occurrence_record_anywhere_is_named(self):

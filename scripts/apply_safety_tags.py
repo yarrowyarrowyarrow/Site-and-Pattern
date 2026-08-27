@@ -114,7 +114,7 @@ _SPREAD_BY_SPECIES = {
     "Glycyrrhiza lepidota":  "aggressive_rhizomatous",
     "Maianthemum canadense": "aggressive_rhizomatous",
     "Tanacetum vulgare":     "aggressive_rhizomatous",
-    "Achillea millefolium":  "self_seeding",
+    "Achillea borealis":  "self_seeding",
     "Gaillardia aristata":   "self_seeding",
     "Cornus sericea":        "slow_spreader",
     "Monarda fistulosa":     "slow_spreader",

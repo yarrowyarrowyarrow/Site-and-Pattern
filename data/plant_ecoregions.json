@@ -183,103 +183,6 @@
         "confidence": "low"
       }
     ],
-    "Achillea millefolium": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 618,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 445,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 391,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 341,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 233,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 196,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 192,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 131,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 112,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 92,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 46,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 27,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "wabasca_lowland",
-        "occurrences": 26,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "athabasca_plain",
-        "occurrences": 13,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "western_boreal",
-        "occurrences": 9,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "churchill_river_upland",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "tazin_lake_upland",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mid_boreal_lowland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "western_continental_ranges",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Acorus americanus": [
       {
         "ecoregion": "boreal_transition",
@@ -5652,38 +5555,6 @@
         "confidence": "low"
       }
     ],
-    "Deschampsia caespitosa": [
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 29,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "athabasca_plain",
-        "occurrences": 14,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 8,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Dieteria canescens": [
       {
         "ecoregion": "moist_mixed_grassland",
@@ -7516,23 +7387,6 @@
         "confidence": "medium"
       }
     ],
-    "Festuca ovina": [
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 5,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Festuca saximontana": [
       {
         "ecoregion": "eastern_continental_ranges",
@@ -8841,58 +8695,6 @@
       {
         "ecoregion": "northern_continental_divide",
         "occurrences": 4,
-        "confidence": "low"
-      }
-    ],
-    "Helianthus annuus": [
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 206,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 190,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 65,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 45,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 12,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "wabasca_lowland",
-        "occurrences": 3,
         "confidence": "low"
       }
     ],
@@ -10963,58 +10765,6 @@
         "confidence": "low"
       }
     ],
-    "Maianthemum racemosum": [
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 397,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 230,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 100,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 60,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 49,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 40,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 36,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 25,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "western_boreal",
-        "occurrences": 12,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 10,
-        "confidence": "medium"
-      }
-    ],
     "Maianthemum stellatum": [
       {
         "ecoregion": "aspen_parkland",
@@ -11125,53 +10875,6 @@
       },
       {
         "ecoregion": "slave_river_lowland",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
-    "Mentha arvensis": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 17,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 17,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 14,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 11,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
         "occurrences": 3,
         "confidence": "low"
       }
@@ -16833,78 +16536,6 @@
         "confidence": "low"
       }
     ],
-    "Solidago simplex": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 24,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 16,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 16,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 12,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "athabasca_plain",
-        "occurrences": 11,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 10,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 10,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 6,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "tazin_lake_upland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Sorbus scopulina": [
       {
         "ecoregion": "northern_continental_divide",
@@ -17207,48 +16838,6 @@
       {
         "ecoregion": "boreal_transition",
         "occurrences": 4,
-        "confidence": "low"
-      }
-    ],
-    "Stachys palustris": [
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 15,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 12,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 10,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 9,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 5,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 3,
         "confidence": "low"
       }
     ],
@@ -18292,13 +17881,6 @@
         "confidence": "low"
       }
     ],
-    "Urtica dioica": [
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 6,
-        "confidence": "low"
-      }
-    ],
     "Urtica gracilis": [
       {
         "ecoregion": "aspen_parkland",
@@ -18903,73 +18485,6 @@
         "confidence": "low"
       }
     ],
-    "Viola canadensis": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 1227,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "northern_continental_divide",
-        "occurrences": 308,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 273,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "western_alberta_upland",
-        "occurrences": 261,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "cypress_upland",
-        "occurrences": 188,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 132,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "fescue_grassland",
-        "occurrences": 120,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 81,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "eastern_continental_ranges",
-        "occurrences": 53,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "peace_lowland",
-        "occurrences": 37,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "mixed_grassland",
-        "occurrences": 22,
-        "confidence": "high"
-      },
-      {
-        "ecoregion": "wabasca_lowland",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "western_boreal",
-        "occurrences": 4,
-        "confidence": "low"
-      }
-    ],
     "Viola orbiculata": [
       {
         "ecoregion": "northern_continental_divide",
@@ -19133,6 +18648,253 @@
         "ecoregion": "mixed_grassland",
         "occurrences": 9,
         "confidence": "medium"
+      }
+    ],
+    "Deschampsia cespitosa subsp. cespitosa": [
+      {
+        "ecoregion": "eastern_continental_ranges",
+        "occurrences": 29,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "athabasca_plain",
+        "occurrences": 14,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 8,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 3,
+        "confidence": "low"
+      }
+    ],
+    "Maianthemum amplexicaule": [
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 397,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 230,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "cypress_upland",
+        "occurrences": 100,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 60,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 49,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 40,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "eastern_continental_ranges",
+        "occurrences": 36,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "peace_lowland",
+        "occurrences": 25,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "western_boreal",
+        "occurrences": 12,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 10,
+        "confidence": "medium"
+      }
+    ],
+    "Mentha canadensis": [
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 17,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 17,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 14,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "mid_boreal_uplands",
+        "occurrences": 11,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 7,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 3,
+        "confidence": "low"
+      }
+    ],
+    "Stachys pilosa var. pilosa": [
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 15,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 12,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 10,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "slave_river_lowland",
+        "occurrences": 9,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 5,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "peace_lowland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 3,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 3,
+        "confidence": "low"
+      }
+    ],
+    "Urtica gracilis subsp. gracilis": [
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 6,
+        "confidence": "low"
+      }
+    ],
+    "Viola rugulosa": [
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 1227,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 308,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 273,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 261,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "cypress_upland",
+        "occurrences": 188,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 132,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 120,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mid_boreal_uplands",
+        "occurrences": 81,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "eastern_continental_ranges",
+        "occurrences": 53,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "peace_lowland",
+        "occurrences": 37,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 22,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "wabasca_lowland",
+        "occurrences": 7,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "western_boreal",
+        "occurrences": 4,
+        "confidence": "low"
       }
     ]
   }

@@ -30,6 +30,85 @@
       "removed_on": "2026-08-21",
       "took_with_it": "11 documented plant-fauna edges (10 nectar, 1 seed_food; 8 from iNaturalist via GloBI, 2 Bumble Bee Watch, 1 Cornell Birds of the World) and 1 seeded polyculture membership. No animal was left without an edge, unlike V2.74, which orphaned six.",
       "substitute": "Nuttall's Sunflower (Helianthus nuttallii) — the native tall sunflower of prairie wet meadows and sloughs, same August-September bloom, same bird_food / keystone_species / pollinator uses."
+    },
+    {
+      "scientific_name": "Festuca ovina",
+      "common_names": [
+        "Sheep Fescue"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "0 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Agoseris parviflora",
+      "common_names": [
+        "Short-beaked Agoseris"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "2 documented plant-fauna edges deleted"
+    },
+    {
+      "scientific_name": "Solidago simplex",
+      "common_names": [
+        "Sticky Goldenrod (Mount Albert Goldenrod)"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "2 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Helianthus annuus",
+      "common_names": [
+        "Common Sunflower"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "113 documented plant-fauna edges deleted, 9 animals left with no edge, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Achillea millefolium",
+      "common_names": [
+        "Yarrow"
+      ],
+      "reason": "merged_into_achillea_borealis",
+      "authority": "VASCAN v37.17 records Achillea millefolium as introduced in AB/SK; the native race recorded here is Achillea borealis, which this catalogue already carries. Edges keep their original source and gain renamed_from.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "332 documented plant-fauna edges re-pointed to Boreal Yarrow, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Achillea borealis (Boreal Yarrow)"
+    },
+    {
+      "scientific_name": "Oligoneuron rigidum",
+      "common_names": [],
+      "reason": "duplicate_of_solidago_rigida",
+      "authority": "VASCAN v37.17 treats Oligoneuron as a synonym of Solidago; Solidago rigida was already in the catalogue under the same common name, sourced. The two rows were one plant.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "no edges: the 78 'Stiff Goldenrod' edges key on the common name and stay with Solidago rigida",
+      "substitute": "Solidago rigida (Stiff Goldenrod)",
+      "note": "The common name 'Stiff Goldenrod' is deliberately NOT listed: it continues on Solidago rigida, and listing it here makes the exclusion guard flag the survivor."
+    },
+    {
+      "scientific_name": "Monarda fistulosa (duplicate row)",
+      "common_names": [
+        "Bee Balm (Wild Bergamot)"
+      ],
+      "reason": "duplicate_of_plants_master_row",
+      "authority": "The same species was listed in both plants_master.json and garden_plants.json. The plants_master row is richer and carries a flora-sourced nativity; the garden copy did not.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "nothing; the surviving row keeps the common name",
+      "substitute": "Monarda fistulosa (Wild Bergamot)"
     }
   ]
 }

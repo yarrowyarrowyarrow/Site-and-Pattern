@@ -66,11 +66,16 @@ _AB_EDITORIAL = ("from the catalogue's own Alberta flag, not checked against "
 #: real improvement on printing it bare and is still an inference published as
 #: this site's answer to the question it is named after.
 #:
-#: Deliberately vague about WHY, because the ~16 species this covers differ and
-#: a single specific sentence would be false for some of them: VASCAN records
-#: *Achillea millefolium* as introduced here, has *Urtica dioica* only under a
-#: different accepted taxon, and does not carry *Andropogon gerardii* at all.
-#: "Not established" is true of every one of them; "no flora records it" is not.
+#: Deliberately vague about WHY, because the species this covers differ and a
+#: single specific sentence would be false for some of them. The V2.80 pass
+#: over the original ~16 found four distinct reasons, which is the point:
+#: *Achillea millefolium* was introduced here and the native race was already
+#: carried as *A. borealis*; *Urtica dioica* and seven others were filed under
+#: a name VASCAN does not accept and are sourced the moment they are renamed;
+#: *Solidago nemoralis* and *Spiraea douglasii* are recorded by VASCAN but not
+#: for these two provinces; and the fruit cultivars will never have a flora
+#: entry at all. "Not established" is true of every one of them; "no flora
+#: records it" is true of almost none.
 WITHHELD_NOTE = ("Not established. No source we have read settles which "
                  "provinces this species is native to, and this catalogue "
                  "does not guess.")

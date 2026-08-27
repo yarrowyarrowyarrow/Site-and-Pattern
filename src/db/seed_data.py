@@ -34,11 +34,11 @@ SEED_COMPANIONS: list[tuple] = [
     ("Wild Chives", "Norland Apple",     "friend"),
     ("Wild Chives", "Evans Cherry",      "friend"),
 
-    # Yarrow improves soil and attracts beneficials near most plants
-    ("Yarrow", "Goodland Apple",    "friend"),
-    ("Yarrow", "Norland Apple",     "friend"),
-    ("Yarrow", "Evans Cherry",      "friend"),
-    ("Yarrow", "Saskatoon Berry",   "friend"),
+    # Boreal Yarrow improves soil and attracts beneficials near most plants
+    ("Boreal Yarrow", "Goodland Apple",    "friend"),
+    ("Boreal Yarrow", "Norland Apple",     "friend"),
+    ("Boreal Yarrow", "Evans Cherry",      "friend"),
+    ("Boreal Yarrow", "Saskatoon Berry",   "friend"),
 
     # Native nitrogen-fixers benefit neighbours
     ("Purple Prairie Clover", "Goodland Apple",  "friend"),

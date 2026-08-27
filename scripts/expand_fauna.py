@@ -309,10 +309,10 @@ NEW_LINKS = [
     L("Western Snowberry", "Melospiza melodia", "cover", "generalist", _BIRD),
 
     # Other insects — hover flies / lady beetles / lacewings on open flowers
-    L("Yarrow", "Eristalis tenax", "nectar", "generalist", _BUG),
-    L("Yarrow", "Syrphus ribesii", "nectar", "generalist", _BUG),
-    L("Yarrow", "Chrysoperla carnea", "nectar", "generalist", _BUG),
-    L("Yarrow", "Hippodamia convergens", "nectar", "generalist", _BUG),
+    L("Boreal Yarrow", "Eristalis tenax", "nectar", "generalist", _BUG),
+    L("Boreal Yarrow", "Syrphus ribesii", "nectar", "generalist", _BUG),
+    L("Boreal Yarrow", "Chrysoperla carnea", "nectar", "generalist", _BUG),
+    L("Boreal Yarrow", "Hippodamia convergens", "nectar", "generalist", _BUG),
     L("Canada Goldenrod", "Chauliognathus pensylvanicus", "pollen", "generalist", _BUG),
     L("Canada Goldenrod", "Eristalis tenax", "nectar", "generalist", _BUG),
     L("Late Goldenrod", "Hippodamia convergens", "nectar", "generalist", _BUG),

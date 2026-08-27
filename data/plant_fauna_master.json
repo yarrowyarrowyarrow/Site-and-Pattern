@@ -721,13 +721,6 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Common Sunflower",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "specificity": "generalist",
-  "source": "cornell_birds_of_the_world"
- },
- {
   "plant": "Maximilian Sunflower",
   "fauna": "Spinus tristis",
   "relationship": "seed_food",
@@ -1156,13 +1149,6 @@
   "source": "wilson_carril_2015_bees"
  },
  {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus spp.",
-  "relationship": "nectar",
-  "specificity": "generalist",
-  "source": "wilson_carril_2015_bees"
- },
- {
   "plant": "Maximilian Sunflower",
   "fauna": "Bombus spp.",
   "relationship": "nectar",
@@ -1284,13 +1270,6 @@
  },
  {
   "plant": "Canada Goldenrod",
-  "fauna": "Halictus spp.",
-  "relationship": "pollen",
-  "specificity": "generalist",
-  "source": "wilson_carril_2015_bees"
- },
- {
-  "plant": "Common Sunflower",
   "fauna": "Halictus spp.",
   "relationship": "pollen",
   "specificity": "generalist",
@@ -1581,13 +1560,6 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Common Sunflower",
-  "fauna": "Cyanocitta cristata",
-  "relationship": "seed_food",
-  "specificity": "generalist",
-  "source": "cornell_birds_of_the_world"
- },
- {
   "plant": "Canada Goldenrod",
   "fauna": "Junco hyemalis",
   "relationship": "seed_food",
@@ -1719,32 +1691,36 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis tenax",
   "relationship": "nectar",
   "specificity": "generalist",
-  "source": "acorn_bugs_ab"
+  "source": "acorn_bugs_ab",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Syrphus ribesii",
   "relationship": "nectar",
   "specificity": "generalist",
-  "source": "acorn_bugs_ab"
+  "source": "acorn_bugs_ab",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chrysoperla carnea",
   "relationship": "nectar",
   "specificity": "generalist",
-  "source": "acorn_bugs_ab"
+  "source": "acorn_bugs_ab",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hippodamia convergens",
   "relationship": "nectar",
   "specificity": "generalist",
-  "source": "acorn_bugs_ab"
+  "source": "acorn_bugs_ab",
+  "renamed_from": "Achillea millefolium"
  },
  {
   "plant": "Canada Goldenrod",
@@ -4571,272 +4547,6 @@
  {
   "plant": "Common Snowberry",
   "fauna": "Bombus frigidus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus rubicundus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Triepeolus helianthi",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Triepeolus concavus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Agapostemon virescens",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus fervidus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus griseocollis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus rubicundus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus ternarius",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus huntii",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus rufocinctus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus appositus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus perplexus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus centralis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus nevadensis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus vagans",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus bifarius",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile relativa",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1176699",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus insularis",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1176844",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus huntii",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus mixtus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Danaus plexippus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus terricola",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Cercyonis pegala",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Eristalis tenax",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vanessa cardui",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vanessa atalanta",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Archilochus colubris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Hyles lineata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Chauliognathus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus flavidus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Spinus pinus",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Toxomerus marginatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus cryptarum",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Cyanocitta cristata",
-  "relationship": "fruit_food",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Poecile atricapillus",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus borealis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bombus occidentalis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
   "notes": "GloBI flowersVisitedBy"
@@ -14376,13 +14086,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Sticky Goldenrod (Mount Albert Goldenrod)",
-  "fauna": "Bombus mixtus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Sticky Purple Geranium",
   "fauna": "Megachile relativa",
   "relationship": "pollen",
@@ -17757,340 +17460,388 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus rubicundus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus mixtus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus flavifrons",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Agapostemon virescens",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus fervidus",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Plebejus melissa",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile relativa",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus griseocollis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus sitkensis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus occidentalis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus centralis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus bifarius",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus melanopygus",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus rufocinctus",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus huntii",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus insularis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus nevadensis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus bifarius",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus melanopygus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epeolus compactus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus rubicundus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epeolus minimus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus flavifrons",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia lignaria",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis tenax",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Danaus plexippus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus terricola",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus pensylvanicus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chauliognathus pensylvanicus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Toxomerus marginatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cercyonis pegala",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus ternarius",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Limenitis arthemis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus borealis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epargyreus clarus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus frigidus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Glaucopsyche lygdamus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Nymphalis antiopa",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Phyciodes cocyta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Vanessa cardui",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Papilio canadensis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Aglais milberti",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus flavidus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Papilio rutulus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Vanessa atalanta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colias philodice",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombus vagans",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epeolus compactus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
   "plant": "Yellow Avens",
@@ -18884,396 +18635,84 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Triepeolus concavus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus centralis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus appositus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus flavifrons",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus occidentalis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus huntii",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus insularis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus fervidus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anthophora terminalis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus pensylvanicus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus bifarius",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus griseocollis",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus vagans",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus nevadensis",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus fervidus",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus perplexus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus appositus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Bombus borealis",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus ternarius",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus rufocinctus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus terricola",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus flavifrons",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus centralis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus huntii",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus cryptarum",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus bifarius",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus insularis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus occidentalis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus mixtus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Hemaris thysbe",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Danaus plexippus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Hyles lineata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Anthophora terminalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Epargyreus clarus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Vanessa atalanta",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Hemaris diffinis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Archilochus colubris",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Cercyonis pegala",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Halictus rubicundus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Nymphalis antiopa",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Toxomerus marginatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Agapostemon virescens",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Limenitis arthemis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Chauliognathus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anthophora occidentalis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Vanessa cardui",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anthophora bomboides",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Colias philodice",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Papilio rutulus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile relativa",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
+  "plant": "Wild Bergamot",
   "fauna": "Papilio canadensis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus pensylvanicus",
-  "relationship": "larval_host",
-  "source": "globi_gbif_dataset_acf0d7d1d84c4148",
-  "notes": "GloBI hostOf"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus griseocollis",
-  "relationship": "larval_host",
-  "source": "globi_gbif_dataset_26255917adf24cc3",
-  "notes": "GloBI hostOf"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bombus fervidus",
-  "relationship": "larval_host",
-  "source": "globi_gbif_dataset_58d3f1699b2945b6",
-  "notes": "GloBI hostOf"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Monarda fistulosa (duplicate row, common name 'Bee Balm (Wild Bergamot)')"
  },
  {
   "plant": "Alpine Bistort",
@@ -19406,41 +18845,6 @@
   "fauna": "Pipilo maculatus",
   "relationship": "fruit_food",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Pheucticus melanocephalus",
-  "relationship": "fruit_food",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Haemorhous mexicanus",
-  "relationship": "fruit_food",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Agelaius phoeniceus",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Sitta carolinensis",
-  "relationship": "seed_food",
-  "source": "globi",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Zenaida macroura",
-  "relationship": "seed_food",
-  "source": "globi",
   "notes": "GloBI eatenBy"
  },
  {
@@ -21779,272 +21183,6 @@
   "fauna": "Bombus kirbiellus",
   "relationship": "nectar",
   "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Helophilus latifrons",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Autographa precationis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bibio albipennis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Andrena miserabilis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus ligatus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus farinosus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile perihirta",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Colletes fulgidus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Agapostemon texanus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Melissodes trinodis",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile pugnata",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1176688",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus confusus",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1176698",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Halictus tripartitus",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1165301",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Feltia herilis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Lycomorpha pholus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Syrphus opinator",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Sphex ichneumoneus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Eristalis stipator",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Autographa precationis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Dolichovespula arenaria",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Colias eurytheme",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Cisseps fulvicollis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Batyle suturalis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Toxomerus geminatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Ochlodes sylvanoides",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Diabrotica undecimpunctata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vespula maculifrons",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Agapostemon splendens",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Dolichovespula maculata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Strymon melinus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vanessa virginiensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile latimanus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Feltia jaculifera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Melissodes bimaculatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Euptoieta claudia",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Syrphus rectus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Lygus lineolaris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Speyeria cybele",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"
  },
  {
@@ -29566,20 +28704,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Short-beaked Agoseris",
-  "fauna": "Lasioglossum sisymbrii",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Short-beaked Agoseris",
-  "fauna": "Pontia protodice",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Short-capsuled Willow",
   "fauna": "Lasioglossum sisymbrii",
   "relationship": "nectar",
@@ -31958,13 +31082,6 @@
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
   "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Sticky Goldenrod (Mount Albert Goldenrod)",
-  "fauna": "Gnophaela vermiculata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
  },
  {
   "plant": "Sticky Purple Geranium",
@@ -35530,949 +34647,1084 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Agapostemon texanus",
   "relationship": "pollen",
   "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Gnophaela vermiculata",
   "relationship": "pollen",
   "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus ligatus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus confusus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus farinosus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena prunorum",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile perihirta",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus tripartitus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile onobrychidis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia montana",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Agapostemon texanus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena pallidifovea",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colletes fulgidus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile pugnata",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia coloradensis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hylaeus modestus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum pruinosum",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hylaeus mesillae",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Heriades carinata",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum ruidosense",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum sisymbrii",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena candida",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Heriades cressoni",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum knereri",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum incompletum",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia albolateralis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum cressonii",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena nigrocaerulea",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hoplitis producta",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sphaerophoria contigua",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis stipator",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum albipenne",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum nigroviride",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena amphibola",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena milwaukeensis",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum marinense",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia trevoris",
   "relationship": "nectar",
   "source": "globi_specimen_usda_ars_bbsl1165762",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile frigida",
   "relationship": "nectar",
   "source": "globi_specimen_usda_ars_bbsl1176416",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum knereri",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Trichodes ornatus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Heriades carinata",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum nevadense",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum cressonii",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hylaeus modestus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena prunorum",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus confusus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia californica",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum pruinosum",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus tripartitus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bombylius major",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis dimidiata",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum ruidosense",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum sisymbrii",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eupeodes volucris",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sphaerophoria contigua",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Osmia coloradensis",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena pallidifovea",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena amphibola",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum albipenne",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus ligatus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus farinosus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colletes fulgidus",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile perihirta",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epistrophe emarginata",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bembix americana",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena nivalis",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis hirta",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum incompletum",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Phyciodes tharos",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lycomorpha pholus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Alypia octomaculata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colias eurytheme",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus gibbosus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis dimidiata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis flavipes",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eupeodes americanus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Limenitis archippus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Papilio polyxenes",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ctenucha virginica",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Toxomerus geminatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile latimanus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Trichodes ornatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cisseps fulvicollis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Vanessa virginiensis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Phyciodes mylitta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena miserabilis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Boloria bellona",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euodynerus foraminatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Pontia protodice",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Strymon melinus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Gnophaela vermiculata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eristalis hirta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Batyle suturalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena crataegi",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ancistrocerus catskill",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Polites peckius",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Syrphus rectus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Augochlorella aurata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Dianthidium subparvum",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus ventilabris",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lon hobomok",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Callophrys niphon",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena vicina",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lygus lineolaris",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Papilio eurymedon",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sphex ichneumoneus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Pyrausta orphisalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Carterocephalus mandan",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Speyeria cybele",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium titus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euphydryas anicia",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bembix americana",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Diabrotica undecimpunctata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Helophilus fasciatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea helloides",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Icaricia icarioides",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena hirticincta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epistrophe grossulariae",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Feltia herilis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Celastrina lucia",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cupido comyntas",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Celastrina neglecta",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ancistrocerus adiabatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Argynnis aphrodite",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Trichiotinus assimilis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Melissodes bimaculatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ochlodes sylvanoides",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Coelioxys rufitarsis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Burnsius communis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea hyllus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colias interior",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Speyeria atlantis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Polites themistocles",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Icaricia saepiolus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus ligatus",
   "relationship": "larval_host",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI hostOf"
+  "notes": "GloBI hostOf",
+  "renamed_from": "Achillea millefolium"
  },
  {
   "plant": "Yellow Avens",
@@ -37161,377 +36413,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Epistrophe emarginata",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Dolichovespula maculata",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Bibio albipennis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Speyeria atlantis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Hylaeus annulatus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile melanophaea",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Andrena crataegi",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile latimanus",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Speyeria cybele",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile frigida",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anagrapha falcifera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Dolichovespula maculata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Melissodes bimaculatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Pyrausta orphisalis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Speyeria atlantis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Vespula consobrina",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Limenitis archippus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Toxomerus geminatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Papilio polyxenes",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Feltia herilis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Dolichovespula arctica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Polites peckius",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Ctenucha virginica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Autographa precationis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Euodynerus foraminatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Satyrium titus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Cisseps fulvicollis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Alypia octomaculata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Physocephala tibialis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Argynnis aphrodite",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Strymon melinus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Vanessa virginiensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Ceratina calcarata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Colias eurytheme",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Dolichovespula arenaria",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Heriades carinata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Polites themistocles",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Melissodes trinodis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Ancistrocerus adiabatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Sphex ichneumoneus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lon hobomok",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Feltia jaculifera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Cupido comyntas",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Phyciodes tharos",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Trichodes ornatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Schinia arcigera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lasioglossum cressonii",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Diabrotica undecimpunctata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Halictus confusus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Halictus ligatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Agapostemon splendens",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Trichiotinus assimilis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Augochlorella aurata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Alpine Aster",
   "fauna": "Polistes fuscatus",
   "relationship": "nectar",
@@ -37554,13 +36435,6 @@
  },
  {
   "plant": "Canada Goldenrod",
-  "fauna": "Polistes fuscatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
   "fauna": "Polistes fuscatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
@@ -37749,25 +36623,20 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Polistes fuscatus",
   "relationship": "larval_host",
   "source": "globi_university_of_michigan_museum_of_zoology_insect_division_ful",
-  "notes": "GloBI hostOf"
+  "notes": "GloBI hostOf",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Polistes fuscatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Polistes fuscatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
   "plant": "Alberta Penstemon",
@@ -39945,174 +38814,6 @@
   "relationship": "larval_host",
   "source": "globi_inaturalist_org",
   "notes": "GloBI hostOf"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Nysson plagiatus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Chalcosyrphus nemorum",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Bicyrtes ventralis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Melissodes agilis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile parallela",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Colletes compactus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Melissodes bimatris",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile fidelis",
-  "relationship": "nectar",
-  "source": "globi_specimen_usda_ars_bbsl1176692",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Melissodes subagilis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Perdita albipennis",
-  "relationship": "nectar",
-  "source": "globi_mczbase_mcz_harvard_edu",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Andrena helianthi",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Autographa californica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vespula atropilosa",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Megachile inermis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Danaus gilippus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Poecilanthrax tegminipennis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Polistes aurifer",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Eupeodes perplexus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Lacinipolia olivacea",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Dicerca divaricata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Euodynerus hidalgo",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Dianthidium curvatum",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vespula alascensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Satyrium calanus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
  },
  {
   "plant": "Creeping Oregon Grape",
@@ -51238,1005 +49939,1148 @@
   "notes": "GloBI hostOf"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena erythrogaster",
   "relationship": "pollen",
   "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Prionyx atratus",
   "relationship": "pollen",
   "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Exorista mella",
   "relationship": "pollen",
   "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Anthophora walshii",
   "relationship": "pollen",
   "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Synanthedon albicornis",
   "relationship": "pollen",
   "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Terellia occidentalis",
   "relationship": "pollen",
   "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Halictus virgatellus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum sandhousiellum",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epeolus olympiellus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile rotundata",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile apicalis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum kincaidii",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena columbiana",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Perdita nevadensis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ectemnius arcuatus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Oxybelus emarginatus",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Oxybelus uniglumis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile brevis",
   "relationship": "nectar",
   "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum paraforbesii",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tropidia quadrata",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hylaeus affinis",
   "relationship": "nectar",
   "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lapposyrphus aberrantis",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Villa lateralis",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Paragus haemorrhous",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Villa fulviana",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hemipenthes morioides",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Andrena trevoris",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lapposyrphus lapponicus",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Phyciodes pulchella",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Stelis permaculata",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Anthidium utahense",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile fidelis",
   "relationship": "nectar",
   "source": "globi_specimen_usda_ars_bbsl1176554",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile parallela",
   "relationship": "nectar",
   "source": "globi_specimen_usda_ars_bbsl1176534",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum sedi",
   "relationship": "nectar",
   "source": "globi_specimen_usda_ars_bbsl1175949",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Adela septentrionella",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sericomyia lata",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cortodera subpilosa",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum punctatoventre",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Neorhynchocephalus sackenii",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum mellipes",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Bembix amoena",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum dashwoodi",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Megachile montivaga",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Anastrangalia laetifica",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum laevissimum",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Conophorus sackenii",
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
-  "notes": "GloBI pollinatedBy"
+  "notes": "GloBI pollinatedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Synanthedon bibionipennis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Leucospis affinis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tremex columba",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Coelioxys octodentatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea mariposa",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sceliphron caementarium",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium calanus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Geina tenuidactylus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium californica",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Scathophaga stercoraria",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euodynerus annulatus",
   "relationship": "larval_host",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI hostOf"
+  "notes": "GloBI hostOf",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euodynerus annulatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Dejongia lobidactylus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Copestylum vittatum",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Stratiomys badia",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Gillmeria pallidactyla",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium saepium",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euphydryas chalcedona",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Holcopasites calliopsidis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euodynerus hidalgo",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chlosyne palla",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euphydryas colon",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lasioglossum pectorale",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hedriodiscus binotatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Epicauta puncticollis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lygaeus kalmii",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus bilunatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Plebejus anna",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chlosyne acastus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Antherophagus ochraceus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Synanthedon pictipes",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Judolia montivagans",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium edwardsii",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chalcosyrphus piger",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Ectemnius maculosus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tetracis cachexiata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea nivalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea rubidus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium acadica",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Allograpta obliqua",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Isodontia mexicana",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lepturobosca chrysocoma",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Callophrys spinetorum",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sphaerophoria sulphuripes",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus politus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus sanbornii",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Toxomerus occidentalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Pyrausta subsequalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cercyonis oetus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Tharsalea editha",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hylaeus leptocephalus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Speyeria zerene",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Cerceris nigrescens",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Colias hecla",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Neophasia menapia",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Nomophila nearctica",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium liparops",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Adela septentrionella",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Meliscaeva cinctella",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Coccinella trifasciata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium behrii",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sericomyia chalcopyga",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Albuna pyramidalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Synanthedon polygoni",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus crabroniformis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Chlosyne harrisii",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Trachysida mutabilis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Pieris marginalis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Scelolyperus varipes",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Gnathacmaeops pratensis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Adalia bipunctata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Temnostoma alternans",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Eucera hamata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euphydryas editha",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Calliopsis andreniformis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Stelis lateralis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Euodynerus pratensis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sericomyia lata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Callophrys augustinus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Hesperia juba",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Pyrgus ruralis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Lycaena cupreus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Satyrium sylvinus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Poecilanthrax tegminipennis",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Parnassius clodius",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Sphex lucae",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Heliothis phloxiphaga",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Plagiognathus obscurus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Neurocolpus nubilus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Oeneis melissa",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus solivagus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Anania funebris",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Synchlora aerata",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Parnassius smintheus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Anastrangalia laetifica",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Isodontia elegans",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
-  "plant": "Yarrow",
+  "plant": "Boreal Yarrow",
   "fauna": "Philanthus multimaculatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
+  "notes": "GloBI flowersVisitedBy",
+  "renamed_from": "Achillea millefolium"
  },
  {
   "plant": "Yellow Avens",
@@ -52715,251 +51559,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Volucella bombylans",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Chalcosyrphus nemorum",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile texana",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lyroda subita",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Vespula germanica",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Pseudomasaris vespoides",
-  "relationship": "pollen",
-  "source": "globi_bascompte_clements_r_e_and_f_l_long_1923_experimental_pollin",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Hoplitis pilosifrons",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anthophora walshii",
-  "relationship": "nectar",
-  "source": "globi_clint_otto_russ_bryant_and_ned_h_euliss_jr_2020_the_u_s_geol",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Argynnis idalia",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lebia viridis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Polygonia interrogationis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Cosmopepla lintneriana",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lasius neoniger",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Anthrax irroratus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Epistrophella emarginata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Lacinipolia renigera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Cycnia tenera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Antherophagus ochraceus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Hemaris thetis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Amphipoea americana",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Satyrium calanus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile inermis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Prochoerodes lineola",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Diachrysia aereoides",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Caenurgina crassiuscula",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Scaeva affinis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Megachile gemula",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Brachiacantha ursina",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Pseudohermonassa bicarnea",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Hyles gallii",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Stictoleptura canadensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Melanoplus bivittatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Tremex columba",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Rhingia nasica",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Bee Balm (Wild Bergamot)",
-  "fauna": "Eusarca confusaria",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Chokecherry",
   "fauna": "Orthosia hibisci",
   "relationship": "larval_host",
@@ -52976,27 +51575,6 @@
  {
   "plant": "Chokecherry",
   "fauna": "Lophocampa maculata",
-  "relationship": "larval_host",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Vanessa cardui",
-  "relationship": "larval_host",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Spilosoma virginica",
-  "relationship": "larval_host",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Common Sunflower",
-  "fauna": "Estigmene acrea",
   "relationship": "larval_host",
   "source": "globi_inaturalist_org",
   "notes": "GloBI eatenBy"

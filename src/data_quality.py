@@ -1635,19 +1635,19 @@ def _load_json_list(path) -> list:
 #: buys silence for one specific pair and costs a written reason, so the check
 #: stays loud for every pair nobody has looked at.
 #:
-#: Merging is deliberately not done here. It moves plant ids, the
-#: ``plant_fauna_master.json`` keys that name a plant by common name, and a
-#: public URL — and picking which name survives needs the taxonomic backbone
-#: F137 fetches. Recorded in docs/DATA_GAPS.md.
-KNOWN_NATIVITY_CONFLICTS: dict[str, str] = {
-    "stiff goldenrod":
-        "Solidago rigida and Oligoneuron rigidum are one taxon under two "
-        "names, and the two rows disagree: AB,SK native versus "
-        "native_to_alberta=0, SK,MB. Known since V2.69, which called merging "
-        "them 'a data decision' and left both live. It is now two published "
-        "species pages making opposite claims about one plant. Resolving it "
-        "means choosing an accepted name, which waits on F137 (VASCAN).",
-}
+#: **Empty since V2.80, because its one entry was resolved rather than
+#: re-explained.** It held *Stiff Goldenrod* from V2.69 to V2.80: *Solidago
+#: rigida* and *Oligoneuron rigidum*, one taxon under two names, two published
+#: pages making opposite claims. The entry said resolving it "waits on F137
+#: (VASCAN)", and when the archive arrived it settled the question — VASCAN
+#: treats *Oligoneuron* as a synonym of *Solidago*, so the duplicate row went
+#: and the 78 edges stayed with the survivor's common name.
+#:
+#: Kept as a mechanism, not deleted, because the check behind it is the
+#: valuable part: an entry buys silence for one specific pair and costs a
+#: written reason, so the check stays loud for every pair nobody has looked at.
+#: An empty allowlist is the honest state — no pair is currently excused.
+KNOWN_NATIVITY_CONFLICTS: dict[str, str] = {}
 
 
 def validate_nativity_consistency() -> tuple[list[str], list[str]]:

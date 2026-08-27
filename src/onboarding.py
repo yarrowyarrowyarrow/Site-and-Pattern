@@ -189,7 +189,7 @@ EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
     (("Blue Grama Grass", "Rough Fescue"), (8.2, 1.6)),
     (("Wild Strawberry",), (4.2, 0.9)),
     (("Wild Strawberry",), (7.0, 0.8)),
-    (("Yarrow",), (9.6, 2.0)),
+    (("Boreal Yarrow",), (9.6, 2.0)),
 )
 
 EXAMPLE_NOTES = (

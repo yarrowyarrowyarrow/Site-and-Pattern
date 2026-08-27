@@ -69,8 +69,31 @@ def _load(name: str):
 
 
 def _save(name: str, data) -> None:
-    (PROJECT_ROOT / "data" / name).write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    """Write a data file back **in the format it already had** — see the same
+    function in ``rename_taxon.py``. The occurrence and range files ship
+    compact; re-indenting them costs 3.4x the repository size for a one-key
+    change."""
+    path = PROJECT_ROOT / "data" / name
+    width = _indent_of(path)
+    text = (json.dumps(data, indent=width, ensure_ascii=False) if width
+            else json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    path.write_text(text + "\n", encoding="utf-8")
+
+
+def _indent_of(path: Path) -> int:
+    """The file's own indent width, or ``0`` meaning compact. See the twin in
+    ``rename_taxon.py``: the occurrence and range files ship on one line, and
+    ``plant_fauna_master.json`` is written at **indent=1**, so both obvious
+    defaults are wrong for some file here."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            fh.readline()
+            second = fh.readline()
+    except OSError:
+        return 2
+    if not second.strip():
+        return 0
+    return len(second) - len(second.lstrip(" ")) or 2
 
 
 def find(scientific: str) -> tuple:

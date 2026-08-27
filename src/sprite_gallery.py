@@ -153,7 +153,7 @@ GEOMETRY = [
     ("herb_fireweed",  "Fireweed (erect)", "Tall erect leafy stem, lance leaves spiralling up (Chamaenerion).",
      "Fireweed",          _plain("wildflower", "Chamaenerion angustifolium", 1.4, 0.4, "Fireweed")),
     ("herb_yarrow",    "Yarrow (ferny)", "Low mound of fine feathery foliage under flat flower stalks (Achillea).",
-     "Yarrow",            _plain("wildflower", "Achillea millefolium", 0.5, 0.45, "Yarrow")),
+     "Boreal Yarrow",            _plain("wildflower", "Achillea borealis", 0.5, 0.45, "Boreal Yarrow")),
     ("herb_fleabane",  "Fleabane (rosette)", "Basal leaf rosette under a few wiry flower stalks (Erigeron).",
      "Philadelphia Fleabane", _plain("wildflower", "Erigeron philadelphicus", 0.5, 0.4, "Philadelphia Fleabane")),
     ("herb_aster",     "Aster (clump)", "Bushy upright leafy clump (Symphyotrichum).",

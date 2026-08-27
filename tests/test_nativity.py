@@ -120,17 +120,36 @@ class TestTheSeamVascanArrivesThrough(unittest.TestCase):
                              f"unexpected source value")
 
     def test_the_species_vascan_could_not_settle_keep_no_source(self):
-        """~20 species are a removal, a rename, or a lineage the archive
-        reader could not follow. Stamping those would publish "read from a
-        published flora" over an answer no flora gave, which is the exact
-        overstatement this whole line of work exists to remove."""
-        blank = [r.get("scientific_name") for r in _shipped()
+        """A handful of species are a removal, a rename, or a lineage the
+        archive reader could not follow. Stamping those would publish "read
+        from a published flora" over an answer no flora gave, which is the
+        exact overstatement this whole line of work exists to remove.
+
+        V2.80 worked that list down from ~20: four introduced species were
+        removed, eight were renamed to the accepted taxon (and clear their
+        source until the archive is re-read under the new name), and what is
+        left is two species VASCAN does not record for these provinces plus
+        four fruit cultivars no flora will ever carry. So this names the
+        *reasons* and asserts one live example of each, rather than a list that
+        every data pass invalidates."""
+        rows = _shipped()
+        blank = [r.get("scientific_name") for r in rows
                  if not r.get(N.SOURCE_FIELD)]
         self.assertTrue(blank, "every species sourced: check nothing stamped "
                                "the unresolved ones")
-        for name in ("Urtica dioica", "Helianthus annuus", "Andropogon "
-                     "gerardii"):
-            self.assertIn(name, blank)
+
+        # Renamed, so the source was cleared and waits on the next archive run.
+        self.assertIn("Urtica gracilis subsp. gracilis", blank)
+        # Recorded by VASCAN, but not for Alberta or Saskatchewan.
+        self.assertIn("Spiraea douglasii", blank)
+        # A cultivar; no flora carries it at all.
+        self.assertIn("Prunus tomentosa", blank)
+
+        # Removed outright, so not merely unsourced -- gone.
+        names = {r.get("scientific_name") for r in rows}
+        for gone in ("Helianthus annuus", "Achillea millefolium",
+                     "Oligoneuron rigidum"):
+            self.assertNotIn(gone, names)
 
 
 class TestEveryPublishedClaimIsMarked(unittest.TestCase):
