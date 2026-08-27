@@ -509,15 +509,51 @@
         wheelPxPerZoomLevel: 60
       });
 
-      osmLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 22,
-          maxNativeZoom: 19
-        }
-      ).addTo(map);
+      // ── The basemap, and why it is not CARTO any more (V2.80) ───────────
+      // This was CARTO's Voyager raster CDN, chosen because its muted palette
+      // sits quietly under the shade, contour and planting overlays. CARTO
+      // now requires an API key on that CDN and stamps "API KEY REQUIRED"
+      // across every tile of an anonymous request, which is what a user saw.
+      //
+      // A key is not a fix here: this is a desktop app somebody installs, so
+      // a key baked into the source is the author's key being spent by every
+      // install, and a key per user is a signup between somebody and their
+      // own garden. So the basemap has to be one that needs no key.
+      //
+      // Two are tried in order. Esri first, because the satellite layer below
+      // already uses that host, so it is the one third party known to work
+      // from an install rather than a new dependency taken on faith.
+      // OpenStreetMap's own tiles are the fallback: no key, no account, and
+      // the most licence-clean option there is.
+      var BASEMAPS = [
+        { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+               'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+          opts: { attribution: '© <a href="https://www.esri.com/">Esri</a>',
+                  maxZoom: 22, maxNativeZoom: 19 } },
+        { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          opts: { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                  maxZoom: 22, maxNativeZoom: 19 } }
+      ];
+
+      // Fall back on sustained tile errors, not on the first one: a single
+      // missing tile at the edge of coverage is normal and must not throw the
+      // whole basemap away. A dead or key-gated host fails every tile, so the
+      // count climbs immediately and the swap happens within a screenful.
+      var _baseIndex = 0, _baseErrors = 0;
+      function _useBasemap(i) {
+        if (i >= BASEMAPS.length) { return; }
+        _baseIndex = i; _baseErrors = 0;
+        if (osmLayer) { map.removeLayer(osmLayer); }
+        osmLayer = L.tileLayer(BASEMAPS[i].url, BASEMAPS[i].opts).addTo(map);
+        osmLayer.on('tileerror', function () {
+          _baseErrors += 1;
+          if (_baseErrors >= 8 && _baseIndex === i) {
+            console.warn('[map] basemap ' + i + ' failing; falling back');
+            _useBasemap(i + 1);
+          }
+        });
+      }
+      _useBasemap(0);
 
       // Satellite imagery lives in its own pane (below the tile pane so the
       // shade/contour overlays still draw on top) so the alignment nudge

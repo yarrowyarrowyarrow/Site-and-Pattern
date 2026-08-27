@@ -648,6 +648,53 @@ class TestLayerStackAndClickDispatch(unittest.TestCase):
         cls.src = {p.name: p.read_text(encoding="utf-8")
                    for p in sorted(base.glob("*.js"))}
 
+    def test_the_basemap_needs_no_api_key(self):
+        """A key-gated tile host stamps "API KEY REQUIRED" across every tile
+        and nothing in the app notices.
+
+        This is not hypothetical: CARTO's Voyager CDN was the basemap until
+        V2.80, when it began requiring a key and a user opened the designer to
+        a watermarked map. A key cannot fix it either -- this is an installed
+        desktop app, so a key in the source is the author's quota spent by
+        every install.
+
+        Scoped to the DEFAULT basemap, not to every tile URL in the tree. A
+        keyed host is fine where the user supplies the key themselves and the
+        layer is opt-in: `initMapboxLayer(token)` in 05-features.js takes a
+        token as an argument for sharper satellite, and that is a feature, not
+        this defect. What must never need a key is the ground the designer
+        draws on when somebody opens it for the first time having configured
+        nothing.
+        """
+        core = self.src["01-core.js"]
+        block = re.search(r"var BASEMAPS = \[(.*?)\n      \];", core, re.S)
+        self.assertIsNotNone(block, "no BASEMAPS list to check")
+        KEYED = ("cartocdn.com", "api.mapbox.com", "tiles.stadiamaps.com",
+                 "maps.googleapis.com", "api.maptiler.com",
+                 "tile.thunderforest.com")
+        for host in KEYED:
+            self.assertNotIn(host, block.group(1),
+                             f"the default basemap uses {host}, which "
+                             f"requires an API key per install")
+        for token in ("access_token", "apikey", "api_key", "?key="):
+            self.assertNotIn(token, block.group(1),
+                             f"the default basemap passes {token}")
+        # CARTO is the one that actually bit, and it has no user-key path in
+        # this app at all, so it should not appear anywhere in the map sources.
+        for name, text in self.src.items():
+            self.assertNotIn("cartocdn.com", text, f"{name} is back on CARTO")
+
+    def test_the_basemap_falls_back_rather_than_failing_blank(self):
+        """One dead host must not leave the designer with no ground at all, so
+        the candidates are a list and sustained tile errors advance it."""
+        core = self.src["01-core.js"]
+        self.assertIn("BASEMAPS", core)
+        urls = re.findall(r"url:\s*'([^']+)'", core)
+        self.assertGreaterEqual(len(urls), 2,
+                                "one basemap is a single point of failure")
+        self.assertIn("tileerror", core,
+                      "nothing advances the fallback without this")
+
     def test_boundary_is_drawn_in_its_own_low_pane(self):
         core = self.src["01-core.js"]
         self.assertIn("createPane('boundaryPane')", core)
