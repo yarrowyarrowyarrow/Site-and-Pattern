@@ -35,6 +35,48 @@ The column (`flower_colour_source`), the seeder
 (`data_quality.validate_flower_colour`) and the "not verified" marker on both
 the species page and the website are all in place.
 
+### The source question, settled (V2.80)
+
+**USDA PLANTS was tried and rejected.** It has a structured *Flower Color*
+field, which is far cheaper than parsing prose, so it was the obvious first
+stop. Two problems, in order of discovery:
+
+1. Its Characteristics Search **downloads the result rows, not the
+   characteristics you filtered on**, so a plain export is a name list. The
+   way round it is one download per colour, letting the filter be the label —
+   `--colour-sets` still implements this.
+2. The data itself is wrong here. Checked at the binomial, not the common
+   name, so it is not the *Achillea filipendulina* confusion it could have
+   been: *"They say yarrow is yellow, the giant hyssop is red"*.
+   *A. millefolium* is white and *Agastache foeniculum* is blue.
+
+So the source is **Budd's Flora of the Canadian Prairie Provinces**
+(Agriculture Canada 1662), which is the right authority for this ground and is
+a scanned book with no colour column at all. `src/budds_colour.py` reads the
+colour out of its sentences.
+
+**The point of that module is not extraction, it is making 348 species
+checkable in an evening.** OCR of a 1979 scan will be wrong sometimes and a
+parser reading English will be wrong sometimes, so nothing is written unseen.
+Instead every proposal carries **the book's own sentence**, and the workflow is
+three commands:
+
+```bash
+python scripts/fetch_flower_colour.py --peek budds.txt        # is there text?
+python scripts/fetch_flower_colour.py --from-budds budds.txt  # review sheet
+python scripts/fetch_flower_colour.py --from-review data/fetched/flower_colour_review.tsv --apply
+```
+
+The middle one writes a spreadsheet with one editable column and the quote
+beside it, uncertain rows sorted to the top. Checking a row costs reading a
+sentence rather than looking a species up. A colour outside the catalogue's
+eleven buckets is refused before anything is written.
+
+Two things the parser deliberately will not do: pick between "white or
+pinkish" (real variation, and the catalogue stores one hex, so a person
+chooses), and read a colour from a sentence with no flower word in it — *red
+osier dogwood* is named for its winter stems and has white flowers.
+
 ### How to move this along (V2.51)
 
 The paragraph above used to end at "what this needs is a flora and a network",

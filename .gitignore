@@ -94,9 +94,24 @@ data/fetched/dwca-*/
 # 1,138 wildlife pages and an embedded index, all regenerated from the database
 # in seconds — so committing a copy adds thousands of files that are stale the
 # next time anyone edits a plant. The source is src/static_site*.py + html/site/.
+#
+# The list is by NAME, so it only ever covers the names somebody has already
+# used. V2.80 built into `out/` and 461 MB of site — 2,054 files, photographs
+# included — went into a commit and up to origin, because `out` was not on
+# this list. Add the name you use, or better, build into one already here.
 /site_out/
 /site-out/
 /_site/
+/out/
+/site/
+
+# Dev artefacts written into the repo root by scripts that render a preview.
+# `plot_occurrences.py` writes an 11 MB specimens.html; `retag_releases.py`
+# writes tags-before.txt as its undo note. Both are working files.
+/specimens.html
+/occurrences.html
+/tags-before.txt
+/tags-after.txt
 
 # Saved suite output. The run prints thousands of lines and teeing it to a file
 # while chasing one failure is the normal way to work; the file is a note to

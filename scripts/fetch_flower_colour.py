@@ -168,6 +168,111 @@ def columns(path: Path) -> int:
     return 0
 
 
+REVIEW_PATH = PROJECT_ROOT / "data" / "fetched" / "flower_colour_review.tsv"
+
+
+def budds_review(text_path: Path) -> int:
+    """Turn a flora's prose into a spreadsheet somebody can check in an evening.
+
+    The review file is the whole point. Nothing here is trusted enough to write
+    unseen -- it is OCR of a 1979 scan, read by a parser guessing at English --
+    but **every row carries the book's own sentence**, so checking one costs
+    reading a quote rather than looking a species up. Uncertain rows sort to
+    the top, because those are the ones that need a person.
+    """
+    from src.budds_colour import read
+    from src.flower_colour import COLOUR_SWATCHES
+
+    need = catalogue_needing_colour()
+    findings = read(text_path.read_text(encoding="utf-8", errors="replace"),
+                    list(need))
+    REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:
+        out = csv.writer(fh, delimiter="\t")
+        out.writerow(["scientific_name", "colour", "check", "was",
+                      "what the flora says"])
+        for f in sorted(findings, key=lambda x: (x.confident,
+                                                 x.scientific_name)):
+            out.writerow([f.scientific_name, f.buckets[0],
+                          "" if f.confident else "CHECK",
+                          need.get(f.scientific_name, ""), f.quote])
+
+    unsure = [f for f in findings if not f.confident]
+    print(f"{len(need)} species carry a guessed colour")
+    print(f"  {len(findings):4d} found in this text")
+    print(f"  {len(unsure):4d} of those name more than one colour "
+          f"(marked CHECK, sorted first)")
+    print(f"  {len(need) - len(findings):4d} not found at all\n")
+    print(f"Written to {REVIEW_PATH}")
+    print("\nOpen it in a spreadsheet. One column to edit -- 'colour' -- and\n"
+          "the flora's sentence is on the same row, so a CHECK row is decided\n"
+          "by reading it. Valid values:\n  "
+          + ", ".join(sorted(COLOUR_SWATCHES)))
+    print(f"\nThen: python {Path(__file__).name} --from-review "
+          f"{REVIEW_PATH.name} --apply")
+    return 0
+
+
+def apply_review(path: Path, write: bool) -> int:
+    """Write the colours back, after a person has been over them."""
+    from src.flower_colour import COLOUR_SWATCHES
+
+    rows = list(csv.DictReader(path.read_text(encoding="utf-8").splitlines(),
+                               delimiter="\t"))
+    wanted, bad = {}, []
+    for row in rows:
+        name = (row.get("scientific_name") or "").strip()
+        colour = (row.get("colour") or "").strip().lower()
+        if not name or not colour:
+            continue
+        if colour not in COLOUR_SWATCHES:
+            bad.append(f"{name}: {colour!r}")
+            continue
+        wanted[name] = colour
+
+    if bad:
+        print(f"{len(bad)} row(s) name a colour this catalogue does not have. "
+              f"Nothing written.\n", file=sys.stderr)
+        for b in bad[:15]:
+            print(f"      {b}", file=sys.stderr)
+        print(f"\nValid: {', '.join(sorted(COLOUR_SWATCHES))}", file=sys.stderr)
+        return 1
+
+    still_check = sum(1 for r in rows if (r.get("check") or "").strip())
+    print(f"{len(wanted)} colours ready to write")
+    if still_check:
+        print(f"  {still_check} row(s) still marked CHECK -- they will be "
+              f"written as they stand")
+    if not write:
+        print("\n(report only. Add --apply to write.)")
+        return 0
+
+    changed = 0
+    for name in ("plants_master.json", "garden_plants.json"):
+        path_j = PROJECT_ROOT / "data" / name
+        try:
+            data = json.loads(path_j.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+            colour = wanted.get(row.get("scientific_name", ""))
+            if not colour:
+                continue
+            row["flower_color"] = COLOUR_SWATCHES[colour]
+            # A new provenance value beside name/epithet/estimated: read from a
+            # published regional flora, which is a different and better claim
+            # than a genus default.
+            row["flower_colour_source"] = "budds"
+            changed += 1
+        path_j.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                          encoding="utf-8")
+    print(f"\nWrote {changed} colours as flower_colour_source='budds'.")
+    print("Now: bump _SCHEMA_VERSION, then validate-data, then the suite.")
+    return 0
+
+
 def _canonical(name: str) -> str:
     """A USDA scientific name reduced to the binomial this catalogue keys on.
 
@@ -316,9 +421,44 @@ def main(argv=None) -> int:
                    help="folder of one CSV per colour, each named for the "
                         "colour it holds (blue.csv, yellow.csv, ...). Reports "
                         "coverage; writes nothing without --apply")
+    p.add_argument("--peek", metavar="FILE",
+                   help="look at extracted flora text before parsing it: "
+                        "counts, a sample, and a warning if a PDF came out "
+                        "empty because it is a scan with no text layer")
+    p.add_argument("--from-budds", metavar="FILE", dest="from_budds",
+                   help="read Budd's Flora (as plain text) and write a review "
+                        "spreadsheet: one proposed colour per species, with "
+                        "the sentence it came from beside it")
+    p.add_argument("--from-review", metavar="FILE", dest="from_review",
+                   help="apply the review spreadsheet after you have been "
+                        "over it. Reports without --apply")
     p.add_argument("--apply", action="store_true",
-                   help="with --colour-sets, write the matched colours")
+                   help="with --colour-sets or --from-review, write the "
+                        "colours into the seed data")
     args = p.parse_args(argv)
+
+    if args.peek:
+        from src.budds_colour import peek
+        path = Path(args.peek)
+        if not path.exists():
+            print(f"No file at {path}.", file=sys.stderr)
+            return 1
+        print(peek(path.read_text(encoding="utf-8", errors="replace")))
+        return 0
+
+    if args.from_budds:
+        path = Path(args.from_budds)
+        if not path.exists():
+            print(f"No file at {path}.", file=sys.stderr)
+            return 1
+        return budds_review(path)
+
+    if args.from_review:
+        path = Path(args.from_review)
+        if not path.exists():
+            print(f"No file at {path}.", file=sys.stderr)
+            return 1
+        return apply_review(path, args.apply)
 
     if args.colour_sets:
         folder = Path(args.colour_sets)
