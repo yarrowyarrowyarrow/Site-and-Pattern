@@ -105,6 +105,17 @@ data/fetched/dwca-*/
 /out/
 /site/
 
+# Flora text dumps. `budds_colour.py` reads a flora's prose to get flower
+# colour out of it, and the working file is the book: a copyrighted work that
+# must not be committed, whatever it is named or wherever it is dropped. What
+# belongs in this repository is the DERIVED fact -- "Achillea millefolium is
+# white" is a fact about a plant, not the book's expression of it -- plus the
+# short quote that makes each one checkable.
+*[Ff]lora*.txt
+budds*.txt
+data/fetched/*.txt
+!data/fetched/*_review.tsv
+
 # Dev artefacts written into the repo root by scripts that render a preview.
 # `plot_occurrences.py` writes an 11 MB specimens.html; `retag_releases.py`
 # writes tags-before.txt as its undo note. Both are working files.
