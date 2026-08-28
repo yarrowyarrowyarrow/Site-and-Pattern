@@ -675,6 +675,13 @@ def write_site(model: dict, out_dir: str, *,
 
     copied = sum(1 for v in photo_src.values() if not v.startswith("http"))
     return {"out_dir": str(root),
+            # What a shared link will actually show, resolved the same way the
+            # pages resolved it. Reported rather than left to be grepped out of
+            # the HTML: this is the one thing about a build that **cannot be
+            # checked by looking at the site**, because the failure lives in
+            # somebody else's scraper. "" means links share text only.
+            "share_image": _SHARE.absolute(_SHARE.image),
+            "share_hotlinked": _SHARE.image.startswith(("http://", "https://")),
             "analytics": bool(_ANALYTICS),
             # Named, not just counted: "did this build have analytics in it"
             # and "which one" are different questions, and the second became

@@ -352,6 +352,25 @@ class TestTheRenderedSite(unittest.TestCase):
         self.assertEqual(missing[:5], [],
                          f"{len(missing)} pages share as a bare URL")
 
+    def test_the_build_reports_what_a_shared_link_will_show(self):
+        """The one thing about a build that **cannot be checked by looking at
+        the site**: whether a pasted link shows a picture lives in somebody
+        else's scraper, so a wrong answer is invisible to the person publishing
+        and obvious to everybody else. It goes in the summary, next to the
+        analytics providers, for the same reason those do."""
+        self.assertTrue(self.summary["share_image"].startswith("https://"),
+                        self.summary["share_image"])
+        self.assertIn("share_hotlinked", self.summary)
+
+    def test_a_build_with_no_base_url_reports_a_text_only_card(self):
+        """Rather than reporting a path that will 404 in a scraper."""
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_nobase_"))
+        summary = render.write_site(self.model, str(out), copy_photos=False)
+        # The fixture's photos are hotlinks, which stay absolute and shareable
+        # with or without a base URL. What must not happen is a *relative* path
+        # being reported as if a scraper could fetch it.
+        self.assertFalse(summary["share_image"].startswith("assets/"))
+
     def test_the_share_image_is_absolute(self):
         """The failure with no symptom on the page it is on: a scraper fetches
         `og:image` from its own servers, with no page to resolve a relative
