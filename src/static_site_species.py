@@ -24,6 +24,44 @@ from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
                                     _swatch, _up)
 
 
+def colour_cell_html(entry: dict, primary: str, depth: int) -> str:
+    """The flower-colour cell: a chip per colour, then the provenance mark.
+
+    **Its own function because this cell has been wrong three times, each time
+    by re-deriving an answer the entry was already carrying.**
+
+    * V2.75: it re-derived the provenance from the raw row with three
+      hard-coded cases, so **81 grass, sedge and rush pages read "not
+      verified"** -- a grass is wind-pollinated, so there is no showy flower to
+      have got wrong -- and any provenance word added later would have rendered
+      no mark at all and read as verified.
+    * V2.80: it rendered ``COLOUR_LABELS[classify(row)]``, the PRIMARY colour
+      only, while the entry held "Yellow to orange". The prickly pear, whose
+      yellow hex under a magenta photograph started the whole flower-colour
+      thread, published as "Yellow" on the very build meant to fix it.
+
+    A species with a range gets a chip for each of its colours, because it
+    genuinely belongs on both hub pages and ``search_plants`` already returns
+    it for either query. ``primary`` is the fallback for a row with no range
+    recorded, which is every row no flora has been read for.
+    """
+    from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES
+
+    keys = [k for k in (entry.get("bloom_colours") or ()) if k]
+    if not keys:
+        keys = [primary] if primary else []
+    if not keys:
+        return ""
+    note = (entry.get("bloom_colour_note") or "").strip()
+    mark = f'<span class="src">{_esc(note)}</span>' if note else ""
+    chips = " ".join(
+        f'<a class="chip" href="{_up(depth)}plants/colour/'
+        f'{_esc(hub_slug("colour", key))}/">'
+        f'{_swatch(COLOUR_SWATCHES.get(key, ""))}'
+        f'{_esc(COLOUR_LABELS.get(key, key))}</a>' for key in keys)
+    return f"{chips} {mark}"
+
+
 def render_species(entry: dict, model: dict, photo_src: dict,
                    include_notes: bool = False) -> str:
     from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES, classify
@@ -63,15 +101,7 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     # * Any provenance word added later (`measured`, `flora`, `photo`) would
     #   have rendered no mark at all here and read as verified, which is the
     #   silent-default failure `src.confidence` exists to prevent.
-    colour_cell = ""
-    if colour:
-        note = (entry.get("bloom_colour_note") or "").strip()
-        mark = f'<span class="src">{_esc(note)}</span>' if note else ""
-        colour_cell = (
-            f'<a class="chip" href="{_up(depth)}plants/colour/'
-            f'{_esc(hub_slug("colour", colour))}/">'
-            f'{_swatch(COLOUR_SWATCHES.get(colour, ""))}'
-            f'{_esc(COLOUR_LABELS.get(colour, colour))}</a> {mark}')
+    colour_cell = colour_cell_html(entry, colour, depth)
 
     body = f"""
 {_crumb([("plants/", "Plants"), ("", entry.get("name") or "")], depth)}

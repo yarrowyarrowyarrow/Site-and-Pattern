@@ -488,3 +488,52 @@ class TestThePageSaysTheWholeRange(unittest.TestCase):
                              "flower_colours": "white,pink",
                              "flower_colour_source": "flora"})
         self.assertEqual(got["bloom_colour_note"], "read from a published flora")
+
+
+class TestTheRangeReachesThePublishedPage(unittest.TestCase):
+    """Three times now a colour has been re-derived at the render site instead
+    of read from the entry that already carried it, and each time the page
+    published something the catalogue did not say. See
+    ``static_site_species.colour_cell_html`` for the other two.
+
+    This is the third: the cell rendered the PRIMARY colour's label while the
+    entry held "Yellow to orange", so the prickly pear -- whose yellow hex
+    under a magenta photograph started the whole flower-colour thread --
+    published as "Yellow" on the very build meant to fix it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+        from src.plant_directory import species_entry
+        row = next(r for r in search_plants()
+                   if r.get("scientific_name") == "Opuntia polyacantha")
+        cls.entry = species_entry(row["id"])
+
+    def test_the_entry_carries_the_range(self):
+        self.assertEqual(self.entry["bloom_colours"], ("yellow", "orange"))
+        self.assertEqual(self.entry["bloom_colour_label"], "Yellow to orange")
+
+    def test_the_cell_links_every_colour_of_the_range(self):
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html(self.entry, "yellow", 2)
+        self.assertIn("plants/colour/yellow/", html)
+        self.assertIn("plants/colour/orange/", html,
+                      "the second colour got no chip, so the page publishes "
+                      "less than the catalogue knows")
+
+    def test_a_single_colour_gets_exactly_one_chip(self):
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html({"bloom_colours": ("blue",)}, "blue", 2)
+        self.assertIn("plants/colour/blue/", html)
+        self.assertNotIn("plants/colour/orange/", html)
+
+    def test_a_row_with_no_range_falls_back_to_the_primary(self):
+        """Every row no flora has been read for still has to render."""
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html({}, "purple", 2)
+        self.assertIn("plants/colour/purple/", html)
+
+    def test_nothing_recorded_renders_nothing(self):
+        from src.static_site_species import colour_cell_html
+        self.assertEqual(colour_cell_html({}, "", 2), "")
