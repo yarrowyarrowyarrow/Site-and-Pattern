@@ -624,13 +624,32 @@ class TestTheWildlifeIndexIsSearchable(unittest.TestCase):
                                  r'value="([^"]+)"', self.html))
         self.assertEqual(offered, {"lepidoptera", "bee"})
 
-    def test_an_animal_with_no_photograph_answers_no_photo_filter(self):
-        """P9 as the filter sees it: absent is absent, not a weak yes. Ticking
-        "has a photograph" must drop it rather than keep it as an unknown."""
+    def test_both_halves_of_the_photograph_question_are_askable(self):
+        """P9 as the filter sees it: ticking "has a photograph" must drop the
+        animal we have no picture of, rather than keeping it as an unknown.
+
+        Until V2.80 that was the *only* half you could ask. Photograph and
+        specialist shared one facet called "Also" with a tick each, so "show me
+        the animals still missing a photograph" — the question somebody looking
+        for work to do would ask — could not be put. Every animal now answers
+        both facets with a yes or a no."""
         from src.static_site_wildlife import facets_for
 
-        self.assertIn("photo", facets_for(self._animal("Monarch"))["has"])
-        self.assertNotIn("has", facets_for(self._animal("Prairie Bee")))
+        monarch = facets_for(self._animal("Monarch"))
+        bee = facets_for(self._animal("Prairie Bee"))
+        self.assertEqual(monarch["photo"], ["yes"])
+        self.assertEqual(bee["photo"], ["no"])
+        self.assertEqual(monarch["specialist"], ["yes"])
+        self.assertEqual(bee["specialist"], ["no"])
+        self.assertNotIn("has", monarch)
+
+    def test_the_negative_labels_do_not_overclaim(self):
+        """A missing photograph is a fact about the catalogue and says "yet".
+        A missing specialist record is not proof the animal is a generalist,
+        so the box says "not recorded as" rather than asserting it is not."""
+        self.assertIn("No photograph yet", self.html)
+        self.assertIn("Not recorded as a specialist", self.html)
+        self.assertNotIn(">Also<", self.html)
 
     def test_the_uncredited_animal_photo_is_absent_entirely(self):
         """The licences oblige attribution. An animal photograph with no

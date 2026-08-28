@@ -6,8 +6,8 @@ Design principle P9 — see docs/DESIGN_PHILOSOPHY.md. A catalogue that says
 made reporting an error harder than living with it, which is a strange thing to
 do about the pages it least wants to be wrong.
 
-Asking for more than errors (V2.80)
------------------------------------
+Asking for more than errors, in two lines (V2.80)
+-------------------------------------------------
 The first version was headed *"Tell us what is wrong"* and every line of it
 assumed the reader had found a fault. Reported as:
 
@@ -16,14 +16,23 @@ assumed the reader had found a fault. Reported as:
      improved?'"
 
 Two reasons that framing was costing something. A page that only invites
-complaints gets only complaints, and what people find *useful* is the thing
-this catalogue has no other way of learning, since it counts page views and
-nothing else. And a reader who liked it has nowhere to say so, which makes the
-form feel like a returns desk.
+complaints gets only complaints, and what people find useful is the thing this
+catalogue has no other way of learning, since it counts page views and nothing
+else. And a reader who liked it has nowhere to say so, which makes the form
+feel like a returns desk.
 
-The error path is unchanged and still named, because a wrong flower colour is
-worth more than a compliment. It is now one of the things you might write
-rather than the only one.
+The first rewrite fixed the framing and then explained itself for two
+paragraphs, and the field label asked the question a third time. The second
+correction was about length, not tone:
+
+    "It's still doing too much... The body should simply say exactly this,
+     'What did you like and what can be improved. Corrections are most
+     welcome.' without repeating it above the feedback box."
+
+So the body is that sentence and nothing else, and the label over the box is
+the neutral *"Your message"* rather than a third asking. A label is still
+there, not dropped: a `textarea` with no label is unreachable by name for
+anybody on a screen reader.
 
 The author's ask: *"I think github is too intimidating for most. I'd like it to
 be a box where feedback can be filled in and sent directly from the website, no
@@ -82,16 +91,11 @@ def render_feedback(model: dict, endpoint: str) -> str:
     body = f"""
 {_crumb([("", "Feedback")], 1)}
 <h1>What did you think?</h1>
-<p class="lede">What you found useful is as worth knowing as what you would
-change. This catalogue counts page views and nothing else, so the only way it
-learns which parts are working is if somebody says so.</p>
-<p>Corrections are just as welcome: a flower colour that looks wrong, a plant
-that does not grow where we say it does, a photograph credited to the wrong
-person. Most of what has been fixed here started with one person noticing one
-thing on one page. None of it needs an account.</p>
+<p class="lede">What did you like and what can be improved. Corrections are most
+welcome.</p>
 
 <form class="feedback" method="post" action="{_esc(endpoint)}">
-  <label for="fb-msg">What did you like? What could be better?</label>
+  <label for="fb-msg">Your message</label>
   <textarea id="fb-msg" name="message" rows="8" required
             placeholder="Anything at all. A page that helped, something that
 confused you, a plant you expected to find, or an error."></textarea>
@@ -145,8 +149,8 @@ def _no_endpoint_body() -> str:
     return f"""
 {_crumb([("", "Feedback")], 1)}
 <h1>What did you think?</h1>
-<p class="lede">What you found useful, what you would change, and anything here
-that is simply wrong: all of it is worth knowing.</p>
+<p class="lede">What did you like and what can be improved. Corrections are most
+welcome.</p>
 <p>This build has no feedback address configured, so there is no form here.
 Anything you would have written can go as an issue on the
 <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">project

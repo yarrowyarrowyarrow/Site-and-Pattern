@@ -80,8 +80,12 @@ TAGLINE = ("Native plants of Alberta and Saskatchewan, and the "
 #: different from the shipped one. The browse axes are reached from the home
 #: page and the map page, both of which build their links from the model and so
 #: cannot outrun it.
-_NAV = (("plants/", "Plants"), ("map/", "Ecoregions"),
-        ("wildlife/", "Wildlife"), ("method/", "Method"), ("about/", "About"),
+#:
+#: The order is the author's, set in V2.80: the two catalogues first because
+#: they are what the site is, then where things grow, then how we know, then who
+#: and how to reply. It was plants-ecoregions-wildlife, which split the pair.
+_NAV = (("plants/", "Plants"), ("wildlife/", "Wildlife"),
+        ("map/", "Ecoregions"), ("method/", "Method"), ("about/", "About"),
         ("feedback/", "Feedback"))
 
 #: What this build phones home to, if anything (V2.71; a second provider in

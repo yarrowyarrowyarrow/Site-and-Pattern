@@ -46,7 +46,7 @@ class TestTheFormOnlyExistsWhenItCanSend(unittest.TestCase):
     def test_it_does_not_only_ask_what_is_wrong(self):
         """It was headed "Tell us what is wrong" and every line assumed the
         reader had found a fault. A page that invites only complaints gets
-        only complaints, and what people find *useful* is the thing this
+        only complaints, and what people find useful is the thing this
         catalogue has no other way of learning: it counts page views and
         nothing else.
 
@@ -56,9 +56,21 @@ class TestTheFormOnlyExistsWhenItCanSend(unittest.TestCase):
         for endpoint in (ENDPOINT, ""):
             page = render_feedback({}, endpoint)
             self.assertNotIn("Tell us what is wrong", page)
-            self.assertIn("useful", page)
-            self.assertIn("wrong", page,
+            self.assertIn("What did you like and what can be improved", page)
+            self.assertIn("Corrections are most", page,
                           "reporting an error must still be invited")
+
+    def test_the_ask_is_made_once(self):
+        """The rewrite that fixed the tone said it three times: a lede, a
+        paragraph explaining the lede, and the field label asking again.
+        Reported as "it's still doing too much".
+
+        The label is checked for *presence* in the same breath, because the
+        obvious way to stop repeating the question is to delete the label, and
+        a textarea with no label has no name for a screen reader."""
+        page = render_feedback({}, ENDPOINT)
+        self.assertEqual(page.count("What did you like"), 1)
+        self.assertIn('<label for="fb-msg">Your message</label>', page)
 
 
 class TestItAsksForNothingItDoesNotNeed(unittest.TestCase):
