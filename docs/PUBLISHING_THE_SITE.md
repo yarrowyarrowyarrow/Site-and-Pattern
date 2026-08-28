@@ -37,9 +37,10 @@ the folder is always a fresh snapshot of the database.
 By default **321 of the photographs are hotlinked**, meaning the page points at the
 photo on iNaturalist rather than carrying a copy. That is legal and correctly
 credited, but it means the pages load slower and a photo can disappear if the
-source removes it. To bundle copies instead, warm the local image cache first
-(open the plant browser in the app and scroll through it) and rebuild. The build
-tells you which it did:
+source removes it. To bundle copies instead, run
+`python scripts/warm_photo_cache.py` once (about six minutes) and rebuild. It
+also decides which photograph a shared link carries, so see **Step 5**. The
+build tells you which it did:
 
 ```
 photos: 0 copied from cache, 321 left as links
@@ -285,12 +286,99 @@ Worth knowing so you do not go looking for it:
 - **It works with no scripts.** Filtering uses a small script, but every page is
   readable and every link works with JavaScript switched off.
 
+## Step 5: the picture a shared link shows (V2.80)
+
+When you paste a link to the site into Facebook, Reddit, Slack, Discord or a
+text message, that app fetches your page and unfolds it into a card: a
+headline, a sentence, and a photograph. Every page now carries the tags that
+say what goes in that card.
+
+**The thing to understand about this, because it is genuinely unlike the rest
+of the site: you cannot check it by looking at the site.** The card is
+assembled by somebody else's server. Your pages will look perfect and the card
+can still be a grey box, and you would not find out until a friend pasted the
+link. So two rules and one build line.
+
+### 5a. `--base-url` is not optional any more
+
+Facebook does not open your page and follow a relative path the way a browser
+does. It fetches the image URL on its own, from its own servers, with nothing
+to resolve `assets/photos/prairie-crocus.jpeg` against. A relative path gives
+it nothing, silently.
+
+That is why the image URL has to be absolute, and the only place the build can
+learn your domain is `--base-url`. You are almost certainly already passing it
+(it also writes the `CNAME` file), but now leaving it off costs you the picture
+as well as the domain.
+
+### 5b. Warm the photo cache, so the picture is yours
+
+`build-site` never downloads anything, on purpose. If a photograph is already
+in your local cache it copies it into `public/assets/photos/` and the site
+serves its own copy; if not, the page points at the original iNaturalist URL.
+
+Both work as a share card. Your own copy is better for two reasons: it loads
+from your domain rather than at somebody else's speed, and it survives the
+photographer deleting the original.
+
+```bash
+python scripts/warm_photo_cache.py
+```
+
+**What it does:** downloads every catalogue photograph once into your user data
+folder (beside the database, *not* into the repository, so it survives deleting
+`public/` and does not add 70 MB to git). **Why this command:** the build
+deliberately never fetches, so warming is a separate step you run when you feel
+like it. **How long:** about six minutes, one request per second, because
+iNaturalist asks for no more than 60 a minute. **How to read it:** it reports
+each failure and skips it; a photo that will not download falls back to the
+hotlink it already had, so a partial run is strictly better than none. **Run it
+again any time** and it is nearly free, because anything already cached is
+never re-downloaded.
+
+### 5c. The build now tells you which of the three you got
+
+The last line of `build-site` says what a shared link will actually show:
+
+```
+  share card: https://grownativeplants.ca/assets/photos/prairie-crocus.jpeg
+              (your own copy)
+```
+
+That is the one you want. The other two:
+
+| Line | What it means | Fix |
+|---|---|---|
+| `(hotlinked, run scripts/warm_photo_cache.py to serve your own copy)` | The card **will** show a photo, served from iNaturalist. Fine to publish. | 5b, when you feel like it |
+| `share card: TEXT ONLY. Pass --base-url …` | The card will be a grey box. | 5a |
+| `share card: TEXT ONLY. No species … has a credited photograph` | Nothing in the catalogue is publishable as an image. | Investigate, this should not happen |
+
+### 5d. Checking it for real, after you publish
+
+The tags can only be tested against a live URL. Once the site is up:
+
+* **Facebook:** paste the URL into
+  [developers.facebook.com/tools/debug](https://developers.facebook.com/tools/debug/)
+  and press *Scrape Again*. It shows you the exact card and lists any tag it
+  could not read. **This is also how you fix a stale card** — these services
+  cache aggressively, so if you publish a change and the old blurb keeps
+  appearing, *Scrape Again* is what clears it.
+* **Everywhere else:** paste the link into a Slack message to yourself, or a
+  Discord channel nobody reads. The preview appears in a second or two.
+* **Try a species page too**, not just the home page. A species page shares
+  *that* species' photograph, so `…/plants/prairie-crocus/` and
+  `…/plants/wild-bergamot/` should show different pictures. If they show the
+  same one, the per-page tag is not being read.
+
 ## What to check before you publish
 
 1. Open `public/index.html` locally and click through a species page, the
    ecoregion map, and a wildlife page.
-2. Decide the photo question above (hotlinked or bundled).
-3. Decide whether the 276 unverified flower colours are acceptable to publish
+2. Read the last four lines of the build output: analytics, feedback form,
+   photographs, and **share card**. Each names what it did, and the share-card
+   line is the only one you cannot verify by looking at the site.
+3. Decide the photo question above (hotlinked or bundled).
+4. Decide whether the unverified flower colours are acceptable to publish
    marked as unverified. They are marked honestly, but they are visible.
    `docs/DATA_GAPS.md` has the worklist for closing that.
 
