@@ -493,6 +493,11 @@ def main(argv=None) -> int:
                    help="FILE then optional species names: print the raw block "
                         "found for each, to see OCR quality on real text and "
                         "whether species headings survived as lines")
+    p.add_argument("--peek-genus", nargs="+", metavar="FILE|GENUS",
+                   dest="peek_genus",
+                   help="FILE then optional genus names: show how the book "
+                        "writes a GENUS heading, which is what reading the "
+                        "genus colour needs")
     p.add_argument("--from-budds", metavar="FILE", dest="from_budds",
                    help="read Budd's Flora (as plain text) and write a review "
                         "spreadsheet: one proposed colour per species, with "
@@ -546,6 +551,45 @@ def main(argv=None) -> int:
               "run into\nthe next one (the headings did not survive as "
               "lines)? And is the prose\nreadable, or is the OCR too broken "
               "to parse?")
+        return 0
+
+    if args.peek_genus:
+        from src.budds_colour import _is_heading, normalise
+        path = Path(args.peek_genus[0])
+        if not path.exists():
+            print(f"No file at {path}.", file=sys.stderr)
+            return 1
+        genera = args.peek_genus[1:] or ["Solidago", "Viola", "Astragalus"]
+        lines = normalise(
+            path.read_text(encoding="utf-8", errors="replace")).split("\n")
+        for genus in genera:
+            print(f"\n=== {genus} ===")
+            low = genus.lower()
+            shown = 0
+            for i, line in enumerate(lines):
+                text = line.strip()
+                if low not in text.lower() or len(text) > 160:
+                    continue
+                # A species heading is Genus + lowercase epithet. Anything else
+                # carrying the genus name in a short line is a candidate for
+                # the genus heading, which is what we need the shape of.
+                import re as _re
+                if _re.match(rf"{_re.escape(genus)}\s+[a-z]{{3,}}", text):
+                    continue
+                print(f"  [line {i}] {'HEADING' if _is_heading(text) else '       '} "
+                      f"{text[:130]}")
+                for nxt in lines[i + 1:i + 3]:
+                    print(f"             ... {nxt.strip()[:120]}")
+                shown += 1
+                if shown >= 4:
+                    break
+            if not shown:
+                print("  no genus-level line found (only species headings)")
+        print("\nWhat this is for: a flora states a colour once at the genus "
+              "and then\nnotes only departures from it, so 140 species here "
+              "have no colour of\ntheir own. Reading the genus needs the shape "
+              "of a genus heading, and\nguessing that shape is how the last "
+              "three parser bugs happened.")
         return 0
 
     if args.from_budds:
