@@ -114,7 +114,14 @@ data/fetched/dwca-*/
 *[Ff]lora*.txt
 budds*.txt
 data/fetched/*.txt
-!data/fetched/*_review.tsv
+
+# The flower-colour worksheets. Regenerated in seconds by --from-budds, so
+# committing one only means the next person's run blocks their merge -- which
+# is exactly what happened, silently: the merge aborted, the old code ran, and
+# the output looked like a feature that had not shipped. The DECISIONS live in
+# plants_master.json with their provenance; these are scratch.
+data/fetched/flower_colour_review.tsv
+data/fetched/flower_colour_misses.tsv
 
 # Dev artefacts written into the repo root by scripts that render a preview.
 # `plot_occurrences.py` writes an 11 MB specimens.html; `retag_releases.py`
