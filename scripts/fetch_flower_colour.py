@@ -622,7 +622,34 @@ def main(argv=None) -> int:
         if not path.exists():
             print(f"No file at {path}.", file=sys.stderr)
             return 1
-        genera = args.peek_genus[1:] or ["Solidago", "Viola", "Astragalus"]
+        genera = args.peek_genus[1:]
+        if not genera:
+            # The genera that actually FAILED, read from the last run's misses
+            # file, rather than three picked in advance. 0 of 80 genus headings
+            # were found on the real book, which is a pattern failure and not a
+            # property of the flora -- 23 species did get a genus reading, so
+            # some headings match and 80 do not. Which 80 is a fact about the
+            # scan, and guessing at it from here is how the heading pattern
+            # came to be written for one shape ("Viola violet") that is
+            # evidently not the common one.
+            from src.budds_genus import genus_of
+            try:
+                rows = list(csv.DictReader(
+                    MISSES_PATH.read_text(encoding="utf-8").splitlines(),
+                    delimiter="\t"))
+            except FileNotFoundError:
+                rows = []
+            seen, genera = set(), []
+            for row in rows:
+                if "no flower colour" not in (row.get("why") or ""):
+                    continue
+                g = genus_of(row.get("scientific_name", ""))
+                if g and g not in seen:
+                    seen.add(g)
+                    genera.append(g)
+            genera = genera[:4] or ["Solidago", "Viola", "Astragalus"]
+            print(f"(genera taken from {MISSES_PATH.name}: "
+                  f"{', '.join(genera)})")
         lines = normalise(
             path.read_text(encoding="utf-8", errors="replace")).split("\n")
         for genus in genera:
