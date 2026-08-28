@@ -1,10 +1,29 @@
 """
-static_site_feedback.py — a way to tell us we are wrong, without an account.
+static_site_feedback.py — a way to say what you think, without an account.
 
 Design principle P9 — see docs/DESIGN_PHILOSOPHY.md. A catalogue that says
 "these pages are wrong in places" and then asks you to open a GitHub issue has
 made reporting an error harder than living with it, which is a strange thing to
 do about the pages it least wants to be wrong.
+
+Asking for more than errors (V2.80)
+-----------------------------------
+The first version was headed *"Tell us what is wrong"* and every line of it
+assumed the reader had found a fault. Reported as:
+
+    "The feedback page text focuses on what is wrong. I would like it not to be
+     so negative and more broadly ask 'What did you like? What can be
+     improved?'"
+
+Two reasons that framing was costing something. A page that only invites
+complaints gets only complaints, and what people find *useful* is the thing
+this catalogue has no other way of learning, since it counts page views and
+nothing else. And a reader who liked it has nowhere to say so, which makes the
+form feel like a returns desk.
+
+The error path is unchanged and still named, because a wrong flower colour is
+worth more than a compliment. It is now one of the things you might write
+rather than the only one.
 
 The author's ask: *"I think github is too intimidating for most. I'd like it to
 be a box where feedback can be filled in and sent directly from the website, no
@@ -62,15 +81,20 @@ def render_feedback(model: dict, endpoint: str) -> str:
 
     body = f"""
 {_crumb([("", "Feedback")], 1)}
-<h1>Tell us what is wrong</h1>
-<p class="lede">These pages are wrong in places. A wrong flower colour, a plant
-that does not grow where we say, a photograph credited to the wrong person: all
-of it is useful and none of it needs an account.</p>
+<h1>What did you think?</h1>
+<p class="lede">What you found useful is as worth knowing as what you would
+change. This catalogue counts page views and nothing else, so the only way it
+learns which parts are working is if somebody says so.</p>
+<p>Corrections are just as welcome: a flower colour that looks wrong, a plant
+that does not grow where we say it does, a photograph credited to the wrong
+person. Most of what has been fixed here started with one person noticing one
+thing on one page. None of it needs an account.</p>
 
 <form class="feedback" method="post" action="{_esc(endpoint)}">
-  <label for="fb-msg">What did you find?</label>
+  <label for="fb-msg">What did you like? What could be better?</label>
   <textarea id="fb-msg" name="message" rows="8" required
-            placeholder="Which page, and what is wrong with it."></textarea>
+            placeholder="Anything at all. A page that helped, something that
+confused you, a plant you expected to find, or an error."></textarea>
 
   <label for="fb-page">The page it is about <span class="opt">optional</span></label>
   <input type="text" id="fb-page" name="page" autocomplete="off"
@@ -94,8 +118,8 @@ account, no name, no tracking on this page. If you would rather use GitHub, the
 catalogue and its data are
 <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">public</a>.</p>
 """
-    return _page("Feedback", "Report an error in this catalogue. No account "
-                             "needed.", body, 1)
+    return _page("Feedback", "Tell us what worked and what could be better. "
+                             "No account needed.", body, 1)
 
 
 def render_thanks(model: dict) -> str:
@@ -103,13 +127,13 @@ def render_thanks(model: dict) -> str:
     body = f"""
 {_crumb([("feedback/", "Feedback"), ("", "Sent")], 2)}
 <h1>Thank you</h1>
-<p class="lede">Your report has been received.</p>
-<p>If you left an email we may write back with what we found. If you did not,
-the report is still read: most corrections to this catalogue have come from
-somebody noticing one wrong thing on one page.</p>
+<p class="lede">That has been sent, and it will be read.</p>
+<p>If you left an email we may write back. If you did not, it is still read:
+most of what has changed here began with somebody noticing one thing on one
+page and taking a minute to say so.</p>
 <p><a class="button" href="../../">Back to the catalogue</a></p>
 """
-    return _page("Thank you", "Your report has been received.", body, 2)
+    return _page("Thank you", "Thank you, your message has been sent.", body, 2)
 
 
 def _no_endpoint_body() -> str:
@@ -120,11 +144,11 @@ def _no_endpoint_body() -> str:
     """
     return f"""
 {_crumb([("", "Feedback")], 1)}
-<h1>Tell us what is wrong</h1>
-<p class="lede">These pages are wrong in places, and knowing which is how they
-get better.</p>
+<h1>What did you think?</h1>
+<p class="lede">What you found useful, what you would change, and anything here
+that is simply wrong: all of it is worth knowing.</p>
 <p>This build has no feedback address configured, so there is no form here.
-Errors and photograph credit problems can be reported as issues on the
+Anything you would have written can go as an issue on the
 <a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">project
 repository</a>.</p>
 """

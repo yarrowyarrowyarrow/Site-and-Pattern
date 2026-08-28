@@ -41,7 +41,24 @@ class TestTheFormOnlyExistsWhenItCanSend(unittest.TestCase):
     def test_the_page_exists_either_way(self):
         """The header links it from every page, so it must always be written."""
         for endpoint in (ENDPOINT, ""):
-            self.assertIn("Tell us what is wrong", render_feedback({}, endpoint))
+            self.assertIn("What did you think?", render_feedback({}, endpoint))
+
+    def test_it_does_not_only_ask_what_is_wrong(self):
+        """It was headed "Tell us what is wrong" and every line assumed the
+        reader had found a fault. A page that invites only complaints gets
+        only complaints, and what people find *useful* is the thing this
+        catalogue has no other way of learning: it counts page views and
+        nothing else.
+
+        The error path is deliberately still named. A wrong flower colour is
+        worth more than a compliment; it is just no longer the only thing you
+        are invited to write."""
+        for endpoint in (ENDPOINT, ""):
+            page = render_feedback({}, endpoint)
+            self.assertNotIn("Tell us what is wrong", page)
+            self.assertIn("useful", page)
+            self.assertIn("wrong", page,
+                          "reporting an error must still be invited")
 
 
 class TestItAsksForNothingItDoesNotNeed(unittest.TestCase):
@@ -82,9 +99,12 @@ class TestItWorksWithoutJavaScript(unittest.TestCase):
         self.assertNotIn("onsubmit", page)
 
     def test_there_is_somewhere_to_land_afterwards(self):
+        """The Worker replies with a redirect, so this page IS the
+        confirmation. It has to say plainly that the message arrived, or the
+        reader cannot tell whether their words went anywhere."""
         thanks = render_thanks({})
         self.assertIn("Thank you", thanks)
-        self.assertIn("has been received", thanks)
+        self.assertIn("has been sent", thanks)
 
 
 class TestTheBotTrap(unittest.TestCase):
