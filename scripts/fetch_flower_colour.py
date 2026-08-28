@@ -193,10 +193,11 @@ def budds_review(text_path: Path) -> int:
         out = csv.writer(fh, delimiter="\t")
         out.writerow(["scientific_name", "colour", "check", "matched_on",
                       "was", "what the flora says"])
-        for f in sorted(findings, key=lambda x: (x.confident,
+        for f in sorted(findings, key=lambda x: (x.found_as == "name",
                                                  x.scientific_name)):
-            out.writerow([f.scientific_name, f.buckets[0],
-                          "" if f.confident else "CHECK", f.found_as,
+            out.writerow([f.scientific_name, ",".join(f.buckets),
+                          "" if f.found_as == "name" else "CHECK",
+                          f.found_as,
                           need.get(f.scientific_name, ""), f.quote])
 
     # "Not found" was hiding two different problems, and which one dominates
@@ -220,11 +221,14 @@ def budds_review(text_path: Path) -> int:
             out.writerow([name, "not in this book under either name",
                           common.get(name, "")])
 
-    unsure = [f for f in findings if not f.confident]
+    unsure = [f for f in findings if f.found_as != "name"]
     print(f"{len(need)} species carry a guessed colour")
     print(f"  {len(findings):4d} found with a colour")
-    print(f"  {len(unsure):4d} of those need a look "
-          f"(more than one colour, or matched on common name)")
+    multi = [f for f in findings if len(f.buckets) > 1]
+    print(f"  {len(multi):4d} of those bloom in more than one colour, "
+          f"kept as a range")
+    print(f"  {len(unsure):4d} need a look (matched on common name, not "
+          f"binomial)")
     print(f"  {len(silent):4d} described in the book, but it states no flower "
           f"colour for them")
     print(f"  {len(absent):4d} not in this book under either name\n")
@@ -245,16 +249,25 @@ def apply_review(path: Path, write: bool) -> int:
 
     rows = list(csv.DictReader(path.read_text(encoding="utf-8").splitlines(),
                                delimiter="\t"))
+    # A row may name a range -- "white,pink" -- because a flora describes one.
+    # The first is the primary hex; the whole list is what the filter reads.
     wanted, bad = {}, []
     for row in rows:
         name = (row.get("scientific_name") or "").strip()
-        colour = (row.get("colour") or "").strip().lower()
-        if not name or not colour:
+        listed = [c.strip().lower()
+                  for c in (row.get("colour") or "").split(",") if c.strip()]
+        if not name or not listed:
             continue
-        if colour not in COLOUR_SWATCHES:
-            bad.append(f"{name}: {colour!r}")
+        unknown = [c for c in listed if c not in COLOUR_SWATCHES]
+        if unknown:
+            bad.append(f"{name}: {', '.join(repr(u) for u in unknown)}")
             continue
-        wanted[name] = colour
+        seen, keys = set(), []
+        for key in listed:
+            if key not in seen:
+                seen.add(key)
+                keys.append(key)
+        wanted[name] = keys
 
     if bad:
         print(f"{len(bad)} row(s) name a colour this catalogue does not have. "
@@ -283,18 +296,25 @@ def apply_review(path: Path, write: bool) -> int:
         for row in data:
             if not isinstance(row, dict):
                 continue
-            colour = wanted.get(row.get("scientific_name", ""))
-            if not colour:
+            keys = wanted.get(row.get("scientific_name", ""))
+            if not keys:
                 continue
-            row["flower_color"] = COLOUR_SWATCHES[colour]
-            # A new provenance value beside name/epithet/estimated: read from a
-            # published regional flora, which is a different and better claim
-            # than a genus default.
-            row["flower_colour_source"] = "budds"
+            # The primary hex stays a single colour, because the 3D viewer and
+            # every swatch draw one. The list is the whole answer.
+            row["flower_color"] = COLOUR_SWATCHES[keys[0]]
+            row["flower_colours"] = ",".join(keys)
+            # "flora" -- the mark src.confidence already defines as "read
+            # from a published flora", inferred=False. NOT "budds": an
+            # unknown mark comes back recorded=False and labelled "not
+            # recorded", which would have printed the opposite of the truth on
+            # every page whose colour had just been sourced.
+            row["flower_colour_source"] = "flora"
             changed += 1
         path_j.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
                           encoding="utf-8")
-    print(f"\nWrote {changed} colours as flower_colour_source='budds'.")
+    ranges = sum(1 for k in wanted.values() if len(k) > 1)
+    print(f"\nWrote {changed} colours as flower_colour_source='flora', "
+          f"{ranges} of them a range.")
     print("Now: bump _SCHEMA_VERSION, then validate-data, then the suite.")
     return 0
 

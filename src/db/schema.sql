@@ -63,6 +63,12 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Flower colour + form (schema v31, V1.90) — drives real-coloured flowers in
     -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
     flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
+    -- Every colour it blooms in, comma-separated bucket keys, primary first
+    -- (schema v81, V2.80). A flora says "white to pinkish", not "white";
+    -- one hex could not hold that and the range is the information. Blank
+    -- means nobody has read a flora for this row, and flower_color is then
+    -- the only answer there is.
+    flower_colours TEXT DEFAULT '',
     -- Where that hex came from (schema v64, V2.48). The colour was seeded at
     -- GENUS level and nothing recorded that: 32 genera had 3+ species sharing
     -- one hex, so both columbines were red. Once colour became filterable

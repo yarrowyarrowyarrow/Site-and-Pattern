@@ -445,7 +445,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # catalogue systematically under-reported northern occurrence for its sixteen
 # most-recorded species, and nothing could see it, because a truncated harvest
 # and a complete one look identical once cached.
-_SCHEMA_VERSION = 80
+_SCHEMA_VERSION = 81
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -844,6 +844,36 @@ def _migrate_to_v79(conn: sqlite3.Connection):
         conn.execute(
             "ALTER TABLE plants "
             "ADD COLUMN native_provinces_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
+    conn.commit()
+
+
+def _migrate_to_v81(conn: sqlite3.Connection):
+    """Every colour a flower blooms in, not just one (V2.80).
+
+    Reading Budd's Flora produced 146 sourced colours and **76 of them named
+    more than one**: *"Heads numerous, in a flattopped inflorescence, white to
+    pinkish"*, *"Flowers showy, yellow to pinkish orange"*. One hex could not
+    hold that, so the tool asked a person to arbitrate 76 rows -- and
+    arbitrating them discards exactly what the flora was consulted for. The
+    prickly pear is the case in miniature: it had a yellow hex and a magenta
+    photograph above it, and both were right.
+
+    ``flower_color`` stays the primary hex, so the 3D viewer, the swatches and
+    every screen that draws one colour are untouched. This column is the full
+    list, comma-separated, primary first, and blank for any row no flora has
+    been read for -- which is the honest state and the one every row starts in.
+
+    Additive and idempotent, like the rest of the chain. It pairs with the
+    ``search_plants(flower_colours=...)`` filter that has existed since V2.47:
+    that argument names the colours a reader is looking for, this column names
+    the colours a plant has, and a species that is white to pink now answers
+    both queries because it is both.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_colours TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass                              # column already present
     conn.commit()
@@ -1887,6 +1917,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("availability_class", ""),
             p.get("sourcing_notes", ""),
             p.get("flower_color", ""),
+            p.get("flower_colours", ""),
             p.get("flower_form", "none"),
             p.get("fruit_color", ""),
             p.get("fruit_form", ""),
@@ -1937,7 +1968,8 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes, flower_color, flower_form, fruit_color, fruit_form,
+            sourcing_notes, flower_color, flower_colours, flower_form,
+            fruit_color, fruit_form,
             image_url, image_attribution, image_license,
             leaf_shape, leaf_size_cm, leaf_arrangement,
             bark_color, fall_color, branching, growth_form,
@@ -1950,7 +1982,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             native_provinces_source)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -2090,6 +2122,9 @@ def init_db() -> None:
 
         if current_version < 79:
             _migrate_to_v79(conn)
+
+        if current_version < 81:
+            _migrate_to_v81(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -2900,12 +2935,17 @@ def _colour_filter(plants: list[dict], colours) -> list[dict]:
     A plant with no recorded colour is excluded rather than assumed, matching
     ``_month_filter``: "we don't know what colour this flowers" is not the claim
     "it flowers white" (P9).
+
+    Since V2.80 it asks ``matches`` rather than ``classify``, so a species a
+    flora describes as *white to pinkish* answers a white query **and** a pink
+    one. It is both, and picking one to file it under was the thing reading a
+    flora was supposed to stop.
     """
     wanted = {str(c) for c in (colours or []) if str(c).strip()}
     if not wanted:
         return plants
-    from src.flower_colour import classify
-    return [p for p in plants if classify(p) in wanted]
+    from src.flower_colour import matches
+    return [p for p in plants if matches(p, wanted)]
 
 
 def _month_filter(plants: list[dict], column: str, months) -> list[dict]:

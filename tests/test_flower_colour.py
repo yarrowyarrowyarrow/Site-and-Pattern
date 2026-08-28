@@ -352,3 +352,106 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
         blank = [p["common_name"] for p in coloured
                  if not _bloom_colour(p)["bloom_colour_label"]]
         self.assertEqual(blank, [])
+
+
+class TestAFlowerCanBloomInMoreThanOneColour(unittest.TestCase):
+    """*"Flowers that list multiple colours should have that possibility in the
+    code."*
+
+    Reading Budd's produced 146 sourced colours and 76 named more than one:
+    "white to pinkish", "yellow to pinkish orange". Asking a person to pick one
+    of each pair discards the very thing the flora was consulted for -- and the
+    prickly pear is the case in miniature, since it had a yellow hex and a
+    magenta photograph and both were right.
+    """
+
+    def test_a_range_reads_back_in_order(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea", "flower_colours": "white,pink"}),
+            ("white", "pink"))
+
+    def test_the_primary_bucket_is_unchanged_by_the_range(self):
+        """Every screen that draws one swatch must keep working."""
+        from src.flower_colour import classify
+        row = {"flower_color": "#f2f2ea", "flower_colours": "white,pink"}
+        self.assertEqual(classify(row), "white")
+
+    def test_a_row_with_no_range_falls_back_to_its_hex(self):
+        from src.flower_colour import colours
+        self.assertEqual(colours({"flower_color": "#f2c11e"}), ("yellow",))
+
+    def test_a_row_with_no_colour_at_all_has_none(self):
+        from src.flower_colour import colours
+        self.assertEqual(colours({"flower_color": ""}), ())
+
+    def test_a_two_coloured_species_answers_both_queries(self):
+        """The point of the whole change: white-to-pink is white AND pink."""
+        from src.flower_colour import matches
+        row = {"flower_color": "#f2f2ea", "flower_colours": "white,pink"}
+        self.assertTrue(matches(row, ["white"]))
+        self.assertTrue(matches(row, ["pink"]))
+        self.assertFalse(matches(row, ["blue"]))
+
+    def test_junk_in_the_list_is_ignored_not_trusted(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea",
+                     "flower_colours": "white,chartreuse,pink"}),
+            ("white", "pink"))
+
+    def test_duplicates_collapse(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea",
+                     "flower_colours": "white,white,pink"}),
+            ("white", "pink"))
+
+    def test_a_grass_is_still_straw_whatever_the_list_says(self):
+        """The wind-pollinated rule is the primary one and a range must not
+        route around it: a seed head is not a bloom."""
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#cbbd80", "plant_type": "grass",
+                     "flower_colours": "white,pink"}),
+            ("straw",))
+
+
+class TestThePageSaysTheWholeRange(unittest.TestCase):
+    """Printing only the first of "white to pinkish" throws away the half that
+    explains why the photograph above it looks wrong."""
+
+    def _label(self, **row):
+        from src.plant_directory import _bloom_colour
+        return _bloom_colour(row)["bloom_colour_label"]
+
+    def test_two_colours_read_as_a_range(self):
+        self.assertEqual(
+            self._label(flower_color="#f2f2ea", flower_colours="white,pink"),
+            "White to pink")
+
+    def test_three_or_more_read_as_a_list(self):
+        """"yellow to pinkish orange" is a range; three colours is a set."""
+        self.assertEqual(
+            self._label(flower_color="#f2c11e",
+                        flower_colours="yellow,pink,orange"),
+            "Yellow, Pink and orange")
+
+    def test_one_colour_is_unchanged(self):
+        self.assertEqual(self._label(flower_color="#f2c11e"), "Yellow")
+
+    def test_a_grass_still_says_seed_heads(self):
+        self.assertEqual(
+            self._label(flower_color="#cbbd80", plant_type="grass",
+                        flower_colours="white,pink"),
+            "Straw or green seed heads")
+
+    def test_a_flora_sourced_colour_is_not_marked_unverified(self):
+        """'flora' is a mark src.confidence already knows. 'budds' is not: it
+        comes back recorded=False and labelled 'not recorded', which would have
+        printed the opposite of the truth on every page just sourced."""
+        from src.plant_directory import _bloom_colour
+        got = _bloom_colour({"flower_color": "#f2f2ea",
+                             "flower_colours": "white,pink",
+                             "flower_colour_source": "flora"})
+        self.assertEqual(got["bloom_colour_note"], "read from a published flora")

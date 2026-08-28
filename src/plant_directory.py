@@ -463,24 +463,42 @@ def _bloom_colour(plant: dict) -> dict:
     Empty strings where the catalogue records nothing, so a caller can print the
     block or skip it without testing for a sentinel.
     """
-    from src.flower_colour import COLOUR_LABELS, classify      # noqa: PLC0415
+    from src.flower_colour import (                            # noqa: PLC0415
+        COLOUR_LABELS, classify, colours,
+    )
     key = classify(plant)
     if not key:
         return {"bloom_colour": "", "bloom_colour_label": "",
-                "bloom_colour_note": ""}
+                "bloom_colour_note": "", "bloom_colours": ()}
     if key == "straw":
         # A grass is not an unverified purple. Its bucket comes from the family
         # being wind-pollinated, which is a botanical fact rather than a guess
         # somebody has yet to check, so the provenance wording does not apply.
         return {"bloom_colour": key,
                 "bloom_colour_label": "Straw or green seed heads",
-                "bloom_colour_note": "wind-pollinated, so no showy flower"}
+                "bloom_colour_note": "wind-pollinated, so no showy flower",
+                "bloom_colours": (key,)}
     from src.confidence import mark                          # noqa: PLC0415
     source = (plant.get("flower_colour_source") or "").strip()
     m = mark(source)
+    keys = colours(plant) or (key,)
+    # A flora writes "white to pinkish", and printing only the first of those
+    # throws away the half of the answer that explains why the photograph
+    # above it looks wrong. Two colours read as a range because that is what
+    # the book means; three or more are listed, because "yellow to pinkish
+    # orange" is a range and "white, pink and purple" is a set.
+    if len(keys) == 1:
+        label = COLOUR_LABELS.get(keys[0], keys[0])
+    elif len(keys) == 2:
+        label = (f"{COLOUR_LABELS.get(keys[0], keys[0])} to "
+                 f"{COLOUR_LABELS.get(keys[1], keys[1]).lower()}")
+    else:
+        named = [COLOUR_LABELS.get(k, k) for k in keys]
+        label = ", ".join(named[:-1]) + " and " + named[-1].lower()
     return {
         "bloom_colour": key,
-        "bloom_colour_label": COLOUR_LABELS.get(key, key),
+        "bloom_colours": keys,
+        "bloom_colour_label": label,
         # No mark on a value somebody checked, and nothing at all when the
         # column is empty — the shared rule from src.confidence.annotate.
         "bloom_colour_note": m.label if (m.recorded and source) else "",
