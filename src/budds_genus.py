@@ -105,17 +105,28 @@ def uniformity(findings: Iterable) -> dict:
 
 
 def inherit(text: str, wanted: Iterable[str], common: dict,
-            species_findings: Iterable) -> list:
+            species_findings: Iterable, measured_from: Iterable = None) -> list:
     """Findings for species the book describes but states no colour for.
 
-    ``species_findings`` are the species-level readings, used twice: to know
-    which species still need a colour, and to measure whether their genus is
-    uniform enough to lend one.
+    ``species_findings`` says which species still need a colour.
+    ``measured_from`` is what the genus is *tested* against, and it has to be
+    a different set.
+
+    **They were the same set at first, and it silently disabled the test.**
+    The species that state their own colour had already been applied in an
+    earlier pass, so they no longer appeared in "needs a colour" -- leaving
+    nothing to measure uniformity against, and all 23 inheritances came back
+    ``untested`` when *Solidago* alone should have been uniform. A test with
+    an empty sample does not fail loudly; it just stops testing.
+
+    So the caller passes readings over the **whole catalogue**, sourced or
+    not, and the genus is judged on every species of it the book describes.
     """
     from src.budds_colour import blocks
 
     done = {f.scientific_name for f in species_findings}
-    uni = uniformity(species_findings)
+    uni = uniformity(measured_from if measured_from is not None
+                     else species_findings)
     todo = [n for n in wanted if n not in done]
     described = blocks(text, todo, common)
 

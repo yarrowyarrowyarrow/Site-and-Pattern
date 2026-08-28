@@ -192,7 +192,14 @@ def budds_review(text_path: Path) -> int:
     findings = read(text, list(need), common)
     # A flora states the colour once at the genus and notes only departures,
     # so the species with no sentence of their own are not a gap in the book.
-    genus_rows = needs_checking(inherit(text, list(need), common, findings))
+    #
+    # Uniformity is measured over the WHOLE catalogue, not over the species
+    # still needing a colour. The species that state their own were applied in
+    # an earlier pass and have left that list, so measuring there left nothing
+    # to test against and every inheritance came back "untested".
+    everything = read(text, list(common), common)
+    genus_rows = needs_checking(
+        inherit(text, list(need), common, findings, measured_from=everything))
     findings = list(findings) + genus_rows
     REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:

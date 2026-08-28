@@ -154,5 +154,44 @@ class TestTheProvenanceIsItsOwn(unittest.TestCase):
         self.assertNotEqual(mark("flora_genus").label, mark("flora").label)
 
 
+
+class TestTheUniformityTestNeedsTheWholeCatalogue(unittest.TestCase):
+    """The bug that made this feature useless on its first real run.
+
+    Uniformity was measured over the species still NEEDING a colour. But the
+    species that state their own had been applied in an earlier pass and had
+    left that list -- so there was nothing to measure against, and all 23
+    inheritances came back "untested" when *Solidago* alone should have been
+    uniform.
+
+    A test with an empty sample does not fail loudly. It just stops testing,
+    and reports a confident-sounding "untested" for everything.
+    """
+
+    def test_a_genus_is_judged_on_species_that_are_not_in_wanted(self):
+        """Solidago canadensis states yellow. It is deliberately absent from
+        `wanted` here, standing for a species sourced in an earlier pass -- and
+        the genus must still be measured on it."""
+        needing = ["Solidago rigida"]
+        whole = read(FLORA, WANT)          # the catalogue, sourced or not
+        got = inherit(FLORA, needing, {}, read(FLORA, needing),
+                      measured_from=whole)
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].found_as, "genus (uniform)")
+
+    def test_without_the_whole_catalogue_it_reads_untested(self):
+        """The failing behaviour, pinned so nobody restores it by simplifying
+        the signature back to one set."""
+        needing = ["Solidago rigida"]
+        got = inherit(FLORA, needing, {}, read(FLORA, needing))
+        self.assertEqual(got[0].found_as, "genus (untested)")
+
+    def test_a_variable_genus_is_still_caught_across_the_whole_catalogue(self):
+        needing = ["Viola canadensis"]
+        whole = read(FLORA, WANT)
+        got = inherit(FLORA, needing, {}, read(FLORA, needing),
+                      measured_from=whole)
+        self.assertEqual(got[0].found_as, "genus (variable)")
+
 if __name__ == "__main__":
     unittest.main()
