@@ -1628,7 +1628,7 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "native_to_alberta": 1,
+    "native_to_alberta": 0,
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
@@ -1639,7 +1639,7 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK",
+    "native_provinces": "SK",
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
@@ -1649,7 +1649,7 @@
     "renamed_from": "Andropogon gerardii",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Big Sagebrush",
@@ -3496,7 +3496,7 @@
     "renamed_from": "Oenothera caespitosa",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Canada Anemone",
@@ -6498,7 +6498,7 @@
     "renamed_from": "Maianthemum racemosum",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Field Chickweed",
@@ -11000,7 +11000,7 @@
     "renamed_from": "Stachys palustris",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Marsh Marigold",
@@ -20738,7 +20738,7 @@
     "renamed_from": "Urtica dioica",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Strawberry Spinach",
@@ -22169,7 +22169,7 @@
     "renamed_from": "Deschampsia caespitosa",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Tufted Tall Manna Grass",
@@ -23194,7 +23194,7 @@
     "renamed_from": "Viola canadensis",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Western Fescue",
@@ -24833,7 +24833,7 @@
     "renamed_from": "Mentha arvensis",
     "renamed_authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the accepted taxon recorded as native in AB/SK.",
     "renamed_on": "2026-08-27",
-    "native_provinces_source": ""
+    "native_provinces_source": "flora"
   },
   {
     "common_name": "Wild Raspberry",

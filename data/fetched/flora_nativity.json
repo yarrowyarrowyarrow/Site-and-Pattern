@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generated": "2026-08-25",
- "source": "VASCAN Darwin Core Archive, read from dwca-vascan-v37.17.zip on 2026-08-25",
+ "generated": "2026-08-28",
+ "source": "VASCAN Darwin Core Archive, read from dwca-vascan-v37.17.zip on 2026-08-28",
  "comment": "Per-province establishment means and accepted names for the plant catalogue. Read by scripts/ingest_flora_nativity.py, which PROPOSES changes and does not apply them. `origin: unstated` is a real answer and must not be rounded to a verdict.",
  "provinces_asked": [
   "AB",
@@ -80,24 +80,6 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Achillea millefolium": {
-   "matched": true,
-   "accepted_name": "Achillea millefolium Linnaeus",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "AB": "introduced",
-    "SK": "introduced",
-    "MB": "introduced"
-   },
-   "raw_matches": 34,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "introduced",
-   "verdict": "not_here",
-   "why": "VASCAN records it as introduced in AB, SK."
-  },
   "Acorus americanus": {
    "matched": true,
    "accepted_name": "Acorus americanus (Rafinesque) Rafinesque",
@@ -169,22 +151,6 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
-  },
-  "Agoseris parviflora": {
-   "matched": true,
-   "accepted_name": "Agoseris parviflora (Nuttall) D. Dietrich",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "SK": "excluded"
-   },
-   "raw_matches": 1,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "introduced",
-   "verdict": "not_here",
-   "why": "VASCAN records it as introduced in SK."
   },
   "Agrimonia striata": {
    "matched": true,
@@ -318,9 +284,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
+    "AB": "native",
     "SK": "native",
-    "MB": "native",
-    "AB": "native"
+    "MB": "native"
    },
    "raw_matches": 7,
    "has_distribution": true,
@@ -366,19 +332,22 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Andropogon gerardii": {
-   "matched": false,
-   "accepted_name": "",
+  "Andropogon gerardi": {
+   "matched": true,
+   "accepted_name": "Andropogon gerardi Vitman",
    "is_synonym": false,
-   "taxonomic_status": "",
-   "provinces": {},
-   "raw_matches": 0,
-   "has_distribution": false,
-   "taxon_rank": "",
-   "native_provinces": "",
-   "origin": "unmatched",
-   "verdict": "review",
-   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial."
+   "taxonomic_status": "accepted",
+   "provinces": {
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 4,
+   "has_distribution": true,
+   "taxon_rank": "species",
+   "native_provinces": "SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in SK."
   },
   "Androsace chamaejasme": {
    "matched": true,
@@ -1336,9 +1305,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
+    "AB": "native",
     "SK": "native",
-    "MB": "native",
-    "AB": "native"
+    "MB": "native"
    },
    "raw_matches": 15,
    "has_distribution": true,
@@ -2204,19 +2173,23 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Deschampsia caespitosa": {
-   "matched": false,
-   "accepted_name": "",
+  "Deschampsia cespitosa subsp. cespitosa": {
+   "matched": true,
+   "accepted_name": "Deschampsia cespitosa (Linnaeus) Palisot de Beauvois",
    "is_synonym": false,
-   "taxonomic_status": "",
-   "provinces": {},
-   "raw_matches": 0,
-   "has_distribution": false,
-   "taxon_rank": "",
-   "native_provinces": "",
-   "origin": "unmatched",
-   "verdict": "review",
-   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial."
+   "taxonomic_status": "accepted",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 24,
+   "has_distribution": true,
+   "taxon_rank": "species",
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
   },
   "Dieteria canescens": {
    "matched": true,
@@ -2685,9 +2658,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "AB": "native",
     "SK": "native",
-    "MB": "native"
+    "MB": "native",
+    "AB": "native"
    },
    "raw_matches": 7,
    "has_distribution": true,
@@ -3041,23 +3014,6 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB."
   },
-  "Festuca ovina": {
-   "matched": true,
-   "accepted_name": "Festuca ovina Linnaeus",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "AB": "excluded",
-    "SK": "excluded"
-   },
-   "raw_matches": 14,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "introduced",
-   "verdict": "not_here",
-   "why": "VASCAN records it as introduced in AB, SK."
-  },
   "Festuca saximontana": {
    "matched": true,
    "accepted_name": "Festuca saximontana Rydberg",
@@ -3100,9 +3056,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "MB": "native",
     "AB": "native",
-    "SK": "native"
+    "SK": "native",
+    "MB": "native"
    },
    "raw_matches": 10,
    "has_distribution": true,
@@ -3551,24 +3507,6 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
-  },
-  "Helianthus annuus": {
-   "matched": true,
-   "accepted_name": "Helianthus annuus Linnaeus",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "AB": "introduced",
-    "SK": "introduced",
-    "MB": "introduced"
-   },
-   "raw_matches": 6,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "introduced",
-   "verdict": "not_here",
-   "why": "VASCAN records it as introduced in AB, SK."
   },
   "Helianthus maximiliani": {
    "matched": true,
@@ -4303,8 +4241,8 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "SK": "native",
-    "AB": "native"
+    "AB": "native",
+    "SK": "native"
    },
    "raw_matches": 15,
    "has_distribution": true,
@@ -4364,6 +4302,23 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB."
   },
+  "Maianthemum amplexicaule": {
+   "matched": true,
+   "accepted_name": "Maianthemum amplexicaule (Nuttall) W.A. Weber",
+   "is_synonym": false,
+   "taxonomic_status": "accepted",
+   "provinces": {
+    "AB": "native",
+    "SK": "native"
+   },
+   "raw_matches": 1,
+   "has_distribution": true,
+   "taxon_rank": "species",
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
+  },
   "Maianthemum canadense": {
    "matched": true,
    "accepted_name": "Maianthemum canadense Desfontaines",
@@ -4381,22 +4336,6 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
-  },
-  "Maianthemum racemosum": {
-   "matched": true,
-   "accepted_name": "Maianthemum racemosum (Linnaeus) Link",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "MB": "native"
-   },
-   "raw_matches": 4,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution."
   },
   "Maianthemum stellatum": {
    "matched": true,
@@ -4468,19 +4407,23 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Mentha arvensis": {
+  "Mentha canadensis": {
    "matched": true,
-   "accepted_name": "Mentha arvensis Linnaeus",
+   "accepted_name": "Mentha canadensis Linnaeus",
    "is_synonym": false,
    "taxonomic_status": "accepted",
-   "provinces": {},
-   "raw_matches": 11,
-   "has_distribution": false,
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 8,
+   "has_distribution": true,
    "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "undetermined",
-   "verdict": "review",
-   "why": "VASCAN matched this name but publishes no distribution for it at rank species. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent."
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
   },
   "Menyanthes trifoliata": {
    "matched": true,
@@ -4678,19 +4621,23 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Oenothera caespitosa": {
-   "matched": false,
-   "accepted_name": "",
+  "Oenothera cespitosa subsp. cespitosa": {
+   "matched": true,
+   "accepted_name": "Oenothera cespitosa Nuttall",
    "is_synonym": false,
-   "taxonomic_status": "",
-   "provinces": {},
-   "raw_matches": 0,
-   "has_distribution": false,
-   "taxon_rank": "",
-   "native_provinces": "",
-   "origin": "unmatched",
-   "verdict": "review",
-   "why": "VASCAN returned no match for this name at all, which is usually a superseded or misspelled binomial."
+   "taxonomic_status": "accepted",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 7,
+   "has_distribution": true,
+   "taxon_rank": "species",
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
   },
   "Oenothera nuttallii": {
    "matched": true,
@@ -4727,20 +4674,6 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
-  },
-  "Oligoneuron rigidum": {
-   "matched": true,
-   "accepted_name": "Solidago rigida Linnaeus subsp. rigida",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {},
-   "raw_matches": 1,
-   "has_distribution": false,
-   "taxon_rank": "subspecies",
-   "native_provinces": "",
-   "origin": "undetermined",
-   "verdict": "review",
-   "why": "VASCAN matched this name but publishes no distribution for it at rank subspecies. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent."
   },
   "Opuntia fragilis": {
    "matched": true,
@@ -4872,8 +4805,8 @@
    "taxonomic_status": "accepted",
    "provinces": {
     "AB": "native",
-    "SK": "native",
-    "MB": "native"
+    "MB": "native",
+    "SK": "native"
    },
    "raw_matches": 25,
    "has_distribution": true,
@@ -6221,8 +6154,8 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "AB": "native",
     "SK": "native",
+    "AB": "native",
     "MB": "native"
    },
    "raw_matches": 13,
@@ -6364,9 +6297,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
+    "AB": "native",
     "SK": "native",
-    "MB": "native",
-    "AB": "native"
+    "MB": "native"
    },
    "raw_matches": 5,
    "has_distribution": true,
@@ -6593,9 +6526,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
+    "MB": "native",
     "AB": "native",
-    "SK": "native",
-    "MB": "native"
+    "SK": "native"
    },
    "raw_matches": 8,
    "has_distribution": true,
@@ -6692,24 +6625,6 @@
    "origin": "native",
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
-  },
-  "Solidago simplex": {
-   "matched": true,
-   "accepted_name": "Solidago simplex Kunth",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {
-    "AB": "excluded",
-    "SK": "excluded",
-    "MB": "excluded"
-   },
-   "raw_matches": 14,
-   "has_distribution": true,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "introduced",
-   "verdict": "not_here",
-   "why": "VASCAN records it as introduced in AB, SK."
   },
   "Sorbus scopulina": {
    "matched": true,
@@ -6919,23 +6834,25 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in SK."
   },
-  "Stachys palustris": {
+  "Stachys pilosa": {
    "matched": true,
-   "accepted_name": "Stachys palustris Linnaeus",
+   "accepted_name": "Stachys pilosa Nuttall",
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "MB": "introduced"
+    "MB": "native",
+    "AB": "native",
+    "SK": "native"
    },
-   "raw_matches": 7,
+   "raw_matches": 5,
    "has_distribution": true,
    "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "absent",
-   "verdict": "not_here",
-   "why": "VASCAN records no Alberta or Saskatchewan distribution."
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
   },
-  "Stachys pilosa": {
+  "Stachys pilosa var. pilosa": {
    "matched": true,
    "accepted_name": "Stachys pilosa Nuttall",
    "is_synonym": false,
@@ -7065,9 +6982,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "AB": "native",
     "SK": "native",
-    "MB": "native"
+    "MB": "native",
+    "AB": "native"
    },
    "raw_matches": 7,
    "has_distribution": true,
@@ -7135,9 +7052,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "MB": "native",
     "AB": "native",
-    "SK": "native"
+    "SK": "native",
+    "MB": "native"
    },
    "raw_matches": 6,
    "has_distribution": true,
@@ -7153,9 +7070,9 @@
    "is_synonym": false,
    "taxonomic_status": "accepted",
    "provinces": {
-    "MB": "native",
     "AB": "native",
-    "SK": "native"
+    "SK": "native",
+    "MB": "native"
    },
    "raw_matches": 13,
    "has_distribution": true,
@@ -7306,21 +7223,25 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Urtica dioica": {
+  "Urtica gracilis": {
    "matched": true,
-   "accepted_name": "Urtica dioica Linnaeus",
+   "accepted_name": "Urtica gracilis Aiton",
    "is_synonym": false,
    "taxonomic_status": "accepted",
-   "provinces": {},
-   "raw_matches": 7,
-   "has_distribution": false,
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 2,
+   "has_distribution": true,
    "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "undetermined",
-   "verdict": "review",
-   "why": "VASCAN matched this name but publishes no distribution for it at rank species. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent."
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
   },
-  "Urtica gracilis": {
+  "Urtica gracilis subsp. gracilis": {
    "matched": true,
    "accepted_name": "Urtica gracilis Aiton",
    "is_synonym": false,
@@ -7532,20 +7453,6 @@
    "verdict": "confirm",
    "why": "VASCAN records it native in AB, SK."
   },
-  "Viola canadensis": {
-   "matched": true,
-   "accepted_name": "Viola canadensis Linnaeus",
-   "is_synonym": false,
-   "taxonomic_status": "accepted",
-   "provinces": {},
-   "raw_matches": 8,
-   "has_distribution": false,
-   "taxon_rank": "species",
-   "native_provinces": "",
-   "origin": "undetermined",
-   "verdict": "review",
-   "why": "VASCAN matched this name but publishes no distribution for it at rank species. It records distribution on the lowest accepted taxon, so this is expected for a species with accepted varieties or subspecies, and it is NOT a statement that the plant is absent."
-  },
   "Viola orbiculata": {
    "matched": true,
    "accepted_name": "Viola orbiculata (A. Gray) Geyer ex B.D. Jacks",
@@ -7591,6 +7498,24 @@
     "MB": "native"
    },
    "raw_matches": 2,
+   "has_distribution": true,
+   "taxon_rank": "species",
+   "native_provinces": "AB,SK",
+   "origin": "native",
+   "verdict": "confirm",
+   "why": "VASCAN records it native in AB, SK."
+  },
+  "Viola rugulosa": {
+   "matched": true,
+   "accepted_name": "Viola rugulosa Greene",
+   "is_synonym": false,
+   "taxonomic_status": "accepted",
+   "provinces": {
+    "AB": "native",
+    "SK": "native",
+    "MB": "native"
+   },
+   "raw_matches": 1,
    "has_distribution": true,
    "taxon_rank": "species",
    "native_provinces": "AB,SK",
