@@ -169,6 +169,7 @@ def columns(path: Path) -> int:
 
 
 REVIEW_PATH = PROJECT_ROOT / "data" / "fetched" / "flower_colour_review.tsv"
+MISSES_PATH = PROJECT_ROOT / "data" / "fetched" / "flower_colour_misses.tsv"
 
 
 def budds_review(text_path: Path) -> int:
@@ -180,12 +181,13 @@ def budds_review(text_path: Path) -> int:
     reading a quote rather than looking a species up. Uncertain rows sort to
     the top, because those are the ones that need a person.
     """
-    from src.budds_colour import read
+    from src.budds_colour import blocks, read
     from src.flower_colour import COLOUR_SWATCHES
 
     need = catalogue_needing_colour()
+    common = catalogue_common_names()
     findings = read(text_path.read_text(encoding="utf-8", errors="replace"),
-                    list(need), catalogue_common_names())
+                    list(need), common)
     REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:
         out = csv.writer(fh, delimiter="\t")
@@ -197,13 +199,37 @@ def budds_review(text_path: Path) -> int:
                           "" if f.confident else "CHECK", f.found_as,
                           need.get(f.scientific_name, ""), f.quote])
 
+    # "Not found" was hiding two different problems, and which one dominates
+    # decides what is worth fixing. A species the book does not carry is a
+    # nomenclature or coverage problem; a species whose description carries no
+    # colour word is the genus problem, where a flora states the obvious once
+    # at the genus and then notes only departures from it.
+    located = blocks(text_path.read_text(encoding="utf-8", errors="replace"),
+                     list(need), common)
+    got = {f.scientific_name for f in findings}
+    silent = sorted(set(located) - got)
+    absent = sorted(set(need) - set(located))
+
+    with open(MISSES_PATH, "w", encoding="utf-8", newline="") as fh:
+        out = csv.writer(fh, delimiter="\t")
+        out.writerow(["scientific_name", "why", "common_name"])
+        for name in silent:
+            out.writerow([name, "described, but no flower colour stated",
+                          common.get(name, "")])
+        for name in absent:
+            out.writerow([name, "not in this book under either name",
+                          common.get(name, "")])
+
     unsure = [f for f in findings if not f.confident]
     print(f"{len(need)} species carry a guessed colour")
-    print(f"  {len(findings):4d} found in this text")
-    print(f"  {len(unsure):4d} of those name more than one colour "
-          f"(marked CHECK, sorted first)")
-    print(f"  {len(need) - len(findings):4d} not found at all\n")
+    print(f"  {len(findings):4d} found with a colour")
+    print(f"  {len(unsure):4d} of those need a look "
+          f"(more than one colour, or matched on common name)")
+    print(f"  {len(silent):4d} described in the book, but it states no flower "
+          f"colour for them")
+    print(f"  {len(absent):4d} not in this book under either name\n")
     print(f"Written to {REVIEW_PATH}")
+    print(f"        and {MISSES_PATH}")
     print("\nOpen it in a spreadsheet. One column to edit -- 'colour' -- and\n"
           "the flora's sentence is on the same row, so a CHECK row is decided\n"
           "by reading it. Valid values:\n  "
@@ -334,6 +360,7 @@ def apply_colour_sets(folder: Path, write: bool) -> int:
 
     usda = read_colour_sets(folder)
     need = catalogue_needing_colour()
+    common = catalogue_common_names()
     by_canon = {_canonical(sci): sci for sci in need}
 
     hits, multi, missing = {}, {}, []
