@@ -1,6 +1,40 @@
 """
 src/budds_genus.py — the colour a flora states once, at the genus.
 
+OFF BY DEFAULT, AND THE MEASUREMENT SAYS WHY (V2.80)
+====================================================
+**Budd's does not have genus descriptions to inherit from.** Run against the
+real scan, this found **0 genus headings for the 80 genera** holding the
+species with no colour of their own. Looking at four of those genera, what the
+book actually contains under their names is:
+
+* identification key couplets -- ``7. Flowers purplish blue, to 2 cm long
+  Cassia``
+* figure captions -- ``Fig. 80. Prairie onion, Allium textile Nels. & Macbr.``
+* index entries -- ``Antennaria 704, 709 / aizoides 716``
+* tribe and subfamily headings -- ``Tribe 5. CHLORIDEAE``
+
+It is a key-plus-species-treatments flora. There is no genus paragraph.
+
+That makes the 23 readings it *did* produce suspect rather than valuable: a
+line like ``Allium textile`` -- a species heading with its authority lost to
+the OCR -- matches the genus-heading shape exactly, and would lend one
+species' colour to every one of its siblings. The book is full of key couplets
+pairing a colour with a species name, which is the same trap one line wider.
+
+So this is opt-in behind ``--genus`` and writes nothing without it. **The code
+is sound and the source does not support it**; a flora that does carry genus
+descriptions would work here unchanged, which is why it is kept rather than
+deleted.
+
+The other half of the same measurement is better news: **74 of the 197 species
+still carrying a genus-default colour are wind-pollinated**, and a grass, sedge
+or rush already classifies as ``straw`` from its type for a botanical reason.
+No flora reading improves that. The real remaining gap is 123 species, not 197.
+
+----
+
+
 Budd's describes **140 of this catalogue's species without naming a flower
 colour for them**, and that is not an omission. A flora states the colour once
 in the genus description and then notes only departures from it:

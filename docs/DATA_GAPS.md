@@ -77,6 +77,32 @@ pinkish" (real variation, and the catalogue stores one hex, so a person
 chooses), and read a colour from a sentence with no flower word in it — *red
 osier dogwood* is named for its winter stems and has white flowers.
 
+### Where Budd's ran out (V2.80)
+
+**146 species sourced, and that is what this book has.** The genus reading was
+built on the reasonable premise that a flora states the colour once at the
+genus and then notes only departures. Budd's does not: it is a
+key-plus-species-treatments flora with no genus paragraph. Measured, not
+assumed -- **0 genus headings found for the 80 genera** that would have needed
+them, and what the book carries under those names instead is identification
+key couplets (`7. Flowers purplish blue, to 2 cm long Cassia`), figure
+captions, index entries and tribe headings.
+
+That makes the 23 readings it did produce a liability rather than a gain: a
+species heading whose authority the OCR dropped matches the genus-heading
+shape exactly and would lend one species' colour to all its siblings. So
+`--genus` is off by default and `src/budds_genus.py` records why. The code is
+sound; the source does not support it, and a flora that carries genus
+descriptions would work unchanged.
+
+**The remaining gap is smaller than it looks.** Of the 197 species still
+carrying a genus default, **74 are wind-pollinated** -- grasses, sedges and
+rushes, which already classify as `straw` from their type, for a botanical
+reason no flora reading improves. The real number is **123**, and the next
+source has to be something other than Budd's: Flora of North America is
+published as text and its descriptions carry colour, at the cost of being
+continental rather than prairie.
+
 ### How to move this along (V2.51)
 
 The paragraph above used to end at "what this needs is a flora and a network",

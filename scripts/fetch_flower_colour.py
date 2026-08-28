@@ -173,7 +173,7 @@ REVIEW_PATH = PROJECT_ROOT / "data" / "fetched" / "flower_colour_review.tsv"
 MISSES_PATH = PROJECT_ROOT / "data" / "fetched" / "flower_colour_misses.tsv"
 
 
-def budds_review(text_path: Path) -> int:
+def budds_review(text_path: Path, use_genus: bool = False) -> int:
     """Turn a flora's prose into a spreadsheet somebody can check in an evening.
 
     The review file is the whole point. Nothing here is trusted enough to write
@@ -197,9 +197,12 @@ def budds_review(text_path: Path) -> int:
     # still needing a colour. The species that state their own were applied in
     # an earlier pass and have left that list, so measuring there left nothing
     # to test against and every inheritance came back "untested".
-    everything = read(text, list(common), common)
-    genus_rows = needs_checking(
-        inherit(text, list(need), common, findings, measured_from=everything))
+    genus_rows = []
+    if use_genus:
+        everything = read(text, list(common), common)
+        genus_rows = needs_checking(
+            inherit(text, list(need), common, findings,
+                    measured_from=everything))
     findings = list(findings) + genus_rows
     REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:
@@ -236,14 +239,15 @@ def budds_review(text_path: Path) -> int:
     unsure = [f for f in findings if f.found_as != "name"]
     print(f"{len(need)} species carry a guessed colour")
     print(f"  {len(findings):4d} found with a colour")
-    variable = [f for f in genus_rows if "variable" in f.found_as]
-    untested = [f for f in genus_rows if "untested" in f.found_as]
-    print(f"  {len(genus_rows):4d} of those from the GENUS the flora states "
-          f"it at, of which")
-    print(f"       {len(variable):4d} sit in a genus whose own species "
-          f"disagree about colour")
-    print(f"       {len(untested):4d} in a genus no species states a colour "
-          f"for, so untestable")
+    if use_genus:
+        variable = [f for f in genus_rows if "variable" in f.found_as]
+        untested = [f for f in genus_rows if "untested" in f.found_as]
+        print(f"  {len(genus_rows):4d} of those from the GENUS the flora "
+              f"states it at, of which")
+        print(f"       {len(variable):4d} sit in a genus whose own species "
+              f"disagree about colour")
+        print(f"       {len(untested):4d} in a genus no species states a "
+              f"colour for, so untestable")
     multi = [f for f in findings if len(f.buckets) > 1]
     print(f"  {len(multi):4d} of those bloom in more than one colour, "
           f"kept as a range")
@@ -262,6 +266,9 @@ def budds_review(text_path: Path) -> int:
           f"{len(with_heading)} have a genus description stating a colour")
     print(f"       {len(silent_genera) - len(with_heading):4d} do not, so "
           f"nothing can be inherited for those")
+    if not use_genus and with_heading:
+        print("       (--genus would read those; see src/budds_genus.py for "
+              "why it is off)")
     print(f"  {len(absent):4d} not in this book under either name\n")
     print(f"Written to {REVIEW_PATH}")
     print(f"        and {MISSES_PATH}")
@@ -565,6 +572,12 @@ def main(argv=None) -> int:
                    help="read Budd's Flora (as plain text) and write a review "
                         "spreadsheet: one proposed colour per species, with "
                         "the sentence it came from beside it")
+    p.add_argument("--genus", action="store_true",
+                   help="also read the colour a flora states at the GENUS. "
+                        "OFF because Budd's has no genus descriptions: 0 "
+                        "headings found for the 80 genera that would need "
+                        "them, and what matches instead is key couplets and "
+                        "figure captions. See src/budds_genus.py")
     p.add_argument("--from-review", metavar="FILE", dest="from_review",
                    help="apply the review spreadsheet after you have been "
                         "over it. Reports without --apply")
@@ -687,7 +700,7 @@ def main(argv=None) -> int:
         if not path.exists():
             print(f"No file at {path}.", file=sys.stderr)
             return 1
-        return budds_review(path)
+        return budds_review(path, args.genus)
 
     if args.from_review:
         path = Path(args.from_review)
