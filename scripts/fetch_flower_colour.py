@@ -59,6 +59,7 @@ import argparse
 import csv
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -243,6 +244,31 @@ def budds_review(text_path: Path) -> int:
     return 0
 
 
+def _name_leads(scientific: str, keys: list) -> list:
+    """Put the colour the plant's own name states first.
+
+    The flora gives a range in the order its sentence happens to run, which is
+    not always the order a person sees. Budd's describes *Coreopsis tinctoria*
+    as having "brownish disk florets and 6-10 broad yellow ray florets", so a
+    word scanner leads with brown -- but the disk is the centre and the rays
+    are the flower, and the plant is called Golden Tickseed. Likewise Dalea
+    purpurea is "red or purple", and it is Purple Prairie Clover.
+
+    So when the accepted common name names one of the colours the flora
+    listed, that one leads. Nothing is added or dropped: the range is the
+    flora's, the order is the name's. This is the same evidence the catalogue
+    already trusts as the ``name`` provenance, and data_quality enforces the
+    agreement -- both of these were errors there before this existed.
+    """
+    from src.budds_colour import COLOUR_TERMS
+    common = catalogue_common_names().get(scientific, "").lower()
+    for word in re.findall(r"[a-z]+", common):
+        bucket = COLOUR_TERMS.get(word)
+        if bucket and bucket in keys:
+            return [bucket] + [k for k in keys if k != bucket]
+    return keys
+
+
 def apply_review(path: Path, write: bool) -> int:
     """Write the colours back, after a person has been over them."""
     from src.flower_colour import COLOUR_SWATCHES
@@ -267,7 +293,7 @@ def apply_review(path: Path, write: bool) -> int:
             if key not in seen:
                 seen.add(key)
                 keys.append(key)
-        wanted[name] = keys
+        wanted[name] = _name_leads(name, keys)
 
     if bad:
         print(f"{len(bad)} row(s) name a colour this catalogue does not have. "

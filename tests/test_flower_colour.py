@@ -37,7 +37,7 @@ from src.db.plants import init_db, search_plants          # noqa: E402
 
 from src.flower_colour import (                           # noqa: E402
     COLOUR_KEYS, COLOUR_LABELS, WIND_POLLINATED_TYPES, bucket_counts, classify,
-    classify_hex, matches,
+    classify_hex, colours, matches,
 )
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -92,13 +92,21 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: Oligoneuron rigidum), straw -1 (Festuca ovina), white -1 (Achillea
     #: millefolium, merged into A. borealis). No bucket moved for any other
     #: reason, so the classifier is unchanged.
-    #: V2.80, second pass: yellow -1 (Solidago nemoralis) and pink -1
-    #: (Spiraea douglasii), the two species VASCAN records but not for these
-    #: provinces. Both drops accounted for; no bucket moved for any other
-    #: reason.
+    #: V2.80, third pass, and the biggest movement this snapshot has ever
+    #: recorded: **146 species had their colour read out of Budd's Flora**, so
+    #: this is no longer a distribution of genus guesses. cream -9, purple -7
+    #: and pink -5 were the largest piles of estimate; white +8, blue +7 and
+    #: green +4 are where the flora put them instead. Only the PRIMARY colour
+    #: is counted here (`classify`), so the 45 species carrying a range appear
+    #: once, under the colour their own name or the flora leads with.
+    #:
+    #: A change here is still either a data change worth noticing or a
+    #: classifier regression. This one is the former, and the numbers to check
+    #: it against are in `data/fetched/flower_colour_review.tsv`, which carries
+    #: the sentence behind every one of the 146.
     EXPECTED = {
-        "yellow": 77, "straw": 80, "white": 71, "purple": 53, "pink": 41,
-        "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
+        "straw": 80, "white": 79, "yellow": 79, "purple": 46, "pink": 36,
+        "blue": 28, "cream": 14, "red": 6, "green": 5, "orange": 3, "brown": 2,
     }
 
     def test_every_seeded_species_lands_where_it_did(self):
@@ -213,17 +221,26 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         self.assertGreater(len(yellow), 0)
         self.assertLess(len(yellow), len(every))
         for plant in yellow:
-            self.assertEqual(classify(plant), "yellow")
+            self.assertIn("yellow", colours(plant))
 
     def test_an_empty_filter_does_not_restrict(self):
         self.assertEqual(len(search_plants(flower_colours=[])),
                          len(search_plants()))
 
     def test_multiple_colours_are_a_union(self):
-        white = search_plants(flower_colours=["white"])
-        yellow = search_plants(flower_colours=["yellow"])
-        both = search_plants(flower_colours=["white", "yellow"])
-        self.assertEqual(len(both), len(white) + len(yellow))
+        """A union, and since V2.80 **not** a sum.
+
+        Two species bloom both white and yellow, so they answer either query
+        and are counted once in the union. Asserting `len(both) == len(white) +
+        len(yellow)` quietly assumed the buckets were disjoint, which stopped
+        being true the moment a flora was allowed to say "white to yellowish".
+        """
+        white = {p["id"] for p in search_plants(flower_colours=["white"])}
+        yellow = {p["id"] for p in search_plants(flower_colours=["yellow"])}
+        both = {p["id"] for p in search_plants(flower_colours=["white", "yellow"])}
+        self.assertEqual(both, white | yellow)
+        self.assertTrue(white & yellow,
+                        "no species is both, so this no longer tests overlap")
 
     def test_it_composes_with_the_other_filters(self):
         """Colour is a post-query pass; it must not discard the SQL filters
@@ -232,7 +249,10 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         self.assertGreater(len(rows), 0)
         for plant in rows:
             self.assertEqual(plant["plant_type"], "wildflower")
-            self.assertEqual(classify(plant), "purple")
+            # `colours`, not `classify`: a species the flora records as "red or
+            # purple" answers a purple query on its second colour, and its
+            # primary is red.
+            self.assertIn("purple", colours(plant))
 
     def test_the_directory_facet_drives_it(self):
         from src import plant_directory as pd
@@ -241,7 +261,7 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         rows = pd.search({"colour": ["blue"]})
         self.assertGreater(len(rows), 0)
         for plant in rows:
-            self.assertEqual(classify(plant), "blue")
+            self.assertIn("blue", colours(plant))
 
 
 class TestTheZoneRangeSurvivesItsData(unittest.TestCase):
@@ -326,8 +346,17 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
         self.assertIn("checked", entry["bloom_colour_note"])
 
     def test_an_estimated_colour_says_that_instead(self):
-        entry = self._entry("Wild Bergamot")
-        self.assertEqual(entry["bloom_colour"], "purple")
+        """Pinned to a species no flora has been read for. Wild Bergamot was
+        the example until V2.80 sourced it from Budd's, which is the point of
+        the exercise rather than a regression -- so this now looks the example
+        up instead of naming one that can be corrected out from under it."""
+        row = next((r for r in search_plants()
+                    if (r.get("flower_colour_source") or "") == "estimated"
+                    and classify(r)), None)
+        self.assertIsNotNone(row, "nothing is estimated any more")
+        from src.plant_directory import species_entry     # noqa: PLC0415
+        entry = species_entry(row["id"])
+        self.assertTrue(entry["bloom_colour"])
         self.assertIn("not verified", entry["bloom_colour_note"])
 
     def test_a_grass_is_not_described_as_unverified(self):

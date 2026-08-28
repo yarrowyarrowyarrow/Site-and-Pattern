@@ -279,3 +279,48 @@ class TestTellingTextFromAScan(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestACompoundIsOneColourNotTwo(unittest.TestCase):
+    """A flora writes both a range and a compound and they look alike to a
+    word scanner:
+
+        Flowers white to pinkish   -> two colours, a real range
+        Flowers pinkish white      -> ONE colour, a white tinged pink
+
+    Reading the second as a range would have the site claim bearberry blooms
+    "pink to white" where the book says "pinkish white" -- an overstatement of
+    exactly the sort this work exists to remove. Both sentences are real, from
+    the 146 rows Budd's yielded.
+    """
+
+    def _c(self, text):
+        return colour_in(text)[0]
+
+    def test_pinkish_white_is_white(self):
+        self.assertEqual(self._c("Flowers pinkish white, urn-shaped, 5 mm."),
+                         ("white",))
+
+    def test_greenish_purple_is_purple(self):
+        self.assertEqual(self._c("Flowers greenish purple, drooping."),
+                         ("purple",))
+
+    def test_white_to_pinkish_is_still_a_range(self):
+        self.assertEqual(self._c("Flowers white to pinkish, in corymbs."),
+                         ("white", "pink"))
+
+    def test_a_connector_makes_it_a_range_even_with_a_hedge(self):
+        self.assertEqual(self._c("Flowers white or pale pink, early."),
+                         ("white", "pink"))
+
+    def test_a_range_of_compounds_keeps_only_the_heads(self):
+        """"yellow to pinkish orange" is yellow TO [pinkish-orange]: two
+        colours, not three. This is the prickly pear, whose yellow hex and
+        magenta photograph started the whole flower-colour thread."""
+        self.assertEqual(
+            self._c("Flowers showy, yellow to pinkish orange, 5-8 cm across."),
+            ("yellow", "orange"))
+
+    def test_the_head_of_a_compound_is_the_later_word(self):
+        """English puts the head noun last, so the modifier is dropped."""
+        self.assertEqual(self._c("Flowers yellowish green, small."), ("green",))

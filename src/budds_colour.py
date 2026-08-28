@@ -189,15 +189,55 @@ def colour_in(block: str) -> tuple:
         # that refusing it outright loses too much, so it is kept but not
         # called confident.
         mixed = bool(wordset & set(NOT_FLOWER_WORDS))
-        found, seen = [], set()
-        for word in words:
-            bucket = COLOUR_TERMS.get(word)
-            if bucket and bucket not in seen:
-                seen.add(bucket)
-                found.append(bucket)
+        found = _colours_in_words(words)
         if found:
             return tuple(found), sentence.strip()
     return (), ""
+
+
+def _colours_in_words(words: list) -> list:
+    """Colour buckets in order, with compounds collapsed.
+
+    **"Pinkish white" is one colour, not two.** A flora writes both a range and
+    a compound and they look alike to a word scanner:
+
+        Flowers white to pinkish      -> two colours, a real range
+        Flowers pinkish white         -> ONE colour, a white tinged pink
+        Flowers greenish purple       -> ONE colour, a purple
+
+    Reading the second kind as a range would have the site claim bearberry
+    blooms "pink to white" where the book says "pinkish white", which is an
+    overstatement of exactly the sort this whole line of work exists to remove.
+
+    The signal is adjacency. Two colour words with nothing between them but a
+    hedge are a compound, and English puts the head last -- *pinkish white* is
+    a white -- so the later word wins and the earlier is dropped. Anything
+    separated by a connector ("to", "or", a comma) is a genuine range.
+    """
+    out: list = []
+    prev_colour_at = -99
+    for i, word in enumerate(words):
+        if word in _HEDGES:
+            continue
+        bucket = COLOUR_TERMS.get(word)
+        if not bucket:
+            prev_colour_at = -99
+            continue
+        # Adjacent to the previous colour, ignoring hedges between them.
+        if out and i - prev_colour_at <= 2 and not _connector_between(words,
+                                                                     prev_colour_at, i):
+            out[-1] = bucket                      # the head noun wins
+        elif bucket not in out:
+            out.append(bucket)
+        prev_colour_at = i
+    return out
+
+
+def _connector_between(words: list, a: int, b: int) -> bool:
+    """Is there a range word between two colour words?"""
+    return any(w in ("to", "or", "and", "through", "sometimes", "rarely",
+                     "varying", "from", "occasionally")
+               for w in words[a + 1:b])
 
 
 def blocks(text: str, wanted: Iterable[str], common: dict = None) -> dict:
