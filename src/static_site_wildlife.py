@@ -283,8 +283,16 @@ def render_wildlife(animal: dict, photo_src: dict) -> str:
 {notes}
 {blocks}
 """
+    # Sharing an animal page should show that animal (V2.80). Built from
+    # `photo_src` rather than from `src` above, which has already had the page's
+    # `../../` prepended and is therefore not a path a scraper can resolve.
+    # `credit` empty means there is no publishable photograph at all, so the
+    # card falls back to the site default rather than to an uncredited image.
+    share_img = (photo_src.get(animal.get("image") or "",
+                               animal.get("image") or "") if credit else "")
     return _page(f'{animal["name"]}: the plants it needs',
                  (f'{blurb} ' if blurb else "")
                  + f'{total} documented plant relationships with '
                    f'{animal.get("scientific_name")}.',
-                 body, depth, wide=True)
+                 body, depth, wide=True, image=share_img,
+                 image_alt=f'{animal["name"]}. {credit}'.strip())

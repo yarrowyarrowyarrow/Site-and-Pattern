@@ -56,6 +56,9 @@ from typing import Callable, Optional
 
 from src.site_analytics import Analytics, NONE as ANALYTICS_NONE, configure
 from src.site_facets import FACETS, GROUPS
+from src.site_share import NONE as SHARE_NONE, Share
+from src.site_share import configure as configure_share
+from src.site_share import default_card as share_default
 from src.static_site import _first_photo
 
 #: Plain text, never pre-escaped: everything here goes through ``_esc`` at the
@@ -99,6 +102,21 @@ _NAV = (("plants/", "Plants"), ("wildlife/", "Wildlife"),
 #: in the footer of every page it appears on — is enforced in
 #: :mod:`src.site_analytics`, which is also where a third provider would go.
 _ANALYTICS: Analytics = ANALYTICS_NONE
+
+#: What a link to this site unfolds into when somebody pastes it somewhere
+#: (V2.80). Set for the length of one ``write_site`` call for the same reason
+#: ``_ANALYTICS`` is: the absolute URL a scraper needs is a property of the
+#: *publish*, not of any page, and threading it through ``_page``'s call sites
+#: in six modules to say one thing would be worse. See :mod:`src.site_share`,
+#: which owns the vocabulary and the picture.
+_SHARE: Share = SHARE_NONE
+
+
+def _social(title: str, description: str, image: str, alt: str) -> str:
+    """The Open Graph and Twitter card tags for one page."""
+    return "".join(f'\n<meta {attr}="{name}" content="{_esc(content)}">'
+                   for attr, name, content
+                   in _SHARE.meta(title, description, image, alt) if content)
 
 
 def _beacon() -> str:
@@ -157,7 +175,10 @@ def _up(depth: int) -> str:
 # ── The shell ────────────────────────────────────────────────────────────────
 
 def _page(title: str, description: str, body: str, depth: int,
-          *, wide: bool = False, scripts: str = "") -> str:
+          *, wide: bool = False, scripts: str = "",
+          image: str = "", image_alt: str = "") -> str:
+    """One page. ``image`` is the page's own photograph for a share card, as a
+    path relative to the site root; without one the site default is used."""
     root = _up(depth)
     nav = "".join(f'<a href="{root}{href}">{label}</a>' for href, label in _NAV)
     return f"""<!doctype html>
@@ -166,7 +187,8 @@ def _page(title: str, description: str, body: str, depth: int,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
-<meta name="description" content="{_esc(description)}">
+<meta name="description" content="{_esc(description)}">{_social(
+    title, description, image, image_alt)}
 <link rel="stylesheet" href="{root}assets/site.css">
 </head>
 <body>
@@ -343,9 +365,8 @@ def render_home(model: dict, photo_src: dict) -> str:
 
 <section class="pitch">
   <h2>Start from the animal instead</h2>
-  <p>Most plant catalogues tell you what a plant looks like. This one also
-  tells you which caterpillars eat it, which bees feed on it, and which of them
-  have no alternative.</p>
+  <p>Most plant catalogues tell you what a plant looks like. This one tells you
+  which caterpillars and bees depend on it.</p>
   <p><a class="button" href="wildlife/">{s['animals']} animals</a></p>
 </section>
 
@@ -523,6 +544,13 @@ def write_site(model: dict, out_dir: str, *,
     both or neither. Neither means no analytics and no external request, which
     is the default and the state every build before V2.71 was in. A malformed
     value raises rather than being written into 2,000 pages.
+
+    ``base_url`` now does three jobs, all of which fail quietly when it is
+    omitted: it writes the sitemap and ``robots.txt``, it writes the ``CNAME``
+    GitHub Pages reads, and (V2.80) it is the only source of the **absolute**
+    image URL a share card needs, since a scraper fetches that image with no
+    page to resolve a relative path against. Publishing without it gives text
+    cards.
     """
     # Imported here, not at module scope: static_site_species imports the shell
     # and the shared pieces back from this module, so a top-level import would
@@ -559,6 +587,21 @@ def write_site(model: dict, out_dir: str, *,
     root.mkdir(parents=True, exist_ok=True)
     photo_src = _stage_photos(model, root, say) if copy_photos else {}
     written: list = []
+
+    # After the photos are staged, because the default card is one of them, and
+    # before the first page is rendered, because every page carries the tags.
+    # Set unconditionally on the way in, like `_ANALYTICS` and for the same
+    # fail-closed reason: a build that raised half way must not leave the next
+    # one pointing its share cards at the last one's domain.
+    global _SHARE
+    default_img, default_alt = share_default(model, photo_src)
+    _SHARE = configure_share(base_url=base_url, image=default_img,
+                             alt=default_alt)
+    if base_url and not default_img:
+        # Not fatal, but worth saying out loud: a link to this build unfolds
+        # into a grey box, and that is the kind of thing nobody notices until
+        # somebody else pastes it somewhere.
+        say("share card: no credited photograph found, links will show no image")
 
     def emit(rel: str, text: str) -> None:
         path = root / rel

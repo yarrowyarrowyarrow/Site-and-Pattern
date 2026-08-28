@@ -318,16 +318,113 @@ class TestTheRenderedSite(unittest.TestCase):
 
     def test_the_about_page_publishes_the_bibliography(self):
         """A citation the reader cannot look up is decoration. The works are
-        listed, and `citations.disclaimer()` travels with them because these
-        details were transcribed from source records rather than checked
-        against the works themselves."""
+        listed, and the disclaimer travels with them because these details were
+        transcribed from source records rather than checked against the works
+        themselves.
+
+        V2.80 restated that disclaimer in the author's first person for this
+        page, so the assertion moved with it. What is being guarded is the
+        *substance*, not the sentence: the reader is told the details were not
+        checked against the works, and that a citation says where a claim came
+        from rather than that anyone confirmed it.
+        """
         from src import citations
         page = (self.out / "about" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("Where this data came from", page)
-        self.assertIn("not been checked", page)
+        self.assertIn("Where the data came from", page)
+        self.assertIn("without opening the works themselves", page)
+        self.assertIn("where a claim came from", page)
         for key in ("acorn_sheldon_butterflies_ab", "globi"):
             head = citations.format_citation(key).split(".")[0]
             self.assertIn(head, page, key)
+
+    def test_every_page_carries_a_share_card(self):
+        """V2.80. A link pasted into Facebook, Reddit, Slack or a text message
+        used to unfold into a grey box with a URL under it, on a site whose
+        whole argument is that the plants are worth looking at.
+
+        Checked on every page rather than one, because the tags are emitted by
+        the shell and a page that renders its own head would silently opt out.
+        """
+        missing = [rel for rel in sorted(self.files)
+                   if rel.endswith(".html")
+                   and 'property="og:title"' not in
+                   (self.out / rel).read_text(encoding="utf-8")]
+        self.assertEqual(missing[:5], [],
+                         f"{len(missing)} pages share as a bare URL")
+
+    def test_the_share_image_is_absolute(self):
+        """The failure with no symptom on the page it is on: a scraper fetches
+        `og:image` from its own servers, with no page to resolve a relative
+        path against, so a relative one produces no card and no error."""
+        found = 0
+        for rel in sorted(self.files):
+            if not rel.endswith(".html"):
+                continue
+            for src in re.findall(r'property="og:image" content="([^"]+)"',
+                                  (self.out / rel).read_text(encoding="utf-8")):
+                found += 1
+                self.assertTrue(src.startswith(("http://", "https://")),
+                                f"{rel}: {src}")
+        self.assertTrue(found, "no page offered an image at all")
+
+    def test_no_species_page_prints_a_dict_key_at_the_reader(self):
+        """V2.80. All 422 published species pages read:
+
+            price: about $8-$16 per plant (estimate); availability: garden
+            centre; notes: Estimate (herb default); AB retail as of 2026
+
+        The extras renderer had a generic "a dict becomes `k: v` pairs" branch
+        and the sourcing field is a dict. The desktop had rendered the same
+        dict as prose since the field existed; only the public surface leaked
+        the schema. Formatting now lives in `sourcing.describe`, beside the
+        numbers, so a third surface cannot invent a fourth wording.
+        """
+        leaked = []
+        for page in (self.out / "plants").rglob("index.html"):
+            body = page.read_text(encoding="utf-8")
+            for key in ("price:", "availability:", "notes:"):
+                if key in body:
+                    leaked.append(f"{page.parent.name}: {key}")
+        self.assertEqual(leaked[:5], [], f"{len(leaked)} raw field names shown")
+
+    def test_the_price_still_says_it_is_an_estimate(self):
+        """The disclaimer `src/sourcing.py` requires is not what got cut: it is
+        a plant-type default, not a quote from a nursery."""
+        from src.sourcing import describe
+        text, note = describe({"price": "about $8-$16 per plant (estimate)",
+                               "availability": "garden centre",
+                               "notes": "Estimate (herb default)"})
+        self.assertEqual(text,
+                         "About $8-$16 per plant (estimate), usually stocked "
+                         "by garden centres.")
+        self.assertEqual(note, "Estimate (herb default)")
+
+    def test_the_availability_class_is_not_dropped_into_a_frame(self):
+        """`availability_class` is *how you get it*, not always a kind of shop,
+        and one frame does not fit all five: "usually from a seed or plug" (82
+        species) and "usually from a big box" (15) are what a single sentence
+        template produces, and neither is English. A class with no clause falls
+        back to the token, which is what the desktop has always shown."""
+        from src.sourcing import describe
+        self.assertEqual(describe({"availability": "seed_or_plug"})[0],
+                         "Usually sold as seed or plugs.")
+        self.assertEqual(describe({"availability": "big box"})[0],
+                         "Sometimes in big-box garden sections.")
+        self.assertEqual(describe({"availability": "mail_order_only"})[0],
+                         "Mail order only.")
+
+    def test_a_species_page_shares_its_own_species(self):
+        """Sharing a plant should show that plant, not the site default."""
+        entry = next(e for e in self.model["species"]
+                     if static_site._first_photo(e))
+        page = (self.out / "plants" / entry["slug"]
+                / "index.html").read_text(encoding="utf-8")
+        want = static_site._first_photo(entry)["url"]
+        self.assertIn(f'property="og:image" content="{want}"', page)
+        # And the credit travels with it: inside somebody else's app the page
+        # carrying the attribution is reduced to a link.
+        alt = re.search(r'property="og:image:alt" content="([^"]+)"', page)
+        self.assertIn(entry["brief"]["name"], alt.group(1))
 
     def test_the_file_index_is_url_shaped_not_os_shaped(self):
         """Guards the `.as_posix()` in setUpClass, which is invisible on Linux.
@@ -941,8 +1038,21 @@ class TestTheMethodPage(unittest.TestCase):
     def test_it_says_unshaded_is_not_absent(self):
         self.assertIn("not absent", self.html.replace("\n", " "))
 
-    def test_it_says_recorded_is_not_native(self):
-        self.assertIn("not native", self.html.replace("\n", " "))
+    # V2.80, second copy pass: `test_it_says_recorded_is_not_native` was
+    # REMOVED here, and this note is the record.
+    #
+    # It required the map section to carry a third bullet, "Recorded is not
+    # native: a garden escape can accumulate hundreds of records." The author's
+    # rewrite cut it to two, and the argument is the one directly below: the
+    # page is read by people, and three warnings under one map is where a
+    # reader stops reading warnings.
+    #
+    # The claim itself did not lapse, which is the test the deletion had to
+    # pass. Nativity is now sourced to VASCAN for every species that publishes
+    # one (F137/F144), a species VASCAN cannot settle prints no province list
+    # at all, and the section immediately below this one says so. The warning
+    # existed because the site could not tell a garden escape from a native;
+    # it now can, and says which.
 
     # V2.80: two tests were REMOVED here, and this note is the record.
     #
@@ -971,6 +1081,38 @@ class TestTheMethodPage(unittest.TestCase):
     def test_it_names_what_is_not_filtered(self):
         self.assertIn("identification-verified", self.html)
 
+    def test_the_retrieval_date_is_still_read_off_the_rows(self):
+        """V2.80 cut the "Retrieved on:" label the date used to hang from, so
+        it has to read as prose on its own. The re-punctuation is a partition
+        on what the row already says, never a typed date, and a source not in
+        that shape prints verbatim rather than being forced into it."""
+        from src.static_site_method import _sentence
+        self.assertEqual(
+            _sentence("GBIF occurrence search, retrieved 2026-08-25"),
+            "The <strong>GBIF occurrence search</strong> was retrieved "
+            "2026-08-25.")
+        self.assertEqual(_sentence("Somebody's field notebook"),
+                         "<strong>Somebody&#x27;s field notebook</strong>.")
+
+    def test_the_nativity_paragraph_matches_its_own_count(self):
+        """V2.80. This page shipped reading *"The other 0 read Not
+        established"*, followed by a paragraph explaining why those zero
+        species are unresolved.
+
+        The count was computed and correct; the prose around it was written
+        when 20 species were withheld and did not move when the renames took
+        that to none. So the *shape* of the sentence follows the count too.
+        """
+        from src.static_site_method import _nativity_claim
+        flat = " ".join(self.html.split())
+        self.assertNotIn("The other 0 ", flat)
+        self.assertIn("all 3 species carry an answer",
+                      _nativity_claim({"claimed": 3, "sourced": 3,
+                                       "withheld": 0}))
+        withheld = _nativity_claim({"claimed": 3, "sourced": 1, "withheld": 2})
+        self.assertIn("1 of 3", withheld)
+        self.assertIn("The other 2", withheld)
+
     def test_it_is_reachable_from_the_nav(self):
         from src.static_site_about import render_about
         self.assertIn('href="../method/"', render_about(self.model))
@@ -991,8 +1133,8 @@ class TestTheMethodPage(unittest.TestCase):
         # a test can only find when it happens to fit on one line is a test
         # about line width.
         flat = " ".join(self.html.split())
-        self.assertIn("counted in both", flat)
-        self.assertIn("eight records in a thousand", flat)
+        self.assertIn("counted twice", flat)
+        self.assertIn("eight records per thousand", flat)
         self.assertIn("Calgary", flat)
 
     def test_the_simplification_distance_is_not_typed_here(self):

@@ -210,7 +210,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # page that answers "where?" (the map page, the per-region maps, the
         # subregion pages) and this module keeps the ones that answer "what?".
         # Third split off this file, after the species page and the About page.
-        (_SRC / "static_site_render.py", 800),         # 709 now
+        # V2.80 spent most of what was left: 788 now, 12 to spare. The share
+        # card went into `src/site_share.py` rather than in here for that
+        # reason, on the V2.73 precedent -- what a build tells other people's
+        # machines is not rendering. The next page-shell concern needs a
+        # module, not the remaining twelve lines.
+        (_SRC / "static_site_render.py", 800),         # 788 now
         # V2.73 — the fifth split off the renderer, and the only one that is
         # not a page. `static_site_render.py` sat at 721 of 800 and growing one
         # analytics provider into two in place would have spent most of the
