@@ -4081,16 +4081,6 @@
   "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
  },
  {
-  "scientific_name": "Andrena quintiliformis",
-  "common_name": "Andrena quintiliformis",
-  "taxon": "bee",
-  "ab_native": 1,
-  "native_provinces": "AB",
-  "range_notes": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK.",
-  "icon": "🐝",
-  "description": "Mining bees. One of the largest bee genera in the prairies; dozens of species across AB and SK."
- },
- {
   "scientific_name": "Andrena robervalensis",
   "common_name": "Andrena robervalensis",
   "taxon": "bee",
@@ -5649,16 +5639,6 @@
   "range_notes": "Native grass-veneer moths.",
   "icon": "🦋",
   "description": "Native grass-veneer moths."
- },
- {
-  "scientific_name": "Criorhina nigriventris",
-  "common_name": "Criorhina nigriventris",
-  "taxon": "other_insect",
-  "ab_native": 1,
-  "native_provinces": "AB,SK",
-  "range_notes": "Bumblebee-mimicking hoverflies, native.",
-  "icon": "🪲",
-  "description": "Bumblebee-mimicking hoverflies, native."
  },
  {
   "scientific_name": "Crossidius coralinus",

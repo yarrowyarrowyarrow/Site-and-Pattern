@@ -872,7 +872,7 @@ def import_polyculture(data):
 #   solution — the instruction ("Therefore: …")
 _PATTERN_TEXT = {
     # ── Fruit & nut tree guilds ──────────────────────────────────────────────
-    "Apple Tree Community": {
+    "Chokecherry Community": {
         "problem": "A lone fruit tree on mown grass competes with turf for water "
                    "and nutrients, feeds little wildlife, and leans on you for "
                    "fertiliser and pest control.",
@@ -883,7 +883,7 @@ _PATTERN_TEXT = {
                   "low maintenance and a harvest. Bare ground under a tree invites "
                   "weeds, while the right companions feed the soil and the bees "
                   "instead.",
-        "solution": "Therefore: plant the apple at the centre and ring it with a "
+        "solution": "Therefore: plant the chokecherry at the centre and ring it with a "
                     "working guild. Add a nutrient accumulator and nitrogen fixer to "
                     "feed the soil, alliums and aromatic herbs to deter pests, a "
                     "pollinator magnet for fruit set, and a living groundcover to "
@@ -892,12 +892,12 @@ _PATTERN_TEXT = {
     "Shade-Tolerant": {
         "problem": "North-facing or partly shaded yards still want a fruit guild, "
                    "but sun-loving prairie companions sulk and fail there.",
-        "context": "The same apple guild, sited where buildings, fences, or taller "
+        "context": "The same chokecherry guild, sited where buildings, fences, or taller "
                    "trees cast shade for part of the day.",
         "forces": "Fruit trees tolerate some shade, but most understory companions "
                   "need full sun; choosing shade-adapted natives keeps the guild "
                   "functioning where light is limited.",
-        "solution": "Therefore: keep the apple but swap the understory for "
+        "solution": "Therefore: keep the chokecherry but swap the understory for "
                     "shade-tolerant natives: woodland-edge shrubs, shade-happy mint, "
                     "and a creeping evergreen groundcover that thrives out of full sun.",
     },
@@ -927,7 +927,7 @@ _PATTERN_TEXT = {
                     "the rest with extra berry shrubs (gooseberry, currant) for a "
                     "layered, fruit-forward planting.",
     },
-    "Evans Cherry Community": {
+    "Pin Cherry Community": {
         "problem": "Sour cherries set heavily on the prairies but draw aphids and "
                    "borers, and a cherry in turf competes for everything it needs.",
         "context": "A Zone 3–4 yard with room for a small fruit tree, where you want "
@@ -943,7 +943,7 @@ _PATTERN_TEXT = {
     "Native Understory": {
         "problem": "Gardeners who want a strictly native planting need a cherry guild "
                    "with no introduced companions.",
-        "context": "An Evans cherry guild for purists restoring local biodiversity, "
+        "context": "A pin cherry guild for purists restoring local biodiversity, "
                    "or sites where only Alberta natives are wanted.",
         "forces": "Native-only narrows the palette, but Alberta's prairie flora "
                   "covers every guild role: nutrient accumulation, pest deterrence, "
@@ -1249,12 +1249,16 @@ _PATTERN_TEXT = {
 
 EXAMPLE_POLYCULTURES = [
     {
-        "name": "Apple Tree Community",
-        "description": "Classic native habitat fruit tree community for Zone 3-4. "
-                       "Apple at centre with support plants filling understory and ground layer.",
+        # Centred on an apple until V2.80, when the fruit cultivars left the
+        # catalogue with the nativity work. Chokecherry is the native fruit
+        # tree at the same scale and keeps the guild's shape: a small tree at
+        # the centre with support plants filling the layers under it.
+        "name": "Chokecherry Community",
+        "description": "Native fruit tree community for Zone 3-4. Chokecherry at centre "
+                       "with support plants filling understory and ground layer.",
         "members": [
             # (common_name, role, offset_x, offset_y)
-            ("Goodland Apple",        "overstory",       0,    0),
+            ("Chokecherry",           "overstory",       0,    0),
             ("Stinging Nettle",       "soil_builder",    1.5,  0.8),
             ("Wild Chives",           "pest_deterrent", -1.2,  1.0),
             ("Purple Prairie Clover", "nitrogen_fixer",  0,    1.5),
@@ -1264,10 +1268,10 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Shade-Tolerant",
-                "description": "Apple community variant using shade-tolerant understory plants. "
+                "description": "Chokecherry community variant using shade-tolerant understory plants. "
                                "Better for north-facing or partially shaded sites.",
                 "members": [
-                    ("Goodland Apple",           "overstory",       0,    0),
+                    ("Chokecherry",              "overstory",       0,    0),
                     ("Stinging Nettle",          "soil_builder",    1.5,  0.8),
                     ("Wild Mint",                "pest_deterrent", -1.2,  1.0),
                     ("Canada Milk Vetch",        "nitrogen_fixer",  0,    1.5),
@@ -1331,15 +1335,18 @@ EXAMPLE_POLYCULTURES = [
     },
     # ── Edmonton-specific polycultures designed for Zone 3-4 ──────────────────────
     {
-        "name": "Evans Cherry Community",
-        "description": "Fruit tree polyculture centred on Evans Cherry, a hardy sour cherry bred for "
-                       "prairie climates. Stinging nettle accumulates deep nutrients and provides "
+        # Named for a cultivated sour cherry until V2.80. Pin cherry is the
+        # native cherry of this ground, so the community keeps both its
+        # identity and its shape.
+        "name": "Pin Cherry Community",
+        "description": "Fruit tree polyculture centred on pin cherry, the native cherry of the "
+                       "prairies and parkland. Stinging nettle accumulates deep nutrients and provides "
                        "chop-and-drop mulch. Wild chives and prairie sage repel aphids and borers "
                        "common on cherries. Purple prairie clover fixes nitrogen as a native ground "
                        "layer, while bee balm attracts native pollinators for improved fruit set. "
                        "Wild strawberry suppresses weeds and yields an additional ground-level harvest.",
         "members": [
-            ("Evans Cherry",              "overstory",       0,    0),
+            ("Pin Cherry",                "overstory",       0,    0),
             ("Stinging Nettle",           "soil_builder",    1.8,  0),
             ("Wild Chives",               "pest_deterrent", -1.0,  1.2),
             ("Purple Prairie Clover",     "nitrogen_fixer",  0,    2.0),
@@ -1350,12 +1357,12 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Native Understory",
-                "description": "Evans Cherry community variant using exclusively native prairie plants. "
+                "description": "Pin cherry community variant using exclusively native prairie plants. "
                                "Yarrow is a native nutrient accumulator and pollinator attractor; "
                                "nodding onion provides allium-family pest deterrence; silvery lupine "
                                "fixes nitrogen in dappled light; wild bergamot draws native bumble bees.",
                 "members": [
-                    ("Evans Cherry",              "overstory",       0,    0),
+                    ("Pin Cherry",                "overstory",       0,    0),
                     ("Boreal Yarrow",                    "soil_builder",    1.8,  0),
                     ("Nodding Onion",             "pest_deterrent", -1.0,  1.2),
                     ("Silvery Lupine",            "nitrogen_fixer",  0,    2.0),
@@ -1570,7 +1577,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Silver Buffaloberry",       "nitrogen_fixer",      0,    1.5),
                     ("Western Snowberry",         "understory",          0.8,  0.8),
                     ("Silverberry",               "windbreak",           0.8,  2.2),
-                    ("Nanking Cherry",            "understory",         -0.5,  3.8),
+                    ("Beaked Hazelnut",           "understory",         -0.5,  3.8),
                     ("Wild Bergamot",  "pollinator",         -0.5,  1.0),
                 ],
             },
@@ -1847,7 +1854,7 @@ EXAMPLE_POLYCULTURES = [
                        'Tallamy keystone genera.',
         "members": [
             ('Late Goldenrod', 'pollinator', 0.0, 0.0),
-            ('Gray Goldenrod', 'pollinator', 1.5, 0.0),
+            ('Prairie Goldenrod', 'pollinator', 1.5, 0.0),
             ('Stiff Goldenrod', 'pollinator', 1.3, 1.6),
             ('Showy Aster', 'pollinator', -0.3, 1.5),
             ('Arctic Aster', 'pollinator', -1.9, 0.9),
@@ -2363,7 +2370,7 @@ EXAMPLE_POLYCULTURES = [
                        'bumble bees; river beauty and sneezeweed carry late bloom; a '
                        'clematis vine scrambles the edge.',
         "members": [
-            ('Pink Spirea', 'shrub_layer', 0.0, 0.0),
+            ('Pink Spirea (Rose Meadowsweet)', 'shrub_layer', 0.0, 0.0),
             ('Tall Larkspur', 'pollinator', 1.5, 0.0),
             ('Mountain Hollyhock', 'pollinator', 1.7, 1.2),
             ('River Beauty', 'pollinator', 0.5, 1.4),

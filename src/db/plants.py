@@ -445,7 +445,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # catalogue systematically under-reported northern occurrence for its sixteen
 # most-recorded species, and nothing could see it, because a truncated harvest
 # and a complete one look identical once cached.
-_SCHEMA_VERSION = 81
+_SCHEMA_VERSION = 82
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

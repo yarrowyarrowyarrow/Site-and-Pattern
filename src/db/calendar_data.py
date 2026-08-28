@@ -67,48 +67,6 @@ SEED_CALENDAR: list[tuple] = [
     ("Paper Birch", 11, "dormant",    None),
     ("Paper Birch", 12, "dormant",    None),
 
-    # Goodland Apple
-    ("Goodland Apple", 1,  "dormant",    None),
-    ("Goodland Apple", 2,  "dormant",    None),
-    ("Goodland Apple", 3,  "pruning",    "Prune before bud break while still dormant"),
-    ("Goodland Apple", 4,  "dormant",    "Order bare-root trees; apply dormant oil"),
-    ("Goodland Apple", 5,  "transplant", "Plant bare-root trees; blooms mid-May"),
-    ("Goodland Apple", 6,  "growing",    "Thin fruitlets after June drop"),
-    ("Goodland Apple", 7,  "growing",    "Water deeply every 7–10 days"),
-    ("Goodland Apple", 8,  "harvest",    "Harvest ripe fruit mid–late August"),
-    ("Goodland Apple", 9,  "harvest",    "Pick remaining fruit before frost"),
-    ("Goodland Apple", 10, "dormant",    "Clean up fallen fruit; mulch roots"),
-    ("Goodland Apple", 11, "dormant",    "Wrap trunk to prevent sunscald"),
-    ("Goodland Apple", 12, "dormant",    None),
-
-    # Norland Apple
-    ("Norland Apple", 1,  "dormant",    None),
-    ("Norland Apple", 2,  "dormant",    None),
-    ("Norland Apple", 3,  "pruning",    "Prune before bud break"),
-    ("Norland Apple", 4,  "dormant",    "Apply dormant oil spray"),
-    ("Norland Apple", 5,  "transplant", "Plant bare-root trees; blooms mid-May"),
-    ("Norland Apple", 6,  "growing",    "Thin fruitlets after June drop"),
-    ("Norland Apple", 7,  "harvest",    "Very early — harvest late July"),
-    ("Norland Apple", 8,  "harvest",    "Harvest early August"),
-    ("Norland Apple", 9,  "growing",    "Post-harvest care; water until freeze"),
-    ("Norland Apple", 10, "dormant",    "Clean up; mulch roots"),
-    ("Norland Apple", 11, "dormant",    "Wrap trunk"),
-    ("Norland Apple", 12, "dormant",    None),
-
-    # Evans Cherry
-    ("Evans Cherry", 1,  "dormant",    None),
-    ("Evans Cherry", 2,  "dormant",    None),
-    ("Evans Cherry", 3,  "pruning",    "Prune before bud break"),
-    ("Evans Cherry", 4,  "dormant",    "Order nursery stock"),
-    ("Evans Cherry", 5,  "transplant", "Plant; blooms in May"),
-    ("Evans Cherry", 6,  "growing",    "Fruit developing; net to protect from birds"),
-    ("Evans Cherry", 7,  "harvest",    "Harvest tart cherries mid–late July"),
-    ("Evans Cherry", 8,  "harvest",    "Finish harvest early August"),
-    ("Evans Cherry", 9,  "growing",    None),
-    ("Evans Cherry", 10, "dormant",    "Mulch around base"),
-    ("Evans Cherry", 11, "dormant",    None),
-    ("Evans Cherry", 12, "dormant",    None),
-
     # Pembina Plum
     ("Pembina Plum", 1,  "dormant",    None),
     ("Pembina Plum", 2,  "dormant",    None),
@@ -280,20 +238,6 @@ SEED_CALENDAR: list[tuple] = [
     ("Raspberry", 10, "dormant",    "Mulch canes for winter protection"),
     ("Raspberry", 11, "dormant",    None),
     ("Raspberry", 12, "dormant",    None),
-
-    # Nanking Cherry
-    ("Nanking Cherry", 1,  "dormant",    None),
-    ("Nanking Cherry", 2,  "dormant",    None),
-    ("Nanking Cherry", 3,  "pruning",    "Shape; remove dead wood"),
-    ("Nanking Cherry", 4,  "dormant",    None),
-    ("Nanking Cherry", 5,  "transplant", "Plant; beautiful pink-white blooms in May"),
-    ("Nanking Cherry", 6,  "growing",    "Fruit developing"),
-    ("Nanking Cherry", 7,  "harvest",    "Harvest small red cherries Jul–Aug"),
-    ("Nanking Cherry", 8,  "harvest",    "Continue harvest"),
-    ("Nanking Cherry", 9,  "growing",    None),
-    ("Nanking Cherry", 10, "dormant",    None),
-    ("Nanking Cherry", 11, "dormant",    None),
-    ("Nanking Cherry", 12, "dormant",    None),
 
     # Potentilla (Shrubby)
     ("Potentilla (Shrubby)", 1,  "dormant",    None),

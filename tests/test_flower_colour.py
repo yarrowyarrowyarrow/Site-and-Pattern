@@ -92,8 +92,12 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: Oligoneuron rigidum), straw -1 (Festuca ovina), white -1 (Achillea
     #: millefolium, merged into A. borealis). No bucket moved for any other
     #: reason, so the classifier is unchanged.
+    #: V2.80, second pass: yellow -1 (Solidago nemoralis) and pink -1
+    #: (Spiraea douglasii), the two species VASCAN records but not for these
+    #: provinces. Both drops accounted for; no bucket moved for any other
+    #: reason.
     EXPECTED = {
-        "yellow": 78, "straw": 80, "white": 71, "purple": 53, "pink": 42,
+        "yellow": 77, "straw": 80, "white": 71, "purple": 53, "pink": 41,
         "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
     }
 

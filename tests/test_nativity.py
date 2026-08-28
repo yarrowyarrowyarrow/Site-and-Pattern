@@ -125,34 +125,39 @@ class TestTheSeamVascanArrivesThrough(unittest.TestCase):
         from a published flora" over an answer no flora gave, which is the
         exact overstatement this whole line of work exists to remove.
 
-        V2.80 worked that list down from ~20 to **six**, and the arithmetic is
-        the point: four introduced species removed, eight renamed to the
-        accepted taxon, and the renames then **sourced themselves** when the
-        author re-ran the archive under the corrected names -- which is what
-        clearing the source on a rename was for.
+        V2.80 worked that list from ~20 to six and then to **none**. Four
+        introduced species were removed; eight were renamed to the accepted
+        taxon and then **sourced themselves** when the author re-ran the
+        archive under the corrected names, which is what clearing the source
+        on a rename was for. On the last six the call was *"we can keep the
+        422 and drop the 6"*: the two species VASCAN records but not for
+        these provinces were removed, and the four fruit cultivars were held
+        out to ``data/food_plants_pack.json``.
 
-        The six that remain are two distinct and permanent reasons, so this
-        asserts one example of each rather than a list every data pass
-        invalidates. An earlier version pinned *Urtica gracilis* as unsourced
-        and failed the moment the re-run sourced it, which was the test
-        working: it had recorded a state that was supposed to be temporary."""
+        So every nativity claim this catalogue publishes is now read from a
+        flora, and the withheld note has nothing left to describe.
+
+        Kept and inverted rather than deleted. Its value now is that adding a
+        species without a sourced nativity fails here, instead of quietly
+        starting a backlog nobody is watching. An earlier version pinned
+        *Urtica gracilis* as unsourced and failed the moment the re-run
+        sourced it -- which was the test working, having recorded a state that
+        was always meant to be temporary."""
         rows = _shipped()
         blank = [r.get("scientific_name") for r in rows
                  if not r.get(N.SOURCE_FIELD)]
-        self.assertTrue(blank, "every species sourced: check nothing stamped "
-                               "the unresolved ones")
-
-        # Recorded by VASCAN, but not for Alberta or Saskatchewan. No rename
-        # resolves this one, so it is a stable pin.
-        self.assertIn("Spiraea douglasii", blank)
-        # A cultivar; no flora carries it at all, and none ever will.
-        self.assertIn("Prunus tomentosa", blank)
-        # The renamed eight are sourced now, from the archive rather than from
-        # a transcription -- the whole reason a rename blanks the field.
-        self.assertNotIn("Urtica gracilis subsp. gracilis", blank)
-        self.assertLessEqual(len(blank), 8,
-                             f"the withheld list should be down to the "
-                             f"cultivars and the absentees: {sorted(blank)}")
+        self.assertEqual(
+            sorted(blank), [],
+            "a species is carrying an unsourced nativity again -- either it "
+            "needs the archive run under its accepted name, or it does not "
+            "belong in a catalogue of native plants")
+        self.assertGreater(len(rows), 400, "the catalogue emptied, which is "
+                                           "not what this test is checking")
+        # Removed outright rather than left unsourced.
+        names = {r.get("scientific_name") for r in rows}
+        for gone in ("Spiraea douglasii", "Solidago nemoralis",
+                     "Prunus tomentosa", "Helianthus annuus"):
+            self.assertNotIn(gone, names)
 
         # Removed outright, so not merely unsourced -- gone.
         names = {r.get("scientific_name") for r in rows}

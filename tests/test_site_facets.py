@@ -290,14 +290,19 @@ class TestOnlyNativesArePublished(unittest.TestCase):
         _use_our_db()
         cls.rows = search_plants()
 
-    def test_the_garden_cultivars_are_dropped(self):
-        """Four, not five: V2.80 consolidated the duplicate *Monarda
-        fistulosa*, which had shipped in the garden file as "Bee Balm (Wild
-        Bergamot)" beside the plants_master row's "Wild Bergamot". The site
-        had always dropped it here; now there is no second row to drop."""
+    def test_nothing_needs_dropping_any_more(self):
+        """The filter used to earn its keep on five rows: four fruit cultivars
+        and a duplicate bergamot. V2.80 removed all of them from the catalogue
+        outright -- *"we can keep the 422 and drop the 6"* -- so there is
+        nothing left for it to catch.
+
+        The rule stays, and this asserts it stays *correct* rather than
+        unused: every row now published is one this catalogue can defend, and
+        the day something non-native is added again the filter is still there
+        to hold it out."""
         dropped = {r["common_name"] for r in self.rows if not is_publishable(r)}
-        self.assertEqual(dropped, {"Goodland Apple", "Norland Apple",
-                                   "Evans Cherry", "Nanking Cherry"})
+        self.assertEqual(dropped, set())
+        self.assertTrue(self.rows, "no rows at all would pass this vacuously")
 
     def test_a_non_alberta_prairie_native_is_kept(self):
         """A species flagged non-Alberta can still be a genuine prairie native.

@@ -770,13 +770,6 @@
   "source": "cornell_birds_of_the_world"
  },
  {
-  "plant": "Gray Goldenrod",
-  "fauna": "Spinus tristis",
-  "relationship": "seed_food",
-  "specificity": "generalist",
-  "source": "cornell_birds_of_the_world"
- },
- {
   "plant": "Stiff Goldenrod",
   "fauna": "Spinus tristis",
   "relationship": "seed_food",
@@ -6359,48 +6352,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Gray Goldenrod",
-  "fauna": "Bombus bifarius",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Bombus rufocinctus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Chauliognathus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Toxomerus marginatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Bombus ternarius",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Eristalis tenax",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Greater Northern Aster",
   "fauna": "Bombus bifarius",
   "relationship": "nectar",
@@ -9534,125 +9485,6 @@
   "fauna": "Bombus melanopygus",
   "relationship": "nectar",
   "source": "globi_lamanna_ja_burkle_la_belote_rt_myers_ja_biotic_and_abiotic_d",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Chauliognathus pensylvanicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus vagans",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus ternarius",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Agapostemon virescens",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus terricola",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Halictus rubicundus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus mixtus",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus bifarius",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus flavifrons",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus occidentalis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus rufocinctus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus appositus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus sitkensis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus griseocollis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus fervidus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus centralis",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus melanopygus",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
   "notes": "GloBI flowersVisitedBy"
  },
  {
@@ -18453,97 +18285,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Nanking Cherry",
-  "fauna": "Eucera fulvitarsis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus huntii",
-  "relationship": "nectar",
-  "source": "globi_www_bumblebeewatch_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus perplexus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus nevadensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus cryptarum",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus ternarius",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Colletes inaequalis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Archilochus colubris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Osmia lignaria",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Vanessa atalanta",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus terricola",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Halictus rubicundus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Eristalis tenax",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Alpine Bistort",
   "fauna": "Lagopus muta",
   "relationship": "fruit_food",
@@ -23213,153 +22954,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Gray Goldenrod",
-  "fauna": "Andrena miserabilis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Bibio albipennis",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Physocephala tibialis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Andrena hirticincta",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Bembix americana",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Schinia arcigera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Philanthus gibbosus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Sphaerophoria contigua",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Colias eurytheme",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Strymon melinus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Vespula maculifrons",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Burnsius communis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Toxomerus geminatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Ancistrocerus catskill",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Philanthus ventilabris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Vanessa virginiensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Halictus ligatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Sphex ichneumoneus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Cupido comyntas",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Melissodes druriellus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Ceratina calcarata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Greater Northern Aster",
   "fauna": "Megachile pugnata",
   "relationship": "nectar",
@@ -26753,69 +26347,6 @@
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
   "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Toxomerus geminatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Phyciodes tharos",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Andrena crataegi",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Augochlorella aurata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Strymon melinus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Bombus vancouverensis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Osmia tristella",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Andrena salicifloris",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Andrena scurra",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
  },
  {
   "plant": "Pink Spirea (Rose Meadowsweet)",
@@ -36207,41 +35738,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Nanking Cherry",
-  "fauna": "Andrena milwaukeensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Bombus vancouverensis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Ceratina calcarata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Andrena vicina",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Eristalis dimidiata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Alpine Aster",
   "fauna": "Polistes fuscatus",
   "relationship": "nectar",
@@ -36313,13 +35809,6 @@
  },
  {
   "plant": "Giant Hyssop",
-  "fauna": "Polistes fuscatus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
   "fauna": "Polistes fuscatus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
@@ -40633,69 +40122,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Gray Goldenrod",
-  "fauna": "Oxybelus emarginatus",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Ponometia candefacta",
-  "relationship": "pollen",
-  "source": "globi_bascompte_robertson_c_1929_flowers_and_insects_lists_of_visi",
-  "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Megacyllene robiniae",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Sericomyia militaris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Perdita octomaculata",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Agrotis venerabilis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Lygaeus kalmii",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Hippodamia parenthesis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Gray Goldenrod",
-  "fauna": "Ammophila procera",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Greater Northern Aster",
   "fauna": "Megachile fidelis",
   "relationship": "nectar",
@@ -43690,41 +43116,6 @@
   "relationship": "pollen",
   "source": "globi_guzman_laura_melissa_kelly_tyler_elle_elizabeth_2022_a_datas",
   "notes": "GloBI pollinatedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Megachile inermis",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Meliscaeva cinctella",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Andrena quintiliformis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Perdita nevadensis",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Pink Spirea",
-  "fauna": "Eucera frater",
-  "relationship": "nectar",
-  "source": "globi_ecdysis_org",
-  "notes": "GloBI flowersVisitedBy"
  },
  {
   "plant": "Plains Wormwood",
@@ -51367,27 +50758,6 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Nanking Cherry",
-  "fauna": "Criorhina nigriventris",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Vespula atropilosa",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
-  "plant": "Nanking Cherry",
-  "fauna": "Lapposyrphus lapponicus",
-  "relationship": "nectar",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI flowersVisitedBy"
- },
- {
   "plant": "Chokecherry",
   "fauna": "Orthosia hibisci",
   "relationship": "larval_host",
@@ -51515,13 +50885,6 @@
  },
  {
   "plant": "Flat-topped Goldenrod",
-  "fauna": "Cucullia convexipennis",
-  "relationship": "larval_host",
-  "source": "globi_inaturalist_org",
-  "notes": "GloBI eatenBy"
- },
- {
-  "plant": "Gray Goldenrod",
   "fauna": "Cucullia convexipennis",
   "relationship": "larval_host",
   "source": "globi_inaturalist_org",

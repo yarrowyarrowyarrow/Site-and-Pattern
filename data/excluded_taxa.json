@@ -109,6 +109,28 @@
       "removed_on": "2026-08-27",
       "took_with_it": "nothing; the surviving row keeps the common name",
       "substitute": "Monarda fistulosa (Wild Bergamot)"
+    },
+    {
+      "scientific_name": "Solidago nemoralis",
+      "common_names": [
+        "Gray Goldenrod"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 records Solidago nemoralis from Manitoba only, not from Alberta or Saskatchewan. A catalogue of AB/SK natives should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-28",
+      "took_with_it": "39 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Spiraea douglasii",
+      "common_names": [
+        "Pink Spirea"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 carries the name but publishes no distribution for these provinces; Spiraea douglasii is a British Columbia coastal species. The pink-flowered spirea native here is Spiraea splendens var. rosea, which is a substitution rather than a rename, so it is not made automatically.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-28",
+      "took_with_it": "31 documented plant-fauna edges deleted, 1 animals left with no edge, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
     }
   ]
 }

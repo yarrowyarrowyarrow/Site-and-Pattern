@@ -41,7 +41,7 @@ class PatternLanguageTests(unittest.TestCase):
         return rec, pattern_language.build_pattern(rec, all_communities=self.all)
 
     def test_build_pattern_has_all_sections(self):
-        _, pat = self._pattern("Apple Tree Community")
+        _, pat = self._pattern("Chokecherry Community")
         for key in ("problem", "context", "forces", "solution",
                     "context_facts", "forces_facts", "related", "name"):
             self.assertIn(key, pat)
@@ -49,7 +49,7 @@ class PatternLanguageTests(unittest.TestCase):
         self.assertIsInstance(pat["forces_facts"], list)
 
     def test_authored_problem_and_solution_used(self):
-        rec, pat = self._pattern("Apple Tree Community")
+        rec, pat = self._pattern("Chokecherry Community")
         # The seed authored real text — the pattern must surface it verbatim.
         self.assertTrue(rec.get("problem"))
         self.assertEqual(pat["problem"], rec["problem"].strip())
@@ -87,7 +87,7 @@ class PatternLanguageTests(unittest.TestCase):
         self.assertIn("nectar", joined)
 
     def test_related_includes_variation(self):
-        _, pat = self._pattern("Apple Tree Community")
+        _, pat = self._pattern("Chokecherry Community")
         relations = {(r["name"], r["relation"]) for r in pat["related"]}
         self.assertIn(("Shade-Tolerant", "Variation"), relations)
 
@@ -97,7 +97,7 @@ class PatternLanguageTests(unittest.TestCase):
         self.assertIn("Base pattern", rels)
 
     def test_card_html_has_headings_and_anchor(self):
-        _, pat = self._pattern("Apple Tree Community")
+        _, pat = self._pattern("Chokecherry Community")
         html = pattern_language.pattern_card_html(pat)
         for heading in ("Problem", "Context", "Forces", "Solution",
                         "Related patterns"):

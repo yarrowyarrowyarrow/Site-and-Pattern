@@ -16472,33 +16472,6 @@
         "confidence": "low"
       }
     ],
-    "Solidago nemoralis": [
-      {
-        "ecoregion": "aspen_parkland",
-        "occurrences": 8,
-        "confidence": "medium"
-      },
-      {
-        "ecoregion": "boreal_transition",
-        "occurrences": 7,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "mid_boreal_uplands",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "slave_river_lowland",
-        "occurrences": 4,
-        "confidence": "low"
-      },
-      {
-        "ecoregion": "moist_mixed_grassland",
-        "occurrences": 3,
-        "confidence": "low"
-      }
-    ],
     "Solidago rigida": [
       {
         "ecoregion": "moist_mixed_grassland",

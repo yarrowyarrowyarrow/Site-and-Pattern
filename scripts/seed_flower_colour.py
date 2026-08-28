@@ -129,7 +129,6 @@ CORRECTIONS: dict = {
     "Capnoides sempervirens": ("pink",   "name", "Pink Corydalis"),
     "Erythranthe lewisii":    ("pink",   "name", "Pink Monkey Flower"),
     "Pyrola asarifolia":      ("pink",   "name", "Pink Pyrola"),
-    "Spiraea douglasii":      ("pink",   "name", "Pink Spirea"),
     "Oenothera suffrutescens": ("pink",  "name",
                                 "Scarlet Butterfly Plant; white aging to pink "
                                 "and red, nearer pink than the genus yellow"),

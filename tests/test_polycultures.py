@@ -264,7 +264,7 @@ class TestPatternLanguageColumns(unittest.TestCase):
             conn.close()
 
     def test_seeded_community_has_authored_pattern(self):
-        pc = polycultures.get_polyculture_by_name("Apple Tree Community")
+        pc = polycultures.get_polyculture_by_name("Chokecherry Community")
         self.assertIsNotNone(pc)
         for field in ("problem", "context", "forces", "solution"):
             self.assertTrue((pc.get(field) or "").strip(),
@@ -280,11 +280,11 @@ class TestPatternLanguageColumns(unittest.TestCase):
                          ("P", "C", "F", "S"))
 
     def test_export_import_roundtrips_authored_fields(self):
-        src_id = polycultures.get_polyculture_by_name("Apple Tree Community")["id"]
+        src_id = polycultures.get_polyculture_by_name("Chokecherry Community")["id"]
         data = polycultures.export_polyculture(src_id)
         for field in ("problem", "context", "forces", "solution"):
             self.assertTrue(data.get(field), f"export dropped {field}")
-        data["name"] = "Apple Tree Community (imported)"
+        data["name"] = "Chokecherry Community (imported)"
         new_id, _warn = polycultures.import_polyculture(data)
         rec = polycultures.get_polyculture_by_id(new_id)
         self.assertEqual(rec["problem"], data["problem"])
@@ -328,7 +328,7 @@ class TestCommunityFacets(unittest.TestCase):
 
     def test_structure_uses_tallest_layer(self):
         # A tree-anchored community groups under "Canopy".
-        apple = polycultures.get_polyculture_by_name("Apple Tree Community")
+        apple = polycultures.get_polyculture_by_name("Chokecherry Community")
         self.assertEqual(
             polycultures.get_community_facets()[apple["id"]]["structure"],
             "Canopy")

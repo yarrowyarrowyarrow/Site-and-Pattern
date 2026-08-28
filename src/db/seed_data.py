@@ -30,18 +30,11 @@ SEED_COMPANIONS: list[tuple] = [
     # Wild Chives (native allium) repels aphids near roses and fruit trees
     ("Wild Chives", "Prickly Wild Rose", "friend"),
     ("Wild Chives", "Saskatoon Berry",   "friend"),
-    ("Wild Chives", "Goodland Apple",    "friend"),
-    ("Wild Chives", "Norland Apple",     "friend"),
-    ("Wild Chives", "Evans Cherry",      "friend"),
 
     # Boreal Yarrow improves soil and attracts beneficials near most plants
-    ("Boreal Yarrow", "Goodland Apple",    "friend"),
-    ("Boreal Yarrow", "Norland Apple",     "friend"),
-    ("Boreal Yarrow", "Evans Cherry",      "friend"),
     ("Boreal Yarrow", "Saskatoon Berry",   "friend"),
 
     # Native nitrogen-fixers benefit neighbours
-    ("Purple Prairie Clover", "Goodland Apple",  "friend"),
     ("Purple Prairie Clover", "Bur Oak",         "friend"),
     ("Silvery Lupine",        "Saskatoon Berry", "friend"),
     ("Canada Milk Vetch",     "Bur Oak",         "friend"),
@@ -51,14 +44,9 @@ SEED_COMPANIONS: list[tuple] = [
     ("Wild Bergamot", "Bur Oak",         "friend"),
 
     # Stinging Nettle improves soil and fruit quality nearby
-    ("Stinging Nettle", "Goodland Apple",  "friend"),
-    ("Stinging Nettle", "Norland Apple",   "friend"),
-    ("Stinging Nettle", "Evans Cherry",    "friend"),
     ("Stinging Nettle", "Bur Oak",         "friend"),
 
     # Jerusalem Artichoke is allelopathic — suppresses many plants
-    ("Jerusalem Artichoke", "Goodland Apple",  "enemy"),
-    ("Jerusalem Artichoke", "Norland Apple",   "enemy"),
     ("Jerusalem Artichoke", "Saskatoon Berry", "enemy"),
 ]
 

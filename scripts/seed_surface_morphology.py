@@ -147,7 +147,6 @@ BARK_TEXTURE = {
     "Spiraea alba": "shaggy",
     "Spiraea alba var. latifolia": "shaggy",
     "Spiraea betulifolia": "shaggy",
-    "Spiraea douglasii": "shaggy",
     "Symphoricarpos albus": "shaggy",
     "Symphoricarpos occidentalis": "shaggy",
 }
