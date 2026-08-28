@@ -425,6 +425,11 @@ def main(argv=None) -> int:
                    help="look at extracted flora text before parsing it: "
                         "counts, a sample, and a warning if a PDF came out "
                         "empty because it is a scan with no text layer")
+    p.add_argument("--peek-species", nargs="+", metavar="FILE|NAME",
+                   dest="peek_species",
+                   help="FILE then optional species names: print the raw block "
+                        "found for each, to see OCR quality on real text and "
+                        "whether species headings survived as lines")
     p.add_argument("--from-budds", metavar="FILE", dest="from_budds",
                    help="read Budd's Flora (as plain text) and write a review "
                         "spreadsheet: one proposed colour per species, with "
@@ -444,6 +449,38 @@ def main(argv=None) -> int:
             print(f"No file at {path}.", file=sys.stderr)
             return 1
         print(peek(path.read_text(encoding="utf-8", errors="replace")))
+        return 0
+
+    if args.peek_species:
+        from src.budds_colour import blocks, colour_in
+        path = Path(args.peek_species[0])
+        if not path.exists():
+            print(f"No file at {path}.", file=sys.stderr)
+            return 1
+        names = args.peek_species[1:]
+        if not names:
+            # Species whose colour is not in dispute, so a wrong answer here is
+            # the parser or the OCR rather than a hard plant.
+            names = ["Achillea millefolium", "Agastache foeniculum",
+                     "Solidago rigida", "Cornus sericea",
+                     "Opuntia polyacantha"]
+        text = path.read_text(encoding="utf-8", errors="replace")
+        found = blocks(text, names)
+        for name in names:
+            print(f"\n=== {name} ===")
+            block = found.get(name)
+            if not block:
+                print("  NOT FOUND in this text")
+                continue
+            print(f"  block is {len(block)} characters:")
+            print("  " + block[:600].replace("\n", "\n  "))
+            buckets, quote = colour_in(block)
+            print(f"\n  -> colour: {'/'.join(buckets) if buckets else 'NONE'}")
+            print(f"  -> from:   {quote[:160]!r}")
+        print("\nWhat to look at: is the block ONE species (good) or does it "
+              "run into\nthe next one (the headings did not survive as "
+              "lines)? And is the prose\nreadable, or is the OCR too broken "
+              "to parse?")
         return 0
 
     if args.from_budds:
