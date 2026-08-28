@@ -84,9 +84,10 @@ class TestABlockIsOneSpecies(unittest.TestCase):
     def test_a_sentence_starting_like_a_genus_does_not_end_the_block(self):
         """"Leaves finely dissected" is Genus-then-epithet shaped. Reading it
         as the next species cut yarrow's block before its flower sentence."""
-        block = blocks(FLORA, ["Achillea millefolium"])["Achillea millefolium"]
+        block, how = blocks(FLORA, ["Achillea millefolium"])["Achillea millefolium"]
         self.assertIn("Flowers white", block)
         self.assertNotIn("Agastache", block)
+        self.assertEqual(how, "name")
 
     def test_the_stopword_list_covers_the_obvious_openers(self):
         for word in ("leaves", "flowers", "stems", "fruit", "perennial"):
@@ -94,6 +95,56 @@ class TestABlockIsOneSpecies(unittest.TestCase):
 
     def test_a_species_the_book_does_not_carry_yields_nothing(self):
         self.assertEqual(read(FLORA, ["Zzzzia nonexistens"]), [])
+
+    def test_a_family_heading_ends_a_block(self):
+        """Budd's runs family headings in capitals -- `ELEAEAGNACEAE -
+        oleaster family` -- which is not Genus-then-epithet, so it did not end
+        a block and Opuntia polyacantha ran 968 characters into the
+        Elaeagnaceae, picking up their flowers as well as its own."""
+        text = ("Opuntia polyacantha Haw. prickly-pear\n"
+                "A prostrate plant. Flowers showy, yellow, 5-8 cm across.\n"
+                "ELEAEAGNACEAE - oleaster family\n"
+                "Shrubs with silvery leaves. Flowers brown, in small clusters.\n")
+        block, _how = blocks(text, ["Opuntia polyacantha"])["Opuntia polyacantha"]
+        self.assertIn("yellow", block)
+        self.assertNotIn("ELEAEAGNACEAE", block)
+        self.assertEqual(read(text, ["Opuntia polyacantha"])[0].buckets,
+                         ("yellow",))
+
+
+class TestA1979FloraDoesNotUse2026Names(unittest.TestCase):
+    """*Cornus sericea* is simply absent from Budd's, which files red osier
+    dogwood under *Cornus stolonifera*. No parser finds a name the book does
+    not contain, so the common name has to carry it."""
+
+    TEXT = ("Cornus stolonifera Michx. red-osier dogwood\n"
+            "Shrub to 3 m. Stems red. Flowers white in flat cymes.\n")
+    COMMON = {"Cornus sericea": "Red Osier Dogwood"}
+
+    def test_the_binomial_alone_finds_nothing(self):
+        self.assertEqual(read(self.TEXT, ["Cornus sericea"]), [])
+
+    def test_the_common_name_crosses_the_gap(self):
+        got = read(self.TEXT, ["Cornus sericea"], self.COMMON)
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].buckets, ("white",))
+
+    def test_hyphenation_between_the_two_books_does_not_matter(self):
+        """Budd's writes 'red-osier dogwood', the catalogue 'Red Osier
+        Dogwood'."""
+        got = read(self.TEXT, ["Cornus sericea"], self.COMMON)
+        self.assertEqual(got[0].found_as, "common name")
+
+    def test_a_common_name_match_is_never_confident(self):
+        """A weaker key deserves a look, so it goes to the CHECK pile whatever
+        else is true of it."""
+        self.assertFalse(read(self.TEXT, ["Cornus sericea"],
+                              self.COMMON)[0].confident)
+
+    def test_a_short_common_name_is_refused(self):
+        """'Rose' or 'Sage' would match half a flora."""
+        self.assertEqual(read(self.TEXT, ["Zzzzia nonexistens"],
+                              {"Zzzzia nonexistens": "Rose"}), [])
 
 
 class TestOnlyTheBloomCounts(unittest.TestCase):

@@ -185,16 +185,16 @@ def budds_review(text_path: Path) -> int:
 
     need = catalogue_needing_colour()
     findings = read(text_path.read_text(encoding="utf-8", errors="replace"),
-                    list(need))
+                    list(need), catalogue_common_names())
     REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:
         out = csv.writer(fh, delimiter="\t")
-        out.writerow(["scientific_name", "colour", "check", "was",
-                      "what the flora says"])
+        out.writerow(["scientific_name", "colour", "check", "matched_on",
+                      "was", "what the flora says"])
         for f in sorted(findings, key=lambda x: (x.confident,
                                                  x.scientific_name)):
             out.writerow([f.scientific_name, f.buckets[0],
-                          "" if f.confident else "CHECK",
+                          "" if f.confident else "CHECK", f.found_as,
                           need.get(f.scientific_name, ""), f.quote])
 
     unsure = [f for f in findings if not f.confident]
@@ -389,6 +389,22 @@ def apply_colour_sets(folder: Path, write: bool) -> int:
     return 0
 
 
+def catalogue_common_names() -> dict:
+    """``{scientific_name: common_name}``, the fallback key for a 1979 flora
+    that does not use 2026 nomenclature."""
+    out = {}
+    for name in ("plants_master.json", "garden_plants.json"):
+        try:
+            rows = json.loads(
+                (PROJECT_ROOT / "data" / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for row in rows:
+            if isinstance(row, dict) and row.get("scientific_name"):
+                out[row["scientific_name"]] = row.get("common_name") or ""
+    return out
+
+
 def catalogue_needing_colour() -> dict:
     """``{scientific_name: current hex}`` for every guessed colour."""
     out = {}
@@ -465,14 +481,16 @@ def main(argv=None) -> int:
                      "Solidago rigida", "Cornus sericea",
                      "Opuntia polyacantha"]
         text = path.read_text(encoding="utf-8", errors="replace")
-        found = blocks(text, names)
+        found = blocks(text, names, catalogue_common_names())
         for name in names:
             print(f"\n=== {name} ===")
-            block = found.get(name)
-            if not block:
-                print("  NOT FOUND in this text")
+            hit = found.get(name)
+            if not hit:
+                print("  NOT FOUND in this text (not under this binomial, "
+                      "and no common-name match)")
                 continue
-            print(f"  block is {len(block)} characters:")
+            block, how = hit
+            print(f"  block is {len(block)} characters, matched on {how}:")
             print("  " + block[:600].replace("\n", "\n  "))
             buckets, quote = colour_in(block)
             print(f"\n  -> colour: {'/'.join(buckets) if buckets else 'NONE'}")

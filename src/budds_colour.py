@@ -94,7 +94,7 @@ _HEDGES = ("pale", "deep", "dark", "bright", "light", "faint", "vivid",
 class Finding(NamedTuple):
     """One species, one proposal, and the sentence it came from."""
     scientific_name: str      #: the name WE key on
-    found_as: str             #: the name as the book spells it
+    found_as: str             #: how it was matched: "name" or "common name"
     buckets: tuple            #: colour keys, in the order the sentence gives
     quote: str                #: the sentence, so a person can check in one read
     confident: bool           #: exactly one colour, and a flower word near it
@@ -132,13 +132,31 @@ def normalise(text: str) -> str:
 
 
 def _is_heading(line: str) -> bool:
-    """Does this line start a new species?
+    """Does this line start a new species, or a new family?
 
-    Genus then epithet, with the genus not one of the words a flora habitually
-    opens a sentence with.
+    Two shapes, and the second was missing at first. A species heading is
+    Genus then epithet, with the genus not a word a flora opens a sentence
+    with. A **family** heading is the family name in capitals --
+    ``ELEAEAGNACEAE - oleaster family`` -- and because it is not
+    Genus-then-epithet it did not end a block, so *Opuntia polyacantha* ran
+    968 characters into the Elaeagnaceae and picked up their flowers too. It
+    happened to take the right sentence; the next species would not have.
     """
-    m = re.match(r"([A-Z][a-z]{2,})\s+([a-z]{3,})", line.strip())
+    text = line.strip()
+    if re.match(r"[A-Z]{4,}(ACEAE|AE)\b", text):
+        return True
+    m = re.match(r"([A-Z][a-z]{2,})\s+([a-z]{3,})", text)
     return bool(m) and m.group(1).lower() not in DESCRIPTIVE_STARTS
+
+
+def _fold(name: str) -> str:
+    """A common name reduced to something two books can agree on.
+
+    Budd's is from 1979 and hyphenates differently than this catalogue does:
+    *giant-hyssop* against *Giant Hyssop*, *prickly-pear* against *Prickly
+    Pear*. Folding case, hyphens and spaces away makes those the same string.
+    """
+    return re.sub(r"[^a-z]", "", (name or "").lower())
 
 
 def _canonical(name: str) -> str:
@@ -182,43 +200,65 @@ def colour_in(block: str) -> tuple:
     return (), ""
 
 
-def blocks(text: str, wanted: Iterable[str]) -> dict:
-    """``{our name: description block}`` for each species we asked about.
+def blocks(text: str, wanted: Iterable[str], common: dict = None) -> dict:
+    """``{our name: (block, how it was matched)}`` for each species asked about.
 
     A block runs from the line naming the species to the next heading line,
     capped, because a name whose block never ends would swallow the rest of
-    the book. Working in lines rather than in one flat string is what stops a
-    sentence beginning "Leaves ..." from being read as the next species.
+    the book. Working in lines rather than one flat string is what stops a
+    sentence beginning "Leaves ..." from reading as the next species.
+
+    **The binomial is tried first and the common name second**, because a 1979
+    flora does not use 2026 nomenclature. *Cornus sericea* is simply absent
+    from Budd's, which files red osier dogwood under *Cornus stolonifera* --
+    and no amount of parsing finds a name the book does not contain. The
+    common name crosses that gap, and the review file records which key
+    matched so a reader can weigh it.
     """
     lines = normalise(text).split("\n")
+    lowered = [ln.lower() for ln in lines]
     heads = [i for i, ln in enumerate(lines) if _is_heading(ln)]
+    folded = [_fold(ln) for ln in lines]
+    common = common or {}
+
+    def _block(start):
+        end = next((h for h in heads if h > start), len(lines))
+        return " ".join(lines[start:end])[:2400]
+
     out: dict = {}
     for name in wanted:
         canon = _canonical(name)
-        if not canon:
-            continue
-        start = next((i for i, ln in enumerate(lines)
-                      if canon in ln.lower()), None)
-        if start is None:
-            continue
-        end = next((h for h in heads if h > start), len(lines))
-        out[name] = " ".join(lines[start:end])[:2400]
+        if canon:
+            start = next((i for i, ln in enumerate(lowered) if canon in ln),
+                         None)
+            if start is not None:
+                out[name] = (_block(start), "name")
+                continue
+        # A common name is a weaker key, so it is only reached when the
+        # binomial is not in the book at all. Short ones are refused: "rose"
+        # or "sage" would match half a flora.
+        cname = _fold(common.get(name, ""))
+        if len(cname) >= 8:
+            start = next((i for i, ln in enumerate(folded) if cname in ln),
+                         None)
+            if start is not None:
+                out[name] = (_block(start), "common name")
     return out
 
 
-def read(text: str, wanted: Iterable[str]) -> list:
+def read(text: str, wanted: Iterable[str], common: dict = None) -> list:
     """Findings for every species the text actually describes."""
     found = []
-    for name, block in blocks(text, wanted).items():
+    for name, (block, how) in blocks(text, wanted, common).items():
         buckets, quote = colour_in(block)
         if not buckets:
             continue
         found.append(Finding(
             scientific_name=name,
-            found_as=_canonical(name),
+            found_as=how,
             buckets=buckets,
             quote=quote[:300],
-            confident=len(buckets) == 1,
+            confident=len(buckets) == 1 and how == "name",
         ))
     return sorted(found, key=lambda f: f.scientific_name)
 
