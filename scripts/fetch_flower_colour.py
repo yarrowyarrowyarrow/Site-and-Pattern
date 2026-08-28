@@ -183,12 +183,17 @@ def budds_review(text_path: Path) -> int:
     the top, because those are the ones that need a person.
     """
     from src.budds_colour import blocks, read
+    from src.budds_genus import inherit, needs_checking
     from src.flower_colour import COLOUR_SWATCHES
 
     need = catalogue_needing_colour()
     common = catalogue_common_names()
-    findings = read(text_path.read_text(encoding="utf-8", errors="replace"),
-                    list(need), common)
+    text = text_path.read_text(encoding="utf-8", errors="replace")
+    findings = read(text, list(need), common)
+    # A flora states the colour once at the genus and notes only departures,
+    # so the species with no sentence of their own are not a gap in the book.
+    genus_rows = needs_checking(inherit(text, list(need), common, findings))
+    findings = list(findings) + genus_rows
     REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(REVIEW_PATH, "w", encoding="utf-8", newline="") as fh:
         out = csv.writer(fh, delimiter="\t")
@@ -206,8 +211,7 @@ def budds_review(text_path: Path) -> int:
     # nomenclature or coverage problem; a species whose description carries no
     # colour word is the genus problem, where a flora states the obvious once
     # at the genus and then notes only departures from it.
-    located = blocks(text_path.read_text(encoding="utf-8", errors="replace"),
-                     list(need), common)
+    located = blocks(text, list(need), common)
     got = {f.scientific_name for f in findings}
     silent = sorted(set(located) - got)
     absent = sorted(set(need) - set(located))
@@ -225,11 +229,20 @@ def budds_review(text_path: Path) -> int:
     unsure = [f for f in findings if f.found_as != "name"]
     print(f"{len(need)} species carry a guessed colour")
     print(f"  {len(findings):4d} found with a colour")
+    variable = [f for f in genus_rows if "variable" in f.found_as]
+    untested = [f for f in genus_rows if "untested" in f.found_as]
+    print(f"  {len(genus_rows):4d} of those from the GENUS the flora states "
+          f"it at, of which")
+    print(f"       {len(variable):4d} sit in a genus whose own species "
+          f"disagree about colour")
+    print(f"       {len(untested):4d} in a genus no species states a colour "
+          f"for, so untestable")
     multi = [f for f in findings if len(f.buckets) > 1]
     print(f"  {len(multi):4d} of those bloom in more than one colour, "
           f"kept as a range")
-    print(f"  {len(unsure):4d} need a look (matched on common name, not "
-          f"binomial)")
+    by_common = [f for f in unsure if f.found_as == "common name"]
+    print(f"  {len(by_common):4d} matched on common name rather than "
+          f"binomial, so worth a look")
     print(f"  {len(silent):4d} described in the book, but it states no flower "
           f"colour for them")
     print(f"  {len(absent):4d} not in this book under either name\n")
@@ -277,9 +290,10 @@ def apply_review(path: Path, write: bool) -> int:
                                delimiter="\t"))
     # A row may name a range -- "white,pink" -- because a flora describes one.
     # The first is the primary hex; the whole list is what the filter reads.
-    wanted, bad = {}, []
+    wanted, bad, how = {}, [], {}
     for row in rows:
         name = (row.get("scientific_name") or "").strip()
+        how[name] = (row.get("matched_on") or "").strip()
         listed = [c.strip().lower()
                   for c in (row.get("colour") or "").split(",") if c.strip()]
         if not name or not listed:
@@ -334,7 +348,13 @@ def apply_review(path: Path, write: bool) -> int:
             # unknown mark comes back recorded=False and labelled "not
             # recorded", which would have printed the opposite of the truth on
             # every page whose colour had just been sourced.
-            row["flower_colour_source"] = "flora"
+            #
+            # A colour taken from the GENUS description is a weaker reading and
+            # gets its own mark, so a page says which it is rather than passing
+            # one off as the other.
+            row["flower_colour_source"] = (
+                "flora_genus" if how.get(row["scientific_name"], "")
+                .startswith("genus") else "flora")
             changed += 1
         path_j.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
                           encoding="utf-8")
