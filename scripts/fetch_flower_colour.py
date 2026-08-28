@@ -251,7 +251,17 @@ def budds_review(text_path: Path) -> int:
     print(f"  {len(by_common):4d} matched on common name rather than "
           f"binomial, so worth a look")
     print(f"  {len(silent):4d} described in the book, but it states no flower "
-          f"colour for them")
+          f"colour for them, and")
+    # "the rest got nothing" is not a finding: it is two different failures
+    # needing opposite fixes -- a genus heading this reader cannot find, or a
+    # genus the book states no colour for either. Counted apart.
+    from src.budds_genus import genus_blocks, genus_of
+    silent_genera = sorted({genus_of(n) for n in silent} - {""})
+    with_heading = genus_blocks(text, silent_genera)
+    print(f"       {len(silent_genera):4d} genera hold them, of which "
+          f"{len(with_heading)} have a genus description stating a colour")
+    print(f"       {len(silent_genera) - len(with_heading):4d} do not, so "
+          f"nothing can be inherited for those")
     print(f"  {len(absent):4d} not in this book under either name\n")
     print(f"Written to {REVIEW_PATH}")
     print(f"        and {MISSES_PATH}")
