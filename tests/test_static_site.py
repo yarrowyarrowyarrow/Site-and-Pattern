@@ -386,6 +386,40 @@ class TestTheRenderedSite(unittest.TestCase):
                                 f"{rel}: {src}")
         self.assertTrue(found, "no page offered an image at all")
 
+    def test_the_maps_come_before_the_animal_list_on_every_species_page(self):
+        """V2.80, the author's call after reading a well-recorded species.
+
+        The animal list is not a sidebar: a plant with a hundred documented
+        relationships pushed both maps below a hundred list items, and *does it
+        grow here* and *what grows with it* are the questions somebody asks
+        before deciding to grow a plant, not after. Nobody scrolls past a
+        hundred bees to reach a map, so the maps were in practice unreachable
+        on exactly the species carrying the most evidence.
+
+        Checked on every page rather than one, because the order lives in a
+        single f-string that a later edit can reorder with nothing complaining.
+        """
+        headings = ("Where it has been recorded",          # the range map
+                    "Which ecoregions the records fall in")  # the region list
+        wrong, checked = [], 0
+        for page in sorted((self.out / "plants").rglob("index.html")):
+            body = page.read_text(encoding="utf-8")
+            animals = body.find("Documented animals")
+            if animals < 0:
+                continue
+            for heading in headings:
+                at = body.find(heading)
+                if at < 0:
+                    continue          # nothing recorded draws nothing (P9)
+                checked += 1
+                if animals < at:
+                    wrong.append(f"{page.parent.name}: {heading}")
+        self.assertEqual(wrong[:5], [],
+                         f"{len(wrong)} pages bury a map under the animals")
+        # Not vacuous: a build where no page had a map at all would otherwise
+        # pass this by finding nothing to compare.
+        self.assertTrue(checked, "no species page carried either block")
+
     def test_no_species_page_prints_a_dict_key_at_the_reader(self):
         """V2.80. All 422 published species pages read:
 

@@ -84,6 +84,19 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))
 
+    # The two maps, and they go ABOVE the animals (V2.80).
+    #
+    # The animal list is not a sidebar: a well-recorded plant carries a hundred
+    # or more documented relationships, and below the fold they were burying the
+    # two things somebody asks about a plant *before* deciding to grow it -- does
+    # it grow here, and what else grows with it. Nobody scrolls past a hundred
+    # bees to find a map, so in practice the maps were unreachable on exactly the
+    # species that have the most evidence behind them.
+    #
+    # Order on this page is now: what it looks like, how to grow it, where it
+    # is, then who uses it. The animals lose nothing by being fourth -- they are
+    # what the reader came *back* for, and the wildlife index is the door for
+    # anybody starting from the animal instead.
     eco_block = occurrence_map(entry, depth) + range_section(
         entry, model, depth)
 
@@ -117,8 +130,8 @@ def render_species(entry: dict, model: dict, photo_src: dict,
   </header>
   {hero}
   {_facts_table(entry, colour_cell, depth, model)}
-  {_wildlife_section(entry, model, depth)}
   {eco_block}
+  {_wildlife_section(entry, model, depth)}
   {_extras_section(entry, include_notes)}
 </article>
 """
