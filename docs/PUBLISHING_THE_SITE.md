@@ -71,21 +71,42 @@ and publishing becomes one command rather than a separate account.
 
 ```bash
 python -m src.cli build-site public
-cd public
-git init -b gh-pages
-git add -A
-git commit -m "Publish the plant directory"
-git remote add origin https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
-git push -f origin gh-pages
+git -C public init -b gh-pages
+git -C public add -A
+git -C public commit -m "Publish the plant directory"
+git -C public remote add origin https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+git -C public push -f origin gh-pages
 ```
 
 A minute or two later the site is at
 `https://yarrowyarrowyarrow.github.io/Site-and-Pattern/`.
 
-To update it later, repeat those same commands. The `-f` is safe here and only
-here: the `gh-pages` branch holds *generated* files, so overwriting it loses
-nothing that is not rebuilt from the catalogue in seconds. Never use `-f` on a
-`V*.*` branch.
+**Why `git -C public` and not `cd public` (V2.81).** These commands used to
+start with `cd public`, and every one after it did real damage if that `cd` did
+not take effect: `rm -rf .git` in the repository root destroys your whole
+history, and `git push -f origin gh-pages` then publishes the *source tree* as
+the website. Both of those happened here, in one run, because a shell had
+silently returned to the repository root between two steps.
+
+`git -C <dir>` names the directory on every single command, so no step depends
+on where the previous one left you. It is the same fix as an absolute path.
+
+If you are re-publishing over an existing `public/`, delete the folder first
+(`rm -rf public`) rather than the `.git` inside it — `build-site` does not clear
+its output directory, so a rebuild over an old one republishes species you have
+since removed. Check before you push:
+
+```bash
+ls public/index.html public/CNAME && ! test -d public/src && echo "this is a site"
+```
+
+That prints `this is a site` only if the folder holds a built site and *not* a
+copy of the source tree. If it prints nothing, stop: you are about to publish
+the wrong directory.
+
+The `-f` is safe here and only here: the `gh-pages` branch holds *generated*
+files, so overwriting it loses nothing that is not rebuilt from the catalogue in
+minutes. Never use `-f` on a `V*.*` branch.
 
 ### Netlify, if you would rather not touch git for this
 

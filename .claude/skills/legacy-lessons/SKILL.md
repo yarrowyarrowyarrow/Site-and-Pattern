@@ -557,6 +557,48 @@ carried it and the new rule was doing nothing.
    and a diagnostic that cannot tell them apart sends the reader looking in the
    wrong place.
 
+## 23. `cd` and then `rm -rf .git` (V2.81)
+
+**What happened.** The publish recipe in `docs/PUBLISHING_THE_SITE.md` read
+`cd public`, then `rm -rf .git`, `git init -b gh-pages`, `git push -f origin
+gh-pages`. Run as a sequence of separate shell invocations, the working
+directory returned to the repository root between two of them. The `rm -rf
+.git` then **destroyed the repository's entire history**, `git init` replaced
+it with an empty `gh-pages` branch containing the source tree, and the
+force-push **published 887 source files as the website**.
+
+**Why it was recoverable, and what that turned on.** Every commit had already
+been pushed to `origin/V2.80`, so `git fetch` + `git checkout -B V2.80
+origin/V2.80` restored the history exactly, and the site was rebuilt from the
+committed catalogue in ten minutes. **Push before you do anything destructive**
+is what made a catastrophe into twenty minutes; nothing else in the recovery
+was clever.
+
+**The trap is not `rm -rf`.** It is a command whose blast radius depends on a
+`cd` that ran in a different invocation. `rm -rf .git` is harmless in
+`public/` and unrecoverable one directory up, and nothing about the command
+says which one it is in.
+
+**The fix.** Never let a destructive command inherit its directory. Name the
+directory on the command itself:
+
+```bash
+git -C public init -b gh-pages      # not: cd public && git init -b gh-pages
+rm -rf /abs/path/public             # not: rm -rf public
+```
+
+And check the target is what you think before publishing it:
+
+```bash
+ls public/index.html public/CNAME && ! test -d public/src && echo "this is a site"
+```
+
+**The related near-miss in the same incident.** The fresh `git init` had no
+`remote.origin.tagOpt = --no-tags`, so the recovery fetch dragged in all ~102
+release tags and recreated the V-branch/tag collision CLAUDE.md warns about.
+Cleared with the documented `git tag -d $(git tag)`, but a clone that starts
+from scratch starts with that trap re-armed.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:
