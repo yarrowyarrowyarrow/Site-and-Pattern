@@ -543,7 +543,8 @@ def read_cache(path=CACHE_PATH) -> dict:
 
 def derive(names: list[str], *, min_records: int, verbose: bool,
            fetch=fetch_occurrences, throttle: "_Throttle | None" = None,
-           on_progress=None, collect=None) -> tuple[dict, dict, list, list]:
+           on_progress=None, collect=None,
+           tally: dict | None = None) -> tuple[dict, dict, list, list]:
     """``(species_ranges, dropped, no_records, failed)`` for a list of species.
 
     ``collect`` is an optional dict that receives ``{name: points}`` as they
@@ -596,7 +597,8 @@ def derive(names: list[str], *, min_records: int, verbose: bool,
             print(f"[{i}/{len(names)}] {name}: {refused} record(s) too "
                   f"coarsely georeferenced to place in a region")
 
-        rows = ranges_for_species(points, min_records=min_records)
+        rows = ranges_for_species(points, min_records=min_records,
+                                  tally=tally)
         thin = dropped_regions(points, min_records=min_records)
         if rows:
             species_ranges[name] = rows
@@ -809,18 +811,24 @@ def main(argv: list[str] | None = None) -> int:
               f"polygons are never counted, so there is no reason to download "
               f"them.\n")
 
+    # Bound before `checkpoint` closes over it, not merely before `derive`
+    # calls it: the closure would resolve either way and only one of those is
+    # a thing the next reader can see is safe.
+    harvest: dict[str, list] = {}
+    tally: dict = {}
+
     def checkpoint(partial: dict):
         """Write what we have so far, so an interrupt is not a lost harvest."""
         if args.dry_run:
             return
         merged = dict(existing)
         merged.update(partial)
-        _write(merged, min_records)
+        _write(merged, min_records, tally,
+               from_cache=bool(args.from_cache))
 
-    harvest: dict[str, list] = {}
     ranges, dropped, no_records, failed = derive(
         names, min_records=min_records, verbose=verbose, fetch=fetch,
-        throttle=throttle, on_progress=checkpoint,
+        throttle=throttle, on_progress=checkpoint, tally=tally,
         collect=None if args.from_cache else harvest)
 
     merged = dict(existing)
@@ -830,6 +838,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  {len(merged)} species with at least one region "
           f"({len(ranges)} from this run)")
     print(f"  {len(no_records)} species with no records inside the polygons")
+    seen = sum(tally.values())
+    if seen:
+        from src.ecoregion import SIMPLIFICATION_M
+        print(f"  {tally.get('counted', 0):,} of {seen:,} records counted; "
+              f"{tally.get('unsettled', 0):,} "
+              f"({tally.get('unsettled', 0) / seen:.1%}) fell within "
+              f"{SIMPLIFICATION_M:.0f} m of a border and count for no region; "
+              f"{tally.get('outside', 0):,} were outside the layer")
     if failed:
         print(f"  {len(failed)} species COULD NOT BE FETCHED — these are NOT "
               f"recorded as absent. Re-run with --resume to retry them:")
@@ -853,7 +869,8 @@ def main(argv: list[str] | None = None) -> int:
         print("\n--dry-run: nothing written.")
         return 0
 
-    _write(merged, min_records)
+    _write(merged, min_records, tally,
+           from_cache=bool(args.from_cache))
     print(f"\nWrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)} "
           f"({len(merged)} species)")
 
@@ -946,13 +963,39 @@ def _run_specimen_pass(names: list[str], *, sleep: float, verbose: bool,
     return 2 if failed else 0
 
 
-def _write(species_ranges: dict, min_records: int) -> None:
+def _retrieved_source(from_cache: bool) -> str:
+    """What to write as ``source``, which is a *retrieval* date (V2.81).
+
+    This said ``retrieved {today}`` unconditionally, and a ``--from-cache``
+    re-derivation fetches nothing: the V2.81 run would have stamped
+    "retrieved 2026-08-31" on a harvest taken on the 24th and published that
+    on every species page, under a heading whose whole job is answering *as of
+    when*. A derivation date and a retrieval date are two facts and only one of
+    them is today's.
+    """
+    if not from_cache:
+        return f"GBIF occurrence search, retrieved {date.today().isoformat()}"
+    try:
+        with open(CACHE_PATH, encoding="utf-8") as handle:
+            cached = json.load(handle)
+    except Exception:                                         # noqa: BLE001
+        cached = {}
+    stated = (cached.get("source") or "").strip()
+    if stated:
+        return stated
+    when = (cached.get("generated") or "").strip()
+    return (f"GBIF occurrence search, retrieved {when}" if when
+            else "GBIF occurrence search, retrieval date not recorded")
+
+
+def _write(species_ranges: dict, min_records: int,
+           tally: dict | None = None, *, from_cache: bool = False) -> None:
     from src.ecoregion_ranges import build_document
     doc = build_document(
         species_ranges,
-        source=f"GBIF occurrence search, retrieved {date.today().isoformat()}",
+        source=_retrieved_source(from_cache),
         generated=date.today().isoformat(),
-        min_records=min_records)
+        min_records=min_records, tally=tally)
     OUTPUT_PATH.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
                            encoding="utf-8")
 

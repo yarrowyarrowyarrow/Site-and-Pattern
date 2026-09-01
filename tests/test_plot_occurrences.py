@@ -555,16 +555,28 @@ class TestAFilteredMapSaysSo(unittest.TestCase):
                           f"other {subject - counted:,}")
 
     def test_counted_is_records_not_claims(self):
-        """A point inside two overlapping polygons is one record. Counting the
-        rows instead counts it twice, which is what went negative."""
+        """A point inside two overlapping polygons is one record. Summing the
+        rows counted it twice, which is what printed a negative remainder.
+
+        V2.81 changed what the right answer is rather than how it is reached.
+        Such a point is inside the border margin by construction, so it now
+        shades nothing and is counted nowhere -- and the caption must still
+        balance, which is the invariant that actually broke last time. The
+        count and the shading are asserted to come from the same rule, because
+        a caption counting by one rule under a map drawn by another is the
+        failure this test exists for."""
         overlap = _O(51.1206, -114.0966, 4.0, 2026, "HUMAN_OBSERVATION", "i")
-        from src.ecoregion_ranges import _containment_lookup
+        from src.ecoregion_ranges import _containment_lookup, _record_lookup
         if len(_containment_lookup(*overlap[:2])) < 2:
             self.skipTest("polygons no longer overlap at Calgary")
+        self.assertEqual(_record_lookup(*overlap[:2]), [],
+                         "an overlap is inside the margin by construction")
         points = [overlap] * 6
         _svg, counted = P.species_svg("Testus", points, width=360,
                                       with_counted=True)
-        self.assertEqual(counted, 6, "counted claims, not records")
+        self.assertEqual(counted, 0,
+                         "six records too near a border shade nothing, and "
+                         "the caption must not claim them as evidence")
 
     def test_the_counted_number_is_not_the_held_number(self):
         """`len(points)` was the caption's denominator and was wrong: records

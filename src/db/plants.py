@@ -445,7 +445,18 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # catalogue systematically under-reported northern occurrence for its sixteen
 # most-recorded species, and nothing could see it, because a truncated harvest
 # and a complete one look identical once cached.
-_SCHEMA_VERSION = 83
+# v84 (V2.81): the ecoregion counts were re-derived under a border margin.
+#
+# A record now has to lie more than 900 m -- the outlines' own stated accuracy
+# -- inside a region to count for it. Reported from the published site: a
+# mountain penstemon and a mountain forget-me-not each carrying Aspen Parkland
+# records, from one hillside population sitting 25 to 202 m inside a line drawn
+# to a kilometre. 108 region rows left 95 of 434 species and none arrived; 5.7%
+# of credited records were set aside. No column changed, so this bump exists
+# purely to push the re-derived `plant_ranges` rows into existing installs --
+# without it the desktop keeps recommending on the old counts while the website
+# publishes the new ones.
+_SCHEMA_VERSION = 84
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

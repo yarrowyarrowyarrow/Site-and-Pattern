@@ -70,6 +70,36 @@ def _currency(model: dict) -> str:
         f"<strong>{_esc(s)}</strong>" for s in sorted(sources)) + "</p>")
 
 
+def _border_margin() -> tuple:
+    """``(margin_phrase, discarded_phrase)`` for the near-border rule (V2.81).
+
+    Both read out of the shipped ``plant_ecoregions.json`` envelope, which the
+    seeder writes with the margin it actually applied and a tally of what that
+    cost. Restating either here would be this page's own failure mode: a page
+    about how the numbers are made, carrying a number nobody remade.
+
+    A file from before V2.81 has neither, and then the second half is empty
+    rather than invented.
+    """
+    from src.ecoregion import SIMPLIFICATION_M                  # noqa: PLC0415
+    from src.ecoregion_ranges import load_document              # noqa: PLC0415
+
+    doc = load_document()
+    margin = doc.get("boundary_margin_m") or SIMPLIFICATION_M
+    tally = doc.get("tally") or {}
+    seen = sum(v for v in tally.values() if isinstance(v, int))
+    unsettled = tally.get("unsettled") or 0
+    share = ""
+    if seen and unsettled:
+        # Carries its own leading space and trailing stop, so the sentence that
+        # embeds it reads correctly when there is no tally to report. Written
+        # the other way first, and a build against a pre-V2.81 file would have
+        # published "to count for it.. It also means".
+        share = (f" That sets aside {unsettled / seen:.1%} of the records we "
+                 f"hold, which count for no region rather than for a guess.")
+    return f"{margin:.0f} m", share
+
+
 def _simplification() -> str:
     """How coarse the drawn outlines are, in the words the caveat already uses.
 
@@ -100,6 +130,7 @@ def render_method(model: dict) -> str:
 
     s = model["stats"]
     simplify = _simplification()
+    margin, discarded = _border_margin()
     body = f"""
 {_crumb([("", "Method")], 1)}
 <h1>How these pages are made</h1>
@@ -153,12 +184,13 @@ on every species page are live; follow those for the current picture.</p>
   records to be identification-verified: that field is absent from most
   herbarium material, so requiring it would discard the best-determined
   specimens to exclude very little.</li>
-  <li><strong>Where two regions meet, a few records are counted in both.</strong>
-  The outlines are simplified to roughly {simplify} and each is simplified on
-  its own, so neighbours overlap by a sliver along a shared border. That
-  inflates the region totals by about <strong>eight records in a
-  thousand</strong>, most of it around Calgary where Aspen Parkland and Fescue
-  Grassland cross.</li>
+  <li><strong>Records near a border are not counted at all.</strong> The
+  outlines are simplified to roughly {simplify}, so within about that distance
+  of one, which side a record falls on is not something this data can settle.
+  A record has to be more than <strong>{margin}</strong> inside a region to
+  count for it.{discarded} It also means no record is counted twice: this used
+  to inflate the totals where two regions met, most of it around Calgary where
+  Aspen Parkland and Fescue Grassland cross.</li>
   <li><strong>Flower colour is mostly unverified.</strong>
   {s['verified_colour']} of {s['species']} species have a colour checkable
   against the plant's own name; the rest are a genus-level default and say

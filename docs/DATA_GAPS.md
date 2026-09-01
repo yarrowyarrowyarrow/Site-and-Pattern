@@ -406,7 +406,7 @@ allowlist mode is ever wanted.
 
 ---
 
-## Two regions can claim the same record, at their shared border (V2.78)
+## Two regions can claim the same record, at their shared border (V2.78, closed V2.81)
 
 The surveyed polygons are simplified to about 900 m **independently of each
 other**, so along a boundary two neighbours overlap by a sliver, and a record
@@ -425,16 +425,37 @@ It is concentrated the way the V2.76 buffer error was, and in the same shape:
 **Eighty-five per cent of it is Calgary**, where the parkland meets the fescue
 grassland.
 
-**Left in place deliberately**, on the author's call, and disclosed on
-`/method/` rather than corrected. Deciding which of the two a record belongs to
-would mean asserting a side of a line we know we drew imprecisely, which is the
-mistake V2.76 was about at five kilometres. Eight records in a thousand is well
-inside the accuracy the outlines themselves claim.
+**Left in place deliberately** at the time, on the author's call, and disclosed
+on `/method/` rather than corrected. Deciding which of the two a record belongs
+to would mean asserting a side of a line we know we drew imprecisely, which is
+the mistake V2.76 was about at five kilometres. Eight records in a thousand is
+well inside the accuracy the outlines themselves claim.
 
-**What it does affect:** published counts are inflated by that fraction, and
-`sum(occurrences)` over a species' rows is a count of *claims*, not records.
-`plot_occurrences.species_svg` learned that the hard way in V2.78, printing
-*"the other -5 fall in regions with too few records to shade"*.
+### CLOSED in V2.81, and the reasoning above is why
+
+That last sentence is the fix, read the other way. If eight in a thousand is
+inside the accuracy the outlines claim, then so is *every* record that near a
+border — overlapping or not. The overlap was a visible symptom of a rule that
+was wrong for a much larger set: **containment answers to the metre against an
+outline good to 900 m.**
+
+What made it undeniable was not the overlap at all. *Penstemon albertinus*
+published 17 Aspen Parkland records beside 284 montane ones, and exactly one of
+its 547 points is in two regions. The seventeen were one hillside population,
+663 m across, sitting 25 to 202 m inside the parkland line.
+
+So a record now counts only where it lies more than `ecoregion.SIMPLIFICATION_M`
+(900 m) inside a region, measured to the nearest *different* region. A doubly
+contained point is by construction inside that margin, so the double count is
+structurally impossible rather than disclosed. See
+[`V2.81-a-border-read-closer-than-it-is-drawn`](plans/V2.81-a-border-read-closer-than-it-is-drawn.md).
+
+**What remains true:** `sum(occurrences)` over a species' rows is now a count of
+records, because a record contributes to at most one region. What is still a
+gap is a different one — **a record is not a place**. Seventeen collections from
+one roadside are seventeen records, and in the middle of a region nothing
+removes them. The occupancy grid on the species page answers that question
+properly; the ecoregion counts do not.
 
 ## VASCAN publishes distribution on the lowest accepted taxon (V2.79)
 

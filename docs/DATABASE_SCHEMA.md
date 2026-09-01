@@ -12,8 +12,10 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `75` (`src/db/plants.py:_SCHEMA_VERSION` — the
-  authoritative value; this doc's narrative may lag, the code wins)
+- **Current schema version:** `84` (`src/db/plants.py:_SCHEMA_VERSION` — the
+  authoritative value; this doc's narrative may lag, the code wins). It sat at
+  `75` here through nine bumps, which is what the parenthesis above is for and
+  is also why it is worth re-reading it whenever you bump.
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
   - Windows: `%APPDATA%/Site & Pattern/`

@@ -51,8 +51,21 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 #: Data files whose top-level ``species`` map is keyed by scientific name.
+#:
+#: **``fetched/plant_occurrences.json`` is the important one and was missing
+#: until V2.81.** The other three are *derived* from it, so re-keying them and
+#: not it leaves a raw point cache holding the old name. Nothing breaks and
+#: nothing warns; the species simply is not in the cache any more, so the next
+#: ``--from-cache`` re-derivation silently drops it. Found the way it would be:
+#: the V2.81 re-derivation produced 407 species where the file had 415, and
+#: seven of the eight missing ones were still in the catalogue.
+#:
+#: The cache is a dev artefact and is not shipped, which is exactly why it is
+#: easy to forget and expensive to forget -- a re-fetch of ~500,000 GBIF
+#: records is the only other way back.
 BY_SCIENTIFIC = ("plant_ecoregions.json", "plant_ranges.json",
-                 "plant_occurrence_points.json")
+                 "plant_occurrence_points.json",
+                 "fetched/plant_occurrences.json")
 PLANT_FILES = ("plants_master.json", "garden_plants.json")
 
 

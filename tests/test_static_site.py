@@ -981,19 +981,51 @@ class TestTheMethodPage(unittest.TestCase):
         self.assertTrue((out / "method" / "index.html").exists())
 
 
-    def test_it_discloses_the_overlap_at_shared_borders(self):
-        """V2.78: 0.81% of in-region records fall in the sliver where two
-        simplified polygons overlap and are counted for both. The author's call
-        was to leave it and say so -- picking a side would assert which side of
-        a line we know we drew imprecisely, which is the mistake the buffer
-        correction was about."""
+    def test_it_discloses_what_happens_at_a_shared_border(self):
+        """V2.78 disclosed a double count: 0.81% of in-region records fell in
+        the sliver where two separately simplified polygons overlap, and were
+        counted for both. The author's call then was to leave it and say so.
+
+        V2.81 replaced it rather than continuing to apologise for it, on the
+        author's *"I'd prefer no overlap"*: a record now has to be further
+        inside a region than the outline's own accuracy to count for it, which
+        makes a double count structurally impossible and sets aside the
+        records too near a line to place. The disclosure changes shape --
+        what is disclosed is now a discard, not an inflation -- and it still
+        has to be on the page, because a count with something taken out of it
+        must say so."""
         # Flattened: the sentence wraps in the source, and a disclosure that
         # a test can only find when it happens to fit on one line is a test
         # about line width.
         flat = " ".join(self.html.split())
-        self.assertIn("counted in both", flat)
-        self.assertIn("eight records in a thousand", flat)
+        self.assertIn("not counted at all", flat)
+        self.assertIn("no record is counted twice", flat)
         self.assertIn("Calgary", flat)
+        self.assertNotIn("eight records in a thousand", flat,
+                         "the old double count is gone, not merely smaller")
+
+    def test_the_border_margin_is_not_typed_here_either(self):
+        """Same rule as the simplification distance below it. The margin comes
+        out of the shipped file's own envelope, which the seeder writes with
+        the value it actually derived under, so a page cannot go on quoting a
+        rule the data was not built to."""
+        from src.static_site_method import _border_margin
+        margin, discarded = _border_margin()
+        flat = " ".join(self.html.split())
+        self.assertIn(margin, flat)
+        self.assertIn("900", margin)
+        # The discard clause is optional -- a file from before V2.81 carries no
+        # tally -- so it brings its own space and full stop rather than the
+        # sentence supplying one. Written the other way, a build against such a
+        # file publishes "to count for it.. It also means". Checked on the
+        # sentence rather than the page: every relative href on it is "..".
+        self.assertNotIn("count for it..", flat)
+        self.assertIn("count for it.", flat)
+        if discarded:
+            self.assertTrue(discarded.startswith(" ")
+                            and discarded.endswith("."),
+                            "the optional clause must punctuate itself")
+            self.assertIn(discarded.strip(), flat)
 
     def test_the_simplification_distance_is_not_typed_here(self):
         """It comes out of `ecoregion_map.CAVEAT`, which is itself checked

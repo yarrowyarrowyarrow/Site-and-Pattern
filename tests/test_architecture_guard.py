@@ -137,7 +137,15 @@ class TestStructuralCeilings(unittest.TestCase):
         # precedent, and overdue: this file decides what a real property gets
         # recommended, and it grew MultiPolygon support, boundary proximity and
         # three-level display without ever being guarded.
-        (_SRC / "ecoregion.py", 480),                  # 438 now
+        # V2.81: 480 -> 570. A third question about the same geometry --
+        # `confident_ecoregion`, which is what a *record* is evidence for, as
+        # against where a yard is and what a polygon contains. Raised rather
+        # than split because the only seam on offer is a worse file: the rule
+        # is four lines of logic over `_feature_index`, `_within_box` and
+        # `_distance_to_ring_m`, and moving it out would export three private
+        # helpers to save eighty lines that are mostly the incident it exists
+        # for. The polygons and the questions asked of them stay together.
+        (_SRC / "ecoregion.py", 570),                  # 552 now
         # V2.49: 260 -> 340. The first number was set against a module that
         # drew six rectangles and nothing else; the map then gained provincial
         # borders, city dots, province codes and hand-placed region labels,

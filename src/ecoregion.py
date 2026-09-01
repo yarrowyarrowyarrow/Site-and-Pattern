@@ -238,7 +238,13 @@ def lookup_ecoregions(lat: float, lng: float, *,
 
     near_m = _NEAR_BOUNDARY_M if near_m is None else max(0.0, float(near_m))
     per_lat, per_lng = metres_per_deg(lat)
-    pad_deg = near_m / max(per_lat, per_lng, 1.0)
+    # The SMALLER of the two, so the pad covers `near_m` metres on both axes.
+    # It was `max`, which under-padded longitude: a degree of longitude is
+    # 70 km at 51 N against 111 km of latitude, so a 5 km buffer padded the box
+    # by 3.1 km east-west and a region whose edge ran 4 km away was rejected by
+    # the pre-filter before its distance was ever measured. A box test is
+    # allowed to be generous and is not allowed to be tight.
+    pad_deg = near_m / max(min(per_lat, per_lng), 1.0)
     inside: list[str] = []
     near: list[str] = []
     for key, rings, box in _feature_index():
@@ -256,6 +262,89 @@ def lookup_ecoregions(lat: float, lng: float, *,
         if gap <= near_m:
             near.append(key)
     return inside + [key for key in near if key not in inside]
+
+
+#: How far these outlines may sit from the survey they were digitised from.
+#:
+#: The same number ``ecoregion_map.CAVEAT`` states in words on every drawing of
+#: this file — "simplified to about 900 m for display" — kept here as a number
+#: so the sentence and the arithmetic cannot drift apart. A drawing that
+#: discloses its error and a calculation that ignores it are the same bug twice.
+SIMPLIFICATION_M = 900.0
+
+
+def confident_ecoregion(lat: float, lng: float, *,
+                        margin: float | None = None) -> list[str]:
+    """The one region a *record* is evidence for: ``[key]``, or ``[]``.
+
+    Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
+
+    A third question about the same geometry, after *where is this yard*
+    (:func:`lookup_ecoregions`, buffered) and *which polygon contains this
+    point* (``near_m=0``). V2.75 split the first two and pinned range
+    derivation to the second. This is what the second one was missing.
+
+    **Containment is a false answer within the layer's own error.** These
+    outlines are accurate to about :data:`SIMPLIFICATION_M`. Asking which side
+    of such a line a point 100 m away falls on is a question the data cannot
+    answer, and answering it anyway is exactly the false precision P9 forbids.
+    Reported from the published site by the author:
+
+        "Aspen parkland cannot be absorbing these mountain native species,
+         such as mountain forgetmenot and alberta penstemmon."
+
+    *Penstemon albertinus* published 284 Northern Continental Divide records
+    and **17 Aspen Parkland** ones. Those 17 were not scattered across the
+    parkland: they were **one population**, 663 m by 291 m of hillside, sitting
+    **25 to 202 metres** inside a boundary good to 900. Read as a region list it
+    says a montane penstemon reaches the parkland. It says one plant grows near
+    a line we cannot draw that finely.
+
+    So a record counts only where it is more than ``margin`` inside a region,
+    measured to the nearest boundary **with a different region on the far
+    side** — same-key parts share internal seams, because the layer splits each
+    ecoregion by Alberta natural subregion, and a seam is not a boundary.
+
+    Two things fall out of that, and the second is why this replaces rather
+    than supplements the old rule:
+
+    * A record can no longer count for two regions. Overlapping polygons
+      overlap *because* their shared border was simplified twice, so a doubly
+      contained point is by construction near a boundary. The 0.8-in-1,000
+      double count the Method page disclosed is now structurally impossible
+      rather than measured and apologised for.
+    * A record too near any border counts for **nothing**. That is the honest
+      answer and it is not a large loss: 3.6% of records sit inside the margin,
+      and no region gained or lost its place in a species list except by
+      shedding records it could not support.
+
+    ``margin=0`` restores plain containment, which is what the tests that
+    characterise the old behaviour ask for.
+    """
+    if lat is None or lng is None:
+        return []
+    margin = SIMPLIFICATION_M if margin is None else max(0.0, float(margin))
+    keys = lookup_ecoregions(lat, lng, near_m=0.0)
+    if len(keys) != 1:
+        # Zero: outside the layer. Two or more: inside an overlap, which is a
+        # simplified border seen twice and never a real answer.
+        return []
+    if not margin:
+        return keys
+
+    from src.projection import metres_per_deg                    # noqa: PLC0415
+    mine = keys[0]
+    per_lat, per_lng = metres_per_deg(lat)
+    pad_deg = margin / max(min(per_lat, per_lng), 1.0)
+    for key, rings, box in _feature_index():
+        if key == mine:
+            continue
+        if not _within_box(lat, lng, box, pad_deg):
+            continue
+        for ring in rings:
+            if _distance_to_ring_m(lat, lng, ring, per_lat, per_lng) <= margin:
+                return []
+    return keys
 
 
 def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:

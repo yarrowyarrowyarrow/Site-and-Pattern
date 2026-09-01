@@ -112,7 +112,9 @@ def range_section(entry: dict, model: dict, depth: int) -> str:
       {_esc(str(MIN_RECORDS))} records is not the same claim as one with three
       hundred, so the count travels with the region. A region missing from
       this list means nobody has recorded it there, which is not the same as
-      the plant being absent.
+      the plant being absent. Records within {_esc(_margin_phrase())} of a
+      border count for neither side, because the border is not drawn finely
+      enough to say which one they are on.
       {_esc(_range_source(entry))}
       {_esc(CAVEAT)}
       <a href="{_up(depth)}method/">How these counts are made</a>.</p>
@@ -123,6 +125,20 @@ def range_section(entry: dict, model: dict, depth: int) -> str:
     return eco_block
 
 
+
+
+def _margin_phrase() -> str:
+    """The border margin, in metres, from the file that was derived with it.
+
+    Read rather than written: the seeder records the margin it applied in the
+    shipped envelope, so a page cannot go on quoting a rule the data was not
+    built to. Falls back to the module constant for a pre-V2.81 file.
+    """
+    from src.ecoregion import SIMPLIFICATION_M                  # noqa: PLC0415
+    from src.ecoregion_ranges import load_document              # noqa: PLC0415
+
+    margin = load_document().get("boundary_margin_m") or SIMPLIFICATION_M
+    return f"{float(margin):.0f} m"
 
 
 def _range_source(entry: dict) -> str:
