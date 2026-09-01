@@ -232,3 +232,49 @@ def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
     m = mulch_cost(mulch_area_m2)
     total = (round(p[0] + s[0] + m[0], 2), round(p[1] + s[1] + m[1], 2))
     return {"plants": p, "structures": s, "mulch": m, "total": total}
+
+
+#: ``availability_class`` as a clause a reader can act on.
+#:
+#: The class is *how you get it*, not always a kind of shop, so one frame does
+#: not fit all five: "usually from a **seed or plug**" (82 species) and "usually
+#: from a **big box**" (15) are what dropping the raw token into a sentence
+#: produces, and neither is English. An unknown class falls back to the token
+#: with its underscores opened out, which is what the desktop has always shown.
+_AVAILABILITY_CLAUSE = {
+    "native specialist": "usually from a native-plant nursery",
+    "garden centre": "usually stocked by garden centres",
+    "big box": "sometimes in big-box garden sections",
+    "seed or plug": "usually sold as seed or plugs",
+    "rare": "hard to find in the trade",
+}
+
+
+def describe(sourcing) -> tuple[str, str]:
+    """``(sentence, estimate note)`` from a ``scene_dossier._sourcing`` dict.
+
+    **The website published this dict's own key names on all 422 species
+    pages** — ``price: about $8-$16 per plant (estimate); availability: garden
+    centre; notes: Estimate (herb default); AB retail as of 2026`` — because
+    its renderer had a generic "a dict becomes ``k: v`` pairs" branch and
+    nothing more specific. The desktop had rendered the same dict as prose
+    since the field existed; only the public surface leaked the schema.
+
+    The formatting lives here, next to the numbers, so the third surface that
+    needs it does not invent a fourth wording. The estimate note comes back
+    separately rather than glued on, because a page marks provenance in its own
+    way and this module should not be choosing markup for it.
+    """
+    if not isinstance(sourcing, dict):
+        return str(sourcing or ""), ""
+    note = (sourcing.get("notes") or "").strip()
+    price = (sourcing.get("price") or "").strip()
+    token = (sourcing.get("availability") or "").strip().replace("_", " ")
+    where = _AVAILABILITY_CLAUSE.get(token.lower(), token)
+    if price and where:
+        text = f"{price}, {where}"
+    else:
+        text = price or where
+    if not text:
+        return "", note
+    return text[:1].upper() + text[1:] + ".", note

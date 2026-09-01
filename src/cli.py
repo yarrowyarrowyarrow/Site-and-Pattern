@@ -222,6 +222,22 @@ def _cmd_build_site(args) -> int:
         print(f"  {summary['photos_copied']} photographs copied from the local "
               f"cache; {summary['photos_hotlinked']} still point at their "
               f"original URLs (warm the cache to bundle them)")
+    # The one thing about a build that cannot be checked by looking at the site
+    # (V2.80): whether a link pasted into Facebook or Reddit shows a picture
+    # lives in somebody else's scraper, so a wrong answer is invisible here and
+    # obvious to everybody else. Said out loud, with the fix in the failing
+    # case rather than in a doc nobody has open.
+    share = summary.get("share_image") or ""
+    if not share and not args.base_url:
+        print("  share card: TEXT ONLY. Pass --base-url so a shared link can "
+              "carry a photograph (a scraper cannot resolve a relative path).")
+    elif not share:
+        print("  share card: TEXT ONLY. No species in this build has a "
+              "credited photograph to share.")
+    else:
+        where = ("hotlinked, run scripts/warm_photo_cache.py to serve your own "
+                 "copy" if summary.get("share_hotlinked") else "your own copy")
+        print(f"  share card: {share}\n              ({where})")
     return 0
 
 

@@ -66,8 +66,20 @@ def _currency(model: dict) -> str:
     if not sources:
         return ("<p>No occurrence source is recorded on the ranges in this "
                 "build, which is itself worth knowing.</p>")
-    return ("<p>" + "</p><p>".join(
-        f"<strong>{_esc(s)}</strong>" for s in sorted(sources)) + "</p>")
+    # A sentence rather than a bare bold string (V2.80): the line above it used
+    # to be "Retrieved on:" and the author's rewrite cut that scaffolding, so
+    # the date has to read as prose on its own. Still off the rows, never typed
+    # -- the split below only re-punctuates what the row already says, and a
+    # source not written in that shape is printed verbatim instead of forced.
+    return "<p>" + "</p><p>".join(_sentence(s) for s in sorted(sources)) + "</p>"
+
+
+def _sentence(source: str) -> str:
+    """``"GBIF occurrence search, retrieved 2026-08-25"`` as a sentence."""
+    what, sep, when = source.partition(", retrieved ")
+    if not sep:
+        return f"<strong>{_esc(source)}</strong>."
+    return f"The <strong>{_esc(what)}</strong> was retrieved {_esc(when)}."
 
 
 def _border_margin() -> tuple:
@@ -95,8 +107,11 @@ def _border_margin() -> tuple:
         # embeds it reads correctly when there is no tally to report. Written
         # the other way first, and a build against a pre-V2.81 file would have
         # published "to count for it.. It also means".
-        share = (f" That sets aside {unsettled / seen:.1%} of the records we "
-                 f"hold, which count for no region rather than for a guess.")
+        # First person, because the page around it is: V2.80 rewrote the Method
+        # copy in the author's own voice and a generated clause dropped into
+        # the middle of it has to speak the same way.
+        share = (f" That sets aside {unsettled / seen:.1%} of the records I "
+                 f"hold, which then count for no region rather than a guess.")
     return f"{margin:.0f} m", share
 
 
@@ -116,11 +131,35 @@ def _simplification() -> str:
 
 
 
+def _nativity_claim(nativity: dict) -> str:
+    """How many species carry a VASCAN answer, said correctly at either end.
+
+    **This sentence shipped reading "The other 0 read Not established", with a
+    paragraph after it explaining why those zero species are unresolved.** It
+    was written when 20 were withheld and stayed on the page when the renames
+    of V2.80 took the number to none, because the count was computed and the
+    prose around it was not. A number that cannot be wrong sitting inside a
+    sentence that can is the same bug the "computed, never written down" rule
+    exists to prevent, one level up.
+
+    So the *shape* of the sentence follows the count too: no withheld species
+    and the paragraph about them does not exist.
+    """
+    if not nativity["withheld"]:
+        return (f"At the moment all {nativity['claimed']:,} species carry an "
+                f"answer from it.")
+    return (f"{nativity['sourced']:,} of {nativity['claimed']:,} species carry "
+            f"an answer from it. The other {nativity['withheld']:,} read "
+            f"<strong>Not established</strong> and show no province list, "
+            f"because VASCAN either records them as introduced here, carries "
+            f"them only under a name this catalogue does not use, or does not "
+            f"carry them at all. I would rather show you nothing than a guess.")
+
+
 def render_method(model: dict) -> str:
     """The Method page."""
     from src.ecoregion_map import CAVEAT, frame_height, map_svg
     from src.ecoregion_ranges import MIN_RECORDS
-    from src.occurrence_points import MARK_DEG
     from src.species_range import CELL_DEG, CELL_KM_NS
     from src.static_site_points import (_nativity_counts,
                                         _point_method_sections,
@@ -128,35 +167,28 @@ def render_method(model: dict) -> str:
     counts = _published_counts()
     nativity = _nativity_counts()
 
-    s = model["stats"]
     simplify = _simplification()
     margin, discarded = _border_margin()
     body = f"""
 {_crumb([("", "Method")], 1)}
 <h1>How these pages are made</h1>
-<p class="lede">Where the data comes from, and where it stops being able to
-tell you anything.</p>
+<p class="lede">What's behind the numbers and their reliability.</p>
 
-<h2>What a record is</h2>
-<p>A <strong>georeferenced occurrence record</strong>: a herbarium sheet, a
-museum specimen, or a photograph submitted with a location. All of them come
-from <a href="https://www.gbif.org/">GBIF</a>, which aggregates iNaturalist,
-university herbaria and government collections. Records based on a living
-specimen, a material sample or a fossil are excluded: a plant in a botanical
-garden is a place somebody put it.</p>
+<h2>What counts as a record</h2>
+<p>Everything mapped here is a <strong>georeferenced occurrence</strong> (a
+herbarium sheet, a museum specimen, or a photo someone uploaded with a location
+attached). It all comes through <a href="https://www.gbif.org/">GBIF</a>, which
+pools iNaturalist, university herbaria and government collections into one
+search.</p>
 
-{_point_method_sections(counts, MARK_DEG, CELL_DEG, CELL_KM_NS)}
+{_point_method_sections(counts, CELL_DEG, CELL_KM_NS)}
 
-<h2>"Native to", and when we leave it blank</h2>
-<p>Which provinces a species is native to comes from
+<h2>"Native to," and the blanks in it</h2>
+<p>Province-level native status comes from
 <a href="https://data.canadensys.net/vascan/">VASCAN</a>, the Database of
-Vascular Plants of Canada. {nativity['sourced']:,} of {nativity['claimed']:,}
-species carry an answer from it.</p>
-<p>The other {nativity['withheld']} read <strong>Not established</strong> and
-show no province list. VASCAN records some of them as introduced here, carries
-some only under a name this catalogue does not use, and does not carry a few
-at all. Each needs a second source before we can say anything.</p>
-<p>We would rather show you nothing than show you a guess.</p>
+Vascular Plants of Canada. {_nativity_claim(nativity)} So far I have included
+AB and SK and plan to continue this project across the rest of Canada's
+provinces and territories.</p>
 
 <h2>The ecoregions</h2>
 <figure class="mapfig methodfig">{map_svg(None, width=520,
@@ -164,50 +196,44 @@ at all. Each needs a second source before we can say anything.</p>
                                           reference=True,
                                           title="The ecoregions this catalogue covers")}
 <figcaption class="note">{_esc(CAVEAT)}</figcaption></figure>
-<p>Below its range map, each species lists the ecoregions its records fall in,
-which is how you get from one plant to what else grows alongside it. A region
-needs at least <strong>{MIN_RECORDS} records</strong> to be listed: two can be
-a misidentified sheet and a garden escape. This cuts against rare species,
-which is a real cost. A region missing from a list means nobody has recorded
-the plant there.</p>
+<p>Every species page lists the ecoregions its records fall in. That's how you
+get from one plant to the rest of the community it sits in, which is part of
+the reason this site exists.</p>
+<p>A region needs <strong>{MIN_RECORDS} records</strong> before it shows up.
+Two records can be a misidentified sheet or garden escapes, and I'd rather not
+build a plant community out of that. The threshold costs me rare species which
+are the ones most worth finding but that is the trade off at the moment.</p>
 {_bands_table()}
 
 <h2>How current this is</h2>
-<p>A <strong>snapshot</strong>, taken once and shipped. Retrieved on:</p>
 {_currency(model)}
 <p>GBIF changes daily and this page does not. The GBIF and iNaturalist links
 on every species page are live; follow those for the current picture.</p>
 
 <h2>Known limits</h2>
-<ul>
-  <li><strong>Misidentifications are in this data.</strong> We do not require
-  records to be identification-verified: that field is absent from most
-  herbarium material, so requiring it would discard the best-determined
-  specimens to exclude very little.</li>
-  <li><strong>Records near a border are not counted at all.</strong> The
-  outlines are simplified to roughly {simplify}, so within about that distance
-  of one, which side a record falls on is not something this data can settle.
-  A record has to be more than <strong>{margin}</strong> inside a region to
-  count for it.{discarded} It also means no record is counted twice: this used
-  to inflate the totals where two regions met, most of it around Calgary where
-  Aspen Parkland and Fescue Grassland cross.</li>
-  <li><strong>Flower colour is mostly unverified.</strong>
-  {s['verified_colour']} of {s['species']} species have a colour checkable
-  against the plant's own name; the rest are a genus-level default and say
-  <em>not verified</em> on the page.</li>
-  <li><strong>Coverage stops at the Saskatchewan border.</strong> Manitoba
-  shares several of these ecoregions and is not included.</li>
-</ul>
-
+<p><strong>Misidentifications are in here.</strong> I don't filter for
+identification-verified records. That flag is missing from most herbarium
+material, so requiring it would throw out the best-determined specimens in
+order to exclude very little.</p>
+<p><strong>Records near a border don't get counted.</strong> Each ecoregion
+outline is simplified to roughly {simplify} on its own, so within about that
+distance of one I can't tell which side of it a record really sits. A record
+has to be more than <strong>{margin}</strong> inside a region before I count it
+for that region.{discarded} It also stops a record being counted twice, which
+used to happen where two outlines overlap by a sliver: mostly around Calgary,
+where Aspen Parkland and Fescue Grassland run into each other.</p>
+<p><strong>Flower colour is imperfect.</strong> I have verified some of the
+flower colours but not all. This is a work in progress. If you notice gross
+errors please <a href="../feedback/">send me feedback</a>.</p>
 
 <h2>Corrections</h2>
-<p>These pages are wrong in places, and the useful thing to do with an error
-is report it. The catalogue and its data are
-<a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">public</a>,
-including the record of species removed for not being native here and the
-authority for each removal.</p>
+<p>Not all the information has been checked by me by hand. If you come across
+something you know to be false I would appreciate any
+<a href="../feedback/">feedback</a>. The catalogue and its underlying data are
+<a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">public</a> and
+I'd like this public facing resource to be as accurate as possible.</p>
 """
-    return _page("How these pages are made", "Where the occurrence records "
-                 "come from, what a shaded region claims, and where these "
-                 "numbers stop being able to tell you anything.",
-                 body, 1)
+    return _page("How these pages are made",
+                 "Where the occurrence records come from, what the map does "
+                 "and does not claim, and how far these numbers can be "
+                 "trusted.", body, 1)

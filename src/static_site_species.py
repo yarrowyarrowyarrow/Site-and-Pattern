@@ -17,6 +17,8 @@ markup have exactly one definition each.
 from __future__ import annotations
 
 from src import citations
+from src.site_share import photo_card as share_photo
+from src.sourcing import describe as sourcing_text
 from src.static_site import _first_photo, hub_slug
 from src.static_site_points import occurrence_map
 from src.static_site_range import range_section
@@ -82,6 +84,19 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))
 
+    # The two maps, and they go ABOVE the animals (V2.80).
+    #
+    # The animal list is not a sidebar: a well-recorded plant carries a hundred
+    # or more documented relationships, and below the fold they were burying the
+    # two things somebody asks about a plant *before* deciding to grow it -- does
+    # it grow here, and what else grows with it. Nobody scrolls past a hundred
+    # bees to find a map, so in practice the maps were unreachable on exactly the
+    # species that have the most evidence behind them.
+    #
+    # Order on this page is now: what it looks like, how to grow it, where it
+    # is, then who uses it. The animals lose nothing by being fourth -- they are
+    # what the reader came *back* for, and the wildlife index is the door for
+    # anybody starting from the animal instead.
     eco_block = occurrence_map(entry, depth) + range_section(
         entry, model, depth)
 
@@ -115,8 +130,8 @@ def render_species(entry: dict, model: dict, photo_src: dict,
   </header>
   {hero}
   {_facts_table(entry, colour_cell, depth, model)}
-  {_wildlife_section(entry, model, depth)}
   {eco_block}
+  {_wildlife_section(entry, model, depth)}
   {_extras_section(entry, include_notes)}
 </article>
 """
@@ -125,8 +140,11 @@ def render_species(entry: dict, model: dict, photo_src: dict,
             f'{entry.get("bloom") or "bloom window unrecorded"}, '
             f'{(entry.get("wildlife") or {}).get("total", 0)} documented '
             f'animal relationships.')
+    # Sharing a species page should show that species, not the site default.
+    share_img, share_alt = share_photo(photo, photo_src,
+                                       entry.get("name") or "")
     return _page(f'{entry.get("name")} ({entry.get("scientific_name")})',
-                 desc, body, depth)
+                 desc, body, depth, image=share_img, image_alt=share_alt)
 
 
 def _native(entry: dict) -> str:
@@ -290,8 +308,7 @@ def _wildlife_section(entry: dict, model: dict, depth: int) -> str:
 def _extras_section(entry: dict, include_notes: bool = False) -> str:
     parts = []
     fields = [("Safety", entry.get("safety")),
-              ("Edible parts", _tokens(entry.get("edible_parts"))),
-              ("Buying it", entry.get("sourcing"))]
+              ("Edible parts", _tokens(entry.get("edible_parts")))]
     # `notes` is unaudited free text and ~43 rows of it describe traditional
     # medicinal and plant-use practice. Publishing that to the open web is a
     # different act from showing it in a desktop panel: indexed, scraped,
@@ -309,6 +326,15 @@ def _extras_section(entry: dict, include_notes: bool = False) -> str:
         elif isinstance(value, (list, tuple)):
             value = "; ".join(str(v) for v in value)
         parts.append(f"<h3>{_esc(heading)}</h3><p>{_esc(value)}</p>")
+    # Prose, not the dict's own key names: this printed
+    # `price: ...; availability: ...; notes: ...` on all 422 pages (V2.80).
+    # The estimate note rides in its own `.src` mark, like every other
+    # provenance mark on this page, so it is not glued into the sentence.
+    buying, estimate = sourcing_text(entry.get("sourcing"))
+    if buying:
+        mark = (f' <span class="src">{_esc(estimate)}</span>'
+                if estimate else "")
+        parts.append(f"<h3>Buying it</h3><p>{_esc(buying)}{mark}</p>")
     prov = entry.get("provenance") or []
     if prov:
         parts.append("<h3>Where these numbers came from</h3><ul>" + "".join(

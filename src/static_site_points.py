@@ -187,7 +187,7 @@ def _nativity_counts() -> dict:
 
 
 
-def _point_method_sections(counts: dict, MARK_DEG, CELL_DEG, CELL_KM_NS) -> str:
+def _point_method_sections(counts: dict, CELL_DEG, CELL_KM_NS) -> str:
     """The `/method/` sections about the map and the records it draws.
 
     Lives here rather than in `static_site_method` because this module owns the
@@ -195,35 +195,35 @@ def _point_method_sections(counts: dict, MARK_DEG, CELL_DEG, CELL_KM_NS) -> str:
     actually does is worse than none. The numbers are computed, never written
     down -- every count on this site is (V2.47), because a number typed into
     prose is correct once.
+
+    Rewritten to the author's own copy in V2.80. The cell size moved out of the
+    figcaption and into the first sentence, where a reader meets it before the
+    words that depend on it; ``MARK_DEG`` left the signature with the sentence
+    about it.
     """
-    from src.static_site_render import _esc               # noqa: PLC0415
-    return f"""<h2>The map</h2>
+    return f"""<h2>Reading the map</h2>
 <figure class="mapfig methodfig">{_example_range_map()}
-<figcaption class="note">A species page map. Squares are
-{CELL_DEG} degrees, about {CELL_KM_NS:.0f} km north to south.</figcaption></figure>
-<p>A <strong>shaded square</strong> means at least one usable record falls
-inside it, and darker squares hold more records. A <strong>filled dot</strong>
-is a herbarium specimen: a pressed sheet somebody can re-examine. A
-<strong>hollow ring</strong> is a field observation, identified by community
-agreement. The buttons show either alone.</p>
-<p>Of {counts["marks"]:,} marks, {counts["s"]:,} are specimens and
-{counts["o"]:,} are observations.</p>
-<p>Three things the map does <em>not</em> say:</p>
-<ul>
-<li><strong>Darker is not more plant.</strong> It is more collecting. The
-squares over Calgary and Edmonton are dark for nearly every species here.</li>
-<li><strong>Empty is not absent.</strong> Unsurveyed and absent look identical
-from here.</li>
-<li><strong>Recorded is not native.</strong> A garden escape can accumulate
-hundreds of records.</li>
-</ul>
-<p>A record is drawn only if its coordinate is precise to within
+<figcaption class="note">A species page map.</figcaption></figure>
+<p>Each square is {CELL_DEG} degrees, about {CELL_KM_NS:.0f} km top to bottom.
+A <strong>shaded square</strong> holds at least one usable record, and darker
+squares hold more. <strong>Filled dots</strong> are herbarium specimens (ie.
+pressed sheets anyone can pull out of a drawer and re-examine.)
+<strong>Hollow rings</strong> are field observations, identified by community
+agreement. The buttons above the map show one or the other on its own.</p>
+<p>Across the catalogue that's {counts["marks"]:,} marks: {counts["s"]:,}
+specimens and {counts["o"]:,} observations.</p>
+<p><strong>Two ways the map can be misread.</strong></p>
+<p><strong>Dark squares are collecting effort, not abundance.</strong> The
+squares over Edmonton and Calgary come out dark for nearly every species on
+this site, because that's where the people making the observations live.</p>
+<p><strong>Empty is not absent.</strong> Unsurveyed and unoccupied look the
+same on the map while not meaning the same thing.</p>
+<p>A record makes it onto the map if its coordinate is good to within
 <strong>10 km</strong>, it falls inside <strong>Alberta or
-Saskatchewan</strong>, and its dataset licence permits redrawing the
-coordinate. We accept non-commercial licences for coordinates but not for
-photographs: a photograph is somebody's work, a coordinate is a fact about a
-place. Records closer together than {MARK_DEG} degrees are drawn once, which
-is under half a pixel."""
+Saskatchewan</strong>, and its licence lets me redraw the coordinate.</p>
+<p>I decided non-commercial licences are fine for coordinates but not for
+photographs as a photograph is someone's work while a coordinate is simply a
+fact about a place.</p>"""
 
 
 def _example_range_map() -> str:

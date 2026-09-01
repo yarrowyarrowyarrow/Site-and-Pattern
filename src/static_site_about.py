@@ -47,9 +47,12 @@ def _sources_section() -> str:
     documented record with a source" showed the reader
     `globi_www_bumblebeewatch_org`.
 
-    `citations.disclaimer()` is not optional furniture. These details were
+    The disclaimer above the list is not optional furniture. These details were
     transcribed from source records rather than checked against the works, and
     a bibliography that does not say so is claiming a verification nobody did.
+    V2.80 restated it in the author's own voice for this page; both halves of
+    `citations.disclaimer()` are still said, and that function is still the
+    wording every other surface prints.
     """
     rows = [r for r in citations.all_sources()
             if not citations.is_placeholder(r.get("key") or "")]
@@ -64,8 +67,18 @@ def _sources_section() -> str:
             f'<li>{_esc(citations.format_citation(r["key"]))}</li>'
             for r in group)
 
-    out = ['<h2>Where this data came from</h2>',
-           f'<p class="lede">{_esc(citations.disclaimer())}</p>']
+    # The disclaimer's *substance* in the author's own voice (V2.80), not a
+    # weakening of it: the details were transcribed rather than checked, and
+    # nobody has confirmed a cited work supports the claim citing it. Both are
+    # still said. `citations.disclaimer()` remains the wording every other
+    # surface uses; the website speaks in the first person and this is the one
+    # page where that difference is the point.
+    out = ['<h2>Where the data came from</h2>',
+           '<p class="lede">These are the works the data cites. I copied the '
+           'details out of the source records without opening the works '
+           'themselves, so I can\'t yet tell you whether they back the claim '
+           'citing it.</p>',
+           '<p>A citation tells you where a claim came from. That\'s all.</p>']
     if published:
         out.append(f'<h3>Published works ({len(published)})</h3>'
                    f'<ul class="sources">{items(published)}</ul>')
@@ -90,46 +103,56 @@ def render_about(model: dict) -> str:
     body = f"""
 {_crumb([("", "About")], 1)}
 <h1>About this catalogue</h1>
-<p class="lede">{s['species']} plants, {s['animals']} animals with documented
-plant relationships, {s['edges']} relationships between them, and
-{s['facets']} searchable fields. Built for Alberta and Saskatchewan.</p>
+<p class="lede">{s['species']:,} native plants of Alberta and Saskatchewan, the
+{s['animals']:,} animals documented to use them, and {s['edges']:,}
+relationships between plants and animals.</p>
+
+<h2>Who's behind this</h2>
+<p>I'm Marci, and I'm in Edmonton. I wanted to share my passion for nature and
+encourage people to grow native plants, which are the cornerstone of the
+ecosystem. By reducing the friction of deciding which plant is best, and
+sharing just how much of the nature we love relies on them, I hope more folks
+make the choice to include native plants in their gardens.</p>
+<p>While I'm not a botanist, I do have years of permaculture knowledge as well
+as years tending my own gardens. I see the life my little native plant garden
+attracts and want that for my whole neighbourhood and beyond.</p>
 
 <h2>What it is</h2>
-<p>A reference to the native plants of Alberta and Saskatchewan, and the
-animals that depend on them. The ecoregions mapped here stop at the
-Saskatchewan border, and they are not all prairie: a third of these species
-are recorded from boreal or montane ground.</p>
-<p>It is the catalogue behind <a
+<p>A reference to the native plants of Alberta and Saskatchewan and the animals
+that depend on them. The ecoregions here stop at the Saskatchewan border, and
+they're not all prairie; a third of these species are recorded from boreal or
+montane ground.</p>
+<p>It's also the catalogue behind <a
 href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">{_esc(APP_NAME)}</a>,
-a desktop application for lawn-to-habitat conversion, pollinator gardens and
-restoration planting, published so you can read it without installing
-anything.</p>
+a desktop app for lawn-to-habitat conversion, pollinator gardens and
+restoration planting. I published this website so you can read it without
+installing anything.</p>
 
-<h2>What it is honest about</h2>
-<ul>
-  <li><strong>Unknowns stay unknown.</strong> A plant with no recorded bloom
-  window appears under no month, and one with no recorded flower colour under
-  no colour. A blank is never filled in.</li>
-  <li><strong>Evidence travels with the claim.</strong> A region built from
-  three records does not look like one built from three hundred.</li>
-  <li><strong>Relationships are documented, not guessed.</strong> Every animal
-  on a plant page comes from a sourced record.</li>
-  <li><strong>Photographs are credited or absent.</strong> {s['with_photo']} of
-  {s['species']} species have an openly-licensed photograph we can attribute.
-  The rest show none.</li>
-  <li><strong>The occurrence records are not identification-checked.</strong>
-  They come from GBIF as submitted, so misidentifications are present here as
-  they are in any occurrence dataset. Checking them against the regional floras
-  is planned for <strong>winter 2026-2027</strong>.</li>
-</ul>
+<h2>What it won't tell you</h2>
+<p><strong>Blanks stay blank.</strong> A plant with no recorded bloom window
+shows up under no month, and one with no recorded flower colour shows up under
+no colour. Nothing gets filled in to make a page look finished.</p>
+<p><strong>The evidence comes with the claim.</strong> A region built from
+three records doesn't look like one built from three hundred, because the count
+sits right next to it.</p>
+<p><strong>Every animal on a plant page comes from a sourced record.</strong>
+Nothing is inferred from what a related species does.</p>
+<p><strong>{s['with_photo']} of {s['species']} species have a photograph I can
+credit.</strong> The other {s['species'] - s['with_photo']} show none. If I
+can't name the photographer, there's no image.</p>
+<p><strong>The occurrence records aren't identification-checked.</strong> They
+come out of GBIF as submitted, so misidentifications are in here the way
+they're in any occurrence dataset. I'm planning to check them against the
+regional floras over <strong>winter '26-27</strong>.</p>
 
 {_sources_section()}
 
 <h2>Corrections</h2>
-<p>Errors and photograph credit problems can be reported as issues on the
-<a href="https://github.com/yarrowyarrowyarrow/Site-and-Pattern">project
-repository</a>. If a photograph of yours is here and the credit is wrong, or you
-would rather it were not here, it will be fixed or removed.</p>
+<p>If something here is wrong, tell me in the
+<a href="../feedback/">Feedback</a> section.</p>
+<p>Photo credits especially. If a picture of yours is on this site and the
+credit is wrong, or you'd rather it weren't here at all, I'll fix it or take it
+down.</p>
 
 <p class="src">Catalogue built {_esc(model["built"])}.</p>
 """
