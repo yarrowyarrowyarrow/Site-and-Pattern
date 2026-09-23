@@ -331,11 +331,19 @@ class TestPlantPanelSmoke(unittest.TestCase):
         self.assertGreater(purple, 0)
         self.assertLess(purple, every)
 
+        # Two colours ticked is a UNION, counted by plant rather than by adding
+        # the two counts. Since V2.80 (`bda0824`) a flower can bloom in more
+        # than one colour, so a plant that is purple and yellow answers both
+        # queries and must appear once; the sum overcounted by exactly those
+        # plants (61 + 83 - 3 = 141 at the time) and this assertion went red
+        # while every session that ran it had no PyQt6 to notice.
         self._set_checked(p._colour_combo, {"purple", "yellow"})
         p._run_search()
         both = p._results_model.rowCount()
-        self.assertEqual(both,
-                         purple + len(search_plants(flower_colours=["yellow"])))
+        union = ({r["id"] for r in search_plants(flower_colours=["purple"])}
+                 | {r["id"] for r in search_plants(flower_colours=["yellow"])})
+        self.assertEqual(both, len(union))
+        self.assertGreater(both, purple)
 
         self._set_checked(p._colour_combo, set())
         p._run_search()
