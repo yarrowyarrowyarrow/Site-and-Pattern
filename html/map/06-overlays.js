@@ -1254,9 +1254,11 @@
         draggable: true,
         zIndexOffset: 1000,
         icon: L.icon({
-          iconUrl:    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          shadowUrl:  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          // Vendored (V2.83): relative to map.html. From unpkg the site pin,
+          // step 1 of getting started, drew as nothing with no internet.
+          iconUrl:    'vendor/leaflet/images/marker-icon.png',
+          iconRetinaUrl: 'vendor/leaflet/images/marker-icon-2x.png',
+          shadowUrl:  'vendor/leaflet/images/marker-shadow.png',
           iconSize:   [25, 41],
           iconAnchor: [12, 41],
           popupAnchor:[1, -34],

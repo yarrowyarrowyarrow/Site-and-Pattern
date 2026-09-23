@@ -224,9 +224,13 @@ replacing each other.
   see the load-bearing block comment above it before touching anything there.
 - **Bridge silence**: a JS call to a misnamed `bridge.onFoo` fails without a
   trace — `python -m unittest tests.test_bridge_contract` catches it statically.
-- The page loads Leaflet/leaflet-draw from unpkg CDN and tiles from the
-  network; `LocalContentCanAccessRemoteUrls` is enabled for that. Offline, the
-  map page itself won't fully boot — don't mistake that for your bug.
+- Leaflet 1.9.4 and Leaflet.draw 1.0.4 are **vendored** under
+  `html/vendor/leaflet*/` (V2.83) and loaded by relative path; before that they
+  came from a CDN and, offline, the page never got an `L` at all. Only the
+  **tiles** come from the network (`LocalContentCanAccessRemoteUrls` is enabled
+  for them), so offline the map boots and draws on a grey background. Never
+  add a CDN `<script>` or image URL back: `tests/test_map_vendor.py` fails on
+  one anywhere in `map.html` or `html/map/*.js`, comments included.
 
 ## Pitfalls & gotchas (real ones)
 
