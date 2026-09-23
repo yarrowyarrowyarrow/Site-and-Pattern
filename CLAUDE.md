@@ -21,116 +21,6 @@ drives the app lives in `docs/DESIGN_PHILOSOPHY.md` — strongly-aligned modules
 one-line `Design principle P#` anchor pointing back to it, guarded by
 `tests/test_philosophy.py`.
 
-## Work in flight (V2.79–V2.80 — delete this section when it ships)
-
-**There is an unfinished increment spanning `V2.79` and `V2.80`.** If you are
-starting cold, read
-[`docs/plans/V2.79-the-range-stops-being-ecoregions.md`](docs/plans/V2.79-the-range-stops-being-ecoregions.md)
-and then
-[`docs/plans/V2.80-the-range-was-never-on-the-page.md`](docs/plans/V2.80-the-range-was-never-on-the-page.md),
-[`V2.80-the-inference-gets-a-source.md`](docs/plans/V2.80-the-inference-gets-a-source.md)
-and [`V2.80-only-facts-backed-by-data.md`](docs/plans/V2.80-only-facts-backed-by-data.md)
-before touching the range maps, the website build or the nativity data —
-especially V2.79's **Handing this over** section, which lists decisions the
-author has already made and that should not be reopened.
-
-In one paragraph: an outside botanical review said the published range maps
-overstate what is known, and V2.75–V2.78 each fixed *how* the ecoregion shading
-was derived while leaving untouched the assumption that a range is made of
-ecoregions. V2.79 replaces that with a **0.25° occupancy grid**
-(`src/species_range.py`, `src/range_map.py`) and fixes a VASCAN parser that was
-publishing a *missing* distribution field as an **absence** for 173 species.
-V2.80 made the new map legible — and found that the range wash it was supposed
-to be tuning had **never been drawn**, because the province outlines are
-redrawn over it with an opaque white fill. **V2.80 also landed VASCAN**: the
-author downloaded the Darwin Core Archive, two parser bugs came out of meeting
-real data, and 414 of 434 species now carry
-`native_provinces_source='flora'` with 34 province lists narrowed (schema
-v79). That closes F137/F144 and the review's original complaint about the
-nativity claim.
-
-**F146 and F147 are done too**: the range map replaced the ecoregion map on
-the species page (the built site went 421 MB → **118 MB**, a species page 888 KB
-→ **111 KB**, because 846 KB of it was ecoregion polygons repeated 430 times),
-and 171,896 occurrence marks are published with a specimen/observation toggle.
-The nativity inference is **withheld rather than annotated** — the species VASCAN
-could not settle read *Not established* and print no province list.
-
-**Those twenty were then sorted and acted on** — see
-[`V2.80-the-names-were-the-problem.md`](docs/plans/V2.80-the-names-were-the-problem.md).
-They held four different reasons, and only five were the introduced species the
-instruction assumed: **8 were renames** (native all along, filed under a name
-VASCAN does not accept), 4 introduced removals, 1 merge (*A. millefolium* into
-*A. borealis*, 332 edges kept), 1 duplicate, 2 recorded-but-not-for-AB/SK, 4
-cultivars. A rename **clears** `native_provinces_source` on purpose, so
-re-running the archive under the corrected name refills it from the archive
-rather than from a transcription. Unsourced 20 → **14**, and 8 of those clear on
-that run. `scripts/rename_taxon.py` is the tool; `KNOWN_NATIVITY_CONFLICTS` is
-now **empty**, because the archive resolved the Stiff Goldenrod pair it existed
-for.
-
-**Four of those eight renames were wrong, and V2.82 found out how** — see
-[`V2.82-the-harebells-were-not-swapped.md`](docs/plans/V2.82-the-harebells-were-not-swapped.md).
-The report was about a *common* name — two harebells that read as a swapped pair
-— and the cause was a binomial: `Campanula alaskana` is a synonym of *Campanula
-rotundifolia*, which the extract on disk had already said. **A wrong scientific
-name is invisible until it is next to a similar one**, so the same comparison
-was run over every row: **26 binomials are not VASCAN's accepted name**, 5 of
-them synonyms of a name *already in the catalogue* (two pages for one plant) and
-4 of them V2.80's own renames landing on an infraspecific rank the checklist
-does not carry — read off the wrong end of an authority string. Use
-`rename_taxon.binomial()` to compare, never the eye. Five pairs merged, catalogue
-417 rows; 18 recombinations (*Galium* → *Trichogalium*, *Spartina* →
-*Sporobolus*, *Ledum* → *Rhododendron*) deliberately left as **one** open
-decision about which nomenclature the site follows, allowlisted with a reason
-each in `data_quality.KNOWN_NOMENCLATURE`, which now **fails the gate** on any
-new synonym entering the catalogue. Three tool changes worth
-knowing: `scripts/rename_common_name.py` is new and is the only safe way to
-change a common name (**the common name is the foreign key here and the
-scientific name is not** — edges join on it, slugs are built from it);
-`remove_taxon.py --merge-into` now merges field by field and de-duplicates the
-re-pointed edges; and `rename_taxon.py` **keeps** a sourced nativity when the
-new name is the accepted name the archive itself resolved the old one to.
-
-**Then the author rewrote the public copy by hand** — see
-[`V2.80-the-copy-in-the-authors-voice.md`](docs/plans/V2.80-the-copy-in-the-authors-voice.md).
-The Method and About pages are first person singular now (an institutional *we*
-for one person in Edmonton is untrue, and quietly corrosive on a page about how
-far you can trust this), About gained a **"Who's behind this"** section, and the
-rewrite named two broken outputs before it named any prose. `/method/` read
-*"The other **0** read Not established"* followed by a paragraph explaining
-those zero species: the count was computed and correct, and the sentence around
-it was written when 20 were withheld and never moved. **A number that cannot go
-stale inside a sentence that can is the same failure one level up**, so the
-sentence shape follows the count now. And all 422 species pages published
-`price: … availability: … notes: …` — the extras renderer's generic dict branch,
-where the desktop had rendered the same dict as prose for years. Fixed in
-`sourcing.describe`. Five disclosures the rewrite cuts are listed in the plan as
-decisions rather than editing residue. **F150** shipped alongside: the site had
-no share card at all.
-
-Three threads are open:
-
-1. **The desktop app still uses the unsourced nativity value.** Those species
-   keep `native_to_alberta`, which drives the native filter and the Habitat
-   Value Score, so the app still recommends on an inference the website now
-   refuses to publish. Blanking it changes what Generate Design produces, so it
-   is its own increment rather than a quiet edit.
-2. **The four fruit cultivars.** Deleting them was asked for and not done: they
-   are the centre plant of a seeded community named after one of them, plus 48
-   calendar rows, and the seeder skips missing plants *silently*. The cheaper
-   rule recommended instead — **publish only what has a nativity source** — drops
-   them from the website and keeps them in a design tool where an apple is
-   useful.
-3. **Two species VASCAN records but not here** (*Solidago nemoralis*, *Spiraea
-   douglasii*). Both have plausible native counterparts already carried, but
-   swapping them is a substitution rather than a rename, which is the argument
-   that kept *Helianthus annuus* from being merged.
-
-**This section is stale the moment this work ships.** Delete it then; the plan
-files and the F145–F149 ledger row in `docs/ROADMAP_NEXT.md` are the permanent
-record.
-
 ## Design philosophy (read this first — weave it through your work)
 
 This project is not a generic plant-placement tool; it is built on a coherent philosophy, and
@@ -143,7 +33,7 @@ feature, skim where it sits in that philosophy. The sources of truth:
   this before re-deriving the backlog from the two roadmaps; it is the index, and it carries the
   verified status of every open ID.
 - [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) — the live plan and the *reasoning* per feature,
-  plus the **ID ledger** (F63–F149) and the shipped record. Feature IDs have collided three times;
+  plus the **ID ledger** (F63–F158) and the shipped record. Feature IDs have collided four times;
   take the next free ID from that ledger, never from memory.
 - [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F62) organized by the
   principle they serve, with a "Shipped" section at the top.
@@ -248,6 +138,15 @@ any release up to V2.79.
 **Never delete the remote tags**: each anchors a GitHub Release, and
 `github_releases.parse_release_version` reads `tag_name` off those releases to
 drive the in-app updater.
+
+**One branch, one version: V2.81 and V2.82 are the cautionary case.** Both were
+committed on the `V2.80` branch, so each push re-ran the release workflows
+against the existing `release-V2.80` release, whose tag still points at the
+25 Aug commit (schema v78). The updater compares `(major, minor)` only, so an
+install from 25 Aug believes it is current and never received v78 → v85.
+Their plan files keep their numbers; **the next branch after them is V2.83**.
+The hook below proposes newest-on-origin + 1, which reads V2.81 until V2.83 is
+pushed, so check `docs/plans/` for a higher number before accepting it.
 
 **This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
 `.claude/settings.json`), so it no longer depends on remembering:
@@ -386,6 +285,23 @@ python -m unittest discover -s tests -t .
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
 
+**CI runs it now (V2.83).** `.github/workflows/tests.yml` runs on every push to
+a `V*.*` branch and on pull requests, with the whole Qt stack and
+rasterio/pyproj installed, then `validate-data`. Until then the suite ran only
+inside sessions, most without PyQt6, and a widget test was red from V2.80 to
+V2.82 with nobody able to see it. CI calls the runner below rather than
+`unittest` directly, and it is the better command in a container too:
+
+```bash
+QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox QT_QPA_PLATFORM=offscreen \
+  python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 30
+```
+
+It prints the skip reasons with counts, **fails when more tests skip than
+`--max-skips`** (21 skip with every dependency present; a missing Qt runtime
+adds ~156), and exits before interpreter teardown, so the WebEngine segfault
+described below cannot turn a green run into exit 139. Read its `RESULT:` line.
+
 **The `-t .` is load-bearing (V2.38).** Without it `unittest discover` makes
 `tests/` the top-level directory, its modules import as top-level names, and
 `tests/__init__.py` is **never imported** — which is where the suite's offline
@@ -508,7 +424,7 @@ only, doesn't affect real commits.
 | `src/scene_wildlife.py` | Which animals appear in a design, where they sit, and what they look like. **Appearance is data since schema v58** — the genus/name tables here are the fallback for a species nobody has described, not the only answer. |
 | `src/confidence.py` | **One vocabulary for "how sure are we?" and "who says so?" (F8/F13/F14/F28, V2.53).** Bands (three rungs plus `UNKNOWN`) and marks (one table over the edges layer's `documented/recorded/derived` and the seed data's `measured/flora/photo/checked/name/epithet/estimated`). Two rules are load-bearing: **absent is not estimated** — a blank field is the app knowing it does not know, `estimated` is a genus default that looks like a measurement — and **a band needs evidence**, so `known=False` gives `UNKNOWN`, never a middle rung. It does *not* own thresholds another module already owns: establishment floors come from `ecoregion_ranges` and a test asserts they agree. |
 | `src/ecoregion_ranges.py` + `scripts/seed_ecoregion_ranges.py` + `scripts/plot_occurrences.py` | **Which ecoregions a species is actually recorded from (V2.38, corrected V2.75, re-derived V2.76 and V2.81).** Counts derived from GBIF occurrence records, each row carrying its count and a confidence band. **A record counts for the region it is more than 900 m INSIDE, and for no other (V2.81).** Containment alone was still reading a border closer than it is drawn: *Penstemon albertinus* published 17 Aspen Parkland records that were **one montane population**, 663 m across, sitting 25-202 m inside a line the site's own `CAVEAT` calls accurate to a kilometre. `ecoregion.confident_ecoregion` requires a record to clear `SIMPLIFICATION_M` (900 m, read from the same number the caveat prints) measured to the nearest **different** region -- never to a ring, because the layer splits each ecoregion by Alberta subregion and Aspen Parkland alone is 9 features with seams through the middle. That also ends the V2.78 double count for free (0.81% of in-region points matched two regions, 85% of them at Calgary): an overlap exists *because* a shared border was simplified twice, so a doubly contained point is by construction inside the margin. Cost: 5.7% fewer records credited (3.6% of them set aside as too near a line), **108 region rows gone across 94 species and zero added** — `ranges_for_species` had defaulted its lookup to `ecoregion.lookup_ecoregions`, which applies a 5 km proximity buffer written for *which ecoregion is this yard in*, so 16.4% of points inside the layer were credited to two or more regions. Two questions, one geometry, kept apart by `near_m`. The seeder **caches the raw points** to `data/fetched/plant_occurrences.json` (dev artefact, never shipped, never published) so a re-derivation costs no network — before V2.75 only the counts survived a run, which is why that bug could be diagnosed here and not corrected. `plot_occurrences.py` draws them, and **V2.77 made the specimen layer real**: `--specimens --publishable` renders what the printed regional floras plot (52,924 of 555,477 records drawable, 300-700 dots per species), because for a herbarium the dataset licence IS the record's licence and a pressed sheet carries none of the rare-taxa coordinate obscuring iNaturalist applies. Whether any of it is *published* is still an open decision, not an effort problem. **Note `MAX_RECORDS_PER_SPECIES = 6000`**: GBIF orders newest-first, so for a common plant the harvest is the last few years and nothing before them - 16 species at the cap hold 89,964 records and thirty-one specimens between them. Use `--specimen-pass` to reach what the cap cut, and `--from-cache` to re-derive with no network. **Re-derived in V2.76** (schema v77) once the author ran the fetch: records 489,546 -> **361,447**, and the error turned out to be concentrated in one sliver — `western_continental_ranges` is a BC region clipped to 0.02% of the layer inside Alberta, claimed by **135 species and now by 15**. Interior regions barely moved (Cypress Upland 231 -> 228), which is the signature a boundary fix should have. |
-| `src/static_site_method.py` + `src/static_site_range.py` | **What a shaded region claims (F135, V2.75).** An outside botanical review read the site and asked five things it could not answer from any page: what a record is, as of when, where in the region, why a region with two records is missing, and what the shading means. Every answer was already in the repo — the retrieval date on the row since schema v59 and printed by the *desktop*, the floor in `MIN_RECORDS`, the near-misses computed by `dropped_regions` every run — and none reached a reader. `/method/` states them, **computed from the modules that own them**, including what this build gets wrong. Every species page links out to GBIF and iNaturalist, which stays current in a way a shipped snapshot cannot. **V2.80 replaced the ecoregion map on the species page with the occurrence range map** (`static_site_range.occurrence_map`): the shading was the overstatement the review objected to, and the swap took the built site 421 MB -> **118 MB** because 846 KB of every page was ecoregion polygons. The region counts stay, under a heading that says what they are. The record marks come from `data/plant_occurrence_points.json` and toggle between specimen and observation with **three radios and no JavaScript** -- the inputs must be siblings of the map, because `~` cannot climb out of a wrapper. |
+| `src/static_site_method.py` + `src/static_site_range.py` | **What a shaded region claims (F135, V2.75).** An outside botanical review read the site and asked five things it could not answer from any page: what a record is, as of when, where in the region, why a region with two records is missing, and what the shading means. Every answer was already in the repo — the retrieval date on the row since schema v59 and printed by the *desktop*, the floor in `MIN_RECORDS`, the near-misses computed by `dropped_regions` every run — and none reached a reader. `/method/` states them, **computed from the modules that own them**, including what this build gets wrong. Every species page links out to GBIF and iNaturalist, which stays current in a way a shipped snapshot cannot. **V2.80 replaced the ecoregion map on the species page with the occurrence range map** (`static_site_range.occurrence_map`): the shading was the overstatement the review objected to, and the swap took the built site 421 MB -> 118 MB because 846 KB of every page was ecoregion polygons. **The ecoregion map then came back later in V2.80, below the occurrence map rather than instead of it**, on the author's review of the build, so the published site is 328 MB again with a median species page of 585 KB raw (about 180 KB compressed, which is what a reader downloads); `static_site_range.range_section` carries the reasoning. The region counts sit beside it, under a heading that says what they are. The record marks come from `data/plant_occurrence_points.json` and toggle between specimen and observation with **three radios and no JavaScript** -- the inputs must be siblings of the map, because `~` cannot climb out of a wrapper. |
 | `src/occurrence_points.py` + `scripts/seed_occurrence_points.py` | **The records themselves, as the site may publish them (F147, V2.80).** 171,896 marks over 426 species, split into herbarium specimen and field observation, because a pressed sheet somebody can re-examine and a photograph identified by community agreement are different evidence. Three filters: 10 km precision, the two provinces, and `PUBLISHABLE_COORDINATES` -- which permits **CC_BY_NC for a coordinate but not for a photograph**, on the author's V2.79 reasoning that a photograph is redistributed as a work and a coordinate is a fact about a place. That is not academic: 329,267 of 365,092 drawable records are NC observations, so the photograph bar would have published a map that is 94% herbarium specimens. Records within 0.01 degrees are drawn once, which is **under half a pixel** -- a rendering decision, not subsampling, and the caption says which. |
 | `src/establishment.py` + `src/reference_fidelity.py` | The two bands (V2.53). *Has anyone recorded this species growing here* — off the schema-v59/v60 occurrence records, where no record bands as **unknown rather than unlikely**, because under-collected and absent are indistinguishable below the floor. And *does this design have the shape of the natural community* — structure per layer, not species, with low explicitly not a failure. |
 | `src/db/relationships.py` | **The unified edges layer (F7, V2.31).** One query API + one edge vocabulary (`EDGE_KINDS`) over the schema-v51 `relationship_edges` view, which unions `plant_fauna`, both companion tables and shared polyculture membership. Ask "what is connected to this plant?" here, not table by table. Every edge carries `evidence` — `documented` (seeded record + `source`) vs `derived` (computed, e.g. two plants feeding the same animal). |
@@ -524,9 +440,9 @@ only, doesn't affect real commits.
 | `.github/workflows/release-macos.yml` | Builds the macOS DMG on a cloud Mac and publishes it to a GitHub Release on every `V*` push, feeding the in-app updater (V1.73). |
 | `src/subject_area.py` | **Is this coordinate on ground this catalogue speaks for? (F142, V2.78).** The GBIF harvest is bounded by the polygon layer's *bounding box* plus half a degree, so it reaches into BC, Montana, Manitoba and the NWT; `map_svg` emitted its overlay outside its own subject clip, and **175,876 of 555,477 cached records (31.7%)** were drawn over ground the layer has no authority over. **The province outline alone is not the test** — Natural Earth 1:10m gives Alberta and Saskatchewan 193 vertices between them, too coarse to adjudicate the continental divide — so a point counts if it is inside the coarse outline **or** any surveyed ecoregion. Separate from `site_facets.SUBJECT_PROVINCES`, which is the same two provinces as a filter vocabulary. |
 | `src/phenology_bar.py` | **When a plant flowers, drawn (F143, V2.78).** Twelve cells, bloom and fruit on one axis because the gap between them is the information. The catalogue had carried `bloom_period` since its first seed file and shown it three ways, all text, none of which answer *what is flowering in July*. **Nothing recorded draws nothing** (P9): twelve empty cells asserts that we checked and it never flowers. Delegates parsing to `habitat_score.parse_month_range` rather than growing a second parser to disagree with the first. |
-| `src/nativity.py` | **What "Native to Alberta and Saskatchewan" rests on (F144, V2.78).** `native_provinces` has no source column, unlike flower colour and safety, and 354 of 430 species publish "AB,SK" from an inference about ecoregions continuing across the 110th meridian — which is the outside review's actual criticism, stated in the retired generator's own docstring. Puts the mark back on, naming the heuristic rather than saying "unverified", with **different notes for the two provenances wearing one string** (Alberta is an editorial flag, Saskatchewan is the inference). Derived, not stored: `SOURCE_FIELD` is the seam VASCAN (F137) writes into and a test fails the day it appears. |
+| `src/nativity.py` | **What "Native to Alberta and Saskatchewan" rests on (F144, V2.78; sourced V2.80).** Before V2.80, 354 of 430 species published "AB,SK" from an inference about ecoregions continuing across the 110th meridian, which was the outside review's actual criticism. VASCAN's checklist then landed (F137, from the Darwin Core Archive), and **every row now carries `native_provinces_source = 'flora'`**, which `provenance()` reads first. The inference notes remain as the fallback for a row that loses its source, which `rename_taxon.py` does on purpose so the next archive run refills it. |
 | `src/flower_colour.py` | **Flower colour as something you can filter on (F108, V2.47).** The hex→bucket classifier behind `search_plants(flower_colours=…)`, the directory facet and the website's colour pages — one parser, so the three cannot disagree. The grasses/sedges/rushes bucket is *not* a bloom colour and is labelled so: they are wind-pollinated and `#cbbd80` is the absence of a showy flower, not an observation of one. |
-| `src/site_facets.py` | **What the website can be searched by (V2.48).** 21 facets in six groups as ONE table, each declaring whether its own ticked values AND or OR (`combine`; safety and role are `all`, everything else `any`), driving the sidebar controls, the values baked into each browse-index row, and the landing pages generated per value. Deliberately *not* `search_plants` parameters: the site filters client-side, so an axis costs a derivation function rather than a thirty-first query parameter. `WITHHELD_ROLES` keeps `medicinal` off the public web (P12). |
+| `src/site_facets.py` | **What the website can be searched by (V2.48).** 21 facets in six groups as ONE table, each declaring whether its own ticked values AND or OR (`combine`; safety and role are `all`, everything else `any`), driving the sidebar controls, the values baked into each browse-index row, and the landing pages generated per value. Deliberately *not* `search_plants` parameters: the site filters client-side, so an axis costs a derivation function rather than a thirty-first query parameter. `WITHHELD_ROLES` has been **empty since V2.50**: the author ruled the `medicinal` use tag a generic horticultural category and it is published; the mechanism stays, tested against a temporary value, because the free-text notes are the artefact P12 keeps off the web. |
 | `src/ecoregion_map.py` + `src/ecoregion_basemap.py` + `src/ecoregion_palette.py` | **The ecoregions, drawn (V2.48, redrawn V2.49, reprojected V2.66).** Inline SVG, no script, no dependency. `_map.py` projects the thematic layer through an Albers equal-area conic; `_basemap.py` draws the ground under it from `data/basemap_prairie.geojson` (Natural Earth 1:10m: real province outlines, major lakes and rivers, generated by `tools/ecoregions/basemap.py`, superseding the hand-typed `data/provinces_prairie.geojson`); `_palette.py` says what a colour asserts and carries the hatch rule. **Below the ecozone, identity is a number, not a colour (V2.69)** — hue is the ecozone and lightness the ecoregion inside it, which collapses at ten siblings (Boreal Transition vs Clear Hills Upland: ΔE 0.3). A search over lightness, chroma and hue rotation together found the best sibling separation that still clears the cross-ecozone colour-vision floor is ΔE 1.7, so focus maps carry numbered discs keyed to a numbered legend, both ordered by one `numbered_order`. A subregion map also draws its **parent underneath**: Alberta surveys subregions and Saskatchewan does not, so without it a cross-border ecoregion showed a hard split down the provincial boundary. **The polygons are surveyed since V2.67** — National Ecological Framework v2.2, 24 ecoregions in 6 ecozones, built by `tools/ecoregions/`; `scripts/draw_ecoregions.py` drew the six that came before and is now history, not the source. `CAVEAT` still travels with every drawing but now discloses the ~900 m simplification instead of calling the outlines a diagram: **it kept saying "not surveyed boundaries" for a whole increment after that became false**, on 432 public pages, so its test checks the caption against the polygon file's own provenance rather than against a remembered string. |
 | `src/static_site_regions.py` | **The website's pages about *places* (V2.69).** The ecoregion map is a **drill-down**: `/map/` colours 6 ecozones, an ecozone's page colours the ecoregions inside it, an ecoregion's page colours the Alberta subregions overlapping it, and each of the 21 subregions has a page. Chosen over three side-by-side maps because the reader's question is sequential and 24 regions do not fit on one 700px map — that crowding is what once shipped "Parkland" as the name of Aspen Parkland. **A subregion page is a locator, not a filter result**: no species is tagged at that level and none should be, so the page borrows its dominant ecoregion's list only when one accounts for two thirds of it, and otherwise lists the overlaps with their measured shares. Alberta's subregions are a *parallel* classification, not a third tier — Montane is 42% of Northern Continental Divide across six ecoregions. |
 | `src/ecoregion_tree.py` | **The vocabulary has three levels (V2.68).** ecozone (6) → ecoregion (24) → Alberta natural subregion (21), all *read from the polygon file* rather than declared beside it — the one hand-transcribed copy that existed was already wrong about Interlake Plain. Drives the collapsible filter (`filter_widgets.build_ecoregion_tree`) so the first choice is six-way, not twenty-four-way. **Matching runs both ways along a lineage**: a plant tagged only "Boreal Plains" answers a Mid-Boreal Uplands query, because its evidence was never finer than the ecozone and that is *unknown*, not no (P9). Keys are prefixed `zone_`/`sub_` — "Athabasca Plain" is both an ELC ecoregion in Saskatchewan and an Alberta subregion, and they are different ground. |
@@ -595,6 +511,20 @@ only, doesn't affect real commits.
   (V1.62). The project dict's plant features and the `_placed_plants`
   index are kept in sync by the store; `tests/test_project_store.py`
   fails the build on any new direct mutation in `src/`.
+- **Taxon names (V2.80–V2.82).** **The common name is the foreign key here and
+  the scientific name is not**: edges in `plant_fauna_master.json` join on it and
+  public URLs are slugged from it. Change one only with
+  `scripts/rename_common_name.py`; rename a binomial with `scripts/rename_taxon.py`;
+  merge two rows with `scripts/remove_taxon.py --merge-into`. Compare names with
+  `src/taxon_names.binomial()`, never by eye: V2.80 read four renames off the
+  wrong end of an authority string. Every row's `native_provinces` is read from
+  VASCAN (`native_provinces_source = 'flora'`), and the 18 recombinations the site
+  has not adopted (*Galium* → *Trichogalium* and the like) are one open decision,
+  allowlisted in `data_quality.KNOWN_NOMENCLATURE`, which fails the gate on any
+  new synonym. Before touching the range maps, the site build or nativity, read
+  the **Handing this over** section of
+  [`V2.79-the-range-stops-being-ecoregions.md`](docs/plans/V2.79-the-range-stops-being-ecoregions.md):
+  the decisions listed there are the author's and are not to be reopened.
 
 ## When making schema/data changes
 

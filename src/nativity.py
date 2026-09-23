@@ -3,6 +3,14 @@ nativity.py — what "Native to Alberta and Saskatchewan" is actually resting on
 
 Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
 
+**Status since V2.80:** the fix this module was waiting for has landed. VASCAN's
+checklist was read from its Darwin Core Archive, and every row in the catalogue
+(417 at V2.82) now carries ``native_provinces_source = 'flora'``, so
+:func:`provenance` returns the sourced branch for all of them. The inference
+notes below are the fallback for a row that loses its source, which
+``scripts/rename_taxon.py`` does on purpose so the next archive run refills it.
+The rest of this docstring is the V2.78 reasoning, kept as it was written.
+
 The claim, and where it came from
 ---------------------------------
 354 of 430 species in this catalogue carry ``native_provinces = "AB,SK"``, 75

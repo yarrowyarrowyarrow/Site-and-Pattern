@@ -2,9 +2,9 @@
 
 **Turn your lawn into native habitat.** A landscape design tool for native plants, ecological restoration, and pollinator/wildlife habitat in Alberta and the Canadian prairies.
 
-Site & Pattern is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a 433-plant database focused on Alberta and the Canadian prairies. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
+Site & Pattern is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a catalogue of over 400 plants native to Alberta and Saskatchewan. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
 
-> **Status:** Site & Pattern is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
+> **Status:** Site & Pattern is in active development. Recent releases have concentrated on the accuracy of the plant catalogue and on its public website, [grownativeplants.ca](https://grownativeplants.ca). See [Going Forward](#going-forward) for where the live plan is kept.
 
 > **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — thirteen principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, beauty as the mechanism the ecology survives by, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
 
@@ -19,7 +19,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 - **Flower-colour filter** — eleven buckets classified from the recorded hex, with grasses and sedges grouped separately because they are wind-pollinated and have no showy flower
 - **Hedgerows** — draw layered native hedgerows for property edges and wildlife corridors
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
-- **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
+- **Plant database** — over 400 species native to Alberta and Saskatchewan, each with its nativity read from VASCAN (the Database of Vascular Plants of Canada)
 - **Hardiness zone lookup** — automatic zone matching from location based on Canadian hardiness zone polygons
 - **PDF export** — export your designs and plant lists as printable PDF documents
 - **Headless scripting** — a Qt-free Python API, CLI, and MCP server for automation and AI agents (see [AI agent usage](#ai-agent-usage-headless-scripting-cli-mcp))
@@ -68,7 +68,7 @@ On first run, the database is seeded automatically with the included plant data.
 
 ## Plant Database
 
-Site & Pattern V1 ships with a master database of 433 plants suitable for Alberta and the Canadian prairies. The data covers:
+Site & Pattern ships with a catalogue of over 400 plants native to Alberta and Saskatchewan. The data covers:
 
 - Common and scientific names, plant type
 - Hardiness zone range, sun and water requirements, soil pH range
@@ -122,21 +122,26 @@ python -m src.cli validate-data                             # check seed JSON
 ### The catalogue as a website
 
 `build-site` renders the plant directory as plain static files: a species page
-per plant, a search page filtering on **23 axes** in the browser (colour, bloom
+per plant, a search page filtering on **21 fields** in the browser (colour, bloom
 month, ecoregion, sun, water, hardiness zone, height, life cycle, foliage,
 growth rate, ecological role, safety, availability and more), browse hubs per
 value, an ecoregion map, and a page per animal listing **the plants documented
-to support it**. No framework, no build step, no CDN, no external request: it
-can be hosted anywhere or opened straight off disk.
+to support it**. No framework, no build step, no CDN, and no external request
+unless you switch analytics on: it can be hosted anywhere or opened straight
+off disk.
 
 ```bash
 python -m src.cli build-site public/ --base-url https://plants.example.org
 ```
 
-Each species page carries a **range map**: every ecoregion in its own colour,
-lightened by how much occurrence evidence stands behind it, so the shape says
-both *where* and *how sure*. The region outlines are hand-traced rather than
-digitised from a survey, and every map says so.
+Each species page carries two maps. The first is **where the plant has been
+recorded**: a 0.25° grid shaded by record count, with herbarium specimens and
+field observations drawn as separate marks you can toggle between. The second
+is **which ecoregions those records fall in**, with the count and a confidence
+band per region. The region outlines are the National Ecological Framework for
+Canada v2.2, simplified to about 900 m for display, and every map says so. The
+`/method/` page says what a record is, as of when, and what the maps cannot
+tell you.
 
 To put it online, see [`docs/PUBLISHING_THE_SITE.md`](docs/PUBLISHING_THE_SITE.md):
 static files host free on GitHub Pages, Netlify or Cloudflare Pages.
@@ -144,11 +149,12 @@ static files host free on GitHub Pages, Netlify or Cloudflare Pages.
 Three things it does on purpose. Photographs are copied out of the local image
 cache where they exist and are **never published without their credit**: a
 species we cannot attribute simply shows no photo. The free-text `notes` field
-is **withheld by default**, along with the `medicinal` use tag, because some of
-that content describes traditional plant-use practice and publishing it to the
-open web is not ours to do (see Principle 12 in
-[`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)); `--include-notes`
-overrides the first. And no em dash reaches a rendered page.
+is **withheld by default**, because some of it describes traditional plant-use
+practice and publishing that to the open web is not ours to do (see Principle 12
+in [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md)); `--include-notes`
+overrides it. The `medicinal` use *category* is published, on the author's
+ruling in V2.50 that it is a horticultural category rather than traditional
+knowledge. And no em dash reaches a rendered page.
 
 Installing the package registers a `permadesign` console script for the
 same commands:
@@ -183,31 +189,20 @@ claude mcp add permadesign -- python -m src.mcp_server
 
 ---
 
-## Project Status and Known Limitations
-
-Site & Pattern is in active development. Known limitations being worked on in the current sprint:
-
-- **Plant names with apostrophes** may cause issues in JavaScript-rendered components due to string escaping. Most plant names are unaffected.
-- **Undo/redo** is being expanded from plant-only to a global undo across plants, structures, boundaries, and contours.
-- **PDF export** falls back silently if a map screenshot cannot be captured. Designs export successfully but the embedded site map may be missing.
-- **Polyculture placement tolerance** uses floating-point lat/lng matching, which is fragile in edge cases but works in normal use.
-- **Soil data** outside of SoilGrids v2.0 (ISRIC) is incomplete; a fallback source is being integrated.
-- **Edmonton open-data download** currently fails on field-name detection; under repair.
-
----
-
 ## Going Forward
 
-The current development plan focuses on tightening the existing Alberta-focused tool rather than a full rewrite:
+What is being built next, and what is known to be wrong, is kept in
+[`docs/BACKLOG.md`](docs/BACKLOG.md): one line per open item, verified against
+the code, with a row leaving when it ships. The reasoning behind each release,
+including what it measured and what it deliberately left alone, is in
+[`docs/plans/`](docs/plans/). What real people have reported, in their words,
+is in [`docs/USER_FEEDBACK.md`](docs/USER_FEEDBACK.md).
 
-- **Plant community builder** — a visual grid for assembling 5–8-plant native plant communities in one screen and saving them locally
-- **Map interaction** — drag-and-drop repositioning of placed plants and entire community groupings, plus global Ctrl+Z across all placements
-- **View bar overhaul** — fixed ordering (Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures), measurement hide-vs-delete distinction, configurable grid base size and opacity
-- **Address finder** — partial-match-first search and crash fix on the Clear button
-- **Terrain & soil** — repair the Edmonton dataset parser (or bundle the dataset locally) and add a soil-data fallback when SoilGrids is unavailable
-- **Distribution** — one-click `.exe` installer for non-technical users (see [INSTALL.md](INSTALL.md))
-
-The longer-term direction (cross-platform rewrite, ecoregion-aware nativity, expanded coverage beyond AB) remains on the table but is gated on the items above.
+*(Until V2.83 this section and a "Known Limitations" list above it described a
+V1-era sprint whose headline items, a one-click installer, global undo and
+drag-to-reposition, have long since shipped. They were replaced rather than
+updated so this file stops carrying a plan that goes stale. The limitations
+were not re-checked one by one; the V2.83 plan lists them so none is lost.)*
 
 ---
 
