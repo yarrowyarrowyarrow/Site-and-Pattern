@@ -1,0 +1,84 @@
+# Run the test suite and the data-quality gate on every release-branch push
+# (V2.83).
+#
+# Until this file existed the suite ran only inside Claude sessions, and most
+# of those had no PyQt6 -- so ~156 widget tests skipped, which reads as a pass.
+# One of them went red in V2.80 and stayed red through V2.82 with nobody able
+# to see it. This job installs the whole Qt stack on purpose, and fails when
+# more tests skip than the ceiling below allows.
+#
+# Runs beside release-macos.yml / release-windows.yml, which trigger on the same
+# pushes and publish installers. A red run here does not stop those today; it
+# makes a broken build visible before somebody installs it.
+
+name: Tests
+
+on:
+  push:
+    branches:
+      - 'V[0-9]*.[0-9]*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    # Pinned rather than ubuntu-latest: the apt package names below are the
+    # 24.04 ones (libasound2t64), and a silent runner upgrade would break the
+    # install step rather than the tests.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    env:
+      # No display on the runner. Offscreen is what CLAUDE.md prescribes, and
+      # --no-sandbox is needed because Chromium's zygote sandbox cannot start
+      # here (unprivileged user namespaces are restricted on 24.04).
+      QT_QPA_PLATFORM: offscreen
+      QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches the frozen builds (release-*.yml).
+          python-version: "3.11"
+          cache: pip
+
+      # The PyQt6 wheel alone is not enough: without these the Qt and WebEngine
+      # imports fail and every widget test skips (CLAUDE.md, "Running tests").
+      - name: Qt runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon0 libnss3 libxcomposite1 libxdamage1 \
+            libxrandr2 libxtst6 libasound2t64 libfontconfig1 libdbus-1-3 \
+            libxkbfile1
+
+      # requirements-optional.txt adds rasterio + pyproj, which the frozen
+      # builds leave out on purpose. Here they unlock 42 raster tests that
+      # otherwise skip -- the same skip that hid a broken local-file sampler.
+      - name: Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-optional.txt
+
+      - name: Data-quality gate
+        run: python -m src.cli validate-data
+
+      # test_undo_redo segfaults in its own tearDown in a GPU-less environment,
+      # identically on a clean tree (CLAUDE.md, V2.40). Run it on a desktop.
+      #
+      # --max-skips: 21 tests skip with every dependency present (the reasons
+      # are printed in the log). A missing Qt library adds ~156, WebEngine 47,
+      # rasterio 42 -- each of which clears this ceiling and fails the job.
+      - name: Test suite
+        if: ${{ !cancelled() }}
+        run: python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 30
