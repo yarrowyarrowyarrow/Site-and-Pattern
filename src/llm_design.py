@@ -1118,7 +1118,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     frac = _DENSITY_FRACTION.get((density or "").lower())
     if cap and frac:
         hints = hints + [
-            f"Aim for roughly {min(int(cap * frac), _MAX_GENERATED_PLANTS)} "
+            f"Aim for roughly {min(int(cap * frac), _density_ceiling(frac))} "
             f"total plantings to fill the space at a {density} density."
         ]
 
@@ -1687,6 +1687,18 @@ _WOODY_TYPES = ("tree", "shrub", "vine")
 _WOODY_SHARE = 0.35
 
 
+def _density_ceiling(frac: float) -> int:
+    """The most plants a generated design may hold at this density.
+
+    `_MAX_GENERATED_PLANTS` at "full", scaled down with the fraction (V2.85).
+    Counting in plants per m^2 put every lot over ~1,000 m^2 at the flat 300
+    ceiling even at "sparse", so the setting stopped doing anything on a
+    medium lot; scaling the ceiling keeps sparse < balanced < full at any size.
+    """
+    full = _DENSITY_FRACTION["full"]
+    return int(_MAX_GENERATED_PLANTS * min(1.0, frac / full))
+
+
 def _anchor_spacing_m(boundary) -> float:
     """Anchor-grid spacing for this boundary: `_SPACING_M` on anything the size
     of a large lot or bigger, tighter on a yard. See the block above."""
@@ -1848,7 +1860,7 @@ def _apply_density(plant_items, boundary, density: str, keepout=None,
     if not frac or not plant_items or not boundary:
         return plant_items
     capacity = _planting_capacity(boundary, keepout)
-    target = min(int(capacity * frac), _MAX_GENERATED_PLANTS) - max(0, already)
+    target = min(int(capacity * frac), _density_ceiling(frac)) - max(0, already)
     target = max(len(plant_items), target)
     current = sum(it[1] for it in plant_items)
     if current >= target:
@@ -1879,8 +1891,11 @@ def _apply_density(plant_items, boundary, density: str, keepout=None,
             for it, w in zip(items, woody)]
     used = sum(f * it[1] for f, it in zip(foot, items))
     sequence = [i for i, w in enumerate(weights) for _ in range(w)]
-    # And no one species becomes the design: a quarter of the fill at most.
-    share_cap = max(_DRIFT_MAX_DEFAULT, int(0.25 * target))
+    # And no one species becomes the design: a quarter of the fill at most,
+    # once there are enough species to share it. A spec that names one plant
+    # asked for one plant.
+    share_cap = (max(_DRIFT_MAX_DEFAULT, int(0.25 * target))
+                 if len(items) >= 4 else target)
     full = set()
     i = 0
     while sum(it[1] for it in items) < target:
