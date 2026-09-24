@@ -2143,11 +2143,11 @@
  {
   "scientific_name": "Bembix americana",
   "common_name": "American Sand Wasp",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Sand wasps, native to prairie sand country.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Sand wasps, native to prairie sand country."
  },
  {
@@ -3153,21 +3153,21 @@
  {
   "scientific_name": "Philanthus gibbosus",
   "common_name": "Philanthus gibbosus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus ventilabris",
   "common_name": "Philanthus ventilabris",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
@@ -3323,11 +3323,11 @@
  {
   "scientific_name": "Sphex ichneumoneus",
   "common_name": "Great Golden Digger Wasp",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced."
  },
  {
@@ -3733,21 +3733,21 @@
  {
   "scientific_name": "Ammophila aberti",
   "common_name": "Ammophila aberti",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Thread-waisted wasps, native and conspicuous.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Thread-waisted wasps, native and conspicuous."
  },
  {
   "scientific_name": "Ammophila procera",
   "common_name": "Ammophila procera",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Thread-waisted wasps, native and conspicuous.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Thread-waisted wasps, native and conspicuous."
  },
  {
@@ -4393,11 +4393,11 @@
  {
   "scientific_name": "Aphilanthops frigidus",
   "common_name": "Aphilanthops frigidus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Ant-hunting wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Ant-hunting wasps, native."
  },
  {
@@ -4523,21 +4523,21 @@
  {
   "scientific_name": "Bembix amoena",
   "common_name": "Bembix amoena",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Sand wasps, native to prairie sand country.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Sand wasps, native to prairie sand country."
  },
  {
   "scientific_name": "Bicyrtes ventralis",
   "common_name": "Bicyrtes ventralis",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Sand wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Sand wasps, native."
  },
  {
@@ -4923,31 +4923,31 @@
  {
   "scientific_name": "Cerceris deserta",
   "common_name": "Cerceris deserta",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Weevil wasps, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Weevil wasps, sand-country natives."
  },
  {
   "scientific_name": "Cerceris nigrescens",
   "common_name": "Cerceris nigrescens",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Weevil wasps, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Weevil wasps, sand-country natives."
  },
  {
   "scientific_name": "Cerceris sexta",
   "common_name": "Cerceris sexta",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Weevil wasps, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Weevil wasps, sand-country natives."
  },
  {
@@ -6003,81 +6003,81 @@
  {
   "scientific_name": "Ectemnius arcuatus",
   "common_name": "Ectemnius arcuatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius continuus",
   "common_name": "Ectemnius continuus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius dilectus",
   "common_name": "Ectemnius dilectus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius lapidarius",
   "common_name": "Ectemnius lapidarius",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius maculosus",
   "common_name": "Ectemnius maculosus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius ruficornis",
   "common_name": "Ectemnius ruficornis",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius rufifemur",
   "common_name": "Ectemnius rufifemur",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
   "scientific_name": "Ectemnius spiniferus",
   "common_name": "Ectemnius spiniferus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native wood-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native wood-nesters."
  },
  {
@@ -6473,11 +6473,11 @@
  {
   "scientific_name": "Eucerceris cressoni",
   "common_name": "Eucerceris cressoni",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Weevil wasps, western and dry-country.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Weevil wasps, western and dry-country."
  },
  {
@@ -7033,11 +7033,11 @@
  {
   "scientific_name": "Gorytes simillimus",
   "common_name": "Gorytes simillimus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Crabronid wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Crabronid wasps, native."
  },
  {
@@ -7493,21 +7493,21 @@
  {
   "scientific_name": "Isodontia elegans",
   "common_name": "Isodontia elegans",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Grass-carrying wasps, native — see also the V2.62 review, which corrected GBIF on this genus.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Grass-carrying wasps, native — see also the V2.62 review, which corrected GBIF on this genus."
  },
  {
   "scientific_name": "Isodontia mexicana",
   "common_name": "Isodontia mexicana",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Grass-carrying wasps, native — see also the V2.62 review, which corrected GBIF on this genus.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Grass-carrying wasps, native — see also the V2.62 review, which corrected GBIF on this genus."
  },
  {
@@ -8023,11 +8023,11 @@
  {
   "scientific_name": "Lindenius columbianus",
   "common_name": "Lindenius columbianus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Small crabronid wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Small crabronid wasps, native."
  },
  {
@@ -8053,11 +8053,11 @@
  {
   "scientific_name": "Liris argentatus",
   "common_name": "Liris argentatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Cricket-hunting wasps.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Cricket-hunting wasps."
  },
  {
@@ -8203,11 +8203,11 @@
  {
   "scientific_name": "Lyroda subita",
   "common_name": "Lyroda subita",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 0,
   "native_provinces": "SK",
   "range_notes": "Small crabronid wasps.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Small crabronid wasps."
  },
  {
@@ -8873,11 +8873,11 @@
  {
   "scientific_name": "Nysson plagiatus",
   "common_name": "Nysson plagiatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Cuckoo wasps of other crabronids.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Cuckoo wasps of other crabronids."
  },
  {
@@ -9243,21 +9243,21 @@
  {
   "scientific_name": "Oxybelus emarginatus",
   "common_name": "Oxybelus emarginatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Fly-hunting crabronids, sand country.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Fly-hunting crabronids, sand country."
  },
  {
   "scientific_name": "Oxybelus uniglumis",
   "common_name": "Oxybelus uniglumis",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Fly-hunting crabronids, sand country.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Fly-hunting crabronids, sand country."
  },
  {
@@ -9423,11 +9423,11 @@
  {
   "scientific_name": "Pemphredon inornata",
   "common_name": "Pemphredon inornata",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Aphid wasps, native stem-nesters.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Aphid wasps, native stem-nesters."
  },
  {
@@ -9533,61 +9533,61 @@
  {
   "scientific_name": "Philanthus bilunatus",
   "common_name": "Philanthus bilunatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus crabroniformis",
   "common_name": "Philanthus crabroniformis",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus multimaculatus",
   "common_name": "Philanthus multimaculatus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus politus",
   "common_name": "Philanthus politus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus sanbornii",
   "common_name": "Philanthus sanbornii",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
   "scientific_name": "Philanthus solivagus",
   "common_name": "Philanthus solivagus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Beewolves, sand-country natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Beewolves, sand-country natives."
  },
  {
@@ -9873,11 +9873,11 @@
  {
   "scientific_name": "Podalonia robusta",
   "common_name": "Podalonia robusta",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Thread-waisted wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Thread-waisted wasps, native."
  },
  {
@@ -10023,21 +10023,21 @@
  {
   "scientific_name": "Prionyx atratus",
   "common_name": "Prionyx atratus",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Grasshopper-hunting wasps, prairie natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Grasshopper-hunting wasps, prairie natives."
  },
  {
   "scientific_name": "Prionyx canadensis",
   "common_name": "Prionyx canadensis",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Grasshopper-hunting wasps, prairie natives.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Grasshopper-hunting wasps, prairie natives."
  },
  {
@@ -10463,11 +10463,11 @@
  {
   "scientific_name": "Sceliphron caementarium",
   "common_name": "Sceliphron caementarium",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Mud daubers. S. caementarium is native to North America despite being cosmopolitan now.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Mud daubers. S. caementarium is native to North America despite being cosmopolitan now."
  },
  {
@@ -10723,11 +10723,11 @@
  {
   "scientific_name": "Sphex lucae",
   "common_name": "Sphex lucae",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB",
   "range_notes": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Digger wasps. S. ichneumoneus was already reviewed as native in curate_introduced."
  },
  {
@@ -11023,11 +11023,11 @@
  {
   "scientific_name": "Tachytes sayi",
   "common_name": "Tachytes sayi",
-  "taxon": "bee",
+  "taxon": "other_insect",
   "ab_native": 1,
   "native_provinces": "AB,SK",
   "range_notes": "Sand-loving crabronid wasps, native.",
-  "icon": "🐝",
+  "icon": "🪲",
   "description": "Sand-loving crabronid wasps, native."
  },
  {

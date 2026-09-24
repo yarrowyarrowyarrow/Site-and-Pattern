@@ -456,7 +456,17 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # purely to push the re-derived `plant_ranges` rows into existing installs --
 # without it the desktop keeps recommending on the old counts while the website
 # publishes the new ones.
-_SCHEMA_VERSION = 85
+# v85 (V2.82): five duplicate species merged (one plant filed under two names),
+# three binomials renamed and eight common names corrected. Recorded here in
+# V2.84; that bump shipped without a line.
+# v86 (V2.84): 43 apoid wasps moved from `taxon = 'bee'` to `other_insect`.
+#
+# The GloBI fetch mapped the superfamily Apoidea, which holds the wasps as well
+# as the bees, so beewolves, sand wasps, mud daubers and crabronids were counted
+# as bees in the app and labelled "native bee" on the website. 174 edges move
+# with them and 51 plants report fewer bees (Boreal Yarrow 151 -> 129); none
+# drops to zero, and the Habitat Value Score headline does not count bees.
+_SCHEMA_VERSION = 86
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

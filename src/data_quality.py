@@ -653,7 +653,7 @@ def validate_all() -> tuple[list[str], list[str]]:
     # Fauna data spine: the bee attributes (F37) and fauna photo-licence
     # compliance (A1). Both read shipped data/*.json the app reseeds from.
     for validate_fauna in (validate_bee_attributes, validate_fauna_images,
-                           validate_fauna_morphology):
+                           validate_fauna_morphology, validate_bee_taxon):
         e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
@@ -1191,6 +1191,77 @@ def validate_bee_attributes() -> tuple[list[str], list[str]]:
             errors.append(
                 f"bee_attributes: {name}: graded tongue_length {tl!r} is only "
                 f"documented for Bombus (use 'unknown' elsewhere)")
+    return errors, warnings
+
+
+#: The bee genera this catalogue carries, by family (V2.84). The bees are the
+#: Anthophila clade of the superfamily Apoidea: exactly these six families.
+BEE_GENERA: dict = {
+    "Apidae": ("Anthophora", "Apis", "Bombus", "Ceratina", "Diadasia",
+               "Epeolus", "Eucera", "Habropoda", "Holcopasites", "Melecta",
+               "Melissodes", "Nomada", "Triepeolus", "Xeromelecta",
+               "Xylocopa", "Zacosmia"),
+    "Andrenidae": ("Andrena", "Calliopsis", "Panurginus", "Perdita",
+                   "Protandrena", "Pseudopanurgus"),
+    "Halictidae": ("Agapostemon", "Augochlorella", "Dufourea", "Halictus",
+                   "Lasioglossum", "Nomia", "Sphecodes"),
+    "Colletidae": ("Colletes", "Hylaeus"),
+    "Megachilidae": ("Anthidiellum", "Anthidium", "Coelioxys", "Dianthidium",
+                     "Heriades", "Hoplitis", "Megachile", "Osmia", "Stelis"),
+    "Melittidae": ("Macropis",),
+}
+
+#: Apoid wasps: the rest of Apoidea, which is not bees (V2.84). Until then the
+#: GloBI fetch mapped the whole superfamily to ``bee`` and 43 of these shipped
+#: labelled "native bee" -- with descriptions that already said "Beewolves",
+#: "Mud daubers" and "Crabronid wasps", so whoever wrote them knew. Every other
+#: wasp in the catalogue (yellowjackets, paper and potter wasps) was already
+#: ``other_insect``, and these follow them.
+APOID_WASP_GENERA: dict = {
+    "Sphecidae": ("Ammophila", "Isodontia", "Podalonia", "Prionyx",
+                  "Sceliphron", "Sphex"),
+    "Philanthidae": ("Aphilanthops", "Cerceris", "Eucerceris", "Philanthus"),
+    "Bembicidae": ("Bembix", "Bicyrtes", "Gorytes", "Nysson"),
+    "Crabronidae": ("Ectemnius", "Lindenius", "Liris", "Lyroda", "Oxybelus",
+                    "Tachytes"),
+    "Pemphredonidae": ("Pemphredon",),
+}
+
+
+def validate_bee_taxon() -> tuple[list[str], list[str]]:
+    """``taxon = 'bee'`` means a bee (V2.84). Returns ``(errors, warnings)``.
+
+    **Error** for a genus known to be an apoid wasp: that is the mistake that
+    shipped, and it has a known right answer (``other_insect``). **Warning**
+    for a bee-filed genus in neither table: probably a bee genus nobody has
+    listed yet, but it is how a syrphid fly or a new wasp would arrive, so it
+    gets looked at once and added to :data:`BEE_GENERA` rather than trusted.
+    """
+    fauna_path = DATA_DIR / "fauna_master.json"
+    try:
+        fauna = json.loads(fauna_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        return [f"{fauna_path.name}: could not load ({e})"], []
+    bees = {g for gs in BEE_GENERA.values() for g in gs}
+    wasps = {g: fam for fam, gs in APOID_WASP_GENERA.items() for g in gs}
+    errors: list[str] = []
+    unknown: dict = {}
+    for row in fauna:
+        if row.get("taxon") != "bee":
+            continue
+        name = row.get("scientific_name") or ""
+        genus = name.split(" ")[0]
+        if genus in wasps:
+            errors.append(
+                f"fauna: {name} is filed as a bee but {genus} is an apoid wasp "
+                f"({wasps[genus]}); use taxon 'other_insect'")
+        elif genus not in bees:
+            unknown.setdefault(genus, []).append(name)
+    warnings = [
+        f"fauna: {len(names)} row(s) filed as bees in genus {genus}, which is "
+        f"in neither data_quality.BEE_GENERA nor APOID_WASP_GENERA -- check its "
+        f"family and add it to one ({', '.join(sorted(names)[:3])})"
+        for genus, names in sorted(unknown.items())]
     return errors, warnings
 
 

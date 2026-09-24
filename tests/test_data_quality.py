@@ -811,5 +811,61 @@ class TestTheEcoregionVocabularyIsThreeLevels(unittest.TestCase):
         self.assertEqual(stale, [])
 
 
+
+class TestABeeIsABee(unittest.TestCase):
+    """`taxon = 'bee'` means one of the six bee families (V2.84).
+
+    The GloBI fetch mapped the whole superfamily Apoidea to `bee`, which holds
+    the apoid wasps too, and 43 of them shipped labelled "native bee" on the
+    public wildlife index: beewolves, sand wasps, mud daubers, crabronids."""
+
+    def setUp(self):
+        import src.data_quality as dq
+        self.dq = dq
+        self._orig_dir = dq.DATA_DIR
+        self.tmp = Path(tempfile.mkdtemp())
+        dq.DATA_DIR = self.tmp
+
+    def tearDown(self):
+        self.dq.DATA_DIR = self._orig_dir
+
+    def _fauna(self, *rows):
+        (self.tmp / "fauna_master.json").write_text(
+            json.dumps([{"scientific_name": n, "taxon": t} for n, t in rows]),
+            encoding="utf-8")
+
+    def test_the_shipped_catalogue_files_no_wasp_as_a_bee(self):
+        self.dq.DATA_DIR = self._orig_dir
+        errors, warnings = self.dq.validate_bee_taxon()
+        self.assertEqual(errors, [])
+        self.assertEqual(warnings, [],
+                         "a bee-filed genus is in neither table; add it")
+
+    def test_a_beewolf_filed_as_a_bee_is_an_error(self):
+        self._fauna(("Philanthus gibbosus", "bee"), ("Bombus ternarius", "bee"))
+        errors, _w = self.dq.validate_bee_taxon()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Philanthus gibbosus", errors[0])
+        self.assertIn("other_insect", errors[0])
+
+    def test_the_same_wasp_as_other_insect_is_fine(self):
+        self._fauna(("Philanthus gibbosus", "other_insect"))
+        self.assertEqual(self.dq.validate_bee_taxon(), ([], []))
+
+    def test_an_unlisted_genus_is_looked_at_not_trusted(self):
+        # A hover fly is how a non-bee would arrive next: not a known wasp, so
+        # not an error, but not a known bee either.
+        self._fauna(("Eristalis tenax", "bee"))
+        errors, warnings = self.dq.validate_bee_taxon()
+        self.assertEqual(errors, [])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Eristalis", warnings[0])
+
+    def test_no_genus_is_both_a_bee_and_a_wasp(self):
+        bees = {g for gs in self.dq.BEE_GENERA.values() for g in gs}
+        wasps = {g for gs in self.dq.APOID_WASP_GENERA.values() for g in gs}
+        self.assertEqual(bees & wasps, set())
+
+
 if __name__ == "__main__":
     unittest.main()
