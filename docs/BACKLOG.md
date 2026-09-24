@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (counted at V2.84): 35 code features · 7 data jobs · 4 legacy-ledger items.**
+**Totals (counted at V2.85): 34 code features · 7 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -40,7 +40,7 @@ possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge an
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
 recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
-F159 opened.)*
+F159 opened. **V2.85**: F154 and F155 shipped, F160 opened.)*
 
 ---
 
@@ -295,9 +295,10 @@ is for, or is wrong in a way a reader can see. Reasoning per row in the
 | **F157** | **A production site build anybody can repeat.** The 13 Sep publish has no analytics and no feedback form (its feedback page says so), because the flags are typed by hand at publish time. A checked-in config plus a build that refuses to publish without it. Needs the author's Umami website ID and feedback URL | S | Low | P9 |
 | ~~**F153**~~ | ✅ **Shipped in V2.84.** 43 rows to `other_insect`, the mapping fixed, `validate_bee_taxon` in the gate. Plan: [`V2.84-a-wasp-is-not-a-bee`](plans/V2.84-a-wasp-is-not-a-bee.md) | — | Done | — |
 | ~~**F156**~~ | ✅ **Shipped in V2.84**, and reaches readers when the site is republished (F157). Plan: [`V2.84-a-wasp-is-not-a-bee`](plans/V2.84-a-wasp-is-not-a-bee.md) | — | Done | — |
+| **F160** | **Communities a province's natives cannot fill.** Since V2.85 a seeded community is offered only when every member is native to the yard's province: **10 of 58 are withheld in Alberta**, six of them only because they include Canada Goldenrod (Saskatchewan-only per VASCAN; Alberta's is likely *Solidago lepida*), and **32 of 58 in Saskatchewan**, because most were written for Alberta. Swap the goldenrod, and write Saskatchewan communities | S–M | Low — seed data | P1, P9 |
 | **F159** | **The German yellowjacket is filed as native.** *Vespula germanica* carries `ab_native = 1` and "Ground yellowjackets, native"; it is introduced in North America. Found in V2.84 while moving the wasps, and left for its own change because a nativity correction is a decision, as *Rudbeckia hirta* was | S | Low — reseed | P9 |
-| **F154** | **Recommend for the yard, not the region.** Site fit is "at least 3 records anywhere in the ecoregion", which is how an Edmonton yard gets Bur Oak from Saskatchewan parkland records. Rank by the 0.25° grid the website already draws (the yard's square and its neighbours), make nativity follow the pin's province, and stop a goal from silently dropping the native requirement. The bridge between the catalogue work and what the app recommends | M–L | Med | P9, P2 |
-| **F155** | **Offline designs that fill the yard.** 4–7 plants on 216 m² with a goal set; offline is the common path because the default model is a local Ollama. Fill to density from the site-matched pool, after F154 | M | Low | P1 |
+| ~~**F154**~~ | ✅ **Shipped in V2.85.** Province-aware nativity, locality ranking from the 0.25° grid (`src/site_fit.py`), communities and repairs under the same rules. Plan: [`V2.85-recommend-for-the-yard`](plans/V2.85-recommend-for-the-yard.md) | — | Done | — |
+| ~~**F155**~~ | ✅ **Shipped in V2.85.** 4–21 → 64–121 plants on a 216 m² yard, more species, no single species above a quarter. Plan: [`V2.85-recommend-for-the-yard`](plans/V2.85-recommend-for-the-yard.md) | — | Done | — |
 
 ---
 
