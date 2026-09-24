@@ -54,6 +54,11 @@ def _smallest_communities(n: int) -> list[dict]:
         community_natural_radius, get_polyculture_by_id,
     )
     comms = [c for c in _api.list_polycultures() if c.get("id") is not None]
+    # Only communities this site can take (V2.85): since F154 a community with
+    # a member not native to the yard's province is not offered, and the
+    # smallest seeded one ("Prairie Pollinator Garden") carries Canada
+    # Goldenrod, which VASCAN records for Saskatchewan and not Alberta.
+    comms = llm._communities_for_site(comms, llm._site_filters(_EDM), 0.0)
     comms.sort(key=lambda c: community_natural_radius(
         get_polyculture_by_id(c["id"]) or {}))
     return comms[:n]

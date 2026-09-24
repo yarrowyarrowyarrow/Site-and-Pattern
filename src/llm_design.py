@@ -279,7 +279,37 @@ def _site_filters(site_config: Optional[dict]) -> dict:
     ph = sc.get("soil_ph")
     if isinstance(ph, (int, float)):
         out["soil_ph"] = float(ph)
+    # Native to the province the yard is in (V2.85, F154). Nativity has been
+    # recorded per province since V2.80, but the generator kept filtering on
+    # the Alberta flag wherever the pin was: an Edmonton yard could be handed a
+    # Saskatchewan-only native (Bur Oak did), and a Regina yard could never get
+    # one. Outside the two provinces there is nothing to say, and the caller's
+    # old default stands.
+    if sc.get("latitude") is not None and sc.get("longitude") is not None:
+        from src.site_fit import province_at                  # noqa: PLC0415
+        prov = province_at(sc["latitude"], sc["longitude"])
+        if prov:
+            out["native_province"] = prov
     return out
+
+
+def _native_default(site_filters: dict) -> dict:
+    """The native requirement to use when nothing else asks for one: the yard's
+    province when it is known, the legacy Alberta flag when it is not."""
+    return {} if "native_province" in (site_filters or {}) else {
+        "native_only": True}
+
+
+def _without_superseded_native(filters: dict) -> dict:
+    """``filters`` minus ``native_only`` when ``native_province`` is present.
+
+    ``native_only`` is the Alberta flag. Ticking the "native plants" goal, or a
+    model that asks for natives, means native *here*, and on a Saskatchewan
+    pin the Alberta flag would silently exclude that province's own natives.
+    """
+    if "native_province" in filters and "native_only" in filters:
+        filters = {k: v for k, v in filters.items() if k != "native_only"}
+    return filters
 
 
 def _site_conditions_line(site_config: Optional[dict]) -> str:
@@ -310,17 +340,26 @@ def _site_conditions_line(site_config: Optional[dict]) -> str:
 
 
 def _plant_palette(query_plants, site_filters: dict,
-                   limit_per_group: int = 8) -> str:
+                   limit_per_group: int = 8, site=None,
+                   area_m2: float = 0.0) -> str:
     """A compact, catalogue-real plant palette grouped by type, restricted to
     site-fit natives — grounds the model so it stops inventing names that get
     snapped to whatever search finds. Best-effort: empty string on any error."""
     try:
-        rows = query_plants(native_only=True, **site_filters)
+        rows = query_plants(**_native_default(site_filters), **site_filters)
     except Exception:  # noqa: BLE001 — context enrichment is best-effort
         try:
             rows = query_plants(native_only=True)
         except Exception:  # noqa: BLE001
             return ""
+    # The model sees the first `limit_per_group` of each type, so the order is
+    # the recommendation (V2.85): nothing too big for the site, and plants
+    # recorded near it first. Catalogue order was alphabetical.
+    rows = _fits_the_area(rows, area_m2)
+    if site:
+        from src.site_fit import locality_rank
+        rows = sorted(rows, key=lambda r: locality_rank(
+            r.get("scientific_name") or "", site[0], site[1]), reverse=True)
     groups: dict[str, list[str]] = {}
     for r in rows:
         nm = r.get("common_name")
@@ -593,7 +632,7 @@ def _resolve_plants(entries: list, query_plants,
         raw_filters = e.get("filters")
         entry_filters = (_clean_filters(raw_filters)
                          if isinstance(raw_filters, dict) else {})
-        base = {**goal_filters, **entry_filters}
+        base = _without_superseded_native({**goal_filters, **entry_filters})
 
         # Try most specific first, then progressively relax.
         attempts: list[dict] = []
@@ -1036,9 +1075,11 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     keepout = keepout_circles(_ctx_dict)
     fills = fill_regions(_ctx_dict)
 
-    communities = list_polycultures()
     structures = list_structures()
     site_filters = _site_filters(site_config)
+    area_m2 = _boundary_area_m2(boundary)
+    communities = _communities_for_site(list_polycultures(), site_filters,
+                                        area_m2)
     context = {
         "community_names": [c.get("name") for c in communities if c.get("name")],
         "structure_ids": [s.get("id") for s in structures if s.get("id")],
@@ -1048,7 +1089,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         "site_conditions": _site_conditions_line(site_config),
         "zones_note": _zones_note(elev, zones),
         "existing_note": _existing_features_note(_ctx_dict),
-        "plant_palette": _plant_palette(query_plants, site_filters),
+        "plant_palette": _plant_palette(query_plants, site_filters,
+                                        site=center, area_m2=area_m2),
         "fauna_note": _fauna_digest(),
     }
 
@@ -1072,12 +1114,12 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # Density target — tell the model roughly how many plantings fill the space
     # (placement also expands deterministically, so this is guidance not a hard
     # contract).
-    cap = _boundary_capacity(boundary, keepout)
+    cap = _planting_capacity(boundary, keepout)
     frac = _DENSITY_FRACTION.get((density or "").lower())
     if cap and frac:
         hints = hints + [
-            f"Aim for roughly {int(cap * frac)} total plantings to fill the "
-            f"space at a {density} density."
+            f"Aim for roughly {min(int(cap * frac), _MAX_GENERATED_PLANTS)} "
+            f"total plantings to fill the space at a {density} density."
         ]
 
     def _realize(spec_dict, into_project=None):
@@ -1174,13 +1216,14 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
 
     # Deterministic backstop for whichever round won: mend the most
     # impactful remaining gaps straight from the catalogue.
+    scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
     for msg in apply_repairs(
-            project, query_plants,
+            project, scoped,
             lambda: _one_position_in_boundary(boundary, center)):
         _add_warning(project, msg)
 
-    _apply_goal_feedback(project, goals, query_plants, center, boundary)
-    _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
+    _apply_goal_feedback(project, goals, scoped, center, boundary)
+    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project
 
@@ -1223,10 +1266,11 @@ def _zone_context(boundary, site_config, project_dict):
         try:
             slope_g = _terrain.compute_slope_grid(elev)
             aspect_g = _terrain.compute_aspect_grid(elev)
-            cells = grid_cells_in_boundary(boundary)
+            spacing = _anchor_spacing_m(boundary)
+            cells = grid_cells_in_boundary(boundary, spacing)
             if cells:
                 cell_env_map = build_cell_env_map(
-                    cells, shade_g, elev, slope_g, aspect_g)
+                    cells, shade_g, elev, slope_g, aspect_g, spacing_m=spacing)
         except Exception:  # noqa: BLE001
             cell_env_map = None
 
@@ -1599,17 +1643,195 @@ _DENSITY_FRACTION = {"sparse": 0.30, "balanced": 0.60, "full": 0.90}
 _MAX_GENERATED_PLANTS = 300
 
 
+def _boundary_area_m2(boundary) -> float:
+    """Planar area of the boundary in square metres, ``0.0`` without one.
+    Through ``src.projection`` (the one metric path), then the shoelace."""
+    pts = [(float(p[0]), float(p[1])) for p in (boundary or [])
+           if isinstance(p, (list, tuple)) and len(p) >= 2]
+    if len(pts) < 3:
+        return 0.0
+    from src.projection import to_local_xy
+    xy = to_local_xy(pts)
+    twice = sum(xy[i][0] * xy[(i + 1) % len(xy)][1]
+                - xy[(i + 1) % len(xy)][0] * xy[i][1] for i in range(len(xy)))
+    return abs(twice) / 2.0
+
+
+# ── Small lots (V2.85, F155) ─────────────────────────────────────────────────
+#
+# Placement anchors every group on a grid of `_SPACING_M` (6 m) cells, which
+# suits acreage and starves a yard: a 12 x 18 m front yard is 216 m^2, six
+# cells, and the density pass targeted 60% of *six*. Traced on an Edmonton
+# yard with the pollinator goal: two plants placed before the critic topped it
+# up to five. Below `_SMALL_LOT_ANCHORS` cells' worth of ground the anchor grid
+# tightens (never below `_MIN_ANCHOR_SPACING_M`) so a yard gets as many anchors
+# as a mid-size lot; a lot of ~1,300 m^2 or more keeps the 6 m grid unchanged.
+_SMALL_LOT_ANCHORS = 36
+_MIN_ANCHOR_SPACING_M = 2.5
+
+#: Plants per square metre at "full" density, the unit the density fraction is
+#: a fraction of (V2.85). Measured in anchor cells before, a unit that meant
+#: one plant per 36 m^2; a naturalistic home planting runs about one plant per
+#: square metre once its drifts fill in. Still capped at `_MAX_GENERATED_PLANTS`.
+_PLANTS_PER_M2 = 1.0
+
+#: A species whose mature footprint (its spacing, squared) takes more than
+#: this share of the plantable area is too big for the site (V2.85): on the
+#: same yard a single Bur Oak, spacing 10 m, reserved nearly every anchor and
+#: left room for one more plant.
+_MAX_FOOTPRINT_SHARE = 0.25
+
+#: Trees, shrubs and vines together may cover this share of the ground by
+#: mature footprint when the density pass multiplies them (V2.85, F155).
+_WOODY_TYPES = ("tree", "shrub", "vine")
+_WOODY_SHARE = 0.35
+
+
+def _anchor_spacing_m(boundary) -> float:
+    """Anchor-grid spacing for this boundary: `_SPACING_M` on anything the size
+    of a large lot or bigger, tighter on a yard. See the block above."""
+    area = _boundary_area_m2(boundary)
+    if area <= 0:
+        return _SPACING_M
+    return max(_MIN_ANCHOR_SPACING_M,
+               min(_SPACING_M, math.sqrt(area / _SMALL_LOT_ANCHORS)))
+
+
+def _too_big_for(plant: dict, area_m2: float) -> bool:
+    """Would one of ``plant`` take more than its share of this site?"""
+    if not area_m2 or area_m2 <= 0:
+        return False
+    # The same precedence as `_plant_spacing_m`, so "how big" means one thing.
+    try:
+        spacing = float(plant.get("mature_canopy_m")
+                        or plant.get("spacing_meters")
+                        or plant.get("spacing_m") or 0)
+    except (TypeError, ValueError):
+        return False
+    return spacing * spacing > _MAX_FOOTPRINT_SHARE * area_m2
+
+
+def _fits_the_area(plants: list, area_m2: float) -> list:
+    """``plants`` without the ones too big for the site, unless that would
+    leave nothing, in which case the pool is returned whole."""
+    kept = [p for p in plants if not _too_big_for(p, area_m2)]
+    return kept or plants
+
+
 def _boundary_capacity(boundary, keepout=None) -> int:
-    """How many plants the boundary holds at the default healthy spacing, minus
-    cells blocked by keep-out. The fill target is a fraction of this."""
-    cells = grid_cells_in_boundary(boundary)
+    """How many placement anchors the boundary holds at its anchor spacing,
+    minus cells blocked by keep-out. Used for anchor-scale decisions (how many
+    community pockets fit); the fill target is `_planting_capacity`."""
+    cells = grid_cells_in_boundary(boundary, _anchor_spacing_m(boundary))
     if keepout:
         from src.exclusion import is_clear
         cells = [c for c in cells if is_clear(c[0], c[1], keepout)]
     return len(cells)
 
 
-def _apply_density(plant_items, boundary, density: str, keepout=None):
+def _planting_capacity(boundary, keepout=None) -> int:
+    """How many plants the plantable ground holds at `_PLANTS_PER_M2`: the
+    boundary's area, less the share of anchor cells keep-out blocks (V2.85)."""
+    area = _boundary_area_m2(boundary)
+    if area <= 0:
+        return 0
+    cells = grid_cells_in_boundary(boundary, _anchor_spacing_m(boundary))
+    clear = _boundary_capacity(boundary, keepout)
+    share = (clear / len(cells)) if cells else 1.0
+    return int(area * share * _PLANTS_PER_M2)
+
+
+def _community_size(community_id) -> int:
+    """How many plants one pocket of a seeded community places."""
+    try:
+        from src.db.polycultures import get_polyculture_by_id
+        return len((get_polyculture_by_id(int(community_id)) or {})
+                   .get("members") or []) or 1
+    except Exception:  # noqa: BLE001
+        return 1
+
+
+def _planned_elsewhere(plant_mixes, community_groups, community_mixes) -> int:
+    """Plants a design has already committed outside its individual drifts --
+    the meadow stand and the community pockets -- so the density pass can aim
+    the whole design at the target instead of stacking on top of them."""
+    n = sum(int(m.get("quantity") or 0) for m in plant_mixes or [])
+    for g in community_groups or []:
+        n += int(g.get("count") or 1) * _community_size(g.get("id"))
+    for mix in community_mixes or []:
+        members = mix.get("members") or []
+        if members:
+            avg = sum(_community_size(cid) for cid, _w in members) / len(members)
+            n += int(round(int(mix.get("count") or 1) * avg))
+    return n
+
+
+def _communities_for_site(communities: list, site_filters: dict,
+                          area_m2: float) -> list:
+    """Seeded communities this site can take (V2.85, F154).
+
+    A community is a bundle of plants, so it has to pass what a single plant
+    passes: every member native to the yard's province, and a centre plant that
+    fits the ground. Until V2.85 the offline generator's third pick for an
+    Edmonton yard was the "Bur Oak Community" -- Saskatchewan's oak, arriving by
+    community after the province filter had kept it out of the plant pool.
+    With no province and no area this returns the list unchanged.
+    """
+    prov = (site_filters or {}).get("native_province")
+    if not prov and not area_m2:
+        return communities
+    from src.db.plants import get_plant
+    from src.db.polycultures import get_polyculture_by_id
+    from src.nativity import provinces as province_codes
+
+    kept = []
+    for c in communities or []:
+        try:
+            full = get_polyculture_by_id(int(c.get("id"))) or {}
+        except Exception:  # noqa: BLE001
+            kept.append(c)
+            continue
+        rows = [get_plant(m.get("plant_id")) or {}
+                for m in full.get("members") or []]
+        if prov and any(prov not in province_codes(r.get("native_provinces"))
+                        for r in rows if r):
+            continue
+        centre = get_plant(full.get("center_plant_id")) or {}
+        if centre and _too_big_for(centre, area_m2):
+            continue
+        kept.append(c)
+    return kept or communities
+
+
+def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
+                       site=None):
+    """``query_plants`` as the design's follow-up steps should see it (V2.85).
+
+    The critic's gap repairs and the goal and wildlife follow-ups search the
+    catalogue with their own filters -- ``native_only=True`` among them -- and
+    so added a Saskatchewan yard's April bloom from an Alberta-only phlox after
+    the main selection had been made province-aware. This wraps the search so
+    those steps get the same three rules the selection does: native to the
+    yard's province, nothing too big for the ground, recorded-nearby first.
+    """
+    prov = (site_filters or {}).get("native_province")
+
+    def scoped(**filters):
+        if prov:
+            filters = _without_superseded_native(
+                {"native_province": prov, **filters})
+        rows = _fits_the_area(query_plants(**filters) or [], area_m2)
+        if site:
+            from src.site_fit import locality_rank
+            rows = sorted(rows, key=lambda r: locality_rank(
+                r.get("scientific_name") or "", site[0], site[1]),
+                reverse=True)
+        return rows
+    return scoped
+
+
+def _apply_density(plant_items, boundary, density: str, keepout=None,
+                   already: int = 0):
     """Scale per-group quantities up so the design fills ``density`` × capacity,
     instead of placing one plant per group on a near-empty lot. Returns the
     (possibly expanded) plant_items. No-op without a boundary or for an unknown
@@ -1617,13 +1839,17 @@ def _apply_density(plant_items, boundary, density: str, keepout=None):
     (V2.20): herbaceous species expand 4× as fast as trees and 2× as fast as
     shrubs, so density fills the lot with the matrix/drift ground layer that
     carries a naturalistic design — equal expansion used to hand a 3,000 m²
-    lot as many willows as wildflowers."""
+    lot as many willows as wildflowers.
+
+    ``already`` is the plants the design has committed elsewhere (a meadow
+    mix, community pockets), subtracted so the whole design lands near the
+    target rather than the individual drifts alone (V2.85)."""
     frac = _DENSITY_FRACTION.get((density or "").lower())
     if not frac or not plant_items or not boundary:
         return plant_items
-    capacity = _boundary_capacity(boundary, keepout)
-    target = max(len(plant_items), int(capacity * frac))
-    target = min(target, _MAX_GENERATED_PLANTS)   # don't carpet a huge lot
+    capacity = _planting_capacity(boundary, keepout)
+    target = min(int(capacity * frac), _MAX_GENERATED_PLANTS) - max(0, already)
+    target = max(len(plant_items), target)
     current = sum(it[1] for it in plant_items)
     if current >= target:
         return plant_items
@@ -1631,20 +1857,48 @@ def _apply_density(plant_items, boundary, density: str, keepout=None):
              for it in plant_items]
     # Normalise to 3 elements (plant_id, qty, layout).
     items = [[it[0], it[1], (it[2] if len(it) > 2 else "")] for it in items]
-    weights = []
+    weights, woody = [], []
     for it in items:
         try:
             from src.db.plants import get_plant
             ptype = (get_plant(it[0]) or {}).get("plant_type", "")
         except Exception:  # noqa: BLE001
             ptype = ""
-        weights.append(1 if ptype == "tree" else 2 if ptype == "shrub" else 4)
+        weights.append(1 if ptype == "tree"
+                       else 2 if ptype in ("shrub", "vine") else 4)
+        woody.append(ptype in _WOODY_TYPES)
+    # Woody plants share a footprint budget (V2.85, F155). Weighting alone let
+    # the density pass hand a 216 m^2 yard ten chokecherries, eleven
+    # saskatoons and seventeen honeysuckle vines once the meadow had taken the
+    # wildflowers, and those drifts then claimed every anchor so the meadow and
+    # all three communities were dropped. Each woody plant costs its mature
+    # footprint (spacing squared); the herbaceous layer takes the rest.
+    area = _boundary_area_m2(boundary)
+    budget = _WOODY_SHARE * area if area else None
+    foot = [(_plant_spacing_m(it[0]) ** 2) if w else 0.0
+            for it, w in zip(items, woody)]
+    used = sum(f * it[1] for f, it in zip(foot, items))
     sequence = [i for i, w in enumerate(weights) for _ in range(w)]
+    # And no one species becomes the design: a quarter of the fill at most.
+    share_cap = max(_DRIFT_MAX_DEFAULT, int(0.25 * target))
+    full = set()
     i = 0
     while sum(it[1] for it in items) < target:
-        items[sequence[i % len(sequence)]][1] += 1
+        k = sequence[i % len(sequence)]
         i += 1
-        if i > target * 2:   # safety valve
+        if k in full:
+            if len(full) == len(items):
+                break
+            continue
+        if budget is not None and woody[k] and used + foot[k] > budget:
+            full.add(k)
+            continue
+        if items[k][1] >= share_cap:
+            full.add(k)
+            continue
+        items[k][1] += 1
+        used += foot[k]
+        if i > target * 4:   # safety valve
             break
     return [tuple(it) for it in items]
 
@@ -1739,7 +1993,8 @@ def _place_within_boundary(project, plant_items, community_groups,
             zpos = zoning.zone_positions(elev, zones, boundary)
         except Exception:  # noqa: BLE001
             zpos = None
-    flat = positions_in_boundary(boundary, 10_000, center)  # full cell pool
+    flat = positions_in_boundary(boundary, 10_000, center,   # full cell pool
+                                 _anchor_spacing_m(boundary))
     if keepout:
         flat = [p for p in flat if is_clear(p[0], p[1], keepout)]
         if zpos:
@@ -2012,13 +2267,26 @@ _OFFLINE_BUCKETS: tuple = (
 )
 
 
-def _rank_offline_plants(plants: list) -> list:
+def _rank_offline_plants(plants: list, site=None) -> list:
     """Order offline candidates by ecological value for a site whose moisture
     is unknown: keystone / larval-host / pollinator / bird-food species first,
     wetland and aquatic specialists last (P9 — with no site moisture data,
     don't gamble the design on a bog), then round-robin across habit buckets
     so the capped pick spans vertical layers instead of taking the first N
-    alphabetical catalogue rows. Deterministic: ties keep catalogue order."""
+    alphabetical catalogue rows. Deterministic: ties keep catalogue order.
+
+    With a ``site`` (``(lat, lng)``), plants recorded near it come first within
+    each habit bucket, ahead of ecological value (V2.85, F154): a keystone
+    species nobody has recorded within a hundred kilometres is a worse
+    suggestion for this yard than a good one somebody has. A ranking, never a
+    filter -- see `src.site_fit` for why an empty grid square is not an
+    absence."""
+    from src.site_fit import locality_rank
+
+    def near(p: dict) -> int:
+        if not site:
+            return 0
+        return locality_rank(p.get("scientific_name") or "", site[0], site[1])
     def value(p: dict) -> int:
         uses = p.get("permaculture_uses") or ""
         v = 0
@@ -2052,10 +2320,11 @@ def _rank_offline_plants(plants: list) -> list:
     good_pools: list = []
     bad_pools: list = []
     for b in _OFFLINE_BUCKETS:
-        pool = sorted(buckets[b], key=value, reverse=True)  # stable sort
+        pool = sorted(buckets[b], key=lambda p: (near(p), value(p)),
+                      reverse=True)                          # stable sort
         good_pools.append([p for p in pool if value(p) >= 0])
         bad_pools.append([p for p in pool if value(p) < 0])
-    other.sort(key=value, reverse=True)
+    other.sort(key=lambda p: (near(p), value(p)), reverse=True)
 
     ordered: list = []
 
@@ -2385,15 +2654,21 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # Bind selection to the measured site (zone/ecoregion/soil pH) on top of the
     # goal filters so the offline design is site-appropriate too (V1.48).
     site_filters = _site_filters(site_config)
-    goal_filters = {**site_filters,
-                    **(filters_for_goals(goals) or {"native_only": True})}
+    # The native requirement no longer depends on whether a goal was ticked
+    # (V2.85, F154): `filters_for_goals(goals) or {"native_only": True}` meant
+    # any goal with a filter of its own -- pollinators, pet-safe -- dropped it.
+    # It is the yard's province now, or the Alberta flag with no province.
+    goal_filters = _without_superseded_native(
+        {**_native_default(site_filters), **site_filters,
+         **(filters_for_goals(goals) or {})})
     try:
         plants = query_plants(**goal_filters)
     except Exception:  # noqa: BLE001
         plants = []
     if not plants:  # site+goals too restrictive — widen so we still produce one
         try:
-            plants = query_plants(native_only=True, **site_filters)
+            plants = query_plants(**_native_default(site_filters),
+                                  **site_filters)
         except Exception:  # noqa: BLE001
             plants = []
     if not plants:
@@ -2405,7 +2680,9 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # Rank the pool ecologically before capping — pre-V2.20 the cap took the
     # first N rows in catalogue (alphabetical) order, which led generic yards
     # with "B..." wetland specialists (Bog Cranberry, Buckbean, ...).
-    plants = _rank_offline_plants(plants)
+    # Too big for the site, then nearest-recorded first (V2.85).
+    area_m2 = _boundary_area_m2(boundary)
+    plants = _rank_offline_plants(_fits_the_area(plants, area_m2), site=center)
 
     # If the user picked target wildlife, lead with plants that support it
     # (intersected with the goals where possible), then fill with the rest so
@@ -2419,7 +2696,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                         or query_plants(supports_fauna_id=int(fid)))
             except Exception:  # noqa: BLE001
                 hits = []
-            for pl in _rank_offline_plants(hits):
+            for pl in _rank_offline_plants(_fits_the_area(hits, area_m2),
+                                           site=center):
                 if pl["id"] not in seen:
                     seen.add(pl["id"]); chosen.append(pl)
         for pl in plants:
@@ -2434,7 +2712,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     plant_items = [(p["id"], 1, default_layout_for(p.get("plant_type", "")))
                    for p in plants[:_OFFLINE_PLANT_CAP]]
 
-    communities = list_polycultures()
+    communities = _communities_for_site(list_polycultures(), site_filters,
+                                        area_m2)
     # D2: place a couple of site/goal-fit communities as grouped units, not a
     # single default — scored by goal + ecoregion name match.
     community_ids = _select_offline_communities(
@@ -2460,12 +2739,19 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     capacity = _boundary_capacity(boundary, keepout)
     frac = _DENSITY_FRACTION.get((density or "balanced").lower()) or 0.6
     p_mixes: list[dict] = []
+    # Sized in plants, not anchors (V2.85): 35% of the fill target.
     meadow = _offline_plant_mix(plants[:_OFFLINE_PLANT_CAP * 2],
-                                capacity, frac)
+                                _planting_capacity(boundary, keepout), frac)
     if meadow:
         p_mixes.append(meadow)
         in_mix = {pid for pid, _ in meadow["members"]}
-        plant_items = [it for it in plant_items if it[0] not in in_mix]
+        # The next `_OFFLINE_PLANT_CAP` species the meadow did not take, not
+        # the first seven minus the meadow's (V2.85): the old way left three or
+        # four individual species, often one herbaceous one, and the density
+        # pass then planted 49 of a single violet on a 216 m^2 yard.
+        plant_items = [(p["id"], 1, default_layout_for(p.get("plant_type", "")))
+                       for p in plants if p["id"] not in in_mix
+                       ][:_OFFLINE_PLANT_CAP]
     c_groups, c_mixes = _offline_community_plan(community_ids, capacity)
 
     plant_items, p_mixes, c_groups, c_mixes, budget_dropped = \
@@ -2476,7 +2762,9 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
             "offline generation found no plants or communities to place"
         )
 
-    plant_items = _apply_density(plant_items, boundary, density, keepout)
+    plant_items = _apply_density(
+        plant_items, boundary, density, keepout,
+        already=_planned_elsewhere(p_mixes, c_groups, c_mixes))
     _place_within_boundary(project, plant_items, c_groups, [],
                            boundary, center, elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
@@ -2487,12 +2775,13 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # The deterministic critic runs offline too (V1.62): score the placed
     # design and mend the most impactful gaps straight from the catalogue.
     from src.design_critic import apply_repairs
+    scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
     for msg in apply_repairs(
-            project, query_plants,
+            project, scoped,
             lambda: _one_position_in_boundary(boundary, center)):
         _add_warning(project, msg)
 
-    _apply_goal_feedback(project, goals, query_plants, center, boundary)
-    _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
+    _apply_goal_feedback(project, goals, scoped, center, boundary)
+    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project
