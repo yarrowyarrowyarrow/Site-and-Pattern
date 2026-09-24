@@ -76,9 +76,10 @@ jobs:
       # test_undo_redo segfaults in its own tearDown in a GPU-less environment,
       # identically on a clean tree (CLAUDE.md, V2.40). Run it on a desktop.
       #
-      # --max-skips: 21 tests skip with every dependency present (the reasons
-      # are printed in the log). A missing Qt library adds ~156, WebEngine 47,
-      # rasterio 42 -- each of which clears this ceiling and fails the job.
+      # --max-skips: 16 tests skip here with every dependency present (the
+      # reasons are printed in the log; V2.84 repaired four that had skipped
+      # only because the data moved). A missing Qt library adds ~156, WebEngine
+      # 47, rasterio 42 -- each clears this ceiling and fails the job.
       - name: Test suite
         if: ${{ !cancelled() }}
-        run: python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 30
+        run: python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 25

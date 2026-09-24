@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (counted at V2.83): 37 code features · 7 data jobs · 4 legacy-ledger items.**
+**Totals (counted at V2.84): 35 code features · 7 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -39,7 +39,8 @@ exposed the moment it was fixed, and F131, which F128's own re-fetch made
 possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge and
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
-recounted from the rows rather than adjusted.)*
+recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
+F159 opened.)*
 
 ---
 
@@ -290,10 +291,11 @@ is for, or is wrong in a way a reader can see. Reasoning per row in the
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
-| **F158** | **Release V2.83, so installed copies update.** V2.81 and V2.82 were built into `release-V2.80`, and the updater compares `(major, minor)` only, so an install from 25 Aug (schema v78) believes it is current and never got v78 → v85. A push publishes installers, so this is the author's go | S | Low | — |
+| ~~**F158**~~ | ✅ **Released 24 Sep as V2.83** (`release-V2.83`), so an install from 25 Aug is offered it by Help → Check for Updates. Plan: [`V2.83-the-work-was-not-reaching-anyone`](plans/V2.83-the-work-was-not-reaching-anyone.md) | — | Done | — |
 | **F157** | **A production site build anybody can repeat.** The 13 Sep publish has no analytics and no feedback form (its feedback page says so), because the flags are typed by hand at publish time. A checked-in config plus a build that refuses to publish without it. Needs the author's Umami website ID and feedback URL | S | Low | P9 |
-| **F153** | **Wasps filed as bees.** ~43 of 381 "bees" are apoid wasps, from `("Apoidea", "bee")` in `scripts/fetch_fauna_edges.py`. Fix the mapping, reclassify, and gate `taxon = bee` on the six bee families. Visible on the first screen of `/wildlife/`, and it inflates every "bees supported" count | S | Low — reseed | P9, P3 |
-| **F156** | **The website on a phone and in a search result.** `/about/` scrolls sideways (bibliography URLs), `/plants/` puts ~20 filter rows before any plant, the phenology bar is unreadable; page titles name neither the site nor the region, no canonical link, `full sun,partial shade`, invalid `<svg height="auto">`. Two modules are at their line ceilings, so a split comes first | S–M | Low | P13 |
+| ~~**F153**~~ | ✅ **Shipped in V2.84.** 43 rows to `other_insect`, the mapping fixed, `validate_bee_taxon` in the gate. Plan: [`V2.84-a-wasp-is-not-a-bee`](plans/V2.84-a-wasp-is-not-a-bee.md) | — | Done | — |
+| ~~**F156**~~ | ✅ **Shipped in V2.84**, and reaches readers when the site is republished (F157). Plan: [`V2.84-a-wasp-is-not-a-bee`](plans/V2.84-a-wasp-is-not-a-bee.md) | — | Done | — |
+| **F159** | **The German yellowjacket is filed as native.** *Vespula germanica* carries `ab_native = 1` and "Ground yellowjackets, native"; it is introduced in North America. Found in V2.84 while moving the wasps, and left for its own change because a nativity correction is a decision, as *Rudbeckia hirta* was | S | Low — reseed | P9 |
 | **F154** | **Recommend for the yard, not the region.** Site fit is "at least 3 records anywhere in the ecoregion", which is how an Edmonton yard gets Bur Oak from Saskatchewan parkland records. Rank by the 0.25° grid the website already draws (the yard's square and its neighbours), make nativity follow the pin's province, and stop a goal from silently dropping the native requirement. The bridge between the catalogue work and what the app recommends | M–L | Med | P9, P2 |
 | **F155** | **Offline designs that fill the yard.** 4–7 plants on 216 m² with a goal set; offline is the common path because the default model is a local Ollama. Fill to density from the site-matched pool, after F154 | M | Low | P1 |
 

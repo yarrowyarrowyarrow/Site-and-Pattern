@@ -116,18 +116,31 @@ class TestSaskatchewanFlora(unittest.TestCase):
         self.assertIn("AB", gm["native_provinces"])
         self.assertIn("SK", gm["native_provinces"])
 
-    def test_mountain_endemics_stay_ab_only(self):
-        """A mountain- or fescue-only endemic must NOT be tagged native to SK.
+    def test_an_sk_claim_the_records_cannot_support_comes_from_the_flora(self):
+        """A species recorded only on Alberta-only ground may claim SK only on
+        a flora's authority, never by inference.
 
-        The regions are read from the vocabulary rather than typed in: this
-        asked for `subalpine_montane` and `fescue_foothills`, both retired by
-        the V2.67 survey, and a SQL `IN` over dead keys matches nothing — so
-        the loop ran zero times and the test passed while checking nothing.
-        Only the `assertTrue(rows)` guard caught it, and only after V2.68
-        cleared the last tags that were keeping it non-empty.
+        This began as "mountain endemics stay AB-only", read from the
+        heuristic `ecoregion` tags. V2.68 cleared those tags as misplaced, the
+        query matched nothing, and the test skipped on every machine from then
+        until V2.84 while reading as an environment gap ("the derived ranges
+        are mid-re-derivation"). Two things had changed underneath it:
 
-        Saskatchewan has no mountains and no foothills. Every region below is
-        Alberta-only ground, so nothing carrying one may claim SK."""
+        * a plant's regions now come from occurrence records
+          (`plant_ecoregions`), so that is what this reads; and
+        * since V2.80 `native_provinces` is read from VASCAN, so the old rule
+          is no longer true as stated. *Hedysarum mackenziei* is recorded here
+          only in the Rockies and VASCAN, correctly, has it in Saskatchewan's
+          north (it also sits in `KNOWN_NOMENCLATURE`, so GBIF may file its
+          records under another name).
+
+        What still has to hold is the P9 rule the old one stood for: when the
+        records cannot support an SK claim, the claim must carry a flora as its
+        source. The `assertTrue(rows)` guard is load-bearing -- it is the only
+        reason this test cannot go vacuous a second time.
+
+        Saskatchewan has no mountains and no foothills: every region below is
+        Alberta-only ground."""
         from src.ecoregion_tree import regions_in, zone_key
 
         keys = [key for key, _name in regions_in(zone_key("Montane Cordillera"))]
@@ -136,18 +149,22 @@ class TestSaskatchewanFlora(unittest.TestCase):
         conn = get_connection()
         try:
             rows = conn.execute(
-                f"SELECT native_provinces FROM plants "
-                f"WHERE ecoregion IN ({placeholders})", keys).fetchall()
+                f"SELECT p.scientific_name, p.native_provinces, "
+                f"       p.native_provinces_source "
+                f"FROM plants p JOIN plant_ecoregions pe ON pe.plant_id = p.id "
+                f"GROUP BY p.id "
+                f"HAVING SUM(CASE WHEN pe.ecoregion IN ({placeholders}) "
+                f"               THEN 0 ELSE 1 END) = 0", keys).fetchall()
         finally:
             conn.close()
-        if not rows:
-            self.skipTest(
-                "no species currently carries a montane or fescue region — "
-                "the heuristic tags for those were cleared as misplaced in "
-                "V2.68 and the derived ranges are mid-re-derivation. Re-run:  "
-                "python scripts/seed_ecoregion_ranges.py")
-        for (np,) in rows:
-            self.assertNotIn("SK", (np or ""))
+        self.assertTrue(rows, "no species is recorded only on Alberta-only "
+                              "ground; the query has gone vacuous again")
+        for sci, provinces, source in rows:
+            if "SK" in (provinces or "").split(","):
+                self.assertEqual(
+                    source, "flora",
+                    f"{sci} claims SK with no record outside the Rockies and "
+                    f"fescue grassland, and the claim is not from a flora")
 
     def test_new_species_have_fauna_links(self):
         conn = get_connection()

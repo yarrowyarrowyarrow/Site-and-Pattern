@@ -73,50 +73,44 @@ class TestGetCompanions(unittest.TestCase):
 
     # ── Seeded relationships flow through correctly ──────────────────────
 
+    # The plant these tests lean on was "Yarrow" until V2.80 merged *Achillea
+    # millefolium* into Boreal Yarrow (*A. borealis*). The seed data followed
+    # the rename; these tests did not, and because a missing plant was a
+    # `skipTest`, all three stopped testing anything on every machine for three
+    # releases with the suite reading OK (found V2.83, fixed V2.84). A seeded
+    # plant going missing is now a failure, which is what it always was.
+    YARROW = "Boreal Yarrow"
+
+    def _seeded_id(self, common_name: str) -> int:
+        pid = self._plant_id_by_name(common_name)
+        self.assertIsNotNone(
+            pid, f"{common_name!r} is not in the seeded catalogue -- renamed? "
+                 "src/db/seed_data.SEED_COMPANIONS names plants by common name")
+        return pid
+
     def test_yarrow_has_seeded_friends(self):
-        """Per seed_data.py, Yarrow is friends with several fruit trees.
-        Verifies the seed pipeline actually populated the table."""
-        yarrow_id = self._plant_id_by_name("Yarrow")
-        if yarrow_id is None:
-            self.skipTest("Yarrow not present in seeded plant data")
-        result = get_companions(yarrow_id)
+        """SEED_COMPANIONS pairs Boreal Yarrow with Saskatoon Berry. Verifies
+        the seed pipeline actually populated the table."""
+        result = get_companions(self._seeded_id(self.YARROW))
         friend_names = {p.get("common_name") for p in result["friends"]}
-        # SEED_COMPANIONS lists Yarrow with Goodland Apple, Norland Apple,
-        # Evans Cherry, Saskatoon Berry. We don't assert all four
-        # (some may be filtered out if the seeded plants_master.json
-        # doesn't include cultivars), but at least one must show through.
-        seeded_yarrow_friends = {
-            "Goodland Apple", "Norland Apple", "Evans Cherry", "Saskatoon Berry",
-        }
-        self.assertTrue(
-            friend_names & seeded_yarrow_friends,
-            f"Expected Yarrow's friends to include at least one of "
-            f"{seeded_yarrow_friends}; got {friend_names}",
-        )
+        self.assertIn("Saskatoon Berry", friend_names)
 
     def test_relationships_are_bidirectional(self):
         """SEED_COMPANIONS lists each pair once; the query should return
         the relationship from either side."""
-        yarrow_id = self._plant_id_by_name("Yarrow")
-        sask_id   = self._plant_id_by_name("Saskatoon Berry")
-        if yarrow_id is None or sask_id is None:
-            self.skipTest("Yarrow or Saskatoon Berry not in seeded data")
-
+        yarrow_id = self._seeded_id(self.YARROW)
+        sask_id = self._seeded_id("Saskatoon Berry")
         yarrow_friend_ids = {p["id"] for p in get_companions(yarrow_id)["friends"]}
-        sask_friend_ids   = {p["id"] for p in get_companions(sask_id)["friends"]}
-
-        # If Yarrow ↔ Saskatoon are seeded as friends, both sides see it.
-        if sask_id in yarrow_friend_ids:
-            self.assertIn(yarrow_id, sask_friend_ids,
-                          "Companion relationships must be bidirectional")
+        sask_friend_ids = {p["id"] for p in get_companions(sask_id)["friends"]}
+        self.assertIn(sask_id, yarrow_friend_ids)
+        self.assertIn(yarrow_id, sask_friend_ids,
+                      "Companion relationships must be bidirectional")
 
     def test_returned_plants_have_expected_fields(self):
         """The detail-panel row reads `common_name`; verify it's present
         on every companion dict returned by the query."""
-        yarrow_id = self._plant_id_by_name("Yarrow")
-        if yarrow_id is None:
-            self.skipTest("Yarrow not present in seeded plant data")
-        result = get_companions(yarrow_id)
+        result = get_companions(self._seeded_id(self.YARROW))
+        self.assertTrue(result["friends"] + result["enemies"])
         for p in result["friends"] + result["enemies"]:
             self.assertIn("common_name", p)
             self.assertIn("id", p)

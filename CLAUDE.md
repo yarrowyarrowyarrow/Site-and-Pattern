@@ -33,7 +33,7 @@ feature, skim where it sits in that philosophy. The sources of truth:
   this before re-deriving the backlog from the two roadmaps; it is the index, and it carries the
   verified status of every open ID.
 - [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) — the live plan and the *reasoning* per feature,
-  plus the **ID ledger** (F63–F158) and the shipped record. Feature IDs have collided four times;
+  plus the **ID ledger** (F63–F159) and the shipped record. Feature IDs have collided four times;
   take the next free ID from that ledger, never from memory.
 - [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F62) organized by the
   principle they serve, with a "Shipped" section at the top.
@@ -294,12 +294,12 @@ V2.82 with nobody able to see it. CI calls the runner below rather than
 
 ```bash
 QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox QT_QPA_PLATFORM=offscreen \
-  python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 30
+  python scripts/run_tests.py --exclude tests.test_undo_redo --max-skips 25
 ```
 
 It prints the skip reasons with counts, **fails when more tests skip than
-`--max-skips`** (21 skip with every dependency present; a missing Qt runtime
-adds ~156), and exits before interpreter teardown, so the WebEngine segfault
+`--max-skips`** (17 skip with every dependency present, 16 on CI where the
+runner is not root; a missing Qt runtime adds ~156), and exits before interpreter teardown, so the WebEngine segfault
 described below cannot turn a green run into exit 139. Read its `RESULT:` line.
 
 **The `-t .` is load-bearing (V2.38).** Without it `unittest discover` makes
