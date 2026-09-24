@@ -228,7 +228,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
       <p class="count" id="count" role="status">{listed} animals</p>
       <div id="active" class="active"></div>
     </div>
-    <div class="fscroll">{_panels(animals)}</div>
+    <details class="fscroll" open><summary class="ftoggle">Filters</summary>{_panels(animals)}</details>
   </form>
 
   <div class="results">

@@ -104,7 +104,7 @@ def phenology_svg(bloom=(), fruit=(), *, width: int = 240,
     cell = width / 12.0
 
     parts = [f'<svg class="phenobar" viewBox="0 0 {width} {height}" '
-             f'width="100%" height="auto" role="img" '
+             f'width="100%" role="img" '
              f'xmlns="http://www.w3.org/2000/svg" '
              f'aria-label="{html.escape(alt_text(bloom, fruit))}">']
 

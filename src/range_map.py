@@ -192,7 +192,7 @@ def range_svg(cells, *, specimens=(), observations=(), width: int = 640,
 
     parts = [
         f'<svg class="rangemap" viewBox="0 0 {width} {height}" width="100%" '
-        f'height="auto" role="img" xmlns="http://www.w3.org/2000/svg" '
+        f'role="img" xmlns="http://www.w3.org/2000/svg" '
         f'aria-label="{html.escape(title or "Range map")}">',
         f'<rect width="{width}" height="{height}" fill="{pal["paper"]}"/>',
         f'<style>.rangemap .ctx{{fill:{pal["context"]};stroke:{pal["coast"]};'

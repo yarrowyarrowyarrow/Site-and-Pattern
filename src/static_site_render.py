@@ -56,7 +56,7 @@ from typing import Callable, Optional
 
 from src.site_analytics import Analytics, NONE as ANALYTICS_NONE, configure
 from src.site_facets import FACETS, GROUPS
-from src.site_share import NONE as SHARE_NONE, Share
+from src.site_share import NONE as SHARE_NONE, Share, page_title
 from src.site_share import configure as configure_share
 from src.site_share import default_card as share_default
 from src.static_site import _first_photo
@@ -186,7 +186,7 @@ def _page(title: str, description: str, body: str, depth: int,
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{_esc(title)}</title>
+<title>{_esc(page_title(title))}</title>
 <meta name="description" content="{_esc(description)}">{_social(
     title, description, image, image_alt)}
 <link rel="stylesheet" href="{root}assets/site.css">
@@ -466,7 +466,7 @@ def render_browse(model: dict, photo_src: dict) -> str:
       <p class="count" id="count" role="status">{len(briefs)} plants</p>
       <div id="active" class="active"></div>
     </div>
-    <div class="fscroll">{"".join(panels)}</div>
+    <details class="fscroll" open><summary class="ftoggle">Filters</summary>{"".join(panels)}</details>
   </form>
 
   <div class="results">
@@ -606,7 +606,7 @@ def write_site(model: dict, out_dir: str, *,
     def emit(rel: str, text: str) -> None:
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(_SHARE.with_page_url(text, rel), encoding="utf-8")
         written.append(rel)
 
     emit("assets/site.css", _asset("site.css"))

@@ -119,6 +119,50 @@ class Share:
             out.append(("name", "twitter:card", "summary"))
         return out
 
+    def page_url(self, rel: str) -> str:
+        """The absolute URL of the page written at ``rel``, or ``""`` (V2.84).
+
+        ``plants/fireweed/index.html`` is served as ``/plants/fireweed/``, and
+        that trailing-slash form is the one every link on the site uses, so it
+        is the one to declare canonical. Only pages, and only with a base URL.
+        """
+        if not self.base_url or not rel.endswith(".html"):
+            return ""
+        path = rel[:-len("index.html")] if rel.endswith("index.html") else rel
+        return self.base_url + "/" + path
+
+    def with_page_url(self, html: str, rel: str) -> str:
+        """``html`` with ``<link rel=canonical>`` and ``og:url`` added (V2.84).
+
+        Added at write time, where the page's path is already known, rather
+        than threaded through ``_page``: V2.80 left ``og:url`` out because
+        passing every page's path through six modules' call sites was the
+        cost, and the file writer had the path all along.
+        """
+        from src.static_site_render import _esc               # noqa: PLC0415
+
+        url = self.page_url(rel)
+        if not url or "</head>" not in html:
+            return html
+        tags = (f'<link rel="canonical" href="{_esc(url)}">\n'
+                f'<meta property="og:url" content="{_esc(url)}">\n')
+        return html.replace("</head>", tags + "</head>", 1)
+
+
+def page_title(title: str) -> str:
+    """The ``<title>`` a search result or a browser tab shows (V2.84).
+
+    Species pages were titled with the plant alone, *Saskatoon Berry
+    (Amelanchier alnifolia)*, so a search result never said whose page it was.
+    The site name is added unless the title already carries it.
+    """
+    from src.static_site_render import SITE_NAME              # noqa: PLC0415
+
+    title = (title or "").strip()
+    if not title:
+        return SITE_NAME
+    return title if SITE_NAME in title else f"{title} | {SITE_NAME}"
+
 
 #: A build that shares nothing but its words. The default, and what a build
 #: without a ``--base-url`` gets, because there is no absolute image URL to be

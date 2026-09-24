@@ -329,7 +329,7 @@ def map_svg(highlight: Optional[dict] = None, *,
 
     parts = [
         f'<svg class="ecomap" viewBox="0 0 {width} {height}" '
-        f'width="100%" height="auto" role="img" '
+        f'width="100%" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" '
         f'aria-label="{html.escape(title or "Ecoregion map")}">',
         hatch_defs(),

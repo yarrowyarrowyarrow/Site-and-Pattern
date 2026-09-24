@@ -142,5 +142,39 @@ class TestPickingTheDefaultPhotograph(unittest.TestCase):
         self.assertEqual(src, "assets/photos/prairie-crocus.jpg")
 
 
+
+class TestThePagesOwnUrlAndTitle(unittest.TestCase):
+    """V2.84: a canonical URL and a title that names the site."""
+
+    def test_an_index_page_is_its_directory(self):
+        share = site_share.configure(base_url="https://grownativeplants.ca/")
+        self.assertEqual(share.page_url("plants/fireweed/index.html"),
+                         "https://grownativeplants.ca/plants/fireweed/")
+        self.assertEqual(share.page_url("index.html"),
+                         "https://grownativeplants.ca/")
+
+    def test_no_base_url_and_no_page_means_no_tags(self):
+        self.assertEqual(site_share.NONE.page_url("about/index.html"), "")
+        share = site_share.configure(base_url="https://example.org")
+        self.assertEqual(share.page_url("assets/site.css"), "")
+        page = "<html><head><title>x</title></head></html>"
+        self.assertEqual(site_share.NONE.with_page_url(page, "index.html"), page)
+
+    def test_the_tags_go_in_the_head_once(self):
+        share = site_share.configure(base_url="https://example.org")
+        page = "<html><head><title>x</title></head><body></head></body></html>"
+        out = share.with_page_url(page, "about/index.html")
+        self.assertEqual(out.count('rel="canonical"'), 1)
+        self.assertLess(out.index('rel="canonical"'), out.index("<body>"))
+
+    def test_the_site_name_is_added_once(self):
+        from src.static_site_render import SITE_NAME
+        self.assertEqual(site_share.page_title("Fireweed (Chamaenerion angustifolium)"),
+                         f"Fireweed (Chamaenerion angustifolium) | {SITE_NAME}")
+        already = f"About the {SITE_NAME} plant catalogue"
+        self.assertEqual(site_share.page_title(already), already)
+        self.assertEqual(site_share.page_title(""), SITE_NAME)
+
+
 if __name__ == "__main__":
     unittest.main()

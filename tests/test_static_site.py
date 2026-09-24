@@ -606,6 +606,53 @@ class TestTheRenderedSite(unittest.TestCase):
                                      f"...{text[max(0, where - 40):where + 40]}...")
         self.assertEqual(offenders, [])
 
+    def _pages(self):
+        for page in sorted(self.out.rglob("*.html")):
+            yield (page.relative_to(self.out).as_posix(),
+                   page.read_text(encoding="utf-8"))
+
+    def test_every_page_declares_its_own_url_as_canonical(self):
+        """V2.84. Added where the file is written, which is the one place that
+        knows each page's path, so no page can be missed and none can carry
+        another page's URL."""
+        for rel, text in self._pages():
+            want = ("https://example.org/"
+                    + (rel[:-len("index.html")] if rel.endswith("index.html")
+                       else rel))
+            self.assertIn(f'<link rel="canonical" href="{want}">', text, rel)
+            self.assertIn(f'<meta property="og:url" content="{want}">', text, rel)
+
+    def test_every_title_names_the_site(self):
+        """A search result for a species page never said whose page it was."""
+        for rel, text in self._pages():
+            title = re.search(r"<title>(.*?)</title>", text, re.S).group(1)
+            self.assertIn(render.SITE_NAME, title, rel)
+            self.assertEqual(title.count(render.SITE_NAME), 1, rel)
+
+    def test_no_svg_claims_an_invalid_height(self):
+        """`height="auto"` is not an SVG length; every map page logged an error
+        for it until V2.84. The stylesheet sizes the maps instead."""
+        for rel, text in self._pages():
+            self.assertNotIn('height="auto"', text, rel)
+
+    def test_the_facet_list_folds_on_a_phone(self):
+        """A <details> rendered open, which browse.js shuts on a narrow screen:
+        with no script the filters are still there (V2.84)."""
+        for rel in ("plants/index.html", "wildlife/index.html"):
+            text = (self.out / rel).read_text(encoding="utf-8")
+            self.assertIn('<details class="fscroll" open>'
+                          '<summary class="ftoggle">Filters</summary>', text, rel)
+
+    def test_a_species_description_reads_as_prose(self):
+        """It printed the raw column, `full sun,partial shade`, and never said
+        where the plant is native (V2.84)."""
+        for rel, text in self._pages():
+            if not re.match(r"plants/[^/]+/index\.html$", rel):
+                continue
+            desc = re.search(r'<meta name="description" content="([^"]*)"',
+                             text).group(1)
+            self.assertIsNone(re.search(r"[a-z],[a-z]", desc), f"{rel}: {desc}")
+
     def test_the_dash_normaliser_leaves_ranges_alone(self):
         """An en dash joining a range is a different mark doing a different
         job. "Jun-Jul" and "pH 5.5-7" must survive."""
@@ -707,13 +754,20 @@ class TestTheRenderedSite(unittest.TestCase):
         on the author's decision.
 
         Three named hosts, still no third-party script, still nothing loaded.
+
+        V2.84 added one exception, exactly one URL per page: the page naming
+        itself in `<link rel="canonical">`, which loads nothing.
         """
         allowed = ("https://github.com/", "https://example.org/p.jpg",
                    "https://example.org/monarch.jpg",
                    "https://www.gbif.org/", "https://www.inaturalist.org/",
                    "https://data.canadensys.net/")
         for page in self.out.rglob("*.html"):
-            for link in _LINK.findall(page.read_text(encoding="utf-8")):
+            text = page.read_text(encoding="utf-8")
+            own = re.search(r'<link rel="canonical" href="([^"]+)">', text)
+            for link in _LINK.findall(text):
+                if own and link == own.group(1):
+                    continue          # the page naming itself (V2.84)
                 if link.startswith(("http://", "https://")):
                     self.assertTrue(link.startswith(allowed), link)
 

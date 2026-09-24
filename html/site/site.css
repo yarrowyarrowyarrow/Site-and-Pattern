@@ -278,6 +278,9 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
             border-radius: var(--radius); padding: .7rem; }
 .rangemapwrap { max-width: 36rem; margin: 0 auto; }
 .rangefig .rangemap { display: block; width: 100%; height: auto; }
+/* Sized here, not by a height="auto" attribute, which is not a valid SVG
+   length and logged an error on every map page until V2.84. */
+.phenobar { display: block; width: 100%; height: auto; }
 .rangefig figcaption { margin-top: .6rem; }
 
 /* Radios, not buttons, and :checked sibling selectors, not JavaScript -- so
@@ -407,6 +410,9 @@ table.facts th {
 table.facts .chip { padding: .16rem .6rem; font-size: .86rem; }
 
 ul.animals, ul.ranges { margin: .4rem 0; padding-left: 1.1rem; }
+/* Citations carry bare URLs and DOIs with no break opportunity; on a phone
+   they pushed /about/ to 821px wide in a 390px viewport (V2.84). */
+ul.sources li { overflow-wrap: anywhere; }
 ul.animals li, ul.ranges li { margin: .22rem 0; }
 ul.ranges { list-style: none; padding-left: 0; }
 ul.ranges li { padding-left: .9rem; position: relative; }
@@ -462,6 +468,9 @@ ul.cols { columns: 2; column-gap: 2rem; }
   padding-bottom: .4rem; border-bottom: 1px solid var(--line);
 }
 .fscroll { overflow-y: auto; padding-top: .5rem; }
+/* The facet list is a <details> so a phone can fold it (V2.84); on a wide
+   screen it is always open and the toggle is not drawn. */
+.ftoggle { display: none; }
 .fbar { display: flex; gap: .4rem; }
 .filters input[type=search] {
   flex: 1; padding: .55rem .7rem; border: 1px solid var(--line-firm);
@@ -539,6 +548,10 @@ img { max-width: 100%; }
   .searchlayout, .split, .ecowrap { grid-template-columns: 1fr; }
   .filters { position: static; max-height: none; }
   .fscroll { overflow: visible; }
+  .ftoggle {
+    display: list-item; cursor: pointer; padding: .55rem 0;
+    font: 600 .92rem/1.2 ui-sans-serif, system-ui, sans-serif;
+  }
   .facets { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
   .facet .opts { max-height: none; }
   ul.cols { columns: 1; }
@@ -551,6 +564,11 @@ img { max-width: 100%; }
   main { padding: 1.25rem 1rem 3rem; }
   .top { padding: .7rem 1rem; }
   .brand-sub { display: none; }
+  /* Label above value, so a value gets the whole width: the flowering bar
+     was squeezed into the ~170px a 12rem label column left it (V2.84). */
+  table.facts, table.facts tbody, table.facts tr,
+  table.facts th, table.facts td { display: block; width: auto; }
+  table.facts th { border-bottom: 0; padding-bottom: 0; }
 }
 
 /* ── The feedback form ──────────────────────────────────────────────────── */

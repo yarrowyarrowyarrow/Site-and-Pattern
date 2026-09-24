@@ -17,6 +17,7 @@ markup have exactly one definition each.
 from __future__ import annotations
 
 from src import citations
+from src.nativity import provinces
 from src.site_share import photo_card as share_photo
 from src.sourcing import describe as sourcing_text
 from src.static_site import _first_photo, hub_slug
@@ -135,9 +136,17 @@ def render_species(entry: dict, model: dict, photo_src: dict,
   {_extras_section(entry, include_notes)}
 </article>
 """
-    desc = (f'{entry.get("name")} ({entry.get("scientific_name")}): '
-            f'{entry.get("sun") or "conditions unrecorded"}, '
-            f'{entry.get("bloom") or "bloom window unrecorded"}, '
+    # What a search result shows under the title (V2.84). It said "full
+    # sun,partial shade" -- the raw column, where the page's own table runs the
+    # same value through `_tokens` -- and never said where the plant is native,
+    # which is the one thing a search for "native plants Alberta" is asking.
+    where = " and ".join({"AB": "Alberta", "SK": "Saskatchewan"}.get(p, p)
+                         for p in provinces(entry.get("native")))
+    sun = _tokens(entry.get("sun")).lower() or "conditions unrecorded"
+    bloom = (f'flowers {entry["bloom"]}' if entry.get("bloom")
+             else "bloom window unrecorded")
+    desc = (f'{entry.get("name")} ({entry.get("scientific_name")})'
+            f'{", native to " + where if where else ""}: {sun}; {bloom}; '
             f'{(entry.get("wildlife") or {}).get("total", 0)} documented '
             f'animal relationships.')
     # Sharing a species page should show that species, not the site default.
