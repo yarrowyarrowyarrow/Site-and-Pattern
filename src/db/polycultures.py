@@ -2412,6 +2412,103 @@ EXAMPLE_POLYCULTURES = [
             ('Woodland Strawberry', 'groundcover', 0.5, -1.4),
         ],
     },
+    # ── The trees promoted in V2.87 (F161) ───────────────────────────────────
+    # Every retail native belongs to a seeded community (TestCommunityCoverage),
+    # and these three give the new trees theirs. The juniper slope carries no
+    # saskatoon, hawthorn or mountain-ash, and the hawthorn thicket no juniper:
+    # juniper is the alternate host of the Gymnosporangium rusts that spot
+    # their fruit (F169).
+    {
+        "name": 'Prairie River Cottonwood Grove',
+        "description": 'The floodplain woodland of southern prairie rivers: plains '
+                       'cottonwood over peach-leaved willow and Manitoba maple, with '
+                       'dogwood and snowberry in the shrub layer and wild licorice '
+                       'fixing nitrogen on the sandbar edge. Poplars and willows are '
+                       'keystone hosts for caterpillars. It needs a water table the '
+                       'trees can reach, and room: plant it on acreage or a riverside '
+                       'lot, well away from buildings and sewer lines.',
+        "members": [
+            ('Plains Cottonwood', 'overstory', 0.0, 0.0),
+            ('Peach-leaved Willow', 'understory', 4.0, 2.0),
+            ('Manitoba Maple (Box Elder)', 'understory', -4.0, 2.0),
+            ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+            ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+            ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+            ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+        ],
+        "variations": [
+            {
+                "name": 'Southwest Alberta River Grove',
+                "description": 'The Oldman River version: narrowleaf cottonwood '
+                               'over peach-leaved willow and water birch, the '
+                               'cottonwood of the southwestern Alberta foothills '
+                               'rivers.',
+                "members": [
+                    ('Narrowleaf Cottonwood', 'overstory', 0.0, 0.0),
+                    ('Peach-leaved Willow', 'understory', 4.0, 2.0),
+                    ('Water Birch', 'understory', -4.0, 2.0),
+                    ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+                    ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+                    ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+                    ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+                ],
+            },
+            {
+                "name": 'Saskatchewan Valley Elm Grove',
+                "description": 'The elm and maple woodland of southeastern '
+                               'Saskatchewan river valleys. American elm is '
+                               'native only in Saskatchewan here, so this '
+                               'version is offered only there. Dutch elm '
+                               'disease is present, and Saskatchewan bans elm '
+                               'pruning from April through August.',
+                "members": [
+                    ('American Elm', 'overstory', 0.0, 0.0),
+                    ('Manitoba Maple (Box Elder)', 'understory', 4.0, 2.0),
+                    ('Peach-leaved Willow', 'understory', -4.0, 2.0),
+                    ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+                    ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+                    ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+                    ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+                ],
+            },
+        ],
+    },
+    {
+        "name": 'Coulee Hawthorn Thicket',
+        "description": 'The thorny shrub thicket of prairie coulees and aspen '
+                       'edges. Round-leaved hawthorn and chokecherry flower for bees '
+                       'in late spring and fruit for birds into winter, and the '
+                       'thorns give songbirds nesting cover. Keep junipers well '
+                       'away: they carry the rust that spots hawthorn fruit.',
+        "members": [
+            ('Round-leaved Hawthorn', 'overstory', 0.0, 0.0),
+            ('Chokecherry', 'shrub_layer', 2.5, 1.0),
+            ('Prairie Rose', 'shrub_layer', -2.5, 1.0),
+            ('Western Snowberry', 'shrub_layer', 0.0, -2.5),
+            ('Silver Buffaloberry', 'nitrogen_fixer', 3.0, -1.5),
+            ('Golden Bean', 'pollinator', -2.0, -1.5),
+            ('Smooth Aster', 'pollinator', 1.0, 2.5),
+        ],
+    },
+    {
+        "name": 'Dry Foothills Juniper Slope',
+        "description": 'An evergreen dry slope from the southwestern Alberta '
+                       'foothills: Rocky Mountain juniper over silverberry and '
+                       'shrubby cinquefoil, with rough fescue and prairie smoke '
+                       'between. Waxwings and thrushes take the juniper\'s blue '
+                       'cones through winter. It deliberately has no saskatoon, '
+                       'hawthorn or mountain-ash: juniper carries the rusts that '
+                       'spot their fruit.',
+        "members": [
+            ('Rocky Mountain Juniper', 'overstory', 0.0, 0.0),
+            ('Silverberry', 'nitrogen_fixer', 2.5, 1.0),
+            ('Shrubby Cinquefoil', 'shrub_layer', -2.5, 1.0),
+            ('Creeping Juniper', 'groundcover', 1.5, -2.0),
+            ('Rough Fescue', 'herbaceous', -1.5, -2.0),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
+             'pollinator', 0.0, 2.5),
+        ],
+    },
 ]
 
 

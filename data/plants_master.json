@@ -27155,7 +27155,20 @@
     "branching": "multi_stem",
     "bark_texture": "scaly",
     "has_thorns": 1,
-    "native_provinces_source": "flora"
+    "native_provinces_source": "flora",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#d8b8a0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0,
+    "flowering_stems": 14,
+    "flower_data_source": "estimated",
+    "flower_data_citation": ""
   },
   {
     "hardiness_zone_min": "3",

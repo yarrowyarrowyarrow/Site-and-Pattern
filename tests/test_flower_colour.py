@@ -112,8 +112,11 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: (*Urtica gracilis* subsp. *gracilis*, below). Five rows, five
     #: decrements, all accounted for -- which is the check this snapshot is
     #: for.
+    #: V2.87 adds seven trees: white +1 (Round-leaved Hawthorn, whose white is
+    #: marked `estimated` like the rest of its genus), and six with no showy
+    #: flower to record, counted below.
     EXPECTED = {
-        "straw": 80, "yellow": 79, "white": 78, "purple": 45, "pink": 34,
+        "straw": 80, "yellow": 79, "white": 79, "purple": 45, "pink": 34,
         "blue": 28, "cream": 14, "red": 6, "green": 5, "orange": 3, "brown": 2,
     }
 
@@ -123,13 +126,16 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
         self.assertEqual(got, self.EXPECTED)
 
     def test_the_unrecorded_stay_unrecorded(self):
-        """43 rows record no flower colour. They must classify to "" — not to
+        """49 rows record no flower colour. They must classify to "" — not to
         white, which is what a naive parse of an empty hex would give.
 
         44 until V2.82 merged the duplicate *Urtica gracilis* row, which was
         one of them: a nettle is wind-pollinated and has no bloom colour to
-        record."""
-        self.assertEqual(bucket_counts(_seed_rows()).get(""), 43)
+        record. 43 -> 49 in V2.87: six of the seven trees promoted then are
+        wind-pollinated or catkin-bearing (two cottonwoods, a willow, a maple,
+        an elm and a juniper), and their rows leave the colour blank rather
+        than guess one."""
+        self.assertEqual(bucket_counts(_seed_rows()).get(""), 49)
 
     def test_no_seeded_hex_falls_through_unclassified(self):
         unclassified = sorted({
