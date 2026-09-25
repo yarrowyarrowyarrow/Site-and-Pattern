@@ -54,6 +54,7 @@ import pathlib
 import shutil
 from typing import Callable, Optional
 
+from src.name_variants import searchable
 from src.site_analytics import Analytics, NONE as ANALYTICS_NONE, configure
 from src.site_facets import FACETS, GROUPS
 from src.site_share import NONE as SHARE_NONE, Share, page_title
@@ -391,7 +392,8 @@ def render_browse(model: dict, photo_src: dict) -> str:
     """The search page: every facet, filtered in the browser."""
     briefs = [e["brief"] for e in model["species"]]
     index = [dict(e["facets"], s=e["slug"],
-                  n=(e["brief"]["name"] + " " + e["brief"]["sci"]).lower())
+                  n=searchable(e["brief"]["name"]) + " "
+                  + e["brief"]["sci"].lower())
              for e in model["species"]]
     # `</script>` inside the payload would close the block early and spill JSON
     # into the document. No botanical name does that today, but the index is

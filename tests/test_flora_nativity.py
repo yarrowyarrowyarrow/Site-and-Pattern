@@ -466,5 +466,124 @@ class TestTheApplyWritesOnlyWhatVascanEarns(unittest.TestCase):
         self.assertEqual(again["ab_flag"], [])
 
 
+
+class TestPendingRowsArePromotedOnlyOnAPlainYes(unittest.TestCase):
+    """V2.86. Trees written in a session that could not reach VASCAN wait in
+    `data/plants_pending_flora.json`; the archive run is what lets them in,
+    and on nothing short of a plain yes."""
+
+    PENDING = {"Salix amygdaloides": {
+        "scientific_name": "Salix amygdaloides",
+        "common_name": "Peach-leaved Willow", "native_provinces": "AB,SK",
+        "native_to_alberta": 1}}
+
+    def _buckets(self, said):
+        return I.compare({"results": {"Salix amygdaloides": said}}, {},
+                         self.PENDING)
+
+    def test_native_here_is_promoted_with_vascans_provinces(self):
+        b = self._buckets({"verdict": "confirm", "origin": "native",
+                           "native_provinces": "SK"})
+        self.assertEqual([p["vascan"] for p in b["promote"]], ["SK"])
+        self.assertEqual(b["hold"], [])
+
+    def test_anything_short_of_a_plain_yes_holds(self):
+        for said in (
+                {"verdict": "not_here", "origin": "introduced",
+                 "native_provinces": ""},
+                {"verdict": "review", "origin": "undetermined",
+                 "native_provinces": ""},
+                {"verdict": "review", "origin": "unstated",
+                 "native_provinces": ""},
+                {"verdict": "review", "origin": "unmatched",
+                 "native_provinces": ""},
+                {"verdict": "confirm", "origin": "native",
+                 "native_provinces": "AB", "is_synonym": True},
+                {"verdict": "confirm", "origin": "native",
+                 "native_provinces": "AB",
+                 "accepted_name": "Salix nigra Marshall"}):
+            b = self._buckets(said)
+            self.assertEqual(b["promote"], [], said)
+            self.assertEqual(len(b["hold"]), 1, said)
+
+    def test_an_accepted_name_with_its_authority_still_promotes(self):
+        """VASCAN writes the authority into the accepted name; compare the
+        binomial, as the V2.82 gate does."""
+        b = self._buckets({"verdict": "confirm", "origin": "native",
+                           "native_provinces": "AB,SK",
+                           "accepted_name": "Salix amygdaloides Andersson"})
+        self.assertEqual(len(b["promote"]), 1)
+
+    def test_a_catalogue_row_is_never_treated_as_pending(self):
+        rows = {"Salix amygdaloides": dict(self.PENDING["Salix amygdaloides"])}
+        b = I.compare({"results": {"Salix amygdaloides": {
+            "verdict": "confirm", "origin": "native",
+            "native_provinces": "AB,SK"}}}, rows, self.PENDING)
+        self.assertEqual(b["promote"], [])
+        self.assertEqual(len(b["confirm"]), 1)
+
+    def test_the_fetch_asks_about_the_pending_names(self):
+        import scripts.fetch_flora_nativity as F
+        from src import pending_species
+        names = F.catalogue_species()
+        for name in pending_species.names():
+            self.assertIn(name, names)
+
+
+class TestThePromotionWrite(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "data").mkdir()
+        self.master = self.tmp / "data" / "plants_master.json"
+        self.master.write_text(json.dumps([
+            {"scientific_name": "Populus balsamifera",
+             "native_provinces": "AB,SK", "native_provinces_source": "flora"}
+        ]), encoding="utf-8")
+        self.pending = self.tmp / "data" / "plants_pending_flora.json"
+        self.pending.write_text(json.dumps([
+            {"scientific_name": "Ulmus americana", "common_name": "American Elm",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+            {"scientific_name": "Acer negundo", "common_name": "Manitoba Maple",
+             "native_provinces": "AB,SK", "native_to_alberta": 1},
+        ]), encoding="utf-8")
+        self._root, self._files = I.PROJECT_ROOT, I.PLANT_FILES
+        I.PROJECT_ROOT, I.PLANT_FILES = self.tmp, ("plants_master.json",)
+        self.buckets = {k: [] for k in ("narrow", "confirm", "not_here",
+                                        "name", "undetermined", "hold")}
+        self.buckets["promote"] = [{"scientific_name": "Ulmus americana",
+                                    "vascan": "SK"}]
+
+    def tearDown(self):
+        I.PROJECT_ROOT, I.PLANT_FILES = self._root, self._files
+
+    def _read(self, path):
+        return {r["scientific_name"]: r
+                for r in json.loads(path.read_text(encoding="utf-8"))}
+
+    def test_a_promoted_row_carries_vascans_answer_not_its_own(self):
+        out = I._apply(self.buckets)
+        self.assertEqual(out["promoted"], [("Ulmus americana", "SK")])
+        elm = self._read(self.master)["Ulmus americana"]
+        self.assertEqual(elm["native_provinces"], "SK")
+        self.assertEqual(elm["native_to_alberta"], 0)
+        self.assertEqual(elm[I.SOURCE_KEY], "flora")
+
+    def test_it_leaves_the_pending_file_and_the_rest_stay(self):
+        I._apply(self.buckets)
+        left = self._read(self.pending)
+        self.assertNotIn("Ulmus americana", left)
+        self.assertIn("Acer negundo", left)
+        self.assertNotIn(I.SOURCE_KEY, left["Acer negundo"])
+
+    def test_running_it_twice_promotes_once(self):
+        I._apply(self.buckets)
+        again = I._apply(self.buckets)
+        self.assertEqual(again["promoted"], [])
+        rows = json.loads(self.master.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [r["scientific_name"] for r in rows].count("Ulmus americana"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

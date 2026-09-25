@@ -26,6 +26,7 @@ import re
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -580,6 +581,19 @@ class TestTheRenderedSite(unittest.TestCase):
         self.assertEqual(len(rows), len(_PLANTS))
         for row in rows:
             self.assertIn(f"../plants/{row['s']}/", hrefs)
+
+    def test_the_search_index_carries_spelling_variants(self):
+        """V2.86: "Burr Oak" found nothing on the site. The box matches by
+        substring over each row's `n`, so the variant has to be in it."""
+        import src.name_variants as nv
+        with mock.patch.dict(nv.SPELLINGS, {"gramma": "grama"}):
+            html = render.render_browse(self.model, {})
+        rows = json.loads(re.search(
+            r'<script id="catalogue" type="application/json">(.*?)</script>',
+            html, re.S).group(1))
+        names = [r["n"] for r in rows]
+        self.assertTrue(any("blue gramma grass" in n for n in names), names)
+        self.assertTrue(any("bouteloua gracilis" in n for n in names), names)
 
     def test_the_embedded_json_cannot_close_its_own_script_block(self):
         """The index is built from free-text database columns. A `</script>` in

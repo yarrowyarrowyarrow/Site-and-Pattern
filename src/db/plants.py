@@ -466,7 +466,14 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # as bees in the app and labelled "native bee" on the website. 174 edges move
 # with them and 51 plants report fewer bees (Boreal Yarrow 151 -> 129); none
 # drops to zero, and the Habitat Value Score headline does not count bees.
-_SCHEMA_VERSION = 86
+# v87 (V2.86): `keystone_species` added to the three birches and Bur Oak.
+#
+# The tag was always applied by genus and `data_quality.KEYSTONE_GENERA` now says
+# which; Betula and Quercus, two of Tallamy & Shropshire's top five woody
+# genera, were the only gaps. Designs holding a birch or the oak gain keystone
+# credit in the Habitat Value Score (15 of its 100 points, 3 per keystone
+# species up to five).
+_SCHEMA_VERSION = 87
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -2688,12 +2695,18 @@ def search_plants(
         return [str(x) for x in v if x]
 
     if query:
-        sql += (" AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
-                " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
-                " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
-                " AND LOWER(u.key) LIKE ?))")
-        q = f"%{query.lower()}%"
-        params += [q, q, q]
+        # Each spelling of the query (V2.86: "Burr Oak" found nothing, and the
+        # catalogue calls it Bur Oak); see src/name_variants.py.
+        from src.name_variants import query_forms            # noqa: PLC0415
+        one = ("LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
+               " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
+               " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
+               " AND LOWER(u.key) LIKE ?)")
+        forms = query_forms(query)
+        sql += " AND (" + " OR ".join(f"({one})" for _ in forms) + ")"
+        for form in forms:
+            q = f"%{form}%"
+            params += [q, q, q]
 
     # Type is a single column value; a multi-select matches ANY chosen type.
     types = _as_filter_list(plant_type)

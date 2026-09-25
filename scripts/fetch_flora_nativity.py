@@ -129,8 +129,11 @@ def _seeder():
 
 
 def catalogue_species() -> list[str]:
+    """The catalogue's names plus the rows waiting for this answer (V2.86,
+    ``src/pending_species.py``), so one run settles both."""
     from scripts.seed_ecoregion_ranges import catalogue_species as names
-    return names()
+    from src import pending_species                          # noqa: PLC0415
+    return sorted(set(names()) | set(pending_species.names()))
 
 
 # ── One species ─────────────────────────────────────────────────────────────

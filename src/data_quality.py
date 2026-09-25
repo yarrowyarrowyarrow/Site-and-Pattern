@@ -682,7 +682,9 @@ def validate_all() -> tuple[list[str], list[str]]:
                                 validate_excluded_taxa,
                                 validate_safety_provenance,
                                 validate_host_genus_coverage,
-                                validate_use_tags_against_edges):
+                                validate_use_tags_against_edges,
+                                validate_keystone_genera,
+                                validate_pending_species):
         e, w = validate_provenance()
         errors.extend(e)
         warnings.extend(w)
@@ -1729,6 +1731,111 @@ def validate_use_tags_against_edges() -> tuple[list[str], list[str]]:
             f"{' / '.join(rels)} edge to a {want} but not the {tag!r} tag "
             f"the score reads — e.g. {', '.join(names[:4])}")
     return [], warnings
+
+
+#: The genera whose every member carries ``keystone_species`` (V2.86).
+#:
+#: The tag was always a genus claim -- `ecological_role` calls it "Tallamy's
+#: high-value genera that anchor the food web" -- and the catalogue applied it
+#: that way to every member of seven genera and to nothing outside them. Two
+#: of the five woody genera Tallamy & Shropshire rank highest for caterpillars
+#: (oak, cherry, willow, birch, poplar; *Conservation Biology* 23:941, 2009)
+#: were missing, so Paper Birch and Bur Oak scored no keystone credit while
+#: every willow did. Written down so the rule is checked rather than
+#: remembered, and so a new member of one of these genera cannot arrive
+#: without the tag. Adding a genus here moves Habitat Value Scores, which is a
+#: decision to take with a source, not a tidy-up.
+KEYSTONE_GENERA = frozenset({
+    # woody: Tallamy & Shropshire's top five
+    "Quercus", "Prunus", "Salix", "Betula", "Populus",
+    # herbaceous: the goldenrods, asters and sunflowers
+    "Solidago", "Symphyotrichum", "Aster", "Helianthus",
+})
+
+
+def validate_keystone_genera() -> tuple[list[str], list[str]]:
+    """``keystone_species`` on exactly the members of `KEYSTONE_GENERA`.
+
+    Both directions are errors: a member without the tag under-scores a
+    design, and a tag outside the list is a claim with no rule behind it.
+    Checks the rows waiting for a flora (`src.pending_species`) too, because
+    they are promoted into the catalogue as they stand.
+    """
+    from src import pending_species                         # noqa: PLC0415
+
+    errors: list[str] = []
+    rows = [r for name in ("plants_master.json", "garden_plants.json")
+            for r in _load_json_list(DATA_DIR / name) if isinstance(r, dict)]
+    rows += pending_species.load()
+    for row in rows:
+        sci = (row.get("scientific_name") or "").strip()
+        if not sci:
+            continue
+        genus = sci.split()[0]
+        tags = {t.strip() for t in
+                (row.get("permaculture_uses") or "").split(",")}
+        tagged = "keystone_species" in tags
+        who = f"{sci} ({row.get('common_name')})"
+        if genus in KEYSTONE_GENERA and not tagged:
+            errors.append(
+                f"keystone genera: {who} is a {genus} without the "
+                f"keystone_species tag every {genus} carries")
+        elif tagged and genus not in KEYSTONE_GENERA:
+            errors.append(
+                f"keystone genera: {who} is tagged keystone_species but "
+                f"{genus} is not in data_quality.KEYSTONE_GENERA")
+    return errors, []
+
+
+def validate_pending_species() -> tuple[list[str], list[str]]:
+    """The rows waiting for a flora (`src.pending_species`, V2.86).
+
+    They are promoted into the catalogue as they stand, so they are held to
+    the catalogue's rules now rather than at promotion, on a machine that may
+    be the author's and in a hurry. Four things on top of the per-row checks:
+    no source stamped (the source is what they are waiting for), not already a
+    catalogue row, not a call already made in ``excluded_taxa.json``, and no
+    lead common name another row already uses.
+    """
+    from src import pending_species                         # noqa: PLC0415
+
+    rows = pending_species.load()
+    if not rows:
+        return [], []
+    errors, warnings = validate_records(rows, pending_species.PENDING_FILE)
+    catalogue = [r for name in ("plants_master.json", "garden_plants.json")
+                 for r in _load_json_list(DATA_DIR / name)
+                 if isinstance(r, dict)]
+    have = {(r.get("scientific_name") or "").strip() for r in catalogue}
+    lead = {(r.get("common_name") or "").split(" (")[0].strip().lower()
+            for r in catalogue}
+    try:
+        excluded = {(t.get("scientific_name") or "").strip() for t in json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8")
+        ).get("taxa", [])}
+    except (FileNotFoundError, json.JSONDecodeError):
+        excluded = set()
+    seen: set = set()
+    for row in rows:
+        sci = row["scientific_name"].strip()
+        name = (row.get("common_name") or "").split(" (")[0].strip().lower()
+        who = f"{pending_species.PENDING_FILE}: {sci}"
+        if (row.get("native_provinces_source") or "").strip():
+            errors.append(f"{who} carries a nativity source; a pending row "
+                          f"is waiting for one, and ingest stamps it")
+        if sci in have:
+            errors.append(f"{who} is already in the catalogue; promote it "
+                          f"with scripts/ingest_flora_nativity.py --apply or "
+                          f"delete the pending row")
+        if sci in excluded:
+            errors.append(f"{who} is in excluded_taxa.json; that call was "
+                          f"made, with an authority, and a pending row would "
+                          f"reverse it")
+        if name in lead or name in seen:
+            errors.append(f"{who} leads with the common name {name!r}, which "
+                          f"another row already uses")
+        seen.add(name)
+    return errors, warnings
 
 
 def validate_host_genus_coverage() -> tuple[list[str], list[str]]:

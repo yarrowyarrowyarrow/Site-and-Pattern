@@ -147,6 +147,17 @@ class TestTheRules(unittest.TestCase):
         self.assertFalse(llm._too_big_for(oak, 3600.0))
         self.assertFalse(llm._too_big_for({}, 216.0))
 
+    def test_a_tall_narrow_tree_is_too_big_for_a_front_yard(self):
+        """V2.86. The footprint rule reads the crown, so a 25 m Lodgepole Pine
+        with a 6 m crown passed a 216 m^2 yard."""
+        pine = {"mature_canopy_m": 6.0, "mature_height_meters": 25.0}
+        self.assertTrue(llm._too_big_for(pine, 216.0))
+        self.assertFalse(llm._too_big_for(pine, 900.0))
+        # The seed rows spell it `mature_height_m`; both are read.
+        self.assertTrue(llm._too_big_for({"mature_height_m": "20"}, 216.0))
+        willow = {"mature_canopy_m": 4.5, "mature_height_meters": 8.0}
+        self.assertFalse(llm._too_big_for(willow, 216.0))
+
     def test_nothing_is_dropped_when_everything_is_too_big(self):
         oaks = [{"mature_canopy_m": 15.0}, {"mature_canopy_m": 20.0}]
         self.assertEqual(llm._fits_the_area(oaks, 100.0), oaks)
@@ -216,6 +227,39 @@ class TestTheYard(unittest.TestCase):
         self.assertTrue(text)
         self.assertNotIn("Bur Oak", text)
         self.assertNotIn("Sitka Valerian", text)
+        # V2.86: nor a 20-25 m conifer with a narrow crown.
+        self.assertNotIn("Lodgepole Pine", text)
+        self.assertNotIn("Tamarack", text)
+
+    def test_a_species_known_only_at_the_ecozone_is_not_excluded(self):
+        """V2.86. The site filter matched the ecoregion key literally, so a
+        species with no occurrence rows and an ecozone tag -- every tree
+        promoted from the pending file before its GBIF run -- was offered
+        nowhere. The plant panel has matched along the lineage since V2.68."""
+        from src.db.plants import get_connection
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO plants (common_name, scientific_name, plant_type,"
+                " ecoregion, native_provinces, native_to_alberta,"
+                " hardiness_zone_min, hardiness_zone_max)"
+                " VALUES ('Lineage Test Tree', 'Lineagus testus', 'tree',"
+                " 'zone_prairies', 'AB', 1, 2, 7)")
+            conn.commit()
+        try:
+            lat, lng = EDMONTON
+            filters = llm._site_filters({"latitude": lat, "longitude": lng,
+                                         "ecoregion_key": "aspen_parkland",
+                                         "hardiness_zone": 4})
+            names = {r["common_name"] for r in _api.query_plants(**filters)}
+            self.assertIn("Lineage Test Tree", names)
+            literal = dict(filters, ab_ecoregion="aspen_parkland")
+            names = {r["common_name"] for r in _api.query_plants(**literal)}
+            self.assertNotIn("Lineage Test Tree", names)
+        finally:
+            with get_connection() as conn:
+                conn.execute("DELETE FROM plants WHERE scientific_name ="
+                             " 'Lineagus testus'")
+                conn.commit()
 
     def test_the_bur_oak_community_is_not_offered_in_alberta(self):
         comms = _api.list_polycultures()

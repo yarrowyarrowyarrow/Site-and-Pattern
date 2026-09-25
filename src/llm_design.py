@@ -275,7 +275,15 @@ def _site_filters(site_config: Optional[dict]) -> dict:
         out["zone"] = int(zone)
     eco = sc.get("ecoregion_key")
     if eco:
-        out["ab_ecoregion"] = str(eco)
+        # Along the lineage, as the plant panel has matched since V2.68: a
+        # species whose evidence was never finer than the ecozone is unknown
+        # for this ecoregion, not absent from it (V2.86). Only species with no
+        # occurrence-derived rows are affected -- the derived rows supersede
+        # the column in `search_plants` -- and those are exactly the ones a
+        # literal match hid: a tree promoted from `plants_pending_flora.json`
+        # before its GBIF run was otherwise never offered anywhere.
+        from src.ecoregion_tree import expand_for_filter      # noqa: PLC0415
+        out["ab_ecoregion"] = expand_for_filter([str(eco)])
     ph = sc.get("soil_ph")
     if isinstance(ph, (int, float)):
         out["soil_ph"] = float(ph)
@@ -1681,6 +1689,14 @@ _PLANTS_PER_M2 = 1.0
 #: left room for one more plant.
 _MAX_FOOTPRINT_SHARE = 0.25
 
+#: A plant taller at maturity than the side of a square of the site's area is
+#: too big for it too (V2.86). The footprint rule reads the crown, and a narrow
+#: crown let a 25 m Lodgepole Pine and a 20 m Tamarack into a 216 m^2 front
+#: yard, where the tree would shade every neighbour and fall onto one. A
+#: judgement, like the footprint share: at 216 m^2 the ceiling is ~14.7 m, at
+#: 900 m^2 it is 30 m and nothing native here is excluded by it.
+_MAX_HEIGHT_PER_SIDE = 1.0
+
 #: Trees, shrubs and vines together may cover this share of the ground by
 #: mature footprint when the density pass multiplies them (V2.85, F155).
 _WOODY_TYPES = ("tree", "shrub", "vine")
@@ -1710,7 +1726,8 @@ def _anchor_spacing_m(boundary) -> float:
 
 
 def _too_big_for(plant: dict, area_m2: float) -> bool:
-    """Would one of ``plant`` take more than its share of this site?"""
+    """Would one of ``plant`` take more than its share of this site, across the
+    ground or above it?"""
     if not area_m2 or area_m2 <= 0:
         return False
     # The same precedence as `_plant_spacing_m`, so "how big" means one thing.
@@ -1719,8 +1736,14 @@ def _too_big_for(plant: dict, area_m2: float) -> bool:
                         or plant.get("spacing_meters")
                         or plant.get("spacing_m") or 0)
     except (TypeError, ValueError):
-        return False
-    return spacing * spacing > _MAX_FOOTPRINT_SHARE * area_m2
+        spacing = 0.0
+    try:
+        height = float(plant.get("mature_height_meters")
+                       or plant.get("mature_height_m") or 0)
+    except (TypeError, ValueError):
+        height = 0.0
+    return (spacing * spacing > _MAX_FOOTPRINT_SHARE * area_m2
+            or height > _MAX_HEIGHT_PER_SIDE * math.sqrt(area_m2))
 
 
 def _fits_the_area(plants: list, area_m2: float) -> list:

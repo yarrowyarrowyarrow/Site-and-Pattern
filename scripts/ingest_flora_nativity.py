@@ -20,6 +20,11 @@ buckets:
               *Rudbeckia hirta* / *Helianthus giganteus* shape.
 ``name``      the binomial is a synonym, or VASCAN could not match it at all.
 
+And two more for the rows in ``data/plants_pending_flora.json`` (V2.86, see
+``src/pending_species.py``): ``promote``, which ``--apply`` moves into the
+catalogue with VASCAN's provinces and the source stamped, and ``hold``,
+everything short of a plain yes, which stays where it is.
+
 What it will not do
 -------------------
 **No automatic deletion.** Every removal goes through
@@ -95,7 +100,27 @@ def catalogue() -> dict:
     return out
 
 
-def compare(fetched: dict, rows: dict) -> dict:
+def _pending_path() -> Path:
+    """Where the rows waiting for this answer live (V2.86). Read off
+    `PROJECT_ROOT` at call time, like the seed files, so a test can redirect
+    both together."""
+    from src.pending_species import PENDING_FILE              # noqa: PLC0415
+    return PROJECT_ROOT / "data" / PENDING_FILE
+
+
+def load_pending() -> dict:
+    """``{scientific_name: row}`` for the rows in `src.pending_species`: whole
+    catalogue rows held back only because nobody has read their nativity from
+    a flora yet."""
+    try:
+        rows = json.loads(_pending_path().read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    return {r["scientific_name"]: r for r in rows
+            if isinstance(r, dict) and r.get("scientific_name")}
+
+
+def compare(fetched: dict, rows: dict, pending: dict | None = None) -> dict:
     """``{bucket: [proposal]}``, where a proposal explains itself.
 
     The comparison the fetcher deliberately does not make: VASCAN answers
@@ -104,9 +129,14 @@ def compare(fetched: dict, rows: dict) -> dict:
     seed files.
     """
     buckets: dict = {"confirm": [], "narrow": [], "not_here": [],
-                     "undetermined": [], "name": []}
+                     "undetermined": [], "name": [], "promote": [],
+                     "hold": []}
+    pending = pending or {}
     for name, said in sorted((fetched.get("results") or {}).items()):
         record = rows.get(name)
+        if record is None and name in pending:
+            _compare_pending(name, said, pending[name], buckets)
+            continue
         if record is None:
             continue
         claimed = {c.strip().upper()
@@ -150,8 +180,38 @@ def compare(fetched: dict, rows: dict) -> dict:
     return buckets
 
 
+def _compare_pending(name: str, said: dict, record: dict,
+                     buckets: dict) -> None:
+    """A pending row is promoted only on a plain yes: a name VASCAN accepts,
+    recorded native in Alberta or Saskatchewan. Everything else -- a synonym,
+    no match, no distribution, introduced, unstated -- holds it where it is,
+    because the whole point of the pending file is that nothing reaches the
+    catalogue on an answer short of that."""
+    proposal = {
+        "scientific_name": name,
+        "common_name": (record.get("common_name") or "").strip(),
+        "claimed": record.get("native_provinces") or "-",
+        "vascan": said.get("native_provinces") or "-",
+        "origin": said.get("origin", ""),
+        "why": said.get("why", ""),
+        "accepted_name": said.get("accepted_name", ""),
+    }
+    # The accepted name must be this name: a row filed under a name the
+    # checklist resolves elsewhere would be promoted straight into the V2.82
+    # accepted-names error, and renaming is its own decision.
+    from src.taxon_names import binomial                     # noqa: PLC0415
+    accepted = binomial(said.get("accepted_name") or "")
+    plain_yes = (not said.get("is_synonym")
+                 and (not accepted or accepted == name)
+                 and said.get("verdict") == "confirm"
+                 and said.get("origin") == "native"
+                 and bool((said.get("native_provinces") or "").strip()))
+    buckets["promote" if plain_yes else "hold"].append(proposal)
+
+
 def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
-    order = ("not_here", "name", "undetermined", "narrow", "confirm")
+    order = ("not_here", "name", "undetermined", "narrow", "confirm",
+             "promote", "hold")
     blurb = {
         "not_here": "VASCAN records these introduced here, or from neither "
                     "province. Each needs a data/excluded_taxa.json entry "
@@ -175,6 +235,12 @@ def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
                         "Decide nothing from this bucket until it is empty or "
                         "explained.",
         "confirm": "VASCAN agrees with the catalogue.",
+        "promote": "Rows waiting in data/plants_pending_flora.json that "
+                   "VASCAN records native here. --apply moves each into "
+                   "plants_master.json with VASCAN's provinces, not the "
+                   "claimed ones.",
+        "hold": "Pending rows VASCAN does not plainly confirm. They stay "
+                "pending; the reason is below each.",
     }
     for bucket in order:
         rows = buckets[bucket]
@@ -186,7 +252,7 @@ def report(buckets: dict, fetched: dict, *, limit: int = 40) -> None:
             print(f"  {row['scientific_name']:34s} "
                   f"claimed {row['claimed']:6s} -> VASCAN {row['vascan']:6s}"
                   f"{extra}")
-            if bucket in ("not_here", "name"):
+            if bucket in ("not_here", "name", "hold"):
                 print(f"      {row['why']}")
                 if row.get("accepted_name"):
                     print(f"      accepted name: {row['accepted_name']}")
@@ -246,7 +312,7 @@ def _apply(buckets: dict) -> dict:
     Those keep no source field, so their pages keep saying inferred -- which
     for them is still true.
     """
-    changed = {"narrowed": [], "sourced": 0, "ab_flag": []}
+    changed = {"narrowed": [], "sourced": 0, "ab_flag": [], "promoted": []}
     wanted = {}
     for row in buckets["narrow"]:
         wanted[row["scientific_name"]] = row["vascan"]
@@ -294,7 +360,56 @@ def _apply(buckets: dict) -> dict:
             path.write_text(
                 json.dumps(rows, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8")
+
+    changed["promoted"] = _promote(buckets.get("promote") or [])
     return changed
+
+
+def _promote(proposals: list) -> list:
+    """Move each confirmed pending row into the master catalogue (V2.86).
+
+    The province list written is **VASCAN's**, never the one on the pending
+    row, which was only what whoever wrote the row expected; the Alberta flag
+    follows it, for the reason `_apply` gives. A row already in the catalogue
+    is not added twice, so a second run changes nothing.
+    """
+    if not proposals:
+        return []
+    pending_path = _pending_path()
+    try:
+        pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return []
+    master_path = PROJECT_ROOT / "data" / PLANT_FILES[0]
+    master = json.loads(master_path.read_text(encoding="utf-8"))
+    have = {r.get("scientific_name") for r in master if isinstance(r, dict)}
+    wanted = {p["scientific_name"]: p["vascan"] for p in proposals}
+
+    promoted, keep = [], []
+    for row in pending:
+        name = row.get("scientific_name") if isinstance(row, dict) else None
+        if name not in wanted:
+            keep.append(row)
+            continue
+        if name in have:
+            continue                  # already promoted: drop the stale copy
+        provinces = wanted[name]
+        row = dict(row)
+        row["native_provinces"] = provinces
+        row["native_to_alberta"] = 1 if "AB" in provinces.split(",") else 0
+        row[SOURCE_KEY] = SOURCE_VALUE
+        master.append(row)
+        promoted.append((name, provinces))
+
+    if promoted:
+        master_path.write_text(
+            json.dumps(master, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+    if len(keep) != len(pending):
+        pending_path.write_text(
+            json.dumps(keep, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+    return promoted
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -325,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr)
         return 1
 
-    buckets = compare(fetched, catalogue())
+    buckets = compare(fetched, catalogue(), load_pending())
     print(f"VASCAN data: {fetched.get('source', 'source unrecorded')}")
     report(buckets, fetched, limit=args.limit)
 
@@ -337,8 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.apply:
         print("\nNOTHING HAS BEEN CHANGED. Removals go through "
               "data/excluded_taxa.json with an authority; renames are their "
-              "own increment. Province narrowing and the source stamp are "
-              "what --apply writes.")
+              "own increment. Province narrowing, the source stamp and "
+              "promoting confirmed pending rows are what --apply writes.")
         return 0
 
     done = _apply(buckets)
@@ -355,6 +470,14 @@ def main(argv: list[str] | None = None) -> int:
         for name, flag in done["ab_flag"]:
             print(f"      {name:34s} -> {flag}")
     print(f"  {done['sourced']} rows stamped {SOURCE_KEY}={SOURCE_VALUE!r}")
+    if done["promoted"]:
+        print(f"  {len(done['promoted'])} pending rows promoted into "
+              f"{PLANT_FILES[0]}:")
+        for name, provinces in done["promoted"]:
+            print(f"      {name:34s} {provinces}")
+        print("  They have no occurrence data yet, so no range map and no "
+              "'recorded near the yard' ranking until the GBIF seeders run "
+              "for them (see src/pending_species.py).")
     print("\nNOT applied, on purpose: removals (excluded_taxa.json with an "
           "authority), renames (their own increment), and undetermined (a "
           "lineage this reader could not follow, not a finding about a plant)."
