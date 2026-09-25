@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (counted at V2.85): 34 code features · 7 data jobs · 4 legacy-ledger items.**
+**Totals (counted at V2.86): 35 code features · 10 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -40,7 +40,7 @@ possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge an
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
 recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
-F159 opened. **V2.85**: F154 and F155 shipped, F160 opened.)*
+F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened.)*
 
 ---
 
@@ -242,6 +242,9 @@ jobs that move it, with the tooling that already exists.*
 | ~~**Merge the synonym duplicates**~~ | ✅ **Shipped across V2.80 and V2.82.** The Stiff Goldenrod pair was resolved by the archive (`KNOWN_NATIVITY_CONFLICTS` is empty), *Achillea millefolium* merged into *A. borealis*, and V2.82 merged five more pairs VASCAN showed to be one taxon (422 → 417). `validate_accepted_names` now fails the gate on a new one |
 | **Manitoba** | *"'Prairie provinces' usually includes MB and some of the same ecozones extend through SW MB."* Fair, and the scope is one line: `tools/ecoregions/common.py` sets `SUBJECT_PROVINCES = ("Alberta", "Saskatchewan")`. V2.75 removed the MB filter chip the site was offering on the strength of **one species**, and said the limit plainly instead. Doing it properly is a `tools/ecoregions/` rebuild with MB as a subject province, a wider window and GBIF bbox, and a full re-derivation. Note `interlake_plain` already ships as the SK fragment of a mostly-Manitoba ecoregion, and is the only one of the 24 keys with **zero** species rows |
 | ~~**Publish the occurrence points**~~ | ✅ **Shipped in V2.80 as F147**: 171,896 marks over 426 species, herbarium specimens and field observations as separate layers with a no-JavaScript toggle, CC-BY-NC admitted for a coordinate but not for a photograph on the author's V2.79 reasoning. Plan: [`V2.80-only-facts-backed-by-data`](plans/V2.80-only-facts-backed-by-data.md) |
+| **Promote the seven staged trees (F161)** | Written in V2.86 and held in `data/plants_pending_flora.json`, because this catalogue ships a species only with its nativity read from a flora and the session could not reach VASCAN. The author's run: `fetch_flora_nativity.py --from-archive <zip>`, then `ingest_flora_nativity.py` (report), then `--apply`, then the GBIF seeders for range maps. **Mind `--resume`** on the GBIF step: without it a `--species` run replaces every other species' rows. The full sequence, with why each flag, is the hand-over in [`V2.86-trees-for-where-the-oak-is-not`](plans/V2.86-trees-for-where-the-oak-is-not.md) |
+| **Bur Oak's Saskatchewan fauna (F165)** | 2 documented caterpillar-host edges against Chokecherry's 17: the edge sources were Alberta-centric and the oak is a Saskatchewan tree. The 26 cached GloBI candidates are mostly gall wasps the registry does not carry, and two are records the filter rightly refused. A sourcing pass on a machine with egress |
+| **Black Hawthorn's thorns (F167)** | `has_thorns` is unset, so the kid-safe filter passes a thorny shrub. One field on one row, found in V2.86 |
 | **Bird morphology** | All 24 rows ship `verified = 0` — entered from published literature in a session with no network. **Wing area is null for every row**, the one bird measurement not routinely published, currently inferred from span and a per-style aspect ratio. Needs a session with egress: AVONET (Tobias et al. 2022, CC BY 4.0) and Dunning's *CRC Handbook of Avian Body Masses* |
 | ~~**Peace River Parkland**~~ | ✅ **Arrived with the survey in V2.67**, as an Alberta natural subregion of Peace Lowland rather than as a hand-added polygon — which is why it was right to hold it in V2.51: drawing one more shape would have put a *guess* where a published boundary was available, in a layer that decides what real properties get recommended. Selectable in the filter since V2.68, along with the other 20 subregions |
 | ~~**Real CEC ecoregion polygons**~~ | ✅ **Shipped in V2.66–V2.68.** `tools/ecoregions/` is a six-stage pipeline (fetch → inspect → harmonize → validate → render → export) and the layer is the **National Ecological Framework v2.2** rather than CEC: 24 ecoregions in 6 ecozones clipped to Alberta and Saskatchewan, with Alberta's 21 natural subregions joined **spatially, never by name**. Two of the three sources refuse a proxied session, so the author ran those stages. Adoption cost almost no code because V2.38 made the polygon file the vocabulary — but it did expose that `lookup_ecoregions` had never handled MultiPolygon, answering *you are in no ecoregion* rather than raising. The heuristic `ab_ecoregion` tags were re-derived by measured overlap in V2.68, and three of the six old regions turned out misplaced rather than coarse |
@@ -299,6 +302,19 @@ is for, or is wrong in a way a reader can see. Reasoning per row in the
 | **F159** | **The German yellowjacket is filed as native.** *Vespula germanica* carries `ab_native = 1` and "Ground yellowjackets, native"; it is introduced in North America. Found in V2.84 while moving the wasps, and left for its own change because a nativity correction is a decision, as *Rudbeckia hirta* was | S | Low — reseed | P9 |
 | ~~**F154**~~ | ✅ **Shipped in V2.85.** Province-aware nativity, locality ranking from the 0.25° grid (`src/site_fit.py`), communities and repairs under the same rules. Plan: [`V2.85-recommend-for-the-yard`](plans/V2.85-recommend-for-the-yard.md) | — | Done | — |
 | ~~**F155**~~ | ✅ **Shipped in V2.85.** 4–21 → 64–121 plants on a 216 m² yard, more species, no single species above a quarter. Plan: [`V2.85-recommend-for-the-yard`](plans/V2.85-recommend-for-the-yard.md) | — | Done | — |
+
+---
+
+## N · Found by answering the Bur Oak question (V2.86)
+
+*Which native trees can do what Bur Oak does, for Alberta and for small yards. The answer was a group of genera; asking it found four things wrong. Reasoning in [`plans/V2.86-trees-for-where-the-oak-is-not`](plans/V2.86-trees-for-where-the-oak-is-not.md). The data rows it opened (F161, F165, F167) are in J.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F166** | **Larval-host records by genus.** The Lepidoptera attribute file names host genera (*Salix* for ten species, *Populus* for nine) that `src/db/derived_edges.py` never expands, as it does for nectar and pollen. Doing so would give a new tree edges on arrival and would restate published genus-level records, not invent them | M | Medium — moves the edge layer and every score that reads it | P3, P9 |
+| ~~**F162**~~ | ✅ **Shipped in V2.86.** Birch and oak join the keystone genera; `KEYSTONE_GENERA` gated both ways; schema v87 | — | Done | — |
+| ~~**F163**~~ | ✅ **Shipped in V2.86.** A tree taller than the lot is wide is too big for it. Calgary's yard 64 → 119 plants once its Lodgepole Pine went | — | Done | — |
+| ~~**F164**~~ | ✅ **Shipped in V2.86.** "Burr Oak" finds Bur Oak, desktop and website | — | Done | — |
 
 ---
 
