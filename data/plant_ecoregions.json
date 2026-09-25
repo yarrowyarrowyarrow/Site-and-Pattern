@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated": "2026-09-01",
-  "source": "GBIF occurrence search + PRESERVED_SPECIMEN pass, retrieved 2026-08-24",
+  "generated": "2026-09-25",
+  "source": "GBIF occurrence search, retrieved 2026-09-25",
   "min_records": 3,
   "boundary_margin_m": 900.0,
   "tally": {
-    "counted": 340293,
-    "outside": 171934,
-    "unsettled": 19045
+    "counted": 2550,
+    "unsettled": 165,
+    "outside": 2216
   },
   "comment": "Per-species ecoregion membership derived from georeferenced occurrence records by scripts/seed_ecoregion_ranges.py. Keyed by scientific name because plant ids are not stable across a reseed. Geographic ecoregions only — riparian and wet_meadow are site-scale moisture niches and are not derivable from a coordinate. A record counts for a region only where it lies more than 900 m inside it, which is the outlines' own positional accuracy: nearer than that, which side of the line a record falls on is not something this data can settle, so it counts for no region rather than for a guess.",
   "species": {
@@ -63,6 +63,73 @@
         "ecoregion": "eastern_continental_ranges",
         "occurrences": 13,
         "confidence": "medium"
+      }
+    ],
+    "Acer negundo": [
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 781,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 393,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 250,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 94,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 55,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mid_boreal_uplands",
+        "occurrences": 19,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "peace_lowland",
+        "occurrences": 19,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 11,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "cypress_upland",
+        "occurrences": 9,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "eastern_continental_ranges",
+        "occurrences": 7,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "mid_boreal_lowland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "wabasca_lowland",
+        "occurrences": 4,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "western_alberta_upland",
+        "occurrences": 3,
+        "confidence": "low"
       }
     ],
     "Achillea alpina": [
@@ -5140,6 +5207,38 @@
         "confidence": "low"
       }
     ],
+    "Crataegus chrysocarpa": [
+      {
+        "ecoregion": "cypress_upland",
+        "occurrences": 78,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 77,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 27,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "boreal_transition",
+        "occurrences": 5,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "peace_lowland",
+        "occurrences": 3,
+        "confidence": "low"
+      }
+    ],
     "Crataegus douglasii": [
       {
         "ecoregion": "cypress_upland",
@@ -9346,6 +9445,33 @@
         "confidence": "medium"
       }
     ],
+    "Juniperus scopulorum": [
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 56,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 18,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "eastern_continental_ranges",
+        "occurrences": 8,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 8,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 8,
+        "confidence": "medium"
+      }
+    ],
     "Koeleria macrantha": [
       {
         "ecoregion": "mixed_grassland",
@@ -12668,6 +12794,28 @@
         "confidence": "low"
       }
     ],
+    "Populus angustifolia": [
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 65,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 24,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 14,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "northern_continental_divide",
+        "occurrences": 7,
+        "confidence": "low"
+      }
+    ],
     "Populus balsamifera": [
       {
         "ecoregion": "aspen_parkland",
@@ -12742,6 +12890,28 @@
       {
         "ecoregion": "western_boreal",
         "occurrences": 4,
+        "confidence": "low"
+      }
+    ],
+    "Populus deltoides": [
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 189,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 139,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 7,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 6,
         "confidence": "low"
       }
     ],
@@ -14666,6 +14836,28 @@
       {
         "ecoregion": "boreal_transition",
         "occurrences": 4,
+        "confidence": "low"
+      }
+    ],
+    "Salix amygdaloides": [
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 24,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "fescue_grassland",
+        "occurrences": 22,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 11,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "mid_boreal_lowland",
+        "occurrences": 3,
         "confidence": "low"
       }
     ],
@@ -17369,6 +17561,33 @@
       },
       {
         "ecoregion": "churchill_river_upland",
+        "occurrences": 3,
+        "confidence": "low"
+      }
+    ],
+    "Ulmus americana": [
+      {
+        "ecoregion": "moist_mixed_grassland",
+        "occurrences": 35,
+        "confidence": "high"
+      },
+      {
+        "ecoregion": "aspen_parkland",
+        "occurrences": 18,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "mixed_grassland",
+        "occurrences": 9,
+        "confidence": "medium"
+      },
+      {
+        "ecoregion": "mid_boreal_lowland",
+        "occurrences": 6,
+        "confidence": "low"
+      },
+      {
+        "ecoregion": "mid_boreal_uplands",
         "occurrences": 3,
         "confidence": "low"
       }
