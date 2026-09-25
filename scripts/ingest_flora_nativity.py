@@ -469,7 +469,12 @@ def main(argv: list[str] | None = None) -> int:
               f"(this moves the Habitat Value Score):")
         for name, flag in done["ab_flag"]:
             print(f"      {name:34s} -> {flag}")
-    print(f"  {done['sourced']} rows stamped {SOURCE_KEY}={SOURCE_VALUE!r}")
+    # Counts rows already in the catalogue; a promoted row is stamped as it
+    # moves and is listed below instead. The author read "0 rows stamped" on
+    # the V2.86 promotion as a possible failure (it was not), so say which.
+    print(f"  {done['sourced']} catalogue rows newly stamped "
+          f"{SOURCE_KEY}={SOURCE_VALUE!r} (rows already stamped are not "
+          f"counted; promoted rows are stamped and listed below)")
     if done["promoted"]:
         print(f"  {len(done['promoted'])} pending rows promoted into "
               f"{PLANT_FILES[0]}:")

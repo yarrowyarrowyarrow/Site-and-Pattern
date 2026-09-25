@@ -473,7 +473,12 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # genera, were the only gaps. Designs holding a birch or the oak gain keystone
 # credit in the Habitat Value Score (15 of its 100 points, 3 per keystone
 # species up to five).
-_SCHEMA_VERSION = 87
+# v88 (V2.87): the seven trees staged in V2.86 promoted by the author's VASCAN
+# run, each with VASCAN's provinces (Rocky Mountain Juniper and Narrowleaf
+# Cottonwood came back AB,SK where the rows had said AB), plus their GBIF
+# ecoregion rows, range cells and occurrence marks. Without this bump no
+# existing install would ever see them.
+_SCHEMA_VERSION = 88
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

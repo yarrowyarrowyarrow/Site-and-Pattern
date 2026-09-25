@@ -1515,6 +1515,25 @@ def validate_plant_images() -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+#: The occurrence-derived files, keyed by scientific name. They are rebuilt
+#: from `data/fetched/plant_occurrences.json`, which keeps every record ever
+#: harvested -- including species later excluded -- so a full rebuild
+#: republishes them unless the seeders skip them (V2.87, where one did).
+DERIVED_BY_SCIENTIFIC = ("plant_ecoregions.json", "plant_ranges.json",
+                         "plant_occurrence_points.json")
+
+
+def excluded_scientific_names() -> set:
+    """The binomials in ``data/excluded_taxa.json``, for the seeders to skip."""
+    try:
+        blob = json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set()
+    return {(t.get("scientific_name") or "").strip()
+            for t in blob.get("taxa") or [] if isinstance(t, dict)} - {""}
+
+
 def validate_excluded_taxa() -> tuple[list[str], list[str]]:
     """A species removed on purpose must stay removed.
 
@@ -1589,6 +1608,19 @@ def validate_excluded_taxa() -> tuple[list[str], list[str]]:
             if entry is not None:
                 _flag(rec.get("scientific_name") or rec.get("common_name")
                       or "?", entry, name)
+
+    # The derived files too (V2.87). A full rebuild from the point cache put six
+    # excluded species back into the range and occurrence files, and nothing
+    # here looked at them.
+    for name in DERIVED_BY_SCIENTIFIC:
+        try:
+            blob_d = json.loads((DATA_DIR / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for sci in (blob_d.get("species") or {}):
+            entry = by_sci.get((sci or "").strip().lower())
+            if entry is not None:
+                _flag(sci, entry, name)
 
     try:
         edges = json.loads(

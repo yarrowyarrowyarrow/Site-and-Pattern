@@ -1,14 +1,16 @@
 """
 tests/test_pending_species.py — trees waiting for a flora, and the keystone
-genera (V2.86).
+genera (V2.86; the trees promoted in V2.87).
 
 Seven native trees were written in a session that could not reach VASCAN.
 Since V2.80 a species ships only with its nativity read from a flora, so they
-wait in `data/plants_pending_flora.json` until the archive run promotes them.
-These pin that the wait is real (nothing seeds from the file) and that the
-rows are held to the catalogue's rules while they wait.
+waited in `data/plants_pending_flora.json` until the author's archive run
+promoted them (V2.87). These pin that the wait is real (nothing seeds from the
+file), that a pending row is held to the catalogue's rules, and that what
+arrived carries VASCAN's answer rather than the one written on the row.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -22,24 +24,59 @@ import src.db.plants as _plants_mod  # noqa: E402
 from src import data_quality as dq  # noqa: E402
 from src import pending_species  # noqa: E402
 
-TREES = {"Salix amygdaloides", "Populus deltoides", "Populus angustifolia",
-         "Acer negundo", "Crataegus chrysocarpa", "Juniperus scopulorum",
-         "Ulmus americana"}
+#: VASCAN's provinces for the seven, as the V2.87 run wrote them. Two differ
+#: from what the pending rows said (Juniper and Narrowleaf Cottonwood were
+#: written AB), which is the point of writing the checklist's answer.
+TREES = {"Salix amygdaloides": "AB,SK", "Populus deltoides": "AB,SK",
+         "Populus angustifolia": "AB,SK", "Acer negundo": "AB,SK",
+         "Crataegus chrysocarpa": "AB,SK", "Juniperus scopulorum": "AB,SK",
+         "Ulmus americana": "SK"}
 
 
-class TestTheShippedPendingRows(unittest.TestCase):
+def _catalogue() -> dict:
+    path = os.path.join(os.path.dirname(__file__), "..", "data",
+                        "plants_master.json")
+    with open(path, encoding="utf-8") as fh:
+        return {r["scientific_name"]: r for r in json.load(fh)}
 
-    def test_the_seven_trees_are_waiting(self):
-        self.assertEqual(set(pending_species.names()), TREES)
+
+class TestTheTreesArrived(unittest.TestCase):
+
+    def test_the_pending_file_is_empty_again(self):
+        self.assertEqual(pending_species.names(), [])
+
+    def test_each_tree_carries_vascans_answer(self):
+        rows = _catalogue()
+        for sci, provinces in TREES.items():
+            self.assertIn(sci, rows)
+            self.assertEqual(rows[sci]["native_provinces"], provinces, sci)
+            self.assertEqual(rows[sci]["native_provinces_source"], "flora",
+                             sci)
+            self.assertEqual(rows[sci]["native_to_alberta"],
+                             1 if "AB" in provinces else 0, sci)
+
+    def test_each_tree_has_occurrence_data(self):
+        """The GBIF run the hand-over asked for: without it a tree has no range
+        map and ranks as unrecorded near every yard."""
+        from src.ecoregion_ranges import parse_document as regions
+        from src.species_range import parse_document as ranges
+        here = os.path.join(os.path.dirname(__file__), "..", "data")
+        with open(os.path.join(here, "plant_ranges.json"),
+                  encoding="utf-8") as fh:
+            grid = ranges(json.load(fh))
+        with open(os.path.join(here, "plant_ecoregions.json"),
+                  encoding="utf-8") as fh:
+            eco = regions(json.load(fh))
+        for sci in TREES:
+            self.assertTrue(grid.get(sci), sci)
+            self.assertTrue(eco.get(sci), sci)
+
+
+class TestThePendingRowsTheGateReads(unittest.TestCase):
 
     def test_they_pass_the_catalogues_own_rules(self):
         errors, _ = dq.validate_pending_species()
         self.assertEqual(errors, [])
-
-    def test_none_claims_a_source_it_has_not_got(self):
-        for row in pending_species.load():
-            self.assertFalse(row.get("native_provinces_source"),
-                             row["scientific_name"])
 
     def test_the_gate_reads_them(self):
         """A validator nobody calls is a comment."""
@@ -51,18 +88,53 @@ class TestTheShippedPendingRows(unittest.TestCase):
 
 class TestNothingSeedsFromThePendingFile(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        _plants_mod._DATA_DIR = _TMP_DIR
-        _plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
-        _plants_mod.init_db()
+    def test_a_pending_row_never_reaches_the_database(self):
+        tmp = tempfile.mkdtemp(prefix="pending_seed_")
+        pending = os.path.join(tmp, "plants_pending_flora.json")
+        with open(pending, "w", encoding="utf-8") as fh:
+            json.dump([{"common_name": "Testing Tree",
+                        "scientific_name": "Testus arbor",
+                        "plant_type": "tree", "native_provinces": "AB"}], fh)
+        with mock.patch.object(pending_species, "path",
+                               return_value=__import__("pathlib").Path(
+                                   pending)):
+            self.assertEqual(pending_species.names(), ["Testus arbor"])
+            _plants_mod._DATA_DIR = _TMP_DIR
+            _plants_mod._DB_PATH = os.path.join(_TMP_DIR,
+                                                "permadesign_test.db")
+            _plants_mod.init_db()
+            from src.db.plants import get_connection
+            with get_connection() as conn:
+                got = {r[0] for r in conn.execute(
+                    "SELECT scientific_name FROM plants")}
+        self.assertNotIn("Testus arbor", got)
+        self.assertIn("Ulmus americana", got)
 
-    def test_no_pending_tree_is_in_the_database(self):
-        from src.db.plants import get_connection
-        with get_connection() as conn:
-            got = {r[0] for r in conn.execute(
-                "SELECT scientific_name FROM plants")}
-        self.assertEqual(got & TREES, set())
+
+class TestTheRebuildSkipsExcludedSpecies(unittest.TestCase):
+    """V2.87. The point cache keeps every record ever harvested, and a full
+    rebuild of the range grid republished six excluded species."""
+
+    def test_no_derived_file_carries_an_excluded_species(self):
+        errors, _ = dq.validate_excluded_taxa()
+        self.assertEqual(errors, [])
+
+    def test_the_range_seeder_skips_them(self):
+        import scripts.seed_species_ranges as S
+        seen = {}
+
+        def fake_derive(cache, **_kw):
+            seen.update(cache)
+            return {}, {}
+        cache = {"Helianthus annuus": [(50.0, -110.0)],
+                 "Testus arbor": [(50.0, -110.0)]}
+        with mock.patch("scripts.seed_ecoregion_ranges.read_cache",
+                        return_value=cache), \
+                mock.patch.object(S, "derive", side_effect=fake_derive), \
+                mock.patch("builtins.print"):
+            S.main(["--dry-run", "--quiet"])
+        self.assertIn("Testus arbor", seen)
+        self.assertNotIn("Helianthus annuus", seen)
 
 
 class TestWhatAPendingRowMayNotBe(unittest.TestCase):

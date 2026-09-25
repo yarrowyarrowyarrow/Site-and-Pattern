@@ -78,6 +78,15 @@ def main(argv: list[str] | None = None) -> int:
               f"scripts/seed_ecoregion_ranges.py on a machine with egress "
               f"first.", file=sys.stderr)
         return 1
+    # The cache keeps every record ever harvested, including species later
+    # excluded (data/excluded_taxa.json); rebuilding from it republished six
+    # of them in V2.87 until this skipped them. The gate now fails on any.
+    from src.data_quality import excluded_scientific_names
+    excluded = sorted(excluded_scientific_names() & set(cache))
+    if excluded:
+        cache = {n: v for n, v in cache.items() if n not in set(excluded)}
+        print(f"Skipping {len(excluded)} excluded species the cache still "
+              f"holds: {', '.join(excluded)}")
     if args.species:
         missing = [n for n in args.species if n not in cache]
         if missing:
