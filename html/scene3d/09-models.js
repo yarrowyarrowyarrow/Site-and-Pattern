@@ -221,18 +221,43 @@ function glbTreeArch(cls, ck, profId, form, tier) {
   return { branchGeo: t.bark, foliageGeo: t.foliage, vertexColorBark: true };
 }
 
-// The parts bag for one (form, variant key) unit, or the neutral 'broad_1' unit
-// the generator always emits. Shared by the herb and shrub lookups: both files
-// hold one unit per (blade class, grain class) the catalogue actually uses, so a
-// key the manifest doesn't carry means the two classifiers have drifted apart
-// (02-plants.js variantKeyFor ↔ assetlib/conventions.py) — degrade to neutral
-// rather than dropping the plant.
+// The parts bag for one (form, variant key) unit. Shared by the herb and shrub
+// lookups: both files hold one unit per (blade, grain[, aspect[, branch]]) the
+// catalogue actually uses, so a key the manifest doesn't carry means the two
+// classifiers have drifted apart (02-plants.js variantKeyFor ↔
+// assetlib/conventions.py) — degrade to the NEAREST baked unit rather than
+// dropping the plant.
+//
+// V2.88: this used to fall back to `map.broad_1`, which herb files stopped
+// carrying when their keys grew aspect and branch segments (V2.34-V2.35), so a
+// miss landed on unit 0 of the file: Heart-leaved Alexanders, a compound leaf,
+// drew as small broad simple leaves. Nearest keeps the leaf outline first.
+function _variantParts(k) {
+  const m = /^([a-z]+)_(\d)(?:_a(\d))?(?:_b(\d))?$/.exec(k || '');
+  return m ? { blade: m[1], grain: +m[2], a: m[3] == null ? 1 : +m[3],
+               b: m[4] == null ? 0 : +m[4] } : null;
+}
+function _nearestVariantKey(map, vkey) {
+  const want = _variantParts(vkey) || _variantParts('broad_1');
+  let best = null, bestScore = -Infinity;
+  for (const k of Object.keys(map).sort()) {
+    const h = _variantParts(k);
+    if (!h) continue;
+    const score = (h.blade === want.blade ? 100 : 0) - 10 * Math.abs(h.grain - want.grain)
+                - 3 * Math.abs(h.a - want.a) - Math.abs(h.b - want.b);
+    if (score > bestScore) { best = k; bestScore = score; }
+  }
+  return best;
+}
 function _glbVariant(key, vkey) {
   const rec = MODEL_PLANTS.get(key);
   if (!rec || !rec.variants || !rec.variants.length) return null;
   const map = rec.variantKeys;
-  let i = map && vkey != null && map[vkey] != null ? map[vkey]
-        : (map ? map.broad_1 : null);
+  let i = null;
+  if (map) {
+    const k = (vkey != null && map[vkey] != null) ? vkey : _nearestVariantKey(map, vkey);
+    i = k == null ? null : map[k];
+  }
   if (i == null) i = 0;
   return rec.variants[i % rec.variants.length] || null;
 }
@@ -276,7 +301,8 @@ function glbLayerVariantIndex(kind, vkey) {
   const rec = MODEL_PLANTS.get('layer.' + kind);
   const map = rec && rec.variantKeys;
   if (!map) return null;
-  const i = vkey != null && map[vkey] != null ? map[vkey] : map.broad_1;
+  const i = vkey != null && map[vkey] != null ? map[vkey]
+          : map[_nearestVariantKey(map, vkey)];
   return i == null ? null : i;
 }
 window.glbLayerCount = glbLayerCount;
@@ -388,6 +414,70 @@ function _glbFaunaMat(name, app, kind) {
   }
 }
 
+// A described bee's OWN tergite colours, T1 to T6 front to back (V2.88).
+//
+// `band_colours` (schema v58) reached only the fly-as-a-bee avatar
+// (06-fly.js makeBeeAvatar). The ambient bees are this baked model, whose three
+// generic `Band` shells are the THORAX colour, so 54 of the 69 described bees
+// showed the wrong pattern and the American Bumble Bee, thorax recorded black,
+// was a solid black bee. The generic shells go and the abdomen is ringed one
+// band per recorded tergite instead, each following the abdomen's taper, as
+// CHILDREN of the Abdomen node so the build's shape rescale carries them. The
+// tip takes the last band's colour, as a bumble bee's tail hair does.
+function _glbBeeBands(byName, app) {
+  const cols = Array.isArray(app.band_colours) ? app.band_colours : null;
+  const abd = byName('Abdomen');
+  if (!cols || !cols.length || !abd || !abd.geometry) return;
+  for (let i = 0; i < 3; i++) {
+    const band = byName('Band' + i);
+    if (band) band.visible = false;
+  }
+  abd.geometry.computeBoundingBox();
+  const bb = abd.geometry.boundingBox;
+  const xr = (bb.max.x - bb.min.x) / 2, yr = (bb.max.y - bb.min.y) / 2;
+  const cy = (bb.min.y + bb.max.y) / 2, zr = (bb.max.z - bb.min.z) / 2;
+  const cz = (bb.min.z + bb.max.z) / 2;
+  // The body axis runs +Z from the thorax (Blender +Y forward = -Z here), so
+  // T1 is the ring nearest the waist. Each tergite is a SLEEVE — a short
+  // tapered cylinder following the abdomen's profile at both of its ends — not
+  // a ball: balls bulge at their centres and let the abdomen show between them,
+  // which reads as thin stripes on a dark bee rather than as segments.
+  // The thorax overlaps the front of the abdomen, so the tergites start where
+  // the abdomen EMERGES from it; started at the abdomen's own front, T1 and T2
+  // were drawn inside the thorax and a bee lost two of its six bands.
+  const th = byName('Body');
+  let z0 = bb.min.z + zr * 0.08;
+  if (th && th.geometry) {
+    // Measured in the ABDOMEN's frame. The shipped bee bakes every node
+    // transform into its geometry, so this is identity today; it keeps a model
+    // exported with a node offset from misplacing every ring without a sound.
+    th.geometry.computeBoundingBox();
+    th.updateWorldMatrix(true, false); abd.updateWorldMatrix(true, false);
+    const tb = th.geometry.boundingBox.clone().applyMatrix4(th.matrixWorld)
+      .applyMatrix4(abd.matrixWorld.clone().invert());
+    z0 = Math.max(z0, Math.min(cz, tb.max.z - zr * 0.05));
+  }
+  const step = (bb.max.z - zr * 0.04 - z0) / cols.length;
+  const prof = (z) => 1.05 * Math.sqrt(Math.max(0.12, 1 - ((z - cz) / zr) ** 2));
+  const met = { flat: true, metal: !!app.metallic };
+  for (let i = 0; i < cols.length; i++) {
+    const za = z0 + step * i, zb = za + step;
+    // Cylinder axis is +Y; rotateX(+90deg) turns its top toward +Z (the rear).
+    const geo = new THREE.CylinderGeometry(prof(zb), prof(za), step, 16, 1);
+    geo.rotateX(Math.PI / 2);
+    const ring = new THREE.Mesh(geo, _cmat(cols[i], met));
+    ring.scale.set(xr, yr, 1);
+    ring.position.set((bb.min.x + bb.max.x) / 2, cy, (za + zb) / 2);
+    ring.name = 'Tergite' + (i + 1);
+    abd.add(ring);
+  }
+  const tip = byName('Tip');
+  if (tip && tip.isMesh) {
+    if (tip.material && tip.material.dispose) tip.material.dispose();
+    tip.material = _cmat(cols[cols.length - 1], met);
+  }
+}
+
 // Build one critter from its GLB template: deep-clone (cloning geometry too,
 // so disposeWildlife's per-critter geometry.dispose() stays correct), swap
 // every material for a viewer-built one keyed by the GLB material's name,
@@ -430,6 +520,7 @@ function glbCritter(kind, app) {
     const band = byName('Band' + i);
     if (band) band.visible = i < nb;
   }
+  if (kind === 'bee') _glbBeeBands(byName, app);
   const spots = byName('Spots');
   if (spots) spots.visible = !!app.spots;
   const beak = byName('Beak');

@@ -204,7 +204,9 @@ function buildFruit(plants, month, terrain) {
     const pos = [], col = [];
     for (const p of byForm[form]) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
-      const h = Math.max(0.1, p.height_m), rad = Math.max(0.1, p.canopy_m * 0.5);
+      // The drawn height (04-quality.js bodyHeightOf), not the recorded one:
+      // on a groundcover capped at 18 cm the fruit hung in the air (V2.88).
+      const h = Math.max(0.05, bodyHeightOf(p)), rad = Math.max(0.1, p.canopy_m * 0.5);
       _c.set(p.fruit_color);
       const seed = hashPid(p.plant_id || 1);
       const base = p.plant_type === 'tree' ? 18 : p.plant_type === 'shrub' ? 15 : 8;

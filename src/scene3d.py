@@ -199,7 +199,13 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int, *,
         # only would put the two classifiers in different classes for exactly
         # the species that have no data. Absent means absent, and both ends then
         # land on the neutral middle class.
-        "mature_canopy_m": round(float(plant.get("mature_canopy_m") or 0), 3),
+        #
+        # NOT rounded (V2.88). The generator divides by 1.5 x spacing exactly as
+        # computed, 0.6000000000000001 for a 0.4 m spacing; rounding it here to
+        # 0.6 put five species whose height / canopy is exactly 1.0 or 1.5 in
+        # the class above the one baked for them, and the lookup then fell back
+        # to an unrelated unit. Unrounded, both sides divide the same doubles.
+        "mature_canopy_m": float(plant.get("mature_canopy_m") or 0),
         "canopy_m": round(float(mature_c) * factor * spread, 3),
         "presence_opacity": round(presence_factor(role, year, ytm), 3),
     }

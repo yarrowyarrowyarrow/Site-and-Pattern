@@ -375,6 +375,57 @@ class ModelAssetsTest(unittest.TestCase):
         # a floor set one row under it fails on every legitimate removal.
         self.assertGreater(checked, 250, "catalogue stopped resolving")
 
+    def test_the_viewer_asks_for_what_was_baked(self):
+        """The same check from the VIEWER's side (V2.88).
+
+        The test above computes each key the generator's way, so it was
+        guarding the generator against itself. The viewer computes its key from
+        the numbers the SCENE sends, and `src/scene3d.py` rounded the recorded
+        canopy to 3 decimals while the generator divided by 1.5 x spacing as
+        computed (0.6000000000000001). Five species whose height / canopy is
+        exactly 1.0 or 1.5 landed in the class above the one baked for them,
+        and the lookup fell back to an unrelated unit, while this file stayed
+        green. So: build each species' 3D state the way the app does and ask
+        for the key the viewer would.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        from src.scene3d import plant_3d_state            # noqa: PLC0415
+        catalogue = json.loads(_read(os.path.join(_ROOT, "data",
+                                                  "plants_master.json")))
+        missing, checked = [], 0
+        for family, (types, form_of, prefix) in conventions.FAMILY_FORMS.items():
+            for rec in catalogue:
+                if rec.get("plant_type") not in types:
+                    continue
+                form = form_of(rec)
+                # db.plants._row_to_dict: canopy defaults to 1.5 x spacing.
+                sp = rec.get("spacing_m")
+                st = plant_3d_state(
+                    dict(rec, mature_height_meters=rec.get("mature_height_m"),
+                         mature_canopy_m=float(sp) * 1.5 if sp else None),
+                    0.0, 0.0, 0)
+                h, c = st["mature_height_m"], st["mature_canopy_m"]
+                blade = conventions.blade_class(rec.get("leaf_shape"))
+                grain = conventions.grain_class(rec.get("leaf_size_cm"), h, family)
+                if family == "herb" and form in conventions.ASPECT_HERB_FORMS:
+                    want = conventions.herb_variant_key(
+                        blade, grain, conventions.herb_aspect_class(form, h, c),
+                        conventions.branch_class(rec.get("stem_branching"))
+                        if form in conventions.BRANCH_HERB_FORMS else None)
+                else:
+                    want = conventions.variant_key(blade, grain)
+                keys = self.mf["plants"].get(f"{prefix}.{form}", {}).get(
+                    "variant_keys", {})
+                if want not in keys:
+                    missing.append(f"{rec.get('scientific_name')} -> "
+                                   f"{prefix}.{form} {want}")
+                checked += 1
+        self.assertEqual(missing, [], "the viewer would ask for units nobody "
+                                      "baked; its lookup then falls back")
+        self.assertGreater(checked, 250, "catalogue stopped resolving")
+
     def test_layer_and_fauna_keys_match_viewer(self):
         layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
                   if k.startswith("layer.")}

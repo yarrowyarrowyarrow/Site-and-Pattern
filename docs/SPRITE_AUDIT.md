@@ -650,3 +650,119 @@ Ranked by value per hour, because the bottleneck is data, not geometry:
    numbers are measured per release instead of argued about.
 4. **Licence-clean photographs**, which the tuning in (1) needs as its
    reference and which roadmap F72 wants anyway.
+
+## Sixth pass — V2.87–V2.88 (every species, and what the viewer was reading)
+
+The fifth pass covered about 140 animals. By V2.87 the catalogue carried **424
+plants and 1,144 animals**, most of the animals added by the V2.59–V2.65 fauna
+expansion with defaults for a look. So this pass checked all of them, and
+checked them differently: every plant rendered through the real viewer (the
+sprite-gallery path, baked models loaded, Balanced, July, mature), every animal
+built with the viewer's own model loader, the viewer's model-selection logic
+reproduced in Python over the shipped catalogue, and — because what a user sees
+is not the catalogue but a design — `scene_wildlife.wildlife_for_scene` run on
+400 random designs of 8 to 30 plants, by day and by night. The full report,
+with every species and a contact sheet per family, is
+[published separately](https://claude.ai/artifact/4DxfwtbLxQsLHWMdUkELXD).
+
+**The scores went down, and that is the measurement improving, not the models
+getting worse.** The fifth pass never measured bloom size, and most of today's
+animals did not exist then.
+
+| Family | Fidelity | Distinctness | Main problem |
+|---|---|---|---|
+| Deciduous trees (13) | 5 | 4 | Cottonwoods borrow the aspen; elm and box elder get the default |
+| Conifers (7) | 5 | 3 | Pines read as bottle brushes; spruce, fir, Douglas-fir and juniper share a look |
+| Shrubs (54) | 5 | 4 | Willows on the smallest leaf variant look bare; stretched up to 2.5x |
+| Wildflower bodies (215) | 4 | 3 | Rosettes are one dark lettuce; asters look like grass |
+| Flowers in bloom | 3 | 5 | **Cluster flowers drawn at cluster size** — fixed in V2.88, see below |
+| Grasses, sedges, rushes (80) | 3 | 1 | One wide-bladed fan in three proportions |
+| Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft |
+| Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts |
+| Climbers (6) | 2 | 2 | Free-standing leafy columns |
+| Fruit (44 species) | 4 | 6 | Shapes right; every fruit 17 to 34 cm across |
+| Bees (338) | 5 | 4 | Recorded bands not drawn — fixed in V2.88 |
+| Butterflies | 4 | 4 | Flat colour, no pattern |
+| Moths (189) | 2 | 2 | 159 drawn as butterflies — fixed in V2.88 |
+| Other insects (408) | 2 | 1 | One hoverfly for wasps, beetles, bugs and ants — partly fixed in V2.88 |
+| Birds (49) | 3 | 3 | One songbird body for owls, hawks, geese and cranes |
+| Mammals (6) | 5 | 4 | Shrew and vole are the mouse |
+
+**The finding that shaped the batches:** the largest defects were not models at
+all. They were the viewer, or the scene builder feeding it, reading the wrong
+number, and each one reached hundreds of species through one expression.
+
+### What V2.88 fixed (batch A, no new models)
+
+Plan: [`V2.88-reading-what-was-recorded`](plans/V2.88-reading-what-was-recorded.md).
+
+**26 · Each flower in a cluster at its own size.** `15-florets.js` scaled every
+floret by the reach of the WHOLE raceme, spike, panicle, umbel or cyme. Over the
+215 cluster species a drawn floret was **3.6 to 15.2x its recorded diameter,
+median 7.8x**; after, **median 1.36x, at most 3.2x**, the excess being deliberate
+(a drawn floret stands in for n / drawn real ones and covers their area). The
+cluster also grew upward from 70–92% of the plant, so **64 topped out more than a
+quarter above the plant's recorded height**; it now hangs from the top, and none
+does. Heads and single flowers were already right and are unchanged.
+
+**27 · Animals from what was recorded, not from words in their names.** 207 of
+343 lepidoptera and 347 of 408 other insects carry their binomial as their common
+name, so a keyword test on the name drew **159 moths as butterflies** and **208
+wasps, beetles, bugs and ants as hoverflies**. The recorded kind
+(`lepidoptera_attributes.kind`, every row since schema v40) and the group each
+insect's description names (`src/fauna_body_plan.py`) decide now. In the
+400-design simulation, night scenes went from **76% of animals on the wrong body
+plan to none**; by day 2% are on a stand-in model flagged `interim` (wasps on the
+fly, bugs and ants on the beetle) until F173 builds theirs.
+
+**28 · The recorded bee bands on the bee you actually see.** The baked bee only
+toggled three generic shells in the thorax colour, so 54 of 69 described bees wore
+the wrong pattern and the American Bumble Bee was solid black. It is now ringed one
+band per recorded tergite, T1 to T6, following the abdomen's taper.
+
+**29 · A rounding tie and a fallback that said one thing and did another.**
+`scene3d.py` rounded canopy to three decimals; the generator does not, so five
+species whose height / canopy is exactly 1.0 or 1.5 asked for a leaf unit never
+baked, and the lookup fell back to unit 0 of the file, not the neutral unit its
+comment promised. Heart-leaved Alexanders had lost its compound leaves.
+`test_model_assets` passed throughout because it computed the key the generator's
+way: it was guarding the generator against itself. It now also computes the key
+from what `build_scene` sends.
+
+**30 · Heights the flowers ignored.** One function, `bodyHeightOf`, now says how
+tall a plant is drawn, and the flowers, fruit and animals read it: Canada Anemone's
+flowers had floated at 60 cm over an 18 cm mat, and a 2 cm duckweed was a 0.5 m reed.
+
+**31 · The alphabet.** `wildlife_for_scene` took the first N animals by common
+name, so **65% of a daytime design's animals started with "A"** (13% of the
+catalogue). A stable hash of the species and the design's plants orders them now:
+14%, and twice as many distinct species across the 400 designs (429 → 882).
+
+**A render probe pins all of it** (`tests/test_accuracy_render.py`,
+`html/accuracy_probe.html`): real catalogue plants through `build_scene` into the
+viewer in headless Chromium, reading back each floret's drawn diameter, where the
+flowers top out, how tall the plant is, and which rings the baked bee wears.
+Against the pre-fix viewer it fails fourteen ways.
+
+**One trade-off, stated.** The tiny-flowered legumes (the prairie clovers, the
+milk-vetches) now show small specks of colour, because that is how big their
+flowers are; a bed of them reads less saturated than the blobs did. That is the
+real plant at the scale it is drawn, and the right answer to it is F180's tuning
+(flowering stems, how many heads), not bigger flowers.
+
+### Still open after the sixth pass
+
+The batches that need a model, a data decision or a flora, one row each in
+`BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
+habit records, 21 bird colour rows, 64 bees on the default look), **F173** insect
+body plans, **F174** bird body plans, **F175** the pond, **F176** horsetails,
+**F177** succulents and cacti, **F178** trees with their own shape, **F179**
+climbers (waiting on a decision: sprawl or drape), **F180** telling species apart.
+Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
+drawn at.
+
+**Not checked in this pass**, honestly: nothing was compared against photographs
+(the judgments of look are the auditor's, and the six colours in F172 need a
+flora before the data changes); software rendering changes lighting and edges,
+not shapes or sizes; winter and autumn states, night lighting, the Stylised level,
+the fly-as-a-bee avatar and structures were not looked at.

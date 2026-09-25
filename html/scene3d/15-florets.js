@@ -282,7 +282,16 @@ const _ARCH_REACH = { raceme: 2.6, spike: 2.6, panicle: 3.4, corymb: 1.7,
 const _BRANCH_HEADS = { unbranched: 4, branched_above: 8,
                         branched_throughout: 14 };
 
-function _headSize(p, arch, drawn) {
+// An inflorescence is part of a plant's recorded height, not added on top of it.
+const _REACH_OF_HEIGHT = 0.45;
+
+// `reach` is the unit frame the placements are scaled into (the whole cluster);
+// `floret` is the size each drawn floret is scaled to. They were one number
+// until V2.88: every floret in a raceme, panicle or cyme was drawn at the reach
+// of the WHOLE cluster, 4-15x its real size on 215 species (a goldenrod's 6 mm
+// florets at 9 cm), and the cluster grew upward from 70-92% of the plant, so 64
+// of them topped out more than a quarter above the plant's own height.
+function _inflorescence(p, arch, drawn, h) {
   const dia = Math.max(0.15, Math.min(20, p.flower_diameter_cm || 2)) / 100;
   // A head and a solitary flower are drawn at their TRUE diameter, and that is
   // the point: a black-eyed Susan is 7 cm across and should read as 7 cm across
@@ -290,9 +299,17 @@ function _headSize(p, arch, drawn) {
   // canopy instead, so a pasqueflower and a sunflower scaled with the plant
   // rather than with the flower — which is exactly the translation-to-the-real-
   // world this whole pass is for.
-  if (arch === 'head' || arch === 'solitary') return dia;
-  const reach = _ARCH_REACH[arch] || 2.0;
-  return Math.max(dia * 2.2, Math.min(0.55, dia * Math.sqrt(drawn) * reach));
+  if (arch === 'head' || arch === 'solitary') return { reach: dia, floret: dia };
+  // The cluster's size comes from the REAL floret count, not from how many are
+  // drawn, and never exceeds a share of the plant it is on.
+  const n = Math.max(1, p.florets_per_head || drawn);
+  const natural = Math.max(dia * 2.2, dia * Math.sqrt(n) * (_ARCH_REACH[arch] || 2.0));
+  const reach = Math.max(dia, Math.min(natural, 0.55, _REACH_OF_HEIGHT * h));
+  // Each drawn floret stands in for n / drawn real ones, so it covers the area
+  // they would: a goldenrod draws 20 florets at 1.7 cm over a 26 cm plume.
+  const floret = Math.max(dia, Math.min(reach * 0.5,
+                                        dia * Math.sqrt(n / Math.max(1, drawn))));
+  return { reach, floret };
 }
 
 // Which plants this layer can draw. Everything else goes back to the billboard.
@@ -324,7 +341,9 @@ function buildFlorets(plants, month, terrain) {
     const names = [], ids = [], discNames = [], discIds = [];
     for (const p of b.items) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
-      const h = Math.max(0.1, p.height_m);
+      // The height the body is DRAWN at (04-quality.js), so the flowers sit on
+      // a capped groundcover rather than floating above it (V2.88).
+      const h = Math.max(0.05, bodyHeightOf(p));
       const frac = Math.max(0.3, Math.min(1.3, p.flower_height_frac || 1.0));
       const rad = Math.max(0.10, p.canopy_m * 0.5);
       const seed = hashPid(p.plant_id || 1);
@@ -334,7 +353,8 @@ function buildFlorets(plants, month, terrain) {
       const hasDisc = !!p.flower_center_color;
       if (hasDisc) _cc.set(p.flower_center_color);
       const drawn = _drawnFlorets(p.florets_per_head);
-      const size = _headSize(p, b.arch, drawn);
+      const { reach, floret } = _inflorescence(p, b.arch, drawn, h);
+      const cluster = b.arch !== 'head' && b.arch !== 'solitary';
       // How many inflorescences the plant carries — most of what "in full
       // bloom" looks like. The billboard used a flat seven for every forb; a
       // mature bergamot holds thirty heads and a pasqueflower holds two.
@@ -363,26 +383,30 @@ function buildFlorets(plants, month, terrain) {
         const rr = rad * spread * Math.sqrt(rnd());
         const hx = p.x + Math.cos(a) * rr;
         const hz = -(p.y + Math.sin(a) * rr);
-        // Where on the stem the inflorescence starts. flower_height_frac is the
+        // Where on the stem the inflorescence sits. flower_height_frac is the
         // species' own answer (schema v53) — a scape holds its head clear of the
-        // foliage, a clump carries them among the leaves.
-        const hy = gy + h * frac * (0.70 + 0.22 * rnd());
+        // foliage, a clump carries them among the leaves. A head sits on its
+        // stem tip; a CLUSTER hangs from the top of the plant (V2.88), because
+        // a recorded height is to the top of the flowers, not to where they begin.
+        const hy = cluster
+          ? Math.max(gy + 0.1 * h, gy + h * frac * (0.86 + 0.14 * rnd()) - reach * 1.1)
+          : gy + h * frac * (0.70 + 0.22 * rnd());
         const spin0 = rnd() * Math.PI * 2;
         const lean = (rnd() - 0.5) * 0.30;
         for (const f of floretPlacements(b.arch, drawn, rnd)) {
-          const sc = size * f.scale;
-          // The unit inflorescence frame is `size` tall and `size` across;
+          const sc = floret * f.scale;
+          // The unit inflorescence frame is `reach` tall and `reach` across;
           // rotate the whole head about its own axis so a bed is not a rank of
-          // clones, then place each floret inside it.
+          // clones, then place each floret inside it at its own size.
           const cs = Math.cos(spin0), sn = Math.sin(spin0);
           const fx = f.x * cs - f.z * sn, fz = f.x * sn + f.z * cs;
-          petalXf.push(hx + fx * size, hy + f.y * size * 1.1, hz + fz * size,
+          petalXf.push(hx + fx * reach, hy + f.y * reach * 1.1, hz + fz * reach,
                        f.tilt + lean, f.spin + spin0, sc);
           petalCol.push(_c.r, _c.g, _c.b);
           names.push(p.common_name || '');
           ids.push(p.plant_id);
           if (hasDisc) {
-            discXf.push(hx + fx * size, hy + f.y * size * 1.1, hz + fz * size,
+            discXf.push(hx + fx * reach, hy + f.y * reach * 1.1, hz + fz * reach,
                         f.tilt + lean, f.spin + spin0, sc);
             discCol.push(_cc.r, _cc.g, _cc.b);
             discNames.push(p.common_name || '');
@@ -456,6 +480,7 @@ function _addFloretMesh(geo, xf, col, names, ids) {
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.userData.pick = names;
   mesh.userData.pickId = ids;
+  mesh.userData.part = 'floret';        // named for permaMeasure (V2.88)
   plantsGroup.add(mesh);
 }
 

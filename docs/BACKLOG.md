@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (counted at V2.87): 36 code features · 12 data jobs · 4 legacy-ledger items.**
+**Totals (at V2.88): 45 code features · 12 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -40,7 +40,7 @@ possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge an
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
 recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
-F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened.)*
+F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened. **V2.88**: nine opened by the 3D model audit, F172–F180 in group O, all counted as code features; F117 gained the fruit-size finding and F119 narrowed to birds and mammals.)*
 
 ---
 
@@ -218,9 +218,9 @@ V2.52 so each has a handle.*
 | **F114** | **Wing-pattern geometry** — eyespots and bands as procedural decals. Written and then **removed**: the marks attached to the wing pivots and positioned correctly but would not render, a coplanar-decal ordering problem that resisted polygon offset, depth-test and explicit render order inside a sensible budget. The data, the vocabulary, the drawings and the bench are all in place, so this is geometry work on a settled contract rather than a rebuild | M | Med | deferred from F84 |
 | **F115** | **Shrub aspect within a silhouette** — the within-class spread the herb and layer axes already got | M | Med — asset size | sprite audit |
 | **F116** | **Fern density** | S | Low | sprite audit |
-| **F117** | **Billboard fruit** — the last billboard in a scene that is otherwise geometry | S | Low | sprite audit |
+| **F117** | **Billboard fruit** — the last billboard in a scene that is otherwise geometry. **And sized (V2.88 audit):** every fruit sprite is drawn 17 to 34 cm across whatever the species, because nothing records how big a fruit is; a geometry fruit needs a fruit-size field to be drawn at | S–M | Low — schema for the size | sprite audit |
 | **F118** | **Better creature models.** The bee is spheres plus two flat discs; the bird is spheres, a cone beak and a box tail. V2.45 made them *move* correctly, which raises rather than lowers the value of making them *look* correct. Blender work through `scripts/blender/assetlib/fauna.py`; the morphology to drive it now exists for all three flying taxa | M | Med | Theme H backlog |
-| **F119** | **Birds, mammals and other insects still resolve from name tables.** Birds render 24 species as 16 looks; F84 gave bees and lepidoptera real morphology columns and left the rest on substring matching against the common name. The schema-v58 pattern is proven and repeatable | M | Med — schema | F84 |
+| **F119** | **Birds and mammals still resolve from name tables.** Birds render 24 species as 16 looks; F84 gave bees and lepidoptera real morphology columns and left the rest on substring matching against the common name. The schema-v58 pattern is proven and repeatable. *(Other insects left the name tables in V2.88: `src/fauna_body_plan.py` reads the group each row's description records. Twelve large birds still get the songbird body, which is F174)* | M | Med — schema | F84 |
 
 ---
 
@@ -319,6 +319,32 @@ is for, or is wrong in a way a reader can see. Reasoning per row in the
 | ~~**F162**~~ | ✅ **Shipped in V2.86.** Birch and oak join the keystone genera; `KEYSTONE_GENERA` gated both ways; schema v87 | — | Done | — |
 | ~~**F163**~~ | ✅ **Shipped in V2.86.** A tree taller than the lot is wide is too big for it. Calgary's yard 64 → 119 plants once its Lodgepole Pine went | — | Done | — |
 | ~~**F164**~~ | ✅ **Shipped in V2.86.** "Burr Oak" finds Bur Oak, desktop and website | — | Done | — |
+
+---
+
+## O · Found by the 3D model audit (V2.87–V2.88)
+
+*Every plant and animal the 3D preview draws, rendered through the real viewer and
+checked against the species: 424 plants and 1,144 animals
+([report](https://claude.ai/artifact/4DxfwtbLxQsLHWMdUkELXD), summarised in the
+sixth pass of [`SPRITE_AUDIT.md`](SPRITE_AUDIT.md)). Batch A, the code fixes,
+shipped in V2.88 ([plan](plans/V2.88-reading-what-was-recorded.md)). These are the
+batches that need a new model, a data decision or a flora. The audit's advice on
+size: **one family per increment**, smallest first (horsetails, then the pond, then
+succulents), because 5 to 20 species is what one contact sheet can show clearly.
+F172's corrections can ride along with whichever increment touches those species.*
+
+| ID | Feature | Effort | Risk | P |
+|----|---------|--------|------|---|
+| **F172** | **Catalogue corrections the audit found.** Six flower colours that look wrong (Prairie Coneflower recorded purple, Fuzzy-tongue Penstemon red, Common Paintbrush green, Late Yellow Oxytropis purple, Dwarf Raspberry and Moss Campion white); three habit records (Northern Bedstraw "sprawling", Western Wood Lily "grassy", Water Arum (Wild Calla) with its spathe counted as 40 flowers); 21 bird colour rows (the Downy Woodpecker is flicker-buff, the Rufous Hummingbird green); 21 bee genera missing from the look table, so 64 bees wear the default. **The colours need a flora check first**: the audit judged them from renders, not from photographs | S | Low — reseed | P9, P13 |
+| **F173** | **Insect body plans.** A wasp (narrow waist, four wings), a true bug / aphid / hopper, an ant, a grasshopper or cricket, and a moth at rest (wings roofed or flat, not spread like a butterfly's). V2.88 put these groups on the nearest existing model and flagged them `interim`; this gives them their own. Reaches 92 wasps and sawflies, 33 bugs, 6 ants, 7 grasshoppers and 189 moths | M | Med — Blender generator | P5, P10 |
+| **F174** | **Bird body plans, and where a big bird stands.** Raptor and owl, grouse and ptarmigan, waterfowl and crane, dove. Twelve birds (a 2 m Sandhill Crane, Snow Goose, ducks, owls, hawks) are drawn as a songbird at their real wingspan, perched inside a plant; they need the ground, or open air | M | Med — Blender generator | P5, P10 |
+| **F175** | **The pond.** Floating-leaf plants on the water, submerged plants mostly hidden, broad-leaved emergents with their own leaves (arrowhead, water-plantain, calla, buckbean), mare's-tail. 17 aquatics are one reed tuft today; V2.88 made the small ones the right height, not the right shape | M | Med — Blender generator | P5 |
+| **F176** | **Horsetails.** Jointed stems, no leaves: four species, and the cheapest archetype on this list to build | S | Low | P5 |
+| **F177** | **Succulents and cacti.** Pads, a spiny ball, a sword-leaf rosette (Soapweed Yucca), a fleshy upright stem (Roseroot). Five species, drawn today as grass tufts or groundcover mats | S–M | Low | P5 |
+| **F178** | **Trees with their own shape.** The elm's vase, Manitoba Maple, broad cottonwood crowns with their own leaves (both cottonwoods borrow the aspen, stretched 1.6x), Rocky Mountain Juniper, multi-stemmed water birch and willows, and pines that do not read as bottle brushes. Eleven trees | M | Med — profiles + generator | P5, P2 |
+| **F179** | **Climbers.** Six species stand as free leafy columns. **Needs the owner's decision first**: with nothing in the scene to climb, should a vine sprawl on the ground or drape over the plant next to it? | S once decided | Low | P5, P10 |
+| **F180** | **Telling species apart.** 80 grasses, sedges and rushes share three shapes; 51 rosette wildflowers look like one dark lettuce; the asters read as grass; 45 species on the smallest narrow-leaf variant read as bare stems. Ongoing: 10 to 20 species per sitting against reference photographs, on the tuning benches (`scripts/tune_morphology.py`). Shrub stretch is F115, fruit size F117, butterfly wing patterns F114 | L, ongoing | Low | P5, P13 |
 
 ---
 

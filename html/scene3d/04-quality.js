@@ -247,6 +247,23 @@ let SHADOW_TEX = null;
 const TREE_SUBVARS = 3;    // distinct random branchings per species, so a stand
                            // of one species reads as individuals, not clones
 
+// How tall a plant is DRAWN, in metres: one answer for the body and for
+// everything that sits on it (V2.88). Each layer floors the recorded height
+// for its own model, and groundcover caps it. Until V2.88 the flowers, fruit
+// and seed heads read the RECORDED height instead, so nine groundcovers wore
+// their flowers above a mat capped at 18 cm (Canada Anemone's at 60 cm), and
+// the 0.5 m floor that suits a reed drew a 2 cm duckweed 25 times too tall.
+// src/scene_wildlife.py perches animals on the same cap
+// (GROUNDCOVER_DRAWN_MAX_M; tests/test_accuracy_render.py keeps them equal).
+const _BODY_H = { tree: [0.4, Infinity], shrub: [0.2, Infinity],
+                  grass: [0.3, Infinity], sedge: [0.3, Infinity],
+                  rush: [0.3, Infinity], aquatic: [0.05, Infinity],
+                  vine: [0.2, Infinity], groundcover: [0.05, 0.18] };
+function bodyHeightOf(p) {
+  const r = _BODY_H[p && p.plant_type] || [0.08, Infinity];   // herbs
+  return Math.min(r[1], Math.max(r[0], (p && p.height_m) || 0));
+}
+
 // A tree's structural tier — which is a SIZE class, not a growth stage. The
 // asset set carries three builds per species and this picks between them from
 // the plant's height right now (which already folds the growth year in, since
@@ -620,7 +637,7 @@ function buildHerbLayer(list, month, year, terrain) {
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
-      const h = Math.max(0.08, p.height_m);
+      const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
@@ -673,7 +690,7 @@ function buildShrubLayer(list, month, year, terrain) {
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
-      const h = Math.max(0.2, p.height_m);
+      const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       const scol = fadeToward(stemHex, p.opacity);
@@ -761,7 +778,7 @@ function buildPlants(group, plants, month, year, terrain) {
       const names = new Array(total), ids = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
-        const h = Math.max(0.4, p.height_m);
+        const h = bodyHeightOf(p);
         const c = unitXZ(arch.foliageGeo, Math.max(0.4, p.canopy_m));
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
@@ -798,19 +815,19 @@ function buildPlants(group, plants, month, year, terrain) {
 
   // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
   buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
-             (p) => [Math.max(0.16, p.canopy_m), Math.max(0.3, p.height_m),
+             (p) => [Math.max(0.16, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.16, p.canopy_m)], month, year, false, terrain,
              (p) => aspectBucket(p, 'grass'));
 
   // Aquatic / emergent marsh plants — tall erect reed/strap-leaf clumps; the
   // cattail's brown spike comes from the flower layer (V1.92).
   buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
-             (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
+             (p) => [Math.max(0.18, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.18, p.canopy_m)], month, year, false, terrain,
              (p) => aspectBucket(p, 'aquatic'));
   // Vines — sprawling/twining leafy stems (V1.99), not a cone.
   buildLayer(byKind.vine, 3, MATS.leaf, (v) => ARCH.vine[v],
-             (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
+             (p) => [Math.max(0.25, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.25, p.canopy_m)], month, year, false, terrain,
              (p) => aspectBucket(p, 'vine'));
 
@@ -818,8 +835,7 @@ function buildPlants(group, plants, month, year, terrain) {
   // domes), so each species gets the unit carrying its own leaf outline.
   buildLayer(byKind.groundcover, ARCH.ground.length, MATS.leaf,
              (v) => ARCH.ground[v],
-             (p) => [Math.max(0.18, p.canopy_m),
-                     Math.min(0.18, Math.max(0.05, p.height_m)),
+             (p) => [Math.max(0.18, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.18, p.canopy_m)], month, year, true, terrain,
              groundcoverBucket);
 

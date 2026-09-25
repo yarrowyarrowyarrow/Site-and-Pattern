@@ -404,6 +404,19 @@ function stepThreads(t) {
 }
 
 // ── measurement hook (V2.29) ────────────────────────────────────────────────
+// The median and largest instance scale of one InstancedMesh (its matrices'
+// first column), for permaMeasure's per-part report below.
+function _instanceScales(o) {
+  const m = new THREE.Matrix4(), s = [];
+  for (let i = 0; i < o.count; i++) {
+    o.getMatrixAt(i, m);
+    s.push(Math.hypot(m.elements[0], m.elements[1], m.elements[2]));
+  }
+  if (!s.length) return {};
+  s.sort((a, b) => a - b);
+  return { s_med: +s[s.length >> 1].toFixed(4), s_max: +s[s.length - 1].toFixed(4) };
+}
+
 // Reports the world-space bounding box the built plants actually occupy, per
 // species. This is a diagnostic, not a control: it is the only way to check the
 // *composition* of archetype geometry x instance transform, which is exactly
@@ -461,14 +474,20 @@ window.permaMeasure = function () {
     // less (a vase shrub's leaves start above its bare lower canes). Measuring
     // the extent instead of the top is what made the first read of that bug
     // look like a partial fix.
-    out.parts.push({
+    //
+    // And the instances' own scale (V2.88), because a part can span the right
+    // extent while every piece of it is the wrong size: each floret in a raceme
+    // was drawn at the size of the whole raceme, 4-15x too big, and no box could
+    // show it. A floret is built 1.0 across, so its scale IS its drawn diameter.
+    out.parts.push(Object.assign({
+      part: o.userData.part || '',
       verts: pos ? pos.count : 0,
       n: o.isInstancedMesh ? o.count : 1,
       w: +Math.max(tmp.max.x - tmp.min.x, tmp.max.z - tmp.min.z).toFixed(3),
       h: +(tmp.max.y - tmp.min.y).toFixed(3),
       base: +tmp.min.y.toFixed(3),
       top: +tmp.max.y.toFixed(3),
-    });
+    }, o.isInstancedMesh ? _instanceScales(o) : {}));
     out.groups++;
   });
   out.verts.sort((a, b) => a - b);

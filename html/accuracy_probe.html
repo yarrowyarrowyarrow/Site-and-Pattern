@@ -1,0 +1,137 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">measuring…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script>
+// Render-level accuracy check for the V2.88 fixes (dev page + the harness behind
+// tests/test_accuracy_render.py). Those fixes were the viewer reading the wrong
+// number — a flower cluster's size for each flower in it, the plant's real height
+// for flowers on a body drawn shorter, a reed's floor for a duckweed, the thorax
+// colour for a bee's recorded bands — and every part-level check passed while
+// they were wrong, because each part was built correctly.
+//
+// The cases arrive in the URL FRAGMENT as JSON, built by the test from the real
+// catalogue through src/scene_contract.build_scene, so this page measures what
+// the app would send and holds no copy of the data to drift:
+//
+//   { plants: [{ name, month, plant }], bees: [{ name, app }] }
+//
+// For each plant it pushes a one-plant scene in the plant's bloom month and reads
+// window.permaMeasure — the union box, and per mesh its extent and instance scale
+// (a floret is built 1.0 across, so its scale IS its drawn diameter). For each
+// bee it builds the baked bee with window.glbCritter and reads back the tergite
+// rings, their colours and the generic Band shells. The answer goes into
+// document.title as JSON, so a headless `--dump-dom` run can read it without CDP.
+let CASES = null;
+try {
+  CASES = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+} catch (e) { CASES = null; }
+const out = document.getElementById('out');
+
+function scene(c) {
+  const B = { min_x: -5, min_y: -5, max_x: 5, max_y: 5 };
+  return {
+    version: 1, year: 30, month: c.month || 7, is_night: false,
+    origin: { lat: 51.05, lng: -114.07 }, bounds: B, boundary: null,
+    sun: { azimuth_deg: 200, altitude_deg: 48 },
+    buildings: [], structures: [], scan_points: [], splat: null, terrain: null,
+    plants: [Object.assign({}, c.plant, { plant_id: 1, x: 0, y: 0 })],
+  };
+}
+
+// One baked bee, taken apart: which rings it wears, in what colours, and
+// whether the three generic shells the rings replace are still showing.
+function beeReport(w, b) {
+  const g = w.glbCritter('bee', b.app);
+  if (!g) return { name: b.name, built: false };
+  const r = { name: b.name, built: true, tergites: [], bands: [], tip: null };
+  g.traverse((o) => {
+    const t = /Tergite(\d+)$/.exec(o.name || '');
+    if (t) r.tergites.push({
+      i: +t[1], colour: '#' + o.material.color.getHexString(),
+      on_abdomen: !!(o.parent && /Abdomen$/.test(o.parent.name)),
+      visible: o.visible });
+    const band = /Band(\d)$/.exec(o.name || '');
+    if (band) r.bands.push({ i: +band[1], visible: o.visible });
+    if (/Tip$/.test(o.name || '') && o.isMesh)
+      r.tip = '#' + o.material.color.getHexString();
+  });
+  r.tergites.sort((a, b) => a.i - b.i);
+  r.bands.sort((a, b) => a.i - b.i);
+  return r;
+}
+
+const result = { models: false, plants: [], bees: [] };
+// Every viewer function this page calls, across the chunks that define them.
+const NEEDS = ['permaSetScene', 'permaMeasure', 'permaModelsReady',
+               'floretsApply', 'glbCritter'];
+let i = 0, waited = 0, booting = 0;
+
+function finish() {
+  document.title = 'ACCURACY ' + JSON.stringify(result);
+  out.textContent = result.plants.map((p) => {
+    const fl = p.parts.filter((q) => q.part === 'floret');
+    return p.name.padEnd(22) + ' height ' + p.height_m
+      + (fl.length ? '  floret ' + Math.max(...fl.map((q) => q.s_med || 0))
+         + ' m, top ' + Math.max(...fl.map((q) => q.top)) : '  no florets');
+  }).concat(result.bees.map((b) => b.name.padEnd(22) + ' '
+    + (b.built ? b.tergites.map((t) => t.colour).join(' ') || 'generic bands'
+               : 'not built'))).join('\n');
+}
+
+function step() {
+  if (!CASES) {
+    out.textContent = 'No cases. This page is driven by '
+      + 'tests/test_accuracy_render.py, which passes them in the URL fragment.';
+    document.title = 'ACCURACY {"error":"no cases"}';
+    return;
+  }
+  const w = document.getElementById('v').contentWindow;
+  if (w && w.permaBootError) {                  // no WebGL here: not a failure
+    document.title = 'ACCURACY ' + JSON.stringify({ skip: 'the viewer could '
+      + 'not start: ' + String(w.permaBootError).replace(/<[^>]*>/g, ' ') });
+    return;
+  }
+  // Wait for EVERY chunk this page measures, not just the first hooks: the
+  // chunks load one after another, 09-models.js starts fetching the models when
+  // it evaluates, and 15-florets.js arrives six chunks later. On a fast model
+  // load the first plant was pushed before florets existed and silently got the
+  // billboard, which read as "no florets" one run in five. A chunk that never
+  // arrives is reported, so the test fails instead of skipping.
+  const missing = !w || !w.document ? NEEDS
+    : NEEDS.filter((f) => typeof w[f] !== 'function');
+  if (missing.length || w.document.readyState !== 'complete') {
+    if ((booting += 250) > 30000) {
+      document.title = 'ACCURACY ' + JSON.stringify({ error: 'the viewer never '
+        + 'finished loading; missing ' + (missing.join(', ') || 'the load event') });
+      return;
+    }
+    setTimeout(step, 250);
+    return;
+  }
+  // Measure the baked models the app ships, not the procedural fallback that
+  // stands in while they load. Give up waiting after 20 s and say so: the bee
+  // needs the models, the plant checks do not.
+  if (i === 0 && !w.permaModelsReady() && waited < 20000) {
+    waited += 250; setTimeout(step, 250); return;
+  }
+  result.models = !!w.permaModelsReady();
+  if (i < CASES.plants.length) {
+    const c = CASES.plants[i++];
+    w.permaSetScene(scene(c));
+    setTimeout(() => {
+      const m = w.permaMeasure();
+      result.plants.push({ name: c.name, height_m: m.height_m || 0,
+                           parts: m.parts || [] });
+      step();
+    }, 600);
+    return;
+  }
+  for (const b of CASES.bees || []) result.bees.push(beeReport(w, b));
+  finish();
+}
+step();
+</script></body></html>

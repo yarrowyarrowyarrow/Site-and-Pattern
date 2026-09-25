@@ -331,7 +331,9 @@ function buildFlowers(plants, month, terrain) {
     const names = [], ids = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
-      const h = Math.max(0.1, p.height_m);
+      // The height the body is DRAWN at (04-quality.js), so a bloom sits on
+      // a capped groundcover rather than above it (V2.88).
+      const h = Math.max(0.05, bodyHeightOf(p));
       const top = gy + h * (isCattail ? 0.96 : 0.9);
       const rad = Math.max(0.12, p.canopy_m * 0.5);
       // How big this species' heads are relative to the form's maximum.
