@@ -13,8 +13,11 @@ flower, flags the growing-season months with **no** forage as gaps, and returns
 a per-plant succession (sorted by first bloom) so the relay from spring to fall
 is visible. Qt-free: the analysis panel draws it, tests exercise it directly.
 
-Bloom windows are parsed with the same ``parse_month_range`` the score uses, so
-the calendar and the score can never disagree. See docs/DESIGN_PHILOSOPHY.md.
+Bloom windows are parsed with the same ``parse_month_range`` the score uses.
+**The two disagree about grasses, on purpose (V2.91):** a grass, sedge or rush
+is not forage here, while the score's bloom continuity still counts its bloom
+period, pending the owner's decision on the headline (F184). See
+docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations
@@ -30,11 +33,24 @@ _MONTH_FULL = ["", "January", "February", "March", "April", "May", "June",
 
 _FALLBACK_FLOWER = "#e6a5d0"     # a soft bloom colour when none is recorded
 
+#: Wind-pollinated habits: they flower, but not for bees.
+WIND_POLLINATED_TYPES = frozenset({"grass", "sedge", "rush"})
 
-def _has_flowers(p: dict) -> bool:
-    """A plant contributes forage if it flowers at all — a recorded bloom
-    period, or a flower form other than 'none'. Grasses/sedges (wind-pollinated,
-    'none') don't count as pollinator forage."""
+
+def is_pollinator_forage(p: dict) -> bool:
+    """Does this plant feed pollinators when it flowers? Yes if it flowers at
+    all (a recorded bloom period, or a flower form other than 'none'), unless
+    it is a grass, sedge or rush.
+
+    **Those never count, bloom period or not (V2.91, F182; the owner's rule).**
+    All 78 in the catalogue record a bloom period, and this used to accept any
+    bloom period before it looked at anything else, so a meadow's grasses
+    filled May to September with forage no bee can use. Four wind-pollinated
+    wetland plants filed ``aquatic`` (cattail, bur-reed, a bulrush and a sedge)
+    still count: the catalogue records no pollination mode to tell them by.
+    Planning → Wildlife reads this too."""
+    if (p.get("plant_type") or "").strip().lower() in WIND_POLLINATED_TYPES:
+        return False
     if (p.get("bloom_period") or "").strip():
         return True
     ff = (p.get("flower_form") or "none").strip().lower()
@@ -48,7 +64,7 @@ def _bloom_months(p: dict) -> list[int]:
     months = parse_month_range(p.get("bloom_period") or "")
     if months:
         return months
-    return [6, 7, 8, 9] if _has_flowers(p) else []
+    return [6, 7, 8, 9] if is_pollinator_forage(p) else []
 
 
 def build_forage_calendar(plants: Optional[list[dict]]) -> dict:
@@ -70,7 +86,7 @@ def build_forage_calendar(plants: Optional[list[dict]]) -> dict:
           "note": str,                     # honest plain-language summary
         }
     """
-    flowering = [p for p in (plants or []) if _has_flowers(p)]
+    flowering = [p for p in (plants or []) if is_pollinator_forage(p)]
     growing = sorted(GROWING_SEASON_MONTHS)
 
     counts = [0] * 13                       # 1-indexed month -> plant count
@@ -160,7 +176,7 @@ def gap_filling_suggestions(plants: Optional[list[dict]],
     for c in candidate_plants:
         if (c.get("common_name") or "").lower() in placed_names:
             continue
-        if not _has_flowers(c):
+        if not is_pollinator_forage(c):
             continue
         fills = sorted(gaps.intersection(_bloom_months(c)))
         if not fills:

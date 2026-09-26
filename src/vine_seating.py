@@ -102,6 +102,20 @@ class VineSeats:
             self._hosts.append({"lat": lat, "lng": lng, "crown_m": crown_m,
                                 "cap": cap, "used": []})
 
+    def note_vine(self, lat: float, lng: float) -> None:
+        """Count a vine already in the ground against the host it was seated
+        at, so a later seat respects that host's capacity and spacing (V2.91:
+        the design review seats its vines after the main pass has)."""
+        best, best_d, bearing = None, SEAT_MAX_M + 0.05, 0.0
+        for h in self._hosts:
+            x, y = Projector(h["lat"], h["lng"]).to_xy(lat, lng)
+            d = math.hypot(x, y)
+            if d <= best_d:
+                best, best_d = h, d
+                bearing = math.degrees(math.atan2(x, y)) % 360.0
+        if best is not None and best_d > 1e-3:
+            best["used"].append(bearing)
+
     def seat(self, others: Iterable[tuple]) -> Optional[tuple[float, float]]:
         """A spot for one vine, or None when no host has room. ``others`` are
         the ``(lat, lng)`` of every plant already placed, seated vines included."""

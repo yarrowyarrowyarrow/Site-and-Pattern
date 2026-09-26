@@ -25,8 +25,9 @@ the parts for:
 
 Pure Python; the plant catalogue is reached through an injected
 ``query_plants`` and placement spots through an injected ``position_for``
-callable, so there are no import cycles with :mod:`src.llm_design` and
-tests can drive it synthetically.
+callable (given the row it is placing, since V2.91: the generator answers
+with :class:`src.open_ground.OpenGround`), so there are no import cycles with
+:mod:`src.llm_design` and tests can drive it synthetically.
 """
 
 from __future__ import annotations
@@ -218,9 +219,15 @@ def apply_repairs(project, query_plants: Callable,
                   max_additions: int = _MAX_REPAIRS) -> list[str]:
     """Deterministically mend the most impactful gaps in a generated
     design. Adds at most ``max_additions`` plants (one per gap, bloom
-    gaps covered greedily) through ``project.place_plant`` at spots from
-    ``position_for()``. Returns the warning messages describing what was
-    added (empty when the design needed nothing)."""
+    gaps covered greedily) through ``project.place_plant`` at the spot
+    ``position_for(row)`` gives for each. Returns the warning messages
+    describing what was added (empty when the design needed nothing).
+
+    **Never a plant that needs standing water (V2.91, F183).** Nobody asked
+    for these additions, and nothing in the app knows whether a yard is wet:
+    the host-plant search led with Buckbean, a bog plant, and added it to a
+    dry yard. The next candidate is taken instead."""
+    from src.zoning import needs_standing_water
     habitat = habitat if habitat is not None else evaluate_design(project)
     if not habitat:
         return []
@@ -232,7 +239,7 @@ def apply_repairs(project, query_plants: Callable,
         if row["id"] in placed_ids:
             return False
         try:
-            lat, lng = position_for()
+            lat, lng = position_for(row)
             project.place_plant(row["id"], lat, lng, quantity=1)
         except Exception:  # noqa: BLE001 — a failed repair is not fatal
             return False
@@ -242,9 +249,10 @@ def apply_repairs(project, query_plants: Callable,
 
     def _candidates(**filters):
         try:
-            return query_plants(native_only=True, **filters) or []
+            rows = query_plants(native_only=True, **filters) or []
         except Exception:  # noqa: BLE001
             return []
+        return [r for r in rows if not needs_standing_water(r)]
 
     budget = max(0, int(max_additions))
 

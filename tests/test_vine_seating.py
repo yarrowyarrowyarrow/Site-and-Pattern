@@ -14,6 +14,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -136,6 +137,25 @@ class TheSeat(unittest.TestCase):
         seats.add_host(*self.HOST, "shrub", 0.8)          # seat 0.25 m out
         self.assertIsNotNone(seats.seat([self.HOST]))
 
+    def test_a_vine_already_in_the_ground_counts_against_its_host(self):
+        # V2.91: the design review seats its vines after the main pass has,
+        # from a fresh VineSeats, so the vines already there must be counted.
+        south = Projector(*self.HOST).to_latlng(0.0, -0.6)
+        seats = self._seats()
+        seats.add_host(*self.HOST, "shrub", 3.0)          # room for two
+        seats.note_vine(*south)
+        spot = seats.seat([self.HOST])                    # south not crowded
+        self.assertGreaterEqual(abs(_bearing(self.HOST, spot) - 180.0),
+                                vs.MIN_SEPARATION_DEG)
+        self.assertIsNone(seats.seat([self.HOST, spot]), "a third vine")
+
+    def test_a_vine_far_from_every_host_counts_against_none(self):
+        stray = Projector(*self.HOST).to_latlng(3.0, 0.0)
+        seats = self._seats()
+        seats.add_host(*self.HOST, "shrub", 1.0)          # room for one
+        seats.note_vine(*stray)
+        self.assertIsNotNone(seats.seat([self.HOST, stray]))
+
 
 class _FakeClient:
     endpoint = "fake://local"
@@ -231,7 +251,10 @@ class TheGenerator(unittest.TestCase):
         self.assertFalse([n for n in notes if n.startswith("Nothing here")])
 
     def test_with_nothing_to_climb_a_vine_is_placed_and_noted(self):
-        project = _generate(self.VINES_ONLY)
+        # The design review is held off here: since V2.91 it plants in open
+        # ground beside the planting, and a willow it adds can hold a vine up.
+        with mock.patch("src.design_critic.apply_repairs", return_value=[]):
+            project = _generate(self.VINES_ONLY)
         names = [p["common_name"] for p in project.placed_plants]
         self.assertEqual(names.count("Wild Clematis"), 1)
         self.assertEqual(names.count("Wild Vetch"), 2)
@@ -240,6 +263,24 @@ class TheGenerator(unittest.TestCase):
         self.assertEqual(len(notes), 1, "option (c): exactly one note")
         self.assertIn("Wild Clematis", notes[0])
         self.assertIn("Wild Vetch (×2)", notes[0])
+
+    def test_after_the_review_the_note_still_matches_the_picture(self):
+        # With the review running, whatever its additions give the vines to
+        # climb, the note names exactly the vines the scene leaves on the
+        # ground (V2.90's promise, checked again for V2.91's placement).
+        project = _generate(self.VINES_ONLY)
+        scene = self.build_scene(project.as_dict(), year=0, wind=False)
+        flat = {v["common_name"] for v in _vines(scene)
+                if v["drawn"]["habit"] != "climbing"}
+        up = {v["common_name"] for v in _vines(scene)
+              if v["drawn"]["habit"] == "climbing"} - flat
+        notes = [n for n in project.as_dict()["properties"].get(
+            "generation_warnings", []) if n.startswith("Nothing here")]
+        self.assertEqual(len(notes), 1 if flat else 0)
+        for name in flat:
+            self.assertIn(name, notes[0])
+        for name in up:
+            self.assertFalse(any(name in n for n in notes), name)
 
     def test_the_same_design_seats_the_same_way(self):
         a = [(p["plant_id"], round(p["lat"], 9), round(p["lng"], 9))

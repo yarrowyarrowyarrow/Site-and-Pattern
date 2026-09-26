@@ -1223,15 +1223,17 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                 pass           # any failure keeps the valid round-1 design
 
     # Deterministic backstop for whichever round won: mend the most
-    # impactful remaining gaps straight from the catalogue.
+    # impactful remaining gaps straight from the catalogue, in open ground.
     scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
-    for msg in apply_repairs(
-            project, scoped,
-            lambda: _one_position_in_boundary(boundary, center)):
+    ground = _open_ground(project, boundary, center, keepout, fills,
+                          cell_env_map)
+    for msg in apply_repairs(project, scoped, ground.spot_for):
         _add_warning(project, msg)
 
-    _apply_goal_feedback(project, goals, scoped, center, boundary)
-    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
+    _apply_goal_feedback(project, goals, scoped, center, boundary,
+                         spot=ground.spot_for)
+    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
+                          spot=ground.spot_for)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
     return project
@@ -2584,27 +2586,57 @@ def _fauna_names(fauna_ids) -> list:
     return out
 
 
-def _one_position_in_boundary(boundary, center: tuple[float, float]
-                              ) -> tuple[float, float]:
-    """A single placement spot inside the boundary (its first free grid cell),
-    falling back to the design centre when there is no usable boundary. Keeps
-    the goal/fauna repair additions from landing outside the drawn area."""
-    cells = grid_cells_in_boundary(boundary)
-    if cells:
-        return cells[0]
-    return _grid_positions(center[0], center[1], 1)[0]
+def _open_ground(project, boundary, center: tuple[float, float],
+                 keepout=None, fills=None, cell_env_map=None):
+    """Where the follow-up steps plant what they add (F183, V2.91): open
+    ground, read from the plants actually placed, by the main pass's rules
+    (:mod:`src.open_ground`). Until V2.91 every addition went on the
+    boundary's first 6 m grid cell, so the critic's three repairs and the
+    top-ups stood on one point."""
+    from src.open_ground import OpenGround
+    return OpenGround(project, boundary, center, keepout=keepout,
+                      fills=fills, cell_env_map=cell_env_map,
+                      spacing_of=_plant_spacing_m)
+
+
+def _water_only_note(animal: str, supporters: list) -> str:
+    """The design note for a chosen animal whose every recorded plant grows in
+    standing water, which the follow-up steps never add (F183, V2.91)."""
+    names = [p.get("common_name") for p in supporters if p.get("common_name")]
+    if not names:
+        return (f"No plant was added for {animal}: every plant recorded "
+                f"supporting it grows in standing water.")
+    if len(names) == 1:
+        return (f"No plant was added for {animal}: the only plant recorded "
+                f"supporting it, {names[0]}, grows in standing water. Where "
+                f"you have a pond or wet ground, plant it there by hand.")
+    listed = ", ".join(names[:-1]) + " and " + names[-1]
+    return (f"No plant was added for {animal}: the plants recorded supporting "
+            f"it ({listed}) all grow in standing water. Where you have a pond "
+            f"or wet ground, plant one there by hand.")
 
 
 def _apply_fauna_feedback(project, fauna_ids, query_plants,
-                          center: tuple[float, float], boundary=None) -> None:
+                          center: tuple[float, float], boundary=None, *,
+                          spot=None) -> None:
     """Ensure the design actually serves each chosen wildlife species: for any
     selected fauna with no supporting plant among those placed, drop in one
-    plant that supports it. Mirrors :func:`_apply_goal_feedback`; warnings live
-    under ``properties.generation_warnings``."""
+    plant that supports it, at ``spot(row)`` (open ground by default). Mirrors
+    :func:`_apply_goal_feedback`; warnings live under
+    ``properties.generation_warnings``.
+
+    Never a plant that needs standing water (F183): measured in V2.91, 39 of
+    the 1,116 animals with a recorded plant for an Edmonton yard led with one.
+    For an animal whose every plant does (five then), the notes say so and
+    name the plants."""
     if not fauna_ids:
         return
+    from src.zoning import needs_standing_water
+    if spot is None:
+        spot = _open_ground(project, boundary, center).spot_for
     placed_ids = {p.get("plant_id") for p in project.placed_plants}
-    added_any = False
+    served: list = []
+    water_only: list = []
     for fid in fauna_ids:
         try:
             supporters = query_plants(supports_fauna_id=int(fid))
@@ -2612,24 +2644,34 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
             supporters = []
         if not supporters:
             continue
-        if placed_ids.isdisjoint({p["id"] for p in supporters}):
-            lat, lng = _one_position_in_boundary(boundary, center)
-            project.place_plant(supporters[0]["id"], lat, lng, quantity=1)
-            placed_ids.add(supporters[0]["id"])
-            added_any = True
-    if added_any:
-        names = _fauna_names(fauna_ids)
-        msg = ("Added plants so the design supports your chosen wildlife"
-               + (f" ({', '.join(names)})." if names else "."))
-        props = project.as_dict().setdefault("properties", {})
-        props.setdefault("generation_warnings", []).append(msg)
+        if not placed_ids.isdisjoint({p["id"] for p in supporters}):
+            continue
+        dry = [p for p in supporters if not needs_standing_water(p)]
+        if not dry:
+            water_only.append((fid, supporters))
+            continue
+        lat, lng = spot(dry[0])
+        project.place_plant(dry[0]["id"], lat, lng, quantity=1)
+        placed_ids.add(dry[0]["id"])
+        served.append(fid)
+    if served:
+        names = _fauna_names(served)
+        _add_warning(project,
+                     "Added plants so the design supports your chosen wildlife"
+                     + (f" ({', '.join(names)})." if names else "."))
+    for fid, supporters in water_only:
+        names = _fauna_names([fid])
+        _add_warning(project, _water_only_note(
+            names[0] if names else "one of your chosen animals", supporters))
 
 
 def _apply_goal_feedback(project, goals, query_plants,
-                         center: tuple[float, float], boundary=None) -> None:
+                         center: tuple[float, float], boundary=None, *,
+                         spot=None) -> None:
     """Record goal-related warnings on the project and, if a *backed* goal ends
     up with no representation among the placed plants, drop in one satisfying
-    plant so the result never silently violates a hard goal.
+    plant (at ``spot(row)``, open ground by default, and never one that needs
+    standing water) so the result never silently violates a hard goal.
 
     Warnings live under ``properties.generation_warnings`` (a plain list on the
     project dict — no schema concept) for the GUI/CLI to surface. The key is
@@ -2638,6 +2680,7 @@ def _apply_goal_feedback(project, goals, query_plants,
     from src.design_goals import (
         filters_for_goals, unbacked_goals, get_goal, caveats_for_goals,
     )
+    from src.zoning import needs_standing_water
 
     warnings: list = []
     unbacked = unbacked_goals(goals)
@@ -2664,12 +2707,20 @@ def _apply_goal_feedback(project, goals, query_plants,
         else:
             sat_ids = {p["id"] for p in satisfying}
             placed_ids = {p.get("plant_id") for p in project.placed_plants}
-            if placed_ids.isdisjoint(sat_ids):
-                lat, lng = _one_position_in_boundary(boundary, center)
-                project.place_plant(satisfying[0]["id"], lat, lng, quantity=1)
+            dry = [p for p in satisfying if not needs_standing_water(p)]
+            if placed_ids.isdisjoint(sat_ids) and not dry:
+                warnings.append(
+                    "No plant was added to honour the selected goals: every "
+                    "plant that meets them grows in standing water."
+                )
+            elif placed_ids.isdisjoint(sat_ids):
+                if spot is None:
+                    spot = _open_ground(project, boundary, center).spot_for
+                lat, lng = spot(dry[0])
+                project.place_plant(dry[0]["id"], lat, lng, quantity=1)
                 warnings.append(
                     "Added one plant to honour the selected goals "
-                    f"({satisfying[0].get('common_name', 'plant')})."
+                    f"({dry[0].get('common_name', 'plant')})."
                 )
 
     if warnings:
@@ -2855,13 +2906,15 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # design and mend the most impactful gaps straight from the catalogue.
     from src.design_critic import apply_repairs
     scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
-    for msg in apply_repairs(
-            project, scoped,
-            lambda: _one_position_in_boundary(boundary, center)):
+    ground = _open_ground(project, boundary, center, keepout, fills,
+                          cell_env_map)
+    for msg in apply_repairs(project, scoped, ground.spot_for):
         _add_warning(project, msg)
 
-    _apply_goal_feedback(project, goals, scoped, center, boundary)
-    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
+    _apply_goal_feedback(project, goals, scoped, center, boundary,
+                         spot=ground.spot_for)
+    _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
+                          spot=ground.spot_for)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
     return project

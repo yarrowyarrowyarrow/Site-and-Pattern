@@ -157,7 +157,7 @@ class TestEvaluateAndRepair(unittest.TestCase):
         before = len(proj.placed_plants)
         msgs = apply_repairs(
             proj, query_plants,
-            lambda: (_EDM["latitude"], _EDM["longitude"]))
+            lambda row: (_EDM["latitude"], _EDM["longitude"]))
         after = len(proj.placed_plants)
         self.assertGreater(after, before)
         self.assertTrue(msgs)
@@ -171,7 +171,7 @@ class TestEvaluateAndRepair(unittest.TestCase):
         proj = self._project_with(["yarrow"])
         msgs = apply_repairs(
             proj, query_plants,
-            lambda: (_EDM["latitude"], _EDM["longitude"]),
+            lambda row: (_EDM["latitude"], _EDM["longitude"]),
             max_additions=1)
         self.assertLessEqual(len(msgs), 1)
 
@@ -181,9 +181,42 @@ class TestEvaluateAndRepair(unittest.TestCase):
         healthy = _habitat()
         msgs = apply_repairs(
             proj, query_plants,
-            lambda: (_EDM["latitude"], _EDM["longitude"]),
+            lambda row: (_EDM["latitude"], _EDM["longitude"]),
             habitat=healthy)
         self.assertEqual(msgs, [])
+
+    def test_repairs_ask_where_to_put_the_plant_they_are_placing(self):
+        # V2.91 (F183): where a plant goes depends on the plant, so
+        # position_for is handed the row. Each spot asked for is used.
+        from src.permadesign_api import query_plants
+        proj = self._project_with(["yarrow"])
+        before = {p["plant_id"] for p in proj.placed_plants}
+        asked = []
+
+        def spot(row):
+            asked.append(row["id"])
+            return (_EDM["latitude"] + 0.00002 * len(asked), _EDM["longitude"])
+
+        msgs = apply_repairs(proj, query_plants, spot)
+        self.assertTrue(msgs)
+        added = {p["plant_id"] for p in proj.placed_plants} - before
+        self.assertEqual(set(asked), added)
+
+    def test_repairs_never_add_a_plant_that_needs_standing_water(self):
+        # V2.91 (F183): the host-plant search led with Buckbean, a bog plant,
+        # and the critic put it in a dry yard. It takes the next one now.
+        from src.permadesign_api import query_plants
+        rows = {r["common_name"]: r for r in query_plants()}
+        wet, dry = rows["Buckbean"], rows["Wild Bergamot"]
+        proj = self._project_with(["yarrow"])
+        gaps = _habitat(keystone={"score": 0}, host={"score": 0})
+        msgs = apply_repairs(proj, lambda **f: [wet, dry],
+                             lambda row: (_EDM["latitude"], _EDM["longitude"]),
+                             habitat=gaps)
+        names = {p["common_name"] for p in proj.placed_plants}
+        self.assertNotIn("Buckbean", names)
+        self.assertIn("Wild Bergamot", names)
+        self.assertEqual(len(msgs), 1)       # one plant, not the same twice
 
 
 class _ReviseClient:

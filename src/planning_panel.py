@@ -458,18 +458,21 @@ class PlanningPanel(QWidget):
         bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
         berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
 
+        # A grass, sedge or rush flowers but not for bees: not a pollinator
+        # bloom (V2.91, F182), the forage calendar's one test.
+        from src.forage_calendar import is_pollinator_forage
         conn = get_connection()
         try:
             for pid in plant_ids:
                 row = conn.execute(
-                    "SELECT common_name, bloom_period, fruit_period "
-                    "FROM plants WHERE id = ?",
+                    "SELECT common_name, plant_type, flower_form, "
+                    "bloom_period, fruit_period FROM plants WHERE id = ?",
                     (pid,)
                 ).fetchone()
                 if not row:
                     continue
                 name = row["common_name"]
-                if row["bloom_period"]:
+                if row["bloom_period"] and is_pollinator_forage(dict(row)):
                     for m in self._parse_month_range(row["bloom_period"]):
                         if name not in bloom_by_month[m]:
                             bloom_by_month[m].append(name)
