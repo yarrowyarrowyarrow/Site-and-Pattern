@@ -671,8 +671,8 @@ animals did not exist then.
 
 | Family | Fidelity | Distinctness | Main problem |
 |---|---|---|---|
-| Deciduous trees (13) | 5 | 4 | Cottonwoods borrow the aspen; elm and box elder get the default |
-| Conifers (7) | 5 | 3 | Pines read as bottle brushes; spruce, fir, Douglas-fir and juniper share a look |
+| Deciduous trees (13) | 5 | 4 | Cottonwoods borrow the aspen; elm and box elder get the default — fixed in V2.92 |
+| Conifers (7) | 5 | 3 | Pines read as bottle brushes; spruce, fir, Douglas-fir and juniper share a look — pines and juniper fixed in V2.92 |
 | Shrubs (54) | 5 | 4 | Willows on the smallest leaf variant look bare; stretched up to 2.5x |
 | Wildflower bodies (215) | 4 | 3 | Rosettes are one dark lettuce; asters look like grass |
 | Flowers in bloom | 3 | 5 | **Cluster flowers drawn at cluster size** — fixed in V2.88, see below |
@@ -809,6 +809,34 @@ unit number modulo a variant count that stopped at three. The render probe now
 compares the two bodies' vertex counts, the only measure that could tell them
 apart.
 
+### What V2.92 fixed (F178 trees with their own shape)
+
+Plan: [`V2.92-trees-with-their-own-shape`](plans/V2.92-trees-with-their-own-shape.md).
+
+**36 · Ten trees drawn as themselves.** Six new baked archetypes and four
+rebuilt, each authored at its species' recorded proportions, so none borrows
+another's model and gets stretched to fit: the elm's vase (a low fork into
+leaders that keep climbing), box elder's several leaning trunks and three-leaflet
+leaves, the two cottonwoods with their own crowns and leaves, Peach-leaved
+Willow, and a juniper that is a lumpy cone foliated to the ground rather than a
+spruce. Water birch and Bebb's willow, both recorded `multi_stem`, leave the
+ground as clumps of stems; until now the generator could not grow a second stem.
+
+**37 · Pines, not bottle brushes.** A new builder: whorls of limbs, each ending
+in a cluster of tufts, with bare trunk between the whorls. The lodgepole has a
+long clear bole and a rounded top; the jack pine a crooked trunk, kinked limbs
+and eight dead stubs kept below its crown. Each tuft has a small solid core the
+eye reads as the shoot's mass, where the old tuft was eighteen needles from one
+point.
+
+Stylised draws the same clumps and forks with its own generator. The pines in
+Stylised are unchanged, the fallback's recorded limit. Black Spruce still wears
+White Spruce's model, because nothing the catalogue records tells them apart.
+
+Found on the way, F186: from a person's eye height most leaf cards render
+near-black on every tree, mostly because of how the viewer lights a card seen
+from its shaded side, with the baked shading adding to it.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
@@ -816,8 +844,9 @@ The batches that need a model, a data decision or a flora, one row each in
 habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
 the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
 ~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), **F177** succulents and cacti,
-**F178** trees with their own shape, ~~F179 climbers~~ (V2.89), **F180** telling
-species apart, and ~~F181~~, placing vines where they can climb (V2.90).
+~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
+telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
+**F186**, dark crowns from eye level, was found by V2.92.
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 

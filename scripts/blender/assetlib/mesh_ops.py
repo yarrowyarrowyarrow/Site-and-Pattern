@@ -289,7 +289,7 @@ RACHIS_EASE = 1.25            # arched rachis: turns gently, hardest near the ti
 
 
 def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                      segments=4, arch=0.0, pairs=None):
+                      segments=4, arch=0.0, pairs=None, leaflet=None):
     """One compound leaf: a slim rachis carrying paired leaflets and a terminal.
 
     A third of the catalogue's leaves are compound — every pea (lupine,
@@ -308,6 +308,10 @@ def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
     ostrich fern both record ``compound_pinnate``, but the rose really does
     carry three pairs while the fern carries dozens, and at three the frond
     reads as a row of paddles rather than as a divided frond.
+
+    ``leaflet`` overrides the leaflet length as a fraction of the rachis
+    (:func:`leaflet_frac` otherwise). A box elder's three leaflets are half the
+    leaf's length each, where the outline's default is sized for a frond.
     """
     pairs = _LEAFLET_PAIRS.get(shape, 3) if pairs is None else pairs
     ln = length * (_LEAF_LEN_MAX - 0.4 + rng.random() * 0.4)
@@ -333,7 +337,8 @@ def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
     add_ribbon(bm, stalk,
                [ln * (0.012 - 0.006 * u) for u in us],
                (mat.to_3x3() @ Vector((0, 1, 0))).normalized())
-    leaflet_len = ln * leaflet_frac(shape, pairs)
+    leaflet_len = ln * (leaflet_frac(shape, pairs) if leaflet is None
+                        else leaflet)
     leaflet_w = leaflet_len * (0.5 if palmate else 0.42)
     flare = 0.55 if palmate else leaflet_flare(pairs)
     n = pairs * 2 + 1
@@ -356,7 +361,8 @@ _LEAF_LEN_MAX = 1.2                       # length × (0.8 + rand·0.4)
 _LEAF_DROOP_MAX = 0.18                    # droop = base + rand·0.18
 
 
-def leaf_extent(length, tilt, shape="lance", arch=0.0, pairs=None):
+def leaf_extent(length, tilt, shape="lance", arch=0.0, pairs=None,
+                leaflet=None):
     """Worst-case ``(horizontal, vertical)`` reach of a leaf :func:`add_leaf`
     would stamp at the origin.
 
@@ -381,20 +387,20 @@ def leaf_extent(length, tilt, shape="lance", arch=0.0, pairs=None):
         # A compound leaf's leaflets stick out sideways from the rachis, so it
         # is wider than a simple blade of the same length and no taller. The
         # aspect fixed point and shape_to_aspect both trust this figure.
-        h += ln * leaflet_frac(
+        h += ln * (leaflet_frac(
             shape, _LEAFLET_PAIRS.get(shape, 3) if pairs is None else pairs
-        ) * 0.8
+        ) if leaflet is None else leaflet) * 0.8
     return (h, v)
 
 
 def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                      segments=4, arch=0.0, pairs=None):
+                      segments=4, arch=0.0, pairs=None, leaflet=None):
     """Stamp the right primitive for ``shape`` — one ribbon, or a rachis with
     leaflets. The single entry point builders should call so a new compound
     outline never needs another branch at every call site."""
     if shape in COMPOUND_SHAPES:
         add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                          segments, arch, pairs)
+                          segments, arch, pairs, leaflet)
     else:
         add_leaf(bm, rng, length, width, tilt, azimuth, at, shape, segments)
 

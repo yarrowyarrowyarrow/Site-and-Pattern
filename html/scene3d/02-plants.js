@@ -343,12 +343,30 @@ const _PROF = {
   aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus tremuloides
   poplar: { id: 'poplar', bark: '#7d7a70', formBias: 'oval', foliageScale: 1.02 },   // P. balsamifera
   birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'slender', droopOuter: 0.55, foliageScale: 0.82 }, // Betula papyrifera
-  birch_water: { id: 'birch_water', bark: '#6b4230', formBias: 'spreading', droopOuter: 0.35, foliageScale: 0.86 }, // B. occidentalis
+  birch_water: { id: 'birch_water', bark: '#6b4230', formBias: 'spreading', droopOuter: 0.35, foliageScale: 0.86,
+                 stems: [4, 6, 0.34], rise: 0.3 }, // B. occidentalis — a clump of stems (V2.92)
   oak:    { id: 'oak',    bark: '#463524', formBias: 'spreading', foliageScale: 1.06 }, // Quercus
-  willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85 }, // Salix
+  willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85,
+            stems: [3, 5, 0.32], rise: 0.3 }, // Salix bebbiana — multi-stemmed (V2.92)
   cherry: { id: 'cherry', bark: '#7a4630', formBias: 'oval' },    // Prunus pensylvanica
   cherry_orchard: { id: 'cherry_orchard', bark: '#7a5140', formBias: 'spreading' }, // P. cerasus
   apple:  { id: 'apple',  bark: '#6a5238', formBias: 'spreading' }, // Malus
+  // V2.92 (F178): the trees the audit found drawn as something else. `stems`
+  // [lo, hi, lean], `leaders` [lo, hi, angle, length x the trunk's] and `rise`
+  // are the architecture the procedural fallback shares with the baked model
+  // (03b-trees.js decidCfg; flora_trees.DECID_GENERA): trunks from the ground,
+  // the trunk's first fork, and limbs that keep climbing.
+  elm:    { id: 'elm', bark: '#6b645b', formBias: 'oval', droopOuter: 0.75,
+            leaders: [4, 5, 0.55, 1.6], rise: 0.8 },           // Ulmus americana — the vase
+  boxelder: { id: 'boxelder', bark: '#8b8377', formBias: 'spreading',
+              stems: [2, 3, 0.40] },                           // Acer negundo
+  cottonwood: { id: 'cottonwood', bark: '#8a8478', formBias: 'oval', foliageScale: 1.05,
+                leaders: [3, 4, 0.5, 1.2], rise: 0.35 },       // Populus deltoides
+  cottonwood_narrow: { id: 'cottonwood_narrow', bark: '#8c877c', formBias: 'oval',
+                       foliageScale: 0.9, leaders: [3, 3, 0.32, 1.1], rise: 0.4 }, // P. angustifolia
+  willow_peach: { id: 'willow_peach', bark: '#6f6457', formBias: 'spreading',
+                  droopOuter: 0.65, foliageScale: 0.9, stems: [1, 2, 0.22] }, // Salix amygdaloides
+  juniper: { id: 'juniper', conifer: 'juniper', bark: '#7a5a48' },  // Juniperus scopulorum
   def:    { id: 'def',    bark: '#5d4433' },
 };
 const TREE_PROFILES = {
@@ -373,12 +391,22 @@ const TREE_PROFILES = {
 // White and black spruce are deliberately NOT split: they differ in height and
 // needle length but their recorded aspects are both 3.3, so a separate
 // archetype would be a fabricated difference rather than a recorded one (P9).
+// V2.92 (F178) adds the six the V2.87 audit found borrowing another tree's model,
+// and stretched to fit: both cottonwoods drew the aspen 1.6x wider, Peach-leaved
+// Willow drew Bebb's 1.35x wider, the juniper the default conifer (a spruce)
+// 1.7x wider, and the elm and box elder the generic defaults.
 const TREE_SPECIES_PROFILES = {
   'populus balsamifera': _PROF.poplar,
   'pinus banksiana': _PROF.pine_jack,
   'betula occidentalis': _PROF.birch_water,
   'prunus cerasus': _PROF.cherry_orchard,
   'pseudotsuga menziesii': _PROF.douglas,
+  'ulmus americana': _PROF.elm,
+  'acer negundo': _PROF.boxelder,
+  'populus deltoides': _PROF.cottonwood,
+  'populus angustifolia': _PROF.cottonwood_narrow,
+  'salix amygdaloides': _PROF.willow_peach,
+  'juniperus scopulorum': _PROF.juniper,
 };
 function profileFor(p) {
   return TREE_SPECIES_PROFILES[(p.species || '').toLowerCase()]
@@ -394,9 +422,15 @@ const CONIFER_KINDS = {
   fir:      { baseRMul: 0.72, tiersAdd: 2,  droopAdd: -0.04, spire: 1.4, segMul: 1.0 },
   douglas:  { baseRMul: 0.62, tiersAdd: 3,  droopAdd: -0.06, spire: 1.5, segMul: 1.0 },
   larch:    { baseRMul: 0.92, tiersAdd: -1, droopAdd: 0.0,  spire: 0.7, segMul: 0.7 },
+  // Juniper (V2.92): the fallback's nearest honest shape, a broad dense cone
+  // foliated to the ground with no spire. The baked model has no tiers at all.
+  // Skirts close enough to overlap into one surface: tiersAdd -2 left an 8 m
+  // tree two skirts in Stylised (which draws 0.6x the count), one on the ground
+  // and a speck on top of a bare pole.
+  juniper:  { baseRMul: 1.12, tiersAdd: 4, droopAdd: 0.02, spire: 0.35, segMul: 0.8 },
 };
 const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17,
-                   douglas: 23, pine_jack: 29 };
+                   douglas: 23, pine_jack: 29, juniper: 31 };
 
 // Shrub growth-form silhouettes (V1.96): instead of one blobby dome, a shrub is
 // a multi-stem woody clump whose foliage is distributed along ascending stems —
@@ -462,7 +496,7 @@ const _SPROF = {
   def:            { id: 'sdef', form: 'spreading' },
 };
 // The species' own recorded habit beats its genus — the same demotion
-// treeFormFor (03-herbs.js) applied to formBias, and the mirror of
+// treeFormFor (03b-trees.js) applied to formBias, and the mirror of
 // assetlib/conventions.py:shrub_form_for. `branching` (schema v47) is seeded for
 // every shrub in the catalogue, so this is reading data rather than guessing.
 const _UPRIGHT_ASPECT = 1.25;

@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (at V2.91): 44 code features · 12 data jobs · 4 legacy-ledger items.**
+**Totals (at V2.92): 44 code features · 12 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -40,7 +40,7 @@ possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge an
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
 recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
-F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened. **V2.88**: nine opened by the 3D model audit, F172–F180 in group O, all counted as code features; F117 gained the fruit-size finding and F119 narrowed to birds and mammals. **V2.89**: F176 and F179 shipped; F181 and F182 opened, both found by that work; F172 gained the Wild Clematis flower. **V2.90**: F175 and F181 shipped; F183 opened, found by that work; F172 gained buckbean's leaf size. **V2.91**: F182 and F183 shipped; F184 opened, found by that work, and F185 numbered, the pond rule V2.90 left open.)*
+F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened. **V2.88**: nine opened by the 3D model audit, F172–F180 in group O, all counted as code features; F117 gained the fruit-size finding and F119 narrowed to birds and mammals. **V2.89**: F176 and F179 shipped; F181 and F182 opened, both found by that work; F172 gained the Wild Clematis flower. **V2.90**: F175 and F181 shipped; F183 opened, found by that work; F172 gained buckbean's leaf size. **V2.91**: F182 and F183 shipped; F184 opened, found by that work, and F185 numbered, the pond rule V2.90 left open. **V2.92**: F178 shipped; F186 opened, found by that work.)*
 
 ---
 
@@ -335,7 +335,8 @@ succulents), because 5 to 20 species is what one contact sheet can show clearly.
 F172's corrections can ride along with whichever increment touches those species.
 V2.89 shipped the climbers and the horsetails ([plan](plans/V2.89-climbers-and-horsetails.md)) and found F181 and F182 on the way.
 V2.90 shipped the pond and F181 ([plan](plans/V2.90-vines-find-hosts-and-the-pond.md)) and found F183.
-V2.91 shipped F182 and F183 ([plan](plans/V2.91-additions-find-open-ground.md)) and found F184; F185 is the pond rule V2.90 left open, numbered.*
+V2.91 shipped F182 and F183 ([plan](plans/V2.91-additions-find-open-ground.md)) and found F184; F185 is the pond rule V2.90 left open, numbered.
+V2.92 shipped F178, the trees ([plan](plans/V2.92-trees-with-their-own-shape.md)), and found F186.*
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
@@ -345,13 +346,14 @@ V2.91 shipped F182 and F183 ([plan](plans/V2.91-additions-find-open-ground.md)) 
 | ~~**F175**~~ | ✅ **Shipped in V2.90.** Each wetland plant drawn by its own body from its recorded habit (`src/pond_habit.py`): floating leaves on a pond's water, submerged plants showing only what reaches the surface, broad leaves on stalks, mare's-tail's whorled stems. Four submerged plants and Water Parsnip recorded correctly | — | Done | — |
 | ~~**F176**~~ | ✅ **Shipped in V2.89.** Horsetails drawn as jointed stems from a new `jointed` growth form: whorled, whorled above, or plain banded rods with a pointed tip. The two grass plumes they wore are gone | — | Done | — |
 | **F177** | **Succulents and cacti.** Pads, a spiny ball, a sword-leaf rosette (Soapweed Yucca), a fleshy upright stem (Roseroot). Five species, drawn today as grass tufts or groundcover mats | S–M | Low | P5 |
-| **F178** | **Trees with their own shape.** The elm's vase, Manitoba Maple, broad cottonwood crowns with their own leaves (both cottonwoods borrow the aspen, stretched 1.6x), Rocky Mountain Juniper, multi-stemmed water birch and willows, and pines that do not read as bottle brushes. Eleven trees | M | Med — profiles + generator | P5, P2 |
+| ~~**F178**~~ | ✅ **Shipped in V2.92.** Ten trees with models of their own at their species' proportions: the elm's vase, box elder's several trunks and three-leaflet leaves, both cottonwoods, Peach-leaved Willow, the juniper as a cone foliated to the ground, water birch and Bebb's willow as clumps of stems, and pines with whorls, a crooked trunk and dead stubs instead of bottle brushes. Black Spruce stays White Spruce's model (P9: nothing recorded tells them apart) | — | Done | — |
 | ~~**F179**~~ | ✅ **Shipped in V2.89.** The owner's rule: a vine climbs the tree or shrub whose footprint touches its own, and with none it lies on the ground, 30 cm at most. Decided once in Python (`src/vine_habit.py`) and fitted to the host's drawn crown | — | Done | — |
 | ~~**F181**~~ | ✅ **Shipped in V2.90.** The generator seats each vine at the base of a tree or shrub it planted, on the sunny side, and with none says so in the design notes (the owner's option c) | — | Done | — |
 | ~~**F182**~~ | ✅ **Shipped in V2.91.** A grass, sedge or rush is never pollinator forage, bloom period or not (the owner's rule), in both forage calendars: the docent's and Planning → Wildlife. The docent's season beat, which had never played because its callers pass no bloom data, now does | — | Done | — |
 | ~~**F183**~~ | ✅ **Shipped in V2.91.** What the design review adds goes in open ground, read from the plants actually placed (`src/open_ground.py`): free ground by the main pass's spacing, the ground that suits the plant, beside the planting; a vine at a shrub's foot. Never a plant that needs standing water; an animal fed only by such plants gets a note instead | — | Done | — |
 | **F184** | **The habitat score counts grass bloom.** Bloom continuity (20 of 100 points) reads every `bloom_period`, graminoids included, and the critic's bloom-gap repairs read its gaps. Most designs do not move, because their wildflowers cover the grasses' months; a grass-heavy prairie mix does, 52 → 46, with June and July a real gap the score calls covered, so the critic never offers a June bloomer. **A headline change, reserved to the owner**; until then the forage calendars and the score disagree about grasses, on purpose | S | Low — but moves the headline | P6, P9 |
 | **F185** | **Aquatics in ponds.** The generator keeps every plant out of a pond's footprint (keep-out) and has no rule that puts a water plant in one, so a pond-lily it places lies on dry ground and the design review, since V2.91, adds no water plant at all. Left by V2.90 as a design rule, like F181 was for vines: which plants go in, where in the pond, how many | S–M | Low — generator | P2, P10 |
+| **F186** | **Tree crowns render dark from eye level.** Seen side-on from a person's height, most leaf cards render near-black, on every tree, and the pine and juniper tufts darkest; from above they read green, which is how the V2.87 audit saw them. **Mostly the viewer's lighting**: V2.92 rendered the same view with every vertex colour set to white, and the crowns were lighter but still largely dark, so the larger part is how the viewer lights a card seen from its shaded side and the baked shading adds the rest. The bake also puts its ground plane at a tree's lowest leaf, because foliage is baked on its own (the elm's mean brightness 0.31, 0.57 with the ground at z = 0). Not diagnosed further | S–M | Med — every tree's look | P13, P5 |
 | **F180** | **Telling species apart.** 80 grasses, sedges and rushes share three shapes; 51 rosette wildflowers look like one dark lettuce; the asters read as grass; 45 species on the smallest narrow-leaf variant read as bare stems. Ongoing: 10 to 20 species per sitting against reference photographs, on the tuning benches (`scripts/tune_morphology.py`). Shrub stretch is F115, fruit size F117, butterfly wing patterns F114 | L, ongoing | Low | P5, P13 |
 
 ---

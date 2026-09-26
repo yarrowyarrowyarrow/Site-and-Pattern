@@ -353,7 +353,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # the fix was the split the ceiling asks for rather than a bigger number.
         (_HTML / "scene3d" / "01b-surface.js", 550),   # ~403 now
         (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
-        (_HTML / "scene3d" / "03-herbs.js", 700),      # ~431 now
+        (_HTML / "scene3d" / "03-herbs.js", 700),      # ~432 now
+        # V2.92 (F178): the procedural trees, split out of 03-herbs.js when the
+        # Stylised half of F178 took it to 758/700 — the split the ceiling
+        # asks for, along the herbs/trees seam.
+        (_HTML / "scene3d" / "03b-trees.js", 450),     # ~339 now
         (_HTML / "scene3d" / "04-quality.js", 900),    # 893 now (V2.90): move code out first
         (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
