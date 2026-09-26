@@ -373,6 +373,9 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // the bird flight attitude took it past its ceiling. Nothing here is called
     // from the animation loop — see 08-modes.js:_loopFault.
     'scene3d/21-critters.js',
+    // V2.89: vines on the tree or shrub beside them (F179). Called from
+    // buildPlants after the trees and shrubs have noted where they stand.
+    'scene3d/22-vines.js',
   ];
   let i = 0;
   (function next() {

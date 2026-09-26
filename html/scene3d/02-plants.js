@@ -529,14 +529,14 @@ function grainClassFor(leafSizeCm, heightM, family) {
 
 // ── layer aspect axis (V2.33, F65) ──────────────────────────────────────────
 // The mirror of assetlib/conventions.py LAYER_ASPECT_BREAKS / layer_aspect_class.
-// grass, aquatic and vine each bake three units at three real aspects; a species
+// grass and aquatic each bake three units at three real aspects; a species
 // picks its own from height ÷ canopy instead of the three being random draws of
 // one shape selected by a plant-id hash. Getting these breaks out of step with
 // the generator's asks for an aspect the manifest doesn't carry, which degrades
 // to the neutral middle unit (09-models.js _glbVariant) — a silent loss of the
 // thing the axis exists for.
-const LAYER_ASPECT_BREAKS = { grass: [1.17, 1.50], aquatic: [0.67, 1.33],
-                              vine: [1.67, 2.00] };
+// (Vines left the axis in V2.89: they are drawn on what they climb, 22-vines.js.)
+const LAYER_ASPECT_BREAKS = { grass: [1.17, 1.50], aquatic: [0.67, 1.33] };
 function aspectClassFor(p, kind) {
   const br = LAYER_ASPECT_BREAKS[kind];
   if (!br) return 1;

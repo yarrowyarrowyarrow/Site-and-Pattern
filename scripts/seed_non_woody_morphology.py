@@ -235,7 +235,8 @@ GENUS = {
     "Acorus":         ("linear", 60.0, "basal", "emergent"),
     "Alisma":         ("ovate", 15.0, "basal", "emergent"),
     "Elodea":         ("linear", 1.5, "whorled", "floating"),
-    "Equisetum":      ("scale", 1.0, "whorled", "emergent"),
+    # Every horsetail is jointed stems, whatever water it stands in (V2.89).
+    "Equisetum":      ("scale", 1.0, "whorled", "jointed"),
     "Hippuris":       ("linear", 3.0, "whorled", "emergent"),
     "Lemna":          ("orbicular", 0.5, "basal", "floating"),
     "Menyanthes":     ("trifoliate", 8.0, "basal", "emergent"),

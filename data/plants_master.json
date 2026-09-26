@@ -4281,9 +4281,10 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "emergent",
+    "growth_form": "jointed",
     "flower_colour_source": "",
-    "native_provinces_source": "flora"
+    "native_provinces_source": "flora",
+    "stem_branching": "branched_throughout"
   },
   {
     "common_name": "Common Juniper",
@@ -4448,15 +4449,16 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
-    "flower_color": "#cbbd80",
-    "flower_form": "plume",
+    "flower_color": "",
+    "flower_form": "none",
     "native_provinces": "AB,SK",
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "emergent",
-    "flower_colour_source": "estimated",
-    "native_provinces_source": "flora"
+    "growth_form": "jointed",
+    "flower_colour_source": "",
+    "native_provinces_source": "flora",
+    "stem_branching": "unbranched"
   },
   {
     "common_name": "Common Snowberry",
@@ -20670,9 +20672,10 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "emergent",
+    "growth_form": "jointed",
     "flower_colour_source": "",
-    "native_provinces_source": "flora"
+    "native_provinces_source": "flora",
+    "stem_branching": "branched_above"
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -22292,15 +22295,16 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/212696762/medium.jpeg",
     "image_attribution": "(c) Юлия, some rights reserved (CC BY), uploaded by Юлия",
     "image_license": "cc-by",
-    "flower_color": "#cbbd80",
-    "flower_form": "plume",
+    "flower_color": "",
+    "flower_form": "none",
     "native_provinces": "AB,SK",
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "emergent",
-    "flower_colour_source": "estimated",
-    "native_provinces_source": "flora"
+    "growth_form": "jointed",
+    "flower_colour_source": "",
+    "native_provinces_source": "flora",
+    "stem_branching": "unbranched"
   },
   {
     "common_name": "Veiny Meadow-Rue",

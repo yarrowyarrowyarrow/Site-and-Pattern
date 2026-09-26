@@ -460,22 +460,6 @@
     "narrow_2": 8
    }
   },
-  "layer.vine": {
-   "file": "layer_vine.glb",
-   "half_width": {
-    "v0": 0.34014,
-    "v1": 0.2907,
-    "v2": 0.16667
-   },
-   "parts": [
-    "foliage"
-   ],
-   "variant_keys": {
-    "aspect_0": 0,
-    "aspect_1": 1,
-    "aspect_2": 2
-   }
-  },
   "shrub.arching": {
    "file": "shrub_arching.glb",
    "half_width": {

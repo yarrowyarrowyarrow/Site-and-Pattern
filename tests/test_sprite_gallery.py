@@ -58,6 +58,25 @@ class TestGalleryScenes(unittest.TestCase):
         whorl = self.scenes["flower_whorl"]["scene"]["plants"][0]
         self.assertEqual(whorl["flower_form"], "whorl")
 
+    def test_a_vine_entry_shows_it_climbing_and_alone(self):
+        # V2.89: a vine climbs the tree or shrub beside it, or lies on the
+        # ground, so a lone specimen would only ever show the sprawl.
+        entries = {k: e["scene"]["plants"] for k, e in self.scenes.items()
+                   if k.startswith("species_")
+                   and any(p.get("plant_type") == "vine"
+                           for p in e["scene"]["plants"])}
+        self.assertTrue(entries, "no vine species in the gallery")
+        for key, plants in entries.items():
+            vines = {p["drawn"]["habit"]: p for p in plants
+                     if p.get("plant_type") == "vine"}
+            host = next(p for p in plants if p.get("plant_type") != "vine")
+            with self.subTest(key):
+                self.assertEqual(sorted(vines), ["climbing", "sprawling"])
+                # On the shrub's right-hand edge as the gallery camera sees
+                # it (east-north-east), not hidden behind or inside it.
+                self.assertGreater(vines["climbing"]["x"], host["x"])
+                self.assertGreater(vines["climbing"]["y"], host["y"])
+
     def test_seed_reads_pin_utf8_encoding(self):
         # Regression (V1.95): bare read_text()/write_text() use the locale codec
         # (cp1252 on Windows) and crash on the seed JSON's en-dashes / accented

@@ -34,7 +34,7 @@ from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import src.db.plants as _plants_mod  # noqa: E402
-from src import scene_wildlife  # noqa: E402
+from src import scene_wildlife, vine_habit  # noqa: E402
 from tests.test_scene3d_render import _Server, _find_chromium, _read_js  # noqa: E402
 
 _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_accuracy_test_")
@@ -49,6 +49,11 @@ _HEAD = "Wild Bergamot"
 _GROUNDCOVER = "Canada Anemone"            # 0.6 m recorded, drawn as an 18 cm mat
 _SMALL_AQUATIC = "Ivy-leaved Duckweed"     # 2 cm recorded, drawn as a 0.5 m reed
 _BANDED_BEE = "American Bumble Bee"        # thorax black, so it rendered solid black
+#: V2.89: a vine beside a shrub climbs it; with nothing beside it, it lies low.
+_CLIMBER, _HOST = "Wild Clematis", "Red Osier Dogwood"
+_SPRAWLER = "Blue Clematis"
+_HORSETAILS = ("Common Horsetail", "Swamp Horsetail", "Common Scouring-rush",
+               "Variegated Horsetail")
 
 #: A drawn floret may stand for several real ones: it covers the area that
 #: n / drawn florets would, which for a goldenrod's 160 is up to 2.8x the single
@@ -87,16 +92,26 @@ def _build_cases():
     finally:
         conn.close()
 
+    def feature(name, dx_m=0.0):
+        return plant_feature({"plant_id": ids[name], "common_name": name,
+                              "lat": 51.05, "lng": -114.07 + dx_m / 70000.0})
+
+    def built(*features):
+        return build_scene({"type": "FeatureCollection",
+                            "properties": {"site_config": {}},
+                            "features": list(features)}, year=0,
+                           wind=False)["plants"]
+
     plants = []
-    for name in _CLUSTERS + (_HEAD, _GROUNDCOVER, _SMALL_AQUATIC):
-        project = {"type": "FeatureCollection",
-                   "properties": {"site_config": {}},
-                   "features": [plant_feature({
-                       "plant_id": ids[name], "common_name": name,
-                       "lat": 51.05, "lng": -114.07})]}
-        plant = build_scene(project, year=0, wind=False)["plants"][0]
+    for name in _CLUSTERS + (_HEAD, _GROUNDCOVER, _SMALL_AQUATIC,
+                             _SPRAWLER) + _HORSETAILS:
+        plant = built(feature(name))[0]
         plants.append({"name": name, "month": _bloom_month(plant),
                        "plant": plant})
+    # The climber beside its host, a quarter-metre outside the crown edge.
+    host = built(feature(_HOST))[0]
+    pair = built(feature(_HOST), feature(_CLIMBER, host["canopy_m"] / 2 + 0.25))
+    plants.append({"name": _CLIMBER, "month": 7, "plants": pair})
 
     # The control bee: one whose look has generic bands and no recorded
     # tergites, so the three baked shells must still be doing the job.
@@ -255,6 +270,68 @@ class AccuracyRenderTest(unittest.TestCase):
             f"{_SMALL_AQUATIC}: recorded {want} m, drawn {got} m tall — the "
             f"0.5 m reed floor is back")
 
+    # ── V2.89: vines on what they climb, horsetails as jointed stems ─────────
+
+    def _group(self):
+        case = self._case(_CLIMBER)
+        vine = next(p for p in case["plants"] if p["plant_type"] == "vine")
+        host = next(p for p in case["plants"] if p["plant_type"] != "vine")
+        return vine, host
+
+    def test_a_vine_beside_a_shrub_climbs_onto_it(self):
+        vine, host = self._group()
+        self.assertEqual(vine["drawn"]["habit"], "climbing")
+        leaves = [q for q in self._measured(_CLIMBER)["parts"]
+                  if q.get("part") == "vine"]
+        self.assertTrue(leaves, f"{_CLIMBER}: no vine leaves were drawn")
+        reach = vine["drawn"]["height_m"]
+        top = max(q["top"] for q in leaves)
+        self.assertGreaterEqual(
+            top, 0.6 * reach,
+            f"{_CLIMBER}: leaves stop at {top:.2f} m of a {reach} m climb — it "
+            f"is lying at the foot of the {_HOST} instead of on it")
+        self.assertLessEqual(top, reach + 0.2,
+                             f"{_CLIMBER}: leaves at {top:.2f} m, above its "
+                             f"{reach} m reach")
+        # ON the shrub: the leaves reach in over the host's crown, not only
+        # round the vine's own root outside it.
+        inner = min(q["x0"] for q in leaves)
+        self.assertLess(
+            inner, host["x"] + host["canopy_m"] / 2 * 0.9,
+            f"{_CLIMBER}: its leaves never reach in over the {_HOST}'s crown")
+
+    def test_with_nothing_to_climb_a_vine_lies_low(self):
+        # Every part, not only those tagged 'vine': the column this replaced
+        # carried no such tag, so a leaves-only check reported it as "nothing
+        # drawn" instead of as the column coming back.
+        parts = self._measured(_SPRAWLER)["parts"]
+        self.assertTrue(parts, f"{_SPRAWLER}: nothing was drawn")
+        top = max(q["top"] for q in parts)
+        self.assertLessEqual(
+            top, vine_habit.SPRAWL_HEIGHT_M + 0.12,
+            f"{_SPRAWLER}: alone, it stands {top:.2f} m tall — the free-standing "
+            f"column is back")
+
+    def test_horsetails_stand_at_their_recorded_height(self):
+        for name in _HORSETAILS:
+            want = self._case(name)["plant"]["height_m"]
+            got = self._measured(name)["height_m"]
+            with self.subTest(name):
+                self.assertGreaterEqual(got / want, 0.85,
+                                        f"{name}: {got} m against {want} m")
+                self.assertLessEqual(got / want, 1.25,
+                                     f"{name}: {got} m against {want} m")
+
+    def test_a_horsetail_is_one_body_and_no_flower(self):
+        """Two of them wore grass plumes until V2.89. A horsetail makes spores
+        in a cone; nothing but its jointed stems should be drawn."""
+        for name in _HORSETAILS:
+            parts = self._measured(name)["parts"]
+            with self.subTest(name):
+                self.assertEqual(len(parts), 1,
+                                 f"{name}: {len(parts)} parts drawn, expected "
+                                 f"its stems alone")
+
     # ── A4: the baked bee wears the recorded bands ───────────────────────────
 
     def test_the_recorded_bands_ring_the_baked_bee(self):
@@ -320,6 +397,13 @@ class DrawnHeightIsOneNumberTest(unittest.TestCase):
             float(cap.group(1)), scene_wildlife.GROUNDCOVER_DRAWN_MAX_M,
             "the viewer's groundcover cap and scene_wildlife's disagree, so the "
             "animals perch at one height and the plant is drawn at another")
+
+    def test_the_vine_sprawl_height_is_one_number_on_both_sides(self):
+        m = re.search(r"const _VINE_SPRAWL_H = ([\d.]+);", _read_js("04-quality.js"))
+        self.assertIsNotNone(m, "04-quality.js lost _VINE_SPRAWL_H")
+        self.assertEqual(float(m.group(1)), vine_habit.SPRAWL_HEIGHT_M,
+                         "the viewer lays a vine lower or higher than the "
+                         "animals visiting it think it is")
 
     def test_flowers_and_fruit_read_the_drawn_height(self):
         for name in ("05-flowers.js", "11-fruit.js", "15-florets.js"):

@@ -315,7 +315,8 @@ foliage masses:
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
 | Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
-| Vine | `buildVineGeo` | sprawling/twining leafy stems *(V1.99)* | Blue Clematis, vetch, peavine |
+| Vine | `buildVines` (`22-vines.js`) | climbs the tree or shrub beside it, over that host's drawn crown; with none, a low tangle at most 30 cm tall *(V2.89; `buildVineGeo` drew a free-standing column)* | Wild Clematis, vetch, peavine |
+| Horsetail | `buildHorsetailGeo` | jointed stems ringed with dark sheaths at the nodes: whorled throughout, whorled above, or plain with a pointed tip *(V2.89)* | the four *Equisetum* |
 
 Herbaceous plants (wildflower / herb / fern) are built to their **growth form**
 (`HERB_FORMS`, keyed by genus via `_HPROF`, else inferred from flower form +

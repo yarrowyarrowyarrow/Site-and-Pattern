@@ -124,7 +124,10 @@ BRANCHING_HABITS  = {"excurrent", "decurrent", "multi_stem", "suckering",
 # the data can select the 3D form directly instead of a genus table guessing it.
 GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
                      "fern", "vining", "tussock", "emergent", "floating",
-                     "cushion", "succulent", "sprawling"}
+                     "cushion", "succulent", "sprawling",
+                     # V2.89: a horsetail's body is its jointed stems, with
+                     # the leaves reduced to sheaths; drawn by 14-layers.js.
+                     "jointed"}
 # Surface character (schema v52). What a species' bark and foliage look like
 # close up — the 3D viewer's procedural grain (html/scene3d/01b-surface.js).
 # Empty is meaningful and common: a per-genus bark default and a matte leaf.

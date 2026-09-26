@@ -679,7 +679,7 @@ animals did not exist then.
 | Grasses, sedges, rushes (80) | 3 | 1 | One wide-bladed fan in three proportions |
 | Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft |
 | Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts |
-| Climbers (6) | 2 | 2 | Free-standing leafy columns |
+| Climbers (6) | 2 | 2 | Free-standing leafy columns — fixed in V2.89 |
 | Fruit (44 species) | 4 | 6 | Shapes right; every fruit 17 to 34 cm across |
 | Bees (338) | 5 | 4 | Recorded bands not drawn — fixed in V2.88 |
 | Butterflies | 4 | 4 | Flat colour, no pattern |
@@ -750,14 +750,44 @@ flowers are; a bed of them reads less saturated than the blobs did. That is the
 real plant at the scale it is drawn, and the right answer to it is F180's tuning
 (flowering stems, how many heads), not bigger flowers.
 
+### What V2.89 fixed (F179 climbers, F176 horsetails)
+
+Plan: [`V2.89-climbers-and-horsetails`](plans/V2.89-climbers-and-horsetails.md).
+
+**32 · A vine on what it climbs.** A vine's recorded height is how far it
+climbs, and the viewer had drawn it as how tall it stands: a 6 m Wild Clematis
+was a 6 m green pillar in the open. The owner's rule decides now. A vine climbs
+the tree or shrub whose footprint touches its own, and with none it lies on the
+ground, 30 cm at most. `src/vine_habit.py` makes that decision once, in the
+scene. The viewer then measures the host's own drawn crown (its outer radius at
+each height and bearing, sampled along the mesh's edges, because a trunk's
+vertices sit only at its two ends) and runs the vine's stems over it. The
+species' own leaves go on the stems, and its flowers and fruit among the leaves
+in the upper two thirds. The animals perch where the foliage is. The baked
+`layer.vine` column is retired, not rebaked: a model baked once cannot fit
+whichever crown it lands on.
+
+**33 · Horsetails as jointed stems.** The four *Equisetum* were a grass tuft, a
+reed tuft and two rush tufts, because their `plant_type` says where they grow.
+Two of them wore a grass seed-head plume, and a horsetail has no flowers at all.
+A `jointed` growth form now routes all four to a drawn body: green stems ringed
+with dark sheaths at the nodes, whorls of branches all the way up (Common), at
+the middle nodes (Swamp) or none, with a pointed tip (Scouring-rush,
+Variegated). The plumes are gone. Schema v89.
+
+Both are pinned in the render probe. Against the old viewer, it reports the
+climber's leaves missing and the lone vine standing 3.00 m tall. Against the old
+data, it counts the plume on the two horsetails that wore one.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
 `BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
-habit records, 21 bird colour rows, 64 bees on the default look), **F173** insect
-body plans, **F174** bird body plans, **F175** the pond, **F176** horsetails,
-**F177** succulents and cacti, **F178** trees with their own shape, **F179**
-climbers (waiting on a decision: sprawl or drape), **F180** telling species apart.
+habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
+the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
+**F175** the pond, ~~F176 horsetails~~ (V2.89), **F177** succulents and cacti,
+**F178** trees with their own shape, ~~F179 climbers~~ (V2.89), **F180** telling
+species apart, and **F181**, placing vines where they can climb.
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 

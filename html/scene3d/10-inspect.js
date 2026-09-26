@@ -487,6 +487,9 @@ window.permaMeasure = function () {
       h: +(tmp.max.y - tmp.min.y).toFixed(3),
       base: +tmp.min.y.toFixed(3),
       top: +tmp.max.y.toFixed(3),
+      // Where it is, not only how big (V2.89): a vine's leaves have to be ON
+      // the shrub beside it, which a width cannot show.
+      x0: +tmp.min.x.toFixed(3), x1: +tmp.max.x.toFixed(3),
     }, o.isInstancedMesh ? _instanceScales(o) : {}));
     out.groups++;
   });

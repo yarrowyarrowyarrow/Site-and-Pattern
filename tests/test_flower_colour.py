@@ -115,8 +115,11 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: V2.87 adds seven trees: white +1 (Round-leaved Hawthorn, whose white is
     #: marked `estimated` like the rest of its genus), and six with no showy
     #: flower to record, counted below.
+    #: V2.89: straw -2. Common Scouring-rush and Variegated Horsetail are filed
+    #: as rushes and carried the graminoid straw with a plume; a horsetail has
+    #: no flower at all, so both now record none, like the other two.
     EXPECTED = {
-        "straw": 80, "yellow": 79, "white": 79, "purple": 45, "pink": 34,
+        "straw": 78, "yellow": 79, "white": 79, "purple": 45, "pink": 34,
         "blue": 28, "cream": 14, "red": 6, "green": 5, "orange": 3, "brown": 2,
     }
 
@@ -126,7 +129,7 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
         self.assertEqual(got, self.EXPECTED)
 
     def test_the_unrecorded_stay_unrecorded(self):
-        """49 rows record no flower colour. They must classify to "" — not to
+        """51 rows record no flower colour. They must classify to "" — not to
         white, which is what a naive parse of an empty hex would give.
 
         44 until V2.82 merged the duplicate *Urtica gracilis* row, which was
@@ -134,8 +137,9 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
         record. 43 -> 49 in V2.87: six of the seven trees promoted then are
         wind-pollinated or catkin-bearing (two cottonwoods, a willow, a maple,
         an elm and a juniper), and their rows leave the colour blank rather
-        than guess one."""
-        self.assertEqual(bucket_counts(_seed_rows()).get(""), 49)
+        than guess one. 49 -> 51 in V2.89: the two horsetails that wore a
+        grass plume. They make spores in a cone and have no bloom colour."""
+        self.assertEqual(bucket_counts(_seed_rows()).get(""), 51)
 
     def test_no_seeded_hex_falls_through_unclassified(self):
         unclassified = sorted({

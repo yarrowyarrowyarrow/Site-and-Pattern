@@ -211,11 +211,15 @@ function buildFruit(plants, month, terrain) {
       const seed = hashPid(p.plant_id || 1);
       const base = p.plant_type === 'tree' ? 18 : p.plant_type === 'shrub' ? 15 : 8;
       const n = Math.max(2, qn(Math.round(base * (_FRUIT_COUNT[form] || 1))));
+      // A climbing vine's fruit hangs on its own leaves, up its host (V2.89).
+      const va = window.vineAnchorsFor ? vineAnchorsFor(p) : null;
       for (let k = 0; k < n; k++) {
         const a = ((seed + k * 97) % 628) / 100;
         const rr = rad * (0.2 + 0.7 * (((seed + k * 61) % 100) / 100));
         const yy = gy + h * (0.4 + 0.45 * (((seed + k * 37) % 100) / 100));
-        pos.push(p.x + Math.cos(a) * rr, yy, -(p.y + Math.sin(a) * rr));
+        const q = va && va[(k * 11 + (seed >>> 0)) % va.length];
+        if (q) pos.push(q.x + q.nx * 0.03, q.y - 0.02, q.z + q.nz * 0.03);
+        else pos.push(p.x + Math.cos(a) * rr, yy, -(p.y + Math.sin(a) * rr));
         col.push(_c.r, _c.g, _c.b);
       }
     }

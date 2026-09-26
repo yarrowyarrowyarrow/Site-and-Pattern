@@ -349,6 +349,8 @@ function buildFlowers(plants, month, terrain) {
               : qn(p.plant_type === 'tree' ? 10
                  : p.plant_type === 'shrub' ? 8
                  : p.plant_type === 'grass' ? 5 : 7);
+      // A vine's blooms are on its leaves, wherever it climbed (V2.89).
+      const va = window.vineAnchorsFor ? vineAnchorsFor(p) : null;
       for (let k = 0; k < n; k++) {
         const j1 = ((seed + k * 97) % 997) / 997;
         const j2 = ((seed + k * 53) % 991) / 991;
@@ -357,7 +359,9 @@ function buildFlowers(plants, month, terrain) {
         const rr = isCattail ? rad * 0.22 * j2
                              : rad * (0.12 + 0.9 * Math.sqrt(j2));  // even areal spread
         const dy = isCattail ? 0 : (j3 - 0.5) * Math.max(0.14, h * 0.3);
-        pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
+        const q = va && va[(k * 7 + (seed >>> 0)) % va.length];
+        if (q) pos.push(q.x + q.nx * 0.03, q.y, q.z + q.nz * 0.03);
+        else pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
         col.push(_fc.r, _fc.g, _fc.b);
         siz.push(isCattail ? 1
                  : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100)));

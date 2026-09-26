@@ -658,6 +658,14 @@ def build_scene(project: dict, *, year: int = 0,
         scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
                        for p in scan["points"]]
 
+    # What each vine holds onto (V2.89, F179): the tree or shrub beside it, or
+    # nothing, in which case it lies on the ground. Decided here, once, after
+    # every plant (existing trees and recruits included) is in the list, so the
+    # viewer and the wildlife read the same answer. Additive — no SCENE_VERSION
+    # bump; a viewer that ignores `drawn` keeps drawing the old column.
+    from src.vine_habit import apply_vine_habits
+    apply_vine_habits(plants)
+
     splat_feature = splat
     if splat_feature is None:
         from src.splat_backdrop import feature_from_project

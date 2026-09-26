@@ -129,8 +129,9 @@ HERB_ASPECT = {
 # grass/sedge/rush share the grass tuft, so its figure is theirs pooled. This
 # stays the representative figure for the family (the manifest-level target and
 # the groundcover's single aspect); the per-unit targets are the axis below.
-LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
-                "groundcover": 0.42}
+# Vines left in V2.89: the viewer draws them on the tree or shrub they climb
+# (html/scene3d/22-vines.js), so there is no free-standing vine unit to bake.
+LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "groundcover": 0.42}
 
 # ── the layer aspect axis (V2.33, F65) ──────────────────────────────────────
 #
@@ -154,12 +155,10 @@ LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
 LAYER_ASPECT_CLASSES = {
     "grass":   (1.07, 1.33, 1.78),
     "aquatic": (0.55, 1.00, 1.78),   # lo pulled up off the floating-leaf floor
-    "vine":    (1.47, 1.72, 3.00),
 }
 LAYER_ASPECT_BREAKS = {
     "grass":   (1.17, 1.50),
     "aquatic": (0.67, 1.33),
-    "vine":    (1.67, 2.00),
 }
 # Which layer kinds carry the axis. Groundcover is absent on purpose: its
 # variant axis is already (blade × grain), it is the one layer looked straight
@@ -591,7 +590,10 @@ def grain_class(leaf_size_cm, height_m, family="herb"):
 # Mirrors _FORM_ALIAS in html/scene3d/03-herbs.js and flora_herbs.
 HERB_FORM_ALIAS = {"cushion": "mat", "succulent": "mat", "sprawling": "mat",
                    "vining": "clump", "tussock": "grassy", "emergent": "grassy",
-                   "floating": "mat"}
+                   "floating": "mat",
+                   # Horsetails are drawn by the viewer, not baked (V2.89);
+                   # the alias only keeps a herb-typed one resolvable here.
+                   "jointed": "grassy"}
 
 
 def herb_form_for(rec):

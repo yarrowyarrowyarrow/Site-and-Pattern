@@ -4,7 +4,8 @@ The seven herb forms from html/scene3d/03-herbs.js HERB_FORMS — erect /
 ferny / rosette / clump / grassy / mat / fern — built from real leaf blades
 with width profiles (lance / ovate / strap), leafy stems and bare flower
 stalks (the viewer's flower sprite lands on top). Plus the four simple-layer
-kinds: grass and aquatic blade tufts, sprawling vines, groundcover domes.
+kinds: grass and aquatic blade tufts, groundcover domes. (Vines left in V2.89:
+the viewer draws each one on the tree or shrub it climbs.)
 All single-part ('foliage') — herb stems are green.
 
 build_herb(form, rng)          → {'foliage': obj}
@@ -94,13 +95,13 @@ HERB_FORMS = {
                 "fine": False},
 }
 
-LAYER_KINDS = {"grass": 3, "aquatic": 3, "vine": 3, "groundcover": 2}
+LAYER_KINDS = {"grass": 3, "aquatic": 3, "groundcover": 2}
 # Layers whose units are keyed by (blade class × grain class) like herbs and
 # shrubs, rather than being N interchangeable random draws. Groundcover earned
 # it: its 32 species carry 14 distinct leaf outlines and four arrangements, and
 # they are looked at from a metre away.
 # Layers whose units are morphology-keyed rather than N interchangeable draws.
-# groundcover varies by (blade class × grain class); grass/aquatic/vine vary by
+# groundcover varies by (blade class × grain class); grass/aquatic vary by
 # ASPECT CLASS (conventions.LAYER_ASPECT_CLASSES, F65) — the axis that stops a
 # 2.67:1 mountain brome being stretched out of a 1.31:1 archetype.
 VARIANT_LAYERS = frozenset({"groundcover"}) | frozenset(C.ASPECT_LAYERS)
@@ -112,7 +113,7 @@ VARIANT_LAYERS = frozenset({"groundcover"}) | frozenset(C.ASPECT_LAYERS)
 # the rest, and it NEEDS the measured pass: its leaves lie nearly horizontal, so
 # their reach — not the runner anchors — is what sets the mat's width, and
 # anchor shaping alone landed it at aspect 0.24 against a target of 0.42.
-FLAT_LEAF_LAYERS = frozenset({"grass", "aquatic", "vine", "groundcover"})
+FLAT_LEAF_LAYERS = frozenset({"grass", "aquatic", "groundcover"})
 
 
 def _rint(rng, lo, hi):
@@ -445,36 +446,6 @@ def _layer_aquatic(bm, rng, aspect=None):
             aspect or LAYER_ASPECT["aquatic"])
 
 
-def _layer_vine(bm, rng, aspect=None):
-    n_stems = 7 + int(rng.random() * 4)                 # sprawling tangle
-    stems, leaves, pts = [], [], []
-    for i in range(n_stems):
-        az = i / n_stems * math.tau + rng.random() * 0.8
-        splay = 0.6 + rng.random() * 0.55
-        h = 0.7 + rng.random() * 0.35
-        rot = (Matrix.Rotation(az, 4, "Z") @ Matrix.Rotation(splay, 4, "Y"))
-        base = Vector((0, 0, 0))
-        tip = rot @ Vector((0, 0, h))
-        stems.append((base, tip))
-        pts.extend((base, tip))
-        n_leaf = 7 + int(rng.random() * 4)
-        for j in range(n_leaf):
-            t = 0.3 + 0.65 * (j / max(1, n_leaf - 1))
-            at = rot @ Vector((0, 0, h * t))
-            leaves.append((at, j * 2.39996 + az))
-            pts.append(at)
-    # A vine's leaves reach well past the stem tips, so they are the overhang.
-    leaf_len, leaf_wid, leaf_tilt = 0.16, 0.1, 1.05
-    lr, lz = leaf_extent(leaf_len, leaf_tilt, "ovate")
-    shape_to_aspect(pts, aspect or LAYER_ASPECT["vine"],
-                    radii=[0.0] * (2 * len(stems)) + [lr] * len(leaves),
-                    radii_z=[0.0] * (2 * len(stems)) + [lz] * len(leaves))
-    for base, tip in stems:
-        add_cone_between(bm, base, tip, 0.013, 0.007, 4)
-    for at, az in leaves:
-        add_leaf(bm, rng, leaf_len, leaf_wid, leaf_tilt, az, at, "ovate")
-
-
 # A groundcover leaf is seen from almost directly above, at close range, and its
 # outline is most of what there is to see — but there are a lot of them, so two
 # ribbon segments (4 triangles) buys the count that reads as a MAT.
@@ -557,7 +528,7 @@ def _layer_groundcover(bm, rng, grain=1, leaf_shape=None, arrangement=None):
 
 
 _LAYER_BUILDERS = {"grass": _layer_grass, "aquatic": _layer_aquatic,
-                   "vine": _layer_vine, "groundcover": _layer_groundcover}
+                   "groundcover": _layer_groundcover}
 
 
 def build_layer(kind, rng, coll, name_prefix="", **morph):

@@ -478,7 +478,10 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # Cottonwood came back AB,SK where the rows had said AB), plus their GBIF
 # ecoregion rows, range cells and occurrence marks. Without this bump no
 # existing install would ever see them.
-_SCHEMA_VERSION = 88
+# v89 (V2.89): the four horsetails recorded `growth_form: jointed` with their
+# `stem_branching`, and the grass plume taken off the two that carried one (a
+# horsetail makes spores in a cone and has no inflorescence at all).
+_SCHEMA_VERSION = 89
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

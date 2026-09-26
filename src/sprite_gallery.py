@@ -191,7 +191,7 @@ GEOMETRY = [
      "Great Bulrush",     _plain("aquatic", "Schoenoplectus acutus", 1.8, 0.6, "Great Bulrush")),
     ("groundcover",    "Groundcover mat", "Low scatter of textured domes.",
      "Bearberry",         _plain("groundcover", "Arctostaphylos uva-ursi", 0.15, 0.7, "Bearberry")),
-    ("vine",           "Vine", "Sprawling/twining leafy stems (clematis, vetch, peavine).",
+    ("vine",           "Vine", "On the shrub beside it, and alone on the ground with nothing to climb (V2.89).",
      "Blue Clematis",     _plain("vine", "Clematis occidentalis", 2.0, 1.2, "Blue Clematis")),
 ]
 
@@ -241,7 +241,65 @@ def _flower_specimen(p):
     }
 
 
+#: The shrub a vine climbs in its gallery entry (V2.89). A vine's form depends
+#: on what stands beside it — it climbs a tree or shrub, or with neither lies on
+#: the ground (src/vine_habit.py) — so a lone specimen would only ever show one
+#: half. Red Osier Dogwood, 3 m: its broad leaves set off the vines' fine ones,
+#: where a rose's small pinnate leaves hid them. One-metre shrubs (snowberry,
+#: currant, spirea) did not make the short peavines and vetch any easier to
+#: see from the gallery's distance.
+VINE_HOST = "Cornus sericea"
+
+#: Unit (east, north) toward the right-hand edge of the shrub as the gallery's
+#: camera sees it. frameCamera (html/scene3d/01-core.js) puts the camera 0.9 r
+#: east and 1.1 r south of the scene, so screen-right is east-north-east. A
+#: vine there hangs on the shrub's silhouette, seen against the ground. Facing
+#: the camera it was lost among the shrub's own leaves, and due east it was
+#: half behind them.
+_VINE_SIDE = (1.1 / math.hypot(0.9, 1.1), 0.9 / math.hypot(0.9, 1.1))
+
+
+def _vine_scene(plant, pid, name, i):
+    """A vine climbing the gallery's host shrub, and a second copy of it in the
+    open with nothing to climb. None if the host is not in the seed data."""
+    host_row = next((r for r in _seed_rows()
+                     if (r.get("scientific_name") or "") == VINE_HOST), None)
+    if host_row is None:
+        return None
+    host = _species_specimen(host_row)
+    hr = float(host.get("mature_canopy_m") or 1.5) / 2.0
+    vr = float(plant.get("mature_canopy_m") or 0.6) / 2.0
+    host_id = pid + 100000
+
+    def at(dx, dy, the_id, label):
+        lat, lng = _offset(LAT0, LNG0, dx, dy)
+        return plant_feature({"plant_id": the_id, "common_name": label,
+                              "lat": lat, "lng": lng})
+    ux, uy = _VINE_SIDE
+    feats = [_boundary(LAT0, LNG0, 8.0), at(0.0, 0.0, host_id, host["common_name"]),
+             at(ux * (hr + 0.25), uy * (hr + 0.25), pid, name),
+             at(-(hr + 1.2 + vr), 0.0, pid, name)]
+    by_id = {pid: plant, host_id: host}
+    sc = build_scene(_fc(feats), year=0, when=WHEN, get_plant=by_id.get)
+    xs = [p["x"] for p in sc["plants"]]
+    ys = [p["y"] for p in sc["plants"]]
+    h = max(float(p.get("height_m") or 1.0) for p in sc["plants"]
+            if p.get("plant_type") != "vine")
+    cx, cy = (min(xs) + max(xs)) / 2.0, (min(ys) + max(ys)) / 2.0
+    half = round(max(h, (max(xs) - min(xs)) / 2.0 + hr,
+                     (max(ys) - min(ys)) / 2.0 + hr), 2)
+    sc["bounds"] = {"min_x": cx - half, "max_x": cx + half,
+                    "min_y": cy - half, "max_y": cy + half}
+    sc["origin"] = {"lat": LAT0 + i * 0.001, "lng": LNG0}
+    sc["boundary"] = []
+    return sc
+
+
 def _scene_for(plant, pid, name, i):
+    if plant.get("plant_type") == "vine":
+        sc = _vine_scene(plant, pid, name, i)
+        if sc is not None:
+            return sc
     feat = plant_feature({"plant_id": pid, "common_name": name,
                           "lat": LAT0, "lng": LNG0})
     proj = _fc([_boundary(LAT0, LNG0, 8.0), feat])
@@ -427,6 +485,9 @@ def _species_specs():
             bits.append(str(row["leaf_arrangement"]))
         if row.get("bloom_period"):
             bits.append(f"blooms {row['bloom_period']}")
+        if row.get("plant_type") == "vine":
+            bits.append("shown climbing the right-hand side of a Red Osier "
+                        "Dogwood, and alone with nothing to climb (left)")
         out.append((f"species_{slug}", row["common_name"], " · ".join(bits),
                     row.get("scientific_name") or "",
                     _species_specimen(row)))

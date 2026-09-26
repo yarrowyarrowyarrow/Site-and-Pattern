@@ -38,7 +38,9 @@ function scene(c) {
     origin: { lat: 51.05, lng: -114.07 }, bounds: B, boundary: null,
     sun: { azimuth_deg: 200, altitude_deg: 48 },
     buildings: [], structures: [], scan_points: [], splat: null, terrain: null,
-    plants: [Object.assign({}, c.plant, { plant_id: 1, x: 0, y: 0 })],
+    // A case is one plant at the origin, or (V2.89) a whole group as the
+    // scene built it — a vine and the shrub it climbs.
+    plants: c.plants || [Object.assign({}, c.plant, { plant_id: 1, x: 0, y: 0 })],
   };
 }
 

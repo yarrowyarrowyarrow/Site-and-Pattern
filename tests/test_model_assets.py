@@ -429,20 +429,20 @@ class ModelAssetsTest(unittest.TestCase):
     def test_layer_and_fauna_keys_match_viewer(self):
         layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
                   if k.startswith("layer.")}
-        self.assertEqual(set(layers), {"grass", "aquatic", "vine",
-                                       "groundcover"})
+        # Vines left in V2.89: drawn on what they climb (22-vines.js), not baked.
+        self.assertEqual(set(layers), {"grass", "aquatic", "groundcover"})
         # Groundcover is morphology-keyed (V2.29): its 32 species carry 14 leaf
         # outlines, so it ships one unit per (blade × grain) like a herb rather
         # than N interchangeable draws.
         self.assertGreaterEqual(len(layers["groundcover"].get("variant_keys", {})), 4)
         self.assertIsNone(layers["groundcover"].get("variants"))
-        # grass / aquatic / vine are aspect-keyed (V2.33, F65). They always
+        # grass / aquatic are aspect-keyed (V2.33, F65). They always
         # shipped three units; until now the three were random draws of ONE
         # shape picked by a plant-id hash, so a 2.67:1 mountain brome and a
         # 0.56:1 golden sedge were both stretched out of a 1.31:1 archetype.
         # Same payload, three real shapes, chosen by the species.
         conventions = _assetlib_conventions()
-        for kind in ("grass", "aquatic", "vine"):
+        for kind in ("grass", "aquatic"):
             keys = layers[kind].get("variant_keys", {})
             self.assertIsNone(layers[kind].get("variants"),
                               f"layer.{kind} still declares interchangeable variants")

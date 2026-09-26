@@ -28,7 +28,7 @@ or more) · **XL** (a program of work). Risk: Low / Med / High — chance of
 breakage, scope creep or a hard dependency. **P** names the design principle from
 [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 
-**Totals (at V2.88): 45 code features · 12 data jobs · 4 legacy-ledger items.**
+**Totals (at V2.89): 45 code features · 12 data jobs · 4 legacy-ledger items.**
 *(V2.52: 41. Shipped since: F8/F12/F13/F14/F28 in V2.53, F121 in V2.54, F122 and
 F104 in V2.55, F76 and F75 in V2.56, F92 and F91 in V2.57, F125 in V2.59, F124
 and F127a in V2.60, F128 in V2.62, F127/F130 in V2.63–V2.64, **F120/F129/F131 in
@@ -40,7 +40,7 @@ possible two increments after it landed. **V2.83**: the VASCAN, synonym-merge an
 occurrence-point data jobs had shipped in V2.80–V2.82 without leaving this file,
 and six rows opened from the V2.83 review, F153–F158, as group M. The totals were
 recounted from the rows rather than adjusted. **V2.84**: F153, F156 and F158 shipped,
-F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened. **V2.88**: nine opened by the 3D model audit, F172–F180 in group O, all counted as code features; F117 gained the fruit-size finding and F119 narrowed to birds and mammals.)*
+F159 opened. **V2.85**: F154 and F155 shipped, F160 opened. **V2.86**: F162–F164 shipped; F161 staged and waiting on the author's VASCAN run; F165–F167 opened. **V2.87**: F161 shipped; F168–F171 opened. **V2.88**: nine opened by the 3D model audit, F172–F180 in group O, all counted as code features; F117 gained the fruit-size finding and F119 narrowed to birds and mammals. **V2.89**: F176 and F179 shipped; F181 and F182 opened, both found by that work; F172 gained the Wild Clematis flower.)*
 
 ---
 
@@ -322,7 +322,7 @@ is for, or is wrong in a way a reader can see. Reasoning per row in the
 
 ---
 
-## O · Found by the 3D model audit (V2.87–V2.88)
+## O · Found by the 3D model audit (V2.87–V2.89)
 
 *Every plant and animal the 3D preview draws, rendered through the real viewer and
 checked against the species: 424 plants and 1,144 animals
@@ -332,18 +332,21 @@ shipped in V2.88 ([plan](plans/V2.88-reading-what-was-recorded.md)). These are t
 batches that need a new model, a data decision or a flora. The audit's advice on
 size: **one family per increment**, smallest first (horsetails, then the pond, then
 succulents), because 5 to 20 species is what one contact sheet can show clearly.
-F172's corrections can ride along with whichever increment touches those species.*
+F172's corrections can ride along with whichever increment touches those species.
+V2.89 shipped the climbers and the horsetails ([plan](plans/V2.89-climbers-and-horsetails.md)) and found F181 and F182 on the way.*
 
 | ID | Feature | Effort | Risk | P |
 |----|---------|--------|------|---|
-| **F172** | **Catalogue corrections the audit found.** Six flower colours that look wrong (Prairie Coneflower recorded purple, Fuzzy-tongue Penstemon red, Common Paintbrush green, Late Yellow Oxytropis purple, Dwarf Raspberry and Moss Campion white); three habit records (Northern Bedstraw "sprawling", Western Wood Lily "grassy", Water Arum (Wild Calla) with its spathe counted as 40 flowers); 21 bird colour rows (the Downy Woodpecker is flicker-buff, the Rufous Hummingbird green); 21 bee genera missing from the look table, so 64 bees wear the default. **The colours need a flora check first**: the audit judged them from renders, not from photographs | S | Low — reseed | P9, P13 |
+| **F172** | **Catalogue corrections the audit found.** Six flower colours that look wrong (Prairie Coneflower recorded purple, Fuzzy-tongue Penstemon red, Common Paintbrush green, Late Yellow Oxytropis purple, Dwarf Raspberry and Moss Campion white); three habit records (Northern Bedstraw "sprawling", Western Wood Lily "grassy", Water Arum (Wild Calla) with its spathe counted as 40 flowers); 21 bird colour rows (the Downy Woodpecker is flicker-buff, the Rufous Hummingbird green); 21 bee genera missing from the look table, so 64 bees wear the default. *(V2.89)* Wild Clematis carries Blue Clematis's flower (`solitary`, `bell`, 3 cm) where descriptions give many-flowered axillary clusters of small open white flowers, and all six vines carry the banded `flowering_stems: 14`. **The colours need a flora check first**: the audit judged them from renders, not from photographs | S | Low — reseed | P9, P13 |
 | **F173** | **Insect body plans.** A wasp (narrow waist, four wings), a true bug / aphid / hopper, an ant, a grasshopper or cricket, and a moth at rest (wings roofed or flat, not spread like a butterfly's). V2.88 put these groups on the nearest existing model and flagged them `interim`; this gives them their own. Reaches 92 wasps and sawflies, 33 bugs, 6 ants, 7 grasshoppers and 189 moths | M | Med — Blender generator | P5, P10 |
 | **F174** | **Bird body plans, and where a big bird stands.** Raptor and owl, grouse and ptarmigan, waterfowl and crane, dove. Twelve birds (a 2 m Sandhill Crane, Snow Goose, ducks, owls, hawks) are drawn as a songbird at their real wingspan, perched inside a plant; they need the ground, or open air | M | Med — Blender generator | P5, P10 |
 | **F175** | **The pond.** Floating-leaf plants on the water, submerged plants mostly hidden, broad-leaved emergents with their own leaves (arrowhead, water-plantain, calla, buckbean), mare's-tail. 17 aquatics are one reed tuft today; V2.88 made the small ones the right height, not the right shape | M | Med — Blender generator | P5 |
-| **F176** | **Horsetails.** Jointed stems, no leaves: four species, and the cheapest archetype on this list to build | S | Low | P5 |
+| ~~**F176**~~ | ✅ **Shipped in V2.89.** Horsetails drawn as jointed stems from a new `jointed` growth form: whorled, whorled above, or plain banded rods with a pointed tip. The two grass plumes they wore are gone | — | Done | — |
 | **F177** | **Succulents and cacti.** Pads, a spiny ball, a sword-leaf rosette (Soapweed Yucca), a fleshy upright stem (Roseroot). Five species, drawn today as grass tufts or groundcover mats | S–M | Low | P5 |
 | **F178** | **Trees with their own shape.** The elm's vase, Manitoba Maple, broad cottonwood crowns with their own leaves (both cottonwoods borrow the aspen, stretched 1.6x), Rocky Mountain Juniper, multi-stemmed water birch and willows, and pines that do not read as bottle brushes. Eleven trees | M | Med — profiles + generator | P5, P2 |
-| **F179** | **Climbers.** Six species stand as free leafy columns. **Needs the owner's decision first**: with nothing in the scene to climb, should a vine sprawl on the ground or drape over the plant next to it? | S once decided | Low | P5, P10 |
+| ~~**F179**~~ | ✅ **Shipped in V2.89.** The owner's rule: a vine climbs the tree or shrub whose footprint touches its own, and with none it lies on the ground, 30 cm at most. Decided once in Python (`src/vine_habit.py`) and fitted to the host's drawn crown | — | Done | — |
+| **F181** | **Vines placed where they can climb.** The design generator has no rule that seats a vine beside a tree or shrub, so whether a generated vine climbs or sprawls is chance. Sprawling is true to V2.89's rule and wastes the plant: a design rule should seat a vine at the edge of a shrub or tree crown, or say why not | S | Low — generator rule | P3, P10 |
+| **F182** | **The forage calendar counts grasses as bee forage.** `forage_calendar._has_flowers` accepts any `flower_form` but `none`, and every grass, sedge and rush is `plume` on purpose, so all 78 count, each with the June to September fallback. Its own docstring says they must not. Reaches the docent's narration; the habitat score reads `bloom_period` and is unaffected | S | Low | P6, P9 |
 | **F180** | **Telling species apart.** 80 grasses, sedges and rushes share three shapes; 51 rosette wildflowers look like one dark lettuce; the asters read as grass; 45 species on the smallest narrow-leaf variant read as bare stems. Ongoing: 10 to 20 species per sitting against reference photographs, on the tuning benches (`scripts/tune_morphology.py`). Shrub stretch is F115, fruit size F117, butterfly wing patterns F114 | L, ongoing | Low | P5, P13 |
 
 ---

@@ -24,6 +24,7 @@ import zlib
 from typing import Callable, Optional
 
 from src import fauna_body_plan
+from src.vine_habit import drawn_frame
 
 # Per-taxon caps so a diverse yard shows a balanced community, not 40 bees.
 _TAXON_CAP = {"bee": 8, "lepidoptera": 7, "bird": 6, "other_insect": 5, "mammal": 3}
@@ -749,7 +750,9 @@ def wildlife_for_scene(scene: dict, *,
     (defaults to ``src.db.fauna.fauna_for_plants``; injectable for tests). Each
     returned creature: ``{kind, x, y, h, name, on, rel, seed, app}``.
     """
-    plants = [p for p in (scene.get("plants") or []) if p.get("plant_id")]
+    # Each plant where it is DRAWN: a vine is on its host's crown (V2.89).
+    plants = [drawn_frame(p) for p in (scene.get("plants") or [])
+              if p.get("plant_id")]
     if not plants:
         return []
     by_id = {p["plant_id"]: p for p in plants}

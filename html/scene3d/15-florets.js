@@ -378,17 +378,19 @@ function buildFlorets(plants, month, terrain) {
       // is correct for foliage and wrong for blooms) and a lupine came out with
       // racemes floating half a metre off its own stem.
       const spread = b.arch === 'corymb' || b.arch === 'umbel' ? 0.55 : 0.42;
+      const va = window.vineAnchorsFor ? vineAnchorsFor(p) : null;  // V2.89
       for (let k = 0; k < heads; k++) {
         const a = rnd() * Math.PI * 2;
         const rr = rad * spread * Math.sqrt(rnd());
-        const hx = p.x + Math.cos(a) * rr;
-        const hz = -(p.y + Math.sin(a) * rr);
+        const q = va && va[(k * 7 + (seed >>> 0)) % va.length];    // on its leaves
+        const hx = q ? q.x + q.nx * 0.03 : p.x + Math.cos(a) * rr;
+        const hz = q ? q.z + q.nz * 0.03 : -(p.y + Math.sin(a) * rr);
         // Where on the stem the inflorescence sits. flower_height_frac is the
         // species' own answer (schema v53) — a scape holds its head clear of the
         // foliage, a clump carries them among the leaves. A head sits on its
         // stem tip; a CLUSTER hangs from the top of the plant (V2.88), because
         // a recorded height is to the top of the flowers, not to where they begin.
-        const hy = cluster
+        const hy = q ? Math.max(gy + 0.02, q.y - (cluster ? reach * 0.55 : 0)) : cluster
           ? Math.max(gy + 0.1 * h, gy + h * frac * (0.86 + 0.14 * rnd()) - reach * 1.1)
           : gy + h * frac * (0.70 + 0.22 * rnd());
         const spin0 = rnd() * Math.PI * 2;
