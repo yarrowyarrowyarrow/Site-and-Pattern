@@ -67,6 +67,14 @@ _BALL, _YUCCA = "Ball Cactus", "Soapweed Yucca"
 _FLESHY, _STONECROP = "Roseroot", "Lance-leaved Stonecrop"
 _SUCCULENTS = (_PADS, _SMALL_PADS, _BALL, _YUCCA, _FLESHY, _STONECROP)
 _YUCCA_IN_WINTER = _YUCCA + " in January"
+#: V2.94 (F186): broad-leaved crowns seen at a person's eye height from the side
+#: away from the sun, under the scene's own default sun. V2.93 drew 38-41% of
+#: their pixels near-black, and V2.94 about 2-6%.
+_IN_LIGHT = ("Trembling Aspen", "Paper Birch")
+MAX_SHADED_NEAR_BLACK = 0.15
+MIN_SHADED_LUMA = 0.25
+#: The sunny side stays the brighter one, and a blown-out leaf would read white.
+MAX_SUNNY_LUMA = 0.6
 
 #: A drawn floret may stand for several real ones: it covers the area that
 #: n / drawn florets would, which for a goldenrod's 160 is up to 2.8x the single
@@ -127,6 +135,16 @@ def _build_cases():
                        "plant": plant})
     plants.append({"name": _YUCCA_IN_WINTER, "month": 1,
                    "plant": built(feature(_YUCCA))[0]})
+    # V2.94: each tree alone in July under the sun build_scene gives a scene
+    # (21 June, 13:00), with bounds wide enough for the shadow map to cover it.
+    for name in _IN_LIGHT:
+        sc = scene_of(feature(name))
+        tree = sc["plants"][0]
+        half = max(6.0, tree["height_m"] * 1.3, tree["canopy_m"] * 1.3)
+        plants.append({"name": name, "month": 7, "year": 0, "plant": tree,
+                       "sun": sc["sun"], "light": True,
+                       "bounds": {"min_x": -half, "min_y": -half,
+                                  "max_x": half, "max_y": half}})
     # The climber beside its host, a quarter-metre outside the crown edge.
     host = built(feature(_HOST))[0]
     pair = built(feature(_HOST), feature(_CLIMBER, host["canopy_m"] / 2 + 0.25))
@@ -502,6 +520,49 @@ class AccuracyRenderTest(unittest.TestCase):
                            f"{_STONECROP}: its flowering stems with no mat under them")
         self.assertGreaterEqual(max(q["w"] for q in leaves), 0.8 * d["canopy_m"],
                                 f"{_STONECROP}: the mat covers a sliver of its ground")
+
+    # ── V2.94: a crown seen from its shaded side is not a silhouette ────────
+
+    def _light(self, name):
+        if not self.result["models"]:
+            self.skipTest("the baked models did not load in this browser, and "
+                          "the thresholds were set on the baked crowns")
+        light = self._measured(name).get("light")
+        self.assertIsNotNone(light, f"{name}: the probe took no light reading")
+        return light
+
+    def test_a_crown_seen_from_its_shaded_side_is_not_a_silhouette(self):
+        """A leaf card faces the sky, so from a path you see undersides. Until
+        V2.94 an underside took no sun, and the bake darkened what light it had
+        twice over: more than half of every crown was near-black from 1.6 m,
+        green from above, which is how the audit saw it."""
+        for name in _IN_LIGHT:
+            shaded = self._light(name)["shaded"]
+            with self.subTest(name):
+                self.assertGreater(shaded["px"], 2000,
+                                   f"{name}: the crown barely shows in the frame")
+                self.assertLess(
+                    shaded["dark"], MAX_SHADED_NEAR_BLACK,
+                    f"{name}: {shaded['dark']:.0%} of the crown is near-black "
+                    f"from the side away from the sun. Are the leaves letting "
+                    f"light through (01c-leaves.js), and is the bake on the sky "
+                    f"only?")
+                self.assertGreater(shaded["luma"], MIN_SHADED_LUMA,
+                                   f"{name}: the crown averages "
+                                   f"{shaded['luma']:.2f} from its shaded side")
+
+    def test_the_sunny_side_is_still_the_brighter_one(self):
+        """Light through a leaf is less than light on it, and a leaf that lets
+        light through must not glow white."""
+        for name in _IN_LIGHT:
+            light = self._light(name)
+            with self.subTest(name):
+                self.assertGreater(light["sunny"]["luma"], light["shaded"]["luma"],
+                                   f"{name}: brighter from the shaded side than "
+                                   f"from the sunny one")
+                self.assertLess(light["sunny"]["luma"], MAX_SUNNY_LUMA,
+                                f"{name}: the sunlit crown averages "
+                                f"{light['sunny']['luma']:.2f}, washed out")
 
     # ── A4: the baked bee wears the recorded bands ───────────────────────────
 

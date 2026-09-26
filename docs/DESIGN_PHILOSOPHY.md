@@ -367,7 +367,10 @@ Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.m
 > presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the
 > first artefact the user can actually hand to the person whose agreement they need — including
 > a sidewalk camera at eye height, which is the view that decides whether a planting gets a
-> complaint or a question about where to buy the seeds. **Flower colour became a filter** in
+> complaint or a question about where to buy the seeds. **Until V2.94 that eye-height view drew
+every tree crown more than half near-black** (F186): leaves now let light through
+([`01c-leaves.js`](../html/scene3d/01c-leaves.js)), because a crown seen from a path is
+its undersides. **Flower colour became a filter** in
 > V2.47 ([`flower_colour.py`](../src/flower_colour.py), F108) — the hex had been in the schema
 > since v31 driving the 3D florets, and none of the thirty search parameters could ask about
 > it, which meant the catalogue could answer every ecological question and not the one a

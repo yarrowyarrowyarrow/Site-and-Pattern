@@ -345,15 +345,19 @@ class TestStructuralCeilings(unittest.TestCase):
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        # 399 now (V2.93), 1 LEFT: the next chunk needs the bootstrap's FILES
-        # list moved out of the page, not a bigger number.
+        # 400 now (V2.94, 01c-leaves.js), NONE LEFT: the next chunk needs the
+        # bootstrap's FILES list moved out of the page, not a bigger number.
         (_HTML / "scene3d.html", 400),
         (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
         # the surface work and the real-wind work land in the same function, so
         # the fix was the split the ceiling asks for rather than a bigger number.
-        (_HTML / "scene3d" / "01b-surface.js", 550),   # ~403 now
+        (_HTML / "scene3d" / "01b-surface.js", 550),   # 512 now (V2.94)
+        # V2.94 (F186): how a leaf is lit, in its own chunk because 01b-surface
+        # reached 548/550 with it inline. Light through a leaf and the bake on
+        # the sky; anything more about light belongs in its own chunk too.
+        (_HTML / "scene3d" / "01c-leaves.js", 150),    # 74 now
         (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
         (_HTML / "scene3d" / "03-herbs.js", 700),      # ~432 now
         # V2.92 (F178): the procedural trees, split out of 03-herbs.js when the

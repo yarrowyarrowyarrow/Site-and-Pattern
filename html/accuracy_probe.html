@@ -34,9 +34,11 @@ const out = document.getElementById('out');
 function scene(c) {
   const B = { min_x: -5, min_y: -5, max_x: 5, max_y: 5 };
   return {
-    version: 1, year: 30, month: c.month || 7, is_night: false,
-    origin: { lat: 51.05, lng: -114.07 }, bounds: B, boundary: null,
-    sun: { azimuth_deg: 200, altitude_deg: 48 },
+    // A light case (V2.94) brings the scene's own sun, and bounds wide enough
+    // for the shadow map to cover a whole tree: the viewer fits it to them.
+    version: 1, year: c.year ?? 30, month: c.month || 7, is_night: false,
+    origin: { lat: 51.05, lng: -114.07 }, bounds: c.bounds || B, boundary: null,
+    sun: c.sun || { azimuth_deg: 200, altitude_deg: 48 },
     buildings: [], structures: c.structures || [], scan_points: [], splat: null,
     terrain: null,
     // A case is one plant at the origin, or (V2.89) a whole group as the
@@ -66,6 +68,68 @@ function beeReport(w, b) {
   r.tergites.sort((a, b) => a.i - b.i);
   r.bands.sort((a, b) => a.i - b.i);
   return r;
+}
+
+// How a crown is LIT (V2.94, F186). From a person's height, leaves seen from
+// their shaded side rendered near-black, and every geometry check passed, since
+// the geometry was right. A case with `light` is photographed at 1.6 m from the
+// side away from the sun and from the side facing it, and each frame again with
+// only the plant in it, unlit white on black, both faces: the mask. Brightness is
+// the sRGB luma of the plant's own pixels; near-black is under 0.12. Evaluated in
+// the viewer's realm, where camera, scene and the rest are script globals.
+const LIGHT_SRC = `(function (p, sun, px) {
+  const amp = windUniforms.uWindAmp.value;
+  windUniforms.uWindAmp.value = 0;          // the mask must be the same geometry
+  const prev = new THREE.Vector2(), size = new THREE.Vector2();
+  renderer.getSize(prev);
+  const prevAspect = camera.aspect, gl = renderer.getContext();
+  renderer.setSize(px, px, false);
+  camera.aspect = 1; camera.updateProjectionMatrix();
+  const grab = () => {
+    renderer.render(scene, camera);
+    renderer.getDrawingBufferSize(size);
+    const buf = new Uint8Array(size.x * size.y * 4);
+    gl.readPixels(0, 0, size.x, size.y, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    return buf;
+  };
+  const white = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const H = Math.max(0.3, p.height_m), C = Math.max(0.3, p.canopy_m);
+  const D = Math.max(3, H * 1.25 + C * 0.5), ty = Math.min(H * 0.55, 1.6 + 0.35 * (H - 1.6));
+  const view = (bearing) => {
+    const a = bearing * Math.PI / 180;       // compass bearing, scene north = -z
+    camera.position.set(p.x + Math.sin(a) * D, 1.6, -(p.y + Math.cos(a) * D));
+    controls.target.set(p.x, ty, -p.y); controls.update();
+    const img = grab(), hid = [];
+    scene.traverse((o) => {
+      if (!(o.isMesh || o.isPoints || o.isSprite || o.isLine) || !o.visible) return;
+      let q = o;
+      while (q && q !== plantsGroup) q = q.parent;
+      // A plant's meshes name it for the tooltip; its contact shadow does not.
+      if (!q || !(o.userData && o.userData.pick)) { hid.push(o); o.visible = false; }
+    });
+    const bg = scene.background, fog = scene.fog;
+    scene.background = new THREE.Color(0x000000); scene.fog = null;
+    scene.overrideMaterial = white;
+    const mask = grab();
+    scene.overrideMaterial = null; scene.background = bg; scene.fog = fog;
+    hid.forEach((o) => { o.visible = true; });
+    let n = 0, sum = 0, dark = 0;
+    for (let i = 0; i < img.length; i += 4) {
+      if (Math.max(mask[i], mask[i + 1], mask[i + 2]) <= 8) continue;
+      const l = (0.2126 * img[i] + 0.7152 * img[i + 1] + 0.0722 * img[i + 2]) / 255;
+      n++; sum += l; if (l < 0.12) dark++;
+    }
+    return { px: n, luma: n ? +(sum / n).toFixed(4) : 0, dark: n ? +(dark / n).toFixed(4) : 0 };
+  };
+  const out = { shaded: view(sun.azimuth_deg + 180), sunny: view(sun.azimuth_deg) };
+  white.dispose();
+  renderer.setSize(prev.x, prev.y, false);
+  camera.aspect = prevAspect; camera.updateProjectionMatrix();
+  windUniforms.uWindAmp.value = amp;
+  return out;
+})`;
+function lightReport(w, c) {
+  return w.eval(LIGHT_SRC)(Object.assign({}, c.plant, { x: 0, y: 0 }), c.sun, 256);
 }
 
 const result = { models: false, plants: [], bees: [] };
@@ -129,8 +193,9 @@ function step() {
     w.permaSetScene(scene(c));
     setTimeout(() => {
       const m = w.permaMeasure();
-      result.plants.push({ name: c.name, height_m: m.height_m || 0,
-                           parts: m.parts || [] });
+      const r = { name: c.name, height_m: m.height_m || 0, parts: m.parts || [] };
+      if (c.light) r.light = lightReport(w, c);
+      result.plants.push(r);
       step();
     }, 600);
     return;

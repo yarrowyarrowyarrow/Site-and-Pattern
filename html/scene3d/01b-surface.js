@@ -432,13 +432,20 @@ function plantMaterial(opts = {}) {
       applyWindShader(shader, strength, opts.stiffness ?? 1.0);
     };
   }
+  // How a leaf is lit: light through it, shade only on the sky (01c-leaves.js).
+  const trans = opts.translucency || 0;
+  if (trans > 0) {
+    const before = mat.onBeforeCompile;
+    mat.onBeforeCompile = (shader) => { before(shader); applyLeafLight(shader, trans); };
+  }
   // The cache key has to name every branch of the injection above, or three.js
   // reuses one compiled program for materials whose shaders differ.
-  if (strength > 0 || detail) {
+  if (strength > 0 || detail || trans > 0) {
     mat.customProgramCacheKey = () =>
       'plant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '')
       + '|' + detail + dscale.toFixed(2) + damount.toFixed(2)
-      + (cylindrical ? 'cyl' : 'tri') + (opts.stiffness ?? 1).toFixed(2);
+      + (cylindrical ? 'cyl' : 'tri') + (opts.stiffness ?? 1).toFixed(2)
+      + '|t' + trans.toFixed(3);
   }
   return mat;
 }
@@ -466,7 +473,8 @@ function surfaceMaterial(preset, cls, vc) {
       // confident abstraction, it is a smudge.
       ? { vertexColors: !!vc, detail: '', flatShading: true }
       : { vertexColors: !!vc,
-          detail: cls ? preset.detailKind + '.' + cls : preset.detailKind }));
+          detail: cls ? preset.detailKind + '.' + cls : preset.detailKind },
+      { translucency: preset.translucency ?? LEAF_TRANSLUCENCY[preset.key] ?? 0 }));
   }
   return _MAT_CACHE[key];
 }

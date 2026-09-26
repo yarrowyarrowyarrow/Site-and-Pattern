@@ -874,6 +874,45 @@ Found on the way: with the yucca no longer drawn as a shrub, a vine beside it
 climbed a dome the yucca's size, and the generator could seat one there. A shrub
 recorded as a rosette has no crown, so a vine beside one now lies on the ground.
 
+### What V2.94 fixed (F186 the dark crowns)
+
+Plan: [`V2.94-leaves-let-light-through`](plans/V2.94-leaves-let-light-through.md).
+
+**39 · Crowns that read green from a path.** This audit looked at the trees from
+above, where a crown is its sunlit tops. From a person's height more than half of
+every crown was near-black. Three causes, each measured by switching it alone:
+
+* a leaf card seen from its shaded side took no sun at all, where a real leaf
+  seen with the sun behind it glows;
+* the baked shade darkened the sun as well as the sky, so a sunlit leaf inside a
+  crown was shaded twice, by the shadow map and by the bake;
+* the bake put its ground at the crown's lowest leaf, because a crown is baked
+  without its trunk, and buried nearly every interior leaf.
+
+A leaf now takes the light falling on its far side, times the share it lets
+through (broad leaves 0.55, herbs 0.45, needles 0.3), in a new chunk,
+`01c-leaves.js`. The bake shades the sky, and only 30% of the sun. The 25 tree
+models are rebaked standing on the ground, and nothing but their crowns' shade
+changed.
+
+Over the 20 trees from 1.6 m, near-black went from 57% to 38%. Trembling Aspen
+went 39% → 2% and Paper Birch 41% → 6%, and in a whole yard the bur oak's crown
+turns from black leaf silhouettes to green leaves. Stylised keeps its facets.
+
+**The first measurement was wrong.** Its mask drew front faces only, so it
+dropped every leaf with its back to the camera, which from below is most of
+them. It was redone before any number was kept.
+
+Found on the way:
+
+* **F187**: the ground bounce is about a seventh of what the viewer's own sun
+  and sky would reflect off the ground it draws. It keeps tier undersides,
+  trunks and walls dark on their shaded side. The evergreen conifers still read
+  darker from a path (45-74% near-black), mostly for other reasons: their dark
+  recorded colours, opaque needles and the shade between tiers.
+* **F188**: shrub foliage is drawn with vertex colours off, so no shrub has ever
+  shown its baked shade.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
@@ -883,7 +922,8 @@ the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
 ~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), ~~F177 succulents and cacti~~ (V2.93),
 ~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
 telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
-**F186**, dark crowns from eye level, was found by V2.92.
+~~F186, dark crowns from eye level~~ (V2.94), which found **F187**, the
+ground bounce, and **F188**, the shrubs' shade never drawn.
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 
