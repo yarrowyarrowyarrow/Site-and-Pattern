@@ -19,8 +19,8 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.80`,
-`_SCHEMA_VERSION = 88` (in `src/db/plants.py`).
+**Current facts (verify before quoting):** branch `V2.89`,
+`_SCHEMA_VERSION = 89` (in `src/db/plants.py`).
 
 v79 adds `plants.native_provinces_source` (V2.80) and reseeds. It is the worked
 example of the half of a seed change that fails **silently**: the apply wrote
