@@ -295,6 +295,21 @@ def _vine_scene(plant, pid, name, i):
     return sc
 
 
+def _pond_for(p0):
+    """A pond structure at the origin whose water (src/pond_habit.py) covers
+    the plant's spread with room round it. Never smaller than the model's
+    authored 6 m: it scales in width but keeps its stones' height, so a small
+    pond is ringed by spikes."""
+    from src.db.structures import get_structure
+    from src.pond_habit import POND_WATER_RY
+    sd = dict(get_structure("pond") or {"id": "pond", "size_m": 6.0})
+    reach = float(p0.get("canopy_m") or 0.5) / 2.0 * 1.4
+    sd["size_m"] = round(max(6.0, reach / POND_WATER_RY), 2)
+    return {"type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [LNG0, LAT0]},
+            "properties": {"element_type": "structure", "struct_def": sd}}
+
+
 def _scene_for(plant, pid, name, i):
     if plant.get("plant_type") == "vine":
         sc = _vine_scene(plant, pid, name, i)
@@ -305,6 +320,12 @@ def _scene_for(plant, pid, name, i):
     proj = _fc([_boundary(LAT0, LNG0, 8.0), feat])
     sc = build_scene(proj, year=0, when=WHEN, get_plant=lambda _id: plant)
     p0 = sc["plants"][0] if sc["plants"] else {}
+    # A floating or submerged plant is shown on a pond's water (V2.90): on the
+    # lawn a pond-lily is a scatter of pads on grass.
+    if (p0.get("drawn") or {}).get("body") in ("floating", "submerged"):
+        proj = _fc([_boundary(LAT0, LNG0, 8.0), _pond_for(p0), feat])
+        sc = build_scene(proj, year=0, when=WHEN, get_plant=lambda _id: plant)
+        p0 = next(p for p in sc["plants"] if p.get("plant_id") == pid)
     h = float(p0.get("height_m") or 1.0)
     c = float(p0.get("canopy_m") or 0.5)
     # Frame the box on the SPECIMEN, so every sprite fills the same ~43% of the

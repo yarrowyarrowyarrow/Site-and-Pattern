@@ -291,9 +291,10 @@ function _sprawlPaths(p, d, rng, terrain) {
 }
 
 // A unit leaf of the species' outline: length 1 along +Y, width along +X, face
-// +Z. makeLeaf draws its length factor first and its facing second, so both are
-// pinned; everything after that is the usual seeded variation.
-function _unitLeaf(shape) {
+// +Z; shared with the pond (23-pond.js, V2.90). makeLeaf draws its length factor
+// first and its facing second, so both are pinned; everything after that is the
+// usual seeded variation.
+function unitLeafGeo(shape) {
   const fixed = [0.5, 0.75, 0.5];
   let s = 97;
   const rng = () => (fixed.length ? fixed.shift()
@@ -397,7 +398,7 @@ function buildVines(list, all, month, year, terrain) {
     }
     if (!bare) {
       const shape = p.leaf_shape || 'elliptic';
-      if (!units.has(shape)) units.set(shape, _unitLeaf(shape));
+      if (!units.has(shape)) units.set(shape, unitLeafGeo(shape));
       const len = Math.max(0.03, Math.min(0.25, (p.leaf_size_cm || 6) / 100));
       let mats = [];
       for (const pa of paths) {

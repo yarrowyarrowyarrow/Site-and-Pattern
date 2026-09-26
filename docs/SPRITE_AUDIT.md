@@ -677,7 +677,7 @@ animals did not exist then.
 | Wildflower bodies (215) | 4 | 3 | Rosettes are one dark lettuce; asters look like grass |
 | Flowers in bloom | 3 | 5 | **Cluster flowers drawn at cluster size** — fixed in V2.88, see below |
 | Grasses, sedges, rushes (80) | 3 | 1 | One wide-bladed fan in three proportions |
-| Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft |
+| Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft — fixed in V2.90 |
 | Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts |
 | Climbers (6) | 2 | 2 | Free-standing leafy columns — fixed in V2.89 |
 | Fruit (44 species) | 4 | 6 | Shapes right; every fruit 17 to 34 cm across |
@@ -779,15 +779,45 @@ Both are pinned in the render probe. Against the old viewer, it reports the
 climber's leaves missing and the lone vine standing 3.00 m tall. Against the old
 data, it counts the plume on the two horsetails that wore one.
 
+### What V2.90 fixed (F175 the pond, and F181)
+
+Plan: [`V2.90-vines-find-hosts-and-the-pond`](plans/V2.90-vines-find-hosts-and-the-pond.md).
+
+**34 · The pond.** Seventeen aquatics were one reed tuft, so a pond-lily stood
+20 cm up in the air and a submerged pondweed half a metre. `src/pond_habit.py`
+now gives each wetland plant its body from its recorded habit and leaves, once,
+in the scene:
+
+* floating leaves in the species' outline, lying on the water;
+* submerged plants showing only what reaches the surface;
+* broad leaves on stalks (arrowheads, water-plantain, calla, buckbean);
+* mare's-tail as the horsetail builder's whorled-leaf unit;
+* the reeds keeping their tuft.
+
+The water matters because the pond structure's surface is an opaque sheet
+10 cm up: a pad drawn at ground level inside it would be invisible, so the
+scene says where the water is. Four submerged plants had been recorded
+`floating` with the pond-lily, and are `submerged` now.
+
+**35 · Generated vines on something to climb (F181).** The generator seats each
+vine at the base of a tree or shrub it planted. With none, it places the vine
+anyway and the design notes say there is nothing for it to climb, the owner's
+choice of the three offered.
+
+Mare's-tail first came out as a scouring-rush, because the layer took its
+unit number modulo a variant count that stopped at three. The render probe now
+compares the two bodies' vertex counts, the only measure that could tell them
+apart.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
 `BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
 habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
 the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
-**F175** the pond, ~~F176 horsetails~~ (V2.89), **F177** succulents and cacti,
+~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), **F177** succulents and cacti,
 **F178** trees with their own shape, ~~F179 climbers~~ (V2.89), **F180** telling
-species apart, and **F181**, placing vines where they can climb.
+species apart, and ~~F181~~, placing vines where they can climb (V2.90).
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 

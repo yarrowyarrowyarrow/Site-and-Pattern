@@ -25,7 +25,15 @@ Scene schema (``SCENE_VERSION`` = 1)::
                   growth_curve, color, opacity, health, health_state,
                   common_name, bark_color, fall_color, leaf_size_cm,
                   leaf_shape, leaf_arrangement, growth_form,
-                  existing?, recruit?}, ...],
+                  existing?, recruit?, drawn?}, ...],
+                                       # drawn: where and how the plant is DRAWN
+                                       #   when that is not its own x/y/height,
+                                       #   decided once for the viewer and the
+                                       #   wildlife alike. A vine's habit and
+                                       #   host (src/vine_habit.py, V2.89); a
+                                       #   wetland plant's body and the water
+                                       #   under it (src/pond_habit.py, V2.90).
+                                       #   Both carry x, y, height_m, canopy_m
                                        # bark_color / fall_color / leaf_size_cm:
                                        #   botanical morphology (schema v47) —
                                        #   the species' real trunk colour, its
@@ -665,6 +673,11 @@ def build_scene(project: dict, *, year: int = 0,
     # bump; a viewer that ignores `drawn` keeps drawing the old column.
     from src.vine_habit import apply_vine_habits
     apply_vine_habits(plants)
+    # Each wetland plant's body, and the water it stands in (V2.90, F175): a
+    # pond-lily's pads lie on a pond's surface, a pondweed shows only what
+    # reaches it. Additive too; an older viewer draws the reed tuft it always did.
+    from src.pond_habit import apply_pond_habits
+    apply_pond_habits(plants, structures)
 
     splat_feature = splat
     if splat_feature is None:

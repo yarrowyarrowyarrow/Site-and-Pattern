@@ -34,7 +34,7 @@ from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import src.db.plants as _plants_mod  # noqa: E402
-from src import scene_wildlife, vine_habit  # noqa: E402
+from src import pond_habit, scene_wildlife, vine_habit  # noqa: E402
 from tests.test_scene3d_render import _Server, _find_chromium, _read_js  # noqa: E402
 
 _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_accuracy_test_")
@@ -54,6 +54,11 @@ _CLIMBER, _HOST = "Wild Clematis", "Red Osier Dogwood"
 _SPRAWLER = "Blue Clematis"
 _HORSETAILS = ("Common Horsetail", "Swamp Horsetail", "Common Scouring-rush",
                "Variegated Horsetail")
+#: V2.90: the pond. A floating leaf, a submerged plant, a broad leaf on a stalk,
+#: and the plant most often mistaken for a horsetail.
+_FLOATING, _SUBMERGED = "Yellow Pond-lily", "Sago Pondweed"
+_BROADLEAF, _MARES_TAIL = "Broad-leaved Arrowhead", "Common Mare's-tail"
+_IN_A_POND = _FLOATING + " in a pond"
 
 #: A drawn floret may stand for several real ones: it covers the area that
 #: n / drawn florets would, which for a goldenrod's 160 is up to 2.8x the single
@@ -96,15 +101,18 @@ def _build_cases():
         return plant_feature({"plant_id": ids[name], "common_name": name,
                               "lat": 51.05, "lng": -114.07 + dx_m / 70000.0})
 
-    def built(*features):
+    def scene_of(*features):
         return build_scene({"type": "FeatureCollection",
                             "properties": {"site_config": {}},
-                            "features": list(features)}, year=0,
-                           wind=False)["plants"]
+                            "features": list(features)}, year=0, wind=False)
+
+    def built(*features):
+        return scene_of(*features)["plants"]
 
     plants = []
     for name in _CLUSTERS + (_HEAD, _GROUNDCOVER, _SMALL_AQUATIC,
-                             _SPRAWLER) + _HORSETAILS:
+                             _SPRAWLER) + _HORSETAILS + (
+                                 _FLOATING, _SUBMERGED, _BROADLEAF, _MARES_TAIL):
         plant = built(feature(name))[0]
         plants.append({"name": name, "month": _bloom_month(plant),
                        "plant": plant})
@@ -112,6 +120,15 @@ def _build_cases():
     host = built(feature(_HOST))[0]
     pair = built(feature(_HOST), feature(_CLIMBER, host["canopy_m"] / 2 + 0.25))
     plants.append({"name": _CLIMBER, "month": 7, "plants": pair})
+    # The pond-lily on a pond's water (V2.90).
+    from src.db.structures import get_structure
+    pond = scene_of({"type": "Feature",
+                     "geometry": {"type": "Point", "coordinates": [-114.07, 51.05]},
+                     "properties": {"element_type": "structure",
+                                    "struct_def": dict(get_structure("pond"))}},
+                    feature(_FLOATING))
+    plants.append({"name": _IN_A_POND, "month": 7, "plants": pond["plants"],
+                   "structures": pond["structures"]})
 
     # The control bee: one whose look has generic bands and no recorded
     # tergites, so the three baked shells must still be doing the job.
@@ -331,6 +348,71 @@ class AccuracyRenderTest(unittest.TestCase):
                 self.assertEqual(len(parts), 1,
                                  f"{name}: {len(parts)} parts drawn, expected "
                                  f"its stems alone")
+
+    # ── V2.90: the pond ───────────────────────────────────────────────────────
+
+    def _parts(self, name, part):
+        return [q for q in self._measured(name)["parts"] if q.get("part") == part]
+
+    def test_a_floating_leaf_lies_flat_where_there_is_no_pond(self):
+        pads = self._parts(_FLOATING, "pond_pad")
+        self.assertTrue(pads, f"{_FLOATING}: no floating leaves were drawn")
+        top = max(q["top"] for q in pads)
+        self.assertLessEqual(top, 0.03,
+                             f"{_FLOATING}: its leaves reach {top:.2f} m, standing "
+                             f"in the air where they should lie flat")
+        canopy = self._case(_FLOATING)["plant"]["canopy_m"]
+        self.assertGreaterEqual(max(q["w"] for q in pads), 0.6 * canopy,
+                                f"{_FLOATING}: its pads cover a sliver of its "
+                                f"{canopy} m spread")
+
+    def test_in_a_pond_the_leaves_float_on_the_water(self):
+        pads = self._parts(_IN_A_POND, "pond_pad")
+        self.assertTrue(pads, f"{_IN_A_POND}: no floating leaves were drawn")
+        base = min(q["base"] for q in pads)
+        self.assertGreaterEqual(
+            base, pond_habit.WATER_SURFACE_M - 0.002,
+            f"{_IN_A_POND}: its leaves are at {base:.3f} m, under the pond's "
+            f"opaque water at {pond_habit.WATER_SURFACE_M} m, so nothing shows")
+        self.assertLessEqual(max(q["top"] for q in pads),
+                             pond_habit.WATER_SURFACE_M + 0.03)
+
+    def test_a_submerged_plant_shows_only_what_reaches_the_surface(self):
+        parts = self._measured(_SUBMERGED)["parts"]
+        self.assertTrue(parts, f"{_SUBMERGED}: nothing was drawn")
+        top = max(q["top"] for q in parts)
+        self.assertLessEqual(
+            top, pond_habit.SUBMERGED_ABOVE_M + 0.05,
+            f"{_SUBMERGED}: it stands {top:.2f} m tall in the open air, "
+            f"which a submerged plant never does")
+        self.assertTrue([q for q in parts if q.get("part") == "pond_sprig"],
+                        f"{_SUBMERGED}: no shoot tips at the surface")
+
+    def test_an_arrowhead_holds_its_leaves_on_stalks(self):
+        want = self._case(_BROADLEAF)["plant"]["height_m"]
+        leaves = self._parts(_BROADLEAF, "pond_leaf")
+        stalks = self._parts(_BROADLEAF, "pond_stalk")
+        self.assertTrue(leaves and stalks,
+                        f"{_BROADLEAF}: drawn without its broad leaves on stalks")
+        top = max(q["top"] for q in leaves)
+        self.assertGreaterEqual(top / want, 0.85, f"{_BROADLEAF}: {top} of {want} m")
+        self.assertLessEqual(top / want, 1.1, f"{_BROADLEAF}: {top} of {want} m")
+        self.assertLessEqual(min(q["base"] for q in stalks), 0.02,
+                             f"{_BROADLEAF}: its stalks float off the ground")
+
+    def test_mares_tail_is_not_drawn_as_a_horsetail(self):
+        """Common Mare's-tail is the plant horsetails are mistaken for. It has
+        its own unit, which a count of variants that stopped at three would
+        wrap straight back onto the scouring-rush's."""
+        want = self._case(_MARES_TAIL)["plant"]["height_m"]
+        got = self._measured(_MARES_TAIL)
+        self.assertGreaterEqual(got["height_m"] / want, 0.85)
+        self.assertLessEqual(got["height_m"] / want, 1.25)
+        body = lambda name: max(q["verts"] for q in                 # noqa: E731
+                                self._measured(name)["parts"])
+        self.assertNotEqual(body(_MARES_TAIL), body("Common Scouring-rush"),
+                            "Common Mare's-tail is drawn with the "
+                            "scouring-rush's banded stems")
 
     # ── A4: the baked bee wears the recorded bands ───────────────────────────
 

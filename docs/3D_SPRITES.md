@@ -313,7 +313,11 @@ foliage masses:
 | `irregular` | sparse asymmetric woody (often silvery) | Sagebrush, buffaloberry |
 | **Herbaceous** (by growth form) | `buildPerennialGeo` | leaves built to the species' real habit *(V1.98)* | wildflower / herb / fern — see below |
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
-| Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
+| Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | the reeds (Cattail, Great Bulrush, Giant Bur-reed) |
+| Floating leaves | `_pondFloating` (`23-pond.js`) | pads in the species' outline (heart, kidney, round) lying on a pond's water, or on the ground outside one *(V2.90)* | Yellow Pond-lily, duckweed |
+| Submerged | `_pondSubmerged` | only what reaches the surface: shoot tips lying on it, the flowers above *(V2.90)* | waterweed, milfoil, pondweed, bladderwort |
+| Broad leaves on stalks | `_pondBroad` | a crown of stalks, each ending in the species' blade *(V2.90)* | arrowheads, water-plantain, calla, buckbean |
+| Whorled stems | `buildHorsetailGeo` unit 3 | unbranched stems clothed in whorls of narrow leaves *(V2.90)* | Common Mare's-tail |
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
 | Vine | `buildVines` (`22-vines.js`) | climbs the tree or shrub beside it, over that host's drawn crown; with none, a low tangle at most 30 cm tall *(V2.89; `buildVineGeo` drew a free-standing column)* | Wild Clematis, vetch, peavine |
 | Horsetail | `buildHorsetailGeo` | jointed stems ringed with dark sheaths at the nodes: whorled throughout, whorled above, or plain with a pointed tip *(V2.89)* | the four *Equisetum* |

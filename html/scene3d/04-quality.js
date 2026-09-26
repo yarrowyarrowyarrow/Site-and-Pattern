@@ -259,16 +259,15 @@ const _BODY_H = { tree: [0.4, Infinity], shrub: [0.2, Infinity],
                   grass: [0.3, Infinity], sedge: [0.3, Infinity],
                   rush: [0.3, Infinity], aquatic: [0.05, Infinity],
                   groundcover: [0.05, 0.18] };
-// A vine is as high as it climbs, which Python decided from what stands beside it
-// (src/vine_habit.py `drawn`, V2.89); with no decision it lies on the ground,
-// no higher than vine_habit.SPRAWL_HEIGHT_M (tests/test_accuracy_render.py keeps
-// the two equal). A horsetail has no reed or grass body to floor it.
+// Python decides some heights once, as `drawn`: a vine's climb from what stands
+// beside it (src/vine_habit.py, V2.89), a floating or submerged plant's height
+// over the water (src/pond_habit.py, V2.90). An undecided vine lies on the
+// ground, no higher than vine_habit.SPRAWL_HEIGHT_M (tests/test_accuracy_render.py
+// keeps the two equal). A horsetail has no reed or grass body to floor it.
 const _VINE_SPRAWL_H = 0.30;
 function bodyHeightOf(p) {
-  if (p && p.plant_type === 'vine') {
-    return Math.max(0.05, p.drawn ? p.drawn.height_m
-                                  : Math.min(_VINE_SPRAWL_H, p.height_m || 0));
-  }
+  if (p && p.drawn) return Math.max(0.02, p.drawn.height_m);
+  if (p && p.plant_type === 'vine') return Math.max(0.05, Math.min(_VINE_SPRAWL_H, p.height_m || 0));
   if (p && p.growth_form === 'jointed') return Math.max(0.05, p.height_m || 0);
   const r = _BODY_H[p && p.plant_type] || [0.08, Infinity];   // herbs
   return Math.min(r[1], Math.max(r[0], (p && p.height_m) || 0));
@@ -387,14 +386,11 @@ function buildArchetypes() {
     grass.push(glb('grass', i) || buildGrassGeo(mulberry32(sd))));
   [541, 587, 631].forEach((sd, i) =>
     aquatic.push(glb('aquatic', i) || buildAquaticGeo(mulberry32(sd))));
-  // Plain, whorled at the middle nodes, whorled throughout: drawn, not baked.
-  const horsetail = [0, 1, 2].map((v) => buildHorsetailGeo(mulberry32(811 + 37 * v), v));
+  // Plain, whorled at the middle nodes, whorled throughout, mare's-tail.
+  const horsetail = [0, 1, 2, 3].map((v) => buildHorsetailGeo(mulberry32(811 + 37 * v), v));
   ARCH = { ground, grass, aquatic, horsetail };
 }
 
-// Which horsetail unit: the species' recorded branching (V2.89).
-const _HORSETAIL_UNIT = { unbranched: 0, branched_above: 1, branched_throughout: 2 };
-function horsetailBucket(p) { return _HORSETAIL_UNIT[p.stem_branching] || 0; }
 
 // Presets for the surfaces that vary BY SPECIES (F63). `surfaceMaterial(preset,
 // cls)` builds one material per (preset × class) on first use — a birch's papery
@@ -751,11 +747,14 @@ function buildPlants(group, plants, month, year, terrain) {
   if (window.vinesReset) vinesReset();
 
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
-                   aquatic: [], herb: [], horsetail: [] };
+                   aquatic: [], herb: [], horsetail: [], pond: [] };
   for (const p of plants || []) {
-    // A horsetail is jointed stems whatever habitat its type records (V2.89).
-    if (p.growth_form === 'jointed') { byKind.horsetail.push(p); continue; }
-    let t = p.plant_type;
+    // A horsetail is jointed stems whatever habitat its type records (V2.89); a
+    // wetland plant is the body src/pond_habit.py gave it (V2.90, 23-pond.js).
+    const pb = p.drawn && p.drawn.body;
+    if (p.growth_form === 'jointed' || pb === 'whorled') { byKind.horsetail.push(p); continue; }
+    if (pb && pb !== 'reed' && pb !== 'herb') { byKind.pond.push(p); continue; }
+    let t = pb === 'herb' ? 'herb' : p.plant_type;
     if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
     const k = byKind[t] ? t : 'herb';
     byKind[k].push(p);
@@ -853,13 +852,15 @@ function buildPlants(group, plants, month, year, terrain) {
              (p) => aspectBucket(p, 'aquatic'));
   // Horsetails — jointed stems, whorled or plain as the species records its
   // branching (V2.89, 14-layers.js buildHorsetailGeo).
-  buildLayer(byKind.horsetail, 3, MATS.blade, (v) => ARCH.horsetail[v],
+  buildLayer(byKind.horsetail, ARCH.horsetail.length, MATS.blade, (v) => ARCH.horsetail[v],
              (p) => [Math.max(0.1, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.1, p.canopy_m)], month, year, false, terrain,
              horsetailBucket);
   // Vines — on the tree or shrub beside them, or on the ground (V2.89,
   // 22-vines.js). After the trees and shrubs, which note where they stand.
   if (window.buildVines) buildVines(byKind.vine, scenePlants, month, year, terrain);
+  // Floating leaves, submerged plants, broad leaves on stalks (V2.90, 23-pond.js).
+  if (window.buildPond) buildPond(byKind.pond, month, year, terrain);
 
   // Groundcover — a creeping mat of REAL leaves since V2.29 (it was faceted
   // domes), so each species gets the unit carrying its own leaf outline.

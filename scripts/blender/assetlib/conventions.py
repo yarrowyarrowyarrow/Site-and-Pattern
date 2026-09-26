@@ -590,7 +590,7 @@ def grain_class(leaf_size_cm, height_m, family="herb"):
 # Mirrors _FORM_ALIAS in html/scene3d/03-herbs.js and flora_herbs.
 HERB_FORM_ALIAS = {"cushion": "mat", "succulent": "mat", "sprawling": "mat",
                    "vining": "clump", "tussock": "grassy", "emergent": "grassy",
-                   "floating": "mat",
+                   "floating": "mat", "submerged": "mat",
                    # Horsetails are drawn by the viewer, not baked (V2.89);
                    # the alias only keeps a herb-typed one resolvable here.
                    "jointed": "grassy"}

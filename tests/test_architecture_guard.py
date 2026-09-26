@@ -354,7 +354,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "01b-surface.js", 550),   # ~403 now
         (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
         (_HTML / "scene3d" / "03-herbs.js", 700),      # ~431 now
-        (_HTML / "scene3d" / "04-quality.js", 900),    # 892 now (V2.89): move code out first
+        (_HTML / "scene3d" / "04-quality.js", 900),    # 893 now (V2.90): move code out first
         (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
@@ -373,7 +373,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.89: vines fitted to the host they climb (F179). The profile
         # measurement and the path/leaf builders; when this trips, the host
         # profile half is the seam.
-        (_HTML / "scene3d" / "22-vines.js", 520),      # ~432 now
+        (_HTML / "scene3d" / "22-vines.js", 520),      # ~433 now
+        # V2.90: the pond (F175) — floating leaves, submerged plants, broad
+        # leaves on stalks. Its own chunk because 04-quality.js had no room;
+        # when this trips, the three body builders are the seam.
+        (_HTML / "scene3d" / "23-pond.js", 350),       # ~189 now
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.
@@ -391,7 +395,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "13-stylised.js", 400),   # ~115 now
         # V2.34: the four procedural layer tufts, moved out of
         # 04-quality.js when the Stylised switch took it past 900.
-        (_HTML / "scene3d" / "14-layers.js", 400),     # ~147 now
+        (_HTML / "scene3d" / "14-layers.js", 400),     # ~161 now
         # V2.34: the bloom as geometry — florets, discs and the nine
         # inflorescence architectures. 05-flowers.js was at 737 of its
         # 800 and this is a different thing from a canvas drawing.

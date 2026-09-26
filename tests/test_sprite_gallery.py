@@ -77,6 +77,21 @@ class TestGalleryScenes(unittest.TestCase):
                 self.assertGreater(vines["climbing"]["x"], host["x"])
                 self.assertGreater(vines["climbing"]["y"], host["y"])
 
+    def test_a_floating_or_submerged_plant_is_shown_on_water(self):
+        # V2.90: on the lawn a pond-lily is a scatter of pads on grass.
+        shown = 0
+        for key, e in self.scenes.items():
+            if not key.startswith("species_"):
+                continue
+            for p in e["scene"]["plants"]:
+                if (p.get("drawn") or {}).get("body") in ("floating",
+                                                          "submerged"):
+                    shown += 1
+                    with self.subTest(key):
+                        self.assertGreater(p["drawn"]["water_m"], 0,
+                                           "drawn on dry ground")
+        self.assertGreaterEqual(shown, 7, "the pond's species went missing")
+
     def test_seed_reads_pin_utf8_encoding(self):
         # Regression (V1.95): bare read_text()/write_text() use the locale codec
         # (cp1252 on Windows) and crash on the seed JSON's en-dashes / accented

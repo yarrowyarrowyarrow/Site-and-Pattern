@@ -127,7 +127,11 @@ GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
                      "cushion", "succulent", "sprawling",
                      # V2.89: a horsetail's body is its jointed stems, with
                      # the leaves reduced to sheaths; drawn by 14-layers.js.
-                     "jointed"}
+                     "jointed",
+                     # V2.90: lives under the water, only its flowers and shoot
+                     # tips reaching the surface (src/pond_habit.py). Not
+                     # "floating", which is leaves lying on the surface.
+                     "submerged"}
 # Surface character (schema v52). What a species' bark and foliage look like
 # close up — the 3D viewer's procedural grain (html/scene3d/01b-surface.js).
 # Empty is meaningful and common: a per-genus bark default and a matte leaf.

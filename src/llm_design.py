@@ -1233,6 +1233,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     _apply_goal_feedback(project, goals, scoped, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
+    _note_vines_without_support(project, existing_features)
     return project
 
 
@@ -1292,6 +1293,20 @@ def _add_warning(project, message: str) -> None:
     """Append a one-off message to ``properties.generation_warnings``."""
     props = project.as_dict().setdefault("properties", {})
     props.setdefault("generation_warnings", []).append(message)
+
+
+def _note_vines_without_support(project, existing_features=None) -> None:
+    """The owner's option (c) for F181 (V2.90): a vine with nothing to climb is
+    placed anyway and the design notes say so. Runs last, after every step that
+    can add a plant, and asks the 3D scene rather than re-deriving the rule."""
+    try:
+        from src.vine_seating import climb_note, vines_with_nothing_to_climb
+        names = vines_with_nothing_to_climb(project.as_dict(),
+                                            existing_features or [])
+    except Exception:  # noqa: BLE001 — a note must never break a design
+        return
+    if names:
+        _add_warning(project, climb_note(names))
 
 
 def _cell_dist_m(a: tuple, b: tuple) -> float:
@@ -2068,6 +2083,11 @@ def _place_within_boundary(project, plant_items, community_groups,
             out.append((la, ln))
         return out
 
+    # V2.90 (F181): each tree and shrub placed below becomes a host, and each
+    # vine is seated at the foot of one (src/vine_seating.py).
+    from src.vine_seating import VineSeats, crown_m_of
+    seats = VineSeats(lambda la, ln: bool(_clip_keepout([(la, ln)])))
+
     # ── Plant groups: layer-ordered, ecologically scored ───────────────────
     # Sort by ecological layer so canopy trees anchor first and subsequent
     # groups fill around them (stable sort preserves LLM order within layers).
@@ -2098,6 +2118,24 @@ def _place_within_boundary(project, plant_items, community_groups,
             plant_row["_uses"] = set(get_plant_uses(plant_id))
         except Exception:  # noqa: BLE001
             plant_row["_uses"] = set()
+        plant_type = plant_row.get("plant_type", "")
+
+        # A vine goes at the foot of a tree or shrub while one has room (the
+        # owner's rule, V2.89). Whatever cannot be seated is placed as before,
+        # and the design notes say it has nothing to climb (option c).
+        if plant_type == "vine" and seats.hosts:
+            placed = [(p["lat"], p["lng"]) for p in project.placed_plants]
+            seated = []
+            for _ in range(qty):
+                spot = seats.seat(placed + seated)
+                if spot is None:
+                    break
+                seated.append(spot)
+            for la, ln in seated:
+                project.place_plant(plant_id, la, ln, quantity=1)
+            qty -= len(seated)
+            if qty <= 0:
+                continue
 
         anchor = positioner.take_best(plant_row, zone)
         if anchor is None:
@@ -2119,10 +2157,13 @@ def _place_within_boundary(project, plant_items, community_groups,
             project.place_plant(plant_id, la, ln, quantity=1)
         # Reserve the group's footprint so later groups don't reuse those cells.
         positioner.reserve_near(positions, spacing)
+        if plant_type in ("tree", "shrub"):
+            crown = crown_m_of(plant_row)
+            for la, ln in positions:
+                seats.add_host(la, ln, plant_type, crown)
 
         # After placing a canopy tree, attract understory plants to the
         # drip-line ring; clear the bonus once a non-tree group has used it.
-        plant_type = plant_row.get("plant_type", "")
         height = plant_row.get("mature_height_meters") or 0
         is_canopy = plant_type == "tree" and (height or 0) >= 4.0
         if is_canopy:
@@ -2822,4 +2863,5 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     _apply_goal_feedback(project, goals, scoped, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
+    _note_vines_without_support(project, existing_features)
     return project

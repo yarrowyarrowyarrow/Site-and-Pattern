@@ -481,7 +481,10 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v89 (V2.89): the four horsetails recorded `growth_form: jointed` with their
 # `stem_branching`, and the grass plume taken off the two that carried one (a
 # horsetail makes spores in a cone and has no inflorescence at all).
-_SCHEMA_VERSION = 89
+# v90 (V2.90): waterweed, milfoil, sago pondweed and bladderwort recorded
+# `growth_form: submerged` (they had been `floating` with the pond-lily), and
+# Water Parsnip `erect`, so the pond draws each by its own body.
+_SCHEMA_VERSION = 90
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
