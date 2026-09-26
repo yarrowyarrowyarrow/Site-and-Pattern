@@ -212,7 +212,8 @@ function buildFruit(plants, month, terrain) {
       const base = p.plant_type === 'tree' ? 18 : p.plant_type === 'shrub' ? 15 : 8;
       const n = Math.max(2, qn(Math.round(base * (_FRUIT_COUNT[form] || 1))));
       // A climbing vine's fruit hangs on its own leaves, up its host (V2.89).
-      const va = window.vineAnchorsFor ? vineAnchorsFor(p) : null;
+      const va = (window.vineAnchorsFor && vineAnchorsFor(p))
+        || (window.succulentAnchorsFor && succulentAnchorsFor(p));   // V2.93
       for (let k = 0; k < n; k++) {
         const a = ((seed + k * 97) % 628) / 100;
         const rr = rad * (0.2 + 0.7 * (((seed + k * 61) % 100) / 100));

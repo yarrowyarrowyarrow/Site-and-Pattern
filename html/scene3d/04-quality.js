@@ -747,12 +747,13 @@ function buildPlants(group, plants, month, year, terrain) {
   if (window.vinesReset) vinesReset();
 
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
-                   aquatic: [], herb: [], horsetail: [], pond: [] };
+                   aquatic: [], herb: [], horsetail: [], pond: [], succulent: [] };
   for (const p of plants || []) {
-    // A horsetail is jointed stems whatever habitat its type records (V2.89); a
-    // wetland plant is the body src/pond_habit.py gave it (V2.90, 23-pond.js).
+    // A horsetail is jointed stems whatever its type (V2.89); a wetland plant or a
+    // succulent is the body Python gave it (V2.90 23-pond.js, V2.93 24-succulents.js).
     const pb = p.drawn && p.drawn.body;
     if (p.growth_form === 'jointed' || pb === 'whorled') { byKind.horsetail.push(p); continue; }
+    if (window.SUCCULENT_BODIES && SUCCULENT_BODIES[pb]) { byKind.succulent.push(p); continue; }
     if (pb && pb !== 'reed' && pb !== 'herb') { byKind.pond.push(p); continue; }
     let t = pb === 'herb' ? 'herb' : p.plant_type;
     if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
@@ -861,6 +862,8 @@ function buildPlants(group, plants, month, year, terrain) {
   if (window.buildVines) buildVines(byKind.vine, scenePlants, month, year, terrain);
   // Floating leaves, submerged plants, broad leaves on stalks (V2.90, 23-pond.js).
   if (window.buildPond) buildPond(byKind.pond, month, year, terrain);
+  // Pads, balls, swords, fleshy stems (V2.93, 24-succulents.js), before the flowers.
+  if (window.buildSucculents) buildSucculents(byKind.succulent, month, year, terrain);
 
   // Groundcover — a creeping mat of REAL leaves since V2.29 (it was faceted
   // domes), so each species gets the unit carrying its own leaf outline.

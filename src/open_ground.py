@@ -239,6 +239,7 @@ class OpenGround:
         """F181's seat at a tree or shrub's foot, counting the vines already
         on each host, or None when no host has room."""
         from src.exclusion import is_clear
+        from src.vine_habit import holds_vines
         from src.vine_seating import VineSeats, crown_m_of
         seats = VineSeats(lambda la, ln: (self._inside(la, ln)
                                           and is_clear(la, ln, self._keepout)))
@@ -246,7 +247,7 @@ class OpenGround:
         for la, ln, pid in placed:
             row = self._row(pid)
             kind = (row.get("plant_type") or "").lower()
-            if kind in ("tree", "shrub"):
+            if holds_vines(row):
                 seats.add_host(la, ln, kind, crown_m_of(row))
             elif kind == "vine":
                 vines.append((la, ln))

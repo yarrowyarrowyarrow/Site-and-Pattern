@@ -71,6 +71,7 @@ const _FORM_ALIAS = {
   tussock: 'grassy', emergent: 'grassy', floating: 'mat',
   jointed: 'grassy',     // horsetails route to 14-layers.js first (V2.89)
   submerged: 'mat',      // wetland bodies route to 23-pond.js first (V2.90)
+  pads: 'mat', globose: 'mat',   // cacti route to 24-succulents.js first (V2.93)
 };
 function herbFormFor(p) {
   if (p.plant_type === 'fern') return 'fern';

@@ -76,6 +76,17 @@ class TheOwnersRule(unittest.TestCase):
     def test_nothing_at_all_and_it_sprawls(self):
         self.assertEqual(_habit([_vine()])["habit"], "sprawling")
 
+    def test_a_rosette_shrub_has_no_crown_to_climb(self):
+        """Soapweed yucca is filed as a shrub, and its body is sword leaves from
+        the ground (V2.93). "Only if it is a tree or shrub" is a limit: a vine
+        beside it lies on the ground rather than climbing a 50 cm rosette."""
+        yucca = _shrub(h=0.9, c=1.8, branching="rosette")
+        d = _habit([yucca, _vine(x=1.2)], i=1)
+        self.assertEqual(d["habit"], "sprawling")
+        self.assertFalse(V.holds_vines(yucca))
+        self.assertTrue(V.holds_vines(_shrub(branching="multi_stem")))
+        self.assertTrue(V.holds_vines(_shrub()))
+
 
 class Adjacent(unittest.TestCase):
     """Beside means the footprints touch: the gap from the vine's root to the

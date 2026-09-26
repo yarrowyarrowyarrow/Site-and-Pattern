@@ -484,7 +484,10 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v90 (V2.90): waterweed, milfoil, sago pondweed and bladderwort recorded
 # `growth_form: submerged` (they had been `floating` with the pond-lily), and
 # Water Parsnip `erect`, so the pond draws each by its own body.
-_SCHEMA_VERSION = 90
+# v91 (V2.93): the two prickly pears recorded `growth_form: pads` and the ball
+# cactus `globose` (all three had been `succulent`, which drew them as a mat
+# and a grass-like star), so the viewer draws each by its own body.
+_SCHEMA_VERSION = 91
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

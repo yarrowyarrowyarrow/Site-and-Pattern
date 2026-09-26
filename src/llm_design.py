@@ -2087,6 +2087,7 @@ def _place_within_boundary(project, plant_items, community_groups,
 
     # V2.90 (F181): each tree and shrub placed below becomes a host, and each
     # vine is seated at the foot of one (src/vine_seating.py).
+    from src.vine_habit import holds_vines
     from src.vine_seating import VineSeats, crown_m_of
     seats = VineSeats(lambda la, ln: bool(_clip_keepout([(la, ln)])))
 
@@ -2159,7 +2160,7 @@ def _place_within_boundary(project, plant_items, community_groups,
             project.place_plant(plant_id, la, ln, quantity=1)
         # Reserve the group's footprint so later groups don't reuse those cells.
         positioner.reserve_near(positions, spacing)
-        if plant_type in ("tree", "shrub"):
+        if holds_vines(plant_row):             # a tree or shrub with a crown
             crown = crown_m_of(plant_row)
             for la, ln in positions:
                 seats.add_host(la, ln, plant_type, crown)

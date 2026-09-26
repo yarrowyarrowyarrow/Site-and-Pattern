@@ -734,6 +734,11 @@ GROUNDCOVER_DRAWN_MAX_M = 0.18
 
 
 def _drawn_height(pl: dict) -> float:
+    # A body the scene decided (a vine, a pond plant, a cactus) is drawn at its
+    # block's height whatever its type, as the viewer's bodyHeightOf reads it:
+    # the plains prickly pear is a 30 cm groundcover, not an 18 cm mat (V2.93).
+    if pl.get("drawn"):
+        return float(pl["drawn"].get("height_m") or 0.0) or 0.5
     h = float(pl.get("height_m") or 0.5)
     return (min(h, GROUNDCOVER_DRAWN_MAX_M)
             if pl.get("plant_type") == "groundcover" else h)

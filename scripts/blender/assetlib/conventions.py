@@ -614,7 +614,9 @@ HERB_FORM_ALIAS = {"cushion": "mat", "succulent": "mat", "sprawling": "mat",
                    "floating": "mat", "submerged": "mat",
                    # Horsetails are drawn by the viewer, not baked (V2.89);
                    # the alias only keeps a herb-typed one resolvable here.
-                   "jointed": "grassy"}
+                   "jointed": "grassy",
+                   # So are the cacti (V2.93, 24-succulents.js).
+                   "pads": "mat", "globose": "mat"}
 
 
 def herb_form_for(rec):

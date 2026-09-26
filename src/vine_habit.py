@@ -9,7 +9,11 @@ was a 6 m green pillar in the open.
 
 The owner's rule (V2.89): *"Vines should climb adjacent plant but only if it is
 a tree or shrub."* So a vine climbs the tree or shrub beside it; with neither
-beside it, it has nothing to climb and lies on the ground.
+beside it, it has nothing to climb and lies on the ground. Since V2.93 a shrub
+whose habit is a rosette (soapweed yucca: sword leaves from the ground, no
+crown) is not a host either: "only if" is a limit, and nobody plants a clematis
+to climb a yucca. The generator's seating asks the same question
+(:func:`holds_vines`), so it never seats a vine at one.
 
 "Beside" means the two footprints touch: the gap between the vine's root and the
 host's crown edge is no more than the vine's own spread radius, plus
@@ -33,6 +37,8 @@ from typing import Optional
 
 #: The owner's rule: what a vine may climb.
 CLIMBABLE = ("tree", "shrub")
+#: A woody habit with no crown to climb (V2.93): the yucca's rosette.
+NOT_A_CROWN = ("rosette",)
 
 #: A vine with nothing to climb lies on the ground, no taller than this.
 SPRAWL_HEIGHT_M = 0.30
@@ -61,9 +67,16 @@ def is_vine(plant: dict) -> bool:
     return (plant.get("plant_type") or "") == "vine"
 
 
+def holds_vines(plant: dict) -> bool:
+    """Whether this kind of plant can hold a vine up at all: a tree or shrub
+    with a crown. A scene plant and a catalogue row both answer it."""
+    return ((plant.get("plant_type") or "") in CLIMBABLE
+            and (plant.get("branching") or "").lower() not in NOT_A_CROWN)
+
+
 def can_hold(plant: dict) -> bool:
-    """A tree or shrub that is standing in this year's scene."""
-    if (plant.get("plant_type") or "") not in CLIMBABLE:
+    """A tree or shrub with a crown that is standing in this year's scene."""
+    if not holds_vines(plant):
         return False
     if plant.get("health_state") == "dead":
         return False

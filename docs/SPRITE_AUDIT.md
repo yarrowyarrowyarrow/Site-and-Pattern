@@ -678,7 +678,7 @@ animals did not exist then.
 | Flowers in bloom | 3 | 5 | **Cluster flowers drawn at cluster size** — fixed in V2.88, see below |
 | Grasses, sedges, rushes (80) | 3 | 1 | One wide-bladed fan in three proportions |
 | Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft — fixed in V2.90 |
-| Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts |
+| Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts — cacti fixed in V2.93 |
 | Climbers (6) | 2 | 2 | Free-standing leafy columns — fixed in V2.89 |
 | Fruit (44 species) | 4 | 6 | Shapes right; every fruit 17 to 34 cm across |
 | Bees (338) | 5 | 4 | Recorded bands not drawn — fixed in V2.88 |
@@ -837,13 +837,50 @@ Found on the way, F186: from a person's eye height most leaf cards render
 near-black on every tree, mostly because of how the viewer lights a card seen
 from its shaded side, with the baked shading adding to it.
 
+### What V2.93 fixed (F177 succulents and cacti)
+
+Plan: [`V2.93-succulents-and-cacti`](plans/V2.93-succulents-and-cacti.md).
+
+**38 · Succulents with bodies of their own.** The six succulents had each
+borrowed another plant's body:
+
+* both prickly pears were the groundcover mat's star of narrow blades, because
+  a cactus's leaves are scales and `scale` is a narrow outline;
+* the ball cactus and roseroot were the herb mat drawn in 5 mm and 3 cm leaves,
+  which from a path is nothing;
+* soapweed yucca was a leafy bush with its flowers inside it;
+* the stonecrop, which this audit had passed, was the same narrow-bladed star.
+
+`src/succulent_habit.py` now gives each a body, once, in the scene, and
+`24-succulents.js` draws it:
+
+* the prickly pears are chains of spiny pads, a first pad leaning low and more
+  standing on its rim, with the flowers sitting on the top rims (Brittle
+  Prickly-pear's had floated at 1.4 times the plant);
+* the ball cactus is a cluster of globes, tubercles on a spiral, each tipped
+  with a star of pale spines;
+* the yucca is blue-grey rosettes of sword leaves at their recorded 50 cm, one
+  flower stalk per recorded flowering stem rising to the recorded height,
+  standing from bloom to the end of fruit;
+* roseroot is leafy stems of fleshy leaves with the flowers on top;
+* the stonecrop is flowering stems over a mat of short shoots that outlasts
+  them.
+
+Two growth forms, `pads` and `globose`, carry it in the data (schema v91).
+
+The render probe pins each body, and fails seven ways against the V2.92 viewer.
+
+Found on the way: with the yucca no longer drawn as a shrub, a vine beside it
+climbed a dome the yucca's size, and the generator could seat one there. A shrub
+recorded as a rosette has no crown, so a vine beside one now lies on the ground.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
 `BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
 habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
 the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
-~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), **F177** succulents and cacti,
+~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), ~~F177 succulents and cacti~~ (V2.93),
 ~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
 telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
 **F186**, dark crowns from eye level, was found by V2.92.

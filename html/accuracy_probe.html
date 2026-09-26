@@ -69,9 +69,10 @@ function beeReport(w, b) {
 }
 
 const result = { models: false, plants: [], bees: [] };
-// Every viewer function this page calls, across the chunks that define them.
+// Every viewer function this page calls, across the chunks that define them,
+// and the last chunk to load (V2.93), without which a cactus is a herb mat.
 const NEEDS = ['permaSetScene', 'permaMeasure', 'permaModelsReady',
-               'floretsApply', 'glbCritter'];
+               'floretsApply', 'glbCritter', 'buildSucculents'];
 let i = 0, waited = 0, booting = 0;
 
 function finish() {

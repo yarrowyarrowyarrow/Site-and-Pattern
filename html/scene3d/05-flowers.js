@@ -350,7 +350,8 @@ function buildFlowers(plants, month, terrain) {
                  : p.plant_type === 'shrub' ? 8
                  : p.plant_type === 'grass' ? 5 : 7);
       // A vine's blooms are on its leaves, wherever it climbed (V2.89).
-      const va = window.vineAnchorsFor ? vineAnchorsFor(p) : null;
+      const va = (window.vineAnchorsFor && vineAnchorsFor(p))
+        || (window.succulentAnchorsFor && succulentAnchorsFor(p));   // V2.93
       for (let k = 0; k < n; k++) {
         const j1 = ((seed + k * 97) % 997) / 997;
         const j2 = ((seed + k * 53) % 991) / 991;
@@ -360,14 +361,20 @@ function buildFlowers(plants, month, terrain) {
                              : rad * (0.12 + 0.9 * Math.sqrt(j2));  // even areal spread
         const dy = isCattail ? 0 : (j3 - 0.5) * Math.max(0.14, h * 0.3);
         const q = va && va[(k * 7 + (seed >>> 0)) % va.length];
-        if (q) pos.push(q.x + q.nx * 0.03, q.y, q.z + q.nz * 0.03);
-        else pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
-        col.push(_fc.r, _fc.g, _fc.b);
-        siz.push(isCattail ? 1
-                 : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100)));
+        const sz = isCattail ? 1
+                 : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100));
         // Attitude, jittered per bloom so a plant is not a rank of clones.
         const j4 = ((seed + k * 41) % 977) / 977;
-        tilts.push(att0.tilt + (j4 - 0.5) * 2 * att0.jitter);
+        const tilt = att0.tilt + (j4 - 0.5) * 2 * att0.jitter;
+        // A succulent's anchor is where the bloom's top is (V2.93): a card held
+        // upright hangs below it, one lying face-up sits on it.
+        const qy = q && (q.top ? q.y - 0.5 * sz * (_FLOWER_SIZE[form] || 0.24)
+                                     * Math.abs(Math.sin(tilt)) : q.y);
+        if (q) pos.push(q.x + q.nx * 0.03, qy, q.z + q.nz * 0.03);
+        else pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
+        col.push(_fc.r, _fc.g, _fc.b);
+        siz.push(sz);
+        tilts.push(tilt);
         // `spin: true` forms are read from the side, so face them AWAY from the
         // plant's centre — `a` is the bloom's own bearing from that centre, and
         // +π aligns the card's outward normal with it. The rest get a free spin.

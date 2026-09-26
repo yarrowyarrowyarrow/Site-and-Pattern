@@ -131,7 +131,12 @@ GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
                      # V2.90: lives under the water, only its flowers and shoot
                      # tips reaching the surface (src/pond_habit.py). Not
                      # "floating", which is leaves lying on the surface.
-                     "submerged"}
+                     "submerged",
+                     # V2.93: cacti, whose bodies are their stems: chains of
+                     # flat pads (the prickly pears) and a spiny ball (the ball
+                     # cactus), drawn by src/succulent_habit.py. "succulent" is
+                     # the rest: fleshy leaves on an ordinary stem or mat.
+                     "pads", "globose"}
 # Surface character (schema v52). What a species' bark and foliage look like
 # close up — the 3D viewer's procedural grain (html/scene3d/01b-surface.js).
 # Empty is meaningful and common: a per-genus bark default and a matte leaf.

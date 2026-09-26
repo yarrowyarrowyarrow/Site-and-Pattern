@@ -289,7 +289,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # and deciding what each one LOOKS like and how big it is (the
         # appearance half, _appearance_for / _size_for / _flight_for). That is
         # the seam when this trips; do not raise the number.
-        (_SRC / "scene_wildlife.py", 980),             # 970 now (V2.89)
+        (_SRC / "scene_wildlife.py", 980),             # 975 now (V2.93)
         # V2.43: the reference window went from a read-only diorama (163
         # lines) to an editable sandbox. When this trips, the split is the
         # edit half — the bridge slots and the trowel — into its own _flow.
@@ -345,7 +345,9 @@ class TestStructuralCeilings(unittest.TestCase):
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        (_HTML / "scene3d.html", 400),                 # 391 now — 9 LEFT
+        # 399 now (V2.93), 1 LEFT: the next chunk needs the bootstrap's FILES
+        # list moved out of the page, not a bigger number.
+        (_HTML / "scene3d.html", 400),
         (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
@@ -358,8 +360,8 @@ class TestStructuralCeilings(unittest.TestCase):
         # Stylised half of F178 took it to 758/700 — the split the ceiling
         # asks for, along the herbs/trees seam.
         (_HTML / "scene3d" / "03b-trees.js", 450),     # ~339 now
-        (_HTML / "scene3d" / "04-quality.js", 900),    # 893 now (V2.90): move code out first
-        (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
+        (_HTML / "scene3d" / "04-quality.js", 900),    # 896 now (V2.93): move code out first
+        (_HTML / "scene3d" / "05-flowers.js", 800),    # ~772 now (V2.93)
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
         (_HTML / "scene3d" / "08-modes.js", 600),      # ~496 now
@@ -382,6 +384,9 @@ class TestStructuralCeilings(unittest.TestCase):
         # leaves on stalks. Its own chunk because 04-quality.js had no room;
         # when this trips, the three body builders are the seam.
         (_HTML / "scene3d" / "23-pond.js", 350),       # ~189 now
+        # V2.93: succulents and cacti (F177) — pads, balls, swords, fleshy
+        # stems. When this trips, the unit shapes are the seam.
+        (_HTML / "scene3d" / "24-succulents.js", 650),  # ~533 now
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.
@@ -403,7 +408,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.34: the bloom as geometry — florets, discs and the nine
         # inflorescence architectures. 05-flowers.js was at 737 of its
         # 800 and this is a different thing from a canvas drawing.
-        (_HTML / "scene3d" / "15-florets.js", 500),    # ~490 now
+        (_HTML / "scene3d" / "15-florets.js", 500),    # ~493 now (V2.93)
         # V2.43: click-to-plant + the viewer's first QWebChannel. Geometry in,
         # coordinates out — if this file grows past its ceiling the cause is
         # almost certainly placement logic that belongs in

@@ -59,6 +59,14 @@ _HORSETAILS = ("Common Horsetail", "Swamp Horsetail", "Common Scouring-rush",
 _FLOATING, _SUBMERGED = "Yellow Pond-lily", "Sago Pondweed"
 _BROADLEAF, _MARES_TAIL = "Broad-leaved Arrowhead", "Common Mare's-tail"
 _IN_A_POND = _FLOATING + " in a pond"
+#: V2.93: the succulents. Pads with the flowers on them, a spiny ball, the
+#: yucca's swords and its flower stalks (and none in January), roseroot's leafy
+#: stems, the stonecrop's mat.
+_PADS, _SMALL_PADS = "Plains Prickly Pear Cactus", "Brittle Prickly-pear"
+_BALL, _YUCCA = "Ball Cactus", "Soapweed Yucca"
+_FLESHY, _STONECROP = "Roseroot", "Lance-leaved Stonecrop"
+_SUCCULENTS = (_PADS, _SMALL_PADS, _BALL, _YUCCA, _FLESHY, _STONECROP)
+_YUCCA_IN_WINTER = _YUCCA + " in January"
 
 #: A drawn floret may stand for several real ones: it covers the area that
 #: n / drawn florets would, which for a goldenrod's 160 is up to 2.8x the single
@@ -112,10 +120,13 @@ def _build_cases():
     plants = []
     for name in _CLUSTERS + (_HEAD, _GROUNDCOVER, _SMALL_AQUATIC,
                              _SPRAWLER) + _HORSETAILS + (
-                                 _FLOATING, _SUBMERGED, _BROADLEAF, _MARES_TAIL):
+                                 _FLOATING, _SUBMERGED, _BROADLEAF,
+                                 _MARES_TAIL) + _SUCCULENTS:
         plant = built(feature(name))[0]
         plants.append({"name": name, "month": _bloom_month(plant),
                        "plant": plant})
+    plants.append({"name": _YUCCA_IN_WINTER, "month": 1,
+                   "plant": built(feature(_YUCCA))[0]})
     # The climber beside its host, a quarter-metre outside the crown edge.
     host = built(feature(_HOST))[0]
     pair = built(feature(_HOST), feature(_CLIMBER, host["canopy_m"] / 2 + 0.25))
@@ -413,6 +424,84 @@ class AccuracyRenderTest(unittest.TestCase):
         self.assertNotEqual(body(_MARES_TAIL), body("Common Scouring-rush"),
                             "Common Mare's-tail is drawn with the "
                             "scouring-rush's banded stems")
+
+    # ── V2.93: succulents and cacti ──────────────────────────────────────────
+
+    def _drawn(self, name):
+        return self._case(name)["plant"]["drawn"]
+
+    def test_a_prickly_pear_is_pads_with_its_flowers_on_them(self):
+        """Both were the groundcover mat's star of narrow blades, and Brittle
+        Prickly-pear's flowers floated at 1.4x the plant."""
+        for name in (_PADS, _SMALL_PADS):
+            h = self._drawn(name)["height_m"]
+            pads, spines = self._parts(name, "succ_pad"), self._parts(name, "succ_spine")
+            with self.subTest(name):
+                self.assertTrue(pads and spines,
+                                f"{name}: drawn without its pads and spines")
+                top = max(q["top"] for q in pads)
+                self.assertGreaterEqual(top, 0.6 * h, f"{name}: pads reach "
+                                        f"{top:.2f} m of {h} m")
+                self.assertLessEqual(top, h, f"{name}: pads above the plant")
+                fl = max(q["top"] for q in self._florets(name))
+                self.assertLessEqual(
+                    fl, MAX_TOP_OVER_HEIGHT * h + TOP_SLACK_M,
+                    f"{name}: flowers at {fl:.2f} m over a {h} m plant")
+                self.assertGreaterEqual(fl, 0.75 * top,
+                                        f"{name}: the flowers are sunk in the clump")
+
+    def test_a_ball_cactus_is_a_cluster_of_spiny_globes(self):
+        d = self._drawn(_BALL)
+        balls, spines = self._parts(_BALL, "succ_ball"), self._parts(_BALL, "succ_spine")
+        self.assertTrue(balls and spines, f"{_BALL}: no spiny globes")
+        self.assertEqual(sum(q["n"] for q in balls), d["stems"])
+        top = max(q["top"] for q in balls)
+        self.assertAlmostEqual(top / d["ball_m"], 1.0, delta=0.15)
+        fl = max(q["top"] for q in self._florets(_BALL))
+        self.assertLessEqual(fl, MAX_TOP_OVER_HEIGHT * d["height_m"] + TOP_SLACK_M)
+        self.assertGreaterEqual(fl, 0.8 * top, f"{_BALL}: no flowers at the crown")
+
+    def test_a_yucca_is_swords_with_its_flowers_on_stalks(self):
+        """It was a leafy bush with its flowers scattered inside it."""
+        d = self._drawn(_YUCCA)
+        swords, stalks = self._parts(_YUCCA, "succ_sword"), self._parts(_YUCCA, "succ_stalk")
+        self.assertTrue(swords and stalks, f"{_YUCCA}: no sword leaves or stalks")
+        leaf_top = max(q["top"] for q in swords)
+        self.assertGreaterEqual(leaf_top, 0.7 * d["leaf_m"])
+        self.assertLessEqual(leaf_top, d["leaf_m"] + 0.02)
+        self.assertAlmostEqual(max(q["top"] for q in stalks) / d["height_m"], 1.0,
+                               delta=0.03)
+        self.assertEqual(sum(q["n"] for q in stalks), d["stalks"])
+        fl = self._florets(_YUCCA)
+        self.assertLessEqual(max(q["top"] for q in fl),
+                             1.05 * d["height_m"] + TOP_SLACK_M)
+        self.assertGreaterEqual(min(q["base"] for q in fl), 0.6 * leaf_top,
+                                f"{_YUCCA}: flowers down among the leaves")
+
+    def test_in_january_the_yucca_has_no_flower_stalk(self):
+        self.assertTrue(self._parts(_YUCCA_IN_WINTER, "succ_sword"),
+                        f"{_YUCCA}: no leaves in January; it is evergreen")
+        self.assertFalse(self._parts(_YUCCA_IN_WINTER, "succ_stalk"),
+                         f"{_YUCCA}: a flower stalk standing in January")
+
+    def test_roseroot_is_leafy_stems_with_the_flowers_on_top(self):
+        d = self._drawn(_FLESHY)
+        stems, leaves = self._parts(_FLESHY, "succ_stem"), self._parts(_FLESHY, "succ_leaf")
+        self.assertTrue(stems and leaves, f"{_FLESHY}: no leafy stems")
+        self.assertEqual(sum(q["n"] for q in stems), d["stems"])
+        self.assertGreaterEqual(max(q["top"] for q in stems) / d["height_m"], 0.85)
+        fl = max(q["top"] for q in self._florets(_FLESHY))
+        self.assertGreaterEqual(fl, 0.9 * d["height_m"])
+        self.assertLessEqual(fl, MAX_TOP_OVER_HEIGHT * d["height_m"] + TOP_SLACK_M)
+
+    def test_a_stonecrop_is_a_mat_under_its_flowering_stems(self):
+        d = self._drawn(_STONECROP)
+        stems, leaves = self._parts(_STONECROP, "succ_stem"), self._parts(_STONECROP, "succ_leaf")
+        self.assertTrue(stems and leaves, f"{_STONECROP}: no fleshy shoots")
+        self.assertGreater(sum(q["n"] for q in stems), d["stems"],
+                           f"{_STONECROP}: its flowering stems with no mat under them")
+        self.assertGreaterEqual(max(q["w"] for q in leaves), 0.8 * d["canopy_m"],
+                                f"{_STONECROP}: the mat covers a sliver of its ground")
 
     # ── A4: the baked bee wears the recorded bands ───────────────────────────
 

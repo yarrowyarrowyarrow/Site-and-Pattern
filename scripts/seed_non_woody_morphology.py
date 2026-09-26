@@ -202,8 +202,10 @@ GENUS = {
     "Prunella":       ("ovate", 5.0, "opposite", "mat"),
     "Silene":         ("linear", 1.0, "opposite", "cushion"),
     "Phlox":          ("linear", 1.5, "opposite", "cushion"),
-    "Escobaria":      ("scale", 0.5, "alternate", "succulent"),
-    "Opuntia":        ("scale", 0.3, "alternate", "succulent"),
+    # V2.93: the cacti's bodies are their stems, a spiny ball and chains of
+    # flat pads (src/succulent_habit.py); the leaves are the scales.
+    "Escobaria":      ("scale", 0.5, "alternate", "globose"),
+    "Opuntia":        ("scale", 0.3, "alternate", "pads"),
     "Rhodiola":       ("spatulate", 3.0, "alternate", "succulent"),
     "Sedum":          ("lanceolate", 2.0, "alternate", "succulent"),
 
@@ -296,8 +298,8 @@ GENUS = {
 
 # Species that genuinely depart from their genus's typical form.
 SPECIES_OVERRIDE = {
-    # A shrubby cactus-like succulent, not the mat its relatives make.
-    "Escobaria vivipara":     ("scale", 0.5, "alternate", "succulent"),
+    # A spiny ball, solitary or a few together, not a mat (V2.93).
+    "Escobaria vivipara":     ("scale", 0.5, "alternate", "globose"),
     # Floating-leaved, unlike the marsh-marigold rosette.
     "Caltha natans":          ("reniform", 5.0, "basal", "floating"),
     # A creeping stoloniferous mat, unlike the upright cinquefoils.

@@ -321,6 +321,10 @@ foliage masses:
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
 | Vine | `buildVines` (`22-vines.js`) | climbs the tree or shrub beside it, over that host's drawn crown; with none, a low tangle at most 30 cm tall *(V2.89; `buildVineGeo` drew a free-standing column)* | Wild Clematis, vetch, peavine |
 | Horsetail | `buildHorsetailGeo` | jointed stems ringed with dark sheaths at the nodes: whorled throughout, whorled above, or plain with a pointed tip *(V2.89)* | the four *Equisetum* |
+| Pads | `_succPads` (`24-succulents.js`) | chains of flat spiny joints, a first one leaning low and more standing on its rim, the flowers on the top rims; small joints plumper *(V2.93)* | both prickly pears |
+| Ball | `_succBall` | one to five globes of spiral tubercles, each with a star of pale radial spines and a dark central *(V2.93)* | Ball Cactus |
+| Swords | `_succSwords` | rosettes of stiff channelled leaves at the recorded leaf length, flat to upright, and a flower stalk per recorded flowering stem from bloom to the end of fruit *(V2.93)* | Soapweed Yucca |
+| Fleshy | `_succFleshy` | upright stems crowded with small lens-shaped leaves, the flowers on top; on a groundcover, the same stems over a mat of short shoots *(V2.93)* | Roseroot, Lance-leaved Stonecrop |
 
 Herbaceous plants (wildflower / herb / fern) are built to their **growth form**
 (`HERB_FORMS`, keyed by genus via `_HPROF`, else inferred from flower form +

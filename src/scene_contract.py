@@ -146,6 +146,9 @@ _GENUS_FOLIAGE = {
     "quercus":     "#46702f",   # oak — deep
     "salix":       "#8aa46a",   # willow — pale grey-green
     "cornus":      "#5a8246",   # dogwood
+    # Soapweed yucca's leaves are glaucous blue-grey, which is its name (V2.93);
+    # as the shrub default it was drawn the green of a dogwood.
+    "yucca":       "#6e8c7d",
 }
 
 
@@ -678,6 +681,10 @@ def build_scene(project: dict, *, year: int = 0,
     # reaches it. Additive too; an older viewer draws the reed tuft it always did.
     from src.pond_habit import apply_pond_habits
     apply_pond_habits(plants, structures)
+    # A cactus's pads or ball, a yucca's swords, roseroot's fleshy stems
+    # (V2.93, F177). Additive; an older viewer draws the mat or bush it did.
+    from src.succulent_habit import apply_succulent_habits
+    apply_succulent_habits(plants)
 
     splat_feature = splat
     if splat_feature is None:
