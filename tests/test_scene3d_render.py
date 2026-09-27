@@ -215,6 +215,91 @@ class FlatLeafMaterialsTest(unittest.TestCase):
             "plantMaterial no longer maps opts.doubleSide onto THREE.DoubleSide")
 
 
+def _call_args(src, start):
+    """The top-level arguments of the call whose '(' ends just before `start`,
+    as stripped source strings. Skips nested brackets and string literals."""
+    args, depth, cur, i, quote = [], 0, [], start, None
+    while i < len(src):
+        ch = src[i]
+        if quote:
+            cur.append(ch)
+            if ch == "\\":
+                cur.append(src[i + 1])
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "'\"`":
+            quote = ch
+            cur.append(ch)
+        elif ch in "([{":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}" and depth:
+            depth -= 1
+            cur.append(ch)
+        elif ch == ")":
+            break
+        elif ch == "," and not depth:
+            args.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    last = "".join(cur).strip()
+    return args + [last] if last else args
+
+
+class VertexColourFlagTest(unittest.TestCase):
+    """Every surface material says whether its geometry carries colours (V2.96).
+
+    ``surfaceMaterial(preset, cls, vc)`` reads ``vc`` as "this geometry has a
+    colour attribute", and a missing argument as no, overriding the preset's own
+    ``vertexColors: true``. It has to be the caller's word, because procedural
+    bark has no colour attribute and would render black. The shrub layer's call
+    passed two arguments, so no shrub drew the shade baked into its model, nor
+    Stylised's gradient, and nothing failed (F188): the geometry carried the
+    colours and the material ignored them. A call that states nothing is the bug.
+    """
+
+    def _calls(self):
+        """(file, line, args) for every surfaceMaterial( call in the viewer."""
+        out = []
+        folder = os.path.join(_HTML, "scene3d")
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith(".js"):
+                continue
+            src = _read_js(name)
+            for m in re.finditer(r"\bsurfaceMaterial\(", src):
+                before = src[src.rfind("\n", 0, m.start()) + 1:m.start()]
+                if "//" in before or before.rstrip().endswith("function"):
+                    continue
+                out.append((name, src.count("\n", 0, m.start()) + 1,
+                            _call_args(src, m.end())))
+        return out
+
+    def test_every_call_says_whether_its_geometry_has_colours(self):
+        calls = self._calls()
+        self.assertGreaterEqual(len(calls), 15, "the surfaceMaterial calls moved")
+        for name, line, args in calls:
+            with self.subTest(f"{name}:{line}"):
+                self.assertEqual(
+                    len(args), 3,
+                    f"{name}:{line} calls surfaceMaterial({', '.join(args)}) "
+                    f"without saying whether the geometry carries colours, so "
+                    f"any it carries are silently not drawn")
+
+    def test_the_shrub_leaves_ask_for_their_colours(self):
+        """Both shrub paths carry them: a baked model's shade (09-models.js
+        _glbBakedGeo adds white where a part has none) and the procedural
+        gradient (03-herbs.js applyFoliageGradient)."""
+        shrub = [(n, ln, a) for n, ln, a in self._calls()
+                 if a and a[0] == "MAT_PRESETS.shrubLeaf"]
+        self.assertTrue(shrub, "the shrub layer no longer asks for MAT_PRESETS.shrubLeaf")
+        for name, line, args in shrub:
+            with self.subTest(f"{name}:{line}"):
+                self.assertEqual(args[2:], ["true"])
+
+
 class StylisedModeTest(unittest.TestCase):
     """Detail level 0 must be a coherent STYLE, not a thinned copy (V2.34).
 

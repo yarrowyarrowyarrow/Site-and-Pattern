@@ -75,6 +75,15 @@ MAX_SHADED_NEAR_BLACK = 0.15
 MIN_SHADED_LUMA = 0.25
 #: The sunny side stays the brighter one, and a blown-out leaf would read white.
 MAX_SUNNY_LUMA = 0.6
+#: V2.96 (F188): shrubs seen from above as drawn, against the same frame with
+#: their leaves' colour attribute made white. Until V2.96 the two were the same
+#: picture, because the shrub layer asked for its leaves with vertex colours off.
+#: The shade takes about a quarter of the brightness from above; the old bake,
+#: switched on as it was, took about half.
+_SHADED_SHRUBS = ("Western Snowberry", "Red Osier Dogwood")
+_FROM_ABOVE = " from above"
+MAX_DRAWN_OVER_WHITE = 0.95
+MIN_DRAWN_OVER_WHITE = 0.6
 
 #: A drawn floret may stand for several real ones: it covers the area that
 #: n / drawn florets would, which for a goldenrod's 160 is up to 2.8x the single
@@ -137,14 +146,20 @@ def _build_cases():
                    "plant": built(feature(_YUCCA))[0]})
     # V2.94: each tree alone in July under the sun build_scene gives a scene
     # (21 June, 13:00), with bounds wide enough for the shadow map to cover it.
-    for name in _IN_LIGHT:
+    # V2.96: the shrubs whose shade is photographed from above, the same way.
+    def in_july(name, case_name, **flag):
         sc = scene_of(feature(name))
-        tree = sc["plants"][0]
-        half = max(6.0, tree["height_m"] * 1.3, tree["canopy_m"] * 1.3)
-        plants.append({"name": name, "month": 7, "year": 0, "plant": tree,
-                       "sun": sc["sun"], "light": True,
-                       "bounds": {"min_x": -half, "min_y": -half,
-                                  "max_x": half, "max_y": half}})
+        plant = sc["plants"][0]
+        half = max(6.0, plant["height_m"] * 1.3, plant["canopy_m"] * 1.3)
+        plants.append(dict({"name": case_name, "month": 7, "year": 0,
+                            "plant": plant, "sun": sc["sun"],
+                            "bounds": {"min_x": -half, "min_y": -half,
+                                       "max_x": half, "max_y": half}}, **flag))
+
+    for name in _IN_LIGHT:
+        in_july(name, name, light=True)
+    for name in _SHADED_SHRUBS:
+        in_july(name, name + _FROM_ABOVE, shade=True)
     # The climber beside its host, a quarter-metre outside the crown edge.
     host = built(feature(_HOST))[0]
     pair = built(feature(_HOST), feature(_CLIMBER, host["canopy_m"] / 2 + 0.25))
@@ -563,6 +578,34 @@ class AccuracyRenderTest(unittest.TestCase):
                 self.assertLess(light["sunny"]["luma"], MAX_SUNNY_LUMA,
                                 f"{name}: the sunlit crown averages "
                                 f"{light['sunny']['luma']:.2f}, washed out")
+
+    # ── V2.96: a shrub draws the shade baked into it ─────────────────────────
+
+    def test_a_shrub_draws_the_shade_baked_into_it(self):
+        """Every shrub model carries a baked shade, and until V2.96 none was
+        drawn: the shrub layer asked for its leaf material with vertex colours
+        off, so whitening the colours changed nothing on screen (F188). Seen
+        from above, where a flat-lit shrub reads as a cut-out."""
+        if not self.result["models"]:
+            self.skipTest("the baked models did not load in this browser, and "
+                          "the bounds were set on the baked shrubs")
+        for name in _SHADED_SHRUBS:
+            shade = self._measured(name + _FROM_ABOVE).get("shade")
+            with self.subTest(name):
+                self.assertIsNotNone(shade, f"{name}: the probe took no shade reading")
+                drawn, white = shade["drawn"], shade["white"]
+                self.assertGreater(drawn["px"], 2000,
+                                   f"{name}: the shrub barely shows in the frame")
+                ratio = drawn["luma"] / white["luma"]
+                self.assertLessEqual(
+                    ratio, MAX_DRAWN_OVER_WHITE,
+                    f"{name}: {drawn['luma']:.3f} as drawn, {white['luma']:.3f} "
+                    f"with its colours whitened, so its shade is not drawn. Does "
+                    f"the shrub layer ask surfaceMaterial for vertex colours?")
+                self.assertGreaterEqual(
+                    ratio, MIN_DRAWN_OVER_WHITE,
+                    f"{name}: its shade takes {1 - ratio:.0%} of its brightness "
+                    f"from above. Is it baked with CROWN_AO (build_all.py)?")
 
     # ── A4: the baked bee wears the recorded bands ───────────────────────────
 

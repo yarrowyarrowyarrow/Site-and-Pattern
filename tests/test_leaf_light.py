@@ -16,7 +16,8 @@ by switching it alone (docs/plans/V2.94-leaves-let-light-through.md):
 What the screen shows is pinned by tests/test_accuracy_render.py, which
 photographs two crowns from their shaded side. This module holds what needs no
 browser: the wiring, the three.js chunks the shader hooks into, the bake's
-settings, and the shade baked into every shipped tree. Stdlib only; never skips.
+settings, and the shade baked into every shipped tree and, since V2.96 (F188),
+every shrub, whose shade the viewer had never drawn. Stdlib only; never skips.
 """
 
 import ast
@@ -42,7 +43,8 @@ _LEAF_PRESETS = {"crown", "shrubLeaf", "herbLeaf", "needle"}
 
 #: A shipped crown's baked shade, averaged over its vertices, and the share of
 #: vertices darker than 0.3. V2.93's trees averaged 0.17-0.46 (0.30 overall), 63%
-#: of vertices under 0.3; V2.94's 0.46-0.71, at most 16% under 0.3.
+#: of vertices under 0.3; V2.94's 0.46-0.71, at most 16% under 0.3. The shrubs,
+#: on the old bake until V2.96: 0.22-0.40 and 48-79%; rebaked, 0.57-0.71 and 4%.
 MIN_CROWN_SHADE = 0.45
 DARK_VERTEX = 0.3
 MAX_DARK_SHARE = 0.20
@@ -168,18 +170,18 @@ class CrownBakeTest(unittest.TestCase):
                              "rays that reach across the crown bury its inside; "
                              "that depth is the shadow map's job")
 
-    def test_the_trees_use_it_and_the_shrubs_do_not(self):
-        """The viewer draws shrub foliage with vertex colours off, so a shrub's
-        bake never reaches the screen (F188). Rebaking them would change the files
-        and nothing visible; they keep the old bake until that is decided."""
+    def test_trees_and_shrubs_are_baked_with_it(self):
+        """One rule for every crown. The shrubs kept the old bake until V2.96,
+        when the viewer began drawing it (F188): turned on as it was, it put 35%
+        of a shrub's pixels near-black from a path."""
         bakes = {kind: call for kind, call in self._foliage_bakes()}
-        self.assertIn("tree", bakes)
-        self.assertIn("shrub", bakes)
-        self.assertTrue(any(k.arg is None and getattr(k.value, "id", "") == "CROWN_AO"
-                            for k in bakes["tree"].keywords),
-                        "the tree crowns are not baked with CROWN_AO")
-        self.assertFalse(any(k.arg is None for k in bakes["shrub"].keywords),
-                         "the shrubs were rebaked; see F188 first")
+        for kind in ("tree", "shrub"):
+            with self.subTest(kind):
+                self.assertIn(kind, bakes)
+                self.assertTrue(
+                    any(k.arg is None and getattr(k.value, "id", "") == "CROWN_AO"
+                        for k in bakes[kind].keywords),
+                    f"the {kind} foliage is not baked with CROWN_AO")
 
     def test_bake_ao_still_defaults_to_the_lowest_vertex(self):
         """Anything baked whole (a herb, a structure) sits on its own lowest
@@ -209,9 +211,11 @@ class ShippedCrownShadeTest(unittest.TestCase):
 
     def test_no_shipped_crown_is_baked_into_darkness(self):
         manifest = json.loads(_read(os.path.join(_MODELS, "manifest.json")))
-        trees = {k: v for k, v in manifest["plants"].items() if k.startswith("tree.")}
-        self.assertGreaterEqual(len(trees), 20)
-        for key, entry in sorted(trees.items()):
+        crowns = {k: v for k, v in manifest["plants"].items()
+                  if k.startswith(("tree.", "shrub."))}
+        self.assertGreaterEqual(sum(k.startswith("tree.") for k in crowns), 20)
+        self.assertGreaterEqual(sum(k.startswith("shrub.") for k in crowns), 8)
+        for key, entry in sorted(crowns.items()):
             gltf, binary = parse_glb(os.path.join(_MODELS, entry["file"]))
             shade = []
             for node in gltf["nodes"]:

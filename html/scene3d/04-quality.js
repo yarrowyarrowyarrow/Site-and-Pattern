@@ -438,8 +438,6 @@ function ensurePlantMats() {
     // which is the same bug the shrubs had, one archetype family later. When
     // geometry changes KIND, every material applied to it is unreviewed.
     foliage: surfaceMaterial(MAT_PRESETS.crown, 'matte', true),
-    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true,
-               detail: 'leaf.matte', detailScale: 11.0, detailAmount: 0.30 }),
     // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
     // faceted masses were closed icosahedra. A solid can be FrontSide, which is
     // what this material was; a flat ribbon under backface culling is INVISIBLE
@@ -684,8 +682,10 @@ function buildShrubLayer(list, month, year, terrain) {
     const arch = getShrubArch(prof, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
+    // Both paths carry colours (the GLB's baked shade, the procedural gradient).
+    // Without `true` they were off, and no shrub drew either until V2.96 (F188).
     const foliage = instancedMesh(arch.foliageGeo, total,
-      surfaceMaterial(MAT_PRESETS.shrubLeaf, surf));
+      surfaceMaterial(MAT_PRESETS.shrubLeaf, surf, true));
     const stems = arch.stemGeo
       ? instancedMesh(arch.stemGeo, total,
                       surfaceMaterial(MAT_PRESETS.bark, bark,

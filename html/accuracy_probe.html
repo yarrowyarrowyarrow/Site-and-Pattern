@@ -77,7 +77,13 @@ function beeReport(w, b) {
 // only the plant in it, unlit white on black, both faces: the mask. Brightness is
 // the sRGB luma of the plant's own pixels; near-black is under 0.12. Evaluated in
 // the viewer's realm, where camera, scene and the rest are script globals.
-const LIGHT_SRC = `(function (p, sun, px) {
+//
+// Whether a crown's baked shade is DRAWN (V2.96, F188). The shrub layer asked
+// for its leaves without vertex colours, so no shrub ever showed the shade baked
+// into its model, and nothing failed: the geometry carried it. A case with
+// `shade` is photographed from above as drawn, and again with its shrub
+// foliage's colour attribute made white. If the shade is drawn, they differ.
+const LOOK_SRC = `(function (shots, px) {
   const amp = windUniforms.uWindAmp.value;
   windUniforms.uWindAmp.value = 0;          // the mask must be the same geometry
   const prev = new THREE.Vector2(), size = new THREE.Vector2();
@@ -92,14 +98,28 @@ const LIGHT_SRC = `(function (p, sun, px) {
     gl.readPixels(0, 0, size.x, size.y, gl.RGBA, gl.UNSIGNED_BYTE, buf);
     return buf;
   };
+  // The shrub archetypes' leaf geometry is instanced as it is cached, so the
+  // plant's foliage mesh wears it; its colours are put back after the shot.
+  const whiten = () => {
+    const leaves = new Set([...SHRUB_CACHE.values()].map((a) => a.foliageGeo));
+    const saved = new Map();
+    plantsGroup.traverse((o) => {
+      const c = o.isMesh && leaves.has(o.geometry) && o.geometry.getAttribute('color');
+      if (!c || saved.has(c)) return;
+      saved.set(c, c.array.slice());
+      const a = c.array;
+      a.fill(a instanceof Uint8Array ? 255 : a instanceof Uint16Array ? 65535 : 1);
+      c.needsUpdate = true;
+    });
+    return () => saved.forEach((a, c) => { c.array.set(a); c.needsUpdate = true; });
+  };
   const white = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-  const H = Math.max(0.3, p.height_m), C = Math.max(0.3, p.canopy_m);
-  const D = Math.max(3, H * 1.25 + C * 0.5), ty = Math.min(H * 0.55, 1.6 + 0.35 * (H - 1.6));
-  const view = (bearing) => {
-    const a = bearing * Math.PI / 180;       // compass bearing, scene north = -z
-    camera.position.set(p.x + Math.sin(a) * D, 1.6, -(p.y + Math.cos(a) * D));
-    controls.target.set(p.x, ty, -p.y); controls.update();
+  const shot = (s) => {
+    camera.position.set(s.at[0], s.at[1], s.at[2]);
+    controls.target.set(s.to[0], s.to[1], s.to[2]); controls.update();
+    const undo = s.white ? whiten() : null;
     const img = grab(), hid = [];
+    if (undo) undo();
     scene.traverse((o) => {
       if (!(o.isMesh || o.isPoints || o.isSprite || o.isLine) || !o.visible) return;
       let q = o;
@@ -121,15 +141,36 @@ const LIGHT_SRC = `(function (p, sun, px) {
     }
     return { px: n, luma: n ? +(sum / n).toFixed(4) : 0, dark: n ? +(dark / n).toFixed(4) : 0 };
   };
-  const out = { shaded: view(sun.azimuth_deg + 180), sunny: view(sun.azimuth_deg) };
+  const out = {};
+  for (const s of shots) out[s.name] = shot(s);
   white.dispose();
   renderer.setSize(prev.x, prev.y, false);
   camera.aspect = prevAspect; camera.updateProjectionMatrix();
   windUniforms.uWindAmp.value = amp;
   return out;
 })`;
+// Where the camera stands, for a plant at the origin: a person's eye (1.6 m) on
+// a compass bearing (scene north is -z), or above, as the V2.87 audit looked.
+function reach(p) {
+  const H = Math.max(0.3, p.height_m), C = Math.max(0.3, p.canopy_m);
+  return { H, D: Math.max(3, H * 1.25 + C * 0.5) };
+}
+function eyeShot(name, p, bearing) {
+  const { H, D } = reach(p), a = bearing * Math.PI / 180;
+  const ty = Math.min(H * 0.55, 1.6 + 0.35 * (H - 1.6));
+  return { name, at: [Math.sin(a) * D, 1.6, -Math.cos(a) * D], to: [0, ty, 0] };
+}
+function aboveShot(name, p, white) {
+  const { H, D } = reach(p);
+  return { name, white, at: [D * 0.55, H * 0.5 + D * 0.9, D * 0.55], to: [0, H * 0.5, 0] };
+}
 function lightReport(w, c) {
-  return w.eval(LIGHT_SRC)(Object.assign({}, c.plant, { x: 0, y: 0 }), c.sun, 256);
+  return w.eval(LOOK_SRC)([eyeShot('shaded', c.plant, c.sun.azimuth_deg + 180),
+                           eyeShot('sunny', c.plant, c.sun.azimuth_deg)], 256);
+}
+function shadeReport(w, c) {
+  return w.eval(LOOK_SRC)([aboveShot('drawn', c.plant, false),
+                           aboveShot('white', c.plant, true)], 256);
 }
 
 const result = { models: false, plants: [], bees: [] };
@@ -195,6 +236,7 @@ function step() {
       const m = w.permaMeasure();
       const r = { name: c.name, height_m: m.height_m || 0, parts: m.parts || [] };
       if (c.light) r.light = lightReport(w, c);
+      if (c.shade) r.shade = shadeReport(w, c);
       result.plants.push(r);
       step();
     }, 600);

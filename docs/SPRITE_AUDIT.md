@@ -930,6 +930,29 @@ app it was worse, because the pond never reached the map at all.
 With no pond they are left out and named. A bare pond is planted, and the
 generated structures reach the map.
 
+### What V2.96 fixed (F188 the shrubs' shade)
+
+Plan: [`V2.96-shrubs-show-their-shade`](plans/V2.96-shrubs-show-their-shade.md).
+
+**41 · Shrubs that are not cut-outs.** Every shrub model carries a baked shade,
+and none was ever drawn. The shrub layer asked for its leaf material without
+saying its geometry carries colours, which the material reads as no; every
+other foliage call says yes. So from above a shrub was a flat-lit green cut-out,
+and Stylised's shrubs lacked the gradient every other Stylised plant has.
+
+Turned on as it was, the old bake (the trees' before V2.94) put 35% of a shrub's
+pixels near-black from a path. The eight shrub models are rebaked with the
+trees' `CROWN_AO`, and nothing but their leaves' shade changed.
+
+Over the 53 shrubs:
+
+* from a path, luma 0.345 → 0.295 and near-black 19% → 25%, still brighter than
+  the trees;
+* from above, the shade between leaf clusters rises 19%.
+
+The darkest from a path are mostly the 40 shrubs that share one default leaf
+green, because nothing records a shrub's leaf colour (noted under F180).
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
@@ -940,7 +963,7 @@ the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
 ~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
 telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
 ~~F186, dark crowns from eye level~~ (V2.94), which found **F187**, the
-ground bounce, and **F188**, the shrubs' shade never drawn.
+ground bounce, and ~~F188, the shrubs' shade never drawn~~ (V2.96).
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 
