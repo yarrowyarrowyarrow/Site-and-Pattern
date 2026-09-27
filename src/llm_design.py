@@ -30,6 +30,7 @@ import urllib.request
 from typing import Any, Optional
 
 from src.errors import LLMError
+from src.pond_planting import seat_water, split_water
 
 DEFAULT_ENDPOINT = "http://localhost:11434/v1"
 DEFAULT_MODEL = "llama3.2"
@@ -1173,6 +1174,10 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
 
         proj = into_project if into_project is not None else Project.create(
             name, site_config=site_config, boundary=boundary)
+        # F185: water plants and pond communities are seated in a pond after
+        # the rest is placed, since the pond is placed last.
+        p_items, p_mixes, c_groups, c_mixes, water, pond_comms = split_water(
+            p_items, p_mixes, c_groups, c_mixes)
         p_items = _apply_density(p_items, boundary, density, keepout)
         _place_within_boundary(proj, p_items, c_groups, s_items,
                                boundary, center,
@@ -1184,6 +1189,9 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                                fill_regions=fills,
                                community_mixes=c_mixes,
                                plant_mixes=p_mixes)
+        for msg in seat_water(proj, water, pond_comms,
+                              _pond_seats(proj, existing_features)):
+            _add_warning(proj, msg)
         return proj, dropped
 
     spec = client.generate_spec(prompt, context, extra_hints=hints)
@@ -1225,15 +1233,16 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # Deterministic backstop for whichever round won: mend the most
     # impactful remaining gaps straight from the catalogue, in open ground.
     scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
+    ponds = _plant_the_ponds(project, existing_features, scoped, center)
     ground = _open_ground(project, boundary, center, keepout, fills,
                           cell_env_map)
     for msg in apply_repairs(project, scoped, ground.spot_for):
         _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, scoped, center, boundary,
-                         spot=ground.spot_for)
+                         spot=ground.spot_for, pond=ponds)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
-                          spot=ground.spot_for)
+                          spot=ground.spot_for, pond=ponds)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
     return project
@@ -2600,6 +2609,30 @@ def _open_ground(project, boundary, center: tuple[float, float],
                       spacing_of=_plant_spacing_m)
 
 
+def _pond_seats(project, existing_features=None):
+    """The ponds a water plant can go in (F185, V2.95): the design's own, then
+    any the user already drew, asked one plant at a time."""
+    from src.pond_planting import PondSeats, ponds_in
+    return PondSeats(project, ponds_in(project.as_dict().get("features"))
+                     + ponds_in(existing_features or []))
+
+
+def _plant_the_ponds(project, existing_features, scoped, center):
+    """Plant a pond the design placed and left bare, before the repairs look at
+    the design; returns the seats the top-ups share. A pond the user drew is
+    theirs to plant, so only the design's own are planted here."""
+    from src.pond_planting import plant_bare_ponds, ponds_in
+    own = ponds_in(project.as_dict().get("features"))
+    if own:
+        try:
+            pool = scoped()
+        except Exception:  # noqa: BLE001
+            pool = []
+        for msg in plant_bare_ponds(project, own, pool, site=center):
+            _add_warning(project, msg)
+    return _pond_seats(project, existing_features)
+
+
 def _water_only_note(animal: str, supporters: list) -> str:
     """The design note for a chosen animal whose every recorded plant grows in
     standing water, which the follow-up steps never add (F183, V2.91)."""
@@ -2617,19 +2650,38 @@ def _water_only_note(animal: str, supporters: list) -> str:
             f"or wet ground, plant one there by hand.")
 
 
+def _seat_in_pond(project, pond, rows, placed_ids: set):
+    """Seat the first of ``rows`` that fits in the design's pond (F185): the
+    top-ups' answer when every plant that would do grows in water. Returns the
+    row seated, or None."""
+    if not pond:
+        return None
+    from src.pond_planting import NOT_CHOSEN_AUTOMATICALLY
+    for row in rows:
+        if (row.get("scientific_name") or "") in NOT_CHOSEN_AUTOMATICALLY:
+            continue
+        s = pond.seat(row)
+        if s is not None:
+            project.place_plant(row["id"], s[0], s[1], quantity=1)
+            placed_ids.add(row["id"])
+            return row
+    return None
+
+
 def _apply_fauna_feedback(project, fauna_ids, query_plants,
                           center: tuple[float, float], boundary=None, *,
-                          spot=None) -> None:
+                          spot=None, pond=None) -> None:
     """Ensure the design actually serves each chosen wildlife species: for any
     selected fauna with no supporting plant among those placed, drop in one
     plant that supports it, at ``spot(row)`` (open ground by default). Mirrors
     :func:`_apply_goal_feedback`; warnings live under
     ``properties.generation_warnings``.
 
-    Never a plant that needs standing water (F183): measured in V2.91, 39 of
-    the 1,116 animals with a recorded plant for an Edmonton yard led with one.
-    For an animal whose every plant does (five then), the notes say so and
-    name the plants."""
+    Never a plant that needs standing water on open ground (F183): measured in
+    V2.91, 39 of the 1,116 animals with a recorded plant for an Edmonton yard
+    led with one. For an animal whose every plant does (five then), one goes
+    in the design's pond when ``pond`` (:class:`src.pond_planting.PondSeats`)
+    has room (F185, V2.95); otherwise the notes say so and name the plants."""
     if not fauna_ids:
         return
     from src.zoning import needs_standing_water
@@ -2649,7 +2701,10 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
             continue
         dry = [p for p in supporters if not needs_standing_water(p)]
         if not dry:
-            water_only.append((fid, supporters))
+            if _seat_in_pond(project, pond, supporters, placed_ids):
+                served.append(fid)
+            else:
+                water_only.append((fid, supporters))
             continue
         lat, lng = spot(dry[0])
         project.place_plant(dry[0]["id"], lat, lng, quantity=1)
@@ -2668,11 +2723,13 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
 
 def _apply_goal_feedback(project, goals, query_plants,
                          center: tuple[float, float], boundary=None, *,
-                         spot=None) -> None:
+                         spot=None, pond=None) -> None:
     """Record goal-related warnings on the project and, if a *backed* goal ends
     up with no representation among the placed plants, drop in one satisfying
     plant (at ``spot(row)``, open ground by default, and never one that needs
-    standing water) so the result never silently violates a hard goal.
+    standing water there) so the result never silently violates a hard goal.
+    When only water plants meet the goals, one goes in the design's pond if
+    ``pond`` has room (F185, V2.95).
 
     Warnings live under ``properties.generation_warnings`` (a plain list on the
     project dict — no schema concept) for the GUI/CLI to surface. The key is
@@ -2710,7 +2767,10 @@ def _apply_goal_feedback(project, goals, query_plants,
             placed_ids = {p.get("plant_id") for p in project.placed_plants}
             dry = [p for p in satisfying if not needs_standing_water(p)]
             if placed_ids.isdisjoint(sat_ids) and not dry:
+                row = _seat_in_pond(project, pond, satisfying, placed_ids)
                 warnings.append(
+                    "Added one plant to honour the selected goals, in the "
+                    f"pond ({row.get('common_name', 'plant')})." if row else
                     "No plant was added to honour the selected goals: every "
                     "plant that meets them grows in standing water."
                 )
@@ -2893,6 +2953,9 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
             "offline generation found no plants or communities to place"
         )
 
+    # F185: a water plant goes in a pond the user drew, or is left out.
+    plant_items, p_mixes, c_groups, c_mixes, water, pond_comms = split_water(
+        plant_items, p_mixes, c_groups, c_mixes)
     plant_items = _apply_density(
         plant_items, boundary, density, keepout,
         already=_planned_elsewhere(p_mixes, c_groups, c_mixes))
@@ -2902,20 +2965,24 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                            keepout=keepout,
                            cell_env_map=cell_env_map, fill_regions=fills,
                            community_mixes=c_mixes, plant_mixes=p_mixes)
+    for msg in seat_water(project, water, pond_comms,
+                          _pond_seats(project, existing_features)):
+        _add_warning(project, msg)
 
     # The deterministic critic runs offline too (V1.62): score the placed
     # design and mend the most impactful gaps straight from the catalogue.
     from src.design_critic import apply_repairs
     scoped = _site_scoped_query(query_plants, site_filters, area_m2, center)
+    ponds = _plant_the_ponds(project, existing_features, scoped, center)
     ground = _open_ground(project, boundary, center, keepout, fills,
                           cell_env_map)
     for msg in apply_repairs(project, scoped, ground.spot_for):
         _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, scoped, center, boundary,
-                         spot=ground.spot_for)
+                         spot=ground.spot_for, pond=ponds)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
-                          spot=ground.spot_for)
+                          spot=ground.spot_for, pond=ponds)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
     return project

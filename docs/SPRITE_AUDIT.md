@@ -913,6 +913,23 @@ Found on the way:
 * **F188**: shrub foliage is drawn with vertex colours off, so no shrub has ever
   shown its baked shade.
 
+### What V2.95 fixed (F185 water plants in the pond)
+
+Plan: [`V2.95-water-plants-go-in-the-pond`](plans/V2.95-water-plants-go-in-the-pond.md).
+
+**40 · The pond-lily on the lawn.** V2.90 drew each wetland plant by its own
+body, and drew a floating one on a pond's water when it stood in one. None ever
+did: the generator placed water plants like any other plant, before the pond,
+so in a measured design all six stood on grass, 9 to 28 m from the pond. In the
+app it was worse, because the pond never reached the map at all.
+
+`src/pond_planting.py` now seats every water plant in a pond by its body:
+* floating and submerged plants in the open water the 3D scene draws;
+* emergents in the shallows of the north shore.
+
+With no pond they are left out and named. A bare pond is planted, and the
+generated structures reach the map.
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in

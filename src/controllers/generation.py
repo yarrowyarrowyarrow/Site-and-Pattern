@@ -203,17 +203,66 @@ class GenerationController:
                 quantity=qty)
             batch.append((pid, name))
 
+        # The structures come too (V2.95, F185). The generator places a pond,
+        # a bee hotel or a brush pile and scores the design with them, and the
+        # map never received them: a design's pond-lilies seated in its pond
+        # would have stood in a ring on the lawn. Written as the map's own
+        # structure tool writes them; this method's checkpoint makes the whole
+        # design, structures included, one undo step.
+        placed_structures = 0
+        for struct_def, lat, lng in _iter_generated_structures(project):
+            main._project["features"].append(
+                _structure_feature(struct_def, lat, lng))
+            main.map_widget.load_structure(struct_def, lat, lng)
+            placed_structures += 1
+
         main.plant_panel.on_plants_placed_batch(batch)
         main._mark_modified()
         main._sync_planning_panel()
         main.statusBar().showMessage(
-            f"Generated design — placed {len(batch)} plants. Fine-tune by "
-            "dragging or deleting.", 5000)
+            f"Generated design — placed {len(batch)} plants"
+            + (f" and {placed_structures} structure"
+               + ("s" if placed_structures != 1 else "")
+               if placed_structures else "")
+            + ". Fine-tune by dragging or deleting.", 5000)
 
         warnings = (project.as_dict().get("properties", {})
                     .get("generation_warnings", []))
         if warnings:
             QMessageBox.information(main, "Design notes", "\n\n".join(warnings))
+
+
+def _iter_generated_structures(project):
+    """Yield ``(struct_def, lat, lng)`` for each structure in ``project``, the
+    definition carrying its ``id`` and ``size_m``."""
+    for f in project.as_dict().get("features", []):
+        props = f.get("properties", {})
+        if props.get("element_type") != "structure":
+            continue
+        coords = (f.get("geometry", {}) or {}).get("coordinates") or []
+        sd = dict(props.get("struct_def") or {})
+        sid = props.get("struct_id") or sd.get("id")
+        if len(coords) < 2 or not sid:
+            continue
+        sd["id"] = sid
+        sd["size_m"] = float(props.get("size_m") or sd.get("size_m") or 4.0)
+        yield sd, coords[1], coords[0]
+
+
+def _structure_feature(struct_def: dict, lat: float, lng: float) -> dict:
+    """A structure feature in the shape the map's structure tool writes
+    (``map_events._on_structure_placed``)."""
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [lng, lat]},
+        "properties": {
+            "element_type": "structure",
+            "struct_id": struct_def["id"],
+            "name": struct_def.get("name") or struct_def["id"],
+            "size_m": struct_def["size_m"],
+            "struct_def": struct_def,
+        },
+    }
 
 
 def _iter_generated_plants(project):
