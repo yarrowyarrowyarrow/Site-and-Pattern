@@ -23,7 +23,7 @@ import math
 import zlib
 from typing import Callable, Optional
 
-from src import fauna_body_plan
+from src import bird_body_plan, fauna_body_plan
 from src.vine_habit import drawn_frame
 
 # Per-taxon caps so a diverse yard shows a balanced community, not 40 bees.
@@ -247,41 +247,7 @@ def _apply_lep_morph(out: dict, morph: dict) -> dict:
     return out
 
 
-# Body plan by name (assetlib/fauna_variants.BIRD_VARIANTS). A woodpecker
-# propped on a trunk by its stiff tail and a chickadee on a twig are not the
-# same bird, and the roster routinely holds both.
-_BIRD_BUILD_WORDS = (("woodpecker", "woodpecker"), ("sapsucker", "woodpecker"),
-                     ("flicker", "woodpecker"), ("hummingbird", "hummer"))
-
-
-def _bird_appearance(name: str) -> dict:
-    n = (name or "").lower()
-    def spec(body, belly, wing, size=1.0, hummer=False):
-        build = "passerine"
-        for word, plan in _BIRD_BUILD_WORDS:
-            if word in n:
-                build = plan
-                break
-        return {"kind": "bird", "body": body, "belly": belly, "wing": wing,
-                "size": size, "hummer": hummer, "build": build}
-    if "hummingbird" in n:          return spec("#2f7d4f", "#d8cbb0", "#3a2a20", 0.5, True)
-    if "goldfinch" in n:            return spec("#e8c72e", "#f0e6b0", "#1c1c14", 0.7)
-    if "waxwing" in n:              return spec("#b79a72", "#d8c8a0", "#3a2c22", 0.85)
-    if "robin" in n:               return spec("#4a4038", "#b5502e", "#2a241e", 1.0)
-    if "blue jay" in n:            return spec("#3f6fb0", "#eef2f5", "#20304a", 1.0)
-    if "jay" in n:                 return spec("#6a7480", "#d8dde0", "#3a4048", 1.0)
-    if "magpie" in n:              return spec("#1c1e22", "#eef2f5", "#20304a", 1.1)
-    if "chickadee" in n:           return spec("#8a8f92", "#e8eef0", "#2a2c2e", 0.55)
-    if "nuthatch" in n:            return spec("#5a6a80", "#c88a5a", "#2a3140", 0.55)
-    if "warbler" in n:             return spec("#e0d24a", "#e7e0a0", "#6a6a2e", 0.55)
-    if "woodpecker" in n or "flicker" in n: return spec("#c8b48a", "#e0d6b8", "#2a241e", 0.8)
-    if "sparrow" in n or "junco" in n or "siskin" in n or "redpoll" in n:
-        return spec("#8a7a60", "#d8cbb0", "#3a3026", 0.6)
-    if "grosbeak" in n:            return spec("#b5482e", "#d8a0a0", "#3a2620", 0.75)
-    if "hawk" in n or "kestrel" in n or "merlin" in n: return spec("#7a5a3a", "#e0d2b0", "#3a2a1e", 1.2)
-    if "owl" in n:                 return spec("#6a5a44", "#c8b48a", "#3a3020", 1.2)
-    if "grouse" in n:              return spec("#7a6a4a", "#c0a878", "#3a3020", 1.1)
-    return spec("#8a7a60", "#cbbb90", "#3a3026", 0.7)
+# A bird's look, build and stance: src/bird_body_plan.py (V2.97, F174).
 
 
 def _insect_appearance(row: dict) -> dict:
@@ -397,8 +363,8 @@ _SIZE_AXIS = {
     "bee": "z",          # body length, nose to sting
     "butterfly": "x",    # wingspan, tip to tip
     "moth": "x",
-    "bird": "x",         # wingspan — the model's Z is body+tail, which is
-                         # authored long relative to a real passerine
+    "bird": "x",         # wingspan: each build's width IS its span, wings
+                         # spread at its birds' proportions (V2.97)
     "fly": "x",
     "beetle": "z",
     "bat": "x",
@@ -471,6 +437,8 @@ def size_sentence(size: dict) -> str:
         return ""
     measure = (f"{true_m * 1000:.0f} mm" if true_m < 0.1
                else f"{true_m * 100:.0f} cm")
+    if size.get("what"):              # "wingspan": a crane 1.1 m tall is 198 cm
+        measure = f"{size['what']} {measure}"
     if boost >= _BOOST_WORTH_SAYING:
         return f"{measure} — shown {boost:.0f}× life size so you can see it"
     return f"{measure} — shown life size"
@@ -542,6 +510,7 @@ def _size_for(row: dict, app: dict, bee_m: dict = None, lep_m: dict = None,
         "m": round(drawn, 4),
         "true_m": round(m, 4),
         "axis": _SIZE_AXIS.get(kind, "z"),
+        "what": "wingspan" if taxon in ("bird", "lepidoptera") else "",
         # 1.0 means "drawn life size" — the viewer only labels a boost above
         # _BOOST_WORTH_SAYING, but the number itself is always here.
         "boost": round(drawn / m, 2) if m > 0 else 1.0,
@@ -626,7 +595,7 @@ def _appearance_for(row: dict, morph: dict = None,
     if taxon == "lepidoptera":
         return _lep_appearance(name, sci, _lep_kind(row, lep_kind), morph)
     if taxon == "bird":
-        return _bird_appearance(name)
+        return bird_body_plan.appearance(name, sci)
     if taxon == "other_insect":
         return _insect_appearance(row)
     if taxon == "mammal":
@@ -840,6 +809,7 @@ def wildlife_for_scene(scene: dict, *,
     load: dict = {}
     per_taxon: dict = {}
     creatures: list[dict] = []
+    bird_tops: set = set()          # tree tops a hawk or owl already holds
     for c in chosen:
         r = c["row"]
         taxon = r.get("taxon")
@@ -906,7 +876,7 @@ def wildlife_for_scene(scene: dict, *,
                     added += 1
                     if added >= _PATROL_WAYPOINTS:
                         break
-        creatures.append({
+        crit = {
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),
             "y": round(p["y"] + math.sin(ang) * rad, 2),
@@ -939,14 +909,21 @@ def wildlife_for_scene(scene: dict, *,
                               lep_morph.get(_fid), bird_morph.get(_fid)),
             "route": route,
             "_ax": p["x"], "_ay": p["y"],
-        })
+        }
+        # Where its body stands (V2.97): a hawk in a tall tree, a grouse on
+        # the ground, a duck on the pond; an owl with no tree is not drawn.
+        if taxon == "bird" and not bird_body_plan.place(
+                crit, p, all_pl, scene, [by_id[q] for q in c["plants"]],
+                _drawn_height, bird_tops):
+            continue
+        creatures.append(crit)
         per_taxon[taxon] = per_taxon.get(taxon, 0) + 1
         if len(creatures) >= max_creatures:
             break
 
     _relax_spacing(creatures)
     for c in creatures:
-        c.pop("_ax", None); c.pop("_ay", None)
+        c.pop("_ax", None); c.pop("_ay", None); c.pop("_fixed", None)
     return creatures
 
 
@@ -956,6 +933,8 @@ def _relax_spacing(creatures: list, min_sep: float = 0.85, tries: int = 12) -> N
     from its anchor plant until it clears its neighbours (deterministic)."""
     placed: list = []
     for c in creatures:
+        if c.get("_fixed"):             # a bird's stance (bird_body_plan)
+            placed.append((c["x"], c["y"])); continue
         ax, ay = c.get("_ax", c["x"]), c.get("_ay", c["y"])
         vx, vy = c["x"] - ax, c["y"] - ay
         r = math.hypot(vx, vy) or 0.01

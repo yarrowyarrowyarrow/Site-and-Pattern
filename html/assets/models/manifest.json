@@ -55,7 +55,13 @@
    "nodes": [
     "passerine",
     "woodpecker",
-    "hummer"
+    "hummer",
+    "raptor",
+    "owl",
+    "grouse",
+    "duck",
+    "goose",
+    "crane"
    ],
    "nominal_size": 1.0
   },

@@ -953,17 +953,42 @@ Over the 53 shrubs:
 The darkest from a path are mostly the 40 shrubs that share one default leaf
 green, because nothing records a shrub's leaf colour (noted under F180).
 
+### What V2.97 fixed (F174 the birds)
+
+Plan: [`V2.97-birds-with-their-own-bodies`](plans/V2.97-birds-with-their-own-bodies.md).
+
+**42 · Birds at their own size, where they would be.** The audit found twelve big
+birds drawn as a songbird perched inside a plant. Measuring them found more:
+**every bird was drawn about 2.4 times its length**. The viewer sets a bird's
+width to its recorded wingspan, and the three builds' wings were paddles, so the
+body that came with the right width was 52 cm for a robin, 51 cm for a Downy
+Woodpecker and three metres for the Sandhill Crane.
+
+Nine builds now, each with its wings at its birds' real span and a folded pair
+shown at rest, picked by genus:
+
+* hawks, falcons and the owl sit upright on a tall tree's top; a hawk soars over
+  a young design, and an owl with no tree is not drawn;
+* grouse, ptarmigans and the crane walk on the ground beside their plants;
+* the Snow Goose and Northern Shoveler float on a pond at their waterline, and
+  walk without one.
+
+The robin is 22 cm, the hawk 57 cm, and the crane stands 1.07 m. One span to
+length per build leaves birds with unusually long or short tails 14-25% off. The
+colours are unchanged (F172).
+
 ### Still open after the sixth pass
 
 The batches that need a model, a data decision or a flora, one row each in
 `BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
 habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
-the Wild Clematis flower), **F173** insect body plans, **F174** bird body plans,
+the Wild Clematis flower), **F173** insect body plans, ~~F174 bird body plans~~ (V2.97),
 ~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), ~~F177 succulents and cacti~~ (V2.93),
 ~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
 telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
 ~~F186, dark crowns from eye level~~ (V2.94), which found **F187**, the
-ground bounce, and ~~F188, the shrubs' shade never drawn~~ (V2.96).
+ground bounce, and ~~F188, the shrubs' shade never drawn~~ (V2.96). V2.97's
+birds found **F190**: animals carry no range, so ptarmigans reach prairie yards.
 Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
 drawn at.
 

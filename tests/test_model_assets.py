@@ -593,7 +593,7 @@ class ModelAssetsTest(unittest.TestCase):
         identification (F67).
         """
         try:
-            from src import scene_wildlife            # noqa: PLC0415
+            from src import bird_body_plan, scene_wildlife   # noqa: PLC0415
         except Exception:                             # noqa: BLE001
             self.skipTest("src.scene_wildlife not importable")
         wanted = {"bee": set(), "lep": set(), "bird": set()}
@@ -605,9 +605,11 @@ class ModelAssetsTest(unittest.TestCase):
                            ("Monarch", "butterfly"), ("Sphinx Moth", "moth"),
                            ("Nothing In Particular", "butterfly")):
             wanted["lep"].add(scene_wildlife._lep_appearance(name, "", kind)["build"])
-        for name in ("Downy Woodpecker", "Northern Flicker", "Ruby-throated "
-                     "Hummingbird", "Black-capped Chickadee", "Robin"):
-            wanted["bird"].add(scene_wildlife._bird_appearance(name)["build"])
+        # Birds by genus since V2.97 (src/bird_body_plan.py): every build the
+        # genus table can name, and the name-word fallback for a bird with none.
+        for genus in list(bird_body_plan.PLAN_BY_GENUS) + ["turdus"]:
+            wanted["bird"].add(bird_body_plan.appearance("", genus + " x")["build"])
+        wanted["bird"].add(bird_body_plan.appearance("Pileated Woodpecker", "")["build"])
         for key, builds in wanted.items():
             declared = set(self.mf["fauna"][key].get("nodes", []))
             missing = builds - declared

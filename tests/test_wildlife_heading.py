@@ -143,9 +143,10 @@ class BirdFlightTest(unittest.TestCase):
         # this failed without having found a defect. The claim is about the
         # bird, not about which file draws it.
         src = _read_all()
+        # V2.97: the anim may come from Python (`app.anim || 'perch'`).
         m = re.search(r"} else \{\s*(?://[^\n]*\n\s*)*"
                       r"g\.userData\.flap = \{([^}]*)\};\s*\n\s*"
-                      r"g\.userData\.anim = 'perch';", src)
+                      r"g\.userData\.anim = (?:app\.anim \|\| )?'perch';", src)
         self.assertIsNotNone(
             m, "the perching bird's flap config moved")
         amp = re.search(r"amp:\s*([0-9.]+)", m.group(1))
@@ -174,7 +175,9 @@ class BirdFlightTest(unittest.TestCase):
         # the flier branch, whose own flapWings call makes the assertion pass
         # with the perch call deleted. It did, until I checked.
         src = _read(_WILDLIFE)
-        m = re.search(r"\n    \} else if \(c\.anim === 'perch'\) \{(.*?)"
+        # V2.97: a soaring raptor shares the branch (`|| c.anim === 'soar'`).
+        m = re.search(r"\n    \} else if \(c\.anim === 'perch'"
+                      r"(?: \|\| c\.anim === 'soar')?\) \{(.*?)"
                       r"\n    \} else if", src, re.S)
         self.assertIsNotNone(m, "the perch branch of animateWildlife moved")
         # Comments stripped first. The branch carries a comment EXPLAINING the
@@ -191,7 +194,8 @@ class BirdFlightTest(unittest.TestCase):
         travel branch — a gap the V2.29 nose-first fix left behind, so birds
         crossed the yard sideways."""
         src = _read(_WILDLIFE)
-        m = re.search(r"\} else if \(c\.anim === 'perch'\) \{(.*?)\n      \} else \{",
+        m = re.search(r"\} else if \(c\.anim === 'perch'"
+                      r"(?: \|\| c\.anim === 'soar')?\) \{(.*?)\n      \} else \{",
                       src, re.S)
         self.assertIsNotNone(m, "the perch travel branch moved")
         self.assertIn("critterHeading", m.group(1),

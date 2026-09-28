@@ -17,7 +17,8 @@ iframe{width:900px;height:600px;border:0;display:block}
 // catalogue through src/scene_contract.build_scene, so this page measures what
 // the app would send and holds no copy of the data to drift:
 //
-//   { plants: [{ name, month, plant }], bees: [{ name, app }] }
+//   { plants: [{ name, month, plant }], bees: [{ name, app }],
+//     birds: [{ name, app, size }] }
 //
 // For each plant it pushes a one-plant scene in the plant's bloom month and reads
 // window.permaMeasure — the union box, and per mesh its extent and instance scale
@@ -68,6 +69,32 @@ function beeReport(w, b) {
   r.tergites.sort((a, b) => a.i - b.i);
   r.bands.sort((a, b) => a.i - b.i);
   return r;
+}
+
+// A bird as the scene draws it (V2.97, F174): its baked build, scaled to life by
+// its recorded wingspan as rebuildWildlife does, then settled with its wings
+// folded. V2.46 sized birds by the width of models whose wings were paddles, and
+// checked the width it set, not the length that came with it: every bird was
+// drawn about 2.4 times its length. `span_m` is the whole model's width, hidden
+// spread wings and all (what the scaling measures); length and height are the
+// body that shows, nose to tail along -z and feet to crown.
+function birdReport(w, b) {
+  const g = w.glbCritter('bird', b.app);
+  if (!g) return { name: b.name, built: false };
+  w.scaleCritterToLife(g, b.size);
+  // Guarded so that a viewer from before the folded wings reports its numbers
+  // (and fails on them) instead of stopping the page.
+  if (typeof w._wingState === 'function') w._wingState(g, false);
+  g.updateMatrixWorld(true);
+  const all = new w.THREE.Box3().setFromObject(g), shown = new w.THREE.Box3();
+  g.traverseVisible((m) => { if (m.isMesh) shown.expandByObject(m); });
+  const s = shown.getSize(new w.THREE.Vector3());
+  const wings = (g.userData.wings || []).map((x) => x.pivot.visible);
+  const folds = (g.userData.folds || []).map((x) => x.visible);
+  const r3 = (v) => Math.round(v * 1000) / 1000;
+  return { name: b.name, built: true, build: b.app.build,
+           span_m: r3(all.max.x - all.min.x), length_m: r3(s.z), height_m: r3(s.y),
+           folded: folds.length > 0 && folds.every(Boolean) && !wings.some(Boolean) };
 }
 
 // How a crown is LIT (V2.94, F186). From a person's height, leaves seen from
@@ -173,7 +200,7 @@ function shadeReport(w, c) {
                            aboveShot('white', c.plant, true)], 256);
 }
 
-const result = { models: false, plants: [], bees: [] };
+const result = { models: false, plants: [], bees: [], birds: [] };
 // Every viewer function this page calls, across the chunks that define them,
 // and the last chunk to load (V2.93), without which a cactus is a herb mat.
 const NEEDS = ['permaSetScene', 'permaMeasure', 'permaModelsReady',
@@ -189,7 +216,9 @@ function finish() {
          + ' m, top ' + Math.max(...fl.map((q) => q.top)) : '  no florets');
   }).concat(result.bees.map((b) => b.name.padEnd(22) + ' '
     + (b.built ? b.tergites.map((t) => t.colour).join(' ') || 'generic bands'
-               : 'not built'))).join('\n');
+               : 'not built'))).concat(result.birds.map((b) => b.name.padEnd(22)
+    + (b.built ? ' span ' + b.span_m + ' m, length ' + b.length_m + ' m, height '
+                 + b.height_m + ' m' : ' not built'))).join('\n');
 }
 
 function step() {
@@ -243,6 +272,7 @@ function step() {
     return;
   }
   for (const b of CASES.bees || []) result.bees.push(beeReport(w, b));
+  for (const b of CASES.birds || []) result.birds.push(birdReport(w, b));
   finish();
 }
 step();

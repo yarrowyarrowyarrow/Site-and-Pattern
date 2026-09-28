@@ -485,15 +485,16 @@ class TestTheWingsCanActuallyBeFound(unittest.TestCase):
                             f"{kind}: {glb.name} has no WingL node at all")
 
     def test_the_bird_builds_match_the_model(self):
-        """`_bird_appearance` picks a build name; the GLB has to carry it, or
+        """`bird_body_plan` picks a build name; the GLB has to carry it, or
         the lookup falls back to the first variant and every woodpecker is a
-        passerine."""
+        passerine. Every build the genus table can name, not only the ones
+        today's catalogue reaches (V2.97)."""
         models = self._models_dir()
         if not (models / "fauna_bird.glb").exists():   # pragma: no cover
             self.skipTest("model assets not present in this checkout")
         _names, roots = self._glb_nodes(models / "fauna_bird.glb")
-        from src.scene_wildlife import _BIRD_BUILD_WORDS
-        builds = {plan for _word, plan in _BIRD_BUILD_WORDS} | {"passerine"}
+        from src.bird_body_plan import PLAN_BY_GENUS, STANCE
+        builds = set(PLAN_BY_GENUS.values()) | set(STANCE) | {"passerine"}
         self.assertFalse(builds - set(roots),
                          f"builds with no model variant: {builds - set(roots)}")
 
@@ -516,14 +517,14 @@ class TestTheWingsCanActuallyBeFound(unittest.TestCase):
         root = pathlib.Path(__file__).resolve().parent.parent
         fauna = json.loads((root / "data" / "fauna_master.json")
                            .read_text(encoding="utf-8"))
-        from src.scene_wildlife import (_bee_appearance, _bird_appearance,
-                                        _lep_appearance)
+        from src.bird_body_plan import appearance as _bird_appearance
+        from src.scene_wildlife import _bee_appearance, _lep_appearance
         wanted = {"bird": set(), "lep": set(), "bee": set()}
         for r in fauna:
             name = r.get("common_name", "")
             sci = r.get("scientific_name", "") or " "
             if r.get("taxon") == "bird":
-                wanted["bird"].add(_bird_appearance(name).get("build"))
+                wanted["bird"].add(_bird_appearance(name, sci).get("build"))
             elif r.get("taxon") == "lepidoptera":
                 wanted["lep"].add(
                     _lep_appearance(name, sci, "butterfly", None).get("build"))

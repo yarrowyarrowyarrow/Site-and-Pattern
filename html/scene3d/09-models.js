@@ -350,7 +350,9 @@ const _GLB_CRITTER = {
   // if a multi-variant fauna GLB has a spec with no `node`.
   bird:      { key: 'bird',
                node: (a) => a.hummer ? 'hummer' : (a.build || 'passerine'),
-               anim: (a) => a.hummer ? 'hover' : 'perch',
+               // `a.anim` since V2.97: walk (ground and water birds) and soar
+               // (a hawk with no tree) come from src/bird_body_plan.py.
+               anim: (a) => a.anim || (a.hummer ? 'hover' : 'perch'),
                // Matches the procedural bird in 07-wildlife.js — a slow deep
                // beat, folded on the perch by animateWildlife's gain. Was
                // amp 0.0 here too, so the baked bird was as motionless as the
@@ -523,8 +525,9 @@ function glbCritter(kind, app) {
   if (kind === 'bee') _glbBeeBands(byName, app);
   const spots = byName('Spots');
   if (spots) spots.visible = !!app.spots;
-  const beak = byName('Beak');
-  if (beak && app.hummer) beak.scale.z *= 2.4;
+  // A bird's folded wings (V2.97): shown at rest, the spread pair in the air.
+  const folds = ['FoldL', 'FoldR'].map(byName).filter(Boolean);
+  if (folds.length) g.userData.folds = folds;
   // Bee body form: the GLB abdomen is authored 'round'; slender/stout are
   // relative rescales (ratios from makeBeeAvatar's shape table, 06-fly.js).
   const abd = byName('Abdomen');

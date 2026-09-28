@@ -46,15 +46,24 @@ function makeBirdCritter(app) {
   const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.22), wing);
   tail.position.set(0, 0.02, 0.28); tail.rotation.x = 0.3;
   g.add(b, bel, head, beak, tail);
-  const wings = [];
+  // Spread wings at a songbird's span, 1.55 times its length, as the baked
+  // builds are (V2.97): the viewer sizes a bird by its width, so short paddles
+  // drew it twice its length. A folded pair shows at rest (_wingState).
+  const wings = [], folds = [];
   const wg = new THREE.SphereGeometry(0.14, 8, 3);
   for (const s of [-1, 1]) {
     const pivot = new THREE.Group(); pivot.position.set(0.08 * s, 0.04, 0.02);
-    const w = new THREE.Mesh(wg, wing); w.scale.set(0.5, 0.14, 1.0);
-    w.position.set(0.12 * s, 0, 0.02); pivot.add(w); g.add(pivot);
+    const w = new THREE.Mesh(wg, wing); w.scale.set(1.82, 0.14, 0.7);
+    w.position.set(0.255 * s, 0, 0.02); pivot.add(w); g.add(pivot);
     wings.push({ pivot, sign: s });
+    const f = new THREE.Mesh(wg, wing); f.scale.set(0.28, 0.35, 1.3);
+    f.position.set(0.11 * s, 0.05, 0.08); g.add(f); folds.push(f);
   }
   g.userData.wings = wings;
+  g.userData.folds = folds;
+  // A walking bird's route is at its feet (bird_body_plan); this body is
+  // centred on its origin, so stand it up on the ground.
+  if (app.anim === 'walk') for (const ch of g.children) ch.position.y += 0.16;
   if (app.hummer) {
     g.userData.flap = { base: 0, amp: 1.1, speed: 0.4 };   // blur
     g.userData.anim = 'hover';
@@ -68,7 +77,7 @@ function makeBirdCritter(app) {
     // tables have to agree or the baked and procedural birds beat
     // differently in the same scene.
     g.userData.flap = { base: -0.55, amp: 1.7, speed: 0.22, hold: 0.0 };
-    g.userData.anim = 'perch';
+    g.userData.anim = app.anim || 'perch';
   }
   g.scale.setScalar(0.9 * (app.size || 1));
   return g;

@@ -75,6 +75,16 @@ MAX_SHADED_NEAR_BLACK = 0.15
 MIN_SHADED_LUMA = 0.25
 #: The sunny side stays the brighter one, and a blown-out leaf would read white.
 MAX_SUNNY_LUMA = 0.6
+#: V2.97 (F174): a bird of each body plan, with the plant the scene puts it on.
+#: Every bird was drawn about 2.4 times its length until V2.97.
+_BIRDS = (("American Robin", "Black Hawthorn"),
+          ("Black-capped Chickadee", "Chokecherry"),
+          ("Red-tailed Hawk", "Balsam Poplar"),
+          ("Great Horned Owl", "Trembling Aspen"),
+          ("Ruffed Grouse", "Bearberry"),
+          ("Snow Goose", "Saltgrass"),
+          ("Sandhill Crane", "Broad-leaved Arrowhead"))
+_NIGHT_BIRDS = ("Great Horned Owl",)
 #: V2.96 (F188): shrubs seen from above as drawn, against the same frame with
 #: their leaves' colour attribute made white. Until V2.96 the two were the same
 #: picture, because the shrub layer asked for its leaves with vertex colours off.
@@ -186,7 +196,26 @@ def _build_cases():
                   "app": scene_wildlife.appearance_for_fauna(banded)}]
     if plain:
         bee_cases.append({"name": "plain bee %d" % plain[0], "app": plain[1]})
-    return {"plants": plants, "bees": bee_cases}
+
+    # V2.97 (F174): each bird alone with a plant it is tied to, through
+    # wildlife_for_scene; the probe gets the appearance and size it returns.
+    from src.db.fauna import fauna_for_plants
+    conn = get_connection()
+    try:
+        bird_ids = {r["common_name"]: r["id"] for r in conn.execute(
+            "SELECT id, common_name FROM fauna WHERE taxon = 'bird'")}
+    finally:
+        conn.close()
+    bird_cases = []
+    for bird, plant_name in _BIRDS:
+        sc = scene_of(feature(plant_name))
+        sc["month"], sc["is_night"] = 7, bird in _NIGHT_BIRDS
+        fid = bird_ids[bird]
+        crit = scene_wildlife.wildlife_for_scene(
+            sc, fauna_edges=lambda pids, fid=fid: [
+                r for r in fauna_for_plants(pids) if r.get("id") == fid])[0]
+        bird_cases.append({"name": bird, "app": crit["app"], "size": crit["size"]})
+    return {"plants": plants, "bees": bee_cases, "birds": bird_cases}
 
 
 @unittest.skipIf(_find_chromium() is None,
@@ -645,6 +674,52 @@ class AccuracyRenderTest(unittest.TestCase):
         for b in bee["bands"]:
             self.assertEqual(b["visible"], b["i"] < n,
                              f"Band{b['i']} visibility is wrong for bands={n}")
+
+    # ── V2.97 (F174): a bird is drawn at its own size ────────────────────────
+
+    def _bird(self, name):
+        if not self.result["models"]:
+            self.skipTest("the baked models did not load in this browser, and "
+                          "the builds are the baked birds")
+        for b in self.result.get("birds", []):
+            if b["name"] == name:
+                self.assertTrue(b["built"], f"{name}: glbCritter built nothing")
+                return b
+        self.fail(f"{name}: the probe did not report it")
+
+    def test_a_bird_is_as_wide_as_its_recorded_wingspan(self):
+        for case in self.cases["birds"]:
+            want = case["size"]["m"]
+            with self.subTest(case["name"]):
+                self.assertAlmostEqual(
+                    self._bird(case["name"])["span_m"], want, delta=0.02 * want,
+                    msg="the scaling no longer measures the spread wings")
+
+    def test_a_bird_is_drawn_near_its_published_length(self):
+        """The number V2.46 never checked: the length that comes with the width
+        it set. The robin was 52 cm, the crane three metres."""
+        from tests.test_bird_body_plan import (PUBLISHED_LENGTH_CM,
+                                               PUBLISHED_STANDING_CM, SLACK)
+        for name, _plant in _BIRDS:
+            b = self._bird(name)
+            lo, hi = PUBLISHED_LENGTH_CM[name]
+            with self.subTest(name):
+                cm = b["length_m"] * 100
+                if name in PUBLISHED_STANDING_CM:     # upright: its height
+                    lo, hi = PUBLISHED_STANDING_CM[name]
+                    cm = b["height_m"] * 100
+                self.assertGreaterEqual(cm, lo * (1 - SLACK),
+                                        f"{name} drawn {cm:.1f} cm")
+                self.assertLessEqual(cm, hi * (1 + SLACK),
+                                     f"{name} drawn {cm:.1f} cm (published "
+                                     f"{lo}-{hi} cm)")
+
+    def test_a_settled_bird_folds_its_wings(self):
+        for name, _plant in _BIRDS:
+            with self.subTest(name):
+                self.assertTrue(self._bird(name)["folded"],
+                                f"{name}: the spread wings still show at rest, "
+                                f"or the folded pair is missing")
 
 
 def _same_colour(a, b, tol=2):
