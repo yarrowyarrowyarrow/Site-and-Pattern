@@ -254,6 +254,15 @@ class StanceTest(unittest.TestCase):
         self.assertEqual((hawk["on"], hawk["on_id"]), ("old poplar", 2),
                          "the label names the tree it is sitting on")
 
+    def test_the_label_takes_the_relationship_to_the_tree_it_is_on(self):
+        owl = _bird("Great Horned Owl", "Bubo virginianus", 1.15)
+        owl["rel"] = "cover"
+        spruce = _plant(1, 0, 0, 2.5, 1.0, "tree", common_name="White Spruce")
+        aspen = _plant(2, 8, 2, 9.0, 4.0, "tree", common_name="Trembling Aspen")
+        self.assertTrue(BP.place(owl, spruce, [spruce, aspen], {}, [spruce, aspen],
+                                 _height, None, {1: "cover", 2: "nesting"}))
+        self.assertEqual((owl["on"], owl["rel"]), ("Trembling Aspen", "nesting"))
+
     def test_with_no_tall_tree_of_its_own_a_hawk_circles_overhead(self):
         hawk = _bird("Red-tailed Hawk", "Buteo jamaicensis", 1.22)
         young = _plant(1, 0, 0, 2.4, 1.2, "tree")
@@ -377,6 +386,32 @@ class ThroughTheSceneTest(unittest.TestCase):
         self.assertGreater(hawk["h"], tree["height_m"])
         self.assertLess(hawk["h"], tree["height_m"] + 0.3)
         self.assertEqual(hawk["app"]["build"], "raptor")
+
+    def test_a_young_spruce_sends_the_owl_to_the_aspen_it_nests_in(self):
+        """The owl's best-ranked tie is cover in White Spruce; it also nests in
+        Trembling Aspen. In year 1 the spruce is under 3 m and the aspen is not,
+        so the owl belongs on the aspen, not out of the scene."""
+        from src.db.fauna import fauna_for_plants
+        from src.project_store import plant_feature
+        from src.scene_contract import build_scene
+        from src.scene_wildlife import wildlife_for_scene
+        feats = [plant_feature({"plant_id": self.plant_id[n], "common_name": n,
+                                "lat": 51.05, "lng": -114.07 + dx / 70000.0})
+                 for n, dx in (("White Spruce", 0), ("Trembling Aspen", 8))]
+        sc = build_scene({"type": "FeatureCollection", "properties": {"site_config": {}},
+                          "features": feats}, year=1, wind=False)
+        sc["month"], sc["is_night"] = 7, True
+        heights = {p["common_name"]: p["height_m"] for p in sc["plants"]}
+        self.assertLess(heights["White Spruce"], BP.TREE_MIN_M)
+        self.assertGreaterEqual(heights["Trembling Aspen"], BP.TREE_MIN_M)
+        fid = self.fauna_id["Great Horned Owl"]
+        owl = [c for c in wildlife_for_scene(
+            sc, fauna_edges=lambda ids: [r for r in fauna_for_plants(ids)
+                                         if r.get("id") == fid])]
+        self.assertEqual(len(owl), 1, "the owl was dropped with a tall aspen present")
+        self.assertEqual((owl[0]["on"], owl[0]["rel"], owl[0]["app"]["anim"]),
+                         ("Trembling Aspen", "nesting", "perch"))
+        self.assertGreater(owl[0]["h"], heights["Trembling Aspen"])
 
     def test_the_grouse_is_on_the_ground_by_its_bearberry(self):
         grouse, _sc = self._one("Ruffed Grouse", "Bearberry")

@@ -149,16 +149,17 @@ def appearance(name: str, scientific_name: str = "") -> dict:
 
 def place(creature: dict, anchor: dict, plants: list, scene: dict,
           food: list, drawn_height: Callable[[dict], float],
-          taken: Optional[set] = None) -> bool:
+          taken: Optional[set] = None, rels: Optional[dict] = None) -> bool:
     """Put a bird ``creature`` (a ``wildlife_for_scene`` record) where its build
     stands, rewriting its position, ``h``, ``route`` and ``app["anim"]``.
 
     ``anchor`` is the plant it was given, ``plants`` every plant as drawn,
-    ``food`` the design's plants this species is tied to, ``drawn_height`` how
-    tall the viewer draws a plant. ``taken`` holds the tree tops already sat on
-    in this scene, so two hawks do not share one; the caller keeps it. False
-    means the bird has nowhere to be here and is not drawn: an owl with no
-    tree."""
+    ``food`` every plant in the design this species is tied to, by any
+    relationship, and ``rels`` that relationship per plant id, for the label
+    when the bird sits on another of them. ``drawn_height`` is how tall the
+    viewer draws a plant. ``taken`` holds the tree tops already sat on in this
+    scene, so two hawks do not share one; the caller keeps it. False means the
+    bird has nowhere to be here and is not drawn: an owl with no tree."""
     app = creature.get("app") or {}
     plan = app.get("build") or "passerine"
     stance = STANCE.get(plan, "crown")
@@ -187,6 +188,8 @@ def place(creature: dict, anchor: dict, plants: list, scene: dict,
         if home is not anchor:          # the label names the tree it is on
             creature["on"] = home.get("common_name", creature.get("on", ""))
             creature["on_id"] = home.get("plant_id", creature.get("on_id"))
+            creature["rel"] = (rels or {}).get(home.get("plant_id"),
+                                               creature.get("rel", ""))
         span = float((creature.get("size") or {}).get("m") or 0.5)
         # Then between its tree and the nearest other tall ones, top to top.
         others = sorted((t for t in trees if t is not home),

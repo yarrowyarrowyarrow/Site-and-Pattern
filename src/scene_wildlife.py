@@ -775,6 +775,10 @@ def wildlife_for_scene(scene: dict, *,
     # species that uses several present plants can be spread across them rather
     # than piling every animal onto one keystone shrub (the old clumping bug).
     cand: dict = {}    # fauna_id -> {"best_rank", "row", "plants": [pid,...]}
+    # Every present plant each species is tied to, with its best relationship
+    # there: a bird's stance may seat it on a tree it nests in when the one it
+    # shelters in is still a sapling (bird_body_plan.place, V2.97).
+    tied: dict = {}    # fauna_id -> {pid: (rank, relationship)}
     for r in rows:
         fid = r.get("id")
         pid = r.get("plant_id")
@@ -786,6 +790,9 @@ def wildlife_for_scene(scene: dict, *,
             continue
         prio = _REL_PRIORITY.get(r.get("taxon"), ())
         rank = prio.index(r["relationship"]) if r.get("relationship") in prio else len(prio)
+        t = tied.setdefault(fid, {})
+        if pid not in t or rank < t[pid][0]:
+            t[pid] = (rank, r.get("relationship", ""))
         c = cand.get(fid)
         if c is None or rank < c["best_rank"]:
             cand[fid] = {"best_rank": rank, "row": {**r}, "plants": [pid]}
@@ -913,8 +920,10 @@ def wildlife_for_scene(scene: dict, *,
         # Where its body stands (V2.97): a hawk in a tall tree, a grouse on
         # the ground, a duck on the pond; an owl with no tree is not drawn.
         if taxon == "bird" and not bird_body_plan.place(
-                crit, p, all_pl, scene, [by_id[q] for q in c["plants"]],
-                _drawn_height, bird_tops):
+                crit, p, all_pl, scene,
+                [by_id[q] for q in sorted(tied.get(_fid, {}), key=str)],
+                _drawn_height, bird_tops,
+                {q: rel for q, (_rk, rel) in tied.get(_fid, {}).items()}):
             continue
         creatures.append(crit)
         per_taxon[taxon] = per_taxon.get(taxon, 0) + 1
