@@ -913,8 +913,8 @@ class TestEveryTextFileReadPinsItsEncoding(unittest.TestCase):
 
 
 class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
-    """Guards against two ways a module has aborted the whole run rather than
-    failing a test. Both cost hours to find, because the abort happens in a
+    """Guards against three ways a module has aborted the whole run rather than
+    failing a test. Each cost hours to find, because the abort happens in a
     *later* module than the one at fault and prints no test name."""
 
     def test_no_module_builds_a_qapplication_with_an_empty_argv(self):
@@ -971,6 +971,44 @@ class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
             offenders, [],
             "deleteLater() on a window without close() or stop_threads() "
             "first — its workers outlive it and abort the run later")
+
+    def test_every_object_on_a_web_channel_has_a_qt_parent(self):
+        """A ``QWebChannel`` keeps a bare pointer to each object registered on it.
+
+        ``MapWidget`` built its bridge with no parent, so all that kept it
+        alive was the view wrapper's Python attribute. PyQt's ``deleteLater()``
+        hands the view to C++, and outside an event loop the deferred delete
+        never runs; a garbage-collection pass then cleared the wrapper and
+        freed the bridge under a page that was still loading. The page's first
+        message to the channel read the freed object: a segfault in
+        ``QMetaObjectPublisher::classInfoForObject``, in a later module that
+        only pumped events (CI, V2.98). A parent ties the object to the view;
+        measured, the view's page and channel are destroyed before it.
+        """
+        src_root = Path(__file__).resolve().parent.parent / "src"
+        offenders, seen = [], 0
+        for path in sorted(src_root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            built = {ast.unparse(n.targets[0]): n.value for n in ast.walk(tree)
+                     if isinstance(n, ast.Assign) and len(n.targets) == 1
+                     and isinstance(n.value, ast.Call)}
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "registerObject"
+                        and len(node.args) == 2):
+                    continue
+                seen += 1
+                obj = node.args[1]
+                call = obj if isinstance(obj, ast.Call) else built.get(ast.unparse(obj))
+                if call is None or not (call.args or any(
+                        k.arg == "parent" for k in call.keywords)):
+                    offenders.append(f"src/{path.relative_to(src_root)}:{node.lineno}")
+        self.assertGreaterEqual(seen, 2, "the guard no longer finds the bridges")
+        self.assertEqual(
+            offenders, [],
+            "an object registered on a QWebChannel is built without a Qt "
+            "parent — Python garbage collection can free it under a live page")
 
 
 if __name__ == "__main__":

@@ -441,7 +441,14 @@ class MapWidget(QWebEngineView):
         # signal turns an invisible crash into a single stderr line we
         # can grep for.
         self.page().renderProcessTerminated.connect(self._on_render_terminated)
-        self.bridge = MapBridge()
+        # Parented to the view, so it lives exactly as long as the page that
+        # calls it. The channel keeps a bare pointer to it, and until V2.98 the
+        # bridge's only owner was this wrapper's Python attribute: PyQt's
+        # deleteLater() hands the view to C++, and a garbage-collection pass
+        # that then clears the wrapper freed the bridge under a live page. The
+        # page's first message to the channel read the freed object and
+        # segfaulted, in whatever later code happened to be running (CI, V2.98).
+        self.bridge = MapBridge(self)
         # Stamp on every mode change Python sends; the map echoes the last one
         # it saw with each mode report, so a report that crossed a newer change
         # in flight can be told apart and ignored (V2.98).

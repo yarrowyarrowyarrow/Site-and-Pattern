@@ -370,8 +370,9 @@ QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox python -m unittest discover -s tests -t 
 
 ### When the run dies with no summary at all (V2.40)
 
-Three distinct process aborts hid behind each other here, each printing in a
-*later* module than the one at fault and naming no test. Two are now guarded by
+Three distinct process aborts hid behind each other here, and V2.98 found a
+fourth, each printing in a *later* module than the one at fault and naming no
+test. Three are now guarded by
 `tests/test_architecture_guard.py:TestTheTestSuiteCanReachItsOwnSummary` — when
 one fires, read the guard, not the abort.
 
@@ -380,9 +381,14 @@ one fires, read the guard, not the abort.
 | `Argument list is empty, the program name is not passed to QCoreApplication` | Some module built `QApplication([])`. The first one wins for the whole process, and the next `QWebEngineView` anywhere aborts. Pass a name. |
 | `Running as root without --no-sandbox is not supported` | The env var above. |
 | `QThread: Destroyed while thread '' is still running` | A teardown called `deleteLater()` on a window without `close()`, so `closeEvent` never stopped its workers. Nothing happens until the *next* event loop runs — some unrelated later test opening a dialog. |
+| `Fatal Python error: Segmentation fault` with a bare `processEvents()` as the top Python frame; native frame `QMetaObjectPublisher::classInfoForObject` (V2.98) | An object registered on a `QWebChannel` was freed while its page lived on. `deleteLater()` hands a window to C++, the deferred delete never runs outside an event loop, and a garbage-collection pass then frees anything the window's wrappers were the only owner of. Give it a Qt parent. Guarded. |
 
 `python -X faulthandler -m unittest …` is what actually locates these: it prints
-the Python frame the abort came from, including the parked worker's stack.
+the Python frame the abort came from, including the parked worker's stack. When
+that frame is only `processEvents()`, the fault is in Qt: run the reproduction
+under `gdb -batch -ex run -ex bt --args python …` (gdb is in the container) for
+the native frame. A subset that includes `test_app_smoke` needs
+`import PyQt6.QtWebEngineWidgets` before any `QApplication`, or its tests skip.
 
 **The one that is not fixable in code:** with the three above cleared,
 `tests/test_undo_redo.py` segfaults (139) *mid-run* in its own `tearDown`, at

@@ -218,6 +218,14 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertIs(bar.parentWidget(), self._win.map_widget.parentWidget())
         self.assertFalse(self._win.map_widget.isAncestorOf(bar))
 
+    def test_the_map_bridge_lives_as_long_as_the_view(self):
+        """The web channel keeps a bare pointer to the bridge. Owned only by a
+        Python attribute, it was freed under a live page (CI, V2.98)."""
+        from PyQt6 import sip
+        bridge = self._win.map_widget.bridge
+        self.assertIs(bridge.parent(), self._win.map_widget)
+        self.assertFalse(sip.ispyowned(bridge))
+
     def test_the_map_leaving_placing_stands_everything_down(self):
         """Esc in the map: the real bridge signal, through the real wiring."""
         from src.db.plants import search_plants
