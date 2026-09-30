@@ -1,22 +1,26 @@
 """
-tests/test_placement_arming.py — selecting is the arming gesture (V2.37).
+tests/test_placement_arming.py — a Place action arms the map; looking does not
+(V2.37, reversed in part in V2.99).
 
-User feedback: "selecting a plant or plant community or building a plant
-community mix should be sufficient to then place that unit on the map, an auto
-select if you will instead of having to press 'Place on Map' ... often I end up
-placing the wrong thing (the last thing) because I haven't hit the button."
+V2.37 made selecting the arming gesture, from a tester: "selecting a plant or
+plant community ... should be sufficient to then place that unit on the map ...
+often I end up placing the wrong thing (the last thing) because I haven't hit the
+button." V2.99 (F191, on the owner's call) found the cost: every way of *looking*
+armed the map, down to keyboard focus arriving in a list, which armed its first
+plant. So now:
 
-The failure mode these guard is specific: arming was a separate act, so the map
-kept holding whatever was armed *last*. Changing the species, the mix or the
-pattern without pressing again meant the next map click planted the previous
-choice — a wrong plant in the ground, which is expensive to notice and annoying
-to undo. So the assertions are about *re-arming on every change*, not merely
-about the first arm working.
+* **selecting only looks** (it names the plant on the Place button);
+* **a Place action arms**: the button, Enter, a double-click, the context menu,
+  Place mix;
+* **once placing, choosing another plant switches to it**, which is the tester's
+  case: the map is never left holding "the last thing" after another is chosen;
+* **what is placed is what the Place action named**, the plant or the mix; a
+  pattern only says how. Until V2.99 a built mix rode along on any plant's Row.
 
-V2.98 moved the answer to "what is armed?" from a chip on each panel's Place
-button to the placement bar over the map (tests/test_placement_bar.py); the
-panels now announce it (``armed_changed`` / ``armedChanged``), and these tests
-check what they announce.
+Re-arming on every change of *setting* (count, pattern, spacing) is unchanged,
+and still the heart of the V2.38 regression tests here. The gesture layer itself
+(Enter, click, drag, ▶, focus) is tested with real input in
+``tests/test_place_action.py``.
 
 Offscreen Qt; skipped where PyQt6 isn't importable.
 """
@@ -64,32 +68,111 @@ class TestPlantPanelArming(unittest.TestCase):
         self._plants = search_plants()[:3]
         return panel
 
-    def test_selecting_a_plant_arms_the_map(self):
+    def _row(self, panel, n):
+        return panel._results_list.model().index(n, 0)
+
+    def _row_plant(self, panel, n):
+        from src.plant_panel import _PLANT_OBJ_ROLE
+        return self._row(panel, n).data(_PLANT_OBJ_ROLE)
+
+    # ── Looking is not placing (V2.99) ────────────────────────────────────
+
+    def test_selecting_a_plant_only_names_it(self):
+        """Measured on V2.98: a click, an arrow key and keyboard focus arriving
+        in the list each armed the map."""
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._results_list.setCurrentIndex(self._row(panel, 1))
+        plant = self._row_plant(panel, 1)
+        self.assertEqual(armed, [], "looking at a plant armed the map")
+        self.assertFalse(panel._armed)
+        self.assertEqual(panel.selected_plant()["id"], plant["id"])
+        self.assertEqual(panel._place_btn.accessibleName(),
+                         f"Place {plant['common_name']} on the map")
+        self.assertTrue(panel._place_btn.isEnabled())
+
+    def test_the_place_button_arms_what_it_names(self):
         panel = self._panel()
         armed = []
         panel.place_plant_requested.connect(
             lambda pid, name, qty, pat: armed.append(name))
-
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
-
-        self.assertEqual(armed, [self._plants[0]["common_name"]])
+        panel._results_list.setCurrentIndex(self._row(panel, 2))
+        panel._place_btn.click()
+        self.assertEqual(armed, [self._row_plant(panel, 2)["common_name"]])
         self.assertTrue(panel._armed)
+        panel._place_btn.click()          # an action, not a toggle (V2.37's was)
+        self.assertTrue(panel._armed, "pressing Place again stood the map down")
 
-    def test_changing_the_plant_rearms_with_the_new_one(self):
-        """The reported bug: the map kept holding the previous choice."""
+    def test_with_nothing_selected_the_button_says_why(self):
+        panel = self._panel()
+        panel._results_list.clearSelection()
+        panel._on_selection_changed()
+        self.assertFalse(panel._place_btn.isEnabled())
+        self.assertIn("Select a plant", panel._place_btn.text())
+
+    def test_enter_and_double_click_place_the_row(self):
         panel = self._panel()
         armed = []
         panel.place_plant_requested.connect(
             lambda pid, name, qty, pat: armed.append(name))
+        panel._on_list_place(self._row(panel, 1))
+        self.assertEqual(armed[-1], self._row_plant(panel, 1)["common_name"])
+        self.assertEqual(panel.selected_plant()["id"],
+                         self._row_plant(panel, 1)["id"],
+                         "what was placed is not what the list highlights")
 
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
-        panel._selected_plant = self._plants[1]
-        panel._auto_arm()
+    def test_choosing_while_idle_does_nothing(self):
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._on_list_choose(self._row(panel, 1))
+        self.assertEqual(armed, [])
 
-        self.assertEqual(armed[-1], self._plants[1]["common_name"],
+    def test_while_placing_choosing_another_plant_switches_to_it(self):
+        """The V2.37 tester's case, kept: once placing, the map is never left
+        holding the last plant after another is chosen."""
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(
+            lambda pid, name, qty, pat: armed.append(name))
+        panel._place_plant(self._row_plant(panel, 0))
+        panel._on_list_choose(self._row(panel, 2))
+        self.assertEqual(armed[-1], self._row_plant(panel, 2)["common_name"],
                          "the map is still armed with the previous plant")
+        n = len(armed)
+        panel._on_list_choose(self._row(panel, 2))      # the same one again
+        self.assertEqual(len(armed), n, "re-armed for nothing")
+
+    def test_a_search_keeps_the_highlight_honest(self):
+        """A search resets the list and drops its highlight; the Place button
+        must not go on naming a plant that is no longer on screen."""
+        panel = self._panel()
+        panel._results_list.setCurrentIndex(self._row(panel, 0))
+        name = self._row_plant(panel, 0)["common_name"]
+        panel._search_box.setText(name)
+        panel._run_search()
+        self.assertEqual((panel.selected_plant() or {}).get("common_name"), name)
+        self.assertTrue(panel._results_list.selectionModel().hasSelection(),
+                        "the plant is listed but no longer highlighted")
+        panel._search_box.setText("zzzz no such plant")
+        panel._run_search()
+        self.assertIsNone(panel.selected_plant())
+        self.assertFalse(panel._place_btn.isEnabled())
+
+    def test_a_search_does_not_change_what_is_placed(self):
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(
+            lambda pid, name, qty, pat: armed.append(name))
+        plant = self._row_plant(panel, 0)
+        panel._place_plant(plant)
+        panel._search_box.setText("zzzz no such plant")
+        panel._run_search()
+        panel._placement.set_kind("row")                 # a re-arm
+        self.assertEqual(armed[-1], plant["common_name"])
+
+    # ── Re-arming on every change of setting (V2.37, V2.38) ───────────────
 
     def test_changing_the_pattern_rearms(self):
         panel = self._panel()
@@ -97,8 +180,7 @@ class TestPlantPanelArming(unittest.TestCase):
         panel.place_plant_requested.connect(
             lambda pid, name, qty, pat: armed.append(pat.get("kind")))
 
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
         panel._placement.set_kind("row")
         panel._on_pattern_kind_changed("row")
 
@@ -109,7 +191,7 @@ class TestPlantPanelArming(unittest.TestCase):
         """The V2.38 regression report: "I manually increased the number using
         the arrows from auto to 11. When I placed it it was only 3 plants."
 
-        Auto-arming reads the pattern at SELECTION time. Only the pattern KIND
+        Arming reads the pattern at arming time. Only the pattern KIND
         announced itself, so a Count set afterwards never reached the map and it
         placed the `auto` count derived from spacing instead.
         """
@@ -118,16 +200,14 @@ class TestPlantPanelArming(unittest.TestCase):
         panel.place_plant_requested.connect(
             lambda pid, name, qty, pat: armed.append(pat))
 
-        panel._selected_plant = self._plants[0]
         panel._placement.set_kind("row")
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
         self.assertIsNone(armed[-1]["params"].get("count") or None)
 
         panel._placement._row_count.setValue(11)
+        self.assertTrue(panel._rearm_timer.isActive())
         panel._rearm_timer.stop()          # fire the debounce now, not in 150 ms
-        panel._on_pattern_params_changed()
-        panel._rearm_timer.stop()
-        panel._auto_arm()
+        panel._rearm()
 
         self.assertEqual(armed[-1]["params"].get("count"), 11,
                          "the map is still armed with the old count")
@@ -165,8 +245,7 @@ class TestPlantPanelArming(unittest.TestCase):
         """Each re-arm is a round trip to the map; holding a spinner arrow
         emits per tick. Without the delay that is the lag the tester felt."""
         panel = self._panel()
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
         armed = []
         panel.place_plant_requested.connect(lambda *a: armed.append(a))
 
@@ -188,16 +267,14 @@ class TestPlantPanelArming(unittest.TestCase):
 
     def test_fill_area_arms_like_the_other_patterns(self):
         """V2.37 left Fill out of arming because re-entering fill mode restarted
-        the polygon. V2.98 removed the Place button, which would have left Fill
-        with no way in, so the map keeps the corners instead (see
-        test_placement_bar) and a selection arms Fill like any pattern."""
+        the polygon; since V2.98 the map keeps the corners (see
+        test_placement_bar), and Place arms Fill like any pattern."""
         panel = self._panel()
         fills = []
         panel.fill_area_requested.connect(lambda *a: fills.append(a))
 
         panel._placement.set_kind("fill")
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
 
         self.assertEqual(len(fills), 1)
         self.assertEqual(fills[0][0], [(int(self._plants[0]["id"]), 1.0)])
@@ -207,25 +284,34 @@ class TestPlantPanelArming(unittest.TestCase):
         """It defaulted to 1.5 m whatever was planted, while the mix line said
         "~0.3 m spacing"."""
         panel = self._panel()
-        plant = dict(self._plants[0], spacing_meters=0.4)
-        panel._selected_plant = plant
-        panel._sync_fill_spacing()
+        panel._placement.set_kind("fill")
+        panel._place_plant(dict(self._plants[0], spacing_meters=0.4))
         self.assertAlmostEqual(panel._placement.fill_spacing(), 0.4)
         # A mix: the widest of its plants, the number its own line shows.
         panel._add_to_mix(dict(self._plants[1], spacing_meters=0.3))
         panel._add_to_mix(dict(self._plants[2], spacing_meters=0.9))
+        panel._on_place_mix_clicked()
         self.assertAlmostEqual(panel._placement.fill_spacing(), 0.9)
         self.assertIn("~0.9 m spacing", panel._mix_status.text())
 
+    def test_a_fill_spacing_you_set_lasts_while_you_place(self):
+        """It is set as a plant comes in, not on every re-arm, or an edit to it
+        would be thrown away by the next setting that moved."""
+        panel = self._panel()
+        panel._placement.set_kind("fill")
+        panel._place_plant(dict(self._plants[0], spacing_meters=0.4))
+        panel._placement.set_fill_spacing(2.0)
+        panel._rearm()
+        self.assertAlmostEqual(panel._placement.fill_spacing(), 2.0)
+
     def test_the_panel_says_what_is_armed(self):
-        """Selection arms silently, so the bar over the map is the only thing
-        answering "what am I about to place?" — and it hears it from here."""
+        """The bar over the map answers "what am I about to place?", and it
+        hears it from here."""
         panel = self._panel()
         said = []
         panel.armed_changed.connect(said.append)
-        panel._selected_plant = self._plants[0]
         panel._placement.set_kind("row")
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
 
         self.assertTrue(said[-1]["armed"])
         self.assertEqual(said[-1]["what"], self._plants[0]["common_name"])
@@ -240,9 +326,8 @@ class TestPlantPanelArming(unittest.TestCase):
         panel.armed_changed.connect(said.append)
         armed = []
         panel.place_plant_requested.connect(lambda *a: armed.append(a))
-        panel._selected_plant = self._plants[0]
         panel._placement.set_kind("row")
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
         before = len(armed)
         panel._placement._row_count.setValue(7)
         self.assertTrue(panel._rearm_timer.isActive())
@@ -261,8 +346,7 @@ class TestPlantPanelArming(unittest.TestCase):
         self.assertTrue(qty_unit.isHidden(), "Qty shown where it is ignored")
         panel._placement.set_kind("single")
         self.assertFalse(qty_unit.isHidden())
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
+        panel._place_plant(self._plants[0])
         panel._qty_spin.setValue(4)
         self.assertTrue(panel._rearm_timer.isActive(),
                         "a Qty set after arming never reaches the map")
@@ -277,7 +361,11 @@ class TestPlantPanelArming(unittest.TestCase):
                 self.assertEqual(not controls._canopy_base_checkbox.isHidden(),
                                  shown)
 
-    def test_single_places_the_plant_even_with_a_mix(self):
+    # ── What is placed is what the Place action named (V2.99) ──────────────
+
+    def test_a_plant_in_a_row_is_a_row_of_that_plant_mix_or_no_mix(self):
+        """Until V2.99 a built mix rode along on any plant's Row, Grid or
+        Circle: picking Wild Bergamot and choosing Row planted the mix."""
         panel = self._panel()
         said = []
         panel.armed_changed.connect(said.append)
@@ -285,11 +373,23 @@ class TestPlantPanelArming(unittest.TestCase):
         panel.place_plant_requested.connect(lambda *a: armed.append(a))
         panel._add_to_mix(self._plants[1])
         panel._add_to_mix(self._plants[2])
-        panel._selected_plant = self._plants[0]
-        panel._placement.set_kind("single")
-        panel._auto_arm()
+        panel._placement.set_kind("row")
+        panel._place_plant(self._plants[0])
         self.assertEqual(armed[-1][1], self._plants[0]["common_name"])
+        self.assertNotIn("polyculture", armed[-1][3]["params"],
+                         "the mix's recipe rode along on a plant's row")
         self.assertEqual(said[-1]["mix"], 0, "the bar would say 'your mix'")
+
+    def test_building_a_mix_beside_a_placed_plant_changes_nothing(self):
+        panel = self._panel()
+        panel._place_plant(self._plants[0])
+        armed, cancels = [], []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel.placement_cancelled.connect(lambda: cancels.append(1))
+        panel._add_to_mix(self._plants[1])
+        panel._add_to_mix(self._plants[2])
+        panel._clear_mix()
+        self.assertEqual((armed, cancels), ([], []))
 
     def test_a_mix_places_with_nothing_selected(self):
         """The button was enabled and did nothing: the Place handler returned
@@ -299,7 +399,6 @@ class TestPlantPanelArming(unittest.TestCase):
         panel.place_plant_requested.connect(lambda *a: armed.append(a))
         panel._add_to_mix(self._plants[1])
         panel._add_to_mix(self._plants[2])
-        panel._selected_plant = None
         panel._placement.set_kind("single")
 
         panel._on_place_mix_clicked()
@@ -309,13 +408,33 @@ class TestPlantPanelArming(unittest.TestCase):
         self.assertEqual(armed[-1][1], self._plants[1]["common_name"])
         self.assertIn("polyculture", armed[-1][3]["params"])
 
+    def test_single_sets_a_placed_mix_aside(self):
+        """A mix cannot go down one plant per click: Single places the selected
+        plant instead, or stands the map down when none is selected."""
+        panel = self._panel()
+        armed, cancels = [], []
+        panel.place_plant_requested.connect(
+            lambda pid, name, qty, pat: armed.append(name))
+        panel.placement_cancelled.connect(lambda: cancels.append(1))
+        panel._add_to_mix(self._plants[1])
+        panel._add_to_mix(self._plants[2])
+        panel._results_list.setCurrentIndex(self._row(panel, 0))
+        panel._on_place_mix_clicked()
+        panel._placement.set_kind("single")
+        self.assertEqual(armed[-1], self._row_plant(panel, 0)["common_name"])
+        self.assertFalse(panel._armed_mix)
+
+        panel._on_place_mix_clicked()
+        panel._results_list.clearSelection()
+        panel._placement.set_kind("single")
+        self.assertEqual(cancels, [1])
+
     def test_clearing_the_armed_mix_stands_the_map_down(self):
         panel = self._panel()
         cancels = []
         panel.placement_cancelled.connect(lambda: cancels.append(1))
         panel._add_to_mix(self._plants[1])
         panel._add_to_mix(self._plants[2])
-        panel._selected_plant = None
         panel._on_place_mix_clicked()
         self.assertTrue(panel._armed)
 
@@ -364,38 +483,86 @@ class TestCommunityPanelArming(unittest.TestCase):
             self.skipTest("fewer than three seeded communities")
         return panel
 
-    def test_spacing_is_set_before_the_community_is_armed(self):
-        """It armed first, so Row/Grid/Circle/Fill used the previous
-        community's spacing."""
+    def _id(self, n):
+        return int(self._items[n].data(0, 256))
+
+    def _index(self, panel, n):
+        return panel.polyculture_tree.indexFromItem(self._items[n])
+
+    def test_selecting_a_community_only_shows_it(self):
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel.polyculture_tree.setCurrentItem(self._items[1])
+        self.assertEqual(placed, [], "reading about a community armed the map")
+        self.assertFalse(panel._armed)
+        self.assertFalse(panel._community_header_row.isHidden())
+        self.assertEqual(panel._place_btn.accessibleName(),
+                         f"Place {self._items[1].text(0)} on the map")
+
+    def test_the_place_button_places_the_selected_community(self):
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel.polyculture_tree.setCurrentItem(self._items[1])
+        panel._place_btn.click()
+        self.assertEqual(placed[-1]["id"], self._id(1))
+        self.assertTrue(panel._armed)
+
+    def test_a_community_comes_in_at_its_own_spacing(self):
+        """Until V2.98 a community armed with the previous one's spacing."""
         from src.db import polycultures
         panel = self._panel()
         placed = []
         panel.placePolycultureRequested.connect(placed.append)
         panel.placement_widget.set_kind("row")
-        item = self._items[1]
-        panel.polyculture_tree.setCurrentItem(item)
-        pc = polycultures.get_polyculture_by_id(item.data(0, 256))
+        panel._place_community(self._id(1))
+        pc = polycultures.get_polyculture_by_id(self._id(1))
         expected = round(max(0.5, polycultures.community_natural_radius(pc) * 2.0), 1)
         self.assertAlmostEqual(placed[-1]["pattern"]["spacing_m"], expected)
+
+    def test_a_spacing_you_set_lasts_while_you_place_and_look(self):
+        """The spacing is set as a community comes in, not as you look at one:
+        looking at another while placing must not change what you placed."""
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel.placement_widget.set_kind("row")
+        panel._place_community(self._id(0))
+        panel.pattern_spacing.setValue(7.0)
+        panel.polyculture_tree.setCurrentItem(self._items[2])     # looking
+        panel._rearm_timer.stop()
+        panel._rearm()
+        self.assertEqual(placed[-1]["id"], self._id(0))
+        self.assertAlmostEqual(placed[-1]["pattern"]["spacing_m"], 7.0)
 
     def test_the_spacing_re_arms(self):
         panel = self._panel()
         panel.placement_widget.set_kind("row")
-        panel.polyculture_tree.setCurrentItem(self._items[0])
+        panel._place_community(self._id(0))
         self.assertTrue(panel._armed)
         panel.pattern_spacing.setValue(panel.pattern_spacing.value() + 1.0)
         self.assertTrue(panel._rearm_timer.isActive(),
                         "the map keeps the old spacing")
 
-    def test_double_click_uses_the_pattern_the_bar_shows(self):
+    def test_double_click_or_enter_uses_the_pattern_the_bar_shows(self):
         panel = self._panel()
         placed = []
         panel.placePolycultureRequested.connect(placed.append)
         panel.placement_widget.set_kind("grid")
-        panel.polyculture_tree.setCurrentItem(self._items[0])
-        panel._on_double_click_place(self._items[0], 0)
+        panel._on_list_place(self._index(panel, 0))
         self.assertEqual(placed[-1]["pattern"]["kind"], "grid",
                          "double-click placed Single whatever the bar said")
+
+    def test_while_placing_choosing_another_community_switches_to_it(self):
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel._on_list_choose(self._index(panel, 1))
+        self.assertEqual(placed, [], "choosing while idle armed the map")
+        panel._place_community(self._id(0))
+        panel._on_list_choose(self._index(panel, 2))
+        self.assertEqual(placed[-1]["id"], self._id(2))
 
     def test_place_mix_arms_the_mix_and_single_sets_it_aside(self):
         panel = self._panel()
@@ -415,6 +582,8 @@ class TestCommunityPanelArming(unittest.TestCase):
                          "the mix flipped the bar straight back to Row")
         self.assertEqual(said[-1]["mix"], 0)
         self.assertTrue(said[-1]["armed"])
+        self.assertEqual(said[-1]["what"], self._items[0].text(0),
+                         "Single should place the selected community")
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

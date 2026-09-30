@@ -1195,6 +1195,10 @@ class PolyculturePanel(QWidget):
         # (a setting that moves re-arms the same thing, not the selection).
         self._armed_what = ""
         self._armed_mix = False
+        # The community a Place action named (V2.99), apart from the one being
+        # looked at: re-arms use it, so a search or a glance elsewhere cannot
+        # change what the map holds.
+        self._armed_community_id = None
         from src.placement_arming import rearm_timer
         self._rearm_timer = rearm_timer(self, self._rearm)
         self._build_ui()
@@ -1344,12 +1348,13 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.setDragEnabled(True)
         self.polyculture_tree.setDragDropMode(
             QAbstractItemView.DragDropMode.DragOnly)
+        # Selecting shows the community; Enter, a double-click, the Place
+        # button or the context menu place it (V2.99, src/place_action.py).
         self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
-        self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
-        # A click (or Enter) on the community that is already current arms it
-        # again: after Done, the way back to it with the Place button gone.
-        self.polyculture_tree.itemClicked.connect(self._on_item_clicked)
-        self.polyculture_tree.itemActivated.connect(self._on_item_clicked)
+        from src.place_action import ListGestures
+        gestures = ListGestures(self.polyculture_tree)
+        gestures.place.connect(self._on_list_place)
+        gestures.choose.connect(self._on_list_choose)
         self.polyculture_tree.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
@@ -1441,8 +1446,19 @@ class PolyculturePanel(QWidget):
         self._community_header = QLabel("")
         self._community_header.setTextFormat(Qt.TextFormat.RichText)
         self._community_header.setWordWrap(True)
-        self._community_header.setVisible(False)
-        layout.addWidget(self._community_header)
+        # Place rides on the name's row (V2.99), so it costs the list no
+        # height; its accessible name says which community it places.
+        from src.place_action import PlaceButton
+        self._place_btn = PlaceButton("community", compact=True)
+        self._place_btn.clicked.connect(
+            lambda: self._place_community(self._get_selected_polyculture_id()))
+        self._community_header_row = QWidget()
+        header_row = QHBoxLayout(self._community_header_row)
+        header_row.setContentsMargins(0, 0, 0, 0)
+        header_row.addWidget(self._community_header, 1)
+        header_row.addWidget(self._place_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._community_header_row.setVisible(False)
+        layout.addWidget(self._community_header_row)
 
         # ── Members (full compact list, auto-sized to its content) ───────
         # The pattern toggle rides on the right of this label row (rather than
@@ -1606,6 +1622,12 @@ class PolyculturePanel(QWidget):
             "border: 1px solid #2e4a2e; }"
             "QMenu::item:selected { background: #2e4a2e; }"
         )
+        # The plant list's menu leads with its plain verb (the review's
+        # favourite control in the panel); communities lacked it (V2.99).
+        act_place = menu.addAction(f"Place {item.text(0).strip()} on Map")
+        act_place.triggered.connect(
+            lambda: self._place_community(int(polyculture_id)))
+        menu.addSeparator()
         in_mix = any(c["id"] == polyculture_id for c in self._mix_communities)
         if in_mix:
             act = menu.addAction("Remove from Community Mix")
@@ -2103,20 +2125,46 @@ class PolyculturePanel(QWidget):
             return
         self._select_polyculture_in_tree(target)
 
-    def _on_double_click_place(self, item, column):
-        """Double-click arms this community with the pattern the bar shows.
-        It used to place Single whatever the bar said."""
-        if item is None or item.data(0, Qt.ItemDataRole.UserRole) is None:
-            return
-        self._on_place()
+    def _community_at(self, index):
+        item = self.polyculture_tree.itemFromIndex(index)
+        pid = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
+        return item, pid
 
-    def _on_item_clicked(self, item, _column=0):
-        """A click (or Enter) on the community that is already current arms
-        it again. A click on another one arms through currentItemChanged
-        first, so this only acts while the map is not armed."""
-        if (not self._armed and item is not None
-                and item.data(0, Qt.ItemDataRole.UserRole) is not None):
-            self._auto_arm()
+    def _on_list_place(self, index):
+        """Enter or a double-click on a community: place it, in the pattern the
+        bar shows (a double-click placed Single whatever it said until V2.98)."""
+        item, pid = self._community_at(index)
+        if pid is not None:
+            self.polyculture_tree.setCurrentItem(item)
+            self._place_community(pid)
+
+    def _on_list_choose(self, index):
+        """A finished click or an arrow key onto a community. While this panel
+        is placing, the list is a palette: what you choose is placed next."""
+        _item, pid = self._community_at(index)
+        if self._armed and pid is not None and (
+                self._armed_mix or pid != self._armed_community_id):
+            self._place_community(pid)
+
+    def _place_community(self, polyculture_id):
+        """A Place action named this community: arm the map with it. Its
+        natural diameter becomes the spacing as it comes in, and only then, so
+        a spacing you set lasts while you place it (until V2.98 a community
+        armed with the previous one's)."""
+        if polyculture_id is None:
+            return
+        if self._armed_mix or polyculture_id != self._armed_community_id:
+            self._armed_mix = False
+            self._armed_community_id = polyculture_id
+            try:
+                natural_r = polycultures.community_natural_radius(
+                    polycultures.get_polyculture_by_id(polyculture_id))
+                was = self.pattern_spacing.blockSignals(True)
+                self.pattern_spacing.setValue(round(max(0.5, natural_r * 2.0), 1))
+                self.pattern_spacing.blockSignals(was)
+            except Exception:  # noqa: BLE001 — a spacing is not worth a failed arm
+                pass
+        self._on_place()
 
     def _on_polyculture_selected(self, current, previous):
         # A "Group By" category node carries no id — treat it as no selection
@@ -2143,7 +2191,8 @@ class PolyculturePanel(QWidget):
             # Let the community list reclaim the whole panel: uncap the tree
             # and hide the (empty) description card so it doesn't hold space.
             self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
-            self._community_header.setVisible(False)
+            self._community_header_row.setVisible(False)
+            self._place_btn.set_subject("")
             self._members_label.setVisible(False)
             self.description_toggle_btn.setVisible(False)
             self.detail_text.clear()
@@ -2176,7 +2225,8 @@ class PolyculturePanel(QWidget):
             f"<span style='color:#9e9e9e; font-size:11px;'>Anchored on "
             f"{center} · {len(members)} plants</span>"
         )
-        self._community_header.setVisible(True)
+        self._community_header_row.setVisible(True)
+        self._place_btn.set_subject(name if name != "—" else "")
         self._members_label.setVisible(True)
         self.description_toggle_btn.setVisible(True)
         self.detail_text.setVisible(self._show_description)
@@ -2197,19 +2247,8 @@ class PolyculturePanel(QWidget):
                 pattern_language.pattern_card_html(pattern, include_header=False))
         except Exception:  # noqa: BLE001 — never let the card break selection
             self.detail_text.setHtml(polyculture.get("description") or "")
-
-        # Pre-fill the spacing with the community's natural diameter, and only
-        # then arm (V2.37: selecting arms, same reasoning as the plant list).
-        # Until V2.98 it armed first, so Row / Grid / Circle / Fill carried the
-        # previous community's spacing. Silently: the arm below reads it.
-        try:
-            natural_r = polycultures.community_natural_radius(polyculture)
-            was = self.pattern_spacing.blockSignals(True)
-            self.pattern_spacing.setValue(round(max(0.5, natural_r * 2.0), 1))
-            self.pattern_spacing.blockSignals(was)
-        except Exception:
-            pass
-        self._auto_arm()
+        # That is all selecting does since V2.99: from V2.37 it armed the map,
+        # so reading about a community readied the next click to plant it.
 
     # ── Members list (compact rows with inline expand) ─────────────────
 
@@ -2513,21 +2552,9 @@ class PolyculturePanel(QWidget):
         from src.placement_arming import request_rearm
         request_rearm(self)
 
-    def _auto_arm(self):
-        """Arm the map with the selected community.
-
-        Fill Area arms too since V2.98. V2.37 left it out because re-entering
-        fill mode restarted the polygon; the map now keeps the corners drawn
-        and a re-arm only swaps what they will be planted with. With the Place
-        button gone, leaving Fill out would have left it no way in at all.
-        """
-        if self._get_selected_polyculture_id() is None:
-            return
-        self._on_place()
-
     def _rearm(self):
         """A setting moved: re-arm whatever is armed, the mix or the
-        selection. Choosing Single sets the mix aside (it cannot be placed
+        community. Choosing Single sets the mix aside (it cannot be placed
         one community at a time) for the selected community; with none, the
         map stands down rather than keep what the bar no longer shows.
         Nothing, if the map stood down meanwhile (the debounce lands here)."""
@@ -2535,7 +2562,13 @@ class PolyculturePanel(QWidget):
             return
         if self._armed_mix and self.placement_widget.kind != "single":
             self._on_place_community_mix()
-        elif self._get_selected_polyculture_id() is not None:
+        elif self._armed_mix:
+            selected = self._get_selected_polyculture_id()
+            if selected is None:
+                self.placementCancelled.emit()
+            else:
+                self._place_community(selected)
+        elif self._armed_community_id is not None:
             self._on_place()
         else:
             self.placementCancelled.emit()
@@ -2572,7 +2605,9 @@ class PolyculturePanel(QWidget):
         return self.placement_widget
 
     def _on_place(self):
-        polyculture_id = self._get_selected_polyculture_id()
+        """Arm the map with the community a Place action named, in the bar's
+        pattern. See :meth:`_place_community` for how one comes in."""
+        polyculture_id = self._armed_community_id
         if polyculture_id is None:
             return
         polyculture = polycultures.get_polyculture_by_id(polyculture_id)

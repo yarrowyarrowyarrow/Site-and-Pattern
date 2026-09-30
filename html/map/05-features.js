@@ -775,6 +775,7 @@
       var wasMode  = currentMode;
       currentMode  = mode;
       currentPlant = null;
+      currentCommunity = null;
       currentStructure = null;
       currentHedgerow  = null;
       currentShape     = null;
@@ -814,6 +815,7 @@
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'polyculture':
+          currentCommunity = data || null;   // its footprint (V2.99)
           // Single plant-community drop. No JS-side placement — the bridge
           // map_clicked → _on_polyculture_click does it. A real mode (NOT
           // 'none') so a click on a boundary/shape forwards to onMapClick
@@ -885,6 +887,7 @@
       var _container = map.getContainer();
       if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
       else _container.classList.remove('placing');
+      if (typeof resetCursorFootprint === 'function') resetCursorFootprint();
       // Report every mode (V2.98): Esc and a finished fill end placing here,
       // and Python must follow. See src/placement_bar_flow.py.
       if (bridge && bridge.onModeChanged) bridge.onModeChanged(mode, _pyModeSeq);

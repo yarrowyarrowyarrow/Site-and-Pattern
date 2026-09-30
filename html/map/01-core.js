@@ -37,6 +37,7 @@
     var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
     var _pyModeSeq    = 0;      // stamp of Python's last mode change, echoed by setMode (V2.98)
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+    var currentCommunity = null; // {name, radius_m, members} placing one (V2.99, 08-footprint.js)
 
     // Structure state
     var structureMarkers = {};  // id -> L.layerGroup
@@ -600,6 +601,9 @@
       // Map click handler
       map.on('click', onMapClick);
       map.on('mousemove', onMapMouseMove);
+      map.on('mouseout', function () {
+        if (typeof hideCursorFootprint === 'function') hideCursorFootprint();
+      });
       map.on('dblclick', onMapDblClick);
 
       // Push the current view centre to Python on every pan/zoom so
@@ -791,6 +795,7 @@
           && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
         _drawPatternPreview(e.latlng);
       }
+      if (typeof updateCursorFootprint === 'function') updateCursorFootprint(e.latlng);
     }
 
     function onMapDblClick(e) {

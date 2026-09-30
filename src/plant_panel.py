@@ -8,10 +8,8 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QListWidget, QFrame,
-    QPushButton, QSizePolicy, QScrollArea,
-    QGroupBox, QSpinBox, QDoubleSpinBox,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFrame,
+    QPushButton, QSizePolicy, QScrollArea, QGroupBox, QSpinBox,
     QColorDialog, QMenu, QListView,
 )
 from PyQt6.QtCore import (
@@ -170,6 +168,11 @@ class PlantPanel(QWidget):
         # What was armed, captured at arming time: the bar describes what the
         # map holds, which is not always what the list shows selected now.
         self._armed_what = ""
+        # What is being placed, apart from what is being looked at (V2.99):
+        # the plant a Place action named, or the mix after Place mix. A
+        # pattern says only how; it never swaps one for the other.
+        self._armed_plant: Optional[dict] = None
+        self._armed_mix = False
 
         from src.placement_arming import rearm_timer
         self._rearm_timer = rearm_timer(self, self._rearm)
@@ -431,23 +434,27 @@ class PlantPanel(QWidget):
             self._results_list.ScrollMode.ScrollPerPixel
         )
         self._results_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._results_list.selectionModel().currentChanged.connect(
-            self._on_view_current_changed
-        )
-        self._results_list.doubleClicked.connect(self._on_view_double_clicked)
+        # Selecting is looking (V2.99): it names the plant on the Place button
+        # and nothing else. Enter, a double-click, the button or the context
+        # menu place it; see src/place_action.py.
+        self._results_list.selectionModel().selectionChanged.connect(
+            self._on_selection_changed)
+        from src.place_action import ListGestures, PlaceButton
+        gestures = ListGestures(self._results_list)
+        gestures.place.connect(self._on_list_place)
+        gestures.choose.connect(self._on_list_choose)
         self._results_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
+        self._place_btn = PlaceButton("plant")
+        self._place_btn.clicked.connect(
+            lambda: self._place_plant(self._selected_plant))
+        top_layout.addWidget(self._place_btn)
 
         # The browser pane is no longer collapsible (V1.86): collapsing it
         # revealed nothing useful and only confused users. The "Plant Library"
         # header sits inline at the top of the pane (added above).
         root.addWidget(local_tab, 1)   # stretches to fill the sidebar
-        # Clicking the row that is already current, or pressing Enter on it,
-        # arms it again: after Done that is the way back to the same plant,
-        # since the Place button is gone (V2.98).
-        self._results_list.clicked.connect(self._on_view_clicked)
-        self._results_list.activated.connect(self._on_view_clicked)
 
         # ── Placement settings: built here, shown in the bar over the map ───
         # Until V2.98 these filled a collapsible "Placement" section below the
@@ -565,34 +572,65 @@ class PlantPanel(QWidget):
 
         self._results_model.set_plants(plants)
         self._results_model.set_placed_counts(self._placed_counts)
+        self._reselect(plants)
 
         n = len(plants)
         self._result_count.setText(f"Results: {n}")
 
-    # ── Selection / detail ────────────────────────────────────────────────────
+    # ── Looking and placing ───────────────────────────────────────────────────
 
-    def _on_view_current_changed(self, current: QModelIndex, _prev: QModelIndex):
-        """QListView equivalent of the old QListWidget currentItemChanged.
+    def _on_selection_changed(self, *_):
+        """The highlighted row is what the Place button names, and that is all.
 
-        Selecting a row **arms the map with that plant** and updates the
-        colour-picker preview. The compact-list flow doesn't surface a separate
-        bottom detail group — the inline expand chevron is the discovery path.
+        From V2.37 selecting armed the map (a tester kept planting "the last
+        thing"), so every way of looking did, down to keyboard focus arriving
+        in the list, which armed its first plant. Choosing while the map is
+        placing still switches it: see :meth:`_on_list_choose`.
         """
-        plant = current.data(_PLANT_OBJ_ROLE) if current.isValid() else None
+        rows = self._results_list.selectionModel().selectedIndexes()
+        plant = rows[0].data(_PLANT_OBJ_ROLE) if rows else None
         self._selected_plant = plant or None
-        if not plant:
-            return
-        self._update_color_btn(plant.get("marker_color") or "")
-        self._sync_fill_spacing()
-        self._auto_arm()
+        self._place_btn.set_subject((plant or {}).get("common_name", ""))
 
-    def _on_view_clicked(self, index: QModelIndex):
-        """A click (or Enter) on the row that is already current re-arms it.
-        A click on another row arms through ``currentChanged`` first, so this
-        only acts while the map is not armed."""
-        if not self._armed and index.isValid() and index.data(_PLANT_OBJ_ROLE):
-            self._selected_plant = index.data(_PLANT_OBJ_ROLE)
-            self._auto_arm()
+    def _reselect(self, plants):
+        """A search resets the list and drops its highlight: put it back on the
+        plant being looked at, or let go if the search hid it, so the Place
+        button never names a plant that is not on screen."""
+        pid = (self._selected_plant or {}).get("id")
+        row = next((i for i, p in enumerate(plants)
+                    if pid and p.get("id") == pid), -1)
+        if row >= 0:
+            self._results_list.setCurrentIndex(self._results_model.index(row))
+        else:
+            self._on_selection_changed()
+
+    def _on_list_place(self, index: QModelIndex):
+        """Enter or a double-click on a row: place that plant."""
+        plant = index.data(_PLANT_OBJ_ROLE)
+        if plant:
+            self._results_list.setCurrentIndex(index)
+            self._place_plant(plant)
+
+    def _on_list_choose(self, index: QModelIndex):
+        """A finished click or an arrow key onto a row. While the map is
+        placing, the list is a palette: what you choose is what the next click
+        plants, so "the last thing" is never placed by mistake."""
+        plant = index.data(_PLANT_OBJ_ROLE)
+        if self._armed and plant and (self._armed_mix or plant.get("id") != (
+                self._armed_plant or {}).get("id")):
+            self._place_plant(plant)
+
+    def _place_plant(self, plant):
+        """A Place action named ``plant``: arm the map with it, in the bar's
+        pattern. Its colour and its fill spacing come in with it."""
+        if not plant or not plant.get("id"):
+            return
+        if self._armed_mix or plant.get("id") != (self._armed_plant or {}).get("id"):
+            self._armed_mix = False
+            self._armed_plant = plant
+            self._update_color_btn(plant.get("marker_color") or "")
+            self._sync_fill_spacing()
+        self._on_place_clicked()
 
     # ── Arming ────────────────────────────────────────────────────────────────
 
@@ -601,30 +639,10 @@ class PlantPanel(QWidget):
         request_rearm(self)
 
     def _rearm(self):
-        """The debounce fired: re-arm with the settings as they are now, if the
-        map is still armed (a stand-down in the meantime wins)."""
+        """The debounce fired: re-arm what is armed with the settings as they
+        are now, unless the map stood down in the meantime."""
         if self._armed:
-            self._auto_arm()
-
-    def _auto_arm(self):
-        """Re-arm the map with whatever is selected now.
-
-        Selecting *is* the arming gesture (V2.37, user feedback: "selecting a
-        plant or plant community should be sufficient to then place that unit on
-        the map... often I end up placing the wrong thing (the last thing)
-        because I haven't hit the button"). The separate press meant the map
-        stayed armed with the previous choice until you pressed again, and the
-        cost of forgetting was a plant in the ground that you did not pick.
-
-        Fill Area arms too since V2.98. V2.37 left it out because re-entering
-        fill mode restarted the polygon, so arrow-keying the list would throw
-        away the corners drawn; the map now keeps them and a re-arm only swaps
-        what the polygon will be planted with. With the Place button gone,
-        leaving Fill out would have left it no way in at all.
-        """
-        if not self._selected_plant and len(self._mix_species) < 2:
-            return
-        self._on_place_clicked()
+            self._on_place_clicked()
 
     def set_armed(self, armed: bool):
         """Told by MainWindow when placement mode ends (Esc, another tool)."""
@@ -633,33 +651,20 @@ class PlantPanel(QWidget):
         if self._armed == bool(armed):
             return
         self._armed = bool(armed)
+        if not armed:
+            self._armed_mix = False
         self._announce_armed()
 
     def _announce_armed(self):
         """Tell the placement bar what the map holds (or that it holds nothing)."""
-        kind = self._placement.kind
-        self._color_unit.setVisible(not self._uses_mix(kind))
+        self._color_unit.setVisible(not self._armed_mix)
         self.armed_changed.emit({
             "armed": self._armed,
             "what": self._armed_what,
-            "kind": kind,
+            "kind": self._placement.kind,
             "qty": self._qty_spin.value(),
-            "mix": len(self._mix_species) if self._uses_mix(kind) else 0,
+            "mix": len(self._mix_species) if self._armed_mix else 0,
         })
-
-    def _uses_mix(self, kind: str) -> bool:
-        """The mix is what gets placed: two or more species, any pattern but
-        Single (which places the selected plant itself)."""
-        return kind != "single" and len(self._mix_species) >= 2
-
-    def _on_view_double_clicked(self, index: QModelIndex):
-        """Double-click: arm this plant with the pattern the bar shows."""
-        if not index.isValid():
-            return
-        plant = index.data(_PLANT_OBJ_ROLE)
-        if plant:
-            self._selected_plant = plant
-            self._on_place_clicked()
 
     def placement_controls(self):
         """The pattern controls, for the placement bar to adopt (V2.98)."""
@@ -672,16 +677,16 @@ class PlantPanel(QWidget):
     # ── Fill an area with plants (Placement Mode → Fill Area) ───────────────────
 
     def _fill_members(self):
-        """``(members, name)`` for an area fill: the current mix (≥2 species) if
-        one is built, else the selected single plant. ``members`` is a list of
+        """``(members, name)`` for an area fill of what is being placed: the
+        mix after Place mix, else the plant. ``members`` is a list of
         ``(plant_id, weight)``."""
-        if len(self._mix_species) >= 2:
+        if self._armed_mix and len(self._mix_species) >= 2:
             members = [(int(s["id"]), float(s.get("_weight", 1) or 1))
                        for s in self._mix_species if s.get("id")]
             return members, "Custom mix"
-        if self._selected_plant and self._selected_plant.get("id"):
-            return ([(int(self._selected_plant["id"]), 1.0)],
-                    self._selected_plant.get("common_name", ""))
+        plant = self._armed_plant or {}
+        if plant.get("id"):
+            return [(int(plant["id"]), 1.0)], plant.get("common_name", "")
         return [], ""
 
     def selected_plant(self) -> Optional[dict]:
@@ -805,28 +810,28 @@ class PlantPanel(QWidget):
         outer.addWidget(mix_box)
 
     def _on_pattern_kind_changed(self, kind: str):
-        # Switching Row → Grid is choosing what to place, exactly like picking a
-        # different species, so it re-arms rather than leaving the map holding
-        # the old pattern. Fill Area included since V2.98: choosing it in the
-        # bar starts the drawing (see _auto_arm).
+        # Switching Row → Grid in the bar changes how the map places, so it
+        # re-arms rather than leave the map holding the old pattern. Fill Area
+        # included since V2.98: choosing it in the bar starts the drawing.
         if self._armed:
             self._rearm_timer.stop()
-            self._auto_arm()
+            self._on_place_clicked()
 
     def _current_pattern(self) -> dict:
         """Build the pattern dict to pass to the map-placement signal.
 
-        When a stack mix is active and the mode is multi-cell
+        While the mix is what is placed and the mode is multi-cell
         (row/grid/circle), the pattern's params get a `polyculture` key
         carrying the resolved species list, distribution strategy, and
         effective spacing — App._enter_plant_mode uses this to override
         the primary's spacing on the map, and App._on_pattern_placed
-        uses it to assign species across positions.
+        uses it to assign species across positions. Only then: until V2.99 a
+        built mix rode along on any plant's Row, and the map planted the mix.
         """
         pattern = self._placement.current_pattern()
         if pattern["kind"] == "single":
             return {"kind": "single"}
-        poly = self.active_polyculture()
+        poly = self.active_polyculture() if self._armed_mix else None
         if poly is not None:
             pattern["params"]["polyculture"] = poly
         return pattern
@@ -952,10 +957,10 @@ class PlantPanel(QWidget):
         """Rebuild the species rows + status label from `_mix_species`.
 
         Each row is a custom QFrame: type-icon + common name + ratio
-        spinner + × remove button; four show and the rest scroll. Changing
-        the mix re-arms for the same reason changing the species does — the
-        map should be holding what you are looking at — and when nothing is
-        left to place, the map stands down rather than keep the old recipe.
+        spinner + × remove button; four show and the rest scroll. A mix being
+        placed follows its rows, and when fewer than two are left the map
+        stands down rather than keep the old recipe. A plant being placed is
+        not the mix, and building one beside it changes nothing on the map.
         """
         # Tear down old rows (stop signal connections from leaking).
         while self._mix_rows_layout.count():
@@ -968,10 +973,10 @@ class PlantPanel(QWidget):
         n = len(self._mix_species)
         self._mix_place_btn.setEnabled(n >= 2)
         self._mix_actions.setVisible(n > 0)
-        self._sync_fill_spacing()
-        if self._armed:
-            if self._selected_plant or n >= 2:
-                self._auto_arm()
+        if self._armed and self._armed_mix:
+            if n >= 2:
+                self._sync_fill_spacing()
+                self._on_place_clicked()
             else:
                 self.placement_cancelled.emit()
 
@@ -1020,15 +1025,14 @@ class PlantPanel(QWidget):
 
     def _sync_fill_spacing(self):
         """Start Fill Area at the plants' own spacing (V2.98): the mix's, as
-        its line shows it ("~0.3 m spacing"), or the selected plant's. It
-        defaulted to 1.5 m whatever was planted, 25 times sparser than a forb
-        mix's own guidance. Follows the selection, as a community's spacing
-        already did."""
-        if len(self._mix_species) >= 2:
+        its line shows it ("~0.3 m spacing"), or the plant's. It defaulted to
+        1.5 m whatever was planted, 25 times sparser than a forb mix's own
+        guidance. Set when what is placed changes, so an edit to it lasts."""
+        if self._armed_mix and len(self._mix_species) >= 2:
             spacing = max(float(s.get("spacing_meters") or 1.0)
                           for s in self._mix_species)
-        elif self._selected_plant:
-            spacing = self._selected_plant.get("spacing_meters")
+        elif self._armed_plant:
+            spacing = self._armed_plant.get("spacing_meters")
         else:
             return
         self._placement.set_fill_spacing(spacing)
@@ -1262,11 +1266,21 @@ class PlantPanel(QWidget):
     # ── Place on map ──────────────────────────────────────────────────────────
 
     def _on_place_clicked(self, _item=None):
-        """Arm the map with the selection, or the mix, in the bar's pattern."""
+        """Arm the map with what is being placed, the plant or the mix, in
+        the bar's pattern. A mix cannot go down one plant per click, so
+        Single sets it aside for the selected plant (as in V2.98), or the map
+        stands down when none is selected."""
+        if self._armed_mix and self._placement.kind == "single":
+            self._armed_mix = False
+            if not self._selected_plant:
+                self._nothing_to_place()
+                return
+            self._armed_plant = self._selected_plant
+            self._update_color_btn(self._armed_plant.get("marker_color") or "")
         pattern = self._current_pattern()
         kind = pattern.get("kind")
-        # Fill Area: draw a polygon and the selected plant — or the current
-        # mix — scatters inside it (evenly distributed).
+        # Fill Area: draw a polygon and the plant, or the mix, scatters inside
+        # it (evenly distributed).
         if kind == "fill":
             members, name = self._fill_members()
             if not members:
@@ -1280,8 +1294,8 @@ class PlantPanel(QWidget):
         # A mix is previewed by its own first species; the recipe decides
         # which species lands where. Until V2.98 a mix with nothing selected
         # in the list could not be placed at all.
-        primary = (self._mix_species[0] if self._uses_mix(kind)
-                   else self._selected_plant)
+        primary = (self._mix_species[0] if self._armed_mix
+                   else self._armed_plant)
         if not primary or not primary.get("id"):
             self._nothing_to_place()
             return
@@ -1317,6 +1331,8 @@ class PlantPanel(QWidget):
             self._armed = False           # no re-arm on the way through
             self._rearm_timer.stop()
             self._placement.set_kind("row")
+        self._armed_mix = True
+        self._sync_fill_spacing()
         self._on_place_clicked()
 
     def _on_plant_context_menu(self, pos):
@@ -1378,14 +1394,14 @@ class PlantPanel(QWidget):
         self._rearm_timer.stop()
         self._placement.set_kind("single")
         self._qty_spin.setValue(qty)
-        self._selected_plant = plant
-        self._on_place_clicked()
+        self._place_plant(plant)
 
     def _on_color_pick(self):
-        """Open a colour picker to set a custom marker colour for the selected plant."""
-        if not self._selected_plant or not self._selected_plant.get("id"):
+        """A custom marker colour for the plant being placed: the button sits
+        in the bar, beside the sentence that names it."""
+        plant = self._armed_plant
+        if not plant or not plant.get("id"):
             return
-        plant = self._selected_plant
         current = plant.get("marker_color") or ""
         initial = QColor(current) if current else QColor(
             _TYPE_COLORS.get(plant.get("plant_type", ""), "#66bb6a")
@@ -1398,7 +1414,7 @@ class PlantPanel(QWidget):
         try:
             from src.db.plants import update_marker_color
             update_marker_color(plant["id"], hex_color)
-            self._selected_plant["marker_color"] = hex_color
+            plant["marker_color"] = hex_color
         except Exception:
             pass
         # Update the colour button preview

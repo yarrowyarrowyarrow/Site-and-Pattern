@@ -62,9 +62,14 @@ class TestDescribe(unittest.TestCase):
                 self.assertIn("Wild Bergamot", headline)
                 self.assertIn(click, instruction)
 
-    def test_single_says_click_the_map(self):
+    def test_single_says_click_the_map_and_that_it_repeats(self):
+        """The map stays armed after a click, which nothing said (the review's
+        finding 8); since V2.99 the bar does."""
         self.assertEqual(self._d("plants", "single", "Wild Bergamot"),
-                         ("Placing Wild Bergamot", "Click the map to place it."))
+                         ("Placing Wild Bergamot",
+                          "Click the map to place it. Each click places another."))
+        _, instruction = self._d("communities", "single", "Aromatic Herb Circle")
+        self.assertIn("Each click places another.", instruction)
 
     def test_a_burst_says_how_many(self):
         headline, instruction = self._d("plants", "single", "Wild Bergamot", qty=5)
@@ -333,8 +338,7 @@ class TestPlacementBarFlow(unittest.TestCase):
         return main, calls
 
     def _arm_plant(self, main):
-        main.plant_panel._selected_plant = self._plant
-        main.plant_panel._auto_arm()
+        main.plant_panel._place_plant(self._plant)
         main._current_mode = "plant"
 
     def test_the_bar_is_a_sibling_of_the_map_never_its_child(self):

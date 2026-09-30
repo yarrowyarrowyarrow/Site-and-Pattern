@@ -226,13 +226,43 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertIs(bridge.parent(), self._win.map_widget)
         self.assertFalse(sip.ispyowned(bridge))
 
+    def test_looking_at_a_plant_leaves_the_map_alone(self):
+        """V2.99 (F191): selecting names the plant on the Place button; only a
+        Place action arms the map. Through the real window's wiring."""
+        win = self._win
+        panel = win.plant_panel
+        win._cancel_draw()
+        panel._results_list.setCurrentIndex(
+            panel._results_list.model().index(0, 0))
+        self.assertEqual(win._current_mode, "none")
+        self.assertEqual(win.placement_bar.source, "")
+        panel._place_btn.click()
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+        win._cancel_draw()
+
+    def test_esc_with_focus_on_the_place_button_stops_placing(self):
+        """Pressing Place leaves keyboard focus in the panel, not the map; Esc
+        must still stand everything down (MainWindow.keyPressEvent)."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtTest import QTest
+        win = self._win
+        panel = win.plant_panel
+        panel._results_list.setCurrentIndex(
+            panel._results_list.model().index(0, 0))
+        panel._place_btn.click()
+        self.assertEqual(win._current_mode, "plant")
+        QTest.keyClick(panel._place_btn, Qt.Key.Key_Escape)
+        self.assertEqual(win._current_mode, "none")
+        self.assertEqual(win.placement_bar.source, "")
+        self.assertFalse(panel._armed)
+
     def test_the_map_leaving_placing_stands_everything_down(self):
         """Esc in the map: the real bridge signal, through the real wiring."""
         from src.db.plants import search_plants
         win = self._win
         panel = win.plant_panel
-        panel._selected_plant = search_plants(query="bergamot")[0]
-        panel._auto_arm()
+        panel._place_plant(search_plants(query="bergamot")[0])
         self.assertEqual(win._current_mode, "plant")
         self.assertEqual(win.placement_bar.source, "plants")
 

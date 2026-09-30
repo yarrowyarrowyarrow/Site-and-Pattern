@@ -3,12 +3,16 @@ placement_arming.py — what the map is armed with, said in words (V2.37, V2.98)
 
 Design principle P5 — see docs/DESIGN_PHILOSOPHY.md
 
-Two panels arm the same map: the plant browser and the community library. Since
-V2.37 *selecting* is the arming gesture rather than pressing a button — a tester
-kept planting "the last thing" because arming was a separate act the map gave no
-sign of. Until V2.98 the answer to "what am I about to place?" was a chip on each
-panel's Place button, "● Placing: Wild Bergamot · Row", in a section that was
-usually collapsed. It is now the first line of the placement bar over the map
+Two panels arm the same map: the plant browser and the community library. From
+V2.37 *selecting* was the arming gesture (a tester kept planting "the last thing"
+because arming was a separate act the map gave no sign of), which meant looking
+armed the map too. Since V2.99 a Place action arms it and selecting only looks;
+once placing, choosing another plant switches to it, which is what that tester
+needed (``src/place_action.py``).
+
+Until V2.98 the answer to "what am I about to place?" was a chip on each panel's
+Place button, "● Placing: Wild Bergamot · Row", in a section that was usually
+collapsed. It is now the first line of the placement bar over the map
 (``src/placement_bar.py``), where the click will land, and it says what the click
 will *do*: "Placing Wild Bergamot in a row. Click the start point, then the end
 point."
@@ -61,13 +65,19 @@ def describe(source: str, kind: str, what: str = "", *, qty: int = 1,
     if mix >= 2 and kind != "single":
         subject = f"your {mix}-{noun} mix"
     if kind == "single":
+        # The map stays armed after a click, which the review found nothing
+        # said (finding 8); the bar says so now, for the modes that repeat
+        # one click at a time.
         if source == "communities":
             return (f"Placing {what}",
-                    "Click the map where its centre should go.")
+                    "Click the map where its centre should go. "
+                    "Each click places another.")
         if qty > 1:
             return (f"Placing {what}, {qty} at a time",
-                    f"Click the map to place a cluster of {qty}.")
-        return f"Placing {what}", "Click the map to place it."
+                    f"Click the map to place a cluster of {qty}. "
+                    f"Each click places another.")
+        return (f"Placing {what}",
+                "Click the map to place it. Each click places another.")
     headline, instruction = _HOW[kind]
     return headline.format(subject=subject), instruction
 

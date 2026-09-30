@@ -85,7 +85,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # the map (src/placement_bar.py; the pattern controls, Qty and colour
         # are built here and adopted there), about 100 lines, and the arming
         # rules it exposed took them back: net +1. The mix is the half left.
-        (_SRC / "plant_panel.py", 1600),               # 1583 now
+        # V2.99: looking is not placing (F191). The rules both panels share
+        # went to src/place_action.py; what is left here (the Place button,
+        # what is placed apart from what is looked at) took it to 1599. One
+        # line: step 2 (F192) cannot start here without extracting the mix.
+        (_SRC / "plant_panel.py", 1600),               # 1599 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
@@ -343,6 +347,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # grows past its ceiling the cause is almost certainly ecology logic
         # that belongs in Python.
         (_HTML / "map" / "07-network.js", 400),        # ~200 now
+        # V2.99 (F191): the footprint under the cursor while placing, its own
+        # chunk because 03-plants.js, where the pattern preview lives, was at
+        # 950 of 950. A community's shape arrives from src/placement_footprint.py.
+        (_HTML / "map" / "08-footprint.js", 250),      # ~150 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in

@@ -477,6 +477,9 @@ class PlantRowDelegate(QStyledItemDelegate):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Set when a release was the ▶ (it read the card, it chose nothing):
+        # Qt 6 still emits the view's ``clicked`` for it. See took_click().
+        self._took_click = False
         self._sci_font = QFont()
         self._sci_font.setItalic(True)
         self._small_font = QFont()
@@ -1187,5 +1190,12 @@ class PlantRowDelegate(QStyledItemDelegate):
                         )
                     except Exception:
                         pass
+                self._took_click = True
                 return True
         return super().editorEvent(event, model, option, index)
+
+    def took_click(self) -> bool:
+        """Whether the last click was the ▶, which reads a plant's card and
+        so must not count as choosing it (V2.99); asking clears it."""
+        took, self._took_click = self._took_click, False
+        return took

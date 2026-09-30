@@ -563,9 +563,9 @@
       if (framing) framing.addTo(preview);
       // Two concentric ghost rings per position: inner = planting spacing
       // (yellow, dashed), outer = mature canopy width (green, sparser dash).
-      // The outer ring shows how big each plant will be at maturity so the
-      // user can see in advance whether neighbours will compete.
-      var spacingRadius = Math.max(s / 2, 0.5);
+      // The outer ring shows mature size, to see whether neighbours compete;
+      // the inner one a placed marker's radius (V2.99; its floor was 0.5 m).
+      var spacingRadius = Math.max(s / 2, 0.05);
       var canopyRadius = Math.max(canopyM / 2, spacingRadius);
       positions.forEach(function(p) {
         L.circle(p, { radius: canopyRadius, color: '#a5d6a7', weight: 1,

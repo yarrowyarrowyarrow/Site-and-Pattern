@@ -545,6 +545,12 @@ class MapWidget(QWebEngineView):
         else:
             self._run_mode_js(map_js.set_mode(mode))
 
+    def set_polyculture_mode(self, footprint: dict):
+        """Place a single community: the map's 'polyculture' mode, carrying
+        its footprint (``placement_footprint.community_footprint``) for the
+        ghost under the cursor (V2.99)."""
+        self._run_mode_js(map_js.set_mode_with_payload("polyculture", footprint))
+
     def cancel_draw(self):
         self._run_mode_js(map_js.cancel_draw())
 

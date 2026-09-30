@@ -1538,8 +1538,10 @@ class MainWindow(QMainWindow):
         # clears any still-armed "Mark tree" structure mode (so a community
         # click doesn't ALSO drop a tree), while being a real placement mode —
         # NOT 'none' — so a click on a visible boundary/shape forwards to
-        # onMapClick → bridge map_clicked → _on_polyculture_click.
-        self.map_widget.set_mode('polyculture')
+        # onMapClick → bridge map_clicked → _on_polyculture_click. It carries
+        # the community's footprint, drawn under the cursor (V2.99).
+        from src.placement_footprint import community_footprint
+        self.map_widget.set_polyculture_mode(community_footprint(polyculture_data))
         self._set_mode_label(
             f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )

@@ -38,15 +38,20 @@ Long names automatically wrap to two lines so nothing is hidden.
 
 ## 4. Place a single plant
 
-1. Click a plant row to select it. **That's it — the map is now armed.** The button below
-   changes to **● Placing: ‹plant› · Single** so you can always see what a map click will drop.
-2. Click anywhere on the map to place it. Click again for another.
-3. (Optional) Click the **●** button to pick a marker colour, or set **Qty** to drop a hex burst at one click.
-4. Press **Esc** — or click the ● Placing chip — to stop.
-
-Changing the plant, the mix, or the placement mode re-arms with the new choice, so you can
-never place the previous one by accident. **Fill Area** is the exception: it starts drawing
-straight away, so it still waits for an explicit press.
+1. Click a plant row to select it. Selecting only shows it: the button under the list
+   now reads **Place ‹plant› on the map**, and the map is untouched. (Click **▶** to read
+   its details.)
+2. Press **Place ‹plant› on the map**, or double-click the row, press **Enter** on it, or
+   right-click → **Place ‹plant› on Map**. A bar appears over the top of the map:
+   *"Placing ‹plant›. Click the map to place it. Each click places another."* The pointer
+   is a crosshair with the plant's footprint under it: a yellow ring at its planting
+   spacing, a green one at its mature spread.
+3. Click the map to place it. Each click places another.
+4. While placing, click another plant in the list (or arrow to it) to switch to it; the
+   bar says so. Reading a card with **▶**, or dragging a plant into the mix, doesn't switch.
+5. In the bar: **Qty** drops a cluster of that many at each click (the footprint shows the
+   cluster and its count), and **Colour** sets the plant's marker colour.
+6. Press **Esc** or **Done** to stop.
 
 Right-click a placed marker for **Remove this plant** or **Delete group** (when the marker belongs to a multi-plant placement).
 
@@ -54,19 +59,26 @@ Right-click a placed marker for **Remove this plant** or **Delete group** (when 
 
 ## 5. Place a row, grid, or circle
 
-Pick **Row**, **Grid**, or **Circle** in the Placement Mode strip — the map re-arms as you pick. Each takes two clicks:
+While placing, pick **Row**, **Grid**, **Circle** or **Fill area** in the bar over the map.
+Only that pattern's settings show beside it, and changing one re-arms the map. Until the
+first click the footprint shows one plant; after it, every plant the pattern will lay,
+with a count.
 
 | Mode | First click | Second click |
 |------|-------------|--------------|
 | Row | Start of row | End of row |
 | Grid | One corner | Opposite corner |
 | Circle | Centre | A point on the radius |
+| Fill area | Click around the area | Double-click to finish |
 
-Tweakable parameters:
+Settings, in the bar:
 
-- **Grid** — Rows / Columns spinners (`auto` derives from spacing) and a **Stagger** checkbox for hex-pack offset.
-- **Circle** — **Total** spinner (caps the plant count — important for **Fill (hex)** mode so big circles don't make thousands of markers), **Fill (hex)** for honeycomb-fill, and an Overlap slider.
-- **All multi-modes** — an **Overlap** slider. `0%` = canopies just touch; `50%` = canopies overlap by half.
+- **Row**: **Count** (`auto` derives it from spacing) and **Drift**, a naturalistic sweep.
+- **Grid**: **Rows** / **Columns** and **Stagger** for a hex-pack offset.
+- **Circle**: **Total** (caps the count, which matters with **Fill (hex)**) and **Fill (hex)**.
+- **Fill area**: **Spacing** (starts at the plants' own) and **Matrix planting**.
+- **Row, Grid and Circle**: **Overlap** (`0 %` = canopies just touch; `50 %` = they overlap by
+  half) and **Canopy width**, to space by mature spread instead of planting spacing.
 
 ---
 
@@ -79,7 +91,10 @@ To plant multiple species mixed together in one Row / Grid / Circle:
    - A **clickable colour dot** — gives that species a unique marker colour just for this mix.
    - A **ratio spinner** (1–9) — `1:1:1` is even split; `3:1:1` gives that species 60%, others 20% each.
    - A **✕** button to remove the species.
-3. Drop a Row / Grid / Circle as usual — building the mix arms it. The recipe stays armed — click again to drop another, **Esc** to finish.
+3. Press **Place mix** under the list. The bar switches to **Row** (a mix can't go down one
+   plant per click); pick Grid, Circle or Fill area there if you prefer. Building a mix
+   never arms the map by itself, and placing a single plant never places the mix. The
+   mix stays armed: click again to drop another, **Esc** to finish.
 
 Distribution is deterministic and spread-optimised: same-species plants are automatically pushed apart so the bed reads as mixed, not blocky.
 

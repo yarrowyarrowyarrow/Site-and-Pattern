@@ -55,7 +55,8 @@ browser for dev — keep new bootstrap code inside that pattern.
 
 `html/map.html` was a 4,900-line monolith; V1.64 split its single `<script>`
 into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
-`07-network.js`, joined them in V2.31 for the relationship-web overlay):
+`07-network.js`, joined them in V2.31 for the relationship-web overlay, and an
+eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor):
 
 ```html
 <script src="map/01-core.js"></script>
@@ -65,6 +66,7 @@ into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
 <script src="map/05-features.js"></script>
 <script src="map/06-overlays.js"></script>
 <script src="map/07-network.js"></script>
+<script src="map/08-footprint.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -95,6 +97,8 @@ That block **is** the load-order definition. Rules that follow from it:
 | `html/map/04-tools.js` | Canvas renderer, geometry utils, snap-to-grid, canopy preview, growth timeline (`setTimelineYearByPlantId`), season view, measurement, annotations |
 | `html/map/05-features.js` | Structures, hedgerows, custom shapes, `setMode` (mode control), satellite alignment (`initMapboxLayer`), layer visibility, project load/`clearAll`, zoom |
 | `html/map/06-overlays.js` | Sun path, sectors, contours/terrain, shade/slope/water/splat/site-photo image overlays, wind + wind shadow + snow catch, legend, site pin, **QWebChannel bootstrap** |
+| `html/map/07-network.js` | The relationship-web overlay (F5): draws what `src/relationship_graph.py` computed |
+| `html/map/08-footprint.js` | The footprint under the cursor while placing (F191, V2.99): the plant, a Qty cluster, a pattern's first plant, a community's members (shape from `src/placement_footprint.py`). Built once per arming, moved per mousemove, in a pane that takes no pointer events |
 
 ## Bridge: Python → JS
 
