@@ -210,6 +210,52 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertTrue(hasattr(self._win, "_act_generate"))
         self.assertIsNotNone(getattr(self._win, "_generation", None))
 
+    # ── The placement bar (F193, V2.98) ──────────────────────────────────────
+
+    def test_placement_bar_sits_beside_the_map_not_inside_it(self):
+        """A child of the web view never reaches the accessibility tree."""
+        bar = self._win.placement_bar
+        self.assertIs(bar.parentWidget(), self._win.map_widget.parentWidget())
+        self.assertFalse(self._win.map_widget.isAncestorOf(bar))
+
+    def test_the_map_leaving_placing_stands_everything_down(self):
+        """Esc in the map: the real bridge signal, through the real wiring."""
+        from src.db.plants import search_plants
+        win = self._win
+        panel = win.plant_panel
+        panel._selected_plant = search_plants(query="bergamot")[0]
+        panel._auto_arm()
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+
+        win.map_widget.bridge.onModeChanged("none", win.map_widget.mode_seq)
+
+        self.assertEqual(win._current_mode, "none")
+        self.assertFalse(panel._armed)
+        self.assertEqual(win.placement_bar.source, "")
+        self.assertEqual(win._sb_mode.text(), "Mode: Ready")
+
+    def test_a_community_pattern_steps_at_community_spacing(self):
+        """It stepped at its preview member's own spacing: a 4.65 m row laid 16
+        two-metre communities 0.3 m apart."""
+        from src.db import polycultures
+        win = self._win
+        pc = next(p for p in (polycultures.get_polyculture_by_id(r["id"])
+                              for r in polycultures.get_all_polycultures())
+                  if p and p.get("members"))
+        pc = dict(pc, pattern={"kind": "row", "spacing_m": 3.5, "params": {}})
+        sent = []
+        original = win.map_widget.set_mode
+        win.map_widget.set_mode = lambda *a, **k: sent.append((a, k))
+        try:
+            win._enter_polyculture_mode(pc)
+        finally:
+            win.map_widget.set_mode = original
+            win._cancel_draw()
+        args, _kwargs = sent[-1]
+        self.assertEqual(args[0], "plant")
+        self.assertAlmostEqual(args[3], 3.5)
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):

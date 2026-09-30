@@ -1174,7 +1174,10 @@ class _CreaturePickerDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
-    placementCancelled = pyqtSignal()             # user stood the map down (V2.37)
+    placementCancelled = pyqtSignal()             # nothing left to place (V2.37)
+    # What the map is armed with, for the placement bar over it (V2.98):
+    # {"armed", "what", "kind", "qty", "mix"}. See src/placement_bar_flow.py.
+    armedChanged = pyqtSignal(dict)
     fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
     fillCommunityMixRequested = pyqtSignal(object, float, bool)  # [{id,weight,name,polyculture}], spacing, matrix (F22)
     # Emitted when the panel creates a brand-new community (e.g. via
@@ -1185,16 +1188,24 @@ class PolyculturePanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         # True while the map is armed with this panel's selected community.
-        # MainWindow calls set_armed(False) when placement ends, so the chip
+        # MainWindow calls set_armed(False) when placement ends, so the bar
         # can never claim the map is listening when it isn't.
         self._armed = False
+        # What was armed, captured at arming time, and whether it was the mix
+        # (a setting that moves re-arms the same thing, not the selection).
+        self._armed_what = ""
+        self._armed_mix = False
         from src.placement_arming import rearm_timer
-        self._rearm_timer = rearm_timer(self, self._auto_arm)
+        self._rearm_timer = rearm_timer(self, self._rearm)
         self._build_ui()
         self._refresh_polyculture_list()
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
+        # One column that scrolls when it cannot fit, rather than squeezing
+        # its sections into each other: with a full mix at 1366 × 768 the
+        # sections needed 806 px of a 670 px column (V2.98).
+        from src.scroll_column import scroll_column
+        layout = scroll_column(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
         # Library title with an inline "show / hide variations" toggle on
@@ -1335,6 +1346,10 @@ class PolyculturePanel(QWidget):
             QAbstractItemView.DragDropMode.DragOnly)
         self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
         self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
+        # A click (or Enter) on the community that is already current arms it
+        # again: after Done, the way back to it with the Place button gone.
+        self.polyculture_tree.itemClicked.connect(self._on_item_clicked)
+        self.polyculture_tree.itemActivated.connect(self._on_item_clicked)
         self.polyculture_tree.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
@@ -1470,7 +1485,9 @@ class PolyculturePanel(QWidget):
         # clickable related-pattern links. stretch=1: fills the remaining space.
         self.detail_text = QTextBrowser()
         self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
-        self.detail_text.setMinimumHeight(120)
+        # 96, not 120 (V2.98): the card scrolls itself, and at 1366 × 768 the
+        # extra 24 px was what made the whole column scroll by 15.
+        self.detail_text.setMinimumHeight(96)
         # Hidden until a community is selected — otherwise the empty card (also
         # stretch 1) competes with the tree for space and the list can't fill
         # the panel on open. The selection handler shows/hides it from here.
@@ -1478,30 +1495,15 @@ class PolyculturePanel(QWidget):
         self.detail_text.anchorClicked.connect(self._on_pattern_link)
         layout.addWidget(self.detail_text, 1)
 
-        # ── Placement controls (collapsible) ─────────────────────────────
-        # The placement-mode selector + community spacing + community mix eat a
-        # lot of vertical room even when the user is just browsing communities,
-        # so wrap them in a CollapsiblePanel (collapsed by default, state
-        # remembered) and let the community tree above reclaim the space.
-        from src.collapsible_panel import CollapsiblePanel
-        placement_body = QWidget()
-        placement_layout = QVBoxLayout(placement_body)
-        placement_layout.setContentsMargins(0, 0, 0, 0)
-        placement_layout.setSpacing(0)
-        self._build_community_pattern_controls(placement_layout)
-        self._build_community_mix_controls(placement_layout)
-        # Minimum vertical policy, the call src/plant_panel.py:519-521 makes and
-        # this panel never did: it tells the layout the pane will accept its
-        # sizeHint but must not be handed more, so a growing mix stops
-        # out-competing the stretch children above it.
-        placement_body.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self._placement_body = placement_body
-        self._placement_panel = CollapsiblePanel(
-            "Placement", panel_id="poly_placement", expanded=False
-        )
-        self._placement_panel.set_content(placement_body)
-        layout.addWidget(self._placement_panel)
+        # ── Placement settings: built here, shown in the bar over the map ───
+        # Until V2.98 these and the mix shared a collapsible "Placement" section
+        # at the foot of this column, which does not scroll: selecting a
+        # community and opening it left the list 6 of 61 rows and the pattern
+        # buttons 11 px (0 px at 1366 × 768). The settings now live in the bar
+        # (src/placement_bar_flow.py adopts them); the mix stays, because
+        # communities are dragged into it from the list.
+        self._build_community_pattern_controls()
+        self._build_community_mix_controls(layout)
 
     def _build_community_mix_controls(self, parent_layout):
         """Inline ratio-mix builder for placing several plant communities
@@ -1549,12 +1551,12 @@ class PolyculturePanel(QWidget):
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
-        self._mix_community_place_btn = QPushButton("Place Mix on Map")
+        self._mix_community_place_btn = QPushButton("Place mix")
         self._mix_community_place_btn.setStyleSheet(_POLY_BTN_STYLE)
         self._mix_community_place_btn.setEnabled(False)
         self._mix_community_place_btn.setToolTip(
-            "Place the community mix using the current pattern "
-            "(Row / Grid / Circle)."
+            "Place the whole mix: in a row unless the bar over the map says "
+            "otherwise."
         )
         self._mix_community_place_btn.clicked.connect(
             self._on_place_community_mix
@@ -1573,8 +1575,19 @@ class PolyculturePanel(QWidget):
         self._mix_community_clear_btn.clicked.connect(self._clear_community_mix)
         btn_row.addWidget(self._mix_community_clear_btn)
         btn_row.addStretch()
-        ml.addLayout(btn_row)
+        # Hidden while the mix is empty, as in the plant mix.
+        self._mix_community_actions = QWidget()
+        btn_row.setContentsMargins(0, 0, 0, 0)
+        self._mix_community_actions.setLayout(btn_row)
+        self._mix_community_actions.setVisible(False)
+        ml.addWidget(self._mix_community_actions)
 
+        # Minimum vertical policy, the call src/plant_panel.py makes too: the
+        # strip takes its sizeHint and no more, so a growing mix cannot
+        # out-compete the stretch children above it.
+        mix_box.setSizePolicy(QSizePolicy.Policy.Expanding,
+                              QSizePolicy.Policy.Minimum)
+        self._mix_community_box = mix_box
         parent_layout.addWidget(mix_box)
 
     # ── Tree right-click menu ───────────────────────────────────────────
@@ -1625,10 +1638,6 @@ class PolyculturePanel(QWidget):
             "weight": 1,
             "polyculture": polyculture,
         })
-        # Reveal the mix: expand the placement pane so the growing mix stays
-        # visible (transient — not a saved preference). (V1.87)
-        if hasattr(self, "_placement_panel"):
-            self._placement_panel.set_expanded(True, persist=False)
         self._refresh_community_mix()
 
     def _remove_from_community_mix(self, polyculture_id: int):
@@ -1654,6 +1663,14 @@ class PolyculturePanel(QWidget):
                 w.setParent(None)
                 w.deleteLater()
         n = len(self._mix_communities)
+        self._mix_community_actions.setVisible(n > 0)
+        # An armed mix follows its rows, like an armed species list does; with
+        # fewer than two left there is no mix, and the map stands down.
+        if self._armed and self._armed_mix:
+            if n >= 2:
+                self._rearm()
+            else:
+                self.placementCancelled.emit()
         if n == 0:
             self._mix_community_status.setText(
                 "Drag or right-click communities here to build a mix."
@@ -1668,11 +1685,7 @@ class PolyculturePanel(QWidget):
                 "1 community — add ≥1 more to activate."
             )
         else:
-            ratios = ":".join(str(int(c["weight"])) for c in self._mix_communities)
-            self._mix_community_status.setText(
-                f"Plant community mix: {n} communities at {ratios}. "
-                f"Pick Row/Grid/Circle and click Place Mix on Map."
-            )
+            self._mix_community_status.setText(self._mix_status_text())
         self._mix_community_rows.setVisible(True)
         self._mix_community_scroll.setVisible(True)
         self._mix_community_clear_btn.setEnabled(True)
@@ -1682,20 +1695,33 @@ class PolyculturePanel(QWidget):
             row = self._build_community_mix_row(idx, c)
             self._mix_community_layout.addWidget(row)
         # Ask Qt to recompute geometry once the new rows have been laid out and
-        # contribute to sizeHint (src/plant_panel.py:948-962 does the same).
-        QTimer.singleShot(0, self._refit_placement_pane)
+        # contribute to sizeHint.
+        QTimer.singleShot(0, self._refit_mix_pane)
 
-    def _refit_placement_pane(self):
-        """Recompute the placement pane's geometry after the mix grows/shrinks.
+    def _fit_mix_rows(self):
+        """Show every row up to _MIX_ROWS_VISIBLE, then scroll. A scroll area
+        asks for its minimum, not its content: measured in V2.98, a
+        two-community mix got 34 px of the 70 its rows need."""
+        cap = _MIX_ROWS_VISIBLE * 26 + 8
+        self._mix_community_scroll.setFixedHeight(
+            min(self._mix_community_rows.sizeHint().height() + 2, cap))
 
-        The pane holds its content directly and its rows now scroll past
-        _MIX_ROWS_VISIBLE, so it settles at a bounded height; this just asks Qt
-        to notice promptly rather than on the next unrelated resize.
+    def _mix_status_text(self) -> str:
+        ratios = ":".join(str(int(c["weight"])) for c in self._mix_communities)
+        return (f"{len(self._mix_communities)} communities at {ratios}. "
+                "Place mix plants them together.")
+
+    def _refit_mix_pane(self):
+        """Recompute the mix strip's geometry after the mix grows/shrinks.
+
+        Its rows scroll past _MIX_ROWS_VISIBLE, so it settles at a bounded
+        height; this just asks Qt to notice promptly rather than on the next
+        unrelated resize, and re-applies the community list's floor.
         """
-        if hasattr(self, "_placement_body"):
-            self._placement_body.updateGeometry()
-        if hasattr(self, "_placement_panel"):
-            self._placement_panel.updateGeometry()
+        if hasattr(self, "_mix_community_scroll"):
+            self._fit_mix_rows()
+        if hasattr(self, "_mix_community_box"):
+            self._mix_community_box.updateGeometry()
         self._apply_tree_floor()
 
     def _apply_tree_floor(self):
@@ -1750,26 +1776,28 @@ class PolyculturePanel(QWidget):
     def _on_community_mix_weight_changed(self, idx: int, value: int):
         if 0 <= idx < len(self._mix_communities):
             self._mix_communities[idx]["weight"] = max(1, int(value))
-            n = len(self._mix_communities)
-            if n >= 2:
-                ratios = ":".join(
-                    str(int(c["weight"])) for c in self._mix_communities
-                )
-                self._mix_community_status.setText(
-                    f"Plant community mix: {n} communities at {ratios}. "
-                    f"Pick Row/Grid/Circle and click Place Mix on Map."
-                )
+            if len(self._mix_communities) >= 2:
+                self._mix_community_status.setText(self._mix_status_text())
+            if self._armed_mix:
+                self._on_pattern_params_changed()   # the armed mix's ratios
 
     def _on_place_community_mix(self):
-        """Emit a placement request for the community mix.
+        """Arm the community mix.
 
         We embed the mix in the same ``pattern`` dict the single-community
         flow uses; app.py recognises ``params['community_mix']`` and
-        dispatches to per-anchor community expansion."""
+        dispatches to per-anchor community expansion. Single places one
+        community, so from Single it switches to Row, where it used to open a
+        dialog telling you to change the pattern yourself."""
         if len(self._mix_communities) < 2:
             return
+        if self.placement_widget.kind == "single":
+            self._armed = False              # no re-arm on the way through
+            self._rearm_timer.stop()
+            self.placement_widget.set_kind("row")
         pattern = self.placement_widget.current_pattern()
         kind = pattern["kind"]
+        spacing = float(self.pattern_spacing.value() or 4.0)
         if kind == "fill":
             # Fill an area with the community mix. With Matrix planting ticked the
             # whole mix dissolves into one matrix (every member of every community
@@ -1781,19 +1809,11 @@ class PolyculturePanel(QWidget):
                      "name": c["name"], "polyculture": c["polyculture"]}
                     for c in self._mix_communities
                 ],
-                float(self.pattern_spacing.value() or 4.0),
+                spacing,
                 bool((pattern.get("params") or {}).get("matrix")),
             )
+            self._arm_as("", mix=True)
             return
-        if kind == "single":
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.information(
-                self, "Pick a pattern",
-                "Community mixes need Row, Grid, Circle, or Fill Area. "
-                "Switch the pattern above and try again."
-            )
-            return
-        spacing = float(self.pattern_spacing.value() or 4.0)
         # Use the first member of the first community as a representative
         # plant so the JS preview ghost has something to size.
         first = self._mix_communities[0]["polyculture"]
@@ -1814,84 +1834,55 @@ class PolyculturePanel(QWidget):
             "params": params,
         }
         self.placePolycultureRequested.emit(representative)
+        self._arm_as("", mix=True)
 
-    def _build_community_pattern_controls(self, parent_layout):
-        """Shared placement controls (Single/Row/Grid/Circle + overlap +
-        stagger + fill) plus a per-community Cell-spacing spinner.
-
-        When the pattern is non-Single, clicking Place on Map enters a
-        multi-anchor placement: each click drops a row/grid/circle of
-        the selected community."""
-        from src.placement_controls import PlacementControlsWidget
-
-        # Place on Map is the placement action, so it heads the Placement panel
-        # (above the mode selector). Enabled only when a community is selected.
-        self.place_btn = QPushButton("Place on Map")
-        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.place_btn.setEnabled(False)
-        # A toggle and a status readout: selecting a community arms the map on
-        # its own, so this shows what is armed and stands it down again.
-        self.place_btn.clicked.connect(self._on_place_btn_clicked)
-        parent_layout.addWidget(self.place_btn)
+    def _build_community_pattern_controls(self):
+        """The shared placement controls (Single/Row/Grid/Circle/Fill + their
+        settings) plus Community spacing, for the placement bar to adopt."""
+        from src.placement_controls import PlacementControlsWidget, labelled_unit
 
         # show_fill_spacing=False: a community/mix is placed as units (or a
         # matrix), never as a scatter of single plants, so the only meaningful
-        # spacing is the gap *between* units — the single Cell spacing control
+        # spacing is the gap *between* units — the Community spacing control
         # below drives every multi mode (Fill Area + Row/Grid/Circle).
         self.placement_widget = PlacementControlsWidget(
             show_canopy_base=False,
             show_fill_spacing=False,
-            title="Placement Mode",
         )
         self.placement_widget.patternChanged.connect(
             self._on_pattern_params_changed)
         self.placement_widget.patternKindChanged.connect(
             self._on_placement_kind_changed)
-        parent_layout.addWidget(self.placement_widget)
 
-        self._spacing_box = QGroupBox("Community spacing")
-        self._spacing_box.setStyleSheet(
-            "QGroupBox { color: #a5d6a7; font-size: 11px; "
-            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 12px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
-            "padding: 0 4px; }"
-        )
-        sl = QHBoxLayout(self._spacing_box)
-        sl.setContentsMargins(8, 12, 8, 6)
-        sl.addWidget(QLabel("Cell spacing:"))
         self.pattern_spacing = QDoubleSpinBox()
         self.pattern_spacing.setRange(0.5, 100.0)
         self.pattern_spacing.setDecimals(1)
         self.pattern_spacing.setValue(4.0)
         self.pattern_spacing.setSuffix(" m")
+        self.pattern_spacing.setFixedWidth(96)
         self.pattern_spacing.setToolTip(
             "Centre-to-centre spacing between community units — the gap between "
             "whole communities for Fill Area and Row/Grid/Circle alike. "
             "Defaults to 2× the selected community's natural radius "
             "(its widest member offset)."
         )
-        sl.addWidget(self.pattern_spacing)
-        sl.addStretch(1)
-        parent_layout.addWidget(self._spacing_box)
-        # Single mode places one community where you click — no inter-unit gap.
-        self._spacing_box.setVisible(False)
+        # It feeds what is armed, so it announces a change like every other
+        # setting (the V2.38 rule). It did not, and the map kept the old gap.
+        self.pattern_spacing.valueChanged.connect(self._on_pattern_params_changed)
+        # Single places one community where you click — no inter-unit gap.
+        self._spacing_box = labelled_unit(
+            "Community spacing", self.pattern_spacing, "Community spacing")
+        self.placement_widget.add_extra(
+            self._spacing_box, ("row", "grid", "circle", "fill"))
 
     def _on_placement_kind_changed(self, kind: str):
-        """Show the Cell spacing control only when it applies — every multi mode
-        (Fill Area, Row, Grid, Circle); hidden for Single (one click, one
-        community, no inter-unit gap)."""
-        if hasattr(self, "_spacing_box"):
-            self._spacing_box.setVisible(kind != "single")
-        # Changing Row → Grid is choosing what to place, so re-arm with it;
-        # switching to Fill Area stands the map down (it draws, it doesn't arm).
-        if kind == "fill":
-            if getattr(self, "_armed", False):
-                self.placementCancelled.emit()
-            return
+        """Changing Row → Grid is choosing what to place, so re-arm with it.
+        Fill Area included since V2.98: choosing it in the bar starts the
+        drawing. (Community spacing shows for every pattern but Single: the
+        controls widget applies that rule.)"""
         if getattr(self, "_armed", False):
-            self._auto_arm()
-        else:
-            self._update_place_btn()
+            self._rearm_timer.stop()
+            self._rearm()
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
@@ -2113,13 +2104,19 @@ class PolyculturePanel(QWidget):
         self._select_polyculture_in_tree(target)
 
     def _on_double_click_place(self, item, column):
-        """Double-click a polyculture to immediately enter placement mode."""
-        polyculture_id = item.data(0, Qt.ItemDataRole.UserRole)
-        if polyculture_id is None:
+        """Double-click arms this community with the pattern the bar shows.
+        It used to place Single whatever the bar said."""
+        if item is None or item.data(0, Qt.ItemDataRole.UserRole) is None:
             return
-        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
-        if polyculture:
-            self.placePolycultureRequested.emit(polyculture)
+        self._on_place()
+
+    def _on_item_clicked(self, item, _column=0):
+        """A click (or Enter) on the community that is already current arms
+        it again. A click on another one arms through currentItemChanged
+        first, so this only acts while the map is not armed."""
+        if (not self._armed and item is not None
+                and item.data(0, Qt.ItemDataRole.UserRole) is not None):
+            self._auto_arm()
 
     def _on_polyculture_selected(self, current, previous):
         # A "Group By" category node carries no id — treat it as no selection
@@ -2130,16 +2127,8 @@ class PolyculturePanel(QWidget):
         has_selection = current_id is not None
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
-        self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
-        # Selecting a community arms the map with it (V2.37) — same reasoning as
-        # the plant list: the separate press left the map holding the previously
-        # armed community, so the wrong one got planted.
-        if has_selection:
-            self._auto_arm()
-        else:
-            self._update_place_btn()
         # Variations are only addable to top-level communities. A top-level
         # community's tree parent is either nothing (flat view) or a group
         # folder (grouped view, no id) — never another community.
@@ -2209,12 +2198,18 @@ class PolyculturePanel(QWidget):
         except Exception:  # noqa: BLE001 — never let the card break selection
             self.detail_text.setHtml(polyculture.get("description") or "")
 
-        # Pre-fill the cell-spacing field with the community's natural diameter.
+        # Pre-fill the spacing with the community's natural diameter, and only
+        # then arm (V2.37: selecting arms, same reasoning as the plant list).
+        # Until V2.98 it armed first, so Row / Grid / Circle / Fill carried the
+        # previous community's spacing. Silently: the arm below reads it.
         try:
             natural_r = polycultures.community_natural_radius(polyculture)
+            was = self.pattern_spacing.blockSignals(True)
             self.pattern_spacing.setValue(round(max(0.5, natural_r * 2.0), 1))
+            self.pattern_spacing.blockSignals(was)
         except Exception:
             pass
+        self._auto_arm()
 
     # ── Members list (compact rows with inline expand) ─────────────────
 
@@ -2519,45 +2514,62 @@ class PolyculturePanel(QWidget):
         request_rearm(self)
 
     def _auto_arm(self):
-        """Re-arm the map with the selected community.
+        """Arm the map with the selected community.
 
-        Fill Area is excluded: it enters polygon-draw mode immediately rather
-        than arming a click, so auto-arming it would hijack the map every time
-        the user arrowed through the community tree.
+        Fill Area arms too since V2.98. V2.37 left it out because re-entering
+        fill mode restarted the polygon; the map now keeps the corners drawn
+        and a re-arm only swaps what they will be planted with. With the Place
+        button gone, leaving Fill out would have left it no way in at all.
         """
-        if self.placement_widget.kind == "fill":
-            return
         if self._get_selected_polyculture_id() is None:
             return
         self._on_place()
 
+    def _rearm(self):
+        """A setting moved: re-arm whatever is armed, the mix or the
+        selection. Choosing Single sets the mix aside (it cannot be placed
+        one community at a time) for the selected community; with none, the
+        map stands down rather than keep what the bar no longer shows.
+        Nothing, if the map stood down meanwhile (the debounce lands here)."""
+        if not self._armed:
+            return
+        if self._armed_mix and self.placement_widget.kind != "single":
+            self._on_place_community_mix()
+        elif self._get_selected_polyculture_id() is not None:
+            self._on_place()
+        else:
+            self.placementCancelled.emit()
+
     def set_armed(self, armed: bool):
         """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if not armed:
+            self._rearm_timer.stop()
         if getattr(self, "_armed", False) == bool(armed):
             return
         self._armed = bool(armed)
-        self._update_place_btn()
+        if not armed:
+            self._armed_mix = False
+        self._announce_armed()
 
-    def _update_place_btn(self):
-        """Render the Place button as a live status chip while armed."""
-        if not hasattr(self, "place_btn"):
-            return
-        from src.placement_arming import apply_chip
-        name = ""
-        if getattr(self, "_armed", False):
-            pid = self._get_selected_polyculture_id()
-            if pid is not None:
-                name = (polycultures.get_polyculture_by_id(pid) or {}).get("name") or ""
-        apply_chip(self.place_btn, armed=getattr(self, "_armed", False),
-                   what=name or "community", kind=self.placement_widget.kind,
-                   idle_text="Place on Map", idle_style=_POLY_BTN_STYLE)
+    def _arm_as(self, what: str, *, mix: bool = False):
+        self._armed_what = what or ""
+        self._armed_mix = bool(mix)
+        self._armed = True
+        self._announce_armed()
 
-    def _on_place_btn_clicked(self):
-        """The button toggles: arm the selection, or stand the map down."""
-        if getattr(self, "_armed", False):
-            self.placementCancelled.emit()
-            return
-        self._on_place()
+    def _announce_armed(self):
+        """Tell the placement bar what the map holds (or that it holds nothing)."""
+        self.armedChanged.emit({
+            "armed": self._armed,
+            "what": self._armed_what,
+            "kind": self.placement_widget.kind,
+            "qty": 1,
+            "mix": len(self._mix_communities) if self._armed_mix else 0,
+        })
+
+    def placement_controls(self):
+        """The pattern controls, for the placement bar to adopt (V2.98)."""
+        return self.placement_widget
 
     def _on_place(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -2566,6 +2578,7 @@ class PolyculturePanel(QWidget):
         polyculture = polycultures.get_polyculture_by_id(polyculture_id)
         if not polyculture:
             return
+        name = polyculture.get("name") or ""
 
         # Attach the pattern config so app.py knows whether to single-place
         # the community or to fan it across a row/grid/circle.
@@ -2580,6 +2593,7 @@ class PolyculturePanel(QWidget):
                 int(polyculture_id),
                 float(self.pattern_spacing.value() or 4.0),
                 bool((pattern.get("params") or {}).get("matrix")))
+            self._arm_as(name)
             return
         if kind != "single":
             spacing = float(self.pattern_spacing.value() or 4.0)
@@ -2590,8 +2604,7 @@ class PolyculturePanel(QWidget):
                 "params": pattern.get("params") or {},
             }
         self.placePolycultureRequested.emit(polyculture)
-        self._armed = True
-        self._update_place_btn()
+        self._arm_as(name)
 
     def _on_export(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -2658,8 +2671,9 @@ QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
 
-# The armed chip's look and wording live in src/placement_arming.py — shared
-# with the plant browser, which arms the same map.
+# What the map is armed with is said by the placement bar over the map
+# (src/placement_bar.py), in words from src/placement_arming.py — shared with the
+# plant browser, which arms the same map.
 
 # Compact, low-prominence style for the library management buttons (New /
 # Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the

@@ -1,33 +1,43 @@
-"""Shared placement-controls widget used by the Plants tab and the Plant
-Communities tab. Owns the Single/Row/Grid/Circle mode selector, the per-mode
-parameter panels (count, rows×cols + stagger, circle total + fill), the
-overlap slider, and the canopy-base toggle.
+"""Shared placement-controls strip used by the Plants tab and the Plant
+Communities tab. Owns the Single/Row/Grid/Circle/Fill selector, the settings of
+each pattern (count, rows × columns + stagger, circle total + fill, fill spacing
++ matrix), overlap, and the canopy-base toggle.
 
-Tabs embed an instance, call ``current_pattern()`` for the pattern dict,
-and inject their own tab-specific keys (``polyculture`` for the Plants-tab
-stack, ``community_mix`` for the Communities-tab mix) into ``params``.
+Since V2.98 it lives in the placement bar over the map (``src/placement_bar.py``)
+rather than in a collapsible section of the side panel, and it is laid out as one
+wrapping line (``src/flow_layout.py``) instead of a stack of rows. **Only the
+current pattern's settings are shown**: Overlap and the canopy toggle were on
+screen in Single and Fill too, where ``current_pattern()`` never reads them, and
+a number that does nothing is a number somebody sets and then distrusts.
+
+Tabs embed an instance, call ``current_pattern()`` for the pattern dict, and
+inject their own tab-specific keys (``polyculture`` for the Plants-tab mix,
+``community_mix`` for the Communities-tab mix) into ``params``. Controls a tab
+owns (the Plants tab's Qty, the Communities tab's spacing) join the same line
+through :meth:`add_extra`, so they wrap with the rest.
+
+Unstyled on purpose: the bar's style sheet styles everything inside it, the
+tab-owned extras included, so the two tabs cannot drift apart in look.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QDoubleSpinBox,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QSizePolicy,
-    QSlider,
     QSpinBox,
-    QStackedWidget,
-    QVBoxLayout,
     QWidget,
 )
 
+from src.flow_layout import FlowLayout
 
+
+# Still used by the two panels' mix rows, which stay in the side panel.
 _QTY_SPIN_STYLE = """
 QSpinBox {
     background: #1a2a1a;
@@ -69,39 +79,45 @@ QSpinBox::down-arrow {
 }
 """
 
-_PATTERN_SEG_STYLE = """
-QPushButton {
-    background: #1e2e1e;
-    color: #c8e6c9;
-    border: 1px solid #2e4a2e;
-    border-radius: 3px;
-    padding: 4px 6px;
-    font-size: 11px;
-}
-QPushButton:checked {
-    background: #2e7d32;
-    color: #e8f5e9;
-    border-color: #66bb6a;
-    font-weight: bold;
-}
-QPushButton:hover:!checked {
-    border-color: #4a7a4a;
-    background: #243824;
-}
-"""
+# The patterns, in button order: (key, label, tooltip).
+PATTERNS = (
+    ("single", "Single", "One click, one placement"),
+    ("row", "Row", "Click the start, then the end: fills a line"),
+    ("grid", "Grid", "Click two opposite corners: fills a rectangle"),
+    ("circle", "Circle", "Click the centre, then the edge: a ring or a disc"),
+    ("fill", "Fill area", "Draw an area on the map: fills it evenly"),
+)
+
+# Which settings each pattern reads. Overlap and the canopy toggle feed the
+# spacing of the multi-cell patterns only.
+_SPACED = ("row", "grid", "circle")
 
 
-def _small_label(text: str) -> QLabel:
-    lbl = QLabel(text)
-    lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
-    return lbl
+def _unit(*widgets) -> QWidget:
+    """Group a label and its control so they wrap as one item."""
+    unit = QWidget()
+    row = QHBoxLayout(unit)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.setSpacing(4)
+    for w in widgets:
+        row.addWidget(w)
+    return unit
+
+
+def labelled_unit(text: str, control: QWidget, name: str) -> QWidget:
+    """``text`` beside ``control``, with ``name`` as the control's accessible
+    name ("Row count", not the bare "Count" a screen reader would otherwise
+    read with no context)."""
+    label = QLabel(text)
+    label.setBuddy(control)
+    control.setAccessibleName(name)
+    return _unit(label, control)
 
 
 class PlacementControlsWidget(QWidget):
-    """Single/Row/Grid/Circle pattern controls — count, stagger, fill,
-    overlap slider, canopy-base toggle. Self-contained; emits
-    ``patternKindChanged`` so embedders can react (e.g. enable/disable
-    a burst-quantity spinner that lives outside this widget)."""
+    """Single/Row/Grid/Circle/Fill pattern controls. Self-contained; emits
+    ``patternKindChanged`` so embedders can react (e.g. show a quantity that
+    only Single uses)."""
 
     patternKindChanged = pyqtSignal(str)
     # Any change to WHAT would be placed — the kind, or any of its parameters.
@@ -122,174 +138,108 @@ class PlacementControlsWidget(QWidget):
         *,
         show_canopy_base: bool = True,
         show_fill_spacing: bool = True,
-        title: str = "Placement Mode",
     ):
         super().__init__(parent)
         self._kind = "single"
+        self._show_canopy_base = show_canopy_base
+        self._extras: list[tuple[QWidget, tuple | None]] = []
+        self.setAccessibleName("Placement pattern")
 
-        wrap = QGroupBox(title)
-        wrap.setStyleSheet(
-            "QGroupBox { color: #a5d6a7; font-size: 11px; "
-            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
-            "padding: 0 4px; }"
-        )
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(wrap)
+        self._flow = FlowLayout(self, h_spacing=12, v_spacing=6)
+        self._flow.setContentsMargins(0, 0, 0, 0)
 
-        outer = QVBoxLayout(wrap)
-        outer.setContentsMargins(6, 4, 6, 4)
-        outer.setSpacing(3)
-
-        # ── Mode segmented buttons ────────────────────────────────────
-        seg = QHBoxLayout()
+        # ── The pattern selector ──────────────────────────────────────────
+        seg_unit = QWidget()
+        seg = QHBoxLayout(seg_unit)
+        seg.setContentsMargins(0, 0, 0, 0)
         seg.setSpacing(2)
         self._btn_group = QButtonGroup(self)
         self._btn_group.setExclusive(True)
-        for key, label, tip in [
-            ("single", "Single", "Click to place one item at a time"),
-            ("row",    "Row",    "Click start, then end — fills a line"),
-            ("grid",   "Grid",   "Click two opposite corners — fills a rectangle"),
-            ("circle", "Circle", "Click centre, then radius — places items on a circle"),
-            ("fill",   "Fill Area", "Draw an area on the map — fills it evenly at the spacing below"),
-        ]:
+        for key, label, tip in PATTERNS:
             btn = QPushButton(label)
             btn.setCheckable(True)
             btn.setToolTip(tip)
-            btn.setStyleSheet(_PATTERN_SEG_STYLE)
             btn.setProperty("pattern_kind", key)
+            btn.setProperty("segment", True)
             self._btn_group.addButton(btn)
             seg.addWidget(btn)
             if key == "single":
                 btn.setChecked(True)
         self._btn_group.buttonClicked.connect(self._on_kind_changed)
-        outer.addLayout(seg)
+        self._flow.addWidget(seg_unit)
 
-        # ── Stacked per-mode parameter panels ──────────────────────────
-        self._stack = QStackedWidget()
-        outer.addWidget(self._stack)
-
-        # Single — no parameters and no hint (the Single button's tooltip already
-        # explains it); an empty page keeps the section compact (V1.87).
-        single_panel = QWidget()
-        QVBoxLayout(single_panel).setContentsMargins(0, 0, 0, 0)
-        self._stack.addWidget(single_panel)
-
-        # Row — count input + optional naturalistic drift.
-        row_panel = QWidget()
-        rl = QVBoxLayout(row_panel)
-        rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(4)
-        row_count_line = QHBoxLayout()
-        row_count_line.setSpacing(4)
-        row_count_line.addWidget(_small_label("Count:"))
+        # ── Row: count + drift ────────────────────────────────────────────
         self._row_count = QSpinBox()
         self._row_count.setRange(0, 200)
         self._row_count.setValue(0)
         self._row_count.setSpecialValueText("auto")
-        self._row_count.setToolTip("0 = auto from spacing; otherwise force this many items")
-        self._row_count.setStyleSheet(_QTY_SPIN_STYLE)
-        self._row_count.setFixedWidth(80)
-        row_count_line.addWidget(self._row_count)
-        row_count_line.addStretch()
-        rl.addLayout(row_count_line)
-        self._row_drift = QCheckBox("Drift — natural sweep, not a straight line")
+        self._row_count.setFixedWidth(76)
+        self._row_count.setToolTip(
+            "How many along the line. Auto works it out from the spacing.")
+        self._row_drift = QCheckBox("Drift")
         self._row_drift.setToolTip(
             "Lay the group out as a flowing, organic drift along the line you "
             "draw (Rainer/West 'designed communities' style) rather than an even "
             "straight row — the most natural look for grasses and forbs."
         )
-        self._row_drift.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-        rl.addWidget(self._row_drift)
-        self._stack.addWidget(row_panel)
+        row_unit = _unit(labelled_unit("Count", self._row_count, "Row count"),
+                         self._row_drift)
 
-        # Grid — rows × cols + stagger.
-        grid_panel = QWidget()
-        gl = QHBoxLayout(grid_panel)
-        gl.setContentsMargins(0, 0, 0, 0)
-        gl.setSpacing(4)
-        gl.addWidget(_small_label("Rows:"))
+        # ── Grid: rows × columns + stagger ────────────────────────────────
         self._grid_rows = QSpinBox()
         self._grid_rows.setRange(0, 200)
         self._grid_rows.setSpecialValueText("auto")
-        self._grid_rows.setStyleSheet(_QTY_SPIN_STYLE)
-        self._grid_rows.setFixedWidth(70)
-        gl.addWidget(self._grid_rows)
-        gl.addWidget(_small_label("Columns:"))
+        self._grid_rows.setFixedWidth(72)
         self._grid_cols = QSpinBox()
         self._grid_cols.setRange(0, 200)
         self._grid_cols.setSpecialValueText("auto")
-        self._grid_cols.setStyleSheet(_QTY_SPIN_STYLE)
-        self._grid_cols.setFixedWidth(70)
-        gl.addWidget(self._grid_cols)
+        self._grid_cols.setFixedWidth(72)
         self._grid_stagger = QCheckBox("Stagger")
-        self._grid_stagger.setToolTip("Hex-pack: offset every other row by half a column")
-        gl.addWidget(self._grid_stagger)
-        gl.addStretch()
-        self._stack.addWidget(grid_panel)
+        self._grid_stagger.setToolTip(
+            "Hex-pack: offset every other row by half a column")
+        grid_unit = _unit(labelled_unit("Rows", self._grid_rows, "Grid rows"),
+                          labelled_unit("Columns", self._grid_cols, "Grid columns"),
+                          self._grid_stagger)
 
-        # Circle — total + fill.
-        circle_panel = QWidget()
-        cl = QHBoxLayout(circle_panel)
-        cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(4)
-        cl.addWidget(_small_label("Total:"))
+        # ── Circle: total + fill ──────────────────────────────────────────
         self._circle_count = QSpinBox()
         self._circle_count.setRange(0, 2000)
         self._circle_count.setSpecialValueText("auto")
+        self._circle_count.setFixedWidth(80)
         self._circle_count.setToolTip(
             "Total items in the placement.\n"
-            "0 (auto) = derive from spacing — perimeter mode uses arc length, "
+            "Auto = derive from spacing — perimeter mode uses arc length, "
             "fill mode packs the whole disc.\n"
             "Otherwise: that many items on the perimeter (no fill) or in the "
             "hex-pack disc (fill), closest-to-centre first."
         )
-        self._circle_count.setStyleSheet(_QTY_SPIN_STYLE)
-        self._circle_count.setFixedWidth(80)
-        cl.addWidget(self._circle_count)
         self._circle_fill = QCheckBox("Fill (hex)")
         self._circle_fill.setToolTip(
             "Honeycomb-pack the whole disc so every item has six "
-            "equidistant neighbours. Use the Total spinner to cap the "
-            "count for large radii."
+            "equidistant neighbours. Use Total to cap the count for large "
+            "radii."
         )
-        cl.addWidget(self._circle_fill)
-        cl.addStretch()
-        self._stack.addWidget(circle_panel)
+        circle_unit = _unit(labelled_unit("Total", self._circle_count, "Circle total"),
+                            self._circle_fill)
 
-        # Fill Area — spacing of the scattered items + optional matrix planting.
-        fill_panel = QWidget()
-        fl = QVBoxLayout(fill_panel)
-        fl.setContentsMargins(0, 0, 0, 0)
-        fl.setSpacing(4)
-        # Spacing label + spinner live in their own row so embedders that supply
-        # their own spacing control (the Communities tab's Cell spacing) can hide
-        # it via show_fill_spacing=False without losing the matrix toggle / hint.
-        self._fill_spacing_row = QWidget()
-        fill_spacing_line = QHBoxLayout(self._fill_spacing_row)
-        fill_spacing_line.setContentsMargins(0, 0, 0, 0)
-        fill_spacing_line.setSpacing(4)
-        fill_spacing_line.addWidget(_small_label("Spacing:"))
+        # ── Fill area: spacing + matrix planting ──────────────────────────
+        # The Communities tab supplies its own spacing (the gap between whole
+        # communities), so it hides this one with show_fill_spacing=False.
         self._fill_spacing = QDoubleSpinBox()
         self._fill_spacing.setRange(0.3, 20.0)
-        self._fill_spacing.setSingleStep(0.5)
+        self._fill_spacing.setSingleStep(0.1)
+        self._fill_spacing.setDecimals(1)
         self._fill_spacing.setValue(1.5)
         self._fill_spacing.setSuffix(" m")
-        self._fill_spacing.setFixedWidth(85)
+        self._fill_spacing.setFixedWidth(90)
         self._fill_spacing.setToolTip(
-            "Centre-to-centre spacing of the scattered items."
+            "Centre-to-centre spacing of the scattered plants. Starts at the "
+            "plant's own spacing (a mix: the widest of its plants)."
         )
-        self._fill_spacing.setStyleSheet(_QTY_SPIN_STYLE)
-        fill_spacing_line.addWidget(self._fill_spacing)
-        fill_spacing_line.addStretch()
-        fl.addWidget(self._fill_spacing_row)
-        if not show_fill_spacing:
-            self._fill_spacing_row.hide()
-        fill_hint = _small_label("Click Place, then draw the area.")
-        fl.addWidget(fill_hint)
-        self._fill_matrix = QCheckBox(
-            "Matrix planting — ground layer knits, taller plants stand out")
+        self._fill_spacing_unit = labelled_unit("Spacing", self._fill_spacing,
+                                            "Fill spacing")
+        self._fill_spacing_unit.setVisible(show_fill_spacing)
+        self._fill_matrix = QCheckBox("Matrix planting")
         self._fill_matrix.setToolTip(
             "Rainer/West matrix planting: the ground-layer species (grasses / "
             "groundcovers) fill the area as a connective matrix while the taller "
@@ -297,60 +247,45 @@ class PlacementControlsWidget(QWidget):
             "groundcover-layer members are the matrix; for a plant mix the "
             "ground-layer species are picked automatically."
         )
-        self._fill_matrix.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-        fl.addWidget(self._fill_matrix)
-        self._stack.addWidget(fill_panel)
+        fill_unit = _unit(self._fill_spacing_unit, self._fill_matrix)
 
-        # ── Overlap / gap slider (applies to all multi modes) ─────────
-        ov = QHBoxLayout()
-        ov.setSpacing(4)
-        ov.addWidget(_small_label("Overlap:"))
-        self._overlap_slider = QSlider(Qt.Orientation.Horizontal)
-        self._overlap_slider.setRange(-100, 50)
-        self._overlap_slider.setValue(0)
-        self._overlap_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._overlap_slider.setTickInterval(25)
-        self._overlap_slider.setToolTip(
-            "Spacing relative to the reference width (see toggle below).\n"
+        self._units = {"row": row_unit, "grid": grid_unit,
+                       "circle": circle_unit, "fill": fill_unit}
+        for unit in self._units.values():
+            self._flow.addWidget(unit)
+
+        # ── Overlap + canopy base (row / grid / circle only) ──────────────
+        # A spin box, not the slider it was until V2.98: the slider's value was
+        # only readable from a separate label, and the accessibility tree
+        # announced it as "Placement Mode".
+        self._overlap = QSpinBox()
+        self._overlap.setRange(-100, 50)
+        self._overlap.setSingleStep(5)
+        self._overlap.setValue(0)
+        self._overlap.setSuffix(" %")
+        self._overlap.setFixedWidth(86)
+        self._overlap.setToolTip(
+            "Spacing relative to the reference width (see Canopy width).\n"
             "  −100% = double spacing (centres 2× reference apart)\n"
             "     0% = at nominal spacing\n"
             "   +50% = half spacing (dense overlap)\n"
             "Effective spacing = reference × (1 − overlap)."
         )
-        ov.addWidget(self._overlap_slider, 1)
-        self._overlap_label = QLabel("0%")
-        self._overlap_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px; min-width: 40px;"
-        )
-        ov.addWidget(self._overlap_label)
-        self._overlap_slider.valueChanged.connect(
-            lambda v: self._overlap_label.setText(f"{v:+d}%" if v else "0%")
-        )
-        outer.addLayout(ov)
+        self._overlap_unit = labelled_unit("Overlap", self._overlap, "Overlap")
+        self._flow.addWidget(self._overlap_unit)
 
-        # Reference-width toggle: planting spacing (default) vs mature canopy.
-        # Plant Communities tab hides this — a community isn't a single canopy.
-        self._canopy_base_checkbox = QCheckBox("Base on mature canopy")
+        # Reference width: planting spacing (default) vs mature canopy.
+        # The Communities tab hides this — a community isn't a single canopy.
+        self._canopy_base_checkbox = QCheckBox("Canopy width")
         self._canopy_base_checkbox.setToolTip(
-            "When off, overlap is measured against planting spacing.\n"
-            "When on, overlap is measured against the mature canopy width — "
+            "Off: overlap is measured against the planting spacing.\n"
+            "On: overlap is measured against the mature canopy width — "
             "useful when you care about leaf-area competition more than "
             "nursery spacing recommendations."
         )
-        self._canopy_base_checkbox.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px;"
-        )
-        outer.addWidget(self._canopy_base_checkbox)
-        if not show_canopy_base:
-            self._canopy_base_checkbox.hide()
+        self._flow.addWidget(self._canopy_base_checkbox)
 
-        # Apply the size-to-current-page policy for the initial Single mode so
-        # the empty Single page doesn't reserve the tallest page's height.
-        for i in range(self._stack.count()):
-            self._stack.widget(i).setSizePolicy(
-                QSizePolicy.Policy.Preferred,
-                QSizePolicy.Policy.Preferred if i == 0
-                else QSizePolicy.Policy.Ignored)
+        self._apply_visibility()
 
         # Announce every parameter current_pattern() reads. Gathered in one list
         # at the end rather than wired at each construction site, so a control
@@ -358,7 +293,7 @@ class PlacementControlsWidget(QWidget):
         # otherwise, and it is the map quietly placing the previous thing.
         for _control in (self._row_count, self._grid_rows, self._grid_cols,
                          self._circle_count, self._fill_spacing,
-                         self._overlap_slider):
+                         self._overlap):
             _control.valueChanged.connect(self._emit_pattern_changed)
         for _control in (self._row_drift, self._grid_stagger, self._circle_fill,
                          self._fill_matrix, self._canopy_base_checkbox):
@@ -380,12 +315,19 @@ class PlacementControlsWidget(QWidget):
                 self._on_kind_changed(btn)
                 return
 
+    def add_extra(self, widget: QWidget, kinds=None) -> None:
+        """Put a tab-owned control on the same wrapping line, shown only for
+        the patterns in ``kinds`` (every pattern when ``None``)."""
+        self._extras.append((widget, tuple(kinds) if kinds else None))
+        self._flow.addWidget(widget)
+        self._apply_visibility()
+
     def current_pattern(self) -> dict:
         """Build the pattern dict ``{kind, params}``. Tab-specific keys
         like ``polyculture`` or ``community_mix`` are the caller's job
         to inject into ``params`` after the fact."""
         kind = self._kind
-        overlap = self._overlap_slider.value() / 100.0
+        overlap = self._overlap.value() / 100.0
         use_canopy = self._canopy_base_checkbox.isChecked()
         if kind == "row":
             params = {
@@ -422,20 +364,37 @@ class PlacementControlsWidget(QWidget):
         """Convenience accessor for the Fill Area spacing (metres)."""
         return float(self._fill_spacing.value())
 
+    def set_fill_spacing(self, metres) -> None:
+        """Start the fill at the plants' own spacing (V2.98). It had defaulted
+        to 1.5 m whatever was being planted, while the mix line above it said
+        "~0.3 m spacing": a forb fill came out about 25 times sparser than the
+        plants' own guidance. Clamped to the spin box's range.
+
+        Silent: a default is not the user changing the pattern, and the caller
+        arms straight after, so announcing it would only queue a second re-arm.
+        """
+        try:
+            value = float(metres)
+        except (TypeError, ValueError):
+            return
+        if value > 0:
+            was = self._fill_spacing.blockSignals(True)
+            self._fill_spacing.setValue(value)
+            self._fill_spacing.blockSignals(was)
+
     # ── Internals ─────────────────────────────────────────────────────
 
+    def _apply_visibility(self) -> None:
+        kind = self._kind
+        for key, unit in self._units.items():
+            unit.setVisible(key == kind)
+        self._overlap_unit.setVisible(kind in _SPACED)
+        self._canopy_base_checkbox.setVisible(
+            self._show_canopy_base and kind in _SPACED)
+        for widget, kinds in self._extras:
+            widget.setVisible(kinds is None or kind in kinds)
+
     def _on_kind_changed(self, btn):
-        kind = btn.property("pattern_kind") or "single"
-        self._kind = kind
-        idx = {"single": 0, "row": 1, "grid": 2, "circle": 3, "fill": 4}.get(kind, 0)
-        self._stack.setCurrentIndex(idx)
-        # Size the stack to the *current* page only (a QStackedWidget otherwise
-        # reserves the tallest page's height — a big empty gap under Single).
-        for i in range(self._stack.count()):
-            page = self._stack.widget(i)
-            page.setSizePolicy(
-                QSizePolicy.Policy.Preferred,
-                QSizePolicy.Policy.Preferred if i == idx
-                else QSizePolicy.Policy.Ignored)
-        self._stack.adjustSize()
-        self.patternKindChanged.emit(kind)
+        self._kind = btn.property("pattern_kind") or "single"
+        self._apply_visibility()
+        self.patternKindChanged.emit(self._kind)

@@ -160,6 +160,11 @@ class MapBridge(QObject):
         # plant_id, common_name, spacing_m, plant_type, custom_color,
         # positions_json, pattern_kind
 
+    # Every mode the map enters, with the stamp of the last mode change Python
+    # had sent (V2.98). The map leaves placing on its own (Esc, a finished
+    # fill) and Python has to follow; see src/placement_bar_flow.py.
+    mode_changed = pyqtSignal(str, int)                   # mode, python_seq
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -389,6 +394,10 @@ class MapBridge(QObject):
     def onTerrainBboxCancelled(self):
         self.terrain_bbox_cancelled.emit()
 
+    @pyqtSlot(str, int)
+    def onModeChanged(self, mode: str, python_seq: int):
+        self.mode_changed.emit(mode or "none", int(python_seq))
+
 
 class _LoggingPage(QWebEnginePage):
     """QWebEnginePage that forwards every JS console.* + uncaught error to
@@ -433,6 +442,10 @@ class MapWidget(QWebEngineView):
         # can grep for.
         self.page().renderProcessTerminated.connect(self._on_render_terminated)
         self.bridge = MapBridge()
+        # Stamp on every mode change Python sends; the map echoes the last one
+        # it saw with each mode report, so a report that crossed a newer change
+        # in flight can be told apart and ignored (V2.98).
+        self._mode_seq = 0
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self._channel)
@@ -482,6 +495,16 @@ class MapWidget(QWebEngineView):
     def run_js(self, js: str):
         self.page().runJavaScript(js)
 
+    @property
+    def mode_seq(self) -> int:
+        """The stamp of the last mode change sent to the map."""
+        return self._mode_seq
+
+    def _run_mode_js(self, js: str):
+        """Send a mode change, stamped (see ``_mode_seq``)."""
+        self._mode_seq += 1
+        self.run_js(map_js.stamp_mode(self._mode_seq) + js)
+
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
                  quantity: int = 1, custom_color: str = "",
@@ -511,12 +534,12 @@ class MapWidget(QWebEngineView):
                 # when missing, mirroring the get_plant fallback.
                 "mature_canopy_m": mature_canopy_m or (spacing_m * 1.5),
             }
-            self.run_js(map_js.set_mode_with_payload("plant", payload))
+            self._run_mode_js(map_js.set_mode_with_payload("plant", payload))
         else:
-            self.run_js(map_js.set_mode(mode))
+            self._run_mode_js(map_js.set_mode(mode))
 
     def cancel_draw(self):
-        self.run_js(map_js.cancel_draw())
+        self._run_mode_js(map_js.cancel_draw())
 
     def clear_measure(self):
         self.run_js(map_js.clear_measure())
@@ -681,7 +704,7 @@ class MapWidget(QWebEngineView):
 
     def set_structure_mode(self, struct_def: dict):
         """Enter structure placement mode with a structure definition."""
-        self.run_js(map_js.set_mode_with_payload("structure", struct_def))
+        self._run_mode_js(map_js.set_mode_with_payload("structure", struct_def))
 
     def load_structure(self, struct_def: dict, lat: float, lng: float):
         """Load a structure from a saved project."""
@@ -691,7 +714,7 @@ class MapWidget(QWebEngineView):
 
     def set_hedgerow_mode(self, hedge_config: dict):
         """Enter hedgerow drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
+        self._run_mode_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
 
     def load_hedgerow(self, hedge_def: dict):
         """Load a hedgerow from a saved project."""
@@ -701,7 +724,7 @@ class MapWidget(QWebEngineView):
 
     def set_shape_mode(self, shape_config: dict):
         """Enter custom shape drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("shape", shape_config))
+        self._run_mode_js(map_js.set_mode_with_payload("shape", shape_config))
 
     def load_shape(self, shape_def: dict):
         """Load a custom shape from a saved project."""
@@ -714,7 +737,7 @@ class MapWidget(QWebEngineView):
 
     def enter_sun_anchor_mode(self):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
-        self.run_js(map_js.set_mode("sun_anchor"))
+        self._run_mode_js(map_js.set_mode("sun_anchor"))
 
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
@@ -736,7 +759,7 @@ class MapWidget(QWebEngineView):
 
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("contour", config))
+        self._run_mode_js(map_js.set_mode_with_payload("contour", config))
 
     def clear_contours(self):
         self.run_js(map_js.clear_contours())
@@ -753,7 +776,7 @@ class MapWidget(QWebEngineView):
 
     def enter_terrain_draw_mode(self):
         """Enter free-draw rectangle mode for picking a terrain bbox."""
-        self.run_js(map_js.set_mode("terrain_rect"))
+        self._run_mode_js(map_js.set_mode("terrain_rect"))
 
     def draw_auto_contours(self, contours: list[dict], color: str, show_labels: bool):
         """Render generated contour lines on the map. Replaces existing auto layer."""

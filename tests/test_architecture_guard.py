@@ -81,7 +81,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # to `filter_widgets.build_ecoregion_tree`, where the widget it drives
         # already lives. 18 lines of headroom is not a reprieve; the
         # placement/polyculture-mix extraction above is still the next move.
-        (_SRC / "plant_panel.py", 1600),               # 1582 now
+        # V2.98: half of it happened. The placement *UI* left for the bar over
+        # the map (src/placement_bar.py; the pattern controls, Qty and colour
+        # are built here and adopted there), about 100 lines, and the arming
+        # rules it exposed took them back: net +1. The mix is the half left.
+        (_SRC / "plant_panel.py", 1600),               # 1583 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong

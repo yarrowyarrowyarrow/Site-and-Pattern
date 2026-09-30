@@ -780,6 +780,11 @@ class MainWindow(QMainWindow):
         self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
         self.polyculture_panel.fillCommunityMixRequested.connect(self._on_community_mix_fill_requested)
         self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
+        # The placement bar over the map (F193, V2.98): both panels' pattern
+        # settings, shown while placing, gone when the map stops — Esc in the
+        # map included, which Python could not see before. See the module.
+        from src import placement_bar_flow
+        placement_bar_flow.install(self)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
         self.plant_panel.communityCreated.connect(
@@ -1131,6 +1136,12 @@ class MainWindow(QMainWindow):
         poly = ((pattern or {}).get("params") or {}).get("polyculture")
         if poly and poly.get("effective_spacing_m"):
             spacing_m = float(poly["effective_spacing_m"])
+        # A row/grid/circle of whole communities steps at Community spacing,
+        # not at its preview member's own spacing. Until V2.98 it did the
+        # latter: a 4.65 m row laid 16 two-metre communities 0.3 m apart.
+        community = ((pattern or {}).get("params") or {}).get("community")
+        if community and community.get("spacing_m"):
+            spacing_m = float(community["spacing_m"])
 
         try:
             from src.db.plants import get_plant
@@ -1147,7 +1158,9 @@ class MainWindow(QMainWindow):
 
         kind = (pattern or {}).get("kind", "single")
         species_n = len(poly["species"]) if poly else 0
-        poly_tag = f" · Mix ({species_n} species)" if species_n else ""
+        if species_n:
+            # Name the mix, not the species that previews it (V2.98).
+            common_name = f"your {species_n}-plant mix"
         # When a polyculture is armed, the recipe persists until Esc, so
         # advertise that the user can drop multiple identical patterns.
         tail = " (Esc to finish)" if poly else " — Esc to cancel"
@@ -1155,11 +1168,11 @@ class MainWindow(QMainWindow):
             qty_str = f" ×{quantity}" if quantity > 1 else ""
             label = f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
         elif kind == "row":
-            label = f"Row of {common_name}{poly_tag} — click start point, then end point{tail}"
+            label = f"Row of {common_name} — click start point, then end point{tail}"
         elif kind == "grid":
-            label = f"Grid of {common_name}{poly_tag} — click two opposite corners{tail}"
+            label = f"Grid of {common_name} — click two opposite corners{tail}"
         elif kind == "circle":
-            label = f"Circle of {common_name}{poly_tag} — click centre, then radius point{tail}"
+            label = f"Circle of {common_name} — click centre, then radius point{tail}"
         else:
             label = f"Placing: {common_name}"
         self._set_mode_label(label)

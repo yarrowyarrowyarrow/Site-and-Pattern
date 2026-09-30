@@ -80,6 +80,9 @@ from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS  # noqa: E402
 
 # CheckableComboBox moved to src/filter_widgets.py (V2.13); re-imported above.
 
+# Mix rows shown before they scroll (V2.98; the community mix's number).
+_MIX_ROWS_VISIBLE = 4
+
 
 class _MixDropGroupBox(QGroupBox):
     """The 'Plant current mix' box, made a drop target so plants can be dragged
@@ -124,7 +127,10 @@ class PlantPanel(QWidget):
     # quantity spinner value (used when pattern["kind"]=="single"); the
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
-    placement_cancelled = pyqtSignal()                        # user stood the map down (V2.37)
+    placement_cancelled = pyqtSignal()                        # nothing left to place (V2.37)
+    # What the map is armed with, for the placement bar over it (V2.98):
+    # {"armed", "what", "kind", "qty", "mix"}. See src/placement_bar_flow.py.
+    armed_changed = pyqtSignal(dict)
     fill_area_requested = pyqtSignal(object, float, str, bool)  # members [(pid,weight)], spacing_m, name, matrix (F3/F22)
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
     # Emitted when "Save as Plant Community" creates a new community from
@@ -159,11 +165,14 @@ class PlantPanel(QWidget):
 
         # True while the map is armed to place what this panel has selected.
         # MainWindow calls set_armed(False) when placement ends (Esc, another
-        # tool), so the chip can never claim the map is listening when it isn't.
+        # tool), so the bar can never claim the map is listening when it isn't.
         self._armed = False
+        # What was armed, captured at arming time: the bar describes what the
+        # map holds, which is not always what the list shows selected now.
+        self._armed_what = ""
 
         from src.placement_arming import rearm_timer
-        self._rearm_timer = rearm_timer(self, self._auto_arm)
+        self._rearm_timer = rearm_timer(self, self._rearm)
 
         # Debounce timer for local search
         self._search_timer = QTimer(self)
@@ -180,20 +189,6 @@ class PlantPanel(QWidget):
         # app.py from SitePanel.ecoregion_detected).
 
         self._run_search()   # populate on startup
-        # Snap the splitter to its auto-fit baseline on launch so the
-        # bottom pane (incl. the Place Mix on Map button) is fully
-        # visible even before the user touches the Plant Community Mix.
-        QTimer.singleShot(0, self._refit_bottom_pane)
-
-    def showEvent(self, event):
-        # Belt-and-suspenders: the first show may happen after __init__
-        # but before the splitter has real sizes (e.g. when the Plants
-        # inner tab isn't the initial selection). Retry on first show so
-        # the user lands on the auto-fit layout regardless of tab order.
-        super().showEvent(event)
-        if not getattr(self, "_did_initial_refit", False):
-            self._did_initial_refit = True
-            QTimer.singleShot(0, self._refit_bottom_pane)
 
     def set_autodetected_ecoregion(self, key):
         """Live update from a property pin dropped this session (V1.87).
@@ -224,17 +219,17 @@ class PlantPanel(QWidget):
     # ── Build ─────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        root = QVBoxLayout(self)
+        # One column that scrolls when it cannot fit, rather than squeezing
+        # its sections into each other (V2.98, src/scroll_column.py).
+        from src.scroll_column import scroll_column
+        root = scroll_column(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
         self._root_layout = root
 
-        # Browser (top, stretches to fill) + placement controls (bottom,
-        # collapses to just its header). A plain layout — NOT a QSplitter —
-        # because QSplitter ignores a collapsed child's maximum height and
-        # leaves an empty gap above the header; a QVBoxLayout honours the
-        # CollapsiblePanel's collapsed sizeHint so the browser fills the space.
-        # Both panes are added to `root` once built (see below).
+        # Browser (top, stretches to fill) + the mix strip (bottom, its own
+        # height). The placement settings are not in this column since V2.98:
+        # they are built here and shown in the bar over the map while placing.
 
         # ── Top pane: header + search + filters + results list ────────────
         local_tab = QWidget()
@@ -448,111 +443,49 @@ class PlantPanel(QWidget):
         # revealed nothing useful and only confused users. The "Plant Library"
         # header sits inline at the top of the pane (added above).
         root.addWidget(local_tab, 1)   # stretches to fill the sidebar
+        # Clicking the row that is already current, or pressing Enter on it,
+        # arms it again: after Done that is the way back to the same plant,
+        # since the Place button is gone (V2.98).
+        self._results_list.clicked.connect(self._on_view_clicked)
+        self._results_list.activated.connect(self._on_view_clicked)
 
-        # ── Bottom: placement controls + placed plants ────────────────────
-        bottom = QWidget()
-        bot_layout = QVBoxLayout(bottom)
-        bot_layout.setContentsMargins(8, 4, 8, 8)
-        bot_layout.setSpacing(6)
-
-        # The legacy "Selected Plant" detail group + standalone planting
-        # calendar QGroupBox were removed — both are now redundant with
-        # the inline-expand chevron in the results list (which shows the
-        # full detail block + the 12-cell colour-coded month strip in
-        # one place).
-
-        # ── Pattern mode selector ───────────────────────────────────────
-        # Single = click-to-place (current behaviour). Row/Grid/Circle take
-        # two clicks each and emit a single batch placement with shared
-        # group_id. The placement-controls widget is shared with the Plant
-        # Communities tab so both tabs expose identical placement options.
-        from src.placement_controls import PlacementControlsWidget
+        # ── Placement settings: built here, shown in the bar over the map ───
+        # Until V2.98 these filled a collapsible "Placement" section below the
+        # list, in a column that does not scroll: opening it took the list's
+        # height and squeezed the pattern buttons to 11 px (0 px at 1366 × 768).
+        # The bar adopts them (src/placement_bar_flow.py); until then they have
+        # no parent, so they never float over this panel.
+        from src.placement_controls import PlacementControlsWidget, labelled_unit
         self._placement = PlacementControlsWidget(show_canopy_base=True)
         self._placement.patternKindChanged.connect(self._on_pattern_kind_changed)
         self._placement.patternChanged.connect(self._on_pattern_params_changed)
-        bot_layout.addWidget(self._placement)
-        self._build_polyculture_controls(bot_layout)
 
-        # ── Placement controls: quantity + colour + place button ───────
-        place_row = QHBoxLayout()
-        place_row.setSpacing(4)
-
-        # Quantity spinner — only meaningful for Single mode (burst placement).
-        qty_label = QLabel("Qty:")
-        qty_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        # Qty is a Single-mode burst. It stayed on screen in Row/Grid/Circle,
+        # where its own tooltip said it was ignored; now it shows for Single only.
         self._qty_spin = QSpinBox()
-        self._qty_spin.setMinimum(1)
-        self._qty_spin.setMaximum(50)
+        self._qty_spin.setRange(1, 50)
         self._qty_spin.setValue(1)
-        self._qty_spin.setFixedWidth(65)
-        self._qty_spin.setToolTip("Single mode: how many plants to burst at the click point\n"
-                                  "Ignored in Row/Grid/Circle modes")
-        self._qty_spin.setStyleSheet(_QTY_SPIN_STYLE)
-        place_row.addWidget(qty_label)
-        place_row.addWidget(self._qty_spin)
+        self._qty_spin.setFixedWidth(64)
+        self._qty_spin.setToolTip("How many to place at each click, as a cluster")
+        self._qty_spin.valueChanged.connect(self._on_pattern_params_changed)
+        self._placement.add_extra(
+            labelled_unit("Qty", self._qty_spin, "Quantity"), ("single",))
 
-        # Colour picker — small caption "Colour" sits directly above a
-        # rainbow-tinted circular button so the affordance is obvious
-        # both by label and by icon.
-        color_col = QVBoxLayout()
-        color_col.setContentsMargins(0, 0, 0, 0)
-        color_col.setSpacing(2)
-        color_caption = QLabel("Colour")
-        color_caption.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        color_caption.setStyleSheet("color: #90a4ae; font-size: 10px;")
-        color_col.addWidget(color_caption)
-
+        # This species' marker colour on the map. It sits on the bar's first
+        # line, beside the name it applies to, and hides while a mix is placed
+        # (each mix row has its own dot).
         self._color_btn = QPushButton()
-        self._color_btn.setFixedSize(28, 28)
-        self._color_btn.setToolTip(
-            "Set a custom marker colour for this plant.\n"
-            "Click to open the colour picker."
-        )
+        self._color_btn.setFixedSize(26, 26)
+        self._color_btn.setToolTip("Set a custom marker colour for this plant")
         self._color_btn.clicked.connect(self._on_color_pick)
-        color_col.addWidget(self._color_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-        place_row.addLayout(color_col)
-        # Show the rainbow default until a plant is selected with a custom colour.
+        self._color_unit = labelled_unit("Colour", self._color_btn, "Marker colour")
         self._update_color_btn("")
 
-        # Place on Map — a toggle and a status readout, not a commit button.
-        # Selecting a plant arms the map on its own (see _auto_arm); this shows
-        # what is armed and clicking it stands the map down again.
-        self._place_btn = QPushButton("Place on Map")
-        self._place_btn.setEnabled(False)
-        self._place_btn.setToolTip("Click to enter plant-placement mode on the map")
-        self._place_btn.clicked.connect(self._on_place_btn_clicked)
-        self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
-        place_row.addWidget(self._place_btn)
-
-        bot_layout.addLayout(place_row)
-        # Fill Area now lives in the Placement Mode selector (choose "Fill Area",
-        # set spacing, click Place, then draw the polygon) — see
-        # _on_place_clicked + PlacementControlsWidget.
-
-        # Bottom pane: just placement controls now. (On This Design lives
-        # in a sibling inner tab at the same level as Plants and Plant
-        # Communities — see app.py's inner QTabWidget.)
-        self._bottom_widget = bottom
-        bottom.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
-
-        # Placement pane (collapsible). The content goes in *directly* — no inner
-        # height-capped scroll area — so the pane grows to fit the whole "Plant
-        # current mix" as species are added (the plant list above gives up the
-        # space). This matches the grow-to-fit the Plant Communities tab uses
-        # (V1.87). Collapsing the pane still frees the sidebar for the list when
-        # the user isn't placing; minimised by default.
-        from src.collapsible_panel import CollapsiblePanel
-        self._placement_panel = CollapsiblePanel(
-            "Placement", panel_id="plant_panel_placement", expanded=False
-        )
-        self._placement_panel.set_content(bottom)
-
-        # stretch 0: the placement panel takes its content height when expanded
-        # and collapses to a bare header at the bottom; the browser above keeps
-        # the rest of the column.
-        root.addWidget(self._placement_panel)
+        # ── The mix: stays beside the list it is built from ───────────────
+        # Plants are dragged into it from the list, so it cannot live in a bar
+        # that only exists while placing. Its *placement* moved: Place mix arms
+        # it, and the bar takes it from there.
+        self._build_polyculture_controls(root)
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -645,29 +578,33 @@ class PlantPanel(QWidget):
         colour-picker preview. The compact-list flow doesn't surface a separate
         bottom detail group — the inline expand chevron is the discovery path.
         """
-        if not current.isValid():
-            self._selected_plant = None
-            self._place_btn.setEnabled(False)
-            self._update_place_btn()
-            return
-        plant = current.data(_PLANT_OBJ_ROLE)
+        plant = current.data(_PLANT_OBJ_ROLE) if current.isValid() else None
+        self._selected_plant = plant or None
         if not plant:
-            self._selected_plant = None
-            # A built mix can still be Placed (incl. Fill Area) without a
-            # current list selection.
-            self._place_btn.setEnabled(len(self._mix_species) >= 2)
-            self._update_place_btn()
             return
-        self._selected_plant = plant
         self._update_color_btn(plant.get("marker_color") or "")
-        self._place_btn.setEnabled(True)
+        self._sync_fill_spacing()
         self._auto_arm()
+
+    def _on_view_clicked(self, index: QModelIndex):
+        """A click (or Enter) on the row that is already current re-arms it.
+        A click on another row arms through ``currentChanged`` first, so this
+        only acts while the map is not armed."""
+        if not self._armed and index.isValid() and index.data(_PLANT_OBJ_ROLE):
+            self._selected_plant = index.data(_PLANT_OBJ_ROLE)
+            self._auto_arm()
 
     # ── Arming ────────────────────────────────────────────────────────────────
 
     def _on_pattern_params_changed(self):
         from src.placement_arming import request_rearm
         request_rearm(self)
+
+    def _rearm(self):
+        """The debounce fired: re-arm with the settings as they are now, if the
+        map is still armed (a stand-down in the meantime wins)."""
+        if self._armed:
+            self._auto_arm()
 
     def _auto_arm(self):
         """Re-arm the map with whatever is selected now.
@@ -679,53 +616,58 @@ class PlantPanel(QWidget):
         stayed armed with the previous choice until you pressed again, and the
         cost of forgetting was a plant in the ground that you did not pick.
 
-        Fill Area is deliberately excluded: it does not arm a click, it enters
-        polygon-draw mode immediately, so auto-arming it would hijack the map
-        every time you arrow-key through the results list.
+        Fill Area arms too since V2.98. V2.37 left it out because re-entering
+        fill mode restarted the polygon, so arrow-keying the list would throw
+        away the corners drawn; the map now keeps them and a re-arm only swaps
+        what the polygon will be planted with. With the Place button gone,
+        leaving Fill out would have left it no way in at all.
         """
-        if self._current_pattern().get("kind") == "fill":
-            return
         if not self._selected_plant and len(self._mix_species) < 2:
             return
         self._on_place_clicked()
 
     def set_armed(self, armed: bool):
         """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if not armed:
+            self._rearm_timer.stop()
         if self._armed == bool(armed):
             return
         self._armed = bool(armed)
-        self._update_place_btn()
+        self._announce_armed()
 
-    def _update_place_btn(self):
-        """Render the button as a live status chip while armed."""
-        if not hasattr(self, "_place_btn"):
-            return
-        from src.placement_arming import apply_chip
-        n = len(self._mix_species)
-        apply_chip(
-            self._place_btn, armed=self._armed,
-            what=("the mix" if n >= 2
-                  else (self._selected_plant or {}).get("common_name", "")),
-            kind=self._placement.kind,
-            idle_text="Place Mix on Map" if n >= 2 else "Place on Map",
-            idle_style=_PLACE_BTN_STYLE,
-            idle_tooltip="Click to enter plant-placement mode on the map")
+    def _announce_armed(self):
+        """Tell the placement bar what the map holds (or that it holds nothing)."""
+        kind = self._placement.kind
+        self._color_unit.setVisible(not self._uses_mix(kind))
+        self.armed_changed.emit({
+            "armed": self._armed,
+            "what": self._armed_what,
+            "kind": kind,
+            "qty": self._qty_spin.value(),
+            "mix": len(self._mix_species) if self._uses_mix(kind) else 0,
+        })
 
-    def _on_place_btn_clicked(self):
-        """The button toggles: arm what's selected, or stand the map down."""
-        if self._armed:
-            self.placement_cancelled.emit()
-            return
-        self._on_place_clicked()
+    def _uses_mix(self, kind: str) -> bool:
+        """The mix is what gets placed: two or more species, any pattern but
+        Single (which places the selected plant itself)."""
+        return kind != "single" and len(self._mix_species) >= 2
 
     def _on_view_double_clicked(self, index: QModelIndex):
-        """Double-click: place the plant directly (Single mode)."""
+        """Double-click: arm this plant with the pattern the bar shows."""
         if not index.isValid():
             return
         plant = index.data(_PLANT_OBJ_ROLE)
         if plant:
             self._selected_plant = plant
             self._on_place_clicked()
+
+    def placement_controls(self):
+        """The pattern controls, for the placement bar to adopt (V2.98)."""
+        return self._placement
+
+    def placement_accessory(self):
+        """The marker colour, for the bar's first line (V2.98)."""
+        return self._color_unit
 
     # ── Fill an area with plants (Placement Mode → Fill Area) ───────────────────
 
@@ -756,7 +698,8 @@ class PlantPanel(QWidget):
     # ── Pattern mode UI ───────────────────────────────────────────────────────
 
     def _build_polyculture_controls(self, outer: QVBoxLayout):
-        """Build the inline stack-mix UI inside the placement group."""
+        """Build the mix strip under the list: a drop target, its rows (four
+        visible, the rest scroll), and its actions, Place mix first."""
         mix_box = _MixDropGroupBox("Plant current mix", self._add_to_mix_by_id)
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
@@ -778,12 +721,27 @@ class PlantPanel(QWidget):
         self._mix_rows_layout = QVBoxLayout(self._mix_rows_container)
         self._mix_rows_layout.setContentsMargins(0, 2, 0, 2)
         self._mix_rows_layout.setSpacing(2)
-        self._mix_rows_container.setVisible(False)
-        ml.addWidget(self._mix_rows_container)
+        # Four rows show and the rest scroll, as in the community mix: a full
+        # mix otherwise takes its whole height out of the list above.
+        self._mix_rows_scroll = QScrollArea()
+        self._mix_rows_scroll.setWidgetResizable(True)
+        self._mix_rows_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._mix_rows_scroll.setWidget(self._mix_rows_container)
+        self._mix_rows_scroll.setMaximumHeight(_MIX_ROWS_VISIBLE * 26 + 8)
+        self._mix_rows_scroll.setVisible(False)
+        ml.addWidget(self._mix_rows_scroll)
 
-        # ── Action buttons (clear, save as community) ────────────────
+        # ── Actions: place it, clear it, keep it ─────────────────────
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
+        self._mix_place_btn = QPushButton("Place mix")
+        self._mix_place_btn.setStyleSheet(_PLACE_BTN_STYLE)
+        self._mix_place_btn.setToolTip(
+            "Place the whole mix: in a row unless the bar over the map says "
+            "otherwise.")
+        self._mix_place_btn.clicked.connect(self._on_place_mix_clicked)
+        self._mix_place_btn.setEnabled(False)
+        btn_row.addWidget(self._mix_place_btn)
         self._mix_clear_btn = QPushButton("Clear mix")
         self._mix_clear_btn.setStyleSheet(
             "QPushButton { background: #1e2e1e; color: #ef9a9a; "
@@ -832,25 +790,28 @@ class PlantPanel(QWidget):
         self._mix_open_builder_btn.setEnabled(False)
         btn_row.addWidget(self._mix_open_builder_btn)
         btn_row.addStretch()
-        ml.addLayout(btn_row)
+        # Hidden while the mix is empty: four disabled buttons under a one-line
+        # hint cost the list a row and offered nothing to do.
+        self._mix_actions = QWidget()
+        btn_row.setContentsMargins(0, 0, 0, 0)
+        self._mix_actions.setLayout(btn_row)
+        self._mix_actions.setVisible(False)
+        ml.addWidget(self._mix_actions)
 
+        # Its own height and no more, so the list above keeps the rest.
+        mix_box.setSizePolicy(QSizePolicy.Policy.Expanding,
+                              QSizePolicy.Policy.Minimum)
+        self._mix_box = mix_box
         outer.addWidget(mix_box)
 
     def _on_pattern_kind_changed(self, kind: str):
-        # Burst quantity only applies in Single mode.
-        self._qty_spin.setEnabled(kind == "single")
         # Switching Row → Grid is choosing what to place, exactly like picking a
         # different species, so it re-arms rather than leaving the map holding
-        # the old pattern. Leaving Fill Area stands the map down instead: the
-        # user is no longer drawing a polygon.
-        if kind == "fill":
-            if self._armed:
-                self.placement_cancelled.emit()
-            return
+        # the old pattern. Fill Area included since V2.98: choosing it in the
+        # bar starts the drawing (see _auto_arm).
         if self._armed:
+            self._rearm_timer.stop()
             self._auto_arm()
-        else:
-            self._update_place_btn()
 
     def _current_pattern(self) -> dict:
         """Build the pattern dict to pass to the map-placement signal.
@@ -947,11 +908,6 @@ class PlantPanel(QWidget):
         entry = dict(plant)
         entry["_weight"] = 1
         self._mix_species.append(entry)
-        # Reveal the mix: expand the placement pane (the plant list above gives
-        # up the space) so the whole growing mix stays visible (V1.87). Transient
-        # (persist=False) — it's a response to this add, not a saved preference.
-        if hasattr(self, "_placement_panel"):
-            self._placement_panel.set_expanded(True, persist=False)
         self._refresh_mix_list()
 
     def _add_to_mix_by_id(self, plant_id: int):
@@ -996,10 +952,10 @@ class PlantPanel(QWidget):
         """Rebuild the species rows + status label from `_mix_species`.
 
         Each row is a custom QFrame: type-icon + common name + ratio
-        spinner + × remove button. The whole stack is always visible
-        (no scroll) so all ≤8 species fit at once. Also updates the
-        Place button's text and the recipe combo's "active" tooltip
-        so users see at a glance that a polyculture is queued up.
+        spinner + × remove button; four show and the rest scroll. Changing
+        the mix re-arms for the same reason changing the species does — the
+        map should be holding what you are looking at — and when nothing is
+        left to place, the map stands down rather than keep the old recipe.
         """
         # Tear down old rows (stop signal connections from leaking).
         while self._mix_rows_layout.count():
@@ -1010,28 +966,24 @@ class PlantPanel(QWidget):
                 w.deleteLater()
 
         n = len(self._mix_species)
-
-        # Place button label tracks the active mix; a built mix is placeable
-        # (incl. Fill Area) even when nothing is selected in the list. Changing
-        # the mix re-arms for the same reason changing the species does — the
-        # map should be holding what you are looking at.
-        if hasattr(self, "_place_btn"):
-            if n >= 2:
-                self._place_btn.setEnabled(True)
-            if self._armed:
+        self._mix_place_btn.setEnabled(n >= 2)
+        self._mix_actions.setVisible(n > 0)
+        self._sync_fill_spacing()
+        if self._armed:
+            if self._selected_plant or n >= 2:
                 self._auto_arm()
             else:
-                self._update_place_btn()
+                self.placement_cancelled.emit()
 
         if n == 0:
             self._mix_status.setText(
                 "Drag or right-click plants here to build a mix."
             )
+            self._mix_rows_scroll.setVisible(False)
             self._mix_rows_container.setVisible(False)
             self._mix_clear_btn.setEnabled(False)
             self._mix_save_btn.setEnabled(False)
             self._mix_open_builder_btn.setEnabled(False)
-            QTimer.singleShot(0, self._refit_bottom_pane)
             return
 
         all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
@@ -1044,6 +996,7 @@ class PlantPanel(QWidget):
             self._mix_status.setText(
                 f"{n} species · {ratios} · ~{eff:.1f} m spacing"
             )
+        self._mix_rows_scroll.setVisible(True)
         self._mix_rows_container.setVisible(True)
         self._mix_clear_btn.setEnabled(True)
         # Save/Open-Builder are only meaningful with ≥2 species — single
@@ -1055,21 +1008,30 @@ class PlantPanel(QWidget):
         for idx, s in enumerate(self._mix_species):
             row = self._build_mix_row(idx, s)
             self._mix_rows_layout.addWidget(row)
-        # Auto-fit the bottom pane: grow it (eating into the plant browser)
-        # so all the freshly added mix rows are visible without scrolling.
-        # Deferred to the next event-loop tick so the new rows have been
-        # laid out and contribute to sizeHint().
-        QTimer.singleShot(0, self._refit_bottom_pane)
+        QTimer.singleShot(0, self._fit_mix_rows)
 
-    def _refit_bottom_pane(self):
-        """Nudge the layout so the placement pane re-sizes to its content after
-        the mix grows/shrinks (V1.87). The pane holds its content directly (no
-        capped scroll area), so it grows to fit the whole mix automatically; this
-        just asks Qt to recompute the geometry promptly."""
-        if hasattr(self, "_bottom_widget"):
-            self._bottom_widget.updateGeometry()
-        if hasattr(self, "_placement_panel"):
-            self._placement_panel.updateGeometry()
+    def _fit_mix_rows(self):
+        """Show every row up to four, then scroll. A scroll area asks for its
+        minimum, not its content: left to itself it gave a three-plant mix
+        34 px, one row of the three."""
+        cap = _MIX_ROWS_VISIBLE * 26 + 8
+        self._mix_rows_scroll.setFixedHeight(
+            min(self._mix_rows_container.sizeHint().height() + 2, cap))
+
+    def _sync_fill_spacing(self):
+        """Start Fill Area at the plants' own spacing (V2.98): the mix's, as
+        its line shows it ("~0.3 m spacing"), or the selected plant's. It
+        defaulted to 1.5 m whatever was planted, 25 times sparser than a forb
+        mix's own guidance. Follows the selection, as a community's spacing
+        already did."""
+        if len(self._mix_species) >= 2:
+            spacing = max(float(s.get("spacing_meters") or 1.0)
+                          for s in self._mix_species)
+        elif self._selected_plant:
+            spacing = self._selected_plant.get("spacing_meters")
+        else:
+            return
+        self._placement.set_fill_spacing(spacing)
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.
@@ -1166,6 +1128,7 @@ class PlantPanel(QWidget):
             return
         species["marker_color"] = color.name()
         self._style_mix_dot(btn, species)
+        self._on_pattern_params_changed()     # the armed recipe carries colours
 
     def _on_mix_weight_changed(self, idx: int, value: int):
         if 0 <= idx < len(self._mix_species):
@@ -1173,6 +1136,7 @@ class PlantPanel(QWidget):
             # Update only the status line — rebuilding rows would
             # disturb the spinner the user is interacting with.
             self._refresh_mix_status_only()
+            self._on_pattern_params_changed()  # …and the armed recipe
 
     def _refresh_mix_status_only(self):
         n = len(self._mix_species)
@@ -1183,8 +1147,7 @@ class PlantPanel(QWidget):
         ratios = ":".join(str(int(s.get("_weight", 1) or 1))
                           for s in self._mix_species)
         self._mix_status.setText(
-            f"Plant community: {n} species at {ratios} — spacing "
-            f"{eff:.2f} m (max). Click Place Mix on Map."
+            f"{n} species · {ratios} · ~{eff:.1f} m spacing"
         )
 
     # ── Save stack as Plant Community ──────────────────────────────────────
@@ -1299,34 +1262,62 @@ class PlantPanel(QWidget):
     # ── Place on map ──────────────────────────────────────────────────────────
 
     def _on_place_clicked(self, _item=None):
+        """Arm the map with the selection, or the mix, in the bar's pattern."""
         pattern = self._current_pattern()
-        # Fill Area is a placement mode now: draw a polygon and the selected
-        # plant — or the current mix — scatters inside it (evenly distributed).
-        if pattern.get("kind") == "fill":
+        kind = pattern.get("kind")
+        # Fill Area: draw a polygon and the selected plant — or the current
+        # mix — scatters inside it (evenly distributed).
+        if kind == "fill":
             members, name = self._fill_members()
             if not members:
+                self._nothing_to_place()
                 return
             self.fill_area_requested.emit(
                 members, self._placement.fill_spacing(), name,
                 bool((pattern.get("params") or {}).get("matrix")))
+            self._arm_as(name)
             return
-        if not self._selected_plant:
+        # A mix is previewed by its own first species; the recipe decides
+        # which species lands where. Until V2.98 a mix with nothing selected
+        # in the list could not be placed at all.
+        primary = (self._mix_species[0] if self._uses_mix(kind)
+                   else self._selected_plant)
+        if not primary or not primary.get("id"):
+            self._nothing_to_place()
             return
         # Stash the polyculture recipe in flight so App can read it back
         # in `_on_pattern_placed` after JS finishes the 2-click gesture.
         # Cleared on consumption.
-        self._pending_polyculture = (
-            (pattern.get("params") or {}).get("polyculture")
-            if isinstance(pattern, dict) else None
-        )
+        self._pending_polyculture = (pattern.get("params") or {}).get("polyculture")
         self.place_plant_requested.emit(
-            self._selected_plant["id"],
-            self._selected_plant["common_name"],
-            self._qty_spin.value(),
+            primary["id"], primary["common_name"], self._qty_spin.value(),
             pattern,
         )
+        self._arm_as(primary.get("common_name", ""))
+
+    def _arm_as(self, what: str):
+        self._armed_what = what or ""
         self._armed = True
-        self._update_place_btn()
+        self._announce_armed()
+
+    def _nothing_to_place(self):
+        """The pattern now asks for something this panel has not got (Single
+        with only a mix, say): stand the map down rather than let it keep
+        placing what the bar no longer shows."""
+        if self._armed:
+            self.placement_cancelled.emit()
+
+    def _on_place_mix_clicked(self):
+        """Place mix: arm the whole mix. Single places one plant, so from
+        Single it switches to Row; the bar shows the change and offers the
+        others."""
+        if len(self._mix_species) < 2:
+            return
+        if self._placement.kind == "single":
+            self._armed = False           # no re-arm on the way through
+            self._rearm_timer.stop()
+            self._placement.set_kind("row")
+        self._on_place_clicked()
 
     def _on_plant_context_menu(self, pos):
         """Right-click context menu for plant results list."""
@@ -1380,10 +1371,15 @@ class PlantPanel(QWidget):
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 
     def _quick_place(self, plant, qty=1):
-        """Place a plant directly from context menu (always Single mode)."""
-        self.place_plant_requested.emit(
-            plant["id"], plant["common_name"], qty, {"kind": "single"}
-        )
+        """Place a plant straight from the context menu: Single, ``qty`` at a
+        click. Set in the bar as well, so the bar says what the map does (it
+        used to go round the panel, which went on showing its own pattern)."""
+        self._armed = False               # no re-arms while the bar is set up
+        self._rearm_timer.stop()
+        self._placement.set_kind("single")
+        self._qty_spin.setValue(qty)
+        self._selected_plant = plant
+        self._on_place_clicked()
 
     def _on_color_pick(self):
         """Open a colour picker to set a custom marker colour for the selected plant."""
@@ -1409,6 +1405,8 @@ class PlantPanel(QWidget):
         self._update_color_btn(hex_color)
         # Signal the map to update existing markers
         self.color_changed.emit(plant["id"], hex_color)
+        # …and the placement armed with the old one.
+        self._on_pattern_params_changed()
 
     def _update_color_btn(self, hex_color: str):
         """Update the colour picker button to show the current plant's colour.
@@ -1420,8 +1418,9 @@ class PlantPanel(QWidget):
         if hex_color:
             self._color_btn.setStyleSheet(
                 f"QPushButton {{ background: {hex_color}; border: 1px solid #4a7a4a; "
-                f"border-radius: 14px; }}"
+                f"border-radius: 13px; }}"
                 f"QPushButton:hover {{ border-color: #8aca8a; }}"
+                f"QPushButton:focus {{ border: 2px solid #ffe082; }}"
             )
         else:
             self._color_btn.setStyleSheet(
@@ -1430,9 +1429,10 @@ class PlantPanel(QWidget):
                 " stop:0 #ff5252, stop:0.17 #ffb74d, stop:0.33 #fdd835,"
                 " stop:0.5 #66bb6a, stop:0.67 #29b6f6, stop:0.83 #7e57c2,"
                 " stop:1 #ff5252);"
-                " border: 1px solid #4a7a4a; border-radius: 14px;"
+                " border: 1px solid #4a7a4a; border-radius: 13px;"
                 "}"
                 "QPushButton:hover { border-color: #8aca8a; }"
+                "QPushButton:focus { border: 2px solid #ffe082; }"
             )
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -1536,8 +1536,9 @@ QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
 
-# The armed chip's look and wording live in src/placement_arming.py — the
-# community panel shows the same state and the two must not diverge.
+# What the map is armed with is said by the placement bar over the map
+# (src/placement_bar.py), in words from src/placement_arming.py — one place for
+# both panels, so the two cannot diverge.
 
 _QTY_SPIN_STYLE = """
 QSpinBox {

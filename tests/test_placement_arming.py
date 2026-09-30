@@ -13,6 +13,11 @@ choice — a wrong plant in the ground, which is expensive to notice and annoyin
 to undo. So the assertions are about *re-arming on every change*, not merely
 about the first arm working.
 
+V2.98 moved the answer to "what is armed?" from a chip on each panel's Place
+button to the placement bar over the map (tests/test_placement_bar.py); the
+panels now announce it (``armed_changed`` / ``armedChanged``), and these tests
+check what they announce.
+
 Offscreen Qt; skipped where PyQt6 isn't importable.
 """
 
@@ -136,7 +141,7 @@ class TestPlantPanelArming(unittest.TestCase):
         watched = [
             (controls._row_count, 7), (controls._grid_rows, 4),
             (controls._grid_cols, 3), (controls._circle_count, 9),
-            (controls._fill_spacing, 2.5), (controls._overlap_slider, 20),
+            (controls._fill_spacing, 2.5), (controls._overlap, 20),
         ]
         for control, value in watched:
             with self.subTest(control=control.objectName() or type(control).__name__):
@@ -181,9 +186,11 @@ class TestPlantPanelArming(unittest.TestCase):
         self.assertEqual(armed, [])
         self.assertFalse(panel._rearm_timer.isActive())
 
-    def test_fill_area_still_needs_an_explicit_press(self):
-        """Fill Area enters polygon-draw mode immediately rather than arming a
-        click, so auto-arming it would hijack the map during list navigation."""
+    def test_fill_area_arms_like_the_other_patterns(self):
+        """V2.37 left Fill out of arming because re-entering fill mode restarted
+        the polygon. V2.98 removed the Place button, which would have left Fill
+        with no way in, so the map keeps the corners instead (see
+        test_placement_bar) and a selection arms Fill like any pattern."""
         panel = self._panel()
         fills = []
         panel.fill_area_requested.connect(lambda *a: fills.append(a))
@@ -192,42 +199,222 @@ class TestPlantPanelArming(unittest.TestCase):
         panel._selected_plant = self._plants[0]
         panel._auto_arm()
 
-        self.assertEqual(fills, [], "Fill Area armed itself from a selection")
+        self.assertEqual(len(fills), 1)
+        self.assertEqual(fills[0][0], [(int(self._plants[0]["id"]), 1.0)])
+        self.assertTrue(panel._armed)
 
-    def test_the_button_says_what_is_armed(self):
-        """Selection arms silently, so the chip is the only thing left
-        answering "what am I about to place?"."""
+    def test_fill_starts_at_the_plants_own_spacing(self):
+        """It defaulted to 1.5 m whatever was planted, while the mix line said
+        "~0.3 m spacing"."""
         panel = self._panel()
+        plant = dict(self._plants[0], spacing_meters=0.4)
+        panel._selected_plant = plant
+        panel._sync_fill_spacing()
+        self.assertAlmostEqual(panel._placement.fill_spacing(), 0.4)
+        # A mix: the widest of its plants, the number its own line shows.
+        panel._add_to_mix(dict(self._plants[1], spacing_meters=0.3))
+        panel._add_to_mix(dict(self._plants[2], spacing_meters=0.9))
+        self.assertAlmostEqual(panel._placement.fill_spacing(), 0.9)
+        self.assertIn("~0.9 m spacing", panel._mix_status.text())
+
+    def test_the_panel_says_what_is_armed(self):
+        """Selection arms silently, so the bar over the map is the only thing
+        answering "what am I about to place?" — and it hears it from here."""
+        panel = self._panel()
+        said = []
+        panel.armed_changed.connect(said.append)
         panel._selected_plant = self._plants[0]
+        panel._placement.set_kind("row")
         panel._auto_arm()
 
-        label = panel._place_btn.text()
-        self.assertIn(self._plants[0]["common_name"], label)
-        self.assertNotEqual(label, "Place on Map")
+        self.assertTrue(said[-1]["armed"])
+        self.assertEqual(said[-1]["what"], self._plants[0]["common_name"])
+        self.assertEqual(said[-1]["kind"], "row")
+        self.assertEqual(said[-1]["mix"], 0)
 
-    def test_standing_down_restores_the_plain_button(self):
+    def test_standing_down_says_so_and_cancels_a_pending_rearm(self):
+        """A Count changed just before Esc re-armed the map 150 ms after it had
+        stopped: the debounce timer never checked."""
         panel = self._panel()
+        said = []
+        panel.armed_changed.connect(said.append)
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
         panel._selected_plant = self._plants[0]
+        panel._placement.set_kind("row")
         panel._auto_arm()
+        before = len(armed)
+        panel._placement._row_count.setValue(7)
+        self.assertTrue(panel._rearm_timer.isActive())
+
         panel.set_armed(False)
 
-        self.assertFalse(panel._armed)
-        self.assertEqual(panel._place_btn.text(), "Place on Map")
+        self.assertFalse(panel._rearm_timer.isActive())
+        self.assertFalse(said[-1]["armed"])
+        panel._rearm_timer.timeout.emit()    # even if it had fired anyway
+        self.assertEqual(len(armed), before, "re-armed after standing down")
 
-    def test_the_chip_click_asks_to_cancel_rather_than_re_arming(self):
+    def test_qty_re_arms_and_shows_only_in_single(self):
+        panel = self._panel()
+        qty_unit = panel._qty_spin.parentWidget()
+        panel._placement.set_kind("row")
+        self.assertTrue(qty_unit.isHidden(), "Qty shown where it is ignored")
+        panel._placement.set_kind("single")
+        self.assertFalse(qty_unit.isHidden())
+        panel._selected_plant = self._plants[0]
+        panel._auto_arm()
+        panel._qty_spin.setValue(4)
+        self.assertTrue(panel._rearm_timer.isActive(),
+                        "a Qty set after arming never reaches the map")
+
+    def test_overlap_and_canopy_show_only_where_they_count(self):
+        controls = self._panel()._placement
+        for kind, shown in [("single", False), ("row", True), ("grid", True),
+                            ("circle", True), ("fill", False)]:
+            controls.set_kind(kind)
+            with self.subTest(kind=kind):
+                self.assertEqual(not controls._overlap_unit.isHidden(), shown)
+                self.assertEqual(not controls._canopy_base_checkbox.isHidden(),
+                                 shown)
+
+    def test_single_places_the_plant_even_with_a_mix(self):
+        panel = self._panel()
+        said = []
+        panel.armed_changed.connect(said.append)
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._add_to_mix(self._plants[1])
+        panel._add_to_mix(self._plants[2])
+        panel._selected_plant = self._plants[0]
+        panel._placement.set_kind("single")
+        panel._auto_arm()
+        self.assertEqual(armed[-1][1], self._plants[0]["common_name"])
+        self.assertEqual(said[-1]["mix"], 0, "the bar would say 'your mix'")
+
+    def test_a_mix_places_with_nothing_selected(self):
+        """The button was enabled and did nothing: the Place handler returned
+        on no selection."""
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._add_to_mix(self._plants[1])
+        panel._add_to_mix(self._plants[2])
+        panel._selected_plant = None
+        panel._placement.set_kind("single")
+
+        panel._on_place_mix_clicked()
+
+        self.assertEqual(panel._placement.kind, "row",
+                         "Single cannot place a mix; Place mix moves to Row")
+        self.assertEqual(armed[-1][1], self._plants[1]["common_name"])
+        self.assertIn("polyculture", armed[-1][3]["params"])
+
+    def test_clearing_the_armed_mix_stands_the_map_down(self):
         panel = self._panel()
         cancels = []
         panel.placement_cancelled.connect(lambda: cancels.append(1))
-        placements = []
-        panel.place_plant_requested.connect(lambda *a: placements.append(a))
+        panel._add_to_mix(self._plants[1])
+        panel._add_to_mix(self._plants[2])
+        panel._selected_plant = None
+        panel._on_place_mix_clicked()
+        self.assertTrue(panel._armed)
 
-        panel._selected_plant = self._plants[0]
-        panel._auto_arm()
-        before = len(placements)
-        panel._on_place_btn_clicked()
+        panel._clear_mix()
 
-        self.assertEqual(cancels, [1])
-        self.assertEqual(len(placements), before, "clicking the chip re-armed")
+        self.assertEqual(cancels, [1], "the map kept placing a mix now gone")
+
+    def test_quick_place_sets_the_bar_to_what_it_places(self):
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._placement.set_kind("grid")
+        panel._quick_place(self._plants[0], 5)
+        self.assertEqual(panel._placement.kind, "single")
+        self.assertEqual(panel._qty_spin.value(), 5)
+        self.assertEqual(armed[-1][2:], (5, {"kind": "single"}))
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestCommunityPanelArming(unittest.TestCase):
+    """The same rules for the community library."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+        cls._tmp = tempfile.mkdtemp(prefix="permadesign_arm_c_")
+        _plants_mod._DATA_DIR = cls._tmp
+        _plants_mod._DB_PATH = os.path.join(cls._tmp, "t.db")
+        cls._orig_dir = _plants_mod._user_data_dir
+        _plants_mod._user_data_dir = lambda: pathlib.Path(cls._tmp)
+        from src.db.plants import init_db
+        init_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        _plants_mod._user_data_dir = cls._orig_dir
+
+    def _panel(self):
+        from src.polyculture_panel import PolyculturePanel
+        panel = PolyculturePanel()
+        self.addCleanup(panel.deleteLater)
+        tree = panel.polyculture_tree
+        self._items = [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())
+                       if tree.topLevelItem(i).data(0, 256) is not None]
+        if len(self._items) < 3:
+            self.skipTest("fewer than three seeded communities")
+        return panel
+
+    def test_spacing_is_set_before_the_community_is_armed(self):
+        """It armed first, so Row/Grid/Circle/Fill used the previous
+        community's spacing."""
+        from src.db import polycultures
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel.placement_widget.set_kind("row")
+        item = self._items[1]
+        panel.polyculture_tree.setCurrentItem(item)
+        pc = polycultures.get_polyculture_by_id(item.data(0, 256))
+        expected = round(max(0.5, polycultures.community_natural_radius(pc) * 2.0), 1)
+        self.assertAlmostEqual(placed[-1]["pattern"]["spacing_m"], expected)
+
+    def test_the_spacing_re_arms(self):
+        panel = self._panel()
+        panel.placement_widget.set_kind("row")
+        panel.polyculture_tree.setCurrentItem(self._items[0])
+        self.assertTrue(panel._armed)
+        panel.pattern_spacing.setValue(panel.pattern_spacing.value() + 1.0)
+        self.assertTrue(panel._rearm_timer.isActive(),
+                        "the map keeps the old spacing")
+
+    def test_double_click_uses_the_pattern_the_bar_shows(self):
+        panel = self._panel()
+        placed = []
+        panel.placePolycultureRequested.connect(placed.append)
+        panel.placement_widget.set_kind("grid")
+        panel.polyculture_tree.setCurrentItem(self._items[0])
+        panel._on_double_click_place(self._items[0], 0)
+        self.assertEqual(placed[-1]["pattern"]["kind"], "grid",
+                         "double-click placed Single whatever the bar said")
+
+    def test_place_mix_arms_the_mix_and_single_sets_it_aside(self):
+        panel = self._panel()
+        said = []
+        panel.armedChanged.connect(said.append)
+        panel.polyculture_tree.setCurrentItem(self._items[0])
+        for item in self._items[1:3]:
+            panel._add_to_community_mix(int(item.data(0, 256)))
+        panel.placement_widget.set_kind("single")
+
+        panel._on_place_community_mix()
+        self.assertEqual(panel.placement_widget.kind, "row")
+        self.assertEqual(said[-1]["mix"], 2)
+
+        panel.placement_widget.set_kind("single")      # the user picks Single
+        self.assertEqual(panel.placement_widget.kind, "single",
+                         "the mix flipped the bar straight back to Row")
+        self.assertEqual(said[-1]["mix"], 0)
+        self.assertTrue(said[-1]["armed"])
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

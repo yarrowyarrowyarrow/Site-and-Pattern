@@ -35,6 +35,7 @@
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
     var bridge        = null; // Python QObject exposed via QWebChannel
     var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
+    var _pyModeSeq    = 0;      // stamp of Python's last mode change, echoed by setMode (V2.98)
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
 
     // Structure state

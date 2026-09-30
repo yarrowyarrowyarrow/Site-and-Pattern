@@ -71,6 +71,12 @@ def cancel_draw() -> str:
     return "cancelDraw();"
 
 
+def stamp_mode(seq: int) -> str:
+    """Prefix for a mode change: the stamp the map echoes back with its mode
+    report, so Python can ignore a report that crossed a newer change (V2.98)."""
+    return f"_pyModeSeq = {int(seq)}; "
+
+
 # ── Layer visibility toggles ────────────────────────────────────────────────
 
 def set_satellite_visible(visible: bool) -> str:

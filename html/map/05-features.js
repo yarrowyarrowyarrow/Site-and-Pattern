@@ -772,6 +772,7 @@
     // src/app.py:_on_polyculture_click. (The old SVG-batch path lived here.)
     // ── Mode control (called from Python) ────────────────────────────────────
     function setMode(mode, data) {
+      var wasMode  = currentMode;
       currentMode  = mode;
       currentPlant = null;
       currentStructure = null;
@@ -835,7 +836,8 @@
           // finishFillArea() → onFillAreaComplete (scatters plants, makes no shape).
           currentShape = {stroke_color: '#66bb6a', fill_color: '#66bb6a',
                           fill_opacity: 0.12, _fillMode: true};
-          shapePoints = [];
+          // Re-arming a fill mid-drawing swaps the plants, not the corners.
+          if (wasMode !== 'fill') shapePoints = [];
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'contour':
@@ -883,6 +885,9 @@
       var _container = map.getContainer();
       if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
       else _container.classList.remove('placing');
+      // Report every mode (V2.98): Esc and a finished fill end placing here,
+      // and Python must follow. See src/placement_bar_flow.py.
+      if (bridge && bridge.onModeChanged) bridge.onModeChanged(mode, _pyModeSeq);
     }
 
     // ── Satellite imagery alignment nudge ──────────────────────────────────

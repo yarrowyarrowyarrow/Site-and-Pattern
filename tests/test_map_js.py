@@ -94,7 +94,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
             cls.html += "\n" + js.read_text(encoding="utf-8")
 
     JS_NAMES = [
-        "setMode",
+        "setMode", "_pyModeSeq",
         "cancelDraw", "clearMeasure", "clearAll", "clearSelection",
         "deleteSelected", "toggleLegend",
         "setSatelliteVisible", "setBoundaryVisible", "setMeasureVisible",

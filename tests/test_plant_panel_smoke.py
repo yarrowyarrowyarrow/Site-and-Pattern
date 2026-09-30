@@ -276,18 +276,24 @@ class TestPlantPanelSmoke(unittest.TestCase):
         md = m.mimeData([idx])
         self.assertTrue(md.hasFormat(_PLANT_MIME))
 
-    def test_drop_adds_to_mix_and_expands(self):
+    def test_drop_adds_to_mix_and_shows_it(self):
+        """The mix strip is always in the column since V2.98 (it was inside a
+        collapsible Placement pane the drop had to expand)."""
         from src.plant_list_view import _PLANT_OBJ_ROLE
         p = self._panel
         p._mix_species = []
-        p._placement_panel.set_expanded(False)
+        p._refresh_mix_list()
+        self.assertTrue(p._mix_actions.isHidden(),
+                        "an empty mix shows disabled buttons")
         m = p._results_model
         if m.rowCount() == 0:
             self.skipTest("no plants seeded")
         pid = m.data(m.index(0), _PLANT_OBJ_ROLE)["id"]
         p._add_to_mix_by_id(pid)             # what the drop handler calls
         self.assertEqual(len(p._mix_species), 1)
-        self.assertTrue(p._placement_panel.expanded())
+        self.assertFalse(p._mix_box.isHidden())
+        self.assertFalse(p._mix_rows_scroll.isHidden())
+        self.assertFalse(p._mix_actions.isHidden())
 
     def test_multiselect_filter_matches_query(self):
         from src.db.plants import search_plants
