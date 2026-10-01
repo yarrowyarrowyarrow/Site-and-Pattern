@@ -277,7 +277,13 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > verb when the observations file could name the life stage on 44 of them (F131). Both fixes are
 > bounded the same way: a taxon has to be right at the far end, an unrecorded stage stays
 > unrecorded, and **additive only** — absence of an edge is absence of evidence, never evidence of
-> absence. **State: strong** (language, provenance, and now in both directions).
+> absence. **V3.01 met the V2.48 lesson again, in the soil.** Since V1.67 a pin's soil pH, an
+> estimate for the area, had been compared with each plant's pH range, a reference value nothing
+> marks as such, and the plants that missed were hidden from Browse with nothing on screen:
+> 105 of 424 at pH 8.0, ordinary on calcareous prairie. It is now a filter like any other, a chip
+> that says "Your soil: pH 8.0", a tooltip that says what it rests on and how many it is hiding,
+> and a × (`src/plant_picker.py`, `src/filter_status.py`). The ranges' provenance is F201.
+> **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects
 

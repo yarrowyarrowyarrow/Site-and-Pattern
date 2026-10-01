@@ -291,13 +291,15 @@ class PlantPanel(QWidget):
 
     def set_soil_ph(self, ph):
         """Set the site's soil pH (from site data) so the browser only shows
-        plants tolerant of it. ``None`` clears the constraint (V1.67)."""
+        plants tolerant of it. ``None`` clears the constraint (V1.67). Since
+        V3.01 the picker shows it as a chip and a toggle, and the reader can
+        take it off."""
         new = float(ph) if isinstance(ph, (int, float)) else None
         if new == self._soil_ph:
             return
         self._soil_ph = new
         self._check_site()
-        self.picker.set_extra(soil_ph=new)
+        self.picker.set_soil_ph(new)
 
     def set_site_source(self, source):
         """``source()`` → ``(lat, lng)`` or ``None``: where the design is, for

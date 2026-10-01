@@ -25,6 +25,14 @@ and what every picker needs from them: criteria to ``search_plants`` keyword
 arguments (:func:`criteria_to_kwargs`), the order (:func:`order_plants`) and a
 short account of what is switched on (:func:`summary`).
 
+**A filter says what it is and how it combines (F194, V3.01).** A dropdown's
+face is :func:`face` ("Type: Tree or Shrub"), the same words as its chip, so the
+two cannot disagree; its list opens on :func:`rule`, because Role keeps plants
+with *every* role ticked and the rest keep plants with *any*, which until V3.01
+only a hover tooltip said. An empty result is answered from :func:`filters_on`
+and :func:`without`: which restriction emptied the list, and what removing it
+would bring back.
+
 **"Recorded near this site" ranks; it never filters.** It reads
 :func:`src.site_fit.locality` the way the design generator does: species
 recorded near the pin first, then the next ring out, then everything else level,
@@ -226,37 +234,140 @@ def active(criteria: Optional[dict]) -> bool:
             or any(criteria.get(q.key) for q in QUALITIES))
 
 
-def summary(criteria: Optional[dict], *, most: int = 2) -> list:
+def summary(criteria: Optional[dict]) -> list:
     """What is switched on, one short phrase each, in the order the filters are
-    drawn: ``["Restoring toward Aspen Parkland", "Type: Shrub or Tree",
-    "Native"]``. The combine rule is in the words ("or" for any, "and" for
-    all), which is the one thing a dropdown's face never says."""
+    drawn: ``["Type: Tree or Shrub", "Restoring toward Aspen Parkland",
+    "Native"]``. The chips' words; :func:`filters_on` pairs them with keys."""
+    return [label for key, label in filters_on(criteria) if key != "query"]
+
+
+def phrase(f: Facet, keys) -> str:
+    """The values ticked on one facet, joined by its rule: "Tree or Shrub",
+    "Bird Food and Larval Host", "June, July or 1 more". Past two it names two
+    and counts the rest, so the rule is still in the words; "3 selected", what
+    the box said until V3.01, kept the count and lost the rule."""
+    names = _value_names(f, _as_list(keys))
+    if not names:
+        return ""
+    joiner = " and " if f.combine == "all" else " or "
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return names[0] + joiner + names[1]
+    return f"{names[0]}, {names[1]}{joiner}{len(names) - 2} more"
+
+
+def face(f: Facet, keys) -> str:
+    """What a facet's dropdown reads once something is ticked, and what its chip
+    says: the dimension, then the values ("Type: Tree or Shrub"). Until V3.01 a
+    box read "Shrub", and with the placeholder gone so was the word "Type".
+    Empty when nothing is ticked, so the box shows its placeholder."""
+    text = phrase(f, keys)
+    if not text:
+        return ""
+    # "Restoring toward" reads on into its value; a colon would break it.
+    return f"{f.label} {text}" if f.key == "ecoregion" else f"{f.label}: {text}"
+
+
+def rule(f: Facet) -> str:
+    """The line each dropdown's list opens on. The boxes look like ordinary
+    single-choice dropdowns, and Role combines the other way from the rest."""
+    need = "every one" if f.combine == "all" else "one"
+    return f"Tick as many as you like. A plant needs {need}."
+
+
+def filters_on(criteria: Optional[dict]) -> list:
+    """Every restriction that is on, as ``(key, words)`` in the order the
+    filters are drawn: each facet by its :func:`face`, each quality by its label,
+    and the search text last, as ``("query", text)``. What a picker removes one
+    at a time, and what an empty result is explained from."""
     criteria = criteria or {}
     out = []
     for f in FACETS:
-        chosen = criteria.get(f.key) or []
-        if isinstance(chosen, str):
-            chosen = [chosen]
-        names = _value_names(f, list(chosen))
-        if not names:
-            continue
-        shown = names[:most]
-        joiner = " and " if f.combine == "all" else " or "
-        text = (", ".join(shown[:-1]) + joiner + shown[-1]
-                if len(shown) > 1 else shown[0])
-        if len(names) > most:
-            text = ", ".join(shown) + f" +{len(names) - most}"
-        out.append(f"{f.label} {text}" if f.key == "ecoregion"
-                   else f"{f.label}: {text}")
-    out += [q.label for q in QUALITIES if criteria.get(q.key)]
+        words = face(f, criteria.get(f.key))
+        if words:
+            out.append((f.key, words))
+    out += [(q.key, q.label) for q in QUALITIES if criteria.get(q.key)]
+    query = (criteria.get("query") or "").strip()
+    if query:
+        out.append(("query", query))
     return out
+
+
+def without(criteria: Optional[dict], key: str) -> dict:
+    """``criteria`` with one restriction taken off, the rest untouched."""
+    out = dict(criteria or {})
+    if key == "query":
+        out["query"] = ""
+    elif facet(key) is not None:
+        out[key] = []
+    else:
+        out[key] = False
+    return out
+
+
+def what_emptied(criteria: Optional[dict], count: Callable, *,
+                 soil: Optional[str] = None) -> tuple:
+    """Why a result came back empty. ``count(criteria, soil_on) -> int`` runs
+    the search; ``soil`` is the soil filter's words while it is on.
+
+    Returns ``(on, options)``: every restriction that is on as ``(key, words)``,
+    and those whose removal alone would bring plants back as ``(n, key,
+    words)``, most first, in drawn order on a tie. Restrictions whose removal
+    still leaves nothing are not offered: they are not what emptied the list.
+    """
+    on = filters_on(criteria)
+    if soil:
+        on.append(("soil", soil))
+    options = []
+    for key, words in on:
+        try:
+            n = (count(criteria, False) if key == "soil"
+                 else count(without(criteria, key), bool(soil)))
+        except Exception:                                       # noqa: BLE001
+            continue
+        if n:
+            options.append((n, key, words))
+    options.sort(key=lambda o: -o[0])
+    return on, options
+
+
+def _as_list(keys) -> list:
+    if not keys:
+        return []
+    return [keys] if isinstance(keys, str) else list(keys)
+
+
+# ── The site's soil pH ───────────────────────────────────────────────────────
+# Set by the app when a pin's soil arrives (V1.67), not by the reader, so its
+# words say whose it is. The tolerance is search_plants' own.
+
+def soil_label(ph: float) -> str:
+    return f"Your soil: pH {float(ph):.1f}"
+
+
+def soil_tip(ph: float, hidden: Optional[int] = None) -> str:
+    from src.db.plants import _SOIL_PH_TOLERANCE                 # noqa: PLC0415
+    tip = (f"Only plants whose recorded pH range reaches your site's soil pH, "
+           f"{float(ph):.1f}, give or take {_SOIL_PH_TOLERANCE:g}. The pH is "
+           "an estimate for the area, not a measurement in your yard, and the "
+           "plants' ranges are reference values.")
+    if hidden:
+        tip += (f" It is hiding {hidden} plant{'s' if hidden != 1 else ''} "
+                "from this list.")
+    return tip
 
 
 def _value_names(f: Facet, keys: list) -> list:
     if f.key == "ecoregion":
         return [_ecoregion_name(k) for k in _outermost(keys)]
     labels = f.values or {}
-    return [labels.get(str(k), str(k)) for k in keys]
+    # In the facet's own order, not the order they were ticked or set in: the
+    # dropdown reads its rows top to bottom, and a chip naming the same values
+    # in another order looked like another filter.
+    order = {k: i for i, k in enumerate(labels)}
+    keys = sorted((str(k) for k in keys), key=lambda k: order.get(k, len(order)))
+    return [labels.get(k, k) for k in keys]
 
 
 def _outermost(keys: list) -> list:

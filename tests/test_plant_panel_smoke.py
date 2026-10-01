@@ -216,14 +216,18 @@ class TestPlantPanelSmoke(unittest.TestCase):
                           for zone, _n in ecozones()
                           for region, _rn in regions_in(zone))
                     + len(MOISTURE_NICHES))
+        # +1: the line the list opens on, saying how ticked regions combine
+        # (V3.01); it is read, never ticked.
         self.assertEqual(self._panel.picker.combos["ecoregion"].model().rowCount(),
-                         expected)
+                         expected + 1)
 
     def _set_checked(self, combo, keys):
         """Check exactly ``keys`` in ``combo`` (clearing others) — order-safe."""
         from PyQt6.QtCore import Qt
         for i in range(combo.model().rowCount()):
             it = combo.model().item(i)
+            if not it.isCheckable():
+                continue                    # the line saying how they combine
             want = it.data(Qt.ItemDataRole.UserRole) in keys
             it.setCheckState(Qt.CheckState.Checked if want
                              else Qt.CheckState.Unchecked)
@@ -231,9 +235,11 @@ class TestPlantPanelSmoke(unittest.TestCase):
     def test_type_combo_has_colour_icons(self):
         # The Type dropdown items carry the plant-type colour swatch (legend).
         tc = self._panel.picker.combos["type"]
-        self.assertTrue(tc.model().rowCount() > 0)
-        for i in range(tc.model().rowCount()):
-            self.assertFalse(tc.model().item(i).icon().isNull())
+        rows = [tc.model().item(i) for i in range(tc.model().rowCount())]
+        values = [it for it in rows if it.isCheckable()]
+        self.assertEqual(len(values), len(rows) - 1, "one rule line, no more")
+        for it in values:
+            self.assertFalse(it.icon().isNull())
 
     def test_browser_pane_not_collapsible(self):
         # V1.86: the Plant Browser pane is no longer wrapped in a CollapsiblePanel.
@@ -305,7 +311,10 @@ class TestPlantPanelSmoke(unittest.TestCase):
         p._run_search()
         expected = len(search_plants(plant_type=["tree", "shrub"],
                                      perm_use=["pollinator", "host_plant"]))
-        self.assertEqual(p.picker.count_label.text(), f"{expected} plants")
+        # With filters on, the count says how much of the catalogue they left
+        # (V3.01).
+        self.assertEqual(p.picker.count_label.text(),
+                         f"{expected} of {len(search_plants())} plants")
         # AND semantics on uses → strictly fewer than pollinator alone
         self.assertLess(expected, len(search_plants(perm_use="pollinator")))
 
@@ -362,7 +371,9 @@ class TestPlantPanelSmoke(unittest.TestCase):
         directory and the website come to disagree about what colour a plant
         is."""
         from src.flower_colour import COLOUR_LABELS
-        self.assertEqual(self._panel.picker.combos["colour"].count(), len(COLOUR_LABELS))
+        # +1: the line saying how ticked colours combine (V3.01).
+        self.assertEqual(self._panel.picker.combos["colour"].count(),
+                         len(COLOUR_LABELS) + 1)
 
 
 if __name__ == "__main__":
@@ -394,6 +405,10 @@ class TestTheEcoregionFilterIsATree(unittest.TestCase):
                                         build_ecoregion_tree)
         combo = CheckableComboBox(placeholder="Restoring toward…")
         build_ecoregion_tree(combo)
+        # Held until the test ends. Nothing else holds a combo with no parent,
+        # and an item taken from one passed inline was freed with it; until
+        # V3.01 a lambda slot's reference cycle had kept it alive by accident.
+        self.addCleanup(combo.deleteLater)
         return combo
 
     def _visible(self, combo):

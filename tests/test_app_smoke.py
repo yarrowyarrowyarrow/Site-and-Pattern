@@ -282,6 +282,80 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(panel._site_source,
                          self._win.site_panel.current_coords)
 
+    def test_a_sites_soil_ph_shows_as_a_filter_you_can_remove(self):
+        """V1.67 made a fetched soil's pH filter Browse and nothing said so;
+        at pH 8.0 it hides a quarter of the catalogue (V3.01)."""
+        from src import soil_flow
+        picker = self._win.plant_panel.picker
+        every = len(picker.rows())
+        sc = (self._win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self.addCleanup(lambda: self._win.plant_panel.set_soil_ph(None))
+        soil_flow.apply_soil_site_fields(
+            self._win, {"summary": {"ph_top": 8.0}})
+        self.assertIn("Your soil: pH 8.0", picker.chip_texts())
+        self.assertLess(len(picker.rows()), every)
+        picker.remove("soil")
+        self.assertNotIn("Your soil: pH 8.0", picker.chip_texts())
+        self.assertEqual(len(picker.rows()), every)
+        picker.set_soil_on(True)
+
+    def _leave_the_window_as_found(self):
+        """The window is shared by the class. A test that changes the design
+        puts back its title (test_constructed reads it), its path, its undo
+        stack and its changed-flag: closing a changed window asks first, a
+        modal nobody answers in a test."""
+        self.addCleanup(self._win.setWindowTitle, self._win.windowTitle())
+        self.addCleanup(setattr, self._win, "_project_path", None)
+        self.addCleanup(setattr, self._win, "_modified", False)
+        self.addCleanup(self._win._clear_undo)
+
+    def test_a_pin_taken_away_takes_its_soil_filter(self):
+        """Removing the pin dropped its soil data but went on filtering Browse
+        by its pH, and kept `soil_ph` in the saved design (V3.01)."""
+        from src import soil_flow
+        picker = self._win.plant_panel.picker
+        sc = (self._win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self._leave_the_window_as_found()
+        soil_flow.apply_soil_site_fields(
+            self._win, {"summary": {"ph_top": 8.0}})
+        self.assertEqual(picker.soil_ph(), 8.0)
+        self._win._map_events._on_site_pin_removed()
+        self.assertIsNone(picker.soil_ph())
+        self.assertNotIn("soil_ph", sc)
+        self.assertFalse(any("Your soil" in c for c in picker.chip_texts()))
+
+    def test_a_design_with_no_pin_has_no_soil_filter(self):
+        """A new design, or one opened without a pin, kept the last design's
+        soil pH until V3.01, under a chip that now says "Your soil"."""
+        from unittest import mock
+        from src import project as project_io, soil_flow
+        picker = self._win.plant_panel.picker
+        self._leave_the_window_as_found()
+        for opened in ("new", "loaded"):
+            soil_flow.apply_soil_site_fields(
+                self._win, {"summary": {"ph_top": 8.0}})
+            self.assertEqual(picker.soil_ph(), 8.0, opened)
+            self._win._modified = False
+            if opened == "new":
+                with mock.patch("src.app.QInputDialog.getText",
+                                return_value=("Soil test", True)):
+                    self._win._on_new()
+            else:
+                path = os.path.join(tempfile.mkdtemp(), "no-pin.perma.geojson")
+                project_io.save_project(project_io.new_project("No pin"), path)
+                # Loading remembers the design in the user's settings.
+                with mock.patch("src.saves.remember_last_design"):
+                    self._win._load_from_path(path)
+            self.assertIsNone(picker.soil_ph(), opened)
+            self.assertFalse(any("Your soil" in c
+                                 for c in picker.chip_texts()), opened)
+
     def test_esc_with_focus_on_the_place_button_stops_placing(self):
         """Pressing Place leaves keyboard focus in the panel, not the map; Esc
         must still stand everything down (MainWindow.keyPressEvent)."""

@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2402 now
+        (_SRC / "app.py", 2600),                       # 2492 now (V3.01)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -93,13 +93,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # out instead: the search, the filters and the list's wiring are
         # src/plant_picker.py, shared with the Directory and the builder, and
         # this file went 1599 -> 1435. The mix is still the next extraction.
-        (_SRC / "plant_panel.py", 1600),               # 1435 now
+        (_SRC / "plant_panel.py", 1600),               # 1437 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
         # in flow modules; the terrain-queue block is the natural extraction
         # when this trips again.
-        (_SRC / "controllers" / "map_events.py", 2100),# ~1903 now
+        (_SRC / "controllers" / "map_events.py", 2100),# 1905 now (V3.01)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
         (_SRC / "polyculture_panel.py", 2900),         # 2395 now (V3.00)
@@ -119,8 +119,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # The page is the Directory's, moved out of its window so the Browse
         # tab can show it too; the vocabulary is Qt-free so a test can check
         # every parameter against search_plants without a display.
-        (_SRC / "plant_filters.py", 450),              # 373 now
-        (_SRC / "plant_picker.py", 560),               # 480 now
+        # V3.01 (F194): the vocabulary gained the words a filter is read by
+        # (its face, its rule, what is on, the soil pH's) and what emptied a
+        # result, raised 450 -> 520 as one cohesive Qt-free table; the picker
+        # passed its own ceiling and the chips and the empty state went to
+        # src/filter_status.py instead, and its copy of src/flow_layout.py's
+        # FlowLayout was deleted.
+        (_SRC / "plant_filters.py", 520),              # 489 now
+        (_SRC / "plant_picker.py", 560),               # 554 now: the order
+        # block (set_site to _reorder, about 60 lines) is the next to go.
+        (_SRC / "filter_status.py", 300),              # 241 now
         (_SRC / "species_page.py", 720),               # 639 now
         (_SRC / "species_flyout.py", 200),             # 136 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
@@ -226,7 +234,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # through this module, so a second one that wants a hierarchy gets it
         # for free rather than growing a private copy.
         (_SRC / "ecoregion_tree.py", 340),             # 282 now
-        (_SRC / "filter_widgets.py", 560),             # 434 now
+        (_SRC / "filter_widgets.py", 560),             # 519 now (V3.01)
         # V2.68: 460 -> 560. `_subregion_pages` builds the third level of the
         # drill-down. It is MODEL code and stays with the model: moving it into
         # the renderer would put "what is a subregion page" in the view layer,

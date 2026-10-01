@@ -90,13 +90,19 @@ class TestTheSummary(unittest.TestCase):
     def test_any_reads_or_and_all_reads_and(self):
         bits = pf.summary({"type": ["shrub", "tree"],
                            "use": ["pollinator", "bird_food"]})
-        self.assertIn("Type: Shrub or Tree", bits)
+        # In the dropdown's order, whatever order they were ticked in.
+        self.assertIn("Type: Tree or Shrub", bits)
         self.assertIn("Role: Pollinator Support and Bird Food", bits)
 
-    def test_many_values_are_counted_not_listed(self):
+    def test_many_values_name_two_and_count_the_rest_by_the_rule(self):
+        """Until V3.01 a box read "3 selected": a count, with the rule gone."""
         bits = pf.summary({"colour": ["white", "yellow", "purple"]})
         self.assertEqual(len(bits), 1)
-        self.assertTrue(bits[0].endswith("+1"), bits)
+        self.assertTrue(bits[0].endswith(" or 1 more"), bits)
+        role = pf.facet("use")
+        self.assertTrue(pf.phrase(role, ["bird_food", "host_plant",
+                                         "pollinator", "aquatic"])
+                        .endswith(" and 2 more"))
 
     def test_a_region_is_named_once_by_its_outermost_tick(self):
         """Ticking an ecozone ticks everything inside it; the line names the
@@ -110,6 +116,136 @@ class TestTheSummary(unittest.TestCase):
     def test_qualities_are_named(self):
         self.assertEqual(pf.summary({"native_only": True, "pet_safe_only": True}),
                          ["Native", "Pet safe"])
+
+
+class TestTheFace(unittest.TestCase):
+    """What a dropdown reads once something is ticked (F194, V3.01). Until then
+    it read "Shrub", and with the placeholder gone so was the word "Type"."""
+
+    def test_the_dimension_comes_first(self):
+        self.assertEqual(pf.face(pf.facet("type"), ["shrub"]), "Type: Shrub")
+        self.assertEqual(pf.face(pf.facet("bloom_months"), ["6", "7"]),
+                         "Blooms in: June or July")
+
+    def test_restoring_toward_reads_on_into_its_value(self):
+        self.assertEqual(pf.face(pf.facet("ecoregion"), ["aspen_parkland"]),
+                         "Restoring toward Aspen Parkland")
+
+    def test_nothing_ticked_is_no_face_so_the_placeholder_shows(self):
+        for f in pf.FACETS:
+            self.assertEqual(pf.face(f, []), "", f.key)
+            self.assertEqual(pf.face(f, None), "", f.key)
+
+    def test_values_are_named_in_the_facets_order_however_they_arrived(self):
+        """The dropdown reads top to bottom; a chip naming the same values in
+        another order looked like another filter."""
+        role = pf.facet("use")
+        self.assertEqual(pf.face(role, ["bird_food", "host_plant"]),
+                         pf.face(role, ["host_plant", "bird_food"]))
+
+    def test_the_face_and_the_chip_are_the_same_words(self):
+        criteria = {"type": ["tree", "shrub"], "use": ["bird_food"]}
+        self.assertEqual(pf.summary(criteria),
+                         [pf.face(pf.facet("type"), criteria["type"]),
+                          pf.face(pf.facet("use"), criteria["use"])])
+
+
+class TestTheRule(unittest.TestCase):
+
+    def test_role_says_every_one_and_the_rest_say_one(self):
+        """Role keeps plants with every role ticked; every other facet keeps
+        plants with any value ticked. Only a tooltip said so before V3.01."""
+        for f in pf.FACETS:
+            rule = pf.rule(f)
+            self.assertTrue(rule.startswith("Tick as many as you like."), f.key)
+            if f.combine == "all":
+                self.assertTrue(rule.endswith("needs every one."), f.key)
+            else:
+                self.assertTrue(rule.endswith("needs one."), f.key)
+        self.assertEqual(pf.facet("use").combine, "all")
+
+
+class TestWhatIsOn(unittest.TestCase):
+
+    CRITERIA = {"type": ["fern"], "bloom_months": ["1"], "native_only": True,
+                "edible_only": False, "query": " aster "}
+
+    def test_each_restriction_in_the_order_it_is_drawn_search_last(self):
+        self.assertEqual(pf.filters_on(self.CRITERIA), [
+            ("type", "Type: Fern"), ("bloom_months", "Blooms in: January"),
+            ("native_only", "Native"), ("query", "aster")])
+
+    def test_without_takes_off_one_and_leaves_the_rest(self):
+        for key, _words in pf.filters_on(self.CRITERIA):
+            rest = pf.without(self.CRITERIA, key)
+            self.assertNotIn(key, dict(pf.filters_on(rest)), key)
+            self.assertEqual(len(pf.filters_on(rest)),
+                             len(pf.filters_on(self.CRITERIA)) - 1, key)
+        self.assertEqual(self.CRITERIA["type"], ["fern"], "the original moved")
+
+    def test_without_a_facet_matches_like_nothing_was_ticked(self):
+        rest = pf.without(self.CRITERIA, "type")
+        self.assertNotIn("plant_type", pf.criteria_to_kwargs(rest))
+
+    def test_nothing_on_is_an_empty_list(self):
+        self.assertEqual(pf.filters_on({}), [])
+        self.assertEqual(pf.filters_on({"query": "  "}), [])
+
+
+class TestWhatEmptied(unittest.TestCase):
+    """Which restriction emptied a result, answered without a display."""
+
+    def _count(self, rule):
+        calls = []
+
+        def count(criteria, soil_on):
+            calls.append((dict(criteria), soil_on))
+            return rule(criteria, soil_on)
+        return count, calls
+
+    def test_only_removals_that_bring_plants_back_are_offered_most_first(self):
+        criteria = {"type": ["fern"], "bloom_months": ["1"], "query": "x"}
+
+        def rule(c, _soil):
+            # Ferns never bloom; the search alone matches 3; ferns alone 1.
+            if c.get("type") and c.get("bloom_months"):
+                return 0
+            return 3 if not c.get("type") else 1
+        count, _calls = self._count(rule)
+        on, options = pf.what_emptied(criteria, count)
+        self.assertEqual([k for k, _w in on], ["type", "bloom_months", "query"])
+        self.assertEqual(options, [(3, "type", "Type: Fern"),
+                                   (1, "bloom_months", "Blooms in: January")])
+
+    def test_the_soil_is_removed_by_searching_without_it(self):
+        count, calls = self._count(lambda c, soil: 0 if soil else 5)
+        on, options = pf.what_emptied({"native_only": True}, count,
+                                      soil="Your soil: pH 8.0")
+        self.assertEqual(on[-1], ("soil", "Your soil: pH 8.0"))
+        self.assertEqual(options, [(5, "soil", "Your soil: pH 8.0")])
+        # Every other removal still searched with the soil on.
+        others = [soil for c, soil in calls if c.get("native_only") is False]
+        self.assertEqual(others, [True])
+
+    def test_a_search_that_fails_is_not_offered(self):
+        def count(_c, _s):
+            raise RuntimeError("no database")
+        self.assertEqual(pf.what_emptied({"edible_only": True}, count)[1], [])
+
+
+class TestTheSoilWords(unittest.TestCase):
+
+    def test_the_label_says_whose_it_is(self):
+        self.assertEqual(pf.soil_label(7.84), "Your soil: pH 7.8")
+
+    def test_the_tip_says_what_the_comparison_rests_on(self):
+        from src.db.plants import _SOIL_PH_TOLERANCE
+        tip = pf.soil_tip(8.0, 105)
+        self.assertIn("estimate for the area", tip)
+        self.assertIn(f"{_SOIL_PH_TOLERANCE:g}", tip)
+        self.assertIn("hiding 105 plants", tip)
+        self.assertNotIn("hiding", pf.soil_tip(8.0, 0))
+        self.assertIn("hiding 1 plant ", pf.soil_tip(8.0, 1))
 
 
 def _row(name, *, sci="", ptype="wildflower", water="medium", zmin=None,

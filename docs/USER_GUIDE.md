@@ -28,16 +28,30 @@ You can edit a boundary later by clicking it: drag white vertices to reshape, dr
 Open the **Plants** tab (**Browse**).
 
 - Type in **Search plants by name or role…**.
-- The line under the search box says which filters are on, for example *Restoring toward
-  Aspen Parkland* once you have dropped a pin on your site. **Filters ▸** unfolds them and
-  **Clear** unticks them all.
-  - Nine dropdowns, each of which takes more than one value: **Type**, **Sun**, **Water**,
-    **Role** (a plant must have every role you tick), **Where to buy**, **Restoring
-    toward** (ecoregions; ticking a system includes everything inside it), **Blooms in**,
-    **Fruits in** and **Flower colour**.
+- The line under the search box shows each filter that is on as a chip, for example
+  **Restoring toward Aspen Parkland ×** once you have dropped a pin on your site. Click a
+  chip's **×** to remove that filter alone; **Clear all** removes every one. **Filters ▸**
+  unfolds them all. The count says how much they leave: *339 of 424 plants*.
+  - Nine dropdowns, each of which takes more than one value. Each list opens on a line
+    saying how the values you tick combine, and once you tick some the box names its
+    filter and joins them the same way: *Type: Tree or Shrub*. **Type**, **Sun**,
+    **Water**, **Where to buy**, **Restoring toward** (ecoregions; ticking a system
+    includes everything inside it), **Blooms in**, **Fruits in** and **Flower colour**
+    keep a plant that has *any* of the values you tick. **Role** is the other way round:
+    a plant must have *every* role you tick (*Role: Bird Food and Larval Host*).
+    ↓ or Space opens a dropdown from the keyboard, and the mouse wheel scrolls the panel
+    rather than changing a filter.
   - Nine on/off filters: **Native** (to Alberta, as the VASCAN flora records it),
     **Perennial**, **Feeds a specialist**, **Edible**, **Pet safe**, **Child safe**, **Well
     behaved**, **Easy to find** and **Has a photo**.
+  - **Your soil: pH 7.8.** Once your site's soil has been fetched, the list keeps only plants
+    whose recorded pH range reaches it, give or take 0.5. The pH is an estimate for the area,
+    not a measurement in your yard, and at a limy pH 8 it hides about a quarter of the
+    catalogue, so it is shown as a chip like any other filter: hover it to see how many plants
+    it is hiding, click its **×** to see them. It stays off until you tick it again among the
+    filters. It goes with the pin: a new design, or one with no pin, has no soil filter.
+- **When nothing matches**, the list says what emptied it and offers to remove it, with the
+  number of plants that would come back: *Remove "Type: Sedge" (16 plants)*.
 - **Order.** With a pin on your site the list starts with plants **recorded near this
   site**, then those hardy in your zone, with plants that need standing water last.
   Nothing is hidden, and a record nearby says nothing about your yard's sun or soil. You

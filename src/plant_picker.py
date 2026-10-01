@@ -21,22 +21,31 @@ pin ticks "Restoring toward") stops being silent.
 
 The order offers "Recorded near this site" only where there is a site, and it
 ranks, never filters (``plant_filters.order_plants``).
+
+**What is on is a row of chips (F194, V3.01)**, one per filter, each removing
+its own: "Type: Tree or Shrub ×". A dropdown reads its dimension once chosen
+and opens on a line saying how its values combine. An empty result names the
+restriction that emptied it, with what removing it would bring back. And the
+site's soil pH, a filter the app has set since V1.67 that nothing showed, is a
+chip and a toggle like any other.
 """
 
 from __future__ import annotations
 
 from typing import Callable, Optional
 
-from PyQt6.QtCore import QPoint, QRect, QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QGridLayout, QHBoxLayout, QLabel, QLayout, QLineEdit,
-    QListView, QPushButton, QToolButton, QVBoxLayout, QWidget,
+    QComboBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListView,
+    QPushButton, QVBoxLayout, QWidget,
 )
 
 from src import plant_filters as pf
+from src.filter_status import DIM as _DIM, FilterLine, WhyEmpty, wrapped
 from src.filter_widgets import (
     COMBO_STYLE, CheckableComboBox, build_ecoregion_tree,
 )
+from src.flow_layout import FlowLayout
 from src.plant_list_view import (
     _PLANT_OBJ_ROLE, _RESULTS_LIST_STYLE, PlantListModel, PlantRowDelegate,
     _colour_icon, _type_icon,
@@ -51,17 +60,10 @@ _CHIP_STYLE = (
     "QPushButton:hover { border-color: #4a7a4a; }"
     "QPushButton:focus { border: 2px solid #ffe082; }"
 )
-_DIM = "color: #a8b8b0; font-size: 12px;"
 _SEARCH = ("QLineEdit { background: #16241a; border: 1px solid #2e4a2e; "
            "border-radius: 4px; padding: 5px 8px; color: #c8e6c9; "
            "font-size: 13px; }"
            "QLineEdit:focus { border: 2px solid #ffe082; }")
-_SMALL_BTN = ("QToolButton, QPushButton { background: transparent; "
-              "color: #c8e6c9; border: 1px solid #2e4a2e; border-radius: 3px; "
-              "padding: 2px 8px; font-size: 12px; min-height: 20px; }"
-              "QToolButton:checked { border-color: #66bb6a; }"
-              "QToolButton:hover, QPushButton:hover { border-color: #4a7a4a; }"
-              "QToolButton:focus, QPushButton:focus { border: 2px solid #ffe082; }")
 
 
 class PlantPicker(QWidget):
@@ -85,8 +87,13 @@ class PlantPicker(QWidget):
         self._wide = wide
         self._search_fn = search_fn
         self._criteria: dict = dict(criteria or {})
-        self._extra: dict = {}
         self._rows: list = []
+        # The site's soil pH (V1.67), set by the app; on until the reader
+        # takes it off, and then off for the session (V3.01).
+        self._soil_ph: Optional[float] = None
+        self._soil_off = False
+        self._soil_hidden = 0
+        self._catalogue: Optional[int] = None
         # "suits" needs a site; set_site makes it the order once there is one.
         self._order = order if order != "suits" else "name"
         self._user_ordered = False
@@ -130,13 +137,21 @@ class PlantPicker(QWidget):
         order_label.setBuddy(self.order_combo)
         for key, label, tip in pf.ORDERS:
             self.order_combo.addItem(label, key)
-            self.order_combo.setItemData(self.order_combo.count() - 1, tip,
+            self.order_combo.setItemData(self.order_combo.count() - 1,
+                                         wrapped(tip),
                                          Qt.ItemDataRole.ToolTipRole)
         self.order_combo.setStyleSheet(COMBO_STYLE)
         self._sync_order_combo()
         self.order_combo.activated.connect(self._on_order_chosen)
         count_row.addWidget(self.order_combo)
         col.addLayout(count_row)
+
+        # Said in place of an empty list's silence: which restriction emptied
+        # it, and what removing it would bring back.
+        self.why_empty = WhyEmpty()
+        self.why_empty.remove_requested.connect(self._take_offer)
+        self.why_empty.clear_requested.connect(lambda: self._take_offer(None))
+        col.addWidget(self.why_empty)
 
         self.model = PlantListModel(self)
         self.view = QListView()
@@ -160,28 +175,14 @@ class PlantPicker(QWidget):
     # ── The filter line and the filters ─────────────────────────────────────
 
     def _build_filter_line(self, col):
-        line = QHBoxLayout()
-        line.setSpacing(6)
-        self.filters_button = QToolButton()
-        self.filters_button.setCheckable(True)
-        self.filters_button.setAccessibleName("Filters")
-        self.filters_button.setToolTip("Show or hide the filters")
-        self.filters_button.setStyleSheet(_SMALL_BTN)
-        self.filters_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.filter_line = FilterLine()
+        self.filters_button = self.filter_line.filters_button
+        self.clear_button = self.filter_line.clear_button
+        self.none_label = self.filter_line.none_label
         self.filters_button.toggled.connect(self.set_filters_open)
-        line.addWidget(self.filters_button, 0, Qt.AlignmentFlag.AlignTop)
-        self.summary_label = QLabel("")
-        self.summary_label.setStyleSheet(_DIM)
-        self.summary_label.setWordWrap(True)
-        line.addWidget(self.summary_label, 1)
-        self.clear_button = QPushButton("Clear")
-        self.clear_button.setAccessibleName("Clear all filters")
-        self.clear_button.setToolTip("Untick every filter")
-        self.clear_button.setStyleSheet(_SMALL_BTN)
-        self.clear_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.clear_button.clicked.connect(self.clear_filters)
-        line.addWidget(self.clear_button, 0, Qt.AlignmentFlag.AlignTop)
-        col.addLayout(line)
+        self.filter_line.remove_requested.connect(self.remove)
+        self.filter_line.clear_requested.connect(self.clear_filters)
+        col.addWidget(self.filter_line)
 
     def _build_filters(self, col):
         self.filter_area = QWidget()
@@ -194,7 +195,9 @@ class PlantPicker(QWidget):
         per_row = 5 if self._wide else 2
         self.combos: dict = {}
         for i, f in enumerate(pf.FACETS):
-            combo = CheckableComboBox(placeholder=f.placeholder)
+            combo = CheckableComboBox(placeholder=f.placeholder,
+                                      rule=pf.rule(f))
+            combo.set_face(lambda keys, f=f: pf.face(f, keys))
             if f.values is None:
                 build_ecoregion_tree(combo)
             else:
@@ -204,7 +207,7 @@ class PlantPicker(QWidget):
                     combo.add_check_item(
                         label, key, icon=icon_for(key) if icon_for else None)
             combo.setStyleSheet(COMBO_STYLE)
-            combo.setToolTip(f.tip)
+            combo.setToolTip(wrapped(f.tip))
             combo.setAccessibleName(f"{f.label} filter")
             combo.setAccessibleDescription(f.tip)
             combo.lineEdit().setAccessibleName(f"{f.label} filter")
@@ -217,19 +220,29 @@ class PlantPicker(QWidget):
         area.addLayout(grid)
 
         chips = QWidget()
-        flow = FlowLayout(chips, spacing=4)
+        flow = FlowLayout(chips, h_spacing=4, v_spacing=4)
+        flow.setContentsMargins(0, 0, 0, 0)
         self.chips: dict = {}
         for q in pf.QUALITIES:
             btn = QPushButton(q.label)
             btn.setCheckable(True)
             btn.setChecked(bool(self._criteria.get(q.key)))
-            btn.setToolTip(q.tip)
+            btn.setToolTip(wrapped(q.tip))
             btn.setAccessibleDescription(q.tip)
             btn.setStyleSheet(_CHIP_STYLE)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.toggled.connect(lambda _on, k=q.key: self._on_quality(k))
             flow.addWidget(btn)
             self.chips[q.key] = btn
+        # The site's soil pH, beside the qualities and drawn like them, so a
+        # filter the app switched on can be switched back on once taken off.
+        self.soil_toggle = QPushButton("")
+        self.soil_toggle.setCheckable(True)
+        self.soil_toggle.setStyleSheet(_CHIP_STYLE)
+        self.soil_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.soil_toggle.toggled.connect(self.set_soil_on)
+        self.soil_toggle.hide()
+        flow.addWidget(self.soil_toggle)
         area.addWidget(chips)
         col.addWidget(self.filter_area)
 
@@ -243,12 +256,20 @@ class PlantPicker(QWidget):
     def filters_open(self) -> bool:
         return self.filter_area.isVisibleTo(self)
 
-    def _refresh_summary(self):
-        bits = pf.summary(self._criteria)
-        self.summary_label.setText(" · ".join(bits) if bits else "None on")
-        self.summary_label.setAccessibleName(
-            "Filters on: " + ", ".join(bits) if bits else "No filters on")
-        self.clear_button.setVisible(bool(bits))
+    def _refresh_chips(self):
+        """One chip per restriction that is on, the soil pH among them."""
+        entries = [(k, w) for k, w in pf.filters_on(self._criteria)
+                   if k != "query"]
+        tips = {}
+        if self.soil_applies():
+            entries.append(("soil", pf.soil_label(self._soil_ph)))
+            tips["soil"] = (pf.soil_tip(self._soil_ph, self._soil_hidden)
+                            + " Click to remove it.")
+        self.filter_line.set_entries(entries, tips)
+
+    def chip_texts(self) -> list:
+        """The words on the chips, without their ×: what is on, as drawn."""
+        return self.filter_line.texts()
 
     # ── Criteria ────────────────────────────────────────────────────────────
 
@@ -284,8 +305,32 @@ class PlantPicker(QWidget):
         self.refresh()
 
     def clear_filters(self):
+        """Take off everything the chips show. The soil pH too: a "Clear all"
+        that left the app's own filter on would leave the reader looking at
+        fewer plants than the catalogue holds with nothing to say why."""
         query = self._criteria.get("query") or ""
+        if self.soil_applies():
+            self._soil_off = True
+            self._sync_soil_toggle()
         self.set_criteria({"query": query} if query else {})
+        self.criteria_changed.emit(self.criteria())
+
+    def remove(self, key: str):
+        """Take one restriction off: a facet, a quality, the search text or
+        ``"soil"``. What a chip and the empty state's buttons do."""
+        if key == "soil":
+            self.set_soil_on(False)
+            return
+        if key == "query":
+            self.search_box.setText("")
+            self.refresh()
+        elif key in self.combos:
+            self.combos[key].set_checked_keys([])
+            self._criteria[key] = []
+            self.refresh()
+        elif key in self.chips:
+            self.chips[key].setChecked(False)       # its toggled signal searches
+            return
         self.criteria_changed.emit(self.criteria())
 
     def _on_search_text(self):
@@ -302,18 +347,49 @@ class PlantPicker(QWidget):
         self.refresh()
         self.criteria_changed.emit(self.criteria())
 
-    def set_extra(self, **kwargs):
-        """Search arguments the app sets rather than the reader: the site's
-        soil pH. ``None`` removes one."""
-        changed = False
-        for key, value in kwargs.items():
-            if value is None:
-                changed |= self._extra.pop(key, None) is not None
-            elif self._extra.get(key) != value:
-                self._extra[key] = value
-                changed = True
-        if changed:
+    # ── The site's soil pH ──────────────────────────────────────────────────
+
+    def set_soil_ph(self, ph: Optional[float]):
+        """The site's soil pH, or ``None`` for no site. The app sets it when a
+        pin's soil arrives and when a project loads; it filters until the reader
+        takes it off, which then holds for the session, so a soil re-fetch does
+        not quietly put it back."""
+        ph = float(ph) if isinstance(ph, (int, float)) else None
+        if ph == self._soil_ph:
+            return
+        self._soil_ph = ph
+        self._sync_soil_toggle()
+        self.refresh()
+
+    def soil_ph(self) -> Optional[float]:
+        return self._soil_ph
+
+    def soil_applies(self) -> bool:
+        return self._soil_ph is not None and not self._soil_off
+
+    def set_soil_on(self, on: bool):
+        on = bool(on)
+        if on == (not self._soil_off):
+            self._sync_soil_toggle()
+            return
+        self._soil_off = not on
+        self._sync_soil_toggle()
+        if self._soil_ph is not None:
             self.refresh()
+
+    def _sync_soil_toggle(self):
+        btn = self.soil_toggle
+        btn.setVisible(self._soil_ph is not None)
+        if self._soil_ph is None:
+            return
+        btn.blockSignals(True)
+        btn.setChecked(self.soil_applies())
+        btn.blockSignals(False)
+        btn.setText(pf.soil_label(self._soil_ph))
+        tip = pf.soil_tip(self._soil_ph, self._soil_hidden
+                          if self.soil_applies() else None)
+        btn.setToolTip(wrapped(tip))
+        btn.setAccessibleDescription(tip)
 
     # ── Order ───────────────────────────────────────────────────────────────
 
@@ -356,8 +432,9 @@ class PlantPicker(QWidget):
                 item = model.item(i)
                 item.setEnabled(self._site is not None)
                 if self._site is None:
-                    item.setToolTip("Drop a pin on your site to rank plants "
-                                    "by what has been recorded near it.")
+                    item.setToolTip(wrapped(
+                        "Drop a pin on your site to rank plants by what has "
+                        "been recorded near it."))
         idx = self.order_combo.findData(self._order)
         self.order_combo.blockSignals(True)
         self.order_combo.setCurrentIndex(max(0, idx))
@@ -382,28 +459,84 @@ class PlantPicker(QWidget):
 
     # ── Searching ───────────────────────────────────────────────────────────
 
+    def _search(self, criteria: dict, *, soil: bool) -> list:
+        search_fn = self._search_fn
+        if search_fn is None:
+            from src.db.plants import search_plants as search_fn
+        kwargs = pf.criteria_to_kwargs(criteria)
+        if soil and self._soil_ph is not None:
+            kwargs["soil_ph"] = self._soil_ph
+        return search_fn(**kwargs)
+
     def refresh(self):
         """Run the search now and show the result. Reads the search box, so a
         refresh straight after typing does not wait for the debounce."""
         self._search_timer.stop()
         self._criteria["query"] = self.search_box.text()
-        self._refresh_summary()
-        search_fn = self._search_fn
-        if search_fn is None:
-            from src.db.plants import search_plants as search_fn
-        kwargs = pf.criteria_to_kwargs(self._criteria)
-        kwargs.update(self._extra)
+        soil = self.soil_applies()
         try:
-            rows = search_fn(**kwargs)
+            rows = self._search(self._criteria, soil=soil)
+            # What the soil pH alone is hiding, for its chip: the plants the
+            # reader's own filters would show without it.
+            self._soil_hidden = (len(self._search(self._criteria, soil=False))
+                                 - len(rows)) if soil else 0
         except Exception as exc:                                # noqa: BLE001
             self.count_label.setText(f"Search failed: {exc}")
             return
         self._rows = self._ordered(rows)
         self.model.set_plants(self._rows)
         n = len(self._rows)
-        self.count_label.setText(
-            "No plants match" if not n else f"{n} plant{'s' if n != 1 else ''}")
+        restricted = bool(pf.filters_on(self._criteria)) or soil
+        if not restricted:
+            self._catalogue = n
+        self._refresh_chips()
+        self._sync_soil_toggle()
+        if not n:
+            self.count_label.setText("No plants match")
+        elif restricted and self._catalogue_size():
+            self.count_label.setText(f"{n} of {self._catalogue} plants")
+        else:
+            self.count_label.setText(f"{n} plant{'s' if n != 1 else ''}")
+        self._show_why_empty(restricted and not n)
         self.results_changed.emit()
+
+    def _catalogue_size(self) -> Optional[int]:
+        """How many plants nothing restricts, for "319 of 424". Counted once;
+        refreshed whenever an unrestricted search runs anyway."""
+        if self._catalogue is None:
+            try:
+                self._catalogue = len(self._search({}, soil=False))
+            except Exception:                                   # noqa: BLE001
+                return None
+        return self._catalogue
+
+    def _show_why_empty(self, empty: bool):
+        """Name what emptied the list (``plant_filters.what_emptied``). Runs
+        only on an empty list, and then at most nineteen searches."""
+        if not empty:
+            self.why_empty.dismiss()
+            return
+        soil = self.soil_applies()
+        self.why_empty.explain(*pf.what_emptied(
+            self._criteria,
+            lambda criteria, on: len(self._search(criteria, soil=on)),
+            soil=pf.soil_label(self._soil_ph) if soil else None),
+            tab_between=(self.order_combo, self.view))
+
+    def _take_offer(self, key: Optional[str]):
+        """An empty state's offer, taken. The button goes with the empty state,
+        and Qt would hand the keyboard on to the map's toolbar: give it to the
+        plants that came back, or to the next offer if there are still none."""
+        had = self.why_empty.has_keyboard()
+        if key is None:
+            self.clear_filters()
+        else:
+            self.remove(key)
+        if had:
+            offers = self.why_empty.buttons()
+            target = (offers[0] if offers and not self.why_empty.isHidden()
+                      else self.view if self._rows else self.search_box)
+            target.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def rows(self) -> list:
         return list(self._rows)
@@ -419,63 +552,3 @@ class PlantPicker(QWidget):
                 self.view.setCurrentIndex(self.model.index(row))
                 return True
         return False
-
-
-class FlowLayout(QLayout):
-    """Children laid left to right, wrapping at the width there is: the chips
-    fit a 1000 px window in two rows and a 240 px column in five, with nobody
-    choosing a number per row."""
-
-    def __init__(self, parent=None, spacing: int = 4):
-        super().__init__(parent)
-        self._items = []
-        self._gap = spacing
-        self.setContentsMargins(0, 0, 0, 0)
-
-    def addItem(self, item):
-        self._items.append(item)
-
-    def count(self):
-        return len(self._items)
-
-    def itemAt(self, index):
-        return self._items[index] if 0 <= index < len(self._items) else None
-
-    def takeAt(self, index):
-        return self._items.pop(index) if 0 <= index < len(self._items) else None
-
-    def expandingDirections(self):
-        return Qt.Orientation(0)
-
-    def hasHeightForWidth(self):
-        return True
-
-    def heightForWidth(self, width):
-        return self._place(QRect(0, 0, width, 0), move=False)
-
-    def setGeometry(self, rect):
-        super().setGeometry(rect)
-        self._place(rect, move=True)
-
-    def sizeHint(self):
-        return self.minimumSize()
-
-    def minimumSize(self):
-        size = QSize()
-        for item in self._items:
-            size = size.expandedTo(item.minimumSize())
-        return size
-
-    def _place(self, rect: QRect, *, move: bool) -> int:
-        x, y, line = rect.x(), rect.y(), 0
-        for item in self._items:
-            hint = item.sizeHint()
-            if x + hint.width() > rect.right() + 1 and line > 0:
-                x = rect.x()
-                y += line + self._gap
-                line = 0
-            if move:
-                item.setGeometry(QRect(QPoint(x, y), hint))
-            x += hint.width() + self._gap
-            line = max(line, hint.height())
-        return y + line - rect.y()

@@ -1890,6 +1890,7 @@ class MainWindow(QMainWindow):
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
         self.plant_panel.set_autodetected_ecoregion("")   # drop the pin's region
+        self.plant_panel.set_soil_ph(None)                # and its soil (V3.01)
         self.planning_panel.set_notes("")
         self.planning_panel.set_placed_plants([])
         self.planning_panel.set_structures([])
@@ -1971,9 +1972,10 @@ class MainWindow(QMainWindow):
             ):
                 if sc.get(key):
                     slot(sc[key])
-            # Restore the soil-pH plant-matching constraint from cached site data.
-            if sc.get("soil_ph") is not None:
-                self.plant_panel.set_soil_ph(sc.get("soil_ph"))
+        # The soil-pH constraint from cached site data, or none: a design with no
+        # pin kept the last design's until V3.01, and its chip said "Your soil".
+        self.plant_panel.set_soil_ph(sc.get("soil_ph") if plat is not None
+                                     and plng is not None else None)
 
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")

@@ -455,7 +455,10 @@ From measured soil/disturbance, recommend a *repair sequence* (pioneer cover →
 builders → target community). **How:** `property_data.fetch_soil` returns `ph_top` +
 `texture_class`; combine with plant `soil_ph_min/max` (via `search_plants(soil_ph=…)`) and
 `succession.successional_role` to stage a recommendation. Revives parked brainstorm L3
-through a restoration lens.
+through a restoration lens. *(V3.01: "measured" overstates it. The pH `fetch_soil` returns is an
+estimate for the area (the soil pack, SoilGrids or a regional default), and the plants' pH ranges
+carry no provenance (F201): a repair sequence staged on the two would be a guess on a guess. The
+same comparison has filtered Browse since V1.67, silently until V3.01 made it a chip.)*
 
 ### F19 · "Why here?" composition reasoning toggle — *Impact Med · Effort M → S · Risk Low — **half already built** (P2, P5)*
 Explain why the generator placed a plant where it did — turn the black box into a teacher.

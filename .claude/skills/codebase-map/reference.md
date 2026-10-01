@@ -69,7 +69,8 @@ added; trust the source over this list).
 | `src/plant_panel.py` | Plants → Browse: the shared picker, Place, and the mix (V3.00) |
 | `src/plant_list_view.py` | The plant list every picker shows: model + row delegate, per-badge tooltips |
 | `src/plant_picker.py` | Search, filters, order and list as one widget: Browse, the Directory, the builder |
-| `src/plant_filters.py` | Qt-free: the one filter vocabulary, criteria → search kwargs, the orders |
+| `src/plant_filters.py` | Qt-free: the one filter vocabulary, criteria → search kwargs, the orders, what a filter reads and what emptied a result |
+| `src/filter_status.py` | The picker's chips (one per filter that is on, each removable) and its empty state (V3.01) |
 | `src/species_page.py` | One species as a page of labels (the Directory's, moved out in V3.00) |
 | `src/species_flyout.py` | The page beside the side panel, over the map's right edge |
 | `src/on_this_design_panel.py` | The "On this design" review tab |

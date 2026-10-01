@@ -665,9 +665,11 @@ class MapEventRouter:
         self._main.site_panel.clear_pin()
         sc = self._main._project["properties"].setdefault("site_config", {})
         for key in ("latitude", "longitude", "pin_label",
-                    "rainfall", "soil", "elevation", "hardiness",
-                    "data_fetched_at"):
+                    "rainfall", "soil", "soil_ph", "soil_texture", "elevation",
+                    "hardiness", "data_fetched_at"):
             sc.pop(key, None)
+        # The pin's soil filtered Browse until V3.01 after the pin was gone.
+        self._main.plant_panel.set_soil_ph(None)
         self._main._mark_modified()
         self._main._set_mode_label("Property pin removed")
 
