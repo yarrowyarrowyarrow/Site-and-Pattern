@@ -59,8 +59,10 @@ DATA_DIR     = PROJECT_ROOT / "data"
 # cleanup backlog stays visible without breaking CI.
 #
 # The split was calibrated against the V1.31 shipped data:
-#   * ``native_to_alberta`` has ``'1?'`` markers handled by
-#     ``polyculture_panel._truthy_int`` — warning, not error.
+#   * ``native_to_alberta`` has ``'1?'`` markers — warning, not error.
+#     Five species still carry one, every one recorded in Alberta by VASCAN;
+#     since V3.00 the plant pickers' Native filter reads ``native_provinces``
+#     instead, so the marker no longer hides them.
 #   * ``permaculture_uses`` carries informal tags like ``overstory`` and
 #     ``food_forest`` that aren't (yet) in ``_USE_DEFINITIONS`` — warning.
 #     Future release can promote them to canonical entries and the
@@ -245,7 +247,7 @@ GROWTH_CURVES     = {"slow_start", "steady", "fast_early"}
 CALENDAR_STATUS   = {"dormant", "start_indoors", "direct_sow", "transplant",
                      "growing", "harvest", "pruning"}
 # native_to_alberta is documented as 0/1 but the data carries '1?' for
-# uncertain-native records; the code handles it via _truthy_int.
+# uncertain-native records; the pickers read native_provinces (V3.00).
 NATIVE_TO_ALBERTA = {0, 1, "0", "1", "1?", "0?"}
 
 # Canadian province/territory codes accepted in the native_provinces field

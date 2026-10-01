@@ -20,6 +20,9 @@ Now a list reports two things, and each panel decides what they mean:
   drag (into the mix) is not a choice, and neither is focus arriving in the list,
   which makes the first row current without selecting it.
 
+* ``read`` (V3.00, plant list only): → (Right arrow) on a row, which opens that
+  plant's page and moves into it. Opt-in, because a tree uses → to open a group.
+
 :class:`PlaceButton` is the Place button both panels show: an action named after
 what it places, never a toggle. V2.37's toggled, so after Esc it took two clicks
 to arm again.
@@ -49,11 +52,13 @@ class ListGestures(QObject):
 
     place = pyqtSignal(QModelIndex)
     choose = pyqtSignal(QModelIndex)
+    read = pyqtSignal(QModelIndex)
 
-    def __init__(self, view):
+    def __init__(self, view, *, read_key: bool = False):
         super().__init__(view)
         self._view = view
         self._keyed = False
+        self._read_key = read_key
         view.installEventFilter(self)
         view.clicked.connect(self._on_clicked)
         view.doubleClicked.connect(self._on_double_clicked)
@@ -70,6 +75,12 @@ class ListGestures(QObject):
                     return True
             elif key in _MOVE_KEYS:
                 self._keyed = True
+            elif (key == Qt.Key.Key_Right and self._read_key
+                    and not event.modifiers()):
+                index = self._view.currentIndex()
+                if index.isValid():
+                    self.read.emit(index)
+                    return True
         elif kind == QEvent.Type.KeyRelease:
             self._keyed = False
         return False
@@ -83,9 +94,9 @@ class ListGestures(QObject):
 
     def _on_clicked(self, index):
         # Qt emits ``clicked`` on a release over the row that was pressed, and
-        # not after a drag. It does after a click the row's delegate took, the
-        # plant list's ▶ (Qt 5 did not): that one read the card, and a delegate
-        # that takes clicks says so through ``took_click()``.
+        # not after a drag. It does after a click the row's delegate took (Qt 5
+        # did not), so a delegate that takes clicks for itself says so through
+        # ``took_click()``; the plant list's ▶ did until V3.00.
         took = getattr(self._view.itemDelegate(), "took_click", None)
         if index.isValid() and not (took and took()):
             self.choose.emit(index)

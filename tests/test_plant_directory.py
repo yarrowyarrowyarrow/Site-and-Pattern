@@ -37,26 +37,41 @@ class TestTheFacetsDriveTheRealQuery(unittest.TestCase):
         real = set(inspect.signature(search_plants).parameters)
         self.assertEqual(pd.facet_params() - real, set())
 
-    def test_it_surfaces_filters_no_other_screen_exposes(self):
-        """The point of the directory, in one assertion. These worked the whole
-        time with nothing to press."""
-        from src import plant_directory as pd
-        panel = (_ROOT / "src" / "plant_panel.py").read_text(encoding="utf-8")
-        exposed = {t[2] for t in pd.TOGGLES}
-        new = {p for p in exposed if p not in panel}
-        self.assertGreaterEqual(len(new), 6, sorted(exposed))
+    def test_one_vocabulary_for_every_picker(self):
+        """Since V3.00 (F192) Browse, the Directory and the community builder
+        are one widget over one vocabulary. The Directory's Keystone, Larval
+        host, Bird food, Pollinator and Nitrogen fixer toggles ran exactly the
+        query the Role facet runs, so they folded into it; what is left are
+        restrictions no facet expresses."""
+        from src import plant_filters as pf
+        qualities = {q.param for q in pf.QUALITIES}
+        for duplicate in ("keystone_only", "host_plant_only", "bird_food_only",
+                          "pollinator_only", "nfixer_only"):
+            self.assertNotIn(duplicate, qualities)
+        roles = dict(pf.facet("use").values)
+        for tag in ("keystone_species", "host_plant", "bird_food",
+                    "pollinator", "nitrogen_fixer"):
+            self.assertIn(tag, roles)
+        for name in ("plant_panel.py", "plant_directory_window.py",
+                     "polyculture_panel.py"):
+            src = (_ROOT / "src" / name).read_text(encoding="utf-8")
+            self.assertIn("PlantPicker(", src, name)
+            self.assertNotIn("CheckableComboBox(", src, name)
 
     def test_criteria_become_keyword_arguments(self):
         from src import plant_directory as pd
         kw = pd.criteria_to_kwargs({
             "query": " bergamot ", "type": ["shrub", "tree"],
-            "keystone_only": True, "bloom_months": ["6", "7"],
-            "sun": [], "edible_only": False,
+            "supports_specialist": True, "bloom_months": ["6", "7"],
+            "sun": [], "edible_only": False, "native_only": True,
         })
         self.assertEqual(kw["query"], "bergamot")
         self.assertEqual(kw["plant_type"], ["shrub", "tree"])
-        self.assertTrue(kw["keystone_only"])
+        self.assertTrue(kw["supports_specialist"])
         self.assertEqual(kw["bloom_months"], [6, 7])
+        # Native reads VASCAN's province list (V3.00), not the seed's flag.
+        self.assertEqual(kw["native_province"], "AB")
+        self.assertNotIn("native_only", kw)
         # An untouched facet must be absent, not an empty list — "no
         # restriction" and "match nothing" are one typo apart downstream.
         self.assertNotIn("sun_req", kw)
@@ -75,8 +90,8 @@ class TestTheFacetsDriveTheRealQuery(unittest.TestCase):
             seen.update(kwargs)
             return [{"common_name": "Wild Bergamot"}, {"common_name": "Aster"}]
 
-        rows = pd.search({"keystone_only": True}, search_fn=fake)
-        self.assertTrue(seen["keystone_only"])
+        rows = pd.search({"supports_specialist": True}, search_fn=fake)
+        self.assertTrue(seen["supports_specialist"])
         self.assertEqual([r["common_name"] for r in rows],
                          ["Aster", "Wild Bergamot"])
 
@@ -171,6 +186,21 @@ class TestASpeciesPageCarriesItsEvidence(unittest.TestCase):
         self.assertTrue(entry["ranges"])
         self.assertEqual(entry["ranges"][0]["occurrences"], 0)
         self.assertEqual(entry["ranges"][0]["confidence"], "")
+
+    def test_animals_are_counted_once_however_many_ways_they_use_it(self):
+        """V3.00: one bee takes nectar and pollen. The page says species, so it
+        counts animals; ``total`` stays relationships, which the website says
+        it is ("documented animal relationships")."""
+        from src import plant_directory as pd
+        bee = {"id": 1, "common_name": "Bee", "specificity": "specialist"}
+        fly = {"id": 2, "common_name": "Fly", "specificity": "generalist"}
+        w = pd._wildlife([dict(bee, relationship="nectar"),
+                          dict(bee, relationship="pollen"),
+                          dict(fly, relationship="nectar")])
+        self.assertEqual(w["total"], 3)
+        self.assertEqual(w["animals"], 2)
+        self.assertEqual(w["specialists"], 2)
+        self.assertEqual(w["specialist_animals"], 1)
 
     def test_specialists_are_counted_apart_from_the_rest(self):
         """A generalist losing this plant finds another. A specialist does
@@ -273,9 +303,10 @@ class TestWhatIsInBloomNow(unittest.TestCase):
 
 
 class TestItCostsThePickerNothing(unittest.TestCase):
-    """``src/plant_panel.py`` sits at exactly its 1600-line guard ceiling. The
-    directory is a separate surface partly so the browser never has to grow to
-    hold a reference work's worth of controls."""
+    """The directory was built as a separate surface partly so the browser
+    never had to grow to hold a reference work's worth of controls. Since
+    V3.00 both are the same picker (src/plant_picker.py), which is how the
+    browser got those controls and lost 164 lines."""
 
     def test_the_directory_does_not_touch_plant_panel(self):
         panel = (_ROOT / "src" / "plant_panel.py").read_text(encoding="utf-8")
@@ -313,8 +344,11 @@ class TestP12(unittest.TestCase):
                   "first nations", "medicine wheel", "ceremonial")
 
     def test_no_indigenous_knowledge_vocabulary_reaches_the_screen(self):
+        # The page moved out of the window in V3.00 and is shown beside the
+        # Browse list too: the guard follows it.
         for name in ("plant_directory.py", "plant_directory_window.py",
-                     "start_screen.py"):
+                     "start_screen.py", "species_page.py", "species_flyout.py",
+                     "plant_picker.py", "plant_filters.py"):
             for text in self._user_facing(_ROOT / "src" / name):
                 for word in self._FORBIDDEN:
                     self.assertNotIn(word, text.lower(),

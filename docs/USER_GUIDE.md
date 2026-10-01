@@ -25,30 +25,53 @@ You can edit a boundary later by clicking it: drag white vertices to reshape, dr
 
 ## 3. Find a plant
 
-Open the **Plants** tab.
+Open the **Plants** tab (**Browse**).
 
-- Type a name in **Search plants…**.
-- Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**, and the habitat-focused trio **Keystone**, **Host Plant**, **Bird Food**.
-- Pick a target Alberta ecoregion in **Restoring toward:** to filter the plant list to species documented from that region — Aspen Parkland, Mixedgrass Prairie, Fescue/Foothills, Boreal Mixedwood, Riparian, Wet Meadow, or Subalpine/Montane. The choice persists across sessions.
-- Click the **▶ chevron** on any row to expand it inline. You'll see the full data block — sun, water, spacing, height, bloom, fruit, edible parts, uses — plus a **colour-coded 12-month planting calendar** and notes.
+- Type in **Search plants by name or role…**.
+- The line under the search box says which filters are on, for example *Restoring toward
+  Aspen Parkland* once you have dropped a pin on your site. **Filters ▸** unfolds them and
+  **Clear** unticks them all.
+  - Nine dropdowns, each of which takes more than one value: **Type**, **Sun**, **Water**,
+    **Role** (a plant must have every role you tick), **Where to buy**, **Restoring
+    toward** (ecoregions; ticking a system includes everything inside it), **Blooms in**,
+    **Fruits in** and **Flower colour**.
+  - Nine on/off filters: **Native** (to Alberta, as the VASCAN flora records it),
+    **Perennial**, **Feeds a specialist**, **Edible**, **Pet safe**, **Child safe**, **Well
+    behaved**, **Easy to find** and **Has a photo**.
+- **Order.** With a pin on your site the list starts with plants **recorded near this
+  site**, then those hardy in your zone, with plants that need standing water last.
+  Nothing is hidden, and a record nearby says nothing about your yard's sun or soil. You
+  can also order by **Name**, **Type**, **Animals supported** or **Height**.
+- Hover over a row to learn what its marks mean: the coloured dot is the plant's type,
+  **Z3–7** its hardiness zones, **AB** that it is native to Alberta, and **[1×]** how many
+  are already in this design.
+- **Click a plant to read about it.** Its page opens beside the list, over the right edge
+  of the map: photo, why it matters, roles, conditions, size, when it flowers and fruits,
+  where it has been recorded, the animals it feeds, what grows well with it and where to
+  buy it. The arrow keys step through the list and the page follows; **→** moves the
+  keyboard into the page, and **Esc** or **✕** closes it.
 
-Long names automatically wrap to two lines so nothing is hidden.
+The same search, filters and list are in **View → Plant Directory**, a bigger window for
+reading that works before you have a design (with a design open, its **Place** button
+hands the plant to the map), and in the community builder.
 
 ---
 
 ## 4. Place a single plant
 
-1. Click a plant row to select it. Selecting only shows it: the button under the list
-   now reads **Place ‹plant› on the map**, and the map is untouched. (Click **▶** to read
-   its details.)
-2. Press **Place ‹plant› on the map**, or double-click the row, press **Enter** on it, or
-   right-click → **Place ‹plant› on Map**. A bar appears over the top of the map:
+1. Click a plant row to select it. Selecting only shows it: its page opens beside the
+   list, the button under the list reads **Place ‹plant› on the map**, and the map is
+   untouched.
+2. Press **Place ‹plant› on the map** (under the list or on its page), or double-click the
+   row, press **Enter** on it, or right-click → **Place ‹plant› on Map**. The page closes so
+   the yard is clear, and a bar appears over the top of the map:
    *"Placing ‹plant›. Click the map to place it. Each click places another."* The pointer
    is a crosshair with the plant's footprint under it: a yellow ring at its planting
    spacing, a green one at its mature spread.
 3. Click the map to place it. Each click places another.
 4. While placing, click another plant in the list (or arrow to it) to switch to it; the
-   bar says so. Reading a card with **▶**, or dragging a plant into the mix, doesn't switch.
+   bar says so. Dragging a plant into the mix doesn't switch, and no page opens while you
+   are placing.
 5. In the bar: **Qty** drops a cluster of that many at each click (the footprint shows the
    cluster and its count), and **Colour** sets the plant's marker colour.
 6. Press **Esc** or **Done** to stop.
@@ -249,13 +272,13 @@ relationship between it and a plant you actually placed.
 ## 15. Tips that aren't obvious
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
-- The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.
+- On a plant's page, the twelve-month bar has a **Flowers** row and a **Fruit** row; the line under it names any months to sow or prune.
 - **Mix stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
 - **Fill (hex) circles** need a **Total** cap or they'll generate thousands of markers on big radii.
 - The **Plants** tab's sub-tabs are **Browse** (search the catalogue), **Plant Communities**, and **On This Design**.
-- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Mix*.
+- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *About ‹plant›* (its page), *Add / Remove from Mix*.
 - **“Blooms in…” / “Fruits in…”** narrow the list to plants flowering or fruiting in chosen months — the direct way to fill the nectar gap the Analysis tab names.
-- The **▶ chevron** doubles as a quick way to compare plants — multiple rows can stay expanded at once.
+- To compare plants, open one's page and step through the list with the arrow keys: the page follows.
 
 ---
 

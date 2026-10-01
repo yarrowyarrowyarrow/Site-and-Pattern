@@ -81,6 +81,10 @@ inventory: [reference.md](reference.md).
 
 `src/plant_panel.py` (+ `src/plant_list_view.py`, `src/on_this_design_panel.py`,
 `src/placement_controls.py`), `src/polyculture_panel.py`,
+the one plant picker and species page every plant list shares since V3.00
+(`src/plant_picker.py` over the Qt-free `src/plant_filters.py`;
+`src/species_page.py`, shown beside the Browse list by `src/species_flyout.py`
+and in the Plant Directory),
 `src/structure_panel.py`, `src/site_panel.py`, `src/analysis_panel.py`,
 `src/planning_panel.py`, `src/learn_panel.py` (Field Study / Lessons /
 Present, V2.25), plus small QPainter widgets

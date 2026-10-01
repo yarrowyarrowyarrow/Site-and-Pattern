@@ -84,7 +84,7 @@ class TestListGestures(unittest.TestCase):
     def setUpClass(cls):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
-    def _list(self):
+    def _list(self, **options):
         from src.place_action import ListGestures
         view = QListView()
         # Parented to the view: a model only Python holds dies with the view's
@@ -93,10 +93,11 @@ class TestListGestures(unittest.TestCase):
         view.setModel(QStringListModel([f"plant {n}" for n in range(6)], view))
         view.setItemDelegate(_TakesClicks(view))
         view.resize(240, 200)
-        gestures = ListGestures(view)
-        self.placed, self.chosen = [], []
+        gestures = ListGestures(view, **options)
+        self.placed, self.chosen, self.read = [], [], []
         gestures.place.connect(lambda i: self.placed.append(i.row()))
         gestures.choose.connect(lambda i: self.chosen.append(i.row()))
+        gestures.read.connect(lambda i: self.read.append(i.row()))
         view.show()
         self._app.processEvents()
         self.addCleanup(view.deleteLater)
@@ -105,6 +106,19 @@ class TestListGestures(unittest.TestCase):
 
     def _at(self, view, row):
         return view.visualRect(view.model().index(row, 0)).center()
+
+    def test_right_arrow_reads_only_where_the_list_asked_for_it(self):
+        """V3.00: → opens the plant list's page. A tree uses → to open a
+        group (the community list), so it is opt-in."""
+        view = self._list(read_key=True)
+        view.setCurrentIndex(view.model().index(2, 0))
+        QTest.keyClick(view, Qt.Key.Key_Right)
+        self.assertEqual(self.read, [2])
+        self.assertEqual(self.placed, [])
+        plain = self._list()
+        plain.setCurrentIndex(plain.model().index(1, 0))
+        QTest.keyClick(plain, Qt.Key.Key_Right)
+        self.assertEqual(self.read, [])
 
     def test_enter_and_return_place_the_current_row(self):
         view = self._list()

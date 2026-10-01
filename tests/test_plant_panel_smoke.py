@@ -186,22 +186,24 @@ class TestPlantPanelSmoke(unittest.TestCase):
     # ── V1.85: unified multi-select filter dropdowns ─────────────────────────
 
     def test_use_based_toggle_buttons_removed(self):
-        # The six use-overlapping toggles folded into the Use dropdown.
+        # The six use-overlapping toggles folded into the Use dropdown (V1.85),
+        # and stayed folded when the picker became shared (V3.00).
         for attr in ("_medicinal_btn", "_nfixer_btn", "_pollinator_btn",
                      "_keystone_btn", "_host_btn", "_birdfood_btn"):
             self.assertFalse(hasattr(self._panel, attr), attr)
-        # The non-use extras stay as buttons.
-        for attr in ("_native_filter_btn", "_edible_btn", "_perennial_btn",
-                     "_has_image_btn"):
-            self.assertTrue(hasattr(self._panel, attr), attr)
+        # The non-use extras are the shared picker's qualities.
+        for key in ("native_only", "edible_only", "perennial_only",
+                    "has_image_only"):
+            self.assertIn(key, self._panel.picker.chips)
 
     def test_facet_combos_are_multiselect(self):
         from src.plant_panel import CheckableComboBox
         # All facet dropdowns — including ecoregion (V1.85 follow-up) — are
         # multi-select.
-        for attr in ("_type_combo", "_sun_combo", "_water_combo",
-                     "_use_combo", "_rarity_combo", "_ecoregion_combo"):
-            self.assertIsInstance(getattr(self._panel, attr), CheckableComboBox)
+        for key in ("type", "sun", "water", "use", "availability",
+                    "ecoregion"):
+            self.assertIsInstance(self._panel.picker.combos[key],
+                                  CheckableComboBox)
         # The ecoregion combo drops the "Any ecoregion" sentinel — its
         # placeholder covers "any". Since V2.67 it is a three-level tree rather
         # than a flat list, so it carries a row per ecozone, per ecoregion and
@@ -214,7 +216,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
                           for zone, _n in ecozones()
                           for region, _rn in regions_in(zone))
                     + len(MOISTURE_NICHES))
-        self.assertEqual(self._panel._ecoregion_combo.model().rowCount(),
+        self.assertEqual(self._panel.picker.combos["ecoregion"].model().rowCount(),
                          expected)
 
     def _set_checked(self, combo, keys):
@@ -228,7 +230,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
 
     def test_type_combo_has_colour_icons(self):
         # The Type dropdown items carry the plant-type colour swatch (legend).
-        tc = self._panel._type_combo
+        tc = self._panel.picker.combos["type"]
         self.assertTrue(tc.model().rowCount() > 0)
         for i in range(tc.model().rowCount()):
             self.assertFalse(tc.model().item(i).icon().isNull())
@@ -240,18 +242,18 @@ class TestPlantPanelSmoke(unittest.TestCase):
     def test_ecoregion_default_is_empty(self):
         # With no auto-detected pin, the ecoregion picker starts unselected and
         # shows its placeholder (V1.86).
-        self.assertEqual(self._panel._ecoregion_combo.checked_keys(), [])
+        self.assertEqual(self._panel.picker.combos["ecoregion"].checked_keys(), [])
         self.assertEqual(
-            self._panel._ecoregion_combo.lineEdit().placeholderText(),
+            self._panel.picker.combos["ecoregion"].lineEdit().placeholderText(),
             "Restoring toward…")
 
     def test_live_pin_sets_and_clears_ecoregion(self):
         # A dropped pin's region drives the picker live; clearing removes it.
         p = self._panel
         p.set_autodetected_ecoregion("aspen_parkland")
-        self.assertEqual(p._ecoregion_combo.checked_keys(), ["aspen_parkland"])
+        self.assertEqual(p.picker.combos["ecoregion"].checked_keys(), ["aspen_parkland"])
         p.set_autodetected_ecoregion("")
-        self.assertEqual(p._ecoregion_combo.checked_keys(), [])
+        self.assertEqual(p.picker.combos["ecoregion"].checked_keys(), [])
 
     def test_type_filter_has_full_taxonomy(self):
         # V1.87: full botanical types, dead "root" retired, all colourable.
@@ -298,12 +300,12 @@ class TestPlantPanelSmoke(unittest.TestCase):
     def test_multiselect_filter_matches_query(self):
         from src.db.plants import search_plants
         p = self._panel
-        self._set_checked(p._type_combo, {"tree", "shrub"})
-        self._set_checked(p._use_combo, {"pollinator", "host_plant"})
+        self._set_checked(p.picker.combos["type"], {"tree", "shrub"})
+        self._set_checked(p.picker.combos["use"], {"pollinator", "host_plant"})
         p._run_search()
         expected = len(search_plants(plant_type=["tree", "shrub"],
                                      perm_use=["pollinator", "host_plant"]))
-        self.assertEqual(p._result_count.text(), f"Results: {expected}")
+        self.assertEqual(p.picker.count_label.text(), f"{expected} plants")
         # AND semantics on uses → strictly fewer than pollinator alone
         self.assertLess(expected, len(search_plants(perm_use="pollinator")))
 
@@ -323,14 +325,14 @@ class TestPlantPanelSmoke(unittest.TestCase):
         # The class shares one panel and `setUp` resets only the mix, so an
         # earlier test's type/use selections are still checked here. Clear every
         # facet first or this measures the intersection instead of the colour.
-        for combo in (p._type_combo, p._sun_combo, p._water_combo, p._use_combo,
-                      p._rarity_combo, p._bloom_combo, p._fruit_combo,
-                      p._colour_combo):
+        for combo in (p.picker.combos["type"], p.picker.combos["sun"], p.picker.combos["water"], p.picker.combos["use"],
+                      p.picker.combos["availability"], p.picker.combos["bloom_months"], p.picker.combos["fruit_months"],
+                      p.picker.combos["colour"]):
             self._set_checked(combo, set())
         p._run_search()
         every = p._results_model.rowCount()
 
-        self._set_checked(p._colour_combo, {"purple"})
+        self._set_checked(p.picker.combos["colour"], {"purple"})
         p._run_search()
         purple = p._results_model.rowCount()
         self.assertEqual(purple, len(search_plants(flower_colours=["purple"])))
@@ -343,7 +345,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
         # queries and must appear once; the sum overcounted by exactly those
         # plants (61 + 83 - 3 = 141 at the time) and this assertion went red
         # while every session that ran it had no PyQt6 to notice.
-        self._set_checked(p._colour_combo, {"purple", "yellow"})
+        self._set_checked(p.picker.combos["colour"], {"purple", "yellow"})
         p._run_search()
         both = p._results_model.rowCount()
         union = ({r["id"] for r in search_plants(flower_colours=["purple"])}
@@ -351,7 +353,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
         self.assertEqual(both, len(union))
         self.assertGreater(both, purple)
 
-        self._set_checked(p._colour_combo, set())
+        self._set_checked(p.picker.combos["colour"], set())
         p._run_search()
         self.assertEqual(p._results_model.rowCount(), every)
 
@@ -360,7 +362,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
         directory and the website come to disagree about what colour a plant
         is."""
         from src.flower_colour import COLOUR_LABELS
-        self.assertEqual(self._panel._colour_combo.count(), len(COLOUR_LABELS))
+        self.assertEqual(self._panel.picker.combos["colour"].count(), len(COLOUR_LABELS))
 
 
 if __name__ == "__main__":

@@ -158,7 +158,8 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > design's food web on the real map, and F15's pollinator-pathway idea was merged into it as a month
 > filter rather than shipped as a third overlay saying the same thing.
 > Since V2.41 the catalogue itself is a place you can stand in: the **plant directory**
-> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90) opens *before any
+> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90; its page is
+> `src/species_page.py`, which since V3.00 also opens beside the Browse list) opens *before any
 > design exists* and gives every species a page — photograph and credit, conditions, season,
 > morphology in plain English, the sourced range **with its occurrence counts and confidence
 > band**, every documented animal with the specialists flagged, companions, sourcing. It is the

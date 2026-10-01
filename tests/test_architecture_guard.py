@@ -89,7 +89,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # went to src/place_action.py; what is left here (the Place button,
         # what is placed apart from what is looked at) took it to 1599. One
         # line: step 2 (F192) cannot start here without extracting the mix.
-        (_SRC / "plant_panel.py", 1600),               # 1599 now
+        # V3.00: step 2 started here anyway, because it took the other half
+        # out instead: the search, the filters and the list's wiring are
+        # src/plant_picker.py, shared with the Directory and the builder, and
+        # this file went 1599 -> 1435. The mix is still the next extraction.
+        (_SRC / "plant_panel.py", 1600),               # 1435 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
@@ -98,7 +102,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "controllers" / "map_events.py", 2100),# ~1903 now
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
-        (_SRC / "polyculture_panel.py", 2900),         # ~2527 now
+        (_SRC / "polyculture_panel.py", 2900),         # 2395 now (V3.00)
         (_SRC / "site_panel.py", 2700),                # ~2240 now
         (_SRC / "analysis_panel.py", 2450),            # 2355 now — 95 LEFT
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
@@ -109,8 +113,16 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.41 — the plant directory (F90). Opted in on arrival rather than
         # when they first hurt: a ceiling added late is a ceiling set around
         # whatever shape the file drifted into.
-        (_SRC / "plant_directory.py", 600),            # 552 now
-        (_SRC / "plant_directory_window.py", 640),     # 518 now
+        (_SRC / "plant_directory.py", 600),            # 452 now
+        (_SRC / "plant_directory_window.py", 640),     # 196 now
+        # V3.00 (F192) — one picker and one species page, opted in on arrival.
+        # The page is the Directory's, moved out of its window so the Browse
+        # tab can show it too; the vocabulary is Qt-free so a test can check
+        # every parameter against search_plants without a display.
+        (_SRC / "plant_filters.py", 450),              # 373 now
+        (_SRC / "plant_picker.py", 560),               # 480 now
+        (_SRC / "species_page.py", 720),               # 639 now
+        (_SRC / "species_flyout.py", 200),             # 136 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
         # arrival, the V2.41 precedent. What does NOT live in the renderer any
         # more is the stylesheet and the browse script, which were Python

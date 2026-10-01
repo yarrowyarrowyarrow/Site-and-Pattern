@@ -1,6 +1,12 @@
 """
-plant_panel.py — Right-side panel: plant browser, search, filters, detail view,
-place-on-map, and placed-plants list.
+plant_panel.py — the Plants → Browse tab: the plant picker, Place, and the mix.
+
+The search, filters, order and list are ``src/plant_picker.py``, the same
+widget the Plant Directory and the community builder show (F192, V3.00). A
+plant's page opens beside the list (``src/species_flyout.py``); this panel says
+when, through ``page_requested`` and ``page_closed``. What it keeps is placing:
+the Place button and the list's gestures (``src/place_action.py``), what is
+armed apart from what is looked at, and the mix.
 """
 
 from __future__ import annotations
@@ -8,20 +14,19 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFrame,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QGroupBox, QSpinBox,
-    QColorDialog, QMenu, QListView,
+    QColorDialog, QMenu,
 )
 from PyQt6.QtCore import (
     Qt, QTimer, pyqtSignal, QModelIndex,
 )
 from PyQt6.QtGui import QColor
 
-# Model, delegate, vocabulary constants, and the shared QListWidget
-# stylesheet now live in src/plant_list_view.py (Chunk 4 of the
-# strengthening roadmap). We re-import the bits PlantPanel still
-# references so the rest of this file is unchanged.
-from src.plant_list_view import (
+# The list, its model and the vocabulary every picker shares (V3.00: the
+# search, filters and order are src/plant_picker.py). Some names are imported
+# for other modules that have always found them here.
+from src.plant_list_view import (  # noqa: F401  (re-exports)
     PlantListModel,
     PlantRowDelegate,
     _TYPE_COLORS,
@@ -30,53 +35,14 @@ from src.plant_list_view import (
     _WATER_LABELS,
     _AVAILABILITY_LABELS,
     _PLANT_OBJ_ROLE,
-    _PLANT_EXPANDED_ROLE,
-    _RESULTS_LIST_STYLE,
     _PLANT_MIME,
-    _type_icon,
-    _colour_icon,
 )
-
-# The multi-select facet dropdown and the shared filter QSS moved to
-# src/filter_widgets.py (V2.13) so the Plant Community Library can reuse them.
-# CheckableComboBox stays importable from here for existing callers/tests.
-from src.filter_widgets import (  # noqa: F401  (re-export)
-    CheckableComboBox,
-    COMBO_STYLE as _COMBO_STYLE,
-    TOGGLE_STYLE as _TOGGLE_STYLE,
-)
-
-# ── Facet vocabularies ───────────────────────────────────────────────────────
-# Moved to the Qt-free src/plant_facets.py (V2.46) when the architecture guard
-# fired on this file — the same move src/ecoregion.py was for the same reason.
-# Re-exported here so every existing importer keeps resolving.
-from src.plant_facets import (      # noqa: E402  (re-export, not a use)
+from src.filter_widgets import CheckableComboBox  # noqa: F401  (re-export)
+from src.plant_facets import (  # noqa: E402,F401  (re-export, not a use)
     _TYPE_LABELS, _DECIDUOUS_LABELS, _LIFECYCLE_LABELS, _MONTH_LABELS,
     _ECOREGION_CHOICES, _ECOREGION_DISPLAY, _AB_ECOREGION_CHOICES,
 )
-from src.ecoregion_tree import expand_for_filter
-from src.filter_widgets import build_ecoregion_tree
 
-# Flower colour (V2.48). Imported rather than restated: the panel, the
-# directory and the website all read one vocabulary.
-from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS  # noqa: E402
-
-
-# NOTE: calendar constants, plant list-item roles, compact row geometry
-# constants, and the `_zone_badge_text` helper moved with the model and
-# delegate to src/plant_list_view.py — see Chunk 4 of the strengthening
-# roadmap.
-
-
-# PlantListModel and PlantRowDelegate moved to src/plant_list_view.py (Chunk 4).
-
-
-
-# OnThisDesignPanel moved to src/on_this_design_panel.py (Chunk 4).
-
-
-
-# CheckableComboBox moved to src/filter_widgets.py (V2.13); re-imported above.
 
 # Mix rows shown before they scroll (V2.98; the community mix's number).
 _MIX_ROWS_VISIBLE = 4
@@ -137,6 +103,10 @@ class PlantPanel(QWidget):
     # Emitted whenever _placed_counts mutates (place / clear / load / remove)
     # so the sibling On-This-Design inner tab can refresh its Plants sub-tab.
     placed_counts_changed = pyqtSignal()
+    # A plant's page, beside the list (V3.00, src/species_flyout.py):
+    # {"plant", "placed", "in_mix", "focus"}; page_closed puts it away.
+    page_requested = pyqtSignal(dict)
+    page_closed = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -177,13 +147,16 @@ class PlantPanel(QWidget):
         from src.placement_arming import rearm_timer
         self._rearm_timer = rearm_timer(self, self._rearm)
 
-        # Debounce timer for local search
-        self._search_timer = QTimer(self)
-        self._search_timer.setSingleShot(True)
-        self._search_timer.setInterval(200)
-        self._search_timer.timeout.connect(self._run_search)
+        # The plant whose page is open beside the list, or 0 (V3.00).
+        self._page_id = 0
+        self._page_plant: dict = {}
+        # Where the site is, asked when the list is ordered: MainWindow hands
+        # in SitePanel.current_coords. See _check_site.
+        self._site_source = None
 
         self._build_ui()
+        # A count changing under an open page (undo, a delete) redraws it.
+        self.placed_counts_changed.connect(self._refresh_page)
 
         # The ecoregion picker starts on its "Restoring toward…" placeholder
         # (V1.87): nothing is pre-selected, and it's no longer restored from a
@@ -209,15 +182,8 @@ class PlantPanel(QWidget):
             keys = [k for k in key if k]
         else:
             keys = [key] if key else []
-        if self._ecoregion_combo.checked_keys() == keys:
-            return
-        self._ecoregion_combo.set_checked_keys(keys)
-        self._run_search()
-
-    def _on_ecoregion_changed(self):
-        # User changed the picker — just refresh results (session-only; the
-        # choice is not persisted across launches, by design).
-        self._run_search()
+        self._check_site()
+        self.picker.set_facet("ecoregion", keys)
 
     # ── Build ─────────────────────────────────────────────────────────────────
 
@@ -234,15 +200,14 @@ class PlantPanel(QWidget):
         # height). The placement settings are not in this column since V2.98:
         # they are built here and shown in the bar over the map while placing.
 
-        # ── Top pane: header + search + filters + results list ────────────
+        # ── Top pane: header, then the picker every plant list shares ─────
         local_tab = QWidget()
         top_layout = QVBoxLayout(local_tab)
         top_layout.setContentsMargins(8, 8, 8, 4)
         top_layout.setSpacing(4)
 
         # Page header (V1.86) — a plain, non-collapsible title that mirrors the
-        # Plant Community Library page. The old collapsible "Plant Browser"
-        # header hid nothing useful when collapsed, so it's gone.
+        # Plant Community Library page.
         title_label = QLabel(
             "<b>Plant Library</b>  "
             "<span style='color:#90a4ae;font-weight:normal;'>(browse &amp; place)</span>"
@@ -250,202 +215,30 @@ class PlantPanel(QWidget):
         title_label.setStyleSheet("font-size: 13px;")
         top_layout.addWidget(title_label)
 
-        # Search box
-        self._search_box = QLineEdit()
-        self._search_box.setPlaceholderText("Search plants…")
-        self._search_box.setClearButtonEnabled(True)
-        self._search_box.textChanged.connect(self._on_search_changed)
-        top_layout.addWidget(self._search_box)
-
-        # ── Filter dropdowns (multi-select facets, V1.85) ─────────────────
-        # Type / Sun / Water / Use / Availability are all multi-select so the
-        # user can combine values within a facet (e.g. Tree + Shrub, or Full
-        # Sun + Partial Shade). They share one dark-green style that blends the
-        # plain combo shape with the toggle-button palette below (shared with
-        # the Plant Community Library via src/filter_widgets.py).
-        _combo_style = _COMBO_STYLE
-        _toggle_style = _TOGGLE_STYLE
-
-        # Row 1: Type + Sun. The Type items carry the plant-type colour swatch
-        # (same colours as the map markers / list dots), so the dropdown doubles
-        # as the legend for the coloured circles. Equal stretch keeps the two
-        # columns 50/50 at any width.
-        row1 = QHBoxLayout()
-        row1.setSpacing(4)
-        self._type_combo = self._make_multi_combo(
-            "Any type", _TYPE_LABELS, _combo_style, icon_for=_type_icon)
-        self._sun_combo = self._make_multi_combo("Any sun", _SUN_LABELS, _combo_style)
-        row1.addWidget(self._type_combo, 1)
-        row1.addWidget(self._sun_combo, 1)
-        top_layout.addLayout(row1)
-
-        # Row 2: Water + Use
-        row2 = QHBoxLayout()
-        row2.setSpacing(4)
-        self._water_combo = self._make_multi_combo("Any water", _WATER_LABELS, _combo_style)
-        self._use_combo = self._make_multi_combo("Any use", _USE_LABELS, _combo_style)
-        self._use_combo.setToolTip(
-            "Pick one or more uses; only plants that have ALL of them are shown."
-        )
-        row2.addWidget(self._water_combo, 1)
-        row2.addWidget(self._use_combo, 1)
-        top_layout.addLayout(row2)
-
-        # Row 3: Availability (where to buy) + Reference ecosystem (N1), paired
-        # side-by-side with the other dropdowns (V1.85). Both multi-select:
-        #  * Availability — show several sourcing tiers at once (e.g. big-box +
-        #    garden-centre + native-nursery) and skip the seed-only / rare tail.
-        #  * Restoring toward — plants documented from ANY of the chosen Alberta
-        #    ecoregions. Session-only; a dropped property pin sets it live.
-        row3 = QHBoxLayout()
-        row3.setSpacing(4)
-        self._rarity_combo = self._make_multi_combo(
-            "Any availability", _AVAILABILITY_LABELS, _combo_style)
-        self._rarity_combo.setToolTip(
-            "Show only plants you can source from the checked tiers.\n"
-            "Leave all unchecked to see everything."
-        )
-        # Three levels, collapsed to six (V2.67). The surveyed vocabulary has
-        # 24 ecoregions and 21 Alberta subregions, which is not a list anybody
-        # can read: the top level is the six ecozones, and each opens.
-        self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
-        build_ecoregion_tree(self._ecoregion_combo)
-        self._ecoregion_combo.setStyleSheet(_combo_style)
-        self._ecoregion_combo.setToolTip(
-            "Restore toward one or more ecoregions. Click the arrow to open a\n"
-            "system and see the regions inside it, and again for Alberta's\n"
-            "natural subregions.\n\n"
-            "Checking a system includes everything inside it, so you do not\n"
-            "have to tick them one by one. Leave unchecked to see everything."
-        )
-        self._ecoregion_combo.selectionChanged.connect(self._on_ecoregion_changed)
-        row3.addWidget(self._rarity_combo, 1)
-        row3.addWidget(self._ecoregion_combo, 1)
-        top_layout.addLayout(row3)
-
-        # Row 4 — phenology (V2.37). The app has always been able to tell you
-        # WHICH months your design leaves without bloom (Analysis → Habitat,
-        # Bees, This Month all name the gap months) and never had a way to act
-        # on the answer: "gap months are shown for a design but there is no
-        # option to choose plants that flower or fruit a particular month."
-        # 428 of 434 plants record a bloom window and 287 a fruit window.
-        row4 = QHBoxLayout()
-        row4.setSpacing(4)
-        self._bloom_combo = self._make_multi_combo(
-            "Blooms in…", _MONTH_LABELS, _combo_style)
-        self._bloom_combo.setToolTip(
-            "Show only plants flowering in any of the checked months —\n"
-            "the direct way to fill a nectar gap. Plants with no recorded\n"
-            "bloom window are left out rather than guessed at.")
-        self._fruit_combo = self._make_multi_combo(
-            "Fruits in…", _MONTH_LABELS, _combo_style)
-        self._fruit_combo.setToolTip(
-            "Show only plants fruiting in any of the checked months —\n"
-            "for staggering bird food or a harvest across the season.")
-        row4.addWidget(self._bloom_combo, 1)
-        row4.addWidget(self._fruit_combo, 1)
-        top_layout.addLayout(row4)
-
-        # Row 5 — flower colour (V2.48). The directory got this in V2.47 and the
-        # picker beside the map did not, which is backwards: choosing a plant
-        # because of how it will look is a PLACEMENT decision, and this is the
-        # panel you place from (P13). Vocabulary imported, never restated, so
-        # the panel, the directory and the website cannot disagree about what
-        # colour a plant is.
-        row5 = QHBoxLayout()
-        row5.setSpacing(4)
-        self._colour_combo = self._make_multi_combo(
-            "Any flower colour", dict(_COLOUR_LABELS), _combo_style,
-            icon_for=_colour_icon)
-        self._colour_combo.setToolTip(
-            "Show only plants flowering in any of the checked colours.\n"
-            "Grasses, sedges and rushes are grouped separately: they are\n"
-            "wind-pollinated, so what you see is the seed head rather than\n"
-            "a bloom. A plant with no recorded colour is left out rather\n"
-            "than guessed at.")
-        row5.addWidget(self._colour_combo, 1)
-        top_layout.addLayout(row5)
-
-        # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
-        # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
-        # Host Plant / Bird Food) moved into the multi-select Use dropdown
-        # above; only the filters with no dropdown equivalent remain here.
-        toggle_row = QHBoxLayout()
-        toggle_row.setSpacing(3)
-
-        self._native_filter_btn = QPushButton("Native AB")
-        self._native_filter_btn.setCheckable(True)
-        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
-        self._native_filter_btn.setStyleSheet(_toggle_style)
-        self._native_filter_btn.toggled.connect(self._run_search)
-        toggle_row.addWidget(self._native_filter_btn)
-
-        self._edible_btn = QPushButton("Edible")
-        self._edible_btn.setCheckable(True)
-        self._edible_btn.setToolTip("Only show plants with edible parts")
-        self._edible_btn.setStyleSheet(_toggle_style)
-        self._edible_btn.toggled.connect(self._run_search)
-        toggle_row.addWidget(self._edible_btn)
-
-        self._perennial_btn = QPushButton("Perennial")
-        self._perennial_btn.setCheckable(True)
-        self._perennial_btn.setToolTip("Only show perennial plants")
-        self._perennial_btn.setStyleSheet(_toggle_style)
-        self._perennial_btn.toggled.connect(self._run_search)
-        toggle_row.addWidget(self._perennial_btn)
-
-        self._has_image_btn = QPushButton("Photo")
-        self._has_image_btn.setCheckable(True)
-        self._has_image_btn.setToolTip(
-            "Only show plants that have a photo (openly licensed, from iNaturalist)"
-        )
-        self._has_image_btn.setStyleSheet(_toggle_style)
-        self._has_image_btn.toggled.connect(self._run_search)
-        toggle_row.addWidget(self._has_image_btn)
-
-        # Result count rides at the end of the toggle row (right-aligned) to
-        # save a vertical line (V1.86).
-        toggle_row.addStretch(1)
-        self._result_count = QLabel("Results: —")
-        self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
-        toggle_row.addWidget(self._result_count)
-        top_layout.addLayout(toggle_row)
-
-        # ── Compact results list (QListView + custom delegate) ─────────
-        # Built on PlantListModel + PlantRowDelegate so each plant lives on
-        # one ~26 px row by default (10+ visible at default panel size). The
-        # chevron at the right edge expands a row inline to reveal the full
-        # detail block; multiple rows can be expanded at once.
-        self._results_model    = PlantListModel(self)
-        self._results_list     = QListView()
-        self._results_delegate = PlantRowDelegate(self._results_list)
-        self._results_list.setModel(self._results_model)
-        self._results_list.setItemDelegate(self._results_delegate)
-        self._results_list.setSelectionMode(
-            self._results_list.SelectionMode.SingleSelection
-        )
-        # Drag a plant out of the list onto the "Plant current mix" box (V1.87).
-        self._results_list.setDragEnabled(True)
-        self._results_list.setDragDropMode(QListView.DragDropMode.DragOnly)
-        self._results_list.setDefaultDropAction(Qt.DropAction.CopyAction)
-        self._results_list.setUniformItemSizes(False)
-        self._results_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._results_list.setVerticalScrollMode(
-            self._results_list.ScrollMode.ScrollPerPixel
-        )
-        self._results_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Search, filters, order and the list (V3.00, src/plant_picker.py):
+        # the same widget the Plant Directory and the community builder show,
+        # over one vocabulary. Its filters start folded to the line that says
+        # which are on; eighteen do not fit above a list in this column.
+        from src.plant_picker import PlantPicker
+        self.picker = PlantPicker(self, draggable=True)
+        self.picker.results_changed.connect(self._on_results)
+        self._results_list = self.picker.view
+        self._results_model = self.picker.model
+        self._search_box = self.picker.search_box
+        self._results_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         # Selecting is looking (V2.99): it names the plant on the Place button
-        # and nothing else. Enter, a double-click, the button or the context
-        # menu place it; see src/place_action.py.
+        # and, since V3.00, shows its page beside the list. Enter, a
+        # double-click, the button or the context menu place it; see
+        # src/place_action.py.
         self._results_list.selectionModel().selectionChanged.connect(
             self._on_selection_changed)
         from src.place_action import ListGestures, PlaceButton
-        gestures = ListGestures(self._results_list)
+        gestures = ListGestures(self._results_list, read_key=True)
         gestures.place.connect(self._on_list_place)
         gestures.choose.connect(self._on_list_choose)
-        self._results_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
-        top_layout.addWidget(self._results_list)
+        gestures.read.connect(self._on_list_read)
+        top_layout.addWidget(self.picker, 1)
         self._place_btn = PlaceButton("plant")
         self._place_btn.clicked.connect(
             lambda: self._place_plant(self._selected_plant))
@@ -494,88 +287,50 @@ class PlantPanel(QWidget):
         # it, and the bar takes it from there.
         self._build_polyculture_controls(root)
 
-    # ── Filter helpers ────────────────────────────────────────────────────────
-
-    def _make_multi_combo(self, placeholder: str, labels: dict,
-                          style: str, icon_for=None) -> "CheckableComboBox":
-        """Build a styled multi-select facet dropdown (V1.85).
-
-        ``labels`` is a key→label dict; selecting items re-runs the search.
-        ``icon_for(key)`` (optional) returns a per-item QIcon — used to put the
-        plant-type colour swatch beside each Type, doubling as the map legend.
-        """
-        combo = CheckableComboBox(placeholder=placeholder)
-        for key, lbl in labels.items():
-            combo.add_check_item(lbl, key,
-                                 icon=icon_for(key) if icon_for else None)
-        combo.setStyleSheet(style)
-        combo.selectionChanged.connect(self._run_search)
-        return combo
-
-    # ── Search / filter ───────────────────────────────────────────────────────
-
-    def _on_search_changed(self, _text: str):
-        self._search_timer.start()
+    # ── Search ────────────────────────────────────────────────────────────────
 
     def set_soil_ph(self, ph):
         """Set the site's soil pH (from site data) so the browser only shows
-        plants tolerant of it. ``None`` clears the constraint. Re-runs the
-        search so results reflect the change immediately (V1.67)."""
+        plants tolerant of it. ``None`` clears the constraint (V1.67)."""
         new = float(ph) if isinstance(ph, (int, float)) else None
         if new == self._soil_ph:
             return
         self._soil_ph = new
-        self._run_search()
+        self._check_site()
+        self.picker.set_extra(soil_ph=new)
+
+    def set_site_source(self, source):
+        """``source()`` → ``(lat, lng)`` or ``None``: where the design is, for
+        the "Recorded near this site" order. Read, not pushed, because a project load
+        restores the pin without any of the signals a dropped pin sends."""
+        self._site_source = source
+        self._check_site()
+
+    def _check_site(self):
+        """Hand the picker the site as it is now. Called whenever the site
+        could have changed under the list: a pin's region arriving, the zone,
+        the soil pH, and the tab being shown."""
+        coords = None
+        if self._site_source is not None:
+            try:
+                coords = self._site_source()
+            except Exception:                                   # noqa: BLE001
+                coords = None
+        self.picker.set_site(coords, self._current_zone)
 
     def _run_search(self):
-        try:
-            from src.db.plants import search_plants
-        except Exception:
-            return
+        self.picker.refresh()
 
-        # The dedicated zone-filter toggle was removed; results are
-        # never zone-restricted now. `_current_zone` is still tracked
-        # for status-bar display elsewhere.
-        zone = None
-
-        # Facet dropdowns are multi-select (V1.85): each returns a list of
-        # checked keys. The use-based toggles moved into the Use dropdown; only
-        # the column-based toggles (Native AB / Edible / Perennial / Photo)
-        # remain as buttons.
-        try:
-            plants = search_plants(
-                query       = self._search_box.text().strip(),
-                plant_type  = self._type_combo.checked_keys(),
-                sun_req     = self._sun_combo.checked_keys(),
-                water_needs = self._water_combo.checked_keys(),
-                perm_use    = self._use_combo.checked_keys(),
-                zone        = zone,
-                native_only = self._native_filter_btn.isChecked(),
-                edible_only = self._edible_btn.isChecked(),
-                perennial_only = self._perennial_btn.isChecked(),
-                has_image_only  = self._has_image_btn.isChecked(),
-                # Expanded along the lineage: checking one ecozone has to match
-                # plants tagged with any region inside it, and checking one
-                # region has to match plants only ever tagged at the ecozone.
-                # See src/ecoregion_tree.py for why both directions.
-                ab_ecoregion    = expand_for_filter(
-                    self._ecoregion_combo.checked_keys()),
-                availability_in = self._rarity_combo.checked_keys(),
-                soil_ph         = self._soil_ph,
-                bloom_months    = self._bloom_combo.checked_keys(),
-                fruit_months    = self._fruit_combo.checked_keys(),
-                flower_colours  = self._colour_combo.checked_keys(),
-            )
-        except Exception as exc:
-            self._result_count.setText(f"Error: {exc}")
-            return
-
-        self._results_model.set_plants(plants)
+    def _on_results(self):
+        """A search ran or the order changed: the counts ride along, the
+        highlight follows the plant being looked at, and its page closes if
+        the search hid it."""
         self._results_model.set_placed_counts(self._placed_counts)
+        plants = self.picker.rows()
         self._reselect(plants)
-
-        n = len(plants)
-        self._result_count.setText(f"Results: {n}")
+        if self._page_id and not any(p.get("id") == self._page_id
+                                     for p in plants):
+            self.close_page()
 
     # ── Looking and placing ───────────────────────────────────────────────────
 
@@ -612,13 +367,87 @@ class PlantPanel(QWidget):
             self._place_plant(plant)
 
     def _on_list_choose(self, index: QModelIndex):
-        """A finished click or an arrow key onto a row. While the map is
-        placing, the list is a palette: what you choose is what the next click
-        plants, so "the last thing" is never placed by mistake."""
+        """A finished click or an arrow key onto a row shows its page (V3.00).
+        While the map is placing, the list is a palette instead: what you
+        choose is what the next click plants, so "the last thing" is never
+        placed by mistake, and the page stays shut so the map stays clear."""
         plant = index.data(_PLANT_OBJ_ROLE)
-        if self._armed and plant and (self._armed_mix or plant.get("id") != (
-                self._armed_plant or {}).get("id")):
+        if not plant:
+            return
+        if not self._armed:
+            self._show_page(plant)
+        elif self._armed_mix or plant.get("id") != (
+                self._armed_plant or {}).get("id"):
             self._place_plant(plant)
+
+    def _on_list_read(self, index: QModelIndex):
+        """→ on a row: its page, with the keyboard in it (Esc comes back)."""
+        plant = index.data(_PLANT_OBJ_ROLE)
+        if plant and not self._armed:
+            self._show_page(plant, focus=True)
+
+    # ── The page beside the list (V3.00) ─────────────────────────────────────
+
+    def _show_page(self, plant: dict, *, focus: bool = False):
+        pid = int(plant.get("id") or 0)
+        if not pid:
+            return
+        self._page_id = pid
+        self._page_plant = plant
+        self.page_requested.emit({
+            "plant": plant, "placed": self.placed_count(pid),
+            "in_mix": self.in_mix(pid), "focus": focus})
+
+    def _refresh_page(self):
+        """The page is open and its plant's count or mix state changed."""
+        if self._page_id:
+            self._show_page(self._page_plant)
+
+    def close_page(self):
+        if self._page_id:
+            self._page_id = 0
+            self.page_closed.emit()
+
+    def page_plant_id(self) -> int:
+        return self._page_id
+
+    def focus_list(self):
+        self._results_list.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def placed_count(self, plant_id) -> int:
+        return int(self._placed_counts.get(plant_id, 0))
+
+    def in_mix(self, plant_id) -> bool:
+        return any(s.get("id") == plant_id for s in self._mix_species)
+
+    def add_to_mix(self, plant: dict):
+        """Add to the mix from outside the list: the page's Add to mix."""
+        self._add_to_mix(plant)
+
+    def place_from_elsewhere(self, plant: dict):
+        """Place ``plant``, named somewhere other than this list: the page
+        beside it, or the Plant Directory. It is highlighted here first when
+        the list shows it, so the Place button and the bar agree."""
+        if plant and plant.get("id"):
+            self.picker.select_plant_id(plant.get("id"))
+            self._place_plant(plant)
+
+    def hideEvent(self, event):
+        # The page belongs to this tab: switching tab, or folding the side
+        # panel away, puts it away too.
+        self.close_page()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._check_site()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and self._page_id:
+            self.close_page()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _place_plant(self, plant):
         """A Place action named ``plant``: arm the map with it, in the bar's
@@ -656,7 +485,10 @@ class PlantPanel(QWidget):
         self._announce_armed()
 
     def _announce_armed(self):
-        """Tell the placement bar what the map holds (or that it holds nothing)."""
+        """Tell the placement bar what the map holds (or that it holds nothing).
+        Placing puts the page away: the map has to be clear for the click."""
+        if self._armed:
+            self.close_page()
         self._color_unit.setVisible(not self._armed_mix)
         self.armed_changed.emit({
             "armed": self._armed,
@@ -989,6 +821,7 @@ class PlantPanel(QWidget):
             self._mix_clear_btn.setEnabled(False)
             self._mix_save_btn.setEnabled(False)
             self._mix_open_builder_btn.setEnabled(False)
+            self._refresh_page()
             return
 
         all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
@@ -1014,6 +847,7 @@ class PlantPanel(QWidget):
             row = self._build_mix_row(idx, s)
             self._mix_rows_layout.addWidget(row)
         QTimer.singleShot(0, self._fit_mix_rows)
+        self._refresh_page()
 
     def _fit_mix_rows(self):
         """Show every row up to four, then scroll. A scroll area asks for its
@@ -1358,11 +1192,12 @@ class PlantPanel(QWidget):
 
         menu.addSeparator()
 
-        expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
-        act_expand = menu.addAction("Collapse details" if expanded else "Expand details")
-        act_expand.triggered.connect(
-            lambda: self._results_model.toggle_expanded(index.row())
-        )
+        # Its page, beside the list (V3.00; this menu used to expand the card
+        # painted into the row). Not while placing: the map stays clear.
+        if not self._armed:
+            act_about = menu.addAction(f"About {plant['common_name']}")
+            act_about.triggered.connect(
+                lambda: self._show_page(plant, focus=True))
 
         menu.addSeparator()
 
@@ -1462,6 +1297,7 @@ class PlantPanel(QWidget):
         `_zone_filter_btn` / `_zone_label` widgets.
         """
         self._current_zone = zone
+        self._check_site()
 
     def on_plant_removed(self, plant_id: int):
         """Notify the panel that a plant marker was removed from the map."""

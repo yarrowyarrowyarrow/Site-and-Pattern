@@ -1,5 +1,4 @@
 import json
-import re
 
 from PyQt6.QtCore import (
     Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray, QTimer,
@@ -97,7 +96,6 @@ class _CommunityMixDropGroupBox(QGroupBox):
             super().dropEvent(e)
 from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
-from src.plant_conditions import condition_matches
 
 
 # Community-tree height bounds. With nothing selected the tree fills the panel
@@ -225,221 +223,6 @@ ROLE_TYPE_HINTS = {
     "windbreak":           ["tree", "shrub"],
     "other":               None,
 }
-
-
-class OffsetCanvas(QWidget):
-    """Mini canvas for visually positioning a polyculture member by clicking."""
-
-    offsetChanged = pyqtSignal(float, float)  # offset_x, offset_y in metres
-
-    def __init__(self, radius_m: float = 10.0, parent=None):
-        super().__init__(parent)
-        self._radius_m = radius_m   # half-width of canvas in metres
-        self._offset_x = 0.0
-        self._offset_y = 0.0
-        self.setFixedSize(180, 180)
-        self.setToolTip("Click to set member offset from the community centre")
-        self.setCursor(Qt.CursorShape.CrossCursor)
-
-    def set_offset(self, x: float, y: float):
-        self._offset_x = max(-self._radius_m, min(self._radius_m, x))
-        self._offset_y = max(-self._radius_m, min(self._radius_m, y))
-        self.update()
-
-    def offset(self) -> tuple[float, float]:
-        return self._offset_x, self._offset_y
-
-    def mousePressEvent(self, event):
-        self._update_from_mouse(event.position())
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.MouseButton.LeftButton:
-            self._update_from_mouse(event.position())
-
-    def _update_from_mouse(self, pos: QPointF):
-        w, h = self.width(), self.height()
-        cx, cy = w / 2, h / 2
-        scale = self._radius_m / (min(w, h) / 2)
-        self._offset_x = round((pos.x() - cx) * scale, 1)
-        self._offset_y = round((cy - pos.y()) * scale, 1)  # Y flipped
-        self._offset_x = max(-self._radius_m, min(self._radius_m, self._offset_x))
-        self._offset_y = max(-self._radius_m, min(self._radius_m, self._offset_y))
-        self.update()
-        self.offsetChanged.emit(self._offset_x, self._offset_y)
-
-    def paintEvent(self, event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        w, h = self.width(), self.height()
-        cx, cy = w / 2, h / 2
-
-        # Background
-        p.fillRect(0, 0, w, h, QColor(20, 32, 20))
-
-        # Grid lines
-        pen = QPen(QColor(46, 74, 46), 1)
-        p.setPen(pen)
-        steps = 5
-        for i in range(steps + 1):
-            frac = i / steps
-            x = int(frac * w)
-            y = int(frac * h)
-            p.drawLine(x, 0, x, h)
-            p.drawLine(0, y, w, y)
-
-        # Crosshair at centre
-        pen.setColor(QColor(100, 160, 100))
-        pen.setStyle(Qt.PenStyle.DashLine)
-        p.setPen(pen)
-        p.drawLine(int(cx), 0, int(cx), h)
-        p.drawLine(0, int(cy), w, int(cy))
-
-        # Centre dot
-        p.setBrush(QBrush(QColor(102, 187, 106)))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(QPointF(cx, cy), 4, 4)
-
-        # Member position dot
-        scale = (min(w, h) / 2) / self._radius_m
-        mx = cx + self._offset_x * scale
-        my = cy - self._offset_y * scale  # Y flipped
-        p.setBrush(QBrush(QColor(255, 167, 38)))
-        p.drawEllipse(QPointF(mx, my), 6, 6)
-
-        # Label
-        p.setPen(QColor(200, 230, 201))
-        p.setFont(QFont("Arial", 8))
-        p.drawText(4, 12, f"±{self._radius_m}m")
-        p.drawText(4, h - 4, f"({self._offset_x:.1f}, {self._offset_y:.1f})m")
-        p.end()
-
-
-class AddMemberDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Add Plant Community Member")
-        self.setMinimumWidth(420)
-
-        self._all_plants = plants_db.get_all_plants()
-
-        layout = QFormLayout(self)
-
-        # Role comes first — it filters the plant list
-        self.role_combo = QComboBox()
-        for r in ROLES:
-            self.role_combo.addItem(r.replace("_", " ").title(), r)
-        self.role_combo.currentIndexChanged.connect(self._on_role_changed)
-        layout.addRow("Role:", self.role_combo)
-
-        self.plant_combo = QComboBox()
-        layout.addRow("Plant:", self.plant_combo)
-
-        # Visual offset editor
-        offset_group = QGroupBox("Position (click or drag to set offset)")
-        offset_layout = QHBoxLayout(offset_group)
-
-        self._canvas = OffsetCanvas(radius_m=10.0)
-        offset_layout.addWidget(self._canvas)
-
-        # Spin boxes alongside for fine-tuning
-        spin_col = QVBoxLayout()
-        spin_col.addStretch()
-        x_row = QHBoxLayout()
-        x_row.addWidget(QLabel("X:"))
-        self.offset_x = QDoubleSpinBox()
-        self.offset_x.setRange(-50, 50)
-        self.offset_x.setSuffix(" m")
-        self.offset_x.setDecimals(1)
-        x_row.addWidget(self.offset_x)
-        spin_col.addLayout(x_row)
-
-        y_row = QHBoxLayout()
-        y_row.addWidget(QLabel("Y:"))
-        self.offset_y = QDoubleSpinBox()
-        self.offset_y.setRange(-50, 50)
-        self.offset_y.setSuffix(" m")
-        self.offset_y.setDecimals(1)
-        y_row.addWidget(self.offset_y)
-        spin_col.addLayout(y_row)
-        spin_col.addStretch()
-        offset_layout.addLayout(spin_col)
-
-        layout.addRow(offset_group)
-
-        # Sync canvas ↔ spinboxes
-        self._canvas.offsetChanged.connect(self._on_canvas_offset)
-        self.offset_x.valueChanged.connect(self._on_spin_offset)
-        self.offset_y.valueChanged.connect(self._on_spin_offset)
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
-
-        # Populate plant list for the default role
-        self._on_role_changed()
-
-    def _on_canvas_offset(self, x: float, y: float):
-        self.offset_x.blockSignals(True)
-        self.offset_y.blockSignals(True)
-        self.offset_x.setValue(x)
-        self.offset_y.setValue(y)
-        self.offset_x.blockSignals(False)
-        self.offset_y.blockSignals(False)
-
-    def _on_spin_offset(self):
-        self._canvas.blockSignals(True)
-        self._canvas.set_offset(self.offset_x.value(), self.offset_y.value())
-        self._canvas.blockSignals(False)
-
-    def _on_role_changed(self):
-        """Filter plant combo based on selected role."""
-        role = self.role_combo.currentData()
-        type_hints = ROLE_TYPE_HINTS.get(role)
-
-        self.plant_combo.clear()
-
-        # Special filtering for function-based roles
-        perm_keyword = None
-        if role == "nitrogen_fixer":
-            perm_keyword = "nitrogen"
-        elif role == "soil_builder":
-            perm_keyword = "soil_builder"
-
-        preferred = []
-        others = []
-
-        for p in self._all_plants:
-            label = f"{p['common_name']} ({p['plant_type']})"
-            ptype = p.get("plant_type", "")
-            puses = (p.get("permaculture_uses") or "").lower()
-
-            if perm_keyword and perm_keyword in puses:
-                preferred.append((label, p["id"]))
-            elif type_hints and ptype in type_hints:
-                preferred.append((label, p["id"]))
-            else:
-                others.append((label, p["id"]))
-
-        # Show matching plants first, then a separator, then the rest
-        for label, pid in preferred:
-            self.plant_combo.addItem(label, pid)
-
-        if preferred and others:
-            self.plant_combo.insertSeparator(len(preferred))
-
-        for label, pid in others:
-            self.plant_combo.addItem(label, pid)
-
-    def get_data(self):
-        return {
-            "plant_id": self.plant_combo.currentData(),
-            "role": self.role_combo.currentData(),
-            "offset_x": self.offset_x.value(),
-            "offset_y": self.offset_y.value(),
-        }
 
 
 class PolycultureGridCanvas(QWidget):
@@ -637,36 +420,10 @@ def _plant_color_for_member(plant: dict) -> str:
     }.get(t, "#66bb6a")
 
 
-def _truthy_int(v) -> int:
-    """Coerce dirty plant-DB values to a safe 0/1 int.
-
-    The seeding JSON has historically contained malformed strings like
-    ``'1?'`` for ``native_to_alberta``; SQLite's flexible typing lets
-    those land in a column declared INTEGER, so consumers that call
-    ``int(...)`` on them blow up with ``ValueError``. This helper
-    handles every shape we've seen — bool, int, float, ``'1'``,
-    ``'1?'``, ``'  1.0  '``, ``''``, ``None`` — and falls through to 0.
-    """
-    if v is None or v is False:
-        return 0
-    if v is True:
-        return 1
-    if isinstance(v, (int, float)):
-        return 1 if v else 0
-    s = str(v).strip()
-    if not s:
-        return 0
-    m = re.match(r"-?\d+", s)
-    try:
-        return 1 if (m and int(m.group(0)) != 0) else 0
-    except ValueError:
-        return 0
-
-
 class PolycultureBuilderDialog(QDialog):
     """One-screen visual editor for a polyculture (create or modify).
 
-    Replaces the older one-plant-at-a-time AddMemberDialog flow. The
+    Replaced the older one-plant-at-a-time AddMemberDialog flow. The
     user fills in name + description, picks plants from an Alberta-
     native-first list on the left, picks a role, then clicks the grid
     in the middle to drop them at metre offsets. Right-click removes,
@@ -708,61 +465,18 @@ class PolycultureBuilderDialog(QDialog):
 
         body = QHBoxLayout()
 
-        # Left — plant picker. Filters mirror the main Plants tab so
-        # users can drill into the catalogue while building a mix
-        # without leaving the dialog (Phase 4 — search parity).
-        from src.plant_panel import (
-            _TYPE_LABELS, _SUN_LABELS, _WATER_LABELS, _USE_LABELS,
-        )
+        # Left — the plant picker every plant list shares (F192, V3.00): the
+        # search, the filters and the list the Browse tab and the Plant
+        # Directory show. Until V3.00 this was a checkbox, four single-choice
+        # dropdowns and a list of plain strings, filtered here in Python. It
+        # starts on natives only, as the checkbox did, and the layer and
+        # functions chosen below lift matching plants to the top.
+        from src.plant_picker import PlantPicker
         picker_col = QVBoxLayout()
         picker_col.addWidget(QLabel("<b>Plants</b>"))
-        self.ab_only = QCheckBox("Alberta natives only")
-        self.ab_only.setChecked(True)
-        self.ab_only.toggled.connect(self._refresh_plant_list)
-        picker_col.addWidget(self.ab_only)
-
-        self.plant_search = QLineEdit()
-        self.plant_search.setPlaceholderText("Search plants…")
-        self.plant_search.setClearButtonEnabled(True)
-        self.plant_search.textChanged.connect(self._refresh_plant_list)
-        picker_col.addWidget(self.plant_search)
-
-        def _build_combo(items):
-            cb = QComboBox()
-            for label, data in items:
-                cb.addItem(label, userData=data)
-            cb.currentIndexChanged.connect(self._refresh_plant_list)
-            return cb
-
-        filt_row1 = QHBoxLayout()
-        self.type_combo = _build_combo(
-            [("All types", "")]
-            + [(lbl, key) for key, lbl in _TYPE_LABELS.items()]
-        )
-        self.sun_combo = _build_combo(
-            [("Any sun", "")]
-            + [(lbl, key) for key, lbl in _SUN_LABELS.items()]
-        )
-        filt_row1.addWidget(self.type_combo)
-        filt_row1.addWidget(self.sun_combo)
-        picker_col.addLayout(filt_row1)
-
-        filt_row2 = QHBoxLayout()
-        self.water_combo = _build_combo(
-            [("Any water", "")]
-            + [(lbl, key) for key, lbl in _WATER_LABELS.items()]
-        )
-        self.use_combo = _build_combo(
-            [("Any use", "")]
-            + [(lbl, key) for key, lbl in _USE_LABELS.items()]
-        )
-        filt_row2.addWidget(self.water_combo)
-        filt_row2.addWidget(self.use_combo)
-        picker_col.addLayout(filt_row2)
-
-        self.plant_list = QListWidget()
-        self.plant_list.setMinimumWidth(220)
-        picker_col.addWidget(self.plant_list, 1)
+        self.picker = PlantPicker(self, criteria={"native_only": True})
+        self.picker.setMinimumWidth(240)
+        picker_col.addWidget(self.picker, 1)
 
         picker_col.addWidget(QLabel("<b>Layer</b>"))
         self.layer_combo = QComboBox()
@@ -795,10 +509,10 @@ class PolycultureBuilderDialog(QDialog):
         )
         picker_col.addWidget(functions_box)
 
-        # Filter the plant picker as soon as the user changes layer/function.
-        self.layer_combo.currentIndexChanged.connect(self._refresh_plant_list)
+        # The layer and functions chosen lift matching plants to the top.
+        self.layer_combo.currentIndexChanged.connect(self._refresh_hint)
         for cb in self.function_checks.values():
-            cb.toggled.connect(self._refresh_plant_list)
+            cb.toggled.connect(self._refresh_hint)
 
         body.addLayout(picker_col, 1)
 
@@ -883,80 +597,30 @@ class PolycultureBuilderDialog(QDialog):
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)
 
-        self._refresh_plant_list()
+        self.picker.refresh()
 
-    def _refresh_plant_list(self, *_):
-        text = (self.plant_search.text() or "").strip().lower()
-        ab_only = self.ab_only.isChecked()
-        type_f  = (self.type_combo.currentData()  if hasattr(self, "type_combo")  else "") or ""
-        sun_f   = (self.sun_combo.currentData()   if hasattr(self, "sun_combo")   else "") or ""
-        water_f = (self.water_combo.currentData() if hasattr(self, "water_combo") else "") or ""
-        use_f   = (self.use_combo.currentData()   if hasattr(self, "use_combo")   else "") or ""
+    def _refresh_hint(self, *_):
+        """Lift the plants that match the layer and functions chosen to the top
+        of the list. Nothing is hidden: the old role dropdown sorted matches
+        first and left the rest pickable, and so does this."""
+        layer_hint = LAYER_TYPE_HINTS.get(self.layer_combo.currentData() or "")
+        keywords = [FUNCTION_PERM_KEYWORDS[fn]
+                    for fn, cb in self.function_checks.items()
+                    if cb.isChecked() and fn in FUNCTION_PERM_KEYWORDS]
+        if not layer_hint and not keywords:
+            self.picker.set_hint(None)
+            return
 
-        # Layer + functions bias the plant ordering — matching plants
-        # sort to the top. They do not hard-filter so the user can still
-        # pick anything (matches the spirit of the previous role combo).
-        layer_sel = (self.layer_combo.currentData()
-                     if hasattr(self, "layer_combo") else None)
-        fn_selected = [fn for fn, cb in getattr(self, "function_checks", {}).items()
-                       if cb.isChecked()]
-        layer_hint = LAYER_TYPE_HINTS.get(layer_sel or "", None)
-        fn_keywords = [FUNCTION_PERM_KEYWORDS[fn] for fn in fn_selected
-                       if fn in FUNCTION_PERM_KEYWORDS]
+        def matches(plant: dict) -> bool:
+            if layer_hint and (plant.get("plant_type") or "") in layer_hint:
+                return True
+            uses = (plant.get("permaculture_uses") or "").lower()
+            return any(kw in uses for kw in keywords)
 
-        self.plant_list.clear()
-        preferred: list[tuple[str, str, dict]] = []  # (display_name, ptype, plant)
-        others: list[tuple[str, str, dict]] = []
-
-        for p in self._all_plants:
-            if ab_only and not _truthy_int(p.get("native_to_alberta")):
-                continue
-            if type_f and (p.get("plant_type") or "") != type_f:
-                continue
-            if not condition_matches(p.get("sun_requirement"), sun_f):
-                continue
-            if not condition_matches(p.get("water_needs"), water_f):
-                continue
-            if use_f:
-                uses_raw = (p.get("permaculture_uses") or "").lower()
-                tokens = {
-                    t.strip()
-                    for chunk in uses_raw.split(",")
-                    for t in chunk.split("|")
-                }
-                if use_f.lower() not in tokens:
-                    continue
-            name = p.get("common_name", "") or ""
-            sci = p.get("scientific_name", "") or ""
-            if text and text not in name.lower() and text not in sci.lower():
-                continue
-            ptype = p.get("plant_type", "") or ""
-            puses = (p.get("permaculture_uses") or "").lower()
-
-            matches_layer = bool(layer_hint) and ptype in layer_hint
-            matches_fn = any(kw in puses for kw in fn_keywords) if fn_keywords else False
-            entry = (name, ptype, p)
-            if matches_layer or matches_fn:
-                preferred.append(entry)
-            else:
-                others.append(entry)
-
-        def _add(items):
-            for name, ptype, p in items:
-                item = QListWidgetItem(f"{name}  ({ptype})" if ptype else name)
-                item.setData(Qt.ItemDataRole.UserRole, p)
-                self.plant_list.addItem(item)
-
-        _add(preferred)
-        if preferred and others:
-            sep = QListWidgetItem("─────")
-            sep.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.plant_list.addItem(sep)
-        _add(others)
+        self.picker.set_hint(matches)
 
     def _selected_plant(self) -> dict | None:
-        item = self.plant_list.currentItem()
-        return item.data(Qt.ItemDataRole.UserRole) if item else None
+        return self.picker.current_plant()
 
     def _on_canvas_add(self, x_m: float, y_m: float):
         plant = self._selected_plant()
@@ -2543,8 +2207,9 @@ class PolyculturePanel(QWidget):
 
     # NOTE: the per-member Add / Remove buttons were retired in favour
     # of the visual builder dialog (`PolycultureBuilderDialog`) opened
-    # via the "Edit in Builder…" button. AddMemberDialog is kept above
-    # in case external code or tests still import it.
+    # via the "Edit in Builder…" button. The one-at-a-time AddMemberDialog,
+    # kept "in case external code or tests still import it", had no caller
+    # and was a fourth plant picker; it went with V3.00's one picker (F192).
 
     # ── Arming ────────────────────────────────────────────────────────────────
 

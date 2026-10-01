@@ -785,6 +785,13 @@ class MainWindow(QMainWindow):
         # map included, which Python could not see before. See the module.
         from src import placement_bar_flow
         placement_bar_flow.install(self)
+        # A plant's page beside the side panel (F192, V3.00): opened by
+        # choosing a plant in Browse, closed by placing. See the module.
+        from src import species_flyout
+        species_flyout.install(self)
+        # Where the site is, for the plant list's "Recorded near this site"
+        # order.
+        self.plant_panel.set_site_source(self.site_panel.current_coords)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
         self.plant_panel.communityCreated.connect(

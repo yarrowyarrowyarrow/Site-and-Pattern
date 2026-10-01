@@ -39,7 +39,6 @@ from __future__ import annotations
 import datetime
 from typing import Callable, Optional
 
-from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
 from src.nativity import SOURCE_FIELD
 # Re-exported: the start-screen trio moved out in V2.80 when this
 # file hit its line ceiling. Callers import them from here.
@@ -48,147 +47,22 @@ from src.plant_directory_bloom import (  # noqa: F401
 
 # ── The filter vocabulary ────────────────────────────────────────────────────
 #
-# `search_plants` takes thirty parameters. The design-side browser wires
-# fourteen. The other sixteen have worked the whole time with nothing to press:
-# keystone, larval host, bird food, pollinator, nitrogen fixer, specialist
-# support, pet/kid safety, spread habit, price, commonness, province, moisture
-# and three fauna-keyed lookups. A reference work is exactly where they belong —
-# "show me the keystone species that feed a specialist and are safe around a
-# dog" is a research question, not a placement one.
-#
-# Held as data so the window is a loop, and so `tests/test_plant_directory.py`
-# can check every `param` against the real signature.
+# One vocabulary for every picker since V3.00 (F192): src/plant_filters.py.
+# The directory's own tables had seven facets and thirteen toggles, five of
+# them Browse's "Use" values under other names, while Browse had three facets
+# the directory lacked. The names below are kept because the start screen, the
+# static site and the tests import them from here.
 
-#: ``(key, label, search_plants parameter, {value: label})`` — multi-select.
-FACETS: tuple = (
-    ("type", "Type", "plant_type", {
-        "tree": "Tree", "shrub": "Shrub", "vine": "Vine",
-        "wildflower": "Wildflower", "herb": "Herb / Foliage",
-        "groundcover": "Groundcover", "grass": "Grass", "sedge": "Sedge",
-        "rush": "Rush", "fern": "Fern", "aquatic": "Aquatic / Wetland",
-    }),
-    ("sun", "Sun", "sun_req", {
-        "full_sun": "Full Sun", "partial_shade": "Partial Shade",
-        "full_shade": "Full Shade",
-    }),
-    ("water", "Water", "water_needs", {
-        "low": "Low", "medium": "Medium", "high": "High",
-    }),
-    ("use", "Role", "perm_use", {
-        "keystone_species": "Keystone Species", "host_plant": "Larval Host",
-        "pollinator": "Pollinator Support", "bird_food": "Bird Food",
-        "nesting_material": "Nesting Material",
-        "wildlife_habitat": "Wildlife Habitat",
-        "nitrogen_fixer": "Nitrogen Fixer", "soil_builder": "Soil Builder",
-        "early_successional": "Pioneer Species", "canopy_layer": "Canopy Layer",
-        "windbreak": "Windbreak", "hedge": "Hedge",
-        "groundcover": "Groundcover",
-    }),
-    ("availability", "Where to buy", "availability_in", {
-        "big_box": "Big-box store", "garden_centre": "Garden centre",
-        "native_specialist": "Native nursery",
-        "seed_or_plug": "Seed / plug only", "rare": "Rare / hard to find",
-    }),
-    ("bloom_months", "Blooms in", "bloom_months", {
-        str(m): name for m, name in enumerate(
-            ("January", "February", "March", "April", "May", "June", "July",
-             "August", "September", "October", "November", "December"), 1)
-    }),
-    # V2.47. `flower_color` has held a hex since schema v31 and nothing could
-    # filter on it — the one axis a person uses when they are choosing a plant
-    # because they want to look at it (P13). The vocabulary is imported rather
-    # than restated so the desktop facet, the search layer and the static site's
-    # colour pages cannot drift; see `src.flower_colour` for why the grasses get
-    # a bucket of their own instead of being filed as yellow.
-    ("colour", "Flower colour", "flower_colours", dict(_COLOUR_LABELS)),
+from src.plant_filters import (  # noqa: E402,F401  (re-exported)
+    FACETS, QUALITIES as TOGGLES, criteria_to_kwargs, facet_params,
 )
+from src.plant_filters import ORDERS as _ORDERS  # noqa: E402
 
-#: ``(key, label, search_plants parameter, tooltip)`` — on/off chips.
-TOGGLES: tuple = (
-    ("native_only", "Native", "native_only",
-     "Native to Alberta."),
-    ("keystone_only", "Keystone", "keystone_only",
-     "Tallamy's high-value genera — the plants that anchor a food web."),
-    ("host_plant_only", "Larval host", "host_plant_only",
-     "Feeds caterpillars, which is what feeds nestling birds."),
-    ("supports_specialist", "Feeds a specialist", "supports_specialist",
-     "Supports at least one animal that has nowhere else to go."),
-    ("bird_food_only", "Bird food", "bird_food_only",
-     "Documented seed or fruit food for birds."),
-    ("pollinator_only", "Pollinator", "pollinator_only",
-     "Documented nectar or pollen source."),
-    ("nfixer_only", "Nitrogen fixer", "nfixer_only",
-     "Feeds the soil rather than needing it fed."),
-    ("edible_only", "Edible", "edible_only",
-     "Has parts recorded as edible for people."),
-    ("pet_safe_only", "Pet safe", "pet_safe_only",
-     "No recorded toxicity to pets. Silence is not a guarantee — an "
-     "unassessed plant passes this filter."),
-    ("kid_safe_only", "Child safe", "kid_safe_only",
-     "No recorded toxicity to people and no thorns. Same caveat."),
-    ("well_behaved_only", "Well behaved", "well_behaved_only",
-     "Does not spread aggressively."),
-    ("common_only", "Easy to find", "common_only",
-     "Stocked somewhere other than a specialist grower."),
-    ("has_image_only", "Has a photo", "has_image_only",
-     "Only species this catalogue can show you."),
-)
-
-#: How the list can be ordered. ``name`` is the default because a reference
-#: work is something you look things up in.
-SORT_KEYS: tuple = (
-    ("name", "Name"),
-    ("type", "Type"),
-    ("height", "Mature height"),
-    ("wildlife", "Animals supported"),
-)
-
-
-def facet_params() -> set:
-    """Every ``search_plants`` parameter this module drives. The test that
-    checks them against the real signature reads this."""
-    return ({f[2] for f in FACETS} | {t[2] for t in TOGGLES}
-            | {"query", "ecoregion"})
+#: How the list can be ordered, ``(key, label)``.
+SORT_KEYS: tuple = tuple((key, label) for key, label, _tip in _ORDERS)
 
 
 # ── Searching ────────────────────────────────────────────────────────────────
-
-def criteria_to_kwargs(criteria: Optional[dict]) -> dict:
-    """Turn ``{facet_key: [values], toggle_key: True, "query": "..."}`` into
-    ``search_plants`` keyword arguments.
-
-    Empty selections are dropped rather than passed as empty lists, because
-    ``search_plants`` reads "no restriction" from an empty value and passing
-    ``[]`` for a list parameter would otherwise read as "match nothing" to a
-    future maintainer even though it currently does not.
-    """
-    criteria = criteria or {}
-    kwargs: dict = {}
-
-    query = (criteria.get("query") or "").strip()
-    if query:
-        kwargs["query"] = query
-    region = criteria.get("ecoregion") or ""
-    if region:
-        kwargs["ecoregion"] = (",".join(region) if isinstance(region, list)
-                               else region)
-
-    for key, _label, param, _values in FACETS:
-        chosen = criteria.get(key) or []
-        if not chosen:
-            continue
-        if param.endswith("_months"):
-            # Month keys travel as strings (CheckableComboBox keys always do);
-            # the search layer wants ints.
-            kwargs[param] = [int(v) for v in chosen if str(v).isdigit()]
-        else:
-            kwargs[param] = list(chosen)
-
-    for key, _label, param, _tip in TOGGLES:
-        if criteria.get(key):
-            kwargs[param] = True
-    return kwargs
-
 
 def search(criteria: Optional[dict] = None, *,
            search_fn: Optional[Callable] = None,
@@ -205,27 +79,10 @@ def search(criteria: Optional[dict] = None, *,
 
 
 def sort_species(rows: list, key: str = "name") -> list:
-    """Order a result set. Unknown keys fall back to name rather than raising —
-    a directory that refuses to draw because a sort key was misspelt is worse
-    than one that draws in the wrong order."""
-    rows = list(rows or [])
-    if key == "type":
-        return sorted(rows, key=lambda r: ((r.get("plant_type") or "~"),
-                                           (r.get("common_name") or "")))
-    if key == "height":
-        return sorted(rows, key=lambda r: (-_float(r.get("mature_height_meters")),
-                                           (r.get("common_name") or "")))
-    if key == "wildlife":
-        return sorted(rows, key=lambda r: (-int(r.get("_wildlife_count") or 0),
-                                           (r.get("common_name") or "")))
-    return sorted(rows, key=lambda r: (r.get("common_name") or "").lower())
-
-
-def _float(value) -> float:
-    try:
-        return float(value or 0)
-    except (TypeError, ValueError):
-        return 0.0
+    """Order a result set (src/plant_filters.order_plants). Unknown keys fall
+    back to name rather than raising."""
+    from src.plant_filters import order_plants                  # noqa: PLC0415
+    return order_plants(rows, key)
 
 
 # ── One species, as a page ───────────────────────────────────────────────────
@@ -257,6 +114,7 @@ def species_entry(plant_id: int, *,
         return {}
 
     from src.ecological_role import ecological_role_summary    # noqa: PLC0415
+    from src.phenology_bar import parse_period                 # noqa: PLC0415
     from src.scene_dossier import (_bloom_pair, _fruit_pair,   # noqa: PLC0415
                                    _month_span, _morphology,
                                    _safety_notes, _sourcing)
@@ -271,6 +129,8 @@ def species_entry(plant_id: int, *,
         "scientific_name": plant.get("scientific_name") or "",
         "plant_type": plant.get("plant_type") or "",
         "badges": ecological_role_summary(plant, fauna_rows=edges),
+        # The use tags in words: what the Role filter matches (V3.00).
+        "roles": _roles(plant),
         "native": (plant.get("native_provinces")
                    or plant.get("native_region") or ""),
         # Carried, not dropped. `nativity.provenance` reads exactly this key
@@ -297,6 +157,10 @@ def species_entry(plant_id: int, *,
         # the same thing about the same plant.
         **_bloom_colour(plant),
         "fruit": _month_span(*_fruit_pair(plant)),
+        # The months themselves, for the twelve-month bar (V3.00). Parsed by
+        # the bar's own parser, which delegates to habitat_score's: one parser.
+        "bloom_months": parse_period(plant.get("bloom_period") or ""),
+        "fruit_months": parse_period(plant.get("fruit_period") or ""),
         "fruit_color": plant.get("fruit_color") or "",
         "morphology": _morphology(plant),
         "safety": _safety_notes(plant),
@@ -316,6 +180,18 @@ def species_entry(plant_id: int, *,
     return entry
 
 
+def _roles(plant: dict) -> list:
+    """The plant's use tags as the Role filter names them, in the filter's
+    order; a tag the vocabulary does not name reads title-cased rather than as
+    a snake_case key."""
+    from src.plant_filters import ROLE_LABELS                  # noqa: PLC0415
+    tags = [t.strip() for t in (plant.get("permaculture_uses") or "").split(",")
+            if t.strip()]
+    known = [ROLE_LABELS[k] for k in ROLE_LABELS if k in tags]
+    other = [t.replace("_", " ").title() for t in tags if t not in ROLE_LABELS]
+    return known + other
+
+
 def _safely(fn: Callable, fallback):
     """A species page must render even when one of its sources is unavailable.
     A missing section is a gap; a traceback is a dead feature."""
@@ -328,18 +204,31 @@ def _safely(fn: Callable, fallback):
 def _wildlife(edges: list) -> dict:
     """The documented animals, grouped by what they get, specialists flagged.
 
-    ``{"total": n, "specialists": n, "groups": [{how, items:[{name, taxon,
-    specialist}]}]}``. Specialists are counted separately because that is the
-    single most consequential thing on the page: a generalist losing this plant
-    finds another, and a specialist does not (P3).
+    ``{"total": n, "specialists": n, "animals": n, "specialist_animals": n,
+    "groups": [{how, items:[{name, taxon, specialist}]}]}``. Specialists are
+    counted separately because that is the single most consequential thing on
+    the page: a generalist losing this plant finds another, and a specialist
+    does not (P3).
+
+    ``total`` and ``specialists`` count relationships, which is what the
+    website says they are. ``animals`` and ``specialist_animals`` count the
+    animals (V3.00): one bee can take nectar and pollen, so Boreal Yarrow has
+    334 relationships with 296 animals, and the desktop page had been calling
+    the first number species.
     """
     from src.scene_dossier import _REL_FROM_PLANT, _TAXON_LABEL  # noqa: PLC0415
     groups: dict = {}
     specialists = 0
+    animals: set = set()
+    specialist_animals: set = set()
     for row in edges or []:
         how = _REL_FROM_PLANT.get(row.get("relationship") or "", "used by")
         specialist = row.get("specificity") == "specialist"
         specialists += 1 if specialist else 0
+        who = row.get("id") or row.get("scientific_name") or row.get("common_name")
+        animals.add(who)
+        if specialist:
+            specialist_animals.add(who)
         groups.setdefault(how, []).append({
             "name": row.get("common_name") or "",
             "scientific_name": row.get("scientific_name") or "",
@@ -352,7 +241,8 @@ def _wildlife(edges: list) -> dict:
            for how, items in sorted(groups.items(),
                                     key=lambda kv: -len(kv[1]))]
     return {"total": len(edges or []), "specialists": specialists,
-            "groups": out}
+            "animals": len(animals),
+            "specialist_animals": len(specialist_animals), "groups": out}
 
 
 def _relationships(plant_id: int, neighbourhood: Optional[Callable]) -> dict:

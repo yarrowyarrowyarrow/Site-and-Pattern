@@ -66,8 +66,12 @@ added; trust the source over this list).
 
 | Module | One line |
 |---|---|
-| `src/plant_panel.py` | Right-side panel: plant browser, search, filters, detail view, placement |
-| `src/plant_list_view.py` | Model + delegate for the plant browser's virtualized |
+| `src/plant_panel.py` | Plants → Browse: the shared picker, Place, and the mix (V3.00) |
+| `src/plant_list_view.py` | The plant list every picker shows: model + row delegate, per-badge tooltips |
+| `src/plant_picker.py` | Search, filters, order and list as one widget: Browse, the Directory, the builder |
+| `src/plant_filters.py` | Qt-free: the one filter vocabulary, criteria → search kwargs, the orders |
+| `src/species_page.py` | One species as a page of labels (the Directory's, moved out in V3.00) |
+| `src/species_flyout.py` | The page beside the side panel, over the map's right edge |
 | `src/on_this_design_panel.py` | The "On this design" review tab |
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |

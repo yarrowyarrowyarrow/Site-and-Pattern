@@ -241,6 +241,47 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(win.placement_bar.source, "plants")
         win._cancel_draw()
 
+    def test_choosing_a_plant_shows_its_page_and_placing_puts_it_away(self):
+        """V3.00 (F192), through the real window: the page opens over the
+        map's right edge, its Place arms the map, and placing closes it so the
+        yard is clear for the click."""
+        win = self._win
+        panel = win.plant_panel
+        fly = win.species_flyout
+        win._cancel_draw()
+        from src.plant_list_view import _PLANT_OBJ_ROLE
+        index = panel._results_list.model().index(1, 0)
+        plant = index.data(_PLANT_OBJ_ROLE)
+        panel._on_list_choose(index)
+        self.assertFalse(fly.isHidden())
+        self.assertIs(fly.parentWidget(), win.map_widget.parentWidget())
+        self.assertEqual(fly.page.shown_id(), plant["id"])
+        self.assertEqual(win._current_mode, "none")
+        fly.page.findChild(type(panel._place_btn), "placeButton").click()
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+        self.assertTrue(fly.isHidden())
+        self.assertEqual(panel._armed_plant["id"], plant["id"])
+        win._cancel_draw()
+
+    def test_closing_the_page_hands_the_keyboard_back_to_the_list(self):
+        win = self._win
+        panel = win.plant_panel
+        fly = win.species_flyout
+        win._cancel_draw()
+        panel._on_list_read(panel._results_list.model().index(2, 0))
+        self.assertFalse(fly.isHidden())
+        fly.page.close_requested.emit()
+        self.assertTrue(fly.isHidden())
+        self.assertEqual(panel.page_plant_id(), 0)
+
+    def test_the_list_knows_where_the_site_is(self):
+        """For "Recorded near this site": read from the site panel, not pushed, so a
+        loaded project's pin counts too."""
+        panel = self._win.plant_panel
+        self.assertEqual(panel._site_source,
+                         self._win.site_panel.current_coords)
+
     def test_esc_with_focus_on_the_place_button_stops_placing(self):
         """Pressing Place leaves keyboard focus in the panel, not the map; Esc
         must still stand everything down (MainWindow.keyPressEvent)."""

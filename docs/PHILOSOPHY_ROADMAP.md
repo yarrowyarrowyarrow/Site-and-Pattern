@@ -74,7 +74,7 @@ These started life as entries below and have since landed — the State markers 
 
 | ID | Feature | Lives in | Advances |
 |----|---------|----------|----------|
-| F1 | "Why it matters" ecological-role labels in the plant browser | `src/ecological_role.py`, surfaced in `src/plant_list_view.py` | P6, P10 |
+| F1 | "Why it matters" ecological-role labels in the plant browser | `src/ecological_role.py`, surfaced on the species page (`src/species_page.py`, beside the Browse list since V3.00) | P6, P10 |
 | F2 | Year 1 / 5 / 15 / 30 snapshot view | `src/snapshot_timeline.py`, `src/snapshot_window.py` | P4 |
 | F3 | Food-web completeness score | `src/habitat_score.py` (`food_web`), `src/design_critic.py` | P3, P6 |
 | F4 | Pattern-language framing for communities | `src/pattern_language.py`, `src/polyculture_panel.py` | P1, P7 |
@@ -200,6 +200,8 @@ columns) to emit short badges — "Keystone", "Hosts 7 caterpillars", "Specialis
 "Pollinator plant" — highest-value first. The delegate caches the line per `plant_id` (paint runs on
 every scroll) and renders it text-only as the first detail row, avoiding the `plant_panel.py` guard
 ceiling (the logic and tests live outside the widget). The collapsed-row badge remains the next slice.
+*(V3.00: the painted detail row is gone. The line leads the species page, "Why it matters", which
+opens beside the Browse list; `species_entry` assembles it from the same function.)*
 
 ### ✅ F2 · Year 1 / 5 / 15 / 30 snapshot view — *Shipped · was Impact High / Effort M / Risk Low (P4)*
 **Shipped** in `src/snapshot_timeline.py` + `src/snapshot_window.py`. The philosophy's literal
@@ -395,8 +397,9 @@ short sourced one-liners next to the habitat components in `src/analysis_panel.p
 source key into a citation a reader can take to a library, with two honesty rules at the
 render layer: a `NOT_A_WORK` placeholder is never dressed up as a citation, and every entry
 currently reads `unverified` because the details were transcribed from the seed data rather
-than checked against the work. It is rendered by `plant_directory_window._citation_block`
-(the species page) and by the Help → Data Sources dialog (`data_sources_flow.py`).
+than checked against the work. It is rendered by `species_page.SpeciesPage._citation_block`
+(the species page, in the Plant Directory and beside the Browse list since V3.00) and by the
+Help → Data Sources dialog (`data_sources_flow.py`).
 
 **Missing half, and it is the one this card was about.** No *design-side* surface shows a
 citation: not the Analysis panel, not the relationship web, not the 3D dossier card. A user
