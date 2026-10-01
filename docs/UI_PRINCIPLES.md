@@ -159,6 +159,13 @@ self-evident, and to fix that instead.
       where you are, and each control has a name a screen reader can say. (Until
       V3.02 nothing could be placed on the map without one, and B pressed in a
       side panel started drawing a boundary.)
+- [ ] Can it be read? No text under 12 px, text 4.5:1 against what it is
+      actually drawn on (a symbol 3:1), a checkbox's box 3:1, every control at
+      least 24 px, and nothing that scrolls sideways at 1366 × 768, in a wide
+      font as well as a narrow one. A colour that means something
+      is in the legend, and the legend names only what is drawn. (Until V3.03 two
+      panels drew 90% of their text at 11 px, and the map's legend listed six of
+      eleven plant types and a community outline nothing drew.)
 
 ## Where this is enforced
 
@@ -174,6 +181,9 @@ have a shape:
 `tests/test_app_smoke.py` holds the keyboard's shape on the real window (V3.02):
 every focusable control has a name, text or a label naming it; every tool and
 view toggle is reached by Tab; the single letters wait for the map; no key is
-bound twice.
+bound twice. And what can be seen (V3.03), on every side tab in turn: no text
+under 12 px, enabled text at 4.5:1 against the ground read from a grab of the
+window, every control at 24 px, no tab scrolling sideways.
+`tests/test_visual_floor.py` holds the 12 px floor in the source.
 
 Those are proxies. The real check is the checklist above and somebody's face.

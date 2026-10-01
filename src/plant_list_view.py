@@ -337,7 +337,7 @@ class PlantListModel(QAbstractListModel):
 _ROW_H_COMPACT  = 26
 _ROW_H_WRAPPED  = 44    # two-line variant for very long common names
 _ZONE_BADGE_W   = 56
-_NATIVE_BADGE_W = 18    # square AB-leaf badge
+_NATIVE_BADGE_W = 22    # the AB badge, wide enough for 12 px text
 
 
 class PlantRowDelegate(QStyledItemDelegate):
@@ -356,27 +356,19 @@ class PlantRowDelegate(QStyledItemDelegate):
     RIGHT_PAD = 6
 
     # Colours for the native-AB badge.
-    AB_NATIVE_BG  = "#2e7d32"
+    AB_NATIVE_BG  = "#1b5e20"
     AB_NATIVE_FG  = "#e8f5e9"
     AB_OTHER_BG   = "#37474f"
-    AB_OTHER_FG   = "#90a4ae"
+    AB_OTHER_FG   = "#cfd8dc"
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._sci_font = QFont()
         self._sci_font.setItalic(True)
+        # The badges' text: 12 px, the app's floor (V3.03). It had been the
+        # application font one point down, about 11 px on Windows.
         self._small_font = QFont()
-        # On some Windows + HiDPI setups the default QFont reports
-        # pointSize() == -1 (size carried in pixels) and pointSize()-1
-        # would feed a negative value into setPointSize, which Qt
-        # rejects with a noisy warning per call. Decrement whichever
-        # unit is actually populated; if neither is, leave the default.
-        _pt = self._small_font.pointSize()
-        _px = self._small_font.pixelSize()
-        if _pt > 1:
-            self._small_font.setPointSize(_pt - 1)
-        elif _px > 1:
-            self._small_font.setPixelSize(_px - 1)
+        self._small_font.setPixelSize(12)
         self._bold_font = QFont()
         self._bold_font.setBold(True)
 
@@ -418,8 +410,8 @@ class PlantRowDelegate(QStyledItemDelegate):
         x = dot_x + self.DOT_W
 
         native = QRect(compact.right() - self.RIGHT_PAD - _NATIVE_BADGE_W,
-                       compact.bottom() - line_h + (line_h - 14) // 2,
-                       _NATIVE_BADGE_W, 14)
+                       compact.bottom() - line_h + (line_h - 16) // 2,
+                       _NATIVE_BADGE_W, 16)
         zone_rect = QRect(native.left() - 4 - _ZONE_BADGE_W,
                           compact.bottom() - line_h + (line_h - 16) // 2,
                           _ZONE_BADGE_W, 16)

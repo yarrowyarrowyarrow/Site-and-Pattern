@@ -541,7 +541,7 @@ class PlantPanel(QWidget):
         visible, the rest scroll), and its actions, Place mix first."""
         mix_box = _MixDropGroupBox("Plant current mix", self._add_to_mix_by_id)
         mix_box.setStyleSheet(
-            "QGroupBox { color: #a5d6a7; font-size: 11px; "
+            "QGroupBox { color: #a5d6a7; font-size: 12px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
@@ -552,7 +552,7 @@ class PlantPanel(QWidget):
 
         self._mix_status = QLabel("Drag or right-click plants here to build a mix.")
         self._mix_status.setWordWrap(True)
-        self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._mix_status.setStyleSheet("color: #90a4ae; font-size: 12px;")
         ml.addWidget(self._mix_status)
 
         # ── Species rows (one per mix entry, custom widgets) ─────────
@@ -585,7 +585,7 @@ class PlantPanel(QWidget):
         self._mix_clear_btn.setStyleSheet(
             "QPushButton { background: #1e2e1e; color: #ef9a9a; "
             "border: 1px solid #4a2e2e; border-radius: 3px; "
-            "padding: 2px 8px; font-size: 11px; }"
+            "padding: 2px 8px; font-size: 12px; }"
             "QPushButton:hover { border-color: #8a4a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
         )
@@ -601,7 +601,7 @@ class PlantPanel(QWidget):
         self._mix_save_btn.setStyleSheet(
             "QPushButton { background: #1e2e1e; color: #a5d6a7; "
             "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 2px 8px; font-size: 11px; }"
+            "padding: 2px 8px; font-size: 12px; }"
             "QPushButton:hover { border-color: #4a7a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
         )
@@ -617,7 +617,7 @@ class PlantPanel(QWidget):
         self._mix_open_builder_btn.setStyleSheet(
             "QPushButton { background: #1e2e1e; color: #a5d6a7; "
             "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 2px 8px; font-size: 11px; }"
+            "padding: 2px 8px; font-size: 12px; }"
             "QPushButton:hover { border-color: #4a7a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
         )
@@ -905,7 +905,7 @@ class PlantPanel(QWidget):
         rl.addWidget(dot)
 
         name = QLabel(species.get("common_name") or "—")
-        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        name.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         name.setToolTip(species.get("scientific_name") or "")
         rl.addWidget(name, 1)
 
@@ -931,7 +931,7 @@ class PlantPanel(QWidget):
         rm.setStyleSheet(
             "QPushButton { background: transparent; color: #ef9a9a; "
             "border: 1px solid transparent; border-radius: 3px; "
-            "font-size: 11px; }"
+            "font-size: 12px; }"
             "QPushButton:hover { border-color: #8a4a4a; background: #2e1a1a; }"
         )
         pid = species.get("id")

@@ -98,7 +98,7 @@
         var altStr = pos.altitude.toFixed(0) + '°';
         var labelIcon = L.divIcon({
           className: 'measure-label',
-          html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
+          html: '<span style="font-size:12px">' + timeStr + ' ☀ ' + altStr + '</span>',
           iconSize: [0, 0],
           iconAnchor: [0, 14]
         });
@@ -154,7 +154,7 @@
           // Label
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
+            html: '<span style="font-size:12px">' + st.label + ' shadow</span>',
             iconSize: [0, 0],
             iconAnchor: [0, -4]
           });
@@ -272,7 +272,7 @@
       L.marker(pt, {
         icon: L.divIcon({
           className: 'measure-label',
-          html: '<span style="font-size:11px;font-weight:700">☀ ' +
+          html: '<span style="font-size:12px;font-weight:700">☀ ' +
                 Math.floor(best.hour) + ':' + mm + ' · ' +
                 best.altitude.toFixed(0) + '°</span>',
           iconSize: [0, 0], iconAnchor: [0, -12]
@@ -345,7 +345,7 @@
           var pt = contourPoints[idx];
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:9px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
+            html: '<span style="font-size:12px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
             iconSize: [0, 0],
             iconAnchor: [0, 8]
           });
@@ -386,7 +386,7 @@
 
         var arrowLabel = L.divIcon({
           className: 'structure-label',
-          html: '<span style="font-size:9px;color:' + color + '">▼ downhill</span>',
+          html: '<span style="font-size:12px;color:' + color + '">▼ downhill</span>',
           iconSize: [0, 0],
           iconAnchor: [0, -2]
         });
@@ -399,7 +399,7 @@
       // Right-click to delete individual contour
       line.bindTooltip(
         '<b>Contour: ' + elevation.toFixed(1) + 'm</b>' +
-        '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+        '<br><span style="color:#b0bec5;font-size:12px">Right-click to remove</span>',
         { className: 'plant-marker-label' }
       );
       line.on('contextmenu', function(e) {
@@ -585,7 +585,7 @@
           var mid = longest[Math.floor(longest.length / 2)];
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:9px;color:' + color +
+            html: '<span style="font-size:12px;color:' + color +
                   ';background:rgba(255,255,255,0.55);padding:0 3px;border-radius:2px">' +
                   elev.toFixed(1) + 'm</span>',
             iconSize: [0, 0],
@@ -941,7 +941,7 @@
 
       var dirLabel = L.divIcon({
         className: 'measure-label',
-        html: '<span style="font-size:10px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
+        html: '<span style="font-size:12px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
         iconSize: [0, 0],
         iconAnchor: [0, 14]
       });
@@ -1033,7 +1033,7 @@
       var dLng = shelterLen * 0.5 * Math.sin(windRad) / (111320 * Math.cos(mid[0] * Math.PI / 180));
       var labelIcon = L.divIcon({
         className: 'structure-label',
-        html: '<span style="font-size:9px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
+        html: '<span style="font-size:12px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
         iconSize: [0, 0],
         iconAnchor: [0, 8]
       });

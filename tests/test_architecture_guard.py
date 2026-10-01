@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2508 now (V3.02)
+        (_SRC / "app.py", 2600),                       # 2490 now (V3.03)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -99,12 +99,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
         # in flow modules; the terrain-queue block is the natural extraction
         # when this trips again.
-        (_SRC / "controllers" / "map_events.py", 2100),# 1905 now (V3.01)
+        (_SRC / "controllers" / "map_events.py", 2100),# 1904 now (V3.03)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
-        (_SRC / "polyculture_panel.py", 2900),         # 2470 now (V3.02)
-        (_SRC / "site_panel.py", 2700),                # 2326 now (V3.02)
-        (_SRC / "analysis_panel.py", 2450),            # 2417 now — 33 LEFT
+        (_SRC / "polyculture_panel.py", 2900),         # 2467 now (V3.03)
+        (_SRC / "site_panel.py", 2700),                # 2362 now (V3.03)
+        (_SRC / "analysis_panel.py", 2450),            # 2422 now — 28 LEFT
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
         # ceilings rather than living in the panel that shows them.
         (_SRC / "confidence.py", 400),                 # 298 now
@@ -134,7 +134,12 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "focus_ring.py", 200),                 # 180 now
         (_SRC / "keyboard_help.py", 260),              # 240 now
         (_SRC / "accessible_names.py", 120),           # 54 now
-        (_SRC / "species_page.py", 720),               # 639 now
+        # V3.03 (F195, second half): the 24 px floor under every control,
+        # raised only where a control would draw smaller, and a checkbox's box
+        # drawn where it can be seen.
+        (_SRC / "target_size.py", 160),                # 127 now
+        (_SRC / "indicator_style.py", 180),            # 134 now
+        (_SRC / "species_page.py", 720),               # 645 now
         (_SRC / "species_flyout.py", 200),             # 136 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
         # arrival, the V2.41 precedent. What does NOT live in the renderer any
@@ -239,7 +244,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # through this module, so a second one that wants a hierarchy gets it
         # for free rather than growing a private copy.
         (_SRC / "ecoregion_tree.py", 340),             # 282 now
-        (_SRC / "filter_widgets.py", 560),             # 519 now (V3.01)
+        (_SRC / "filter_widgets.py", 560),             # 522 now (V3.03)
         # V2.68: 460 -> 560. `_subregion_pages` builds the third level of the
         # drill-down. It is MODEL code and stays with the model: moving it into
         # the renderer would put "what is a subregion page" in the view layer,
@@ -355,10 +360,10 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "scene3d_window.py", 950),             # 911 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
-        (_HTML / "map.html", 400),                     # ~235 now
-        (_HTML / "map" / "01-core.js", 950),           # 927 now (V3.02)
+        (_HTML / "map.html", 400),                     # 238 now (V3.03)
+        (_HTML / "map" / "01-core.js", 950),           # 923 now (V3.03)
         (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
-        (_HTML / "map" / "03-plants.js", 950),         # ~931 now
+        (_HTML / "map" / "03-plants.js", 950),         # 937 now (V3.03)
         (_HTML / "map" / "04-tools.js", 450),          # ~367 now
         # V2.26: +editable existing features (drag + scroll-resize of detected/
         # marked trees & buildings) — in-domain growth for the features file,
@@ -380,6 +385,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # Enter acts through onMapClick and Shift+Enter through finishDrawing,
         # so new tools need no keyboard code here.
         (_HTML / "map" / "09-keyboard.js", 200),       # 143 now
+        # V3.03 (F195): how a plant is drawn (its colour, its outline, its
+        # shape) and the legend that says so, in one place: the type table
+        # moved here from 03-plants.js.
+        (_HTML / "map" / "10-plant-key.js", 200),      # 117 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in

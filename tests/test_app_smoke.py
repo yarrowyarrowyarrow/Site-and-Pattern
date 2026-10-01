@@ -597,6 +597,140 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(args[0], "plant")
         self.assertAlmostEqual(args[3], 3.5)
 
+    # ── What can be seen (F195, V3.03), on every side tab ────────────────────
+
+    def _every_tab(self):
+        """The window at a laptop's size, each side tab and sub-tab in turn,
+        put back as found: later tests expect Browse to be the Plants page."""
+        from PyQt6.QtWidgets import QTabWidget
+        from tests import _visual
+        win = self._win
+        win.resize(1366, 768)
+        win.show()
+        self._app.processEvents()
+        for tabs in [win._side_tabs] + win._side_tabs.findChildren(QTabWidget):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        return _visual.every_tab(win, win._side_tabs)
+
+    def _shown(self):
+        """Widgets actually on screen: shown, and not scrolled out of view."""
+        from PyQt6.QtWidgets import QWidget
+        return [w for w in self._win._side_tabs.findChildren(QWidget)
+                if w.isVisible() and not w.visibleRegion().isEmpty()]
+
+    def test_no_text_under_12px_on_any_tab(self):
+        """Plant Communities drew 19 of its 21 pieces of text under 12 px and
+        Field Notes 21 of 23 (V3.02); rich text's own sizes count too."""
+        from tests import _visual
+        small = []
+        for tab in self._every_tab():
+            for w in self._shown():
+                words = _visual.plain(_visual.text_of(w))
+                if words and _visual.smallest_px(w) < 12:
+                    small.append(f"{tab}: {words[:30]!r} {_visual.smallest_px(w)}px")
+        self.assertEqual(small, [])
+
+    def test_enabled_text_holds_its_contrast_on_every_tab(self):
+        """4.5:1 for text and 3:1 for a graphic (a swatch, a progress dot),
+        against the ground read from the window as drawn. Disabled controls
+        are exempt (WCAG 1.4.3) and meant to recede."""
+        from tests import _visual
+        low = []
+        for tab in self._every_tab():
+            image = self._win.grab().toImage()
+            for w in self._shown():
+                text = _visual.text_of(w)
+                if not w.isEnabled() or not _visual.plain(text):
+                    continue
+                ground = _visual.ground(image, self._win, w)
+                if ground is None:
+                    continue
+                for colour, graphic in _visual.colours(w):
+                    ratio = _visual.contrast(colour, ground)
+                    if ratio < (3.0 if graphic else 4.5):
+                        low.append(f"{tab}: {_visual.plain(text)[:28]!r} "
+                                   f"{colour.name()} on {ground.name()} {ratio:.2f}")
+        self.assertEqual(low, [])
+
+    def test_every_checkbox_can_be_seen_on_every_tab(self):
+        """An unchecked box's edge was 1.11:1 under Fusion (V3.03): nothing
+        said there was a box until it was ticked. 3:1 (WCAG 1.4.11), enabled
+        ones; a disabled control is exempt."""
+        from PyQt6.QtWidgets import QCheckBox, QRadioButton
+        from tests import _visual
+        faint = []
+        for tab in self._every_tab():
+            image = self._win.grab().toImage()
+            for w in self._shown():
+                if isinstance(w, (QCheckBox, QRadioButton)) and w.isEnabled():
+                    seen = _visual.indicator(image, self._win, w)
+                    if seen is None:
+                        continue
+                    edge, ground, _inside = seen
+                    ratio = _visual.contrast(edge, ground)
+                    if ratio < 3.0:
+                        faint.append(f"{tab}: {(w.text() or w.accessibleName())[:28]!r} "
+                                     f"{edge.name()} on {ground.name()} {ratio:.2f}")
+        self.assertEqual(faint, [])
+
+    def test_every_control_is_24px_on_every_tab(self):
+        from PyQt6.QtWidgets import QTabBar
+        from src import target_size
+        small = []
+        for tab in self._every_tab():
+            for w in self._shown():
+                if (isinstance(w, QTabBar) or target_size.counts(w)) \
+                        and min(w.width(), w.height()) < target_size.MIN_TARGET:
+                    small.append(f"{tab}: {type(w).__name__} "
+                                 f"{(getattr(w, 'text', lambda: '')() or w.accessibleName())[:20]!r} "
+                                 f"{w.width()}x{w.height()}")
+        self.assertEqual(small, [])
+
+    def test_no_tab_scrolls_sideways(self):
+        """At 12 px Plant Communities' row of five buttons needed 444 px and
+        Bees' dropdown 441, in a panel 424 wide (first build of V3.03).
+
+        It depends on the font, so it is only as strict as the font the run
+        draws in. CI's runner draws in DejaVu Sans, about 12% wider than the
+        Arial-metric fonts of Windows: the second build passed under Arial
+        metrics and, in DejaVu, Field Notes' questions needed 424 px of 402
+        and Plant Communities' title row 470 of 424."""
+        from PyQt6.QtWidgets import QScrollArea
+        wide = []
+        for tab in self._every_tab():
+            self.assertGreaterEqual(self._win._side_tabs.width(), 380, tab)
+            for area in self._win._side_tabs.findChildren(QScrollArea):
+                if area.isVisible() and area.widget() is not None:
+                    need = area.widget().minimumSizeHint().width()
+                    if need > area.viewport().width():
+                        wide.append(f"{tab}: needs {need}, has {area.viewport().width()}")
+        self.assertEqual(wide, [])
+
+    def test_community_members_are_coloured_as_a_reload_draws_them(self):
+        """By layer until the design was reopened, when the loader drew them by
+        type (persistence.py). Placing now passes what the loader passes."""
+        from src.db import plants as plants_db
+        win = self._win
+        rows = plants_db.get_all_plants()[:2]
+        community = {"name": "Test community", "members": [
+            {"plant_id": r["id"], "common_name": r["common_name"],
+             "offset_x": i * 1.0, "offset_y": 0.0, "layer": "overstory"}
+            for i, r in enumerate(rows)]}
+        drawn = []
+        win.map_widget.place_plant_marker = (
+            lambda pid, *a, **k: drawn.append((pid, k.get("color"))))
+        self.addCleanup(delattr, win.map_widget, "place_plant_marker")
+        self._leave_the_window_as_found()
+        self.addCleanup(win._store.remove_polyculture, "Test community", 53.5, -113.5)
+        win._pending_polyculture = community
+        win._current_mode = "polyculture"
+        self.addCleanup(setattr, win, "_current_mode", "none")
+        win._map_events._on_polyculture_click(53.5, -113.5)
+        self.assertEqual(len(drawn), 2)
+        for pid, colour in drawn:
+            self.assertEqual(colour, win._plant_info(pid)[2])
+            self.assertNotEqual(colour, "#1b5e20")     # the old overstory green
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):

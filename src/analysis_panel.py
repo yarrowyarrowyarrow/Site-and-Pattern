@@ -162,7 +162,7 @@ class AnalysisPanel(QWidget):
             "with it."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         self._build_sun_when_group(layout)
@@ -183,7 +183,7 @@ class AnalysisPanel(QWidget):
         # Results area
         self._sun_info = QLabel("")
         self._sun_info.setWordWrap(True)
-        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
+        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 12px; padding: 4px;")
         layout.addWidget(self._sun_info)
 
         layout.addStretch()
@@ -253,7 +253,7 @@ class AnalysisPanel(QWidget):
             "branches cast ~30% shade. Trees marked without a type still "
             "cast full shade.")
         self._shade_leafoff_note.setWordWrap(True)
-        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._shade_leafoff_note.setVisible(False)
         v.addWidget(self._shade_leafoff_note)
 
@@ -306,9 +306,9 @@ class AnalysisPanel(QWidget):
             "Draw the sun's arc centred on your property.\n"
             "Use 'Move…' to centre it somewhere specific instead.")
         btn_show.setStyleSheet(
-            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
+            "QPushButton { background: #bf360c; color: #fff3e0; border: 1px solid #e65100; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #ff6d00; }"
+            "QPushButton:hover { background: #c8410f; }"
         )
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
@@ -343,7 +343,7 @@ class AnalysisPanel(QWidget):
         # will be real BEFORE they click — refreshed by update_caster_summary.
         self._caster_summary = QLabel("")
         self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self.update_caster_summary(None)
         v.addWidget(self._caster_summary)
 
@@ -404,14 +404,14 @@ class AnalysisPanel(QWidget):
             '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
             '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
             '<span style="color:#5c6bc0">■</span> Full shade')
-        legend.setStyleSheet("font-size: 11px;")
+        legend.setStyleSheet("font-size: 12px;")
         zrow.addWidget(legend)
         zrow.addStretch()
         v.addLayout(zrow)
 
         self._shade_zone_status = QLabel("")
         self._shade_zone_status.setWordWrap(True)
-        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 12px;")
         v.addWidget(self._shade_zone_status)
 
         layout.addWidget(box)
@@ -573,7 +573,7 @@ class AnalysisPanel(QWidget):
             buildings, trees, where="Site → Features")
         lbl.setText(text)
         lbl.setStyleSheet(
-            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
 
     def mark_zones_shown(self):
         """Re-check the 'Show on map' box (without re-emitting) after a classify
@@ -616,7 +616,7 @@ class AnalysisPanel(QWidget):
             "direction, then overlay the sheltered zones on the map."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # ── Step 1: real wind data (seasonal rose + current reading) ────────
@@ -651,7 +651,7 @@ class AnalysisPanel(QWidget):
         self._wind_status_lbl = QLabel(
             "No data yet — drop a site pin (Site tab), then fetch.")
         self._wind_status_lbl.setWordWrap(True)
-        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 12px;")
         dg.addWidget(self._wind_status_lbl)
 
         layout.addWidget(data_group)
@@ -687,7 +687,7 @@ class AnalysisPanel(QWidget):
         dial_text.addWidget(self._wind_dial_lbl)
         dial_hint = QLabel("Drag the dial to test other directions.")
         dial_hint.setWordWrap(True)
-        dial_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        dial_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         dial_text.addWidget(dial_hint)
         speed_row = QHBoxLayout()
         speed_label = QLabel("Typical strength:")
@@ -706,7 +706,7 @@ class AnalysisPanel(QWidget):
         self._wind_advice_lbl = QLabel("")
         self._wind_advice_lbl.setWordWrap(True)
         self._wind_advice_lbl.setStyleSheet(
-            "color: #c5e1a5; font-size: 11px; font-style: italic;")
+            "color: #c5e1a5; font-size: 12px; font-style: italic;")
         rg.addWidget(self._wind_advice_lbl)
 
         layout.addWidget(dir_group)
@@ -755,9 +755,9 @@ class AnalysisPanel(QWidget):
             "Draw the arrows and windbreak shelter zones for the direction on "
             "the dial. (The two checkboxes above draw live, on toggle.)")
         btn_show.setStyleSheet(
-            "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
+            "QPushButton { background: #01579b; color: #e1f5fe; border: 1px solid #0277bd; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0288d1; }"
+            "QPushButton:hover { background: #0266ad; }"
         )
         btn_show.clicked.connect(self._on_show_wind)
         btn_row.addWidget(btn_show)
@@ -886,7 +886,7 @@ class AnalysisPanel(QWidget):
             "continuity."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         btn = QPushButton("Calculate Habitat Value")
@@ -918,7 +918,7 @@ class AnalysisPanel(QWidget):
         self._lawn_counterfactual_label.setWordWrap(True)
         self._lawn_counterfactual_label.setVisible(False)
         self._lawn_counterfactual_label.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "color: #dcedc8; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
         )
         layout.addWidget(self._lawn_counterfactual_label)
@@ -962,7 +962,7 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown = QLabel("")
         self._habitat_breakdown.setWordWrap(True)
         self._habitat_breakdown.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
@@ -987,7 +987,7 @@ class AnalysisPanel(QWidget):
             "that lose all their support, whether the food-web chain snaps, and "
             "the score change.")
         pull_hint.setWordWrap(True)
-        pull_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        pull_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(pull_hint)
 
         self._pull_combo = QComboBox()
@@ -1031,7 +1031,7 @@ class AnalysisPanel(QWidget):
         self._habitat_tips.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }"
+            "font-size: 12px; }"
         )
         self._habitat_tips.setMinimumHeight(160)
         layout.addWidget(self._habitat_tips)
@@ -1049,7 +1049,7 @@ class AnalysisPanel(QWidget):
             "the full-sun / partial-shade / full-shade mix.")
         self._shade_breakdown.setWordWrap(True)
         self._shade_breakdown.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 6px; "
+            "color: #c8e6c9; font-size: 12px; padding: 6px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
         layout.addWidget(self._shade_breakdown)
 
@@ -1060,7 +1060,7 @@ class AnalysisPanel(QWidget):
             "90% of insect biodiversity."
         )
         ref.setWordWrap(True)
-        ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
+        ref.setStyleSheet("color: #90a4ae; font-size: 12px; font-style: italic;")
         layout.addWidget(ref)
 
         # Short tab label so all five fit the strip even with macOS's wider
@@ -1108,7 +1108,7 @@ class AnalysisPanel(QWidget):
             "recorded these species growing where you are, and does the design "
             "have the shape of the natural community for this place.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
 
         self._confidence_text = QLabel(
@@ -1116,7 +1116,7 @@ class AnalysisPanel(QWidget):
         self._confidence_text.setWordWrap(True)
         self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
         self._confidence_text.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; "
             "border-radius: 4px;")
         layout.addWidget(self._confidence_text)
@@ -1159,7 +1159,7 @@ class AnalysisPanel(QWidget):
         body = "".join(f"<br>{ln}" for ln in lines if ln)
         return (f"<b>{title}:</b> <span style='color:{colour};'>"
                 f"{band.label}</span>"
-                f"<br><span style='color:#78909c;'>{band.blurb}</span>{body}")
+                f"<br><span style='color:#90a4ae;'>{band.blurb}</span>{body}")
 
     def _build_relationship_web_block(self, layout):
         """The relationship-web controls on the Habitat tab.
@@ -1180,7 +1180,7 @@ class AnalysisPanel(QWidget):
             "diagram, not a place, because an animal has no address in your "
             "yard.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
 
         self._web_toggle = QCheckBox("Show the relationship web on the map")
@@ -1193,7 +1193,7 @@ class AnalysisPanel(QWidget):
             box = QCheckBox(label)
             box.setChecked(on)
             box.setStyleSheet(
-                "color: #b0bec5; font-size: 11px; padding-left: 16px;")
+                "color: #b0bec5; font-size: 12px; padding-left: 16px;")
             box.toggled.connect(self._on_web_layers_changed)
             layout.addWidget(box)
             self._web_layer_boxes[key] = box
@@ -1202,7 +1202,7 @@ class AnalysisPanel(QWidget):
         self._web_summary.setWordWrap(True)
         self._web_summary.setVisible(False)
         self._web_summary.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #16221f; border: 1px solid #2e4a4a; "
             "border-radius: 4px;")
         layout.addWidget(self._web_summary)
@@ -1289,11 +1289,16 @@ class AnalysisPanel(QWidget):
             "flight season."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         self._bee_selector = QComboBox()
         self._bee_selector.setAccessibleName("Bee to design for")
+        # Sized to its longest bee it was 429 px, wider than the panel at
+        # 12 px text (V3.03); it shrinks now, and its list shows names whole.
+        self._bee_selector.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self._bee_selector.setMinimumContentsLength(18)
         self._bee_selector.setStyleSheet("QComboBox { padding: 4px; }")
         self._populate_bee_selector()
         self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)
@@ -1325,7 +1330,7 @@ class AnalysisPanel(QWidget):
         self._bee_photo_credit = QLabel("")
         self._bee_photo_credit.setFixedWidth(96)
         self._bee_photo_credit.setWordWrap(True)
-        self._bee_photo_credit.setStyleSheet("color: #607d8b; font-size: 8px;")
+        self._bee_photo_credit.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._bee_photo_credit.setVisible(False)
         photo_col.addWidget(self._bee_photo_credit)
         summ.addLayout(photo_col, 0)
@@ -1333,7 +1338,7 @@ class AnalysisPanel(QWidget):
         self._bee_summary.setWordWrap(True)
         self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
         self._bee_summary.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._bee_summary.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._bee_summary.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         summ.addWidget(self._bee_summary, 1)
         layout.addLayout(summ)
 
@@ -1347,7 +1352,7 @@ class AnalysisPanel(QWidget):
             body.setWordWrap(True)
             body.setTextFormat(Qt.TextFormat.RichText)
             body.setStyleSheet(
-                "color: #c8e6c9; font-size: 11px; padding: 8px; "
+                "color: #c8e6c9; font-size: 12px; padding: 8px; "
                 "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
             body.setAlignment(Qt.AlignmentFlag.AlignTop)
             layout.addWidget(body)
@@ -1360,7 +1365,7 @@ class AnalysisPanel(QWidget):
         self._bee_footnote = QLabel("")
         self._bee_footnote.setWordWrap(True)
         self._bee_footnote.setStyleSheet(
-            "color: #607d8b; font-size: 10px; font-style: italic;")
+            "color: #90a4ae; font-size: 12px; font-style: italic;")
         layout.addWidget(self._bee_footnote)
 
         # Re-render the bee photo when a warmed image lands (shared signal).
@@ -1551,10 +1556,10 @@ class AnalysisPanel(QWidget):
     def _bee_match_row(self, m) -> str:
         bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
         chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
-                f"padding:0 4px; font-size:9px;'>{txt}</span>")
+                f"padding:0 4px; font-size:12px;'>{txt}</span>")
         bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
         basis = "" if m.confidence == "documented" else \
-                " <span style='color:#78909c; font-size:9px;'>(genus match)</span>"
+                " <span style='color:#90a4ae; font-size:12px;'>(genus match)</span>"
         star = "★ " if m.in_users_list else ""
         return (f"{star}{m.common_name} {chip}{bloom}{basis}")
 
@@ -1587,7 +1592,7 @@ class AnalysisPanel(QWidget):
                 style = "background:#5d3a1a; color:#ffcc80; border-radius:3px;"
             cells.append(f"<span style='{style} padding:2px 5px; margin:0 1px;'>{abbr}</span>")
         strip = "".join(cells)
-        legend = ("<div style='color:#90a4ae; font-size:9px; padding-top:4px;'>"
+        legend = ("<div style='color:#90a4ae; font-size:12px; padding-top:4px;'>"
                   "green = a plant in bloom for it · orange = flying but no bloom "
                   "(a gap to fill)</div>")
         note = f"<div style='padding-top:4px;'>{f.note}</div>"
@@ -1723,7 +1728,7 @@ class AnalysisPanel(QWidget):
         c = colors.get(r["status"], "#cfe3f0")
         body = f"<span style='color:{c}'>{r['verdict']}</span>"
         if r["host_plants"]:
-            body += (f"<br><span style='color:#9fbccf; font-size:11px'>"
+            body += (f"<br><span style='color:#9fbccf; font-size:12px'>"
                      f"Capacity ≈ {r['caterpillars_low']:,}–"
                      f"{r['caterpillars_high']:,} caterpillars from "
                      f"{r['n_host_species']} host species.</span>")
@@ -1858,7 +1863,7 @@ class AnalysisPanel(QWidget):
         head = lines[0]
         rest = lines[1:]
         html = (f"<b>vs. lawn</b><br>{head}"
-                + ("<br><span style='color:#90a4ae;font-size:10px;'>"
+                + ("<br><span style='color:#90a4ae;font-size:12px;'>"
                    + "<br>".join(rest) + "</span>" if rest else ""))
         lbl.setText(html)
         lbl.setVisible(True)
@@ -2093,7 +2098,7 @@ class AnalysisPanel(QWidget):
         cap = QLabel(name)
         cap.setWordWrap(True)
         cap.setFixedWidth(96)
-        cap.setStyleSheet("color: #c8e6c9; font-size: 9px;")
+        cap.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         v.addWidget(thumb)
         v.addWidget(cap)
         return card

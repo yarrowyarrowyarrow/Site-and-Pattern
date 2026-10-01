@@ -19,11 +19,13 @@
     #map { width: 100%; height: 100%; }
 
     .plant-marker-label {
-      background: rgba(30, 40, 30, 0.85);
+      /* 0.92, not 0.85: its grey second line holds 6.3:1 over the yard or a
+         white tile, where it had been 3.6-4.1:1 (V3.03). */
+      background: rgba(30, 40, 30, 0.92);
       border: 1px solid #5a8a5a;
       border-radius: 4px;
       color: #c8e6c9;
-      font-size: 11px;
+      font-size: 12px;
       padding: 2px 6px;
       white-space: nowrap;
       pointer-events: none;
@@ -57,29 +59,38 @@
       bottom: 30px;
       left: 10px;
       z-index: 1000;
-      background: rgba(26, 42, 26, 0.92);
+      background: rgba(26, 42, 26, 0.94);
       border: 1px solid #4a7a4a;
       border-radius: 6px;
       padding: 8px 12px;
       color: #c8e6c9;
-      font-size: 11px;
-      max-width: 200px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 12px;
+      max-width: 220px;
+      /* Scrolls rather than running off a short map (V3.03). */
+      max-height: calc(100% - 60px);
+      overflow-y: auto;
       display: none;
     }
     #map-legend.visible { display: block; }
     #map-legend h4 {
       margin: 0 0 6px 0;
-      font-size: 12px;
+      font-size: 13px;
       color: #a5d6a7;
       border-bottom: 1px solid #2e4a2e;
       padding-bottom: 4px;
+    }
+    #map-legend .legend-close {
+      float: right; background: none; border: none; color: #c8e6c9;
+      font-size: 16px; line-height: 16px; min-width: 24px; min-height: 24px;
+      margin: -4px -6px 0 0; cursor: pointer;
     }
     #map-legend .legend-section {
       margin-bottom: 6px;
     }
     #map-legend .legend-section-title {
-      font-size: 10px;
-      color: #78909c;
+      font-size: 12px;
+      color: #90a4ae;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
@@ -100,6 +111,10 @@
       background: transparent !important;
       border: 2px dashed;
     }
+    #map-legend .legend-note {
+      color: #90a4ae;
+      margin-top: 2px;
+    }
     #legend-toggle {
       position: absolute;
       bottom: 30px;
@@ -109,8 +124,9 @@
       border: 1px solid #4a7a4a;
       border-radius: 4px;
       color: #a5d6a7;
-      font-size: 11px;
+      font-size: 12px;
       padding: 4px 8px;
+      min-height: 24px;
       cursor: pointer;
     }
     #legend-toggle:hover { background: rgba(46, 74, 46, 0.95); }
@@ -122,7 +138,7 @@
       border: 1px solid #78909c;
       border-radius: 4px;
       color: #e0e0e0;
-      font-size: 11px;
+      font-size: 12px;
       padding: 2px 6px;
       white-space: nowrap;
       text-align: center;
@@ -137,7 +153,7 @@
       border: 1px solid #66bb6a;
       border-radius: 4px;
       color: #c8e6c9;
-      font-size: 11px;
+      font-size: 12px;
       padding: 2px 6px;
       white-space: nowrap;
     }
@@ -175,27 +191,9 @@
 
   <button id="legend-toggle" onclick="toggleLegend()">Legend</button>
   <div id="map-legend">
-    <h4>Legend <span style="float:right;cursor:pointer;font-size:14px;" onclick="toggleLegend()">&times;</span></h4>
-    <div class="legend-section">
-      <div class="legend-section-title">Plant Types</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#2e7d32;"></span> Tree</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#558b2f;"></span> Shrub</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#7cb342;"></span> Herb</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#c6a817;"></span> Groundcover</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#00838f;"></span> Vine</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#6d4c41;"></span> Root</div>
-    </div>
-    <div class="legend-section">
-      <div class="legend-section-title">Vegetation Layers</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#1b5e20;"></span> Overstory</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#388e3c;"></span> Understory</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#4a8b3a;"></span> Shrub Layer</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a;"></span> Groundcover</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#9ccc65;"></span> Herbaceous</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#43a047;"></span> N-Fixer</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#aed581;"></span> Pollinator</div>
-      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Community outline</div>
-    </div>
+    <h4>Legend <button class="legend-close" onclick="toggleLegend()" aria-label="Close the legend">&times;</button></h4>
+    <!-- Built from TYPE_COLORS by html/map/10-plant-key.js (V3.03). -->
+    <div class="legend-section" id="legend-plants"></div>
     <div class="legend-section">
       <div class="legend-section-title">Structures</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Water</div>
@@ -235,5 +233,6 @@
   <script src="map/07-network.js"></script>
   <script src="map/08-footprint.js"></script>
   <script src="map/09-keyboard.js"></script>
+  <script src="map/10-plant-key.js"></script>
 </body>
 </html>

@@ -29,6 +29,8 @@ from PyQt6.QtGui import (
     QBrush, QColor, QFont, QStandardItem, QStandardItemModel,
 )
 
+from src.indicator_style import EDGE as _BOX_EDGE
+
 
 # A second line under an item's label — the place it is, under what it is.
 # Ecoregion names carry their geography ("Moist Mixed Grassland" / "Regina,
@@ -96,7 +98,8 @@ class _TwoLineDelegate(QStyledItemDelegate):
                            box, box)
         painter.save()
         painter.setRenderHint(painter.RenderHint.Antialiasing, True)
-        painter.setPen(QColor("#66bb6a" if checked else "#4a6a4a"))
+        # The unchecked edge is indicator_style's (V3.03): #4a6a4a was 2.3:1.
+        painter.setPen(QColor("#66bb6a" if checked else _BOX_EDGE))
         painter.setBrush(QColor("#2e5a2e") if checked else Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(check_rect, 2, 2)
         if checked:
@@ -121,9 +124,9 @@ class _TwoLineDelegate(QStyledItemDelegate):
             fm.elidedText(title, Qt.TextElideMode.ElideRight, width))
 
         small = QFont(option.font)
-        small.setPointSizeF(max(6.5, option.font.pointSizeF() - 1.5))
+        small.setPixelSize(12)          # the app's floor (V3.03)
         painter.setFont(small)
-        painter.setPen(QColor("#78909c"))
+        painter.setPen(QColor("#90a4ae"))
         sub_fm = painter.fontMetrics()
         # The title carries its indentation in the string, so it lines up on
         # its own; the subtitle is stored bare — deliberately, so the data is
@@ -146,7 +149,7 @@ class _TwoLineDelegate(QStyledItemDelegate):
 
 COMBO_STYLE = (
     "QComboBox { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; "
-    "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+    "border-radius: 3px; padding: 2px 6px; font-size: 12px; }"
     "QComboBox:hover { border-color: #4a7a4a; }"
     "QComboBox::drop-down { border: none; width: 16px; }"
     "QComboBox QLineEdit { background: transparent; color: #a5d6a7; border: none; }"
@@ -156,8 +159,8 @@ COMBO_STYLE = (
 )
 
 TOGGLE_STYLE = (
-    "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
-    "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+    "QPushButton { background: #1e2e1e; color: #90a4ae; border: 1px solid #2e4a2e; "
+    "border-radius: 3px; padding: 2px 6px; font-size: 12px; }"
     "QPushButton:checked { background: #2e5a2e; color: #a5d6a7; border-color: #66bb6a; }"
     "QPushButton:hover { border-color: #4a7a4a; }"
 )

@@ -499,8 +499,9 @@ class SeasonBar(QWidget):
     BLOOM = "#d98b3a"
     FRUIT = "#b98aa6"
     EMPTY = "#2c3b2c"
-    _LABEL_W = 56
-    _ROW_H = 12
+    _LABEL_W = 60
+    _ROW_H = 16           # room for its 12 px words (V3.03)
+    _HEAD_H = 16
 
     def __init__(self, bloom, fruit, parent=None):
         super().__init__(parent)
@@ -513,22 +514,22 @@ class SeasonBar(QWidget):
         self.setAccessibleName(text)
         self.setToolTip(text)
         self.setMinimumWidth(220)
-        self.setFixedHeight(14 + len(self._rows) * (self._ROW_H + 3))
+        self.setFixedHeight(self._HEAD_H + 2 + len(self._rows) * (self._ROW_H + 3))
 
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         font = QFont(self.font())
-        font.setPixelSize(10)
+        font.setPixelSize(12)
         p.setFont(font)
         left = self._LABEL_W
         cell = (self.width() - left) / 12.0
         p.setPen(QColor("#90a4ae"))
         for i, month in enumerate(_MONTHS):
-            p.drawText(int(left + i * cell), 0, int(cell), 12,
+            p.drawText(int(left + i * cell), 0, int(cell), self._HEAD_H,
                        int(Qt.AlignmentFlag.AlignCenter), month[0])
         for r, (name, months, colour) in enumerate(self._rows):
-            top = 14 + r * (self._ROW_H + 3)
+            top = self._HEAD_H + 2 + r * (self._ROW_H + 3)
             p.setPen(QColor("#c8e6c9"))
             p.drawText(0, top, left - 4, self._ROW_H,
                        int(Qt.AlignmentFlag.AlignVCenter

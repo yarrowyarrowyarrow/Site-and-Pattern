@@ -108,7 +108,7 @@ def top_tab_stylesheet() -> str:
         "top: -1px; }"
         "QTabBar { background: #0f1a10; }"
         "QTabBar::tab { background: #0f1a10; color: #8aa08d; "
-        "padding: 7px 4px; font-size: 11px; "
+        "padding: 7px 4px; font-size: 12px; "
         "border: 1px solid transparent; border-bottom: none; }"
         "QTabBar::tab:selected { background: #1e2a1e; color: #c8e6c9; "
         "font-weight: bold; "
@@ -123,7 +123,7 @@ def inner_tab_stylesheet() -> str:
     return (
         "QTabWidget::pane { border: none; background: #1e2a1e; }"
         "QTabBar::tab { background: #15251a; color: #90a4ae; "
-        "padding: 4px 10px; font-size: 11px; "
+        "padding: 4px 10px; font-size: 12px; "
         "border-bottom: 2px solid transparent; }"
         "QTabBar::tab:selected { color: #a5d6a7; "
         "border-bottom: 2px solid #66bb6a; }"
@@ -142,10 +142,10 @@ def leaf_tab_stylesheet() -> str:
     """
     return (
         "QTabWidget::pane { border: none; background: #1e2a1e; }"
-        "QTabBar::tab { background: transparent; color: #78909c; "
-        "padding: 3px 9px; font-size: 10px; "
+        "QTabBar::tab { background: transparent; color: #90a4ae; "
+        "padding: 4px 9px; font-size: 12px; "
         "border-bottom: 1px solid transparent; }"
-        "QTabBar::tab:selected { color: #90a4ae; "
+        "QTabBar::tab:selected { color: #cfd8dc; "
         "border-bottom: 1px solid #4a7a4a; }"
         "QTabBar::tab:hover { color: #b0bec5; }"
     )

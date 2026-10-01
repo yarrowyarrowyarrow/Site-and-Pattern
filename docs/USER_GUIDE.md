@@ -10,8 +10,16 @@ When the app opens you'll see four areas:
 
 - **Map** (centre) — Edmonton by default; pan with click-and-drag, zoom with the mouse wheel.
 - **Toolbar** (top) — drawing tools, layer toggles, zoom-sensitivity combo.
-- **Side panel** (right) — five tabs: **Plants** (with Plant Communities), **Site**, **Structures**, **Analysis**, **Planning**.
+- **Side panel** (right) — six tabs: **Site**, **Plants** (with Plant Communities), **Structures**, **Analysis**, **Planning**, **Learn**.
 - **Status bar** (bottom) — coordinates, hardiness zone, current mode (e.g. "Placing: Yarrow — click map").
+
+**What the colours on the map mean.** Each plant is a circle as wide as its spacing,
+filled in its type's colour (wildflowers purple, trees dark green, groundcovers gold,
+grasses lime…) and ringed in a darker shade of the same colour, so it stands out
+against the yard. A plant in a community is coloured the same way, and a plant you
+gave its own colour keeps it. With **🌳 Canopy** on, a dashed light-green ring shows
+each plant's mature spread. Click **Legend** in the map's lower-left corner, or press
+**L** with the map focused, for the key.
 
 ---
 

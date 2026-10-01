@@ -50,6 +50,7 @@ from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
+from src import indicator_style, target_size
 from src import onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
@@ -64,31 +65,6 @@ from src.branding import APP_NAME, APP_TITLE
 from src.log import get_logger
 
 _log = get_logger(__name__)
-
-
-# Marker colour tables for plant-community members — moved to the Qt-free
-# src.member_colors so placement controllers can colour members without
-# importing this (QtWebEngine-bound) module. Re-exported under the old names
-# for existing importers.
-from src.member_colors import (
-    LAYER_COLORS as _LAYER_COLORS,
-    FUNCTION_COLORS as _FUNCTION_COLORS,
-    OTHER_COLOR as _OTHER_COLOR,
-    member_color as _member_color,
-)
-
-
-# Back-compat shim — older code paths still reference _ROLE_COLORS by
-# name. Kept as a flat lookup that covers the union of layer + function
-# colours plus the legacy aliases.
-_ROLE_COLORS = {
-    **_LAYER_COLORS,
-    **_FUNCTION_COLORS,
-    'canopy':              _LAYER_COLORS['overstory'],
-    'dynamic_accumulator': _FUNCTION_COLORS['soil_builder'],
-    'pest_repellent':      _FUNCTION_COLORS['pest_deterrent'],
-    'other':               _OTHER_COLOR,
-}
 
 
 def _init_database():
@@ -124,6 +100,11 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        # Every control at least 24 px across, and every checkbox's box
+        # visible, however the window was started (main.py installs both
+        # first, for the start screen). F195, V3.03.
+        target_size.install()
+        indicator_style.install()
         _init_database()
         self.setWindowTitle(APP_TITLE)
         self.resize(1400, 860)
@@ -309,7 +290,7 @@ class MainWindow(QMainWindow):
         self._sb_zone.setMinimumWidth(100)
 
         self._sb_tasks = QLabel("")
-        self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 12px;")
         self._load_seasonal_tasks()
 
         sb = QStatusBar(self)
@@ -2487,7 +2468,7 @@ QToolButton:checked {
 
 QStatusBar {
     background-color: #152015;
-    color: #78909c;
+    color: #90a4ae;
     border-top: 1px solid #2e4a2e;
     font-size: 12px;
 }
@@ -2499,10 +2480,11 @@ QSplitter::handle {
 
 QScrollBar:vertical {
     background: #1a2a1a;
-    width: 10px;
+    width: 14px;
 }
 QScrollBar::handle:vertical {
-    background: #2e4a2e;
-    border-radius: 5px;
+    background: #5a8a5a;
+    border-radius: 6px;
+    min-height: 24px;
 }
 """

@@ -1672,9 +1672,6 @@ class MapEventRouter:
             return
         import math
         import src.project as project_io
-        # _member_color lives at module level in src.app — lazy import to
-        # break the controller→MainWindow import cycle.
-        from src.app import _member_color
 
         polyculture = self._main._pending_polyculture
         members = polyculture.get("members", [])
@@ -1690,8 +1687,10 @@ class MapEventRouter:
         for m in members:
             pid = m["plant_id"]
             name = m["common_name"]
-            spacing_m, plant_type, _ = self._main._plant_info(pid)
-            color = _member_color(m)
+            # By type, or the colour you gave the species, as every other
+            # plant is and as the loader redraws it (V3.03): members had been
+            # coloured by layer until the design was reopened.
+            spacing_m, plant_type, color = self._main._plant_info(pid)
 
             mlat = lat + (m.get("offset_y", 0)) / 111320
             mlng = lng + (m.get("offset_x", 0)) / (111320 * cos_lat)

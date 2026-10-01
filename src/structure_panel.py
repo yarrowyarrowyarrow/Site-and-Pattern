@@ -136,11 +136,11 @@ class StructurePanel(QWidget):
 
         self._detail_desc = QLabel("")
         self._detail_desc.setWordWrap(True)
-        self._detail_desc.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._detail_desc.setStyleSheet("color: #90a4ae; font-size: 12px;")
         detail_layout.addWidget(self._detail_desc)
 
         self._detail_info = QLabel("")
-        self._detail_info.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._detail_info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         detail_layout.addWidget(self._detail_info)
 
         layout.addWidget(self._detail_frame)
@@ -245,7 +245,7 @@ class StructurePanel(QWidget):
             "define the line, then double-click to finish."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Style
@@ -347,7 +347,7 @@ class StructurePanel(QWidget):
             "and other areas. Click points to define, double-click to finish."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         form = QFormLayout()

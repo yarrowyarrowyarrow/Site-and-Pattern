@@ -71,6 +71,11 @@ def main():
     # included (F195, V3.02): the panels' own stylesheets remove Qt's.
     from src import focus_ring
     focus_ring.install(app)
+    # And every control at least 24 px across, and every checkbox's box
+    # visible (F195, V3.03).
+    from src import indicator_style, target_size
+    target_size.install(app)
+    indicator_style.install(app)
 
     # The start screen, ahead of the map (V2.40, page in V2.41). Everything it
     # offers is read from disk — the saves folder, the design you were last in,

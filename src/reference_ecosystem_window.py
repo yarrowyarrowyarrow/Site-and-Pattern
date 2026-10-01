@@ -121,7 +121,7 @@ class ReferenceEcosystemWindow(QWidget):
         self._desc = QLabel("")
         self._desc.setWordWrap(True)
         self._desc.setStyleSheet(
-            "color: #b7c9bd; font-size: 11px; padding: 0 10px 6px 10px;")
+            "color: #b7c9bd; font-size: 12px; padding: 0 10px 6px 10px;")
         lay.addWidget(self._desc)
 
         self.viewer = Map3DWidget(self)
@@ -172,7 +172,7 @@ class ReferenceEcosystemWindow(QWidget):
 
     def _label(self, text: str) -> QLabel:
         lab = QLabel(text)
-        lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
         return lab
 
     def _build_tools(self) -> QHBoxLayout:

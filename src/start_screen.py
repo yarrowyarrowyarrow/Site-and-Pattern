@@ -239,7 +239,7 @@ class StartScreen(QDialog):
         foot.addStretch()
         if version:
             stamp = QLabel(version)
-            stamp.setStyleSheet("color: #6d8a6d; font-size: 11px;")
+            stamp.setStyleSheet("color: #6d8a6d; font-size: 12px;")
             foot.addWidget(stamp)
             foot.addWidget(self._link(UPDATE, "Check for updates"))
         layout.addLayout(foot)
@@ -249,7 +249,7 @@ class StartScreen(QDialog):
         self._dont_show.setChecked(bool(hidden))
         self._dont_show.setToolTip(
             "You can always reopen it from Help.")
-        self._dont_show.setStyleSheet("color: #7f9c82; font-size: 11px;")
+        self._dont_show.setStyleSheet("color: #7f9c82; font-size: 12px;")
         tail.addWidget(self._dont_show)
         tail.addStretch()
         close = QPushButton("Close")

@@ -171,12 +171,8 @@
         var c = plantMarkers[mid];
         if (!c || !c._pd) return;
         var sel = _selectionContains(c._pd);
-        var baseColor = c._pd.customColor || TYPE_COLORS[c._pd.plantType] || '#66bb6a';
-        c.setStyle({
-          color:       sel ? '#fdd835' : baseColor,
-          weight:      sel ? 3.0 : 1.5,
-          fillOpacity: sel ? 0.55 : 0.35
-        });
+        c.setStyle(sel ? { color: '#fdd835', weight: 3.0, fillOpacity: 0.55 }
+                       : plantMarkerStyle(plantColour(c._pd)));
       });
       // Boundaries
       boundaries.forEach(function(b) {
@@ -868,7 +864,7 @@
         if (item.checked !== undefined) {
           var chk = document.createElement('span');
           chk.textContent = item.checked ? '✓' : '  ';
-          chk.style.cssText = 'font-size:11px;width:12px;display:inline-block;color:#80cbc4';
+          chk.style.cssText = 'font-size:12px;width:12px;display:inline-block;color:#80cbc4';
           btn.appendChild(chk);
         }
         var lbl = document.createElement('span');

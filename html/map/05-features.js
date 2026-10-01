@@ -83,7 +83,7 @@
       // Tooltip on hover
       mainLayer.bindTooltip(
         '<b>' + escH(icon) + ' ' + escH(name) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">' + Number(sizeM) + 'm' +
+        '<span style="color:#b0bec5;font-size:12px">' + Number(sizeM) + 'm' +
         (structDef.maintenance_hours_year ? ' · ~' + Number(structDef.maintenance_hours_year) + ' hrs/yr' : '') +
         '<br>Right-click to remove</span>',
         { className: 'plant-marker-label' }
@@ -421,7 +421,7 @@
       // Tooltip
       var tooltipText = '<b>Hedgerow</b>';
       if (species) tooltipText += '<br>' + escH(species);
-      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + Number(numPlants) + ' plants · ' +
+      tooltipText += '<br><span style="color:#b0bec5;font-size:12px">~' + Number(numPlants) + ' plants · ' +
         totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
       mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
 
@@ -609,7 +609,7 @@
         : '<br>Click to edit outline · right-click to remove';
       polygon.bindTooltip(
         '<b>' + escH(label || shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr)
+        '<span style="color:#b0bec5;font-size:12px">Area: ' + escH(areaStr)
           + shadeLine + '</span>',
         { className: 'plant-marker-label' }
       );

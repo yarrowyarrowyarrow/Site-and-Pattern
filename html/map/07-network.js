@@ -155,7 +155,7 @@
         el = document.createElement('div');
         el.id = 'rel-web-legend';
         el.style.cssText = 'position:absolute;right:10px;bottom:12px;z-index:1000;' +
-          'max-width:250px;font-family:system-ui,sans-serif;font-size:11px;' +
+          'max-width:250px;font-family:system-ui,sans-serif;font-size:12px;' +
           'color:#dcedc8;background:rgba(20,32,22,.94);border:1px solid #3e5c3e;' +
           'border-radius:8px;padding:7px 10px;line-height:1.6;' +
           'pointer-events:none;box-shadow:0 1px 6px rgba(0,0,0,.4);';
@@ -211,7 +211,7 @@
       st.textContent =
         '.rel-fauna-icon { background: none; border: none; }' +
         '.rel-fauna-chip { display:inline-block; white-space:nowrap;' +
-        ' font-family:system-ui,sans-serif; font-size:11px; color:#e8f5e9;' +
+        ' font-family:system-ui,sans-serif; font-size:12px; color:#e8f5e9;' +
         ' background:rgba(20,32,22,.92); border:1px solid #4a7a4a;' +
         ' border-radius:10px; padding:1px 7px;' +
         ' box-shadow:0 1px 3px rgba(0,0,0,.45); }' +

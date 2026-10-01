@@ -75,7 +75,7 @@ inventory: [reference.md](reference.md).
 | `src/map_js.py` | Typed Python→JS builders for every JS entry point (never hand-format JS strings). |
 | `html/map.html` | Thin shell; loads the six split scripts **in order**. |
 | `html/map/01-core.js` … `html/map/06-overlays.js` | Shared-global classic scripts, NOT ES modules: core/bridge, boundary, plants, tools, features, overlays. Each has a guard line ceiling. |
-| `src/member_colors.py` | Qt-free marker colour tables. |
+| `src/member_colors.py` | Qt-free: the one plant colour table, by type, and `plant_color` (V3.03; was by layer for community members). |
 
 ### Side panels & Qt widgets
 
@@ -95,7 +95,11 @@ Present, V2.25), plus small QPainter widgets
 lives in a Qt-free sibling module. Keyboard and screen reader across all of them
 (V3.02): `src/focus_ring.py` (the one focus ring), `src/keyboard_help.py` (the
 key table, F6, Help → Keyboard Shortcuts), `src/accessible_names.py` (names for
-the containers no panel builds).
+the containers no panel builds). What can be seen (V3.03): `src/target_size.py`
+(every control at least 24 px, raised and never lowered), `src/indicator_style.py`
+(a checkbox's box you can see); the 12 px and 4.5:1
+floors are tests (`tests/test_visual_floor.py`, `tests/test_app_smoke.py`), with
+the measuring helpers in `tests/_visual.py`.
 
 ### Generation & placement scoring (Qt-free)
 

@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
 
 from src.db import polycultures
 from src.filter_widgets import make_multi_combo
+from src.member_colors import plant_color
 
 
 # Drag a community from the library tree → drop on the "Plant Communities Mix"
@@ -129,7 +130,7 @@ _GROUP_BY_OPTIONS = [
 ]
 _GROUP_COMBO_STYLE = (
     "QComboBox { background: #1e2e1e; color: #c8e6c9; border: 1px solid #2e4a2e; "
-    "border-radius: 3px; padding: 1px 6px; font-size: 11px; }"
+    "border-radius: 3px; padding: 1px 6px; font-size: 12px; }"
     "QComboBox:hover { border-color: #4a7a4a; }"
     "QComboBox QAbstractItemView { background: #1e2e1e; color: #c8e6c9; "
     "border: 1px solid #2e4a2e; selection-background-color: #2e5a2e; }"
@@ -351,7 +352,7 @@ class PolycultureGridCanvas(QWidget):
         # centre pip in the dot colour keeps very large canopies
         # legible when they overlap.
         font = QFont()
-        font.setPointSize(8)
+        font.setPixelSize(12)
         p.setFont(font)
         for m in self._members:
             mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
@@ -365,12 +366,15 @@ class PolycultureGridCanvas(QWidget):
             canopy_fill = QColor(color)
             canopy_fill.setAlpha(110)
             p.setBrush(QBrush(canopy_fill))
-            p.setPen(QPen(color.darker(140), 1.2))
+            # Lighter, not darker, on this near-black ground: the type colours
+            # run down to rush brown, whose darkened edge was 1.4:1 here and
+            # whose lightened one is 3.9:1 (V3.03).
+            p.setPen(QPen(color.lighter(170), 1.5))
             p.drawEllipse(QPointF(mx, my), r_px, r_px)
 
             # Solid centre pip so the planting point is unambiguous.
             p.setBrush(QBrush(color))
-            p.setPen(QPen(QColor("#0d1f0d"), 1))
+            p.setPen(QPen(QColor("#e8f5e9"), 1))
             p.drawEllipse(QPointF(mx, my), 4, 4)
 
             p.setPen(QColor("#e8f5e9"))
@@ -426,17 +430,10 @@ def next_free_offset(members, radius_m: float, *, gap_m: float = 0.8) -> tuple:
 
 
 def _plant_color_for_member(plant: dict) -> str:
-    """Pick a representative dot colour for a polyculture member."""
-    if plant and plant.get("marker_color"):
-        return plant["marker_color"]
-    t = (plant or {}).get("plant_type", "")
-    return {
-        "tree":        "#388e3c",
-        "shrub":       "#66bb6a",
-        "herb":        "#9ccc65",
-        "vine":        "#7cb342",
-        "groundcover": "#aed581",
-    }.get(t, "#66bb6a")
+    """A member's dot: the colour the map and the plant list give the species
+    (V3.03; the builder had kept five greens of its own, so a wildflower was a
+    shrub's green here and purple on the map)."""
+    return plant_color(plant)
 
 
 class PolycultureBuilderDialog(QDialog):
@@ -474,7 +471,7 @@ class PolycultureBuilderDialog(QDialog):
         outer.addLayout(meta)
 
         tip = QLabel(
-            "<span style='color:#90a4ae;font-size:11px;'>"
+            "<span style='color:#90a4ae;font-size:12px;'>"
             "Pick a plant + role on the left, then click the grid (or press Enter"
             " in the list) to place it. Right-click a placed plant, or Delete in "
             "Members, to remove it. Drag to reposition. Native habitat plant "
@@ -523,7 +520,7 @@ class PolycultureBuilderDialog(QDialog):
         self.function_checks: dict[str, QCheckBox] = {}
         for fn in FUNCTIONS:
             cb = QCheckBox(fn.replace("_", " ").title())
-            cb.setStyleSheet("QCheckBox { color: #c8e6c9; font-size: 11px; }")
+            cb.setStyleSheet("QCheckBox { color: #c8e6c9; font-size: 12px; }")
             self.function_checks[fn] = cb
             fl.addWidget(cb)
         functions_box.setToolTip(
@@ -581,7 +578,7 @@ class PolycultureBuilderDialog(QDialog):
         centre_col.addWidget(self.canvas, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.count_label = QLabel("0 plants placed")
-        self.count_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self.count_label.setStyleSheet("color: #90a4ae; font-size: 12px;")
         centre_col.addWidget(self.count_label, 0, Qt.AlignmentFlag.AlignHCenter)
 
         arrange_btn = QPushButton("Auto-arrange by layer")
@@ -606,7 +603,7 @@ class PolycultureBuilderDialog(QDialog):
             "6 m matches the built-in communities; raise it for larger plantings."
         )
         self._arrange_radius_label = QLabel("6 m")
-        self._arrange_radius_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._arrange_radius_label.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._arrange_radius_slider.valueChanged.connect(
             lambda v: self._arrange_radius_label.setText(f"{v} m")
         )
@@ -954,6 +951,9 @@ class PolyculturePanel(QWidget):
             "<b>Plant Community Library</b>  "
             "<span style='color:#90a4ae;font-weight:normal;'>(saved communities)</span>"
         )
+        # Wraps rather than widening the panel: beside the variations toggle
+        # it needed 454 px at 12 px in DejaVu Sans, in a 424 px panel (V3.03).
+        title_label.setWordWrap(True)
         title_row.addWidget(title_label, 1)
         self.variations_toggle_btn = QPushButton(
             "▾ Hide variations" if self._show_variations else "▸ Show variations"
@@ -961,7 +961,7 @@ class PolyculturePanel(QWidget):
         self.variations_toggle_btn.setStyleSheet(
             "QPushButton { background: transparent; color: #90a4ae; "
             "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 1px 8px; font-size: 10px; }"
+            "padding: 1px 8px; font-size: 12px; }"
             "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
         )
         self.variations_toggle_btn.setToolTip(
@@ -1071,7 +1071,7 @@ class PolyculturePanel(QWidget):
         self._sort_combo.currentIndexChanged.connect(self._on_sort_changed)
         filter_row3.addWidget(self._sort_combo, 1)
         self._result_count = QLabel("")
-        self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._result_count.setStyleSheet("color: #90a4ae; font-size: 12px;")
         filter_row3.addWidget(self._result_count)
         layout.addLayout(filter_row3)
 
@@ -1116,12 +1116,9 @@ class PolyculturePanel(QWidget):
         self._mix_communities: list[dict] = []
         self._MIX_COMMUNITY_MAX = 8
 
-        # Buttons row 1
-        btn_row1 = QHBoxLayout()
         self.new_btn = QPushButton("New Community")
         self.new_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
-        btn_row1.addWidget(self.new_btn)
 
         # "For a creature…" — generate a community tailored to a native bee,
         # butterfly or moth from its nectar + larval-host plants (V2.12).
@@ -1132,51 +1129,51 @@ class PolyculturePanel(QWidget):
             "moth — its nectar plants and (for butterflies/moths) the host "
             "plants its caterpillars need.")
         self.creature_btn.clicked.connect(self._on_creature_community)
-        btn_row1.addWidget(self.creature_btn)
 
         self.delete_btn = QPushButton("Delete")
         self.delete_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._on_delete_polyculture)
-        btn_row1.addWidget(self.delete_btn)
 
         self.dup_btn = QPushButton("Duplicate")
         self.dup_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.dup_btn.setEnabled(False)
         self.dup_btn.clicked.connect(self._on_duplicate_polyculture)
-        btn_row1.addWidget(self.dup_btn)
 
         self.variation_btn = QPushButton("+ Variation")
         self.variation_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.variation_btn.setEnabled(False)
         self.variation_btn.setToolTip("Create a variation of this plant community")
         self.variation_btn.clicked.connect(self._on_add_variation)
-        btn_row1.addWidget(self.variation_btn)
-        layout.addLayout(btn_row1)
 
-        # Second button row: Edit / Export / Import grouped with the library
-        # actions above (Place on Map lives in the Placement panel instead).
-        btn_row2 = QHBoxLayout()
         self.edit_btn = QPushButton("Edit")
         self.edit_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip("Open the visual builder for this plant community")
         self.edit_btn.clicked.connect(self._on_edit_polyculture)
-        btn_row2.addWidget(self.edit_btn)
 
         self.export_btn = QPushButton("Export")
         self.export_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.export_btn.setEnabled(False)
         self.export_btn.setToolTip("Export this community to a .plant-community.json file")
         self.export_btn.clicked.connect(self._on_export)
-        btn_row2.addWidget(self.export_btn)
 
         self.import_btn = QPushButton("Import")
         self.import_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
         self.import_btn.clicked.connect(self._on_import)
-        btn_row2.addWidget(self.import_btn)
-        layout.addLayout(btn_row2)
+
+        # Two rows by what they act on (V3.03): the library, then the chosen
+        # community, Delete last. Five in one row no longer fitted the panel
+        # once its text was 12 px; the second row had held Edit, Export and
+        # Import. Place on Map lives in the placement bar.
+        for row_buttons in ((self.new_btn, self.creature_btn, self.import_btn),
+                            (self.edit_btn, self.dup_btn, self.variation_btn,
+                             self.export_btn, self.delete_btn)):
+            row = QHBoxLayout()
+            for button in row_buttons:
+                row.addWidget(button)
+            layout.addLayout(row)
 
         # ── Selected community: name + "Anchored on X · N plants" header ──
         # Shown above the members so the list sits directly under the title
@@ -1267,7 +1264,7 @@ class PolyculturePanel(QWidget):
         mix_box = _CommunityMixDropGroupBox(
             "Plant Communities Mix", self._add_to_community_mix)
         mix_box.setStyleSheet(
-            "QGroupBox { color: #a5d6a7; font-size: 11px; "
+            "QGroupBox { color: #a5d6a7; font-size: 12px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
@@ -1281,7 +1278,7 @@ class PolyculturePanel(QWidget):
         )
         self._mix_community_status.setWordWrap(True)
         self._mix_community_status.setStyleSheet(
-            "color: #78909c; font-size: 10px;"
+            "color: #90a4ae; font-size: 12px;"
         )
         ml.addWidget(self._mix_community_status)
 
@@ -1322,7 +1319,7 @@ class PolyculturePanel(QWidget):
         self._mix_community_clear_btn.setStyleSheet(
             "QPushButton { background: #1e2e1e; color: #ef9a9a; "
             "border: 1px solid #4a2e2e; border-radius: 3px; "
-            "padding: 2px 8px; font-size: 11px; }"
+            "padding: 2px 8px; font-size: 12px; }"
             "QPushButton:hover { border-color: #8a4a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
         )
@@ -1508,7 +1505,7 @@ class PolyculturePanel(QWidget):
         rl.setContentsMargins(4, 2, 4, 2)
         rl.setSpacing(4)
         name = QLabel(community.get("name") or "—")
-        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        name.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         rl.addWidget(name, 1)
         spin = QSpinBox()
         spin.setRange(1, 99)
@@ -1809,7 +1806,7 @@ class PolyculturePanel(QWidget):
         btn.setStyleSheet(
             "QPushButton { background: transparent; color: #90a4ae; "
             "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 1px 8px; font-size: 10px; }"
+            "padding: 1px 8px; font-size: 12px; }"
             "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
         )
         btn.setToolTip(
@@ -1961,7 +1958,7 @@ class PolyculturePanel(QWidget):
         name = polyculture.get("name") or "—"
         self._community_header.setText(
             f"<b style='color:#a5d6a7;'>{name}</b><br>"
-            f"<span style='color:#9e9e9e; font-size:11px;'>Anchored on "
+            f"<span style='color:#9e9e9e; font-size:12px;'>Anchored on "
             f"{center} · {len(members)} plants</span>"
         )
         self._community_header_row.setVisible(True)
@@ -2041,13 +2038,13 @@ class PolyculturePanel(QWidget):
         triangle.setText("▸")
         triangle.setStyleSheet(
             "QToolButton { background: transparent; color: #90a4ae; "
-            "border: none; padding: 0px 2px; font-size: 11px; }"
+            "border: none; padding: 0px 2px; font-size: 12px; }"
             "QToolButton:hover { color: #c8e6c9; }"
         )
         triangle.setCursor(Qt.CursorShape.PointingHandCursor)
         head.addWidget(triangle)
         name = QLabel(member.get("common_name") or "—")
-        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        name.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         head.addWidget(name, 1)
         outer.addLayout(head)
 
@@ -2058,7 +2055,7 @@ class PolyculturePanel(QWidget):
         # expand so closed rows don't hit the DB.
         detail = QLabel()
         detail.setStyleSheet(
-            "QLabel { color: #cfd8dc; font-size: 11px; "
+            "QLabel { color: #cfd8dc; font-size: 12px; "
             "padding: 2px 4px 4px 18px; }"
         )
         detail.setTextFormat(Qt.TextFormat.RichText)
@@ -2114,26 +2111,26 @@ class PolyculturePanel(QWidget):
             if sci:
                 rows.append(f"<i style='color:#90a4ae;'>{sci}</i>")
             rows.append(
-                f"<b style='color:#78909c;'>Position:</b> {tag_str} · "
+                f"<b style='color:#90a4ae;'>Position:</b> {tag_str} · "
                 f"({ox} m, {oy} m)"
             )
-            rows.append(f"<b style='color:#78909c;'>Zones:</b> {zones}")
+            rows.append(f"<b style='color:#90a4ae;'>Zones:</b> {zones}")
             rows.append(
-                f"<b style='color:#78909c;'>Sun · Water:</b> {sun} · {water}"
+                f"<b style='color:#90a4ae;'>Sun · Water:</b> {sun} · {water}"
             )
             rows.append(
-                f"<b style='color:#78909c;'>Spacing:</b> "
+                f"<b style='color:#90a4ae;'>Spacing:</b> "
                 f"{f'{spacing} m' if spacing else '—'}"
             )
             rows.append(
-                f"<b style='color:#78909c;'>Height:</b> "
+                f"<b style='color:#90a4ae;'>Height:</b> "
                 f"{f'{height} m' if height else '—'}"
             )
             rows.append(
-                f"<b style='color:#78909c;'>Bloom · Fruit:</b> {bloom} · {fruit}"
+                f"<b style='color:#90a4ae;'>Bloom · Fruit:</b> {bloom} · {fruit}"
             )
-            rows.append(f"<b style='color:#78909c;'>Edible:</b> {edible}")
-            rows.append(f"<b style='color:#78909c;'>Uses:</b> {uses}")
+            rows.append(f"<b style='color:#90a4ae;'>Edible:</b> {edible}")
+            rows.append(f"<b style='color:#90a4ae;'>Uses:</b> {uses}")
             if notes:
                 rows.append(
                     f"<div style='color:#b0bec5; margin-top: 4px;'>{notes}</div>"
@@ -2462,7 +2459,7 @@ QPushButton {
     border: 1px solid #2e4a2e;
     border-radius: 3px;
     padding: 4px 6px;
-    font-size: 11px;
+    font-size: 12px;
 }
 QPushButton:hover    { border-color: #4a7a4a; background: #243824; }
 QPushButton:pressed  { background: #2e5a2e; }

@@ -287,7 +287,7 @@
         L.marker([midLat, midLng], {
           icon: L.divIcon({
             className: '',
-            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
+            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:12px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
             iconSize: null, iconAnchor: null
           }),
           interactive: false
@@ -567,7 +567,7 @@
         : '<br>Click to edit outline · right-click to remove';
       poly.setTooltipContent(
         '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + escH(aStr)
+        '<span style="color:#b0bec5;font-size:12px">Area: ' + escH(aStr)
           + line + '</span>');
     }
 

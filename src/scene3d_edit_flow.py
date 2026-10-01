@@ -75,7 +75,7 @@ def build_tools(win):
 
     bar = QHBoxLayout()
     lab = QLabel("Edit:")
-    lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+    lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
     bar.addWidget(lab)
     for mode, attr, text, tip in _TOOLS:
         btn = QPushButton(text)
@@ -87,7 +87,7 @@ def build_tools(win):
     # Hidden until he is actually walking — see set_walking.
     win._net_btn.setVisible(False)
     win._edit_hint = QLabel("")
-    win._edit_hint.setStyleSheet("color: #cfe8d2; font-size: 11px;")
+    win._edit_hint.setStyleSheet("color: #cfe8d2; font-size: 12px;")
     bar.addWidget(win._edit_hint)
     bar.addStretch(1)
     return bar

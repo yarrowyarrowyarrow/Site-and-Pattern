@@ -90,7 +90,7 @@ class OnThisDesignPanel(QWidget):
         pl.setContentsMargins(2, 2, 2, 2)
         pl.setSpacing(2)
         self._plants_count_label = QLabel("None placed yet")
-        self._plants_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._plants_count_label.setStyleSheet("color: #90a4ae; font-size: 12px;")
         pl.addWidget(self._plants_count_label)
         self._plants_list = QListWidget()
         self._plants_list.setMinimumHeight(60)
@@ -119,7 +119,7 @@ class OnThisDesignPanel(QWidget):
         cl.setSpacing(2)
         self._communities_count_label = QLabel("No communities placed yet")
         self._communities_count_label.setStyleSheet(
-            "color: #78909c; font-size: 11px;"
+            "color: #90a4ae; font-size: 12px;"
         )
         cl.addWidget(self._communities_count_label)
         self._communities_list = QListWidget()
@@ -355,7 +355,7 @@ class OnThisDesignPanel(QWidget):
             f"<b>Habitat value</b> ›</a><br>{head}"
         ]
         if bits:
-            parts.append("<br><span style='color:#90a4ae;font-size:10px;'>"
+            parts.append("<br><span style='color:#90a4ae;font-size:12px;'>"
                          + ", ".join(bits) + "</span>")
         parts.append("</p>")
         return "".join(parts)
@@ -374,14 +374,14 @@ class OnThisDesignPanel(QWidget):
             return ""
         if not nudges:
             return ("<p><b>Where to grow next</b><br>"
-                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "<span style='color:#a5d6a7;font-size:12px;'>"
                     "This design already covers the habitat basics — nice "
                     "work.</span></p>")
         items = "".join(
             f"<li style='margin-bottom:3px;'>{nd['text']}</li>"
             for nd in nudges)
         return ("<p><b>Where to grow next</b>"
-                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:12px;'>"
                 f"{items}</ul></p>")
 
     def _value_framing_html(self) -> str:
@@ -407,7 +407,7 @@ class OnThisDesignPanel(QWidget):
                            f"{'s' if n_struct != 1 else ''}")
         if not creates:
             return ""
-        return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
+        return ("<p style='color:#90a4ae;font-size:12px;margin-top:2px;'>"
                 "What your spend creates: " + ", ".join(creates) + ".</p>")
 
     def _cues_block_html(self) -> str:
@@ -427,11 +427,11 @@ class OnThisDesignPanel(QWidget):
         tally = self._cues_tally
         if tally and tally[1] and tally[0] == tally[1]:
             head = ("<p><b>How it will be read</b><br>"
-                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "<span style='color:#a5d6a7;font-size:12px;'>"
                     f"All {tally[1]} cues to care are here — this will read as "
                     "tended.</span>")
         else:
-            sub = (f" <span style='color:#78909c;font-size:10px;'>"
+            sub = (f" <span style='color:#90a4ae;font-size:12px;'>"
                    f"({tally[0]} of {tally[1]} cues present)</span>"
                    if tally and tally[1] else "")
             head = f"<p><b>How it will be read</b>{sub}"
@@ -439,7 +439,7 @@ class OnThisDesignPanel(QWidget):
             f"<li style='margin-bottom:3px;'>{line}</li>"
             for line in self._cues_lines)
         return (head +
-                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:12px;'>"
                 f"{items}</ul></p>")
 
     def _lawn_block_html(self) -> str:
@@ -461,7 +461,7 @@ class OnThisDesignPanel(QWidget):
         rows = [f"{spec['label']}: {area(by[key])}"
                 for key, spec in ZONE_TYPES.items() if by.get(key, 0) > 0]
         if rows:
-            parts.append("<span style='color:#90a4ae;font-size:10px;'>"
+            parts.append("<span style='color:#90a4ae;font-size:12px;'>"
                          + " · ".join(rows) + "</span>")
         parts.append("</p>")
         return "".join(parts)
@@ -501,7 +501,7 @@ class OnThisDesignPanel(QWidget):
                 else:
                     chips.append(f"{label} {format_cost(lo, hi)}")
             if chips:
-                parts.append("<span style='color:#90a4ae;font-size:10px;'>&nbsp;&nbsp;"
+                parts.append("<span style='color:#90a4ae;font-size:12px;'>&nbsp;&nbsp;"
                              + "<br>&nbsp;&nbsp;".join(chips) + "</span><br>")
         if bd.get("structures") and bd["structures"][1] > 0:
             parts.append(row("Structures", "structures"))
@@ -511,7 +511,7 @@ class OnThisDesignPanel(QWidget):
         if tot:
             parts.append(f"<b>Total: {format_cost(tot[0], tot[1])}</b>")
         parts.append(
-            "<br><span style='color:#78909c;font-size:10px;'>AB retail/install "
+            "<br><span style='color:#90a4ae;font-size:12px;'>AB retail/install "
             "estimate — varies by nursery, year, site.</span></p>"
         )
         return "".join(parts)
@@ -526,7 +526,7 @@ class OnThisDesignPanel(QWidget):
         framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
-            body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
+            body = "<i style='color:#90a4ae;'>Nothing placed yet.</i>"
             self._stats_text.setHtml(
                 body + lawn_html + value_html + nudges_html + cues_html
                 + cost_html + framing_html)

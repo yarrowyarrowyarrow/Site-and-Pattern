@@ -37,7 +37,7 @@ from src import glossary, ui_style
 _TOOLTIP_CSS = (
     " QToolTip { color: #10200f; background-color: #f2f7ef;"
     " border: 1px solid #6c8f6c; border-radius: 4px; padding: 6px 8px;"
-    " font-size: 11px; font-weight: normal; }")
+    " font-size: 12px; font-weight: normal; }")
 
 
 def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
@@ -73,7 +73,7 @@ def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
 # the rich-text span; handlers later call setText() with plain strings, which
 # restores the normal value colour.
-_DASH = "<span style='color:#546e7a;'>—</span>"
+_DASH = "<span style='color:#90a4ae;'>—</span>"
 
 
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
@@ -246,6 +246,35 @@ class _GeocodeWorker(QObject):
             self.failed.emit(str(exc))
 
 
+class _QuestionWords(QLabel):
+    """A Field Notes question, wrapping beside the box it ticks (V3.03).
+
+    A QCheckBox's own words cannot wrap. At 12 px the longest question needed
+    392 px in DejaVu Sans, the font CI and many Linux desktops draw in, and the
+    tab scrolled sideways. So the box carries the question as its name (what a
+    screen reader says) and these words stand beside it; a click on them ticks
+    it, as a click on a checkbox's own words would."""
+
+    def __init__(self, text: str, box: QCheckBox, parent=None):
+        super().__init__(text, parent)
+        self._box = box
+        self.setWordWrap(True)
+
+    def mousePressEvent(self, event):  # noqa: N802 (Qt override)
+        if event.button() == Qt.MouseButton.LeftButton:
+            event.accept()             # so the release comes here
+            return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):  # noqa: N802 (Qt override)
+        if (event.button() == Qt.MouseButton.LeftButton
+                and self.rect().contains(event.position().toPoint())
+                and self._box.isEnabled()):
+            self._box.toggle()
+            return
+        super().mouseReleaseEvent(event)
+
+
 # ── Panel widget ─────────────────────────────────────────────────────────────
 
 class SitePanel(QWidget):
@@ -414,7 +443,7 @@ class SitePanel(QWidget):
         self._first_step.setWordWrap(True)
         self._first_step.setVisible(False)
         self._first_step.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; font-weight: bold; "
+            "color: #dcedc8; font-size: 12px; font-weight: bold; "
             "padding: 6px 8px; background: #1e3320; "
             "border: 1px solid #3e5c3e; border-radius: 4px;")
         layout.addWidget(self._first_step)
@@ -425,7 +454,7 @@ class SitePanel(QWidget):
             "right-click on the pin to remove."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # ── Property pin (with address search) ───────────────────────
@@ -518,7 +547,7 @@ class SitePanel(QWidget):
         self._lbl_status = QLabel("")
         self._lbl_status.setWordWrap(True)
         self._lbl_status.setStyleSheet(
-            "color: #ffcc80; font-size: 11px; padding: 2px 4px;"
+            "color: #ffcc80; font-size: 12px; padding: 2px 4px;"
         )
         layout.addWidget(self._lbl_status)
 
@@ -534,7 +563,7 @@ class SitePanel(QWidget):
         self._lbl_zone   = QLabel("—")
         self._lbl_zone.setStyleSheet("color: #c8e6c9; font-weight: bold; font-size: 14px;")
         self._lbl_hard_src = QLabel("")
-        self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_hard_src.setWordWrap(True)
         # Tooltips for these rows come from src/glossary.py via _explain()
         # below, not from inline strings here (V2.55). Three of them used to be
@@ -556,7 +585,7 @@ class SitePanel(QWidget):
         self._btn_browse_comms.setProperty("namedByContent", True)
         self._btn_browse_comms.setStyleSheet(
             "QPushButton { background: transparent; color: #81c784; border: none;"
-            " text-align: left; padding: 0; font-size: 11px;"
+            " text-align: left; padding: 0; font-size: 12px;"
             " text-decoration: underline; }"
             "QPushButton:hover { color: #a5d6a7; }"
         )
@@ -603,7 +632,7 @@ class SitePanel(QWidget):
         self._lbl_info_wind.setStyleSheet("color: #c8e6c9;")
         self._lbl_wind_hint = QLabel("")
         self._lbl_wind_hint.setWordWrap(True)
-        self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_wind_hint.setVisible(False)
         cl.addRow("Elevation:",       self._lbl_info_elev)
         cl.addRow("Aspect:",          self._lbl_info_aspect)
@@ -622,22 +651,22 @@ class SitePanel(QWidget):
         self._lbl_rain_monthly = QLabel("—")
         self._lbl_rain_monthly.setWordWrap(True)
         self._lbl_rain_monthly.setStyleSheet(
-            "color: #90caf9; font-family: monospace; font-size: 10px;"
+            "color: #90caf9; font-family: monospace; font-size: 12px;"
         )
         self._lbl_rain_src = QLabel("")
-        self._lbl_rain_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_rain_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_rain_src.setWordWrap(True)
         # Rain/snow timing (precip_split): what the total hides is *when* the
         # water arrives — growing-season rain infiltrates now; snow is a delayed
         # spring-melt pulse. Both are liquid-water equivalent (no depth figure).
         self._lbl_rain_growing = QLabel("—")
-        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 12px;")
         self._lbl_rain_growing.setWordWrap(True)
         self._lbl_rain_snow = QLabel("—")
-        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
+        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 12px;")
         self._lbl_rain_snow.setWordWrap(True)
         self._lbl_rain_note = QLabel("")
-        self._lbl_rain_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_rain_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_rain_note.setWordWrap(True)
         self._lbl_rain_note.setVisible(False)
         self._rain_form = rl
@@ -664,7 +693,7 @@ class SitePanel(QWidget):
         self._lbl_winter_thaw.setWordWrap(True)
         self._lbl_winter_notes = QLabel("")
         self._lbl_winter_notes.setWordWrap(True)
-        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 12px;")
         wl.addRow("Snow cover:", self._lbl_winter_cover)
         wl.addRow("Thaw stress:", self._lbl_winter_thaw)
         wl.addRow("", self._lbl_winter_notes)
@@ -682,7 +711,7 @@ class SitePanel(QWidget):
         self._lbl_soil_mix     = QLabel("—")
         self._lbl_soil_depth   = QLabel("—")
         self._lbl_soil_src     = QLabel("")
-        self._lbl_soil_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_soil_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_soil_src.setWordWrap(True)
         sl.addRow("pH (H₂O):",     self._lbl_soil_ph)
         sl.addRow("Texture class:", self._lbl_soil_texture)
@@ -712,7 +741,7 @@ class SitePanel(QWidget):
         soil_btn_row.addWidget(self._soil_cancel_btn)
         sl.addRow(soil_btn_row)
         self._soil_dl_status = QLabel("")
-        self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._soil_dl_status.setWordWrap(True)
         sl.addRow(self._soil_dl_status)
         layout.addWidget(self._soil_box)
@@ -735,7 +764,7 @@ class SitePanel(QWidget):
             "Saskatchewan list (npss.sk.ca). Native plants and seed are seasonal "
             "and often grown to order — confirm availability before visiting or "
             "ordering; many suppliers ship province-wide.")
-        self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_nursery_note.setWordWrap(True)
         nl.addWidget(self._lbl_nursery_note)
         layout.addWidget(self._nursery_box)
@@ -769,7 +798,7 @@ class SitePanel(QWidget):
             "the project and informs the design."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Debounce so a flurry of keystrokes emits one update.
@@ -787,18 +816,25 @@ class SitePanel(QWidget):
         self._fn_checks: dict = {}
         self._fn_notes: dict = {}
         for key, prompt in FIELD_PROMPTS:
-            cb = QCheckBox(prompt)
-            cb.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+            # The box and its words apart, so the words wrap (_QuestionWords).
+            cb = QCheckBox()
+            cb.setAccessibleName(prompt)
             cb.toggled.connect(self._fn_edited)
+            words = _QuestionWords(prompt, cb)
+            words.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+            question = QHBoxLayout()
+            question.setSpacing(6)
+            question.addWidget(cb, 0, Qt.AlignmentFlag.AlignTop)
+            question.addWidget(words, 1)
             le = QLineEdit()
             le.setPlaceholderText("what you noticed…")
             le.setAccessibleName(f"What you noticed: {prompt}")
             le.setStyleSheet(
                 "QLineEdit { background: #1a2a1a; color: #c8e6c9; "
                 "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px; "
-                "font-size: 11px; }")
+                "font-size: 12px; }")
             le.textChanged.connect(self._fn_edited)
-            box_layout.addWidget(cb)
+            box_layout.addLayout(question)
             box_layout.addWidget(le)
             self._fn_checks[key] = cb
             self._fn_notes[key] = le
@@ -818,7 +854,7 @@ class SitePanel(QWidget):
         self._fn_free.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }")
+            "font-size: 12px; }")
         self._fn_free.setMinimumHeight(110)
         self._fn_free.textChanged.connect(self._fn_edited)
         layout.addWidget(self._fn_free)
@@ -843,7 +879,7 @@ class SitePanel(QWidget):
             "georeferenced underlay, centred on your pin. Drop annotation pins "
             "to mark what you see.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
 
         self._sp_add_btn = QPushButton("Add a photo of your site…")
@@ -852,7 +888,7 @@ class SitePanel(QWidget):
 
         self._sp_status = QLabel("No site photo.")
         self._sp_status.setWordWrap(True)
-        self._sp_status.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        self._sp_status.setStyleSheet("color: #b0bec5; font-size: 12px;")
         v.addWidget(self._sp_status)
 
         form = QFormLayout()
@@ -879,7 +915,7 @@ class SitePanel(QWidget):
 
         self._sp_visible = QCheckBox("Show on map")
         self._sp_visible.setChecked(True)
-        self._sp_visible.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._sp_visible.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         self._sp_visible.toggled.connect(
             lambda on: None if self._sp_loading
             else self.site_photo_visible_changed.emit(bool(on)))
@@ -970,7 +1006,7 @@ class SitePanel(QWidget):
         self._lbl_slope   = QLabel("—")
         self._lbl_aspect  = QLabel("—")
         self._lbl_elev_src = QLabel("")
-        self._lbl_elev_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_elev_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_elev_src.setWordWrap(True)
         el.addRow("Elevation:", self._lbl_elev)
         el.addRow("Slope:",     self._lbl_slope)
@@ -1003,7 +1039,7 @@ class SitePanel(QWidget):
             "interpolate but don't add real detail."
         )
         slope_info.setWordWrap(True)
-        slope_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        slope_info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         slope_layout.addWidget(slope_info)
 
         slope_form = QFormLayout()
@@ -1100,7 +1136,7 @@ class SitePanel(QWidget):
         self._auto_status = QLabel("")
         self._auto_status.setWordWrap(True)
         self._auto_status.setStyleSheet(
-            "color: #ffcc80; font-size: 11px; padding: 2px;"
+            "color: #ffcc80; font-size: 12px; padding: 2px;"
         )
         slope_layout.addWidget(self._auto_status)
 
@@ -1166,7 +1202,7 @@ class SitePanel(QWidget):
 
         hint = QLabel("Shifts the satellite basemap only — not your data.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vb.addWidget(hint)
 
         form = QFormLayout()
@@ -1278,7 +1314,7 @@ class SitePanel(QWidget):
             name_html = (f"<a href='{url}' style='color:#66bb6a;'>{name}</a>"
                          if url else f"<b>{name}</b>")
             lines.append(f"{icon} {name_html}<br><span style='color:#90a4ae;"
-                         f"font-size:10px;'>{access}</span>")
+                         f"font-size:12px;'>{access}</span>")
         self._lbl_nurseries.setText("<br>".join(lines))
 
     def _refresh_clicked(self):
@@ -1733,7 +1769,7 @@ class SitePanel(QWidget):
             buildings, trees, where="this tab")
         lbl.setText(text)
         lbl.setStyleSheet(
-            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
 
     # ── Existing shade casters: mark/draw trees & buildings ────────────────
     # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
@@ -1756,7 +1792,7 @@ class SitePanel(QWidget):
                       "Draw traces the real outline (best shadows); Mark "
                       "drops a quick circle or box.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vb.addWidget(hint)
 
         # Running total of what will cast shade, refreshed by
@@ -1764,7 +1800,7 @@ class SitePanel(QWidget):
         # where you would go to fix it.
         self._caster_summary = QLabel("")
         self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self.update_caster_summary(None)
         vb.addWidget(self._caster_summary)
 
@@ -1912,7 +1948,7 @@ class SitePanel(QWidget):
                       "with no boundary it searches ≈60 m around the pin. "
                       "The shade map is only as real as these features.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
         slow_note = QLabel("First import in a new area can take ~10–30 s while "
                            "OpenStreetMap responds (slower outside big cities) — "
@@ -1920,7 +1956,7 @@ class SitePanel(QWidget):
                            "can also “Download buildings for this area” "
                            "below for instant offline access.")
         slow_note.setWordWrap(True)
-        slow_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        slow_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(slow_note)
         # The section's one primary action — the partner of "Show shade".
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
@@ -2048,7 +2084,7 @@ class SitePanel(QWidget):
 
         self._osm_status = QLabel("")
         self._osm_status.setWordWrap(True)
-        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 11px;")
+        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 12px;")
         v.addWidget(self._osm_status)
         parent_layout.addWidget(box)
 
@@ -2121,16 +2157,16 @@ class SitePanel(QWidget):
             "SRTM data outside Edmonton is cached automatically as you use it."
         )
         note.setWordWrap(True)
-        note.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vl.addWidget(note)
 
         self._terrain_status_lbl = QLabel("Checking…")
         self._terrain_status_lbl.setWordWrap(True)
-        self._terrain_status_lbl.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._terrain_status_lbl.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         vl.addWidget(self._terrain_status_lbl)
 
         self._terrain_storage_lbl = QLabel("")
-        self._terrain_storage_lbl.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._terrain_storage_lbl.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vl.addWidget(self._terrain_storage_lbl)
 
         self._terrain_progress = QProgressBar()

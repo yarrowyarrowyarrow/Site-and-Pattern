@@ -54,7 +54,7 @@ class FeedbackDialog(QDialog):
             "Anything you noticed is worth sending — including the things that "
             "are just confusing, and the things that worked.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         root.addWidget(intro)
 
         row = QHBoxLayout()
@@ -93,7 +93,7 @@ class FeedbackDialog(QDialog):
         # that will be attached before agreeing to attach it.
         self._diag_box = QLabel(format_diagnostics(self._diag))
         self._diag_box.setStyleSheet(
-            "color: #78909c; font-size: 10px; background: #142014; "
+            "color: #90a4ae; font-size: 12px; background: #142014; "
             "border: 1px solid #24341f; border-radius: 3px; padding: 5px;")
         self._diag_box.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -103,7 +103,7 @@ class FeedbackDialog(QDialog):
             "Opens a prefilled report in your browser — you can read and edit it "
             "before posting. Nothing is sent from the app itself.")
         note.setWordWrap(True)
-        note.setStyleSheet("color: #78909c; font-size: 10px;")
+        note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         root.addWidget(note)
 
         buttons = QDialogButtonBox(

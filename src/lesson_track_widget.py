@@ -49,7 +49,7 @@ class LessonTrackWidget(QWidget):
             "closing the food web → succession over time → ranges, not "
             "certainties.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
 
         self._dots = QLabel("")
@@ -144,7 +144,7 @@ class LessonTrackWidget(QWidget):
             if j == self._i:
                 out.append(f"<span style='color:{color}'>●</span>")
             else:
-                out.append(f"<span style='color:#3a5a44'>○</span>")
+                out.append(f"<span style='color:#5c8a68'>○</span>")
         return " ".join(out)
 
     def _prev(self):

@@ -124,7 +124,7 @@ class PlanningPanel(QWidget):
             "plantings settle into a much lower maintenance floor by Year 3+."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Available hours input
@@ -220,7 +220,7 @@ class PlanningPanel(QWidget):
             slot = type_totals[ptype]
             label = ptype.title() + ("s" if not ptype.endswith("s") else "")
             native_tag = (
-                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
+                f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
                 if slot["native"] else ""
             )
             rows.append(self._row(
@@ -276,7 +276,7 @@ class PlanningPanel(QWidget):
 
         # Footer note
         cap_text = (
-            f"<p style='color:#90a4ae; font-size:11px; margin:6px 0 4px 0;'>"
+            f"<p style='color:#90a4ae; font-size:12px; margin:6px 0 4px 0;'>"
             f"Your capacity: <b>{self._avail_hours.value():.0f}&nbsp;h/week</b> "
             f"({avail:.0f}&nbsp;h/year). Structures show steady-state recurring "
             f"hours; one-time install labour is not included."
@@ -335,7 +335,7 @@ class PlanningPanel(QWidget):
             text_style = "color:#a5d6a7; font-weight:bold;"
         elif footnote:
             bg = ""
-            text_style = "color:#78909c; font-size:11px; font-style:italic;"
+            text_style = "color:#90a4ae; font-size:12px; font-style:italic;"
         else:
             bg = ""
             text_style = "color:#c8e6c9;"
@@ -390,7 +390,7 @@ class PlanningPanel(QWidget):
             "flagged as nectar gaps."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         btn_row = QHBoxLayout()
@@ -424,7 +424,7 @@ class PlanningPanel(QWidget):
 
         self._wildlife_gap_label = QLabel("")
         self._wildlife_gap_label.setWordWrap(True)
-        self._wildlife_gap_label.setStyleSheet("color: #ef9a9a; font-size: 11px; padding: 2px;")
+        self._wildlife_gap_label.setStyleSheet("color: #ef9a9a; font-size: 12px; padding: 2px;")
         layout.addWidget(self._wildlife_gap_label)
 
         self._wildlife_tree = QTreeWidget()
@@ -555,14 +555,14 @@ class PlanningPanel(QWidget):
                 f"Add a species blooming in these months to support pollinators."
             )
             self._wildlife_gap_label.setStyleSheet(
-                "color: #ef9a9a; font-size: 11px; padding: 2px;"
+                "color: #ef9a9a; font-size: 12px; padding: 2px;"
             )
         else:
             self._wildlife_gap_label.setText(
                 "✓ Continuous bloom across the growing season (Apr–Oct)."
             )
             self._wildlife_gap_label.setStyleSheet(
-                "color: #a5d6a7; font-size: 11px; padding: 2px;"
+                "color: #a5d6a7; font-size: 12px; padding: 2px;"
             )
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -581,15 +581,15 @@ class PlanningPanel(QWidget):
             "fruits, edible leaves / roots / shoots."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         btn_row = QHBoxLayout()
         btn = QPushButton("Show Human Forage")
         btn.setStyleSheet(
-            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
+            "QPushButton { background: #bf360c; color: #fff3e0; border: 1px solid #e65100; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #ff6d00; }"
+            "QPushButton:hover { background: #c8410f; }"
         )
         btn.clicked.connect(self._calc_human_forage)
         btn_row.addWidget(btn, 1)
@@ -751,7 +751,7 @@ class PlanningPanel(QWidget):
             "Compared against growing-season rainfall and catchment capacity."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         form = QFormLayout()
@@ -790,9 +790,9 @@ class PlanningPanel(QWidget):
 
         btn = QPushButton("Calculate Establishment Water Budget")
         btn.setStyleSheet(
-            "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
+            "QPushButton { background: #01579b; color: #e1f5fe; border: 1px solid #0277bd; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0288d1; }"
+            "QPushButton:hover { background: #0266ad; }"
         )
         btn.clicked.connect(self._calc_water)
         layout.addWidget(btn)
@@ -887,7 +887,7 @@ class PlanningPanel(QWidget):
             slot = type_demands[ptype]
             label = ptype.title() + ("s" if not ptype.endswith("s") else "")
             native_tag = (
-                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
+                f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
                 if slot["native"] else ""
             )
             rows.append(self._row(
@@ -1027,7 +1027,7 @@ class PlanningPanel(QWidget):
             "for this project."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Timestamp button
@@ -1074,7 +1074,7 @@ class PlanningPanel(QWidget):
 
         # Word count
         self._notes_count = QLabel("0 words")
-        self._notes_count.setStyleSheet("color: #546e7a; font-size: 10px;")
+        self._notes_count.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(self._notes_count)
 
         # ── Notes pinned on the map (Draw → 📝 Note) ─────────────────────────
@@ -1090,7 +1090,7 @@ class PlanningPanel(QWidget):
             "None yet — use Draw → 📝 Note to pin an observation to a spot "
             "on the map. It will show up here; click it to jump there.")
         self._map_notes_hint.setWordWrap(True)
-        self._map_notes_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._map_notes_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(self._map_notes_hint)
 
         map_notes_box = QWidget()
@@ -1166,7 +1166,7 @@ class PlanningPanel(QWidget):
             "reaches the slowest species' mature age."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Year slider — range extends to the slowest plant's maturity once a
@@ -1199,7 +1199,7 @@ class PlanningPanel(QWidget):
         # Summary display
         self._timeline_summary = QLabel("")
         self._timeline_summary.setWordWrap(True)
-        self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 8px;")
+        self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 12px; padding: 8px;")
         layout.addWidget(self._timeline_summary)
 
         # Year-by-year conversion schedule (F17, P8/P4): turn the drawn lawn
@@ -1217,7 +1217,7 @@ class PlanningPanel(QWidget):
         self._conversion_schedule.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }")
+            "font-size: 12px; }")
         self._conversion_schedule.setMinimumHeight(180)
         self._conversion_schedule.setPlainText(
             "Place plants (and draw lawn-conversion zones) to see a "

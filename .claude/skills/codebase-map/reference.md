@@ -60,7 +60,7 @@ added; trust the source over this list).
 |---|---|
 | `src/map_widget.py` | QtWebEngine wrapper around the Leaflet map |
 | `src/map_js.py` | Typed builders for every JS entry point in html/map.html |
-| `src/member_colors.py` | marker colour tables for plant-community members |
+| `src/member_colors.py` | The one plant colour table, by type, for the map, the plant list, the builder and the 3D contract (V3.03) |
 
 ## Side panels & Qt widgets
 
@@ -76,6 +76,8 @@ added; trust the source over this list).
 | `src/focus_ring.py` | One focus ring that follows the keyboard in every window, drawn over the control (V3.02) |
 | `src/keyboard_help.py` | Every key the app answers to: the map's letters, F6 between map and panel, Help → Keyboard Shortcuts (V3.02) |
 | `src/accessible_names.py` | Names the scroll areas and tab widgets no panel builds, after their tab (V3.02) |
+| `src/target_size.py` | Every control at least 24 px, by one app-wide filter that only ever raises a minimum (V3.03) |
+| `src/indicator_style.py` | A checkbox's box and a radio button's ring drawn where they can be seen, the platform style otherwise (V3.03) |
 | `src/on_this_design_panel.py` | The "On this design" review tab |
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |

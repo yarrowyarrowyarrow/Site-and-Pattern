@@ -44,7 +44,7 @@ class PhenologyWidget(QWidget):
             "What your design is doing this month — and what to walk outside "
             "and confirm. A landscape is a trajectory, not an install day.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
 
         row = QHBoxLayout()
@@ -83,14 +83,14 @@ class PhenologyWidget(QWidget):
 
         strip_label = QLabel("The year at a glance")
         strip_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px; font-weight: bold; padding: 6px 0 2px 0;")
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
         lay.addWidget(strip_label)
 
         self._strip = QLabel("")
         self._strip.setTextFormat(Qt.TextFormat.RichText)
         self._strip.setWordWrap(True)
         self._strip.setStyleSheet("font-family: 'Consolas','Courier New',monospace; "
-                                  "font-size: 11px; color: #cfe3f0;")
+                                  "font-size: 12px; color: #cfe3f0;")
         lay.addWidget(self._strip)
 
         lay.addStretch()
@@ -98,7 +98,7 @@ class PhenologyWidget(QWidget):
 
     def _muted(self, text: str) -> QLabel:
         lab = QLabel(text)
-        lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
         return lab
 
     def _on_month(self, idx: int):
@@ -156,7 +156,7 @@ class PhenologyWidget(QWidget):
         for slot in months:
             n = slot["n_active"]
             block = "·" if n == 0 else ("▪" if n < 3 else "▮")
-            color = "#cfe3f0" if slot["month"] == current else "#5f7d8c"
+            color = "#cfe3f0" if slot["month"] == current else "#90a4ae"
             weight = "bold" if slot["month"] == current else "normal"
             cells.append(f"<span style='color:{color}; font-weight:{weight}'>"
                          f"{slot['abbr']} {block}</span>")

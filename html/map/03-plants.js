@@ -19,21 +19,8 @@
     }
 
     // ── Plant type colours ───────────────────────────────────────────────────
-    // Mirror of src/member_colors.py TYPE_COLORS — keep in sync (V1.87).
-    var TYPE_COLORS = {
-      'tree':        '#2e7d32',
-      'shrub':       '#558b2f',
-      'wildflower':  '#ab47bc',
-      'herb':        '#9ccc65',
-      'groundcover': '#c6a817',
-      'grass':       '#cddc39',
-      'sedge':       '#8d6e63',
-      'rush':        '#5d4037',
-      'vine':        '#00838f',
-      'fern':        '#33691e',
-      'aquatic':     '#29b6f6',
-      'root':        '#6d4c41'
-    };
+    // TYPE_COLORS, the outline rule and the legend live in 10-plant-key.js
+    // (V3.03): plantColour(pd) and plantMarkerStyle(colour).
 
     // ── Plant labels state ───────────────────────────────────────────────────
     var labelsVisible = false;
@@ -53,7 +40,8 @@
       // 1m floor visually overlapped any plant with spacing < 2m at
       // high zoom even though their centres were spaced correctly.
       var radius   = Math.max((spacingM || 1.0) / 2, 0.05);
-      var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
+      var color    = plantColour({ customColor: customColor, plantType: plantType });
+      var look     = plantMarkerStyle(color);
 
       // canvasRenderer instead of the default SVG: with dozens of
       // plants on the map, SVG layout against the satellite-tile
@@ -64,12 +52,12 @@
       // handlers all working in Leaflet 1.9.x.
       var circle = L.circle([lat, lng], {
         radius:      radius,
-        color:       color,
-        weight:      1.5,
-        fillColor:   color,
-        fillOpacity: 0.35,
+        color:       look.color,
+        weight:      look.weight,
+        fillColor:   look.fillColor,
+        fillOpacity: look.fillOpacity,
         renderer:    canvasRenderer,
-      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>',
+      }).bindTooltip(escH(commonName) + '<br><span style="color:#b0bec5;font-size:12px">Right-click for options</span>',
           { permanent: false, className: 'plant-marker-label' })
         .addTo(plantLayerGroup);
 
@@ -255,13 +243,13 @@
 
     function _defaultPlantTooltip(commonName) {
       return escH(commonName) +
-        '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>';
+        '<br><span style="color:#b0bec5;font-size:12px">Right-click for options</span>';
     }
 
     function _clearScopeHighlight() {
       for (var i = 0; i < _scopeHighlighted.length; i++) {
         var m = _scopeHighlighted[i];
-        if (m && m.setStyle) m.setStyle({ weight: 1.5, fillOpacity: 0.35 });
+        if (m && m.setStyle) m.setStyle(plantMarkerStyle(plantColour(m._pd)));
       }
       _scopeHighlighted = [];
       if (_scopeAnchorId) {
@@ -290,7 +278,7 @@
         var more = _scopesFor(pd).length > 1 ? ' — click to narrow' : '';
         anchor.setTooltipContent(
           escH(pd.commonName) +
-          '<br><span style="color:#78909c;font-size:10px">Move: ' +
+          '<br><span style="color:#b0bec5;font-size:12px">Move: ' +
           escH(scope.label) + ' (' + scope.size +
           (scope.size === 1 ? ' plant' : ' plants') + ')' + more + '</span>'
         );
@@ -882,7 +870,7 @@
       Object.keys(plantMarkers).forEach(function(mid) {
         var c = plantMarkers[mid];
         if (c._pd && c._pd.plantId === plantId) {
-          c.setStyle({ color: newColor, fillColor: newColor });
+          c.setStyle(plantMarkerStyle(newColor));
           c._pd.customColor = newColor;
         }
       });
@@ -901,8 +889,7 @@
     var _BEE_FORAGE_DIM = { color: '#5b6b7a', fillColor: '#5b6b7a', fillOpacity: 0.10, weight: 1 };
 
     function _normalPlantStyle(pd) {
-      var color = (pd && pd.customColor) || (pd && TYPE_COLORS[pd.plantType]) || '#66bb6a';
-      return { color: color, fillColor: color, fillOpacity: 0.35, weight: 1.5 };
+      return plantMarkerStyle(plantColour(pd));
     }
 
     // beeLabel === null hides the legend; otherwise show/update it.

@@ -52,7 +52,7 @@ class SavesDialog(QDialog):
 
         self._blurb = QLabel("")
         self._blurb.setWordWrap(True)
-        self._blurb.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._blurb.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(self._blurb)
 
         self._list = QListWidget()

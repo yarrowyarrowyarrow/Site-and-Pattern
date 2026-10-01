@@ -189,7 +189,7 @@ class Scene3DToolBar(QWidget):
     @staticmethod
     def _label(text: str) -> QLabel:
         lab = QLabel(text)
-        lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
         return lab
 
     # ── Handlers ────────────────────────────────────────────────────────────
