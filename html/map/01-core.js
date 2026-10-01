@@ -697,6 +697,9 @@
 
       // Shift+drag marquee selection (replaces Leaflet's box-zoom).
       _initMarqueeHandlers();
+
+      // Enter acts at the centre, Shift+Enter finishes (V3.02).
+      if (typeof initMapKeyboard === 'function') initMapKeyboard();
     }
 
     // Emit the current view centre to Python — wired to map.moveend
@@ -800,6 +803,12 @@
 
     function onMapDblClick(e) {
       L.DomEvent.stop(e);
+      finishDrawing();
+    }
+
+    // What a double-click finishes, and Shift+Enter on the map (V3.02,
+    // html/map/09-keyboard.js).
+    function finishDrawing() {
       if (currentMode === 'boundary' && drawingPolygon) {
         finishBoundaryPolygon();
       } else if (currentMode === 'hedgerow' && hedgerowPoints.length >= 2) {

@@ -1,6 +1,6 @@
 ---
 name: map-frontend
-description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the V1.64 six-file classic-script split (shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
+description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, nine files since V3.02; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
 ---
 
 # Map frontend — Leaflet inside QWebEngineView
@@ -55,8 +55,9 @@ browser for dev — keep new bootstrap code inside that pattern.
 
 `html/map.html` was a 4,900-line monolith; V1.64 split its single `<script>`
 into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
-`07-network.js`, joined them in V2.31 for the relationship-web overlay, and an
-eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor):
+`07-network.js`, joined them in V2.31 for the relationship-web overlay, an
+eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor, and a
+ninth, `09-keyboard.js`, in V3.02 for the map without a mouse):
 
 ```html
 <script src="map/01-core.js"></script>
@@ -67,6 +68,7 @@ eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor):
 <script src="map/06-overlays.js"></script>
 <script src="map/07-network.js"></script>
 <script src="map/08-footprint.js"></script>
+<script src="map/09-keyboard.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -99,6 +101,7 @@ That block **is** the load-order definition. Rules that follow from it:
 | `html/map/06-overlays.js` | Sun path, sectors, contours/terrain, shade/slope/water/splat/site-photo image overlays, wind + wind shadow + snow catch, legend, site pin, **QWebChannel bootstrap** |
 | `html/map/07-network.js` | The relationship-web overlay (F5): draws what `src/relationship_graph.py` computed |
 | `html/map/08-footprint.js` | The footprint under the cursor while placing (F191, V2.99): the plant, a Qty cluster, a pattern's first plant, a community's members (shape from `src/placement_footprint.py`). Built once per arming, moved per mousemove, in a pane that takes no pointer events |
+| `html/map/09-keyboard.js` | The map without a mouse (F195, V3.02): Enter on the focused map calls `onMapClick` at the centre with whatever tool is chosen, Shift+Enter calls `finishDrawing`, a centre mark and the footprint follow the keyboard, the map's own focus ring (the browser's sat outside a container that fills the page), and `L.Marker.mergeOptions({keyboard: false})`, so a label marker is not a Tab stop unless it passes `keyboard: true` because activating it does something. **A new click tool belongs in `_KEYBOARD_TOOLS`** or Enter will not act for it |
 
 ## Bridge: Python → JS
 

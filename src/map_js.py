@@ -160,6 +160,10 @@ def toggle_legend() -> str:
     return "toggleLegend();"
 
 
+def focus_by_keyboard() -> str:
+    return "focusMapByKeyboard();"
+
+
 # ── Map view ────────────────────────────────────────────────────────────────
 
 def set_view(lat: float, lng: float, zoom: int = 14) -> str:

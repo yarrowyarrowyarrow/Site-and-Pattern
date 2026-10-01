@@ -79,10 +79,15 @@ hands the plant to the map), and in the community builder.
 2. Press **Place ‹plant› on the map** (under the list or on its page), or double-click the
    row, press **Enter** on it, or right-click → **Place ‹plant› on Map**. The page closes so
    the yard is clear, and a bar appears over the top of the map:
-   *"Placing ‹plant›. Click the map to place it. Each click places another."* The pointer
-   is a crosshair with the plant's footprint under it: a yellow ring at its planting
-   spacing, a green one at its mature spread.
+   *"Placing ‹plant›. Click the map, or press Enter on it (F6 takes you there), to place
+   it. Each click places another."* The pointer is a crosshair with the plant's footprint
+   under it: a yellow ring at its planting spacing, a green one at its mature spread.
 3. Click the map to place it. Each click places another.
+
+   **Without a mouse:** arrow to the plant and press **Enter** to start placing, then
+   **F6** to go to the map. A yellow cross marks the map's centre, with the footprint on
+   it; the **arrow keys** move the map under it and **Enter** places the plant there.
+   **F6** goes back to the list, where you were.
 4. While placing, click another plant in the list (or arrow to it) to switch to it; the
    bar says so. Dragging a plant into the mix doesn't switch, and no page opens while you
    are placing.
@@ -269,17 +274,37 @@ relationship between it and a plant you actually placed.
 
 ## 14. Keyboard shortcuts
 
+**Help → Keyboard Shortcuts** lists every key, read from the same table the app
+answers from. **Tab** moves between controls, and a yellow ring shows where you are
+while you use the keyboard; it goes away when you use the mouse.
+
 | Shortcut | Action |
 |----------|--------|
 | Ctrl+N / Ctrl+O / Ctrl+S | New / Open / Save project |
 | Ctrl+Shift+S | Save As |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z or Ctrl+Y | Redo |
+| F6 | Move between the map and the side panel, back to where you were |
 | Esc | Cancel current drawing / exit placement mode |
 | Shift+drag | Marquee-select |
 | Shift+click | Toggle an item in the selection |
-| Right-click | Context menu (markers, boundaries, plant rows) |
+| Right-click, or the Menu key | Context menu (markers, boundaries, plant rows) |
 | Mouse wheel | Zoom (sensitivity controlled by the toolbar combo) |
+
+**On the map, while it has focus** (click it, Tab to it, or press F6):
+
+| Key | Action |
+|-----|--------|
+| Arrow keys, + and − | Pan and zoom |
+| Enter | With a tool chosen, act at the map's centre (the yellow cross): place, add a corner, measure, pin a note |
+| Shift+Enter | Finish a boundary, hedgerow, shape, fill area or contour |
+| Delete, Backspace | Delete what is selected |
+| B · M · N · L | Draw the boundary · measure · pin a note · show or hide the legend |
+| P · G · S · A · T | Go to Plants: Browse · Plant Communities · Structures · Analysis · Planning |
+
+The single letters act only while the map has focus, so typing in a panel never
+starts a tool. In the community builder, **Enter** in its plant list adds the plant
+at the next free spot and **Delete** in Members removes one.
 
 ---
 

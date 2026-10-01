@@ -134,6 +134,10 @@ class _Row(QPushButton):
         self._note = QLabel(note)
         self._note.setStyleSheet(
             "color: #93b295; font-size: 12px; background: transparent;")
+        # The words are child labels, so a screen reader heard each row as
+        # "button" (V2.98 review, finding 17). Name it what it says (V3.02).
+        self.setAccessibleName(title)
+        self.setAccessibleDescription(note)
         self._note.setAlignment(Qt.AlignmentFlag.AlignRight
                                 | Qt.AlignmentFlag.AlignVCenter)
         row.addWidget(self._note)

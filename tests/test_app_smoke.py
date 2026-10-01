@@ -356,6 +356,194 @@ class TestMainWindowSmoke(unittest.TestCase):
             self.assertFalse(any("Your soil" in c
                                  for c in picker.chip_texts()), opened)
 
+    # ── The accessibility baseline (F195, V3.02) ──────────────────────────
+
+    def test_every_control_has_a_name_a_screen_reader_can_read(self):
+        """Shown or not: a control that appears only in one state is still
+        read in it. A name is an accessible name, the control's own text, or
+        a label pointing at it; a group box's title and a dropdown's current
+        value are not, since they name the group and the choice. A button
+        whose text arrives with its content says so (``namedByContent``: the
+        quiz's answers, the Site tab's community link); any other button with
+        no text needs a name, hidden or not, since a colour swatch in a closed
+        form is still read once it opens."""
+        from PyQt6.QtWidgets import (
+            QAbstractButton, QAbstractItemView, QAbstractSlider,
+            QAbstractSpinBox, QComboBox, QLabel, QLineEdit, QMenuBar,
+            QScrollBar, QTabBar, QTextEdit, QWidget,
+        )
+        controls = (QAbstractButton, QComboBox, QLineEdit, QAbstractSlider,
+                    QAbstractSpinBox, QAbstractItemView, QTextEdit)
+        parts = (QComboBox, QAbstractSpinBox, QTabBar, QLineEdit,
+                 QAbstractItemView, QMenuBar)
+
+        def part_of_another(w):
+            p = w.parentWidget()
+            while p is not None:
+                if isinstance(p, parts):
+                    return True
+                p = p.parentWidget()
+            return False
+
+        labelled = {id(lab.buddy()) for lab in self._win.findChildren(QLabel)
+                    if lab.buddy() is not None}
+        missing = []
+        for w in self._win.findChildren(QWidget):
+            if (not isinstance(w, controls) or isinstance(w, (QScrollBar, QTabBar))
+                    or part_of_another(w) or w.objectName().startswith("qt_")
+                    or w.window() is not self._win):
+                continue
+            if w.accessibleName().strip() or id(w) in labelled:
+                continue
+            if isinstance(w, QAbstractButton) and (
+                    w.text().strip() or w.property("namedByContent")):
+                continue
+            hint = (getattr(w, "placeholderText", lambda: "")() or w.toolTip()
+                    or "")[:40]
+            missing.append(f"{type(w).__name__} {hint!r}")
+        self.assertEqual(missing, [], "controls a screen reader cannot name")
+
+    def _focus_on(self, widget):
+        self._win.show()
+        self._win.activateWindow()
+        widget.setFocus()
+        self._app.processEvents()
+        if self._app.focusWidget() is not widget:
+            self.skipTest("this platform does not give the window focus")
+
+    def _press(self, key):
+        from PyQt6.QtCore import QEvent, Qt
+        from PyQt6.QtGui import QKeyEvent
+        self._win.keyPressEvent(QKeyEvent(QEvent.Type.KeyPress, key,
+                                          Qt.KeyboardModifier.NoModifier))
+
+    def test_single_letters_wait_for_the_map(self):
+        """With focus on a side-panel button, B started a boundary and A
+        switched tabs (measured on V3.01); Delete removed the map's selection."""
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QPushButton
+        self.addCleanup(self._win._cancel_draw)
+        button = next(b for b in self._win.polyculture_panel.findChildren(QPushButton)
+                      if b.text() == "New Community")
+        from src import keyboard_help
+        keyboard_help.show_panel(self._win.polyculture_panel)
+        self._focus_on(button)
+        tab = self._win._side_tabs.currentIndex()
+        self._press(Qt.Key.Key_B)
+        self._press(Qt.Key.Key_A)
+        self.assertEqual(self._win._current_mode, "none")
+        self.assertEqual(self._win._side_tabs.currentIndex(), tab)
+        with mock.patch.object(self._win.map_widget, "delete_selected") as delete:
+            self._press(Qt.Key.Key_Delete)
+        delete.assert_not_called()
+
+    def test_on_the_map_the_letters_act(self):
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from src import keyboard_help
+        self.addCleanup(self._win._cancel_draw)
+        with mock.patch.object(keyboard_help, "map_has_focus", return_value=True):
+            self._press(Qt.Key.Key_G)
+            self.assertTrue(self._win.polyculture_panel.isVisibleTo(self._win))
+            self._press(Qt.Key.Key_P)
+            self.assertTrue(self._win.plant_panel.isVisibleTo(self._win))
+            self._press(Qt.Key.Key_B)
+            self.assertEqual(self._win._current_mode, "boundary")
+            with mock.patch.object(self._win.map_widget,
+                                   "delete_selected") as delete:
+                self._press(Qt.Key.Key_Delete)
+            delete.assert_called_once()
+
+    def test_every_tool_and_view_toggle_is_reached_by_tab(self):
+        """A QToolBar makes its buttons NoFocus: no tool and no View toggle
+        could be reached from the keyboard. TabFocus, so a click on a tool
+        leaves focus on the map."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QToolBar, QToolButton
+        buttons = [b for bar in self._win.findChildren(QToolBar)
+                   for b in bar.findChildren(QToolButton)
+                   if not b.objectName().startswith("qt_")]
+        self.assertGreater(len(buttons), 10)
+        for b in buttons:
+            self.assertEqual(b.focusPolicy(), Qt.FocusPolicy.TabFocus,
+                             b.text() or b.accessibleName())
+
+    def test_every_scroll_area_and_tab_widget_says_what_it_holds(self):
+        """Both reached a screen reader as an unnamed "filler": the scroll
+        areas as Tab stops, the tab widgets as the tab bars' parents."""
+        from PyQt6.QtWidgets import QScrollArea, QTabWidget
+        unnamed = [w for w in (self._win.findChildren(QScrollArea)
+                               + self._win.findChildren(QTabWidget))
+                   if not w.accessibleName()
+                   and w.focusPolicy() != w.focusPolicy().NoFocus]
+        self.assertEqual(unnamed, [])
+        self.assertEqual(self._win._side_tabs.accessibleName(), "Side panel")
+
+    def test_f6_moves_between_the_panel_and_the_map(self):
+        from PyQt6.QtWidgets import QApplication
+        panel_widget = self._win.plant_panel.picker.view
+        self.addCleanup(self._win._side_tabs.setCurrentIndex,
+                        self._win._side_tabs.currentIndex())
+        self._win._side_tabs.setCurrentIndex(1)
+        self._focus_on(panel_widget)
+        self._win._panes.switch()
+        self._app.processEvents()
+        focus = QApplication.focusWidget()
+        if focus is None:
+            self.skipTest("the map's view took no focus on this platform")
+        self.assertTrue(self._win.map_widget.isAncestorOf(focus)
+                        or focus is self._win.map_widget)
+        self._win._panes.switch()
+        self._app.processEvents()
+        self.assertIs(QApplication.focusWidget(), panel_widget)
+
+    def test_the_map_and_the_widget_that_takes_its_focus_are_named(self):
+        """QtWebEngine's render widget is what Tab lands on, and it read as an
+        unnamed "filler"; a new one arrives whenever the renderer restarts."""
+        from PyQt6.QtWidgets import QWidget
+        view = self._win.map_widget
+        self.assertEqual(view.accessibleName(), "Map")
+        arriving = QWidget(view)
+        self.addCleanup(arriving.deleteLater)
+        arriving.ensurePolished()           # what showing it does
+        self.assertEqual(arriving.accessibleName(), "Map")
+
+    def test_help_lists_the_keys(self):
+        from PyQt6.QtGui import QAction
+        names = [a.text().replace("&", "") for a in self._win.findChildren(QAction)]
+        self.assertIn("Keyboard Shortcuts…", names)
+        from src import keyboard_help
+        page = keyboard_help.help_html(self._win)
+        self.assertIn("Undo", page)            # read from the menus
+        self.assertIn("<b>B</b>", page)
+
+    def test_no_key_is_bound_twice_in_the_window(self):
+        """Qt does not drop a duplicate binding: it calls the two ambiguous and
+        fires neither. Redo bound Ctrl+Shift+Z itself and again inside the
+        platform's Redo keys, so the key on its toolbar tooltip did nothing
+        ("Ambiguous shortcut overload", measured V3.02). A key bound only
+        inside one widget (WidgetShortcut) is that widget's and is skipped."""
+        from collections import defaultdict
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QAction, QShortcut
+        widget_only = Qt.ShortcutContext.WidgetShortcut
+        owners = defaultdict(list)
+        for action in self._win.findChildren(QAction):
+            if action.shortcutContext() == widget_only:
+                continue
+            for seq in action.shortcuts():
+                if not seq.isEmpty():
+                    owners[seq.toString()].append(action.text())
+        for shortcut in self._win.findChildren(QShortcut):
+            if shortcut.context() == widget_only:
+                continue
+            for seq in shortcut.keys():
+                if not seq.isEmpty():
+                    owners[seq.toString()].append(type(shortcut.parent()).__name__)
+        twice = {key: who for key, who in owners.items() if len(who) > 1}
+        self.assertEqual(twice, {})
+
     def test_esc_with_focus_on_the_place_button_stops_placing(self):
         """Pressing Place leaves keyboard focus in the panel, not the map; Esc
         must still stand everything down (MainWindow.keyPressEvent)."""

@@ -67,6 +67,11 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("PermaDesign")
 
+    # One ring that follows keyboard focus in every window, the start screen
+    # included (F195, V3.02): the panels' own stylesheets remove Qt's.
+    from src import focus_ring
+    focus_ring.install(app)
+
     # The start screen, ahead of the map (V2.40, page in V2.41). Everything it
     # offers is read from disk — the saves folder, the design you were last in,
     # an autosave that survived a crash, what is in bloom — so it needs no

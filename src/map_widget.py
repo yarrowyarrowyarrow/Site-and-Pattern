@@ -10,7 +10,8 @@ point, add a builder there and a thin method here.
 
 import os
 import sys
-from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSlot, pyqtSignal, QUrl, QTimer
+from PyQt6.QtWidgets import QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
@@ -430,6 +431,10 @@ class MapWidget(QWebEngineView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # What a screen reader calls it (V3.02). The page names its own parts
+        # (html/map/09-keyboard.js); see childEvent for the widget that takes
+        # focus.
+        self.setAccessibleName("Map")
         # Install the logging page BEFORE wiring the QWebChannel so any
         # JS error / warning that fires during page load surfaces on
         # stderr instead of disappearing into the sandbox.
@@ -481,6 +486,16 @@ class MapWidget(QWebEngineView):
         token = get_mapbox_token()
         if token:
             self.set_mapbox_token(token)
+
+    def childEvent(self, event):  # noqa: N802 (Qt override)
+        """Name the render widget as it arrives. It is what takes keyboard
+        focus, a screen reader read it as an unnamed "filler" (V3.02), and
+        QtWebEngine makes a new one whenever the renderer restarts."""
+        super().childEvent(event)
+        if event.type() == QEvent.Type.ChildPolished:
+            child = event.child()
+            if isinstance(child, QWidget) and not child.accessibleName():
+                child.setAccessibleName(self.accessibleName())
 
     def _on_render_terminated(self, status, exit_code):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
@@ -1000,6 +1015,12 @@ class MapWidget(QWebEngineView):
     def toggle_legend(self):
         """Toggle the on-map legend overlay."""
         self.run_js(map_js.toggle_legend())
+
+    def focus_by_keyboard(self):
+        """Give the map keyboard focus as the F6 key does: the window's focus,
+        then the page's, on the map itself, with its ring showing (V3.02)."""
+        self.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        self.run_js(map_js.focus_by_keyboard())
 
     def undo_boundary(self, boundary_id: str):
         self.run_js(map_js.undo_boundary(boundary_id))

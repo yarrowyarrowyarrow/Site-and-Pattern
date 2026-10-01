@@ -309,7 +309,10 @@
         html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
         iconSize: null, iconAnchor: null
       });
-      var marker = L.marker([clat, clng], { icon: icon, interactive: true }).addTo(map);
+      // Enter cycles the units, as a click does (V3.02: markers are not
+      // tab stops unless they say so, 09-keyboard.js).
+      var marker = L.marker([clat, clng], { icon: icon, interactive: true,
+                                            keyboard: true }).addTo(map);
       marker.on('click', function(e) {
         // This label sits at the polygon CENTROID — the middle of the yard, and
         // exactly where you start dragging a row across it. Cycling units there

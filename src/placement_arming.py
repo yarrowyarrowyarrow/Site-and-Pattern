@@ -67,17 +67,22 @@ def describe(source: str, kind: str, what: str = "", *, qty: int = 1,
     if kind == "single":
         # The map stays armed after a click, which the review found nothing
         # said (finding 8); the bar says so now, for the modes that repeat
-        # one click at a time.
+        # one click at a time. Enter on the focused map acts at its centre
+        # (V3.02, html/map/09-keyboard.js), and F6 reaches the map from the
+        # list (keyboard_help.PaneSwitch), so the keyboard's way is said too.
         if source == "communities":
             return (f"Placing {what}",
-                    "Click the map where its centre should go. "
-                    "Each click places another.")
+                    "Click the map where its centre should go, or press "
+                    "Enter on it (F6 takes you there). Each click places "
+                    "another.")
         if qty > 1:
             return (f"Placing {what}, {qty} at a time",
-                    f"Click the map to place a cluster of {qty}. "
-                    f"Each click places another.")
+                    f"Click the map, or press Enter on it (F6 takes you "
+                    f"there), to place a cluster of {qty}. Each click places "
+                    f"another.")
         return (f"Placing {what}",
-                "Click the map to place it. Each click places another.")
+                "Click the map, or press Enter on it (F6 takes you there), "
+                "to place it. Each click places another.")
     headline, instruction = _HOW[kind]
     return headline.format(subject=subject), instruction
 

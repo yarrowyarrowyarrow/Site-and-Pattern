@@ -162,6 +162,7 @@ class SpeciesPage(QWidget):
         self._col.setContentsMargins(0, 4, 6, 8)
         self._col.setSpacing(6)
         self._scroll = QScrollArea()
+        self._scroll.setAccessibleName("Species page")   # a Tab stop (V3.02)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(

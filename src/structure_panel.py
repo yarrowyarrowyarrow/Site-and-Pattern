@@ -94,11 +94,13 @@ class StructurePanel(QWidget):
         # Search
         self._search = QLineEdit()
         self._search.setPlaceholderText("Search structures...")
+        self._search.setAccessibleName("Search structures")
         self._search.textChanged.connect(self._filter_structures)
         layout.addWidget(self._search)
 
         # Category filter
         self._cat_combo = QComboBox()
+        self._cat_combo.setAccessibleName("Structure category")
         self._cat_combo.addItem("All Categories")
         for cat in STRUCTURE_CATEGORIES:
             self._cat_combo.addItem(cat)
@@ -107,6 +109,7 @@ class StructurePanel(QWidget):
 
         # Structure list
         self._struct_list = QListWidget()
+        self._struct_list.setAccessibleName("Structures")
         self._struct_list.setAlternatingRowColors(True)
         self._struct_list.setStyleSheet(
             "QListWidget { background: #1a2a1a; border: 1px solid #2e4a2e; }"
@@ -144,8 +147,10 @@ class StructurePanel(QWidget):
 
         # Size override
         size_row = QHBoxLayout()
-        size_row.addWidget(QLabel("Size (m):"))
+        size_label = QLabel("Size (m):")
+        size_row.addWidget(size_label)
         self._size_spin = QDoubleSpinBox()
+        size_label.setBuddy(self._size_spin)
         self._size_spin.setRange(0.5, 50.0)
         self._size_spin.setSingleStep(0.5)
         self._size_spin.setValue(3.0)
@@ -273,8 +278,10 @@ class StructurePanel(QWidget):
         layout.addLayout(form)
 
         # Species (optional, free text for now)
-        layout.addWidget(QLabel("Species (optional):"))
+        species_label = QLabel("Species (optional):")
+        layout.addWidget(species_label)
         self._hedge_species = QLineEdit()
+        species_label.setBuddy(self._hedge_species)
         self._hedge_species.setPlaceholderText("e.g. Caragana, Lilac, Dogwood...")
         layout.addWidget(self._hedge_species)
 
@@ -283,6 +290,7 @@ class StructurePanel(QWidget):
         color_row.addWidget(QLabel("Color:"))
         self._hedge_color = "#4caf50"
         self._hedge_color_btn = QPushButton()
+        self._hedge_color_btn.setAccessibleName("Hedgerow colour")
         self._hedge_color_btn.setFixedSize(28, 28)
         self._hedge_color_btn.setStyleSheet(
             f"background: {self._hedge_color}; border: 1px solid #4a7a4a; border-radius: 4px;"
@@ -367,8 +375,10 @@ class StructurePanel(QWidget):
         layout.addLayout(form)
 
         # Label
-        layout.addWidget(QLabel("Label:"))
+        shape_label_label = QLabel("Label:")
+        layout.addWidget(shape_label_label)
         self._shape_label = QLineEdit()
+        shape_label_label.setBuddy(self._shape_label)
         self._shape_label.setPlaceholderText("e.g. Front garden bed")
         layout.addWidget(self._shape_label)
 
@@ -379,6 +389,7 @@ class StructurePanel(QWidget):
         fill_row = QHBoxLayout()
         self._shape_fill = "#4caf50"
         self._shape_fill_btn = QPushButton()
+        self._shape_fill_btn.setAccessibleName("Fill colour")
         self._shape_fill_btn.setFixedSize(28, 28)
         self._shape_fill_btn.setStyleSheet(
             f"background: {self._shape_fill}; border: 1px solid #4a7a4a; border-radius: 4px;"
@@ -392,6 +403,7 @@ class StructurePanel(QWidget):
         stroke_row = QHBoxLayout()
         self._shape_stroke = "#2e7d32"
         self._shape_stroke_btn = QPushButton()
+        self._shape_stroke_btn.setAccessibleName("Outline colour")
         self._shape_stroke_btn.setFixedSize(28, 28)
         self._shape_stroke_btn.setStyleSheet(
             f"background: {self._shape_stroke}; border: 1px solid #4a7a4a; border-radius: 4px;"

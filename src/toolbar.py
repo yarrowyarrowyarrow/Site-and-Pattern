@@ -88,6 +88,7 @@ class _GridSettingsMenu(QMenu):
         col_layout.setContentsMargins(8, 4, 8, 6)
         col_layout.addWidget(QLabel("Colour"))
         self._color_btn = QPushButton()
+        self._color_btn.setAccessibleName("Grid colour")
         self._color_btn.setFixedSize(24, 18)
         self._color_btn.setStyleSheet(self._color_btn_style())
         self._color_btn.clicked.connect(self._on_pick_color)
@@ -179,6 +180,14 @@ class MainToolbar(QToolBar):
 
         self._build_draw()
         self._build_view()
+        # A QToolBar makes its buttons NoFocus, so no tool and no View toggle
+        # could be reached from the keyboard (V3.02, F195). TabFocus, not
+        # StrongFocus: clicking a tool must leave focus on the map, where
+        # Enter now acts.
+        for bar in (self, self.layers_bar):
+            for button in bar.findChildren(QToolButton):
+                if not button.objectName().startswith("qt_"):
+                    button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
 
     # ── Construction ──────────────────────────────────────────────────────────
 
@@ -383,6 +392,7 @@ class MainToolbar(QToolBar):
         # ── Zoom sensitivity ───────────────────────────────────────
         bar.addWidget(QLabel("  🔍 Zoom: "))
         self._zoom_combo = QComboBox()
+        self._zoom_combo.setAccessibleName("Zoom sensitivity")
         self._zoom_combo.addItems(["Fine (1.1×)", "Normal (1.26×)", "Fast (1.5×)", "Coarse (2×)"])
         self._zoom_combo.setCurrentIndex(0)
         self._zoom_combo.setToolTip(

@@ -110,6 +110,9 @@ class FieldStudyWidget(QWidget):
         self._opt_btns: list[QPushButton] = []
         for i in range(4):
             b = QPushButton("")
+            # Its text is the answer, set with each question, and names it;
+            # tests/test_app_smoke reads this to know (V3.02).
+            b.setProperty("namedByContent", True)
             b.setStyleSheet(_OPT_STYLE)
             b.clicked.connect(lambda _=False, idx=i: self._answer(idx))
             b.setVisible(False)

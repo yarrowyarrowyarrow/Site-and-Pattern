@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2492 now (V3.01)
+        (_SRC / "app.py", 2600),                       # 2508 now (V3.02)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -102,9 +102,9 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "controllers" / "map_events.py", 2100),# 1905 now (V3.01)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
-        (_SRC / "polyculture_panel.py", 2900),         # 2395 now (V3.00)
-        (_SRC / "site_panel.py", 2700),                # ~2240 now
-        (_SRC / "analysis_panel.py", 2450),            # 2355 now — 95 LEFT
+        (_SRC / "polyculture_panel.py", 2900),         # 2470 now (V3.02)
+        (_SRC / "site_panel.py", 2700),                # 2326 now (V3.02)
+        (_SRC / "analysis_panel.py", 2450),            # 2417 now — 33 LEFT
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
         # ceilings rather than living in the panel that shows them.
         (_SRC / "confidence.py", 400),                 # 298 now
@@ -129,6 +129,11 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "plant_picker.py", 560),               # 554 now: the order
         # block (set_site to _reorder, about 60 lines) is the next to go.
         (_SRC / "filter_status.py", 300),              # 241 now
+        # V3.02 (F195), opted in on arrival: the ring that follows keyboard
+        # focus, and the one table of keys the window and Help both read.
+        (_SRC / "focus_ring.py", 200),                 # 180 now
+        (_SRC / "keyboard_help.py", 260),              # 240 now
+        (_SRC / "accessible_names.py", 120),           # 54 now
         (_SRC / "species_page.py", 720),               # 639 now
         (_SRC / "species_flyout.py", 200),             # 136 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
@@ -351,7 +356,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~235 now
-        (_HTML / "map" / "01-core.js", 950),           # ~885 now
+        (_HTML / "map" / "01-core.js", 950),           # 927 now (V3.02)
         (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
         (_HTML / "map" / "03-plants.js", 950),         # ~931 now
         (_HTML / "map" / "04-tools.js", 450),          # ~367 now
@@ -371,6 +376,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # chunk because 03-plants.js, where the pattern preview lives, was at
         # 950 of 950. A community's shape arrives from src/placement_footprint.py.
         (_HTML / "map" / "08-footprint.js", 250),      # ~150 now
+        # V3.02 (F195): the map without a mouse, its own chunk on arrival:
+        # Enter acts through onMapClick and Shift+Enter through finishDrawing,
+        # so new tools need no keyboard code here.
+        (_HTML / "map" / "09-keyboard.js", 200),       # 143 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in

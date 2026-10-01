@@ -888,6 +888,8 @@
       if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
       else _container.classList.remove('placing');
       if (typeof resetCursorFootprint === 'function') resetCursorFootprint();
+      // The keyboard's centre mark comes and goes with the tool (V3.02).
+      if (typeof syncCentreMark === 'function') syncCentreMark();
       // Report every mode (V2.98): Esc and a finished fill end placing here,
       // and Python must follow. See src/placement_bar_flow.py.
       if (bridge && bridge.onModeChanged) bridge.onModeChanged(mode, _pyModeSeq);

@@ -438,6 +438,7 @@ class SitePanel(QWidget):
         search_row = QHBoxLayout()
         self._addr_input = QLineEdit()
         self._addr_input.setPlaceholderText("Search Alberta address or place name…")
+        self._addr_input.setAccessibleName("Search for an address or place")
         self._addr_input.setClearButtonEnabled(True)
         self._addr_input.setStyleSheet(
             "QLineEdit { background: #0d1f0d; color: #e8f5e9; "
@@ -460,6 +461,7 @@ class SitePanel(QWidget):
 
         # Suggestion list — empty/hidden until typeahead returns hits.
         self._addr_results = QListWidget()
+        self._addr_results.setAccessibleName("Address matches")
         self._addr_results.setMaximumHeight(120)
         self._addr_results.setVisible(False)
         self._addr_results.setStyleSheet(
@@ -549,6 +551,9 @@ class SitePanel(QWidget):
         # detected, jump to the Plant Communities tab with the Habitat filter
         # pre-set — from "where am I" straight to "what belongs here" (P2/P8).
         self._btn_browse_comms = QPushButton("")
+        # Named by its text, set when a region is found ("Browse 12
+        # reference communities for this ecoregion"): tests/test_app_smoke.
+        self._btn_browse_comms.setProperty("namedByContent", True)
         self._btn_browse_comms.setStyleSheet(
             "QPushButton { background: transparent; color: #81c784; border: none;"
             " text-align: left; padding: 0; font-size: 11px;"
@@ -787,6 +792,7 @@ class SitePanel(QWidget):
             cb.toggled.connect(self._fn_edited)
             le = QLineEdit()
             le.setPlaceholderText("what you noticed…")
+            le.setAccessibleName(f"What you noticed: {prompt}")
             le.setStyleSheet(
                 "QLineEdit { background: #1a2a1a; color: #c8e6c9; "
                 "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px; "
@@ -805,6 +811,7 @@ class SitePanel(QWidget):
         layout.addWidget(free_label)
 
         self._fn_free = QTextEdit()
+        free_label.setBuddy(self._fn_free)
         self._fn_free.setPlaceholderText(
             "Soil felt like clay near the fence; back corner stays wet; "
             "magpies nest in the spruce…")
@@ -1063,6 +1070,7 @@ class SitePanel(QWidget):
         # Contour colour
         color_row = QHBoxLayout()
         self._auto_color_btn = QPushButton()
+        self._auto_color_btn.setAccessibleName("Contour colour")
         self._auto_color_btn.setFixedSize(28, 28)
         self._auto_color_btn.setStyleSheet(
             f"background: {self._auto_color}; border: 1px solid #4a7a4a; "
@@ -1076,8 +1084,10 @@ class SitePanel(QWidget):
         slope_layout.addLayout(slope_form)
 
         opa_row = QHBoxLayout()
-        opa_row.addWidget(QLabel("Ramp opacity:"))
+        opa_label = QLabel("Ramp opacity:")
+        opa_row.addWidget(opa_label)
         self._auto_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opa_label.setBuddy(self._auto_opacity_slider)
         self._auto_opacity_slider.setRange(0, 100)
         self._auto_opacity_slider.setValue(60)
         self._auto_opacity_slider.setToolTip("Transparency of the slope colour ramp.")
@@ -1759,8 +1769,10 @@ class SitePanel(QWidget):
         vb.addWidget(self._caster_summary)
 
         dims = QHBoxLayout()
-        dims.addWidget(QLabel("Height (m):"))
+        height_lbl = QLabel("Height (m):")
+        dims.addWidget(height_lbl)
         self._exist_height = QDoubleSpinBox()
+        height_lbl.setBuddy(self._exist_height)
         self._exist_height.setRange(1.0, 60.0)
         self._exist_height.setSingleStep(0.5)
         self._exist_height.setValue(6.0)
@@ -1770,6 +1782,7 @@ class SitePanel(QWidget):
                             "(building).")
         dims.addWidget(size_lbl)
         self._exist_size = QDoubleSpinBox()
+        size_lbl.setBuddy(self._exist_size)
         self._exist_size.setRange(0.5, 40.0)
         self._exist_size.setSingleStep(0.5)
         self._exist_size.setValue(6.0)
@@ -1786,6 +1799,7 @@ class SitePanel(QWidget):
         fol_lbl = QLabel("Tree type:")
         fol_row.addWidget(fol_lbl)
         self._exist_foliage = QComboBox()
+        fol_lbl.setBuddy(self._exist_foliage)
         self._exist_foliage.addItem("🍂 Deciduous (bare in winter)", "deciduous")
         self._exist_foliage.addItem("🌲 Evergreen (year-round shade)", "evergreen")
         self._exist_foliage.setToolTip(
@@ -1956,6 +1970,7 @@ class SitePanel(QWidget):
         mh_lbl.setToolTip(mh_tip)
         mh_row.addWidget(mh_lbl)
         self._tree_min_height = QDoubleSpinBox()
+        mh_lbl.setBuddy(self._tree_min_height)
         self._tree_min_height.setRange(1.0, 15.0)
         self._tree_min_height.setSingleStep(0.5)
         self._tree_min_height.setDecimals(1)
@@ -1981,6 +1996,7 @@ class SitePanel(QWidget):
             "only what's inside the boundary.")
         marg_row.addWidget(marg_lbl)
         self._osm_margin = QDoubleSpinBox()
+        marg_lbl.setBuddy(self._osm_margin)
         self._osm_margin.setRange(0.0, 100.0)
         self._osm_margin.setSingleStep(5.0)
         self._osm_margin.setDecimals(0)

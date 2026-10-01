@@ -129,8 +129,10 @@ class PlanningPanel(QWidget):
 
         # Available hours input
         hours_row = QHBoxLayout()
-        hours_row.addWidget(QLabel("Your available hrs/week:"))
+        hours_label = QLabel("Your available hrs/week:")
+        hours_row.addWidget(hours_label)
         self._avail_hours = QDoubleSpinBox()
+        hours_label.setBuddy(self._avail_hours)
         self._avail_hours.setRange(0, 100)
         self._avail_hours.setValue(10)
         self._avail_hours.setSingleStep(1)
@@ -426,6 +428,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(self._wildlife_gap_label)
 
         self._wildlife_tree = QTreeWidget()
+        self._wildlife_tree.setAccessibleName("Food for wildlife through the year")
         self._wildlife_tree.setColumnCount(2)
         self._wildlife_tree.setHeaderLabels(["When", "Forage"])
         self._wildlife_tree.setStyleSheet(self._TREE_STYLE)
@@ -611,6 +614,7 @@ class PlanningPanel(QWidget):
         layout.addLayout(btn_row)
 
         self._human_tree = QTreeWidget()
+        self._human_tree.setAccessibleName("What you can harvest through the year")
         self._human_tree.setColumnCount(2)
         self._human_tree.setHeaderLabels(["When", "Edible plant — part"])
         self._human_tree.setStyleSheet(self._TREE_STYLE)
@@ -1050,6 +1054,7 @@ class PlanningPanel(QWidget):
 
         # Text editor
         self._notes_edit = QTextEdit()
+        self._notes_edit.setAccessibleName("Design notes")
         self._notes_edit.setPlaceholderText(
             "Write your design notes here...\n\n"
             "Suggestions:\n"
@@ -1167,8 +1172,10 @@ class PlanningPanel(QWidget):
         # Year slider — range extends to the slowest plant's maturity once a
         # design is loaded (see _update_timeline_horizon); 20 yr until then.
         slider_row = QHBoxLayout()
-        slider_row.addWidget(QLabel("Year:"))
+        year_label = QLabel("Year:")
+        slider_row.addWidget(year_label)
         self._year_slider = QSlider(Qt.Orientation.Horizontal)
+        year_label.setBuddy(self._year_slider)
         self._year_slider.setRange(0, 20)
         self._year_slider.setValue(0)
         self._year_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
@@ -1205,6 +1212,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(sched_label)
 
         self._conversion_schedule = QTextEdit()
+        sched_label.setBuddy(self._conversion_schedule)
         self._conversion_schedule.setReadOnly(True)
         self._conversion_schedule.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "

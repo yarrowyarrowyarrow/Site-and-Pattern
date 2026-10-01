@@ -231,6 +231,9 @@ class AnalysisPanel(QWidget):
             "summer clock\n(daylight saving plus the distance to the "
             "time-zone meridian).")
         self._sun_time_label = QLabel("Sun time  15:00")
+        # addRow(label, field) does not link them (only addRow("text", field)
+        # does), and the label carries the time too: name the slider itself.
+        self._sun_time_slider.setAccessibleName("Sun time")
         form.addRow(self._sun_time_label, self._sun_time_slider)
         v.addLayout(form)
 
@@ -276,8 +279,10 @@ class AnalysisPanel(QWidget):
         form.addRow(self._sun_shadow_length)
 
         arc_row = QHBoxLayout()
-        arc_row.addWidget(QLabel("Arc radius:"))
+        arc_label = QLabel("Arc radius:")
+        arc_row.addWidget(arc_label)
         self._sun_arc_radius = QSpinBox()
+        arc_label.setBuddy(self._sun_arc_radius)
         self._sun_arc_radius.setRange(20, 500)
         self._sun_arc_radius.setValue(80)
         self._sun_arc_radius.setSuffix(" m")
@@ -345,6 +350,7 @@ class AnalysisPanel(QWidget):
         opa_row = QHBoxLayout()
         opa_row.addWidget(QLabel("Opacity:"))
         self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setAccessibleName("Shade opacity")
         self._shade_opacity.setRange(0, 100)
         self._shade_opacity.setValue(50)
         self._shade_opacity.valueChanged.connect(
@@ -658,6 +664,7 @@ class AnalysisPanel(QWidget):
 
         dial_row = QHBoxLayout()
         self._wind_dial = QDial()
+        self._wind_dial.setAccessibleName("Wind direction")
         self._wind_dial.setRange(0, 359)
         self._wind_dial.setWrapping(True)
         self._wind_dial.setNotchesVisible(True)
@@ -683,8 +690,10 @@ class AnalysisPanel(QWidget):
         dial_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
         dial_text.addWidget(dial_hint)
         speed_row = QHBoxLayout()
-        speed_row.addWidget(QLabel("Typical strength:"))
+        speed_label = QLabel("Typical strength:")
+        speed_row.addWidget(speed_label)
         self._wind_speed = QComboBox()
+        speed_label.setBuddy(self._wind_speed)
         self._wind_speed.addItems(["Light", "Moderate", "Strong", "Very Strong"])
         self._wind_speed.setCurrentIndex(1)
         speed_row.addWidget(self._wind_speed)
@@ -982,6 +991,7 @@ class AnalysisPanel(QWidget):
         layout.addWidget(pull_hint)
 
         self._pull_combo = QComboBox()
+        self._pull_combo.setAccessibleName("Plant to pull")
         self._pull_combo.setToolTip("Preview the impact of removing this plant")
         self._pull_combo.currentIndexChanged.connect(self._on_pull_plant)
         layout.addWidget(self._pull_combo)
@@ -1016,6 +1026,7 @@ class AnalysisPanel(QWidget):
         layout.addWidget(tips_label)
 
         self._habitat_tips = QTextEdit()
+        tips_label.setBuddy(self._habitat_tips)
         self._habitat_tips.setReadOnly(True)
         self._habitat_tips.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
@@ -1282,6 +1293,7 @@ class AnalysisPanel(QWidget):
         layout.addWidget(info)
 
         self._bee_selector = QComboBox()
+        self._bee_selector.setAccessibleName("Bee to design for")
         self._bee_selector.setStyleSheet("QComboBox { padding: 4px; }")
         self._populate_bee_selector()
         self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)

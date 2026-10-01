@@ -92,7 +92,10 @@ Present, V2.25), plus small QPainter widgets
 (`src/wind_rose_widget.py`,
 `src/phenology_widget.py`, `src/docent_widget.py`, `src/field_study_widget.py`,
 `src/lesson_track_widget.py`). Widgets draw; they never compute — the maths
-lives in a Qt-free sibling module.
+lives in a Qt-free sibling module. Keyboard and screen reader across all of them
+(V3.02): `src/focus_ring.py` (the one focus ring), `src/keyboard_help.py` (the
+key table, F6, Help → Keyboard Shortcuts), `src/accessible_names.py` (names for
+the containers no panel builds).
 
 ### Generation & placement scoring (Qt-free)
 

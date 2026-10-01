@@ -3,7 +3,7 @@ import json
 from PyQt6.QtCore import (
     Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray, QTimer,
 )
-from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
+from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -406,6 +406,25 @@ class PolycultureGridCanvas(QWidget):
         self._dragging_idx = None
 
 
+def next_free_offset(members, radius_m: float, *, gap_m: float = 0.8) -> tuple:
+    """Where the keyboard puts the next member: the first point of a sunflower
+    spiral out from the centre that is ``gap_m`` clear of every member and
+    inside ``radius_m``. Deterministic, so the same steps give the same
+    community. Falls back to the centre when the circle is full."""
+    import math
+    taken = [(float(m.get("offset_x") or 0), float(m.get("offset_y") or 0))
+             for m in members or []]
+    golden = math.pi * (3 - math.sqrt(5))
+    for k in range(400):
+        r = 0.9 * math.sqrt(k)
+        if r > radius_m - 0.3:
+            break
+        x, y = r * math.cos(k * golden), r * math.sin(k * golden)
+        if all((x - tx) ** 2 + (y - ty) ** 2 >= gap_m ** 2 for tx, ty in taken):
+            return round(x, 2), round(y, 2)
+    return 0.0, 0.0
+
+
 def _plant_color_for_member(plant: dict) -> str:
     """Pick a representative dot colour for a polyculture member."""
     if plant and plant.get("marker_color"):
@@ -456,9 +475,10 @@ class PolycultureBuilderDialog(QDialog):
 
         tip = QLabel(
             "<span style='color:#90a4ae;font-size:11px;'>"
-            "Pick a plant + role on the left, then click the grid to place it. "
-            "Right-click a placed plant to remove. Drag to reposition. "
-            "Native habitat plant communities typically have 5–8 species.</span>"
+            "Pick a plant + role on the left, then click the grid (or press Enter"
+            " in the list) to place it. Right-click a placed plant, or Delete in "
+            "Members, to remove it. Drag to reposition. Native habitat plant "
+            "communities typically have 5–8 species.</span>"
         )
         tip.setWordWrap(True)
         outer.addWidget(tip)
@@ -478,8 +498,11 @@ class PolycultureBuilderDialog(QDialog):
         self.picker.setMinimumWidth(240)
         picker_col.addWidget(self.picker, 1)
 
-        picker_col.addWidget(QLabel("<b>Layer</b>"))
+        layer_label = QLabel("<b>Layer</b>")
+        picker_col.addWidget(layer_label)
         self.layer_combo = QComboBox()
+        layer_label.setBuddy(self.layer_combo)   # read with it (V3.02)
+        self.layer_combo.setAccessibleName("Layer")
         self.layer_combo.addItem("(none)", None)
         for layer in LAYERS:
             self.layer_combo.addItem(layer.replace("_", " ").title(), layer)
@@ -524,8 +547,11 @@ class PolycultureBuilderDialog(QDialog):
         centre_col.addWidget(self._zoom_label)
 
         zoom_row = QHBoxLayout()
-        zoom_row.addWidget(QLabel("Zoom:"))
+        zoom_label = QLabel("Zoom:")
+        zoom_row.addWidget(zoom_label)
         self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        zoom_label.setBuddy(self._zoom_slider)
+        self._zoom_slider.setAccessibleName("Zoom")
         # 3..30 m visible radius. 6 m is the default.
         self._zoom_slider.setRange(3, 30)
         self._zoom_slider.setValue(int(self.canvas.radius_m()))
@@ -541,6 +567,17 @@ class PolycultureBuilderDialog(QDialog):
         self.canvas.memberAdded.connect(self._on_canvas_add)
         self.canvas.memberRemoved.connect(self._on_canvas_remove)
         self.canvas.memberMoved.connect(self._on_canvas_move)
+        # The grid is drawn and takes the mouse; Members is its text, and the
+        # keyboard's way in (V3.02): Enter in the plant list adds the plant,
+        # Delete in Members removes one.
+        self.canvas.setAccessibleName("Community layout")
+        self.canvas.setAccessibleDescription(
+            "Click to add the plant chosen on the left, right-click a plant to "
+            "remove it, drag to move it. From the keyboard, Enter in the plant "
+            "list adds it and Delete in Members removes one.")
+        from src.place_action import ListGestures
+        self._list_gestures = ListGestures(self.picker.view)
+        self._list_gestures.place.connect(lambda _index: self._add_at_next_spot())
         centre_col.addWidget(self.canvas, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.count_label = QLabel("0 plants placed")
@@ -556,8 +593,11 @@ class PolycultureBuilderDialog(QDialog):
         centre_col.addWidget(arrange_btn, 0, Qt.AlignmentFlag.AlignHCenter)
 
         arrange_radius_row = QHBoxLayout()
-        arrange_radius_row.addWidget(QLabel("Max radius:"))
+        radius_label = QLabel("Max radius:")
+        arrange_radius_row.addWidget(radius_label)
         self._arrange_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        radius_label.setBuddy(self._arrange_radius_slider)
+        self._arrange_radius_slider.setAccessibleName("Auto-arrange radius")
         # 2..30 m placement radius. 6 m matches the shipped communities.
         self._arrange_radius_slider.setRange(2, 30)
         self._arrange_radius_slider.setValue(6)
@@ -577,9 +617,16 @@ class PolycultureBuilderDialog(QDialog):
 
         # Right — current members
         right_col = QVBoxLayout()
-        right_col.addWidget(QLabel("<b>Members</b>"))
+        members_label = QLabel("<b>Members</b>")
+        right_col.addWidget(members_label)
         self.member_list = QListWidget()
+        members_label.setBuddy(self.member_list)
+        self.member_list.setAccessibleName("Members")
         self.member_list.setMinimumWidth(220)
+        for key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            QShortcut(QKeySequence(key), self.member_list,
+                      context=Qt.ShortcutContext.WidgetShortcut,
+                      activated=self._remove_current_member)
         right_col.addWidget(self.member_list, 1)
         clear_btn = QPushButton("Clear all")
         clear_btn.clicked.connect(self._on_clear_all)
@@ -627,7 +674,8 @@ class PolycultureBuilderDialog(QDialog):
         if plant is None:
             QMessageBox.information(
                 self, "Pick a plant",
-                "Select a plant from the list on the left, then click the grid to place it."
+                "Select a plant from the list on the left, then click the grid "
+                "(or press Enter in the list) to place it."
             )
             return
         layer = self.layer_combo.currentData()
@@ -650,6 +698,23 @@ class PolycultureBuilderDialog(QDialog):
     def _on_canvas_remove(self, idx: int):
         self.canvas.remove_member(idx)
         self._refresh_member_list()
+
+    def _add_at_next_spot(self):
+        """The keyboard's add: the plant chosen in the list, at the first free
+        spot of a sunflower spiral out from the centre (V3.02)."""
+        if self._selected_plant() is None:
+            return
+        x_m, y_m = next_free_offset(self.canvas.get_members(),
+                                    self.canvas.radius_m())
+        self._on_canvas_add(x_m, y_m)
+
+    def _remove_current_member(self):
+        row = self.member_list.currentRow()
+        if row < 0:
+            return
+        self._on_canvas_remove(row)
+        if self.member_list.count():
+            self.member_list.setCurrentRow(min(row, self.member_list.count() - 1))
 
     def _on_canvas_move(self, idx: int, x_m: float, y_m: float):
         members = self.canvas.get_members()
@@ -923,6 +988,7 @@ class PolyculturePanel(QWidget):
         search_row.setSpacing(4)
         self._search_box = QLineEdit()
         self._search_box.setPlaceholderText("Search communities...")
+        self._search_box.setAccessibleName("Search communities")
         self._search_box.setClearButtonEnabled(True)
         self._search_box.textChanged.connect(
             lambda _t: self._search_timer.start())
@@ -935,6 +1001,7 @@ class PolyculturePanel(QWidget):
             "structure (Canopy / Understory / …)."
         )
         self._group_combo.setStyleSheet(_GROUP_COMBO_STYLE)
+        self._group_combo.setAccessibleName("Group communities by")
         for key, label in _GROUP_BY_OPTIONS:
             self._group_combo.addItem(label, key)
         _gi = self._group_combo.findData(self._group_by)
@@ -952,9 +1019,14 @@ class PolyculturePanel(QWidget):
         choices = polycultures.facet_filter_choices()
         self._facet_combos: dict = {}
         for facet, placeholder in _FACET_FILTER_SPECS:
-            self._facet_combos[facet] = make_multi_combo(
+            combo = make_multi_combo(
                 placeholder, {label: label for label in choices[facet]},
                 on_change=self._refresh_polyculture_list)
+            # Named for a screen reader, which read all five as "combo box"
+            # (V3.02); the placeholder is not a name.
+            combo.setAccessibleName(f"{facet.capitalize()} filter")
+            combo.lineEdit().setAccessibleName(f"{facet.capitalize()} filter")
+            self._facet_combos[facet] = combo
         self._facet_combos["sun"].setToolTip(
             "Dominant sun need across the community's members.")
         self._facet_combos["moisture"].setToolTip(
@@ -990,6 +1062,7 @@ class PolyculturePanel(QWidget):
             "wildlife supported, most Alberta-native, or recently changed."
         )
         self._sort_combo.setStyleSheet(_GROUP_COMBO_STYLE)
+        self._sort_combo.setAccessibleName("Order communities by")
         for key, label in _SORT_BY_OPTIONS:
             self._sort_combo.addItem(label, key)
         _si = self._sort_combo.findData(self._sort_by)
@@ -1004,6 +1077,7 @@ class PolyculturePanel(QWidget):
 
         # Polyculture tree (parent polycultures + variations as children)
         self.polyculture_tree = _CommunityTree()
+        self.polyculture_tree.setAccessibleName("Plant communities")
         self.polyculture_tree.setHeaderHidden(True)
         self.polyculture_tree.setIndentation(16)
         self.polyculture_tree.setMouseTracking(True)
@@ -1164,6 +1238,7 @@ class PolyculturePanel(QWidget):
         # on …" line is shown above in self._community_header). QTextBrowser →
         # clickable related-pattern links. stretch=1: fills the remaining space.
         self.detail_text = QTextBrowser()
+        self.detail_text.setAccessibleName("Community details")
         self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
         # 96, not 120 (V2.98): the card scrolls itself, and at 1366 × 768 the
         # extra 24 px was what made the whole column scroll by 15.

@@ -48,8 +48,10 @@ class PhenologyWidget(QWidget):
         lay.addWidget(intro)
 
         row = QHBoxLayout()
-        row.addWidget(self._muted("Month:"))
+        month_label = self._muted("Month:")
+        row.addWidget(month_label)
         self._month_combo = QComboBox()
+        month_label.setBuddy(self._month_combo)
         self._month_combo.addItems(_MONTHS)
         self._month_combo.setCurrentIndex(self._month - 1)
         self._month_combo.currentIndexChanged.connect(self._on_month)

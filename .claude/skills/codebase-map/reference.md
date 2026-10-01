@@ -73,6 +73,9 @@ added; trust the source over this list).
 | `src/filter_status.py` | The picker's chips (one per filter that is on, each removable) and its empty state (V3.01) |
 | `src/species_page.py` | One species as a page of labels (the Directory's, moved out in V3.00) |
 | `src/species_flyout.py` | The page beside the side panel, over the map's right edge |
+| `src/focus_ring.py` | One focus ring that follows the keyboard in every window, drawn over the control (V3.02) |
+| `src/keyboard_help.py` | Every key the app answers to: the map's letters, F6 between map and panel, Help → Keyboard Shortcuts (V3.02) |
+| `src/accessible_names.py` | Names the scroll areas and tab widgets no panel builds, after their tab (V3.02) |
 | `src/on_this_design_panel.py` | The "On this design" review tab |
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |

@@ -19,10 +19,24 @@ inside ``_sync_planning_panel`` for Communities + Stats.
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
     QSizePolicy,
 )
+
+
+def _activate_on_keys(view: QListWidget, handler) -> None:
+    """Enter or Space on a row does what a click does. Until V3.02 these lists
+    were ``NoFocus``, so a keyboard could not reach the design's own contents;
+    the Menu key opens a row's menu at the row, as a right-click does."""
+    def run():
+        item = view.currentItem()
+        if item is not None:
+            handler(item)
+    for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+        QShortcut(QKeySequence(key), view,
+                  context=Qt.ShortcutContext.WidgetShortcut, activated=run)
 
 from src.plant_list_view import _RESULTS_LIST_STYLE, _type_icon
 
@@ -57,7 +71,7 @@ class OnThisDesignPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        from PyQt6.QtWidgets import QTabWidget, QTextBrowser
+        from PyQt6.QtWidgets import QTextBrowser
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(2)
@@ -81,7 +95,7 @@ class OnThisDesignPanel(QWidget):
         self._plants_list = QListWidget()
         self._plants_list.setMinimumHeight(60)
         self._plants_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._plants_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._plants_list.setAccessibleName("Species in this design")
         self._plants_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -89,6 +103,7 @@ class OnThisDesignPanel(QWidget):
             "Click a species to select and frame it on the map;\n"
             "right-click for select / remove / open in Plant Library.")
         self._plants_list.itemClicked.connect(self._on_plant_row_clicked)
+        _activate_on_keys(self._plants_list, self._on_plant_row_clicked)
         self._plants_list.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu)
         self._plants_list.customContextMenuRequested.connect(
@@ -110,7 +125,7 @@ class OnThisDesignPanel(QWidget):
         self._communities_list = QListWidget()
         self._communities_list.setMinimumHeight(60)
         self._communities_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._communities_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._communities_list.setAccessibleName("Communities in this design")
         self._communities_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -118,6 +133,7 @@ class OnThisDesignPanel(QWidget):
             "Click a community to frame its placed members on the map.")
         self._communities_list.itemClicked.connect(
             self._on_community_row_clicked)
+        _activate_on_keys(self._communities_list, self._on_community_row_clicked)
         cl.addWidget(self._communities_list, 1)
         self._tabs.addTab(communities_widget, "Communities")
 
@@ -127,6 +143,7 @@ class OnThisDesignPanel(QWidget):
         sl.setContentsMargins(2, 2, 2, 2)
         sl.setSpacing(2)
         self._stats_text = QTextBrowser()
+        self._stats_text.setAccessibleName("Design summary")
         self._stats_text.setStyleSheet(
             "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"

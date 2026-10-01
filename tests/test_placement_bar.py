@@ -67,7 +67,8 @@ class TestDescribe(unittest.TestCase):
         finding 8); since V2.99 the bar does."""
         self.assertEqual(self._d("plants", "single", "Wild Bergamot"),
                          ("Placing Wild Bergamot",
-                          "Click the map to place it. Each click places another."))
+                          "Click the map, or press Enter on it (F6 takes you "
+                          "there), to place it. Each click places another."))
         _, instruction = self._d("communities", "single", "Aromatic Herb Circle")
         self.assertIn("Each click places another.", instruction)
 

@@ -155,6 +155,10 @@ self-evident, and to fix that instead.
       colouring, and a checkbox that could switch the start screen off but
       never on.)
 - [ ] Would you be comfortable watching somebody use this without helping them?
+- [ ] Can it be done without a mouse? Tab reaches every control, the ring shows
+      where you are, and each control has a name a screen reader can say. (Until
+      V3.02 nothing could be placed on the map without one, and B pressed in a
+      side panel started drawing a boundary.)
 
 ## Where this is enforced
 
@@ -166,5 +170,10 @@ have a shape:
 - every row's note is five words or fewer;
 - at most one primary action on the screen;
 - every offered choice is acted on by the flow module.
+
+`tests/test_app_smoke.py` holds the keyboard's shape on the real window (V3.02):
+every focusable control has a name, text or a label naming it; every tool and
+view toggle is reached by Tab; the single letters wait for the map; no key is
+bound twice.
 
 Those are proxies. The real check is the checklist above and somebody's face.

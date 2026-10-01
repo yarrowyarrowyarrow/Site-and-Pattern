@@ -49,7 +49,8 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
-from src import data_sources_flow, feedback_flow, onboarding_flow
+from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
+from src import onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.controllers import split_view as _split_view
@@ -175,6 +176,12 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
+        # Every panel is built: name the scroll areas and tab widgets after
+        # their tabs, and let the F6 key move between the map and the side
+        # panel (F195, V3.02).
+        accessible_names.name_containers(self)
+        self._panes = keyboard_help.PaneSwitch(self, self.map_widget,
+                                               self._side_tabs)
 
         # Cold start (F44): paint the three-step strip for the empty project.
         # The start menu is NOT opened here any more — main.py runs it before
@@ -221,6 +228,7 @@ class MainWindow(QMainWindow):
         # overflow the panel minimum on wide-font systems (macOS); eliding a
         # label beats clipping the first tab off-screen entirely.
         self._side_tabs = FillTabWidget(allow_shrink=True)
+        self._side_tabs.setAccessibleName("Side panel")
         # Document mode lets the tab bar span the full width, which is what lets
         # FillTabWidget stretch the tabs edge-to-edge (no gap after "Learn").
         self._side_tabs.setDocumentMode(True)
@@ -446,10 +454,12 @@ class MainWindow(QMainWindow):
 
         self._act_redo = QAction("Redo", self)
         # Both conventions: Ctrl+Shift+Z (shown on the toolbar) and the
-        # platform-standard binding (Ctrl+Y on Windows). Qt drops duplicates.
-        self._act_redo.setShortcuts(
+        # platform-standard binding (Ctrl+Y on Windows). Qt does NOT drop a
+        # key bound twice: it calls the pair ambiguous and fires neither, which
+        # is how Ctrl+Shift+Z never redid anything (V3.02).
+        self._act_redo.setShortcuts(keyboard_help.distinct_keys(
             [QKeySequence("Ctrl+Shift+Z"), QKeySequence("Ctrl+Y")]
-            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo))
+            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo)))
         self._act_redo.setEnabled(False)
         self._act_redo.triggered.connect(self._do_redo)
         self.addAction(self._act_redo)
@@ -656,6 +666,12 @@ class MainWindow(QMainWindow):
             "score, walk in 3D, and take apart")
         act_example.triggered.connect(
             lambda: onboarding_flow.open_example(self))
+
+        # F195 (V3.02): every key the app answers to, from the table the key
+        # handler reads; the single letters had been listed nowhere.
+        act_keys = help_menu.addAction("&Keyboard Shortcuts…")
+        act_keys.setStatusTip("Every key, and where it works")
+        act_keys.triggered.connect(lambda: keyboard_help.show_shortcuts(self))
 
         help_menu.addSeparator()
 
@@ -2359,37 +2375,37 @@ class MainWindow(QMainWindow):
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
 
     def keyPressEvent(self, event):
+        """Esc anywhere; the rest only while the map has focus (F195, V3.02).
+
+        Until V3.02 the single letters and Delete acted from any control that
+        let the key through: B on a side-panel button started a boundary, and
+        Delete removed the map's selection. The letters are
+        ``keyboard_help.MAP_LETTERS``, which Help → Keyboard Shortcuts lists."""
         key = event.key()
         if key == Qt.Key.Key_Escape:
             self._cancel_draw()
             self.map_widget.clear_selection()
-        elif key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
-            # Delete every currently-selected map item (across types).
+            return
+        if not keyboard_help.map_has_focus(self.map_widget):
+            super().keyPressEvent(event)
+            return
+        if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             self.map_widget.delete_selected()
-        elif key == Qt.Key.Key_B and not event.modifiers():
-            self._enter_boundary_mode()
-        elif key == Qt.Key.Key_P and not event.modifiers():
-            # Switch to Plants tab
-            self._side_tabs.setCurrentWidget(self.plant_panel)
-        elif key == Qt.Key.Key_G and not event.modifiers():
-            # Switch to Polycultures tab
-            self._side_tabs.setCurrentWidget(self.polyculture_panel)
-        elif key == Qt.Key.Key_S and not event.modifiers():
-            # Switch to Structures tab
-            self._side_tabs.setCurrentWidget(self.structure_panel)
-        elif key == Qt.Key.Key_A and not event.modifiers():
-            # Switch to Analysis tab
-            self._side_tabs.setCurrentWidget(self.analysis_panel)
-        elif key == Qt.Key.Key_T and not event.modifiers():
-            # Switch to Planning tab
-            self._side_tabs.setCurrentWidget(self.planning_panel)
-        elif key == Qt.Key.Key_M and not event.modifiers():
-            self._enter_measure_mode()
-        elif key == Qt.Key.Key_N and not event.modifiers():
-            self._enter_annotate_mode()
-        elif key == Qt.Key.Key_L and not event.modifiers():
-            # Toggle map legend
-            self.map_widget.toggle_legend()
+            return
+        show = keyboard_help.show_panel
+        act = {
+            "boundary": self._enter_boundary_mode,
+            "measure": self._enter_measure_mode,
+            "note": self._enter_annotate_mode,
+            "legend": self.map_widget.toggle_legend,
+            "plants": lambda: show(self.plant_panel),
+            "communities": lambda: show(self.polyculture_panel),
+            "structures": lambda: show(self.structure_panel),
+            "analysis": lambda: show(self.analysis_panel),
+            "planning": lambda: show(self.planning_panel),
+        }.get(keyboard_help.letter_action(event))
+        if act is not None:
+            act()
         else:
             super().keyPressEvent(event)
 
