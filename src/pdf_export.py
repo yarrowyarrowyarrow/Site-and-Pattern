@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 from collections import Counter
 
-from PyQt6.QtCore import Qt, QMarginsF, QRectF, QSizeF
+from PyQt6.QtCore import Qt, QMarginsF, QPointF, QRectF, QSizeF
 from PyQt6.QtGui import (
     QPainter, QColor, QFont, QPen, QPageLayout, QPageSize,
 )
@@ -174,6 +174,15 @@ def export_pdf(
             printer.newPage()
             _draw_before_after(painter, w, h, dpi_scale, panels,
                                before_after_caption)
+
+        # ── Walk the site (F32, V3.05) ────────────────────────────────────
+        # The first job of all, before the ground is prepared: the ten field
+        # prompts with room to write, carrying anything already noted. P11:
+        # the site knows things the screen does not.
+        from src.field_notes import get_field_notes, walk_sheet
+        printer.newPage()
+        _draw_site_walk(painter, w, h, dpi_scale,
+                        walk_sheet(get_field_notes(project)))
 
         # ── Page 2: Site prep (F43) ───────────────────────────────────────
         # Ahead of the buy list on purpose: this is the work that happens
@@ -799,6 +808,71 @@ def _draw_missing_map_note(painter, w, h, s, project) -> None:
             QRectF(15 * s, y, w - 30 * s, 15 * s), Qt.AlignmentFlag.AlignLeft,
             "To get it: draw your property boundary on the map, then export "
             "again.")
+
+
+def _draw_site_walk(painter: QPainter, w: float, h: float, s: float,
+                    rows: list) -> float:
+    """The site-walk sheet (F32): a box, the question, what is already noted,
+    and ruled lines to write on, for each field prompt. Taken outside on a
+    clipboard; what is written goes back in under Site › Field Notes."""
+    y = _page_title(painter, w, s, "Walk the site",
+                    "Write what you notice; enter it in Site › Field Notes after")
+    left, right = 15 * s, w - 15 * s
+    # The ruling fills the page: as wide as narrow-ruled paper (about 6 mm)
+    # when it can be, never so tight a pencil cannot use it, and every
+    # question always on the page.
+    n_lines = sum(3 if r["key"] == "free_text" else 2 for r in rows)
+    fixed = sum((16 + (15 if r["note"] else 0) + 10) * s for r in rows)
+    pitch = max(12 * s, min(24 * s, (h - y - 10 * s - fixed) / max(1, n_lines)))
+    for row in rows:
+        lines = 3 if row["key"] == "free_text" else 2
+        if row["key"] != "free_text":
+            box = QRectF(left, y + 2 * s, 10 * s, 10 * s)
+            painter.setPen(QPen(QColor("#33691e"), 1.2 * s))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(box)
+            if row["checked"]:
+                painter.drawLine(box.topLeft(), box.bottomRight())
+                painter.drawLine(box.topRight(), box.bottomLeft())
+        painter.setPen(QColor("#1b3a1b"))
+        painter.setFont(_font(10 * s, bold=True))
+        painter.drawText(QRectF(left + 16 * s, y, right - left - 16 * s, 16 * s),
+                         Qt.AlignmentFlag.AlignLeft, row["question"])
+        y += 16 * s
+        if row["note"]:
+            painter.setPen(QColor("#37474f"))
+            painter.setFont(_font(9 * s))
+            painter.drawText(QRectF(left + 16 * s, y, right - left - 16 * s,
+                                    14 * s), Qt.AlignmentFlag.AlignLeft,
+                             row["note"][:140])
+            y += 15 * s
+        painter.setPen(QPen(QColor("#b0bec5"), 0.8 * s))
+        for _ in range(lines):
+            y += pitch
+            painter.drawLine(QPointF(left + 16 * s, y), QPointF(right, y))
+        y += 10 * s
+    return y
+
+
+def export_field_sheet(path: str, project: dict) -> None:
+    """The site-walk sheet alone, for a walk before there is any design (F32).
+    Same page as the full export's, from the same rows."""
+    from src.field_notes import get_field_notes, walk_sheet
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+    printer.setOutputFileName(path)
+    printer.setPageSize(QPageSize(QPageSize.PageSizeId.Letter))
+    printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Unit.Millimeter)
+    painter = QPainter()
+    if not painter.begin(printer):
+        raise RuntimeError(f"Could not open {path} for writing")
+    try:
+        page_rect = printer.pageRect(QPrinter.Unit.DevicePixel)
+        _draw_site_walk(painter, page_rect.width(), page_rect.height(),
+                        printer.resolution() / 96.0,
+                        walk_sheet(get_field_notes(project)))
+    finally:
+        painter.end()
 
 
 def _draw_site_prep(painter: QPainter, w: float, h: float, prep, s: float) -> float:

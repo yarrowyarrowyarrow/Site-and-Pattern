@@ -129,3 +129,20 @@ def format_field_notes(notes) -> str:
         lines.append("Other observations:")
         lines.append(n["free_text"])
     return "\n".join(lines).rstrip() + "\n"
+
+
+def walk_sheet(notes) -> list[dict]:
+    """The site-walk sheet's rows (F32, V3.05): every prompt in walking order,
+    ticked or not, with what is already noted, so the printed page carries the
+    whole checklist outside and brings nothing back that is not already here.
+    The last row is the catch-all."""
+    n = normalize(notes)
+    rows = []
+    for key, question in FIELD_PROMPTS:
+        entry = n["observations"].get(key) or {}
+        rows.append({"key": key, "question": question,
+                     "checked": bool(entry.get("checked")),
+                     "note": (entry.get("note") or "").strip()})
+    rows.append({"key": "free_text", "question": "Anything else you noticed",
+                 "checked": False, "note": (n["free_text"] or "").strip()})
+    return rows

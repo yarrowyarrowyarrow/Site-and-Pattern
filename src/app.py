@@ -900,6 +900,9 @@ class MainWindow(QMainWindow):
             lambda notes: _field_notes.set_field_notes(self._project, notes))
         self.site_panel.field_notes_changed.connect(
             lambda _notes: self._mark_modified())
+        from src import field_sheet_flow
+        self.site_panel.print_field_sheet_requested.connect(
+            lambda: field_sheet_flow.export(self))
 
         # Site photo overlay (F24) — wired straight to the flow module (free
         # functions taking ``main``, mirroring splat_flow; MainWindow is full).
