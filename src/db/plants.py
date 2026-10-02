@@ -491,6 +491,11 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # Flat-topped White Aster, Round-leaved Alumroot, Stiff Sunflower, Tall
 # Anemone) set to 1, as VASCAN records every one in Alberta (F199). The
 # generator's native-only filter reads the flag, so it had left them out.
+# Each also joins the seeded community its habitat matches (False Box under
+# Montane Woodland Beauty's fir, the aster in Wet Meadow Aster & Monkeyflower,
+# the alumroot on Montane Scree, the sunflower in Mixedgrass Late Aster &
+# Goldenrod, the anemone at Parkland Woodland Wildflowers' edge): counted as
+# natives now, they were the retail natives no community held.
 _SCHEMA_VERSION = 92
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when

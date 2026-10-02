@@ -38,7 +38,7 @@ def install(main) -> None:
                  accessory=main.plant_panel.placement_accessory())
     bar.add_page("communities", main.polyculture_panel.placement_controls())
     bar.done_requested.connect(main._cancel_draw)
-    bar.undo_requested.connect(main._do_undo)
+    bar.undo_requested.connect(lambda: main._do_undo())
     main.plant_panel.placed_counts_changed.connect(
         lambda: on_design_changed(main))
     main.plant_panel.armed_changed.connect(

@@ -57,7 +57,7 @@ _STYLE = """
 #placementBar QWidget { background-color: transparent; }
 #placementBar QLabel { color: #e8f5e9; font-size: 13px; border: none; }
 #placementBar QLabel#placementStatus { color: #fff3c4; }
-#placementBar QLabel#placementNote { color: #ffe0b2; font-size: 12px; }
+#placementBar QLabel#placementNote { color: #ffe0b2; font-size: 13px; }
 #placementBar QFrame#placementDot {
     background-color: #ffb300; border: none; border-radius: 5px;
 }

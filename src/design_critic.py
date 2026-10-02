@@ -243,6 +243,9 @@ def apply_repairs(project, query_plants: Callable,
             project.place_plant(row["id"], lat, lng, quantity=1)
         except Exception:  # noqa: BLE001 — a failed repair is not fatal
             return False
+        # The page of the plant says why it was added (F19, V3.05).
+        from src import why_here
+        why_here.stamp(project, 1, [why_here.REVIEW.format(why=why)])
         placed_ids.add(row["id"])
         msgs.append(f"Added {row.get('common_name', 'a plant')} — {why}")
         return True

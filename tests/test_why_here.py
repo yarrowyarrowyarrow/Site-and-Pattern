@@ -6,7 +6,10 @@ rest composition and spread) and kept none of it: a generated design could not
 say why its milkweed was by the fence. The chosen cell's sub-scores are now
 read back in words, carried on the plant's feature (``why_here``), and shown
 first on its page when it is clicked on the map. With no terrain or shade for
-the site the generator only spreads plants out, and says exactly that.
+the site the generator only spreads plants out, and says exactly that. A plant
+placed by a rule rather than a score (a vine at its host's foot, a mixed stand,
+a community, what the design review added, a pond plant) names the rule
+(``src/why_here.py``).
 """
 
 import os
@@ -68,7 +71,7 @@ class TestTheWords(unittest.TestCase):
         self.assertEqual(pos.last_why[0], "Full sun, as it likes")
 
     def test_the_reasons_ride_on_the_group_just_placed(self):
-        from src.llm_design import _stamp_why
+        from src.why_here import stamp as _stamp_why
 
         class _Proj:
             def __init__(self):
@@ -99,6 +102,80 @@ class TestTheWords(unittest.TestCase):
         self.assertEqual(rec["why_here"], [NO_SITE_DATA_WHY])
         store.add_plant(2, "Yarrow", 53.6, -113.5)       # by hand: no reasons
         self.assertNotIn("why_here", project["features"][1]["properties"])
+
+
+class TestEveryRuleNamesItself(unittest.TestCase):
+    """A generated design end to end, with a fake model: the plants the
+    generator scored, and the ones it placed by a rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        import src.permadesign_api as api
+        _plants.init_db()
+        api._DB_READY = True
+
+    def _generate(self, spec, **kw):
+        import src.llm_design as llm
+
+        class _Client:
+            endpoint, model = "fake://", "fake"
+
+            def generate_spec(self, prompt, context, extra_hints=None):
+                return spec
+
+        lat0, lng0, d = 53.5461, -113.4938, 0.0006
+        ring = [[lat0, lng0], [lat0, lng0 + 2 * d], [lat0 + d, lng0 + 2 * d],
+                [lat0 + d, lng0], [lat0, lng0]]
+        return llm.generate_design(
+            "habitat", site_config={"latitude": lat0, "longitude": lng0},
+            boundary=ring, client=_Client(), revise=False, density="sparse",
+            **kw)
+
+    def _plants(self, project):
+        return [f["properties"] for f in project.as_dict()["features"]
+                if f["properties"].get("element_type") == "plant"]
+
+    def test_vines_stands_and_communities_say_how_they_were_placed(self):
+        from src import why_here
+        project = self._generate({
+            "plants": [{"query": "trembling aspen", "quantity": 1},
+                       {"query": "clematis", "quantity": 1}],
+            "plant_mixes": [{"plants": [{"query": "blue grama"},
+                                        {"query": "prairie crocus"}],
+                             "quantity": 6}],
+            "communities": [{"query": "Backyard Meadow Patch"}]})
+        plants = self._plants(project)
+        vines = [p for p in plants if "Clematis" in p.get("common_name", "")]
+        stand = [p for p in plants
+                 if p.get("common_name") in ("Blue Grama Grass", "Prairie Crocus")
+                 and not p.get("polyculture_name")]
+        community = [p for p in plants
+                     if p.get("polyculture_name") == "Backyard Meadow Patch"]
+        self.assertTrue(vines and stand and community,
+                        (len(vines), len(stand), len(community)))
+        # A vine with no host left to climb is placed by score like any plant.
+        self.assertIn([why_here.VINE_SEAT], [p.get("why_here") for p in vines])
+        self.assertTrue(all(p.get("why_here") for p in vines))
+        for p in stand:
+            self.assertEqual(p["why_here"][0], why_here.MIX)
+        for p in community:
+            self.assertEqual(p["why_here"], [why_here.COMMUNITY.format(
+                name="Backyard Meadow Patch")])
+
+    def test_the_review_says_why_it_added_a_plant(self):
+        from src import why_here
+        from src.design_critic import apply_repairs
+        from src.permadesign_api import Project, query_plants
+        project = Project.create("t", site_config={"latitude": 53.5,
+                                                   "longitude": -113.5})
+        project.place_plant(query_plants(query="yarrow")[0]["id"], 53.5, -113.5)
+        msgs = apply_repairs(project, query_plants, lambda row: (53.5, -113.5))
+        self.assertTrue(msgs)
+        added = self._plants(project)[1:]
+        self.assertEqual(len(added), len(msgs))
+        for p in added:
+            self.assertTrue(p["why_here"][0].startswith(
+                why_here.REVIEW.split("{")[0]), p)
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

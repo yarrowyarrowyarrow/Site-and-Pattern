@@ -82,6 +82,15 @@ accounted for:
 - *Find* with an empty address box, *Reset to Year 0* already at Year 0, and five
   toolbar entries that are labels or are reached through their own button.
 
+**And one silence the probe could not click.** The map is a web page, and the
+probe clicks Qt controls, not markers. Clicking a placed plant on the map sends a
+signal to Python (`plant_marker_clicked`), and **nothing in Python listened to
+it**: the click only changed what a drag moves. In a window whose argument is
+what each plant is for, the plant on the map was the one thing that could not be
+asked about. **Fixed in V3.05 (F19)**: the click opens the plant's page beside
+the list, and for a generated design the page starts with why the generator put
+the plant there.
+
 ## The findings
 
 ### 1. Results that wait for a button
@@ -207,15 +216,28 @@ boundary's area, the barrels, ponds and swales placed) and stay editable.
 ### 8. Empty states that look broken
 
 Structures › Habitat shows three empty bordered boxes under the list until a
-structure is chosen; the Bees page shows an empty dark square where a photograph
-would be (62 of 69 bees have none); Analysis › Habitat opened on two empty boxes
-before its score was live. **The first two fixed in V3.05** (the boxes appear with
-something in them), the third by finding 1.
+structure is chosen: a border meant for the frame around them reached the three
+labels inside it too, because a label is a frame to Qt. Analysis › Habitat opened
+on two empty boxes before its score was live. **Both fixed in V3.05**: the
+structure's details appear when a structure is chosen, and the score fills itself
+(finding 1).
+
+*Corrected after the first draft:* the first draft also counted an empty dark
+square on the Bees page, where a photograph would be (62 of 69 bees have none). It
+is not empty. It is the 🐝 shown when there is no photograph, drawn in a font with
+no emoji in it, and only the probe's machine lacks one: Windows and macOS draw a
+bee. Not a defect, and not changed.
 
 ### 9. Smaller things
 
 - The Bees dropdown reads "Agapostemon femoratus · Agapostemon femoratus" for
-  every bee with no English name: the name printed twice. **Fixed.**
+  every bee with no English name: the name printed twice. **Fixed.** Its plant
+  list put a grey pill reading "—" beside every plant whose fit to the bee's
+  tongue is not known, a label that says nothing. **Left out now**; the rows that
+  are a good or workable fit keep theirs.
+- A new design is named **"My Food Forest"** until it is renamed: the app's
+  permaculture-era name for a design, in an app about native habitat. **Fixed**:
+  "My yard".
 - The Wind page says "No data yet — drop a site pin (Site tab), then fetch" when a
   pin is already down. **Fixed** (it says what is missing). Wind is also the one
   site figure fetched by hand rather than with the pin's other data.
@@ -249,19 +271,21 @@ is not the problem when each click is obvious; the column that matters is the la
 |---|---|---|---|
 | find a plant for a shady, wet corner | Plants › Filters › Sun › Shade › Water › Wet | 6 | — the filters read well since V3.01 |
 | put it in | its row › Place › the map | 3 | — |
-| place a community | Plants › Plant Communities › a row › Place › the map | 5 | 61 names, A–Z, details only after a click (F196) |
-| know how the design is doing | Plants › On This Design › Stats | 3 | **Why is the score under Plants?** Analysis › Habitat looks like the place, and showed "—" |
+| place a community | Plants › Plant Communities › a row › Place › the map | 5 | 61 names, A–Z, details only after a click. *V3.05 (F196): each row says its size, sun and moisture* |
+| know how the design is doing | Plants › On This Design › Stats | 3 | **Why is the score under Plants?** Analysis › Habitat looks like the place, and showed "—". *V3.05: Habitat is live too* |
 | see what it feeds | Analysis › Habitat › tick the web | 3 | or Planning › Wildlife, or Analysis › Bees: three answers |
 | find the gaps in bloom | Planning › Wildlife (› Show) | 2–3 | why Planning? |
 | know what to do this month | Analysis › This Month | 2 | why Analysis, when Effort is in Planning? |
 | see the shade | Analysis › Sun & Shade › Show shade | 3 | — but shade is about the site, and Site has no shade |
 | see it in 3D | View › 3D Preview… | 2 | — |
-| watch it grow | the 3D preview's Year slider | 3 | **the slider was 15 px wide at 1366** |
+| watch it grow | the 3D preview's Year slider | 3 | **the slider was 15 px wide at 1366**. *Fixed* |
 | print the plan | File › Export PDF… | 2 | three exports side by side; fine |
 | show a neighbour | Learn › Present | 2 | **presenting is not learning** |
 | note what I saw outside | Site › Field Notes, Planning › Notes, or Draw › Note | 2 | three places, no single record (F86) |
-| know the water it needs | Planning › Water (› Calculate) | 2–3 | started from 200 m², not this yard |
-| generate a design | File › Generate Design… › Generate | 3 | **Generate was off-screen at 768 px tall** |
+| take the questions outside | Site › Field Notes › Print this sheet… | 3 | *new in V3.05 (F32); before it, a laptop in the yard* |
+| ask why a plant is where it is | click it on the map | 1 | **nothing happened**. *V3.05 (F19): its page opens, with the generator's reasons* |
+| know the water it needs | Planning › Water (› Calculate) | 2–3 | started from 200 m², not this yard. *Fixed* |
+| generate a design | File › Generate Design… › Generate | 3 | **Generate was off-screen at 768 px tall**. *Fixed* |
 
 ## Page by page
 
@@ -273,9 +297,9 @@ looked for · **Retire** from the interface. The last column is the owner's.
 | Site › Site Info | pin, zone, climate, rainfall, soil, where to buy | Keep; move *Where to buy* | Where to buy is about the buy list, not the site | |
 | Site › Slope | elevation, contours, slope ramp, terrain pack | Keep | its download crashed (fixed) | |
 | Site › Features | existing buildings and trees, imported or drawn; satellite alignment | Keep; move *Satellite alignment* | alignment is a setting of the satellite layer, which lives on the View row | |
-| Site › Field Notes | ten site-walk prompts, free notes, site photo | Keep; print it (F32); move the site photo | the photo is a map layer, beside *Yard photo* | |
+| Site › Field Notes | ten site-walk prompts, free notes, site photo | Keep (it prints since V3.05, F32); move the site photo | the photo is a map layer, beside *Yard photo* | |
 | Plants › Browse | find and place plants | Keep | the core, and it reads well | |
-| Plants › Plant Communities | find and place communities | Keep (F196) | | |
+| Plants › Plant Communities | find and place communities | Keep | each row says what it is since V3.05 (F196) | |
 | Plants › On This Design › Species | what is planted | Merge with Communities | two lists of what is on the design | |
 | Plants › On This Design › Communities | what communities are planted | Merge with Species | | |
 | Plants › On This Design › Stats | **the report card** | **Move to the front of Analysis** | the best summary in the app, three levels deep | |
@@ -330,8 +354,11 @@ still, Before / after). What is left for the owner:
 
 - **Refresh from design** is a manual sync, the 3D form of finding 1. Split view
   already follows edits; the window could too.
-- **The creature dropdown** is the 721-entry list F196 names in the community
-  builder: no typing to find the Monarch.
+- **The creature dropdown** is the same 721 rows as the community builder's,
+  where the Monarch is far down a list typing cannot search. F196 gave the
+  builder's copy a find box; this copy has none yet. `scene3d_window.py` sits at
+  its line ceiling (950 of 950), so it waits for the split that ceiling asks for,
+  and the two copies of the list should become one when it comes.
 - **Presentation still** and **Before / after** are outputs; they belong with the
   Share place above, and are reachable from the 3D window because that is where
   they render.
@@ -350,9 +377,28 @@ still, Before / after). What is left for the owner:
 8. The worked example's notes and the score's tips point at pages that exist, and
    a test reads every such pointer against the real window.
 9. Notes counts its words on load; Growth Snapshots names its years and frames the
-   yard; Wind says what is missing; Bees names a bee once; the 3D preview says what
-   to do when WebGL is unavailable; native shares say what they count; empty
-   structure and bee boxes do not show until they hold something.
+   yard; Wind says what is missing; Bees names a bee once and drops the "—" pill;
+   the 3D preview says what to do when WebGL is unavailable; native shares say
+   what they count; the structure's detail boxes do not show until they hold
+   something; a new design is "My yard".
+
+And the leftovers from picking and placing (V2.98 to V3.04) and the take-it-outside
+document, bundled into the same release:
+
+10. **F19**: a plant clicked on the map opens its page, and a generated plant's
+    page starts with why it is there.
+11. **F32**: Field Notes prints as a sheet to carry outside, alone or as the first
+    job in the design PDF.
+12. **F123**: a presentation still rendered in the 3D preview goes into the PDF.
+13. **F196**: each community row says its size, sun and moisture; the creature
+    picker finds by typing; Cancel asks before throwing away a community laid out
+    by hand.
+14. **F198**: the bar over the map says when a placement landed outside the
+    boundary or inside another plant's circle, with Undo beside it.
+15. **F199 and F200**: Native follows the pin's province (Saskatchewan's natives
+    for a Regina yard), and the five catalogue rows still flagged "1?" are native
+    to Alberta, as VASCAN records all five, so a native-only generated design no
+    longer leaves them out.
 
 ## Left for the owner
 

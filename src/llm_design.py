@@ -1640,23 +1640,9 @@ class ScoredPositioner:
         self._bonus_cells.clear()
 
 
+# Why each plant is where it is, written onto it (F19, V3.05).
+from src import why_here  # noqa: E402
 from src.placement_score import NO_SITE_DATA_WHY  # noqa: E402
-
-
-def _stamp_why(project, n: int, why) -> None:
-    """Write ``why`` onto the last ``n`` plant features placed (one group):
-    the reasons the generator chose the spot, which the plant's page shows
-    when it is clicked on the map (F19, V3.05). Empty reasons write nothing."""
-    if not why or n <= 0:
-        return
-    try:
-        features = project.as_dict()["features"]
-    except (AttributeError, KeyError, TypeError):
-        return
-    for f in features[-n:]:
-        props = f.get("properties", {})
-        if props.get("element_type") == "plant":
-            props["why_here"] = list(why)
 
 
 def _apply_dripline_bonus(positioner: ScoredPositioner,
@@ -2172,6 +2158,7 @@ def _place_within_boundary(project, plant_items, community_groups,
                 seated.append(spot)
             for la, ln in seated:
                 project.place_plant(plant_id, la, ln, quantity=1)
+            why_here.stamp(project, len(seated), [why_here.VINE_SEAT])
             qty -= len(seated)
             if qty <= 0:
                 continue
@@ -2194,7 +2181,7 @@ def _place_within_boundary(project, plant_items, community_groups,
             positions = [anchor]
         for la, ln in positions:
             project.place_plant(plant_id, la, ln, quantity=1)
-        _stamp_why(project, len(positions),
+        why_here.stamp(project, len(positions),
                    getattr(positioner, "last_why", None)
                    if getattr(positioner, "_env_map", None) is not None
                    else [NO_SITE_DATA_WHY])
@@ -2252,10 +2239,21 @@ def _place_within_boundary(project, plant_items, community_groups,
         positions = _clip_keepout(positions, half_canopy_m=spacing / 2.0)
         if not positions:
             positions = [anchor]
+        # The stand's ground was scored for its first member (F19): its own
+        # reasons are about it, and the others say whose ground it is.
+        reasons = ((getattr(positioner, "last_why", None) or [])
+                   if getattr(positioner, "_env_map", None) is not None
+                   else [NO_SITE_DATA_WHY])
+        first = first_row.get("common_name") or "its first plant"
+        whys = []
         for (la, ln), pick in zip(positions,
                                   assign_species(positions, species_items,
                                                  "even_split")):
             project.place_plant(pick["id"], la, ln, quantity=1)
+            own = pick["id"] == members[0][0] or reasons == [NO_SITE_DATA_WHY]
+            whys.append([why_here.MIX] + reasons if own
+                        else [why_here.MIX_OTHER.format(first=first)])
+        why_here.stamp_each(project, whys)
         positioner.reserve_near(positions, spacing)
 
     # ── Communities: only where the whole footprint fits + clears keep-out ──
@@ -2272,7 +2270,11 @@ def _place_within_boundary(project, plant_items, community_groups,
         boundary and clears keep-out; reserves the footprint on success."""
         if (community_fits(boundary, anchor, radius)
                 and is_clear(anchor[0], anchor[1], keepout, radius)):
+            before = why_here.feature_count(project)
             project.place_polyculture(cid, anchor[0], anchor[1])
+            name = (get_polyculture_by_id(cid) or {}).get("name") or "a"
+            why_here.stamp(project, why_here.feature_count(project) - before,
+                           [why_here.COMMUNITY.format(name=name)])
             positioner.note_anchor(anchor, {})
             positioner.reserve_near([anchor], radius * 2)
             return True
@@ -2694,6 +2696,7 @@ def _seat_in_pond(project, pond, rows, placed_ids: set):
         s = pond.seat(row)
         if s is not None:
             project.place_plant(row["id"], s[0], s[1], quantity=1)
+            why_here.stamp(project, 1, [why_here.POND])
             placed_ids.add(row["id"])
             return row
     return None
@@ -2739,6 +2742,9 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
             continue
         lat, lng = spot(dry[0])
         project.place_plant(dry[0]["id"], lat, lng, quantity=1)
+        animal = _fauna_names([fid])
+        why_here.stamp(project, 1, [why_here.FOR_ANIMAL.format(name=animal[0])]
+                       if animal else [why_here.FOR_GOAL])
         placed_ids.add(dry[0]["id"])
         served.append(fid)
     if served:
@@ -2810,6 +2816,7 @@ def _apply_goal_feedback(project, goals, query_plants,
                     spot = _open_ground(project, boundary, center).spot_for
                 lat, lng = spot(dry[0])
                 project.place_plant(dry[0]["id"], lat, lng, quantity=1)
+                why_here.stamp(project, 1, [why_here.FOR_GOAL])
                 warnings.append(
                     "Added one plant to honour the selected goals "
                     f"({dry[0].get('common_name', 'plant')})."

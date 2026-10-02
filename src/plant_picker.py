@@ -37,29 +37,21 @@ from typing import Callable, Optional
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListView,
-    QPushButton, QVBoxLayout, QWidget,
+    QVBoxLayout, QWidget,
 )
 
 from src import plant_filters as pf
-from src.filter_status import DIM as _DIM, FilterLine, WhyEmpty, wrapped
+from src.filter_status import (
+    DIM as _DIM, FilterLine, QualityChips, WhyEmpty, wrapped,
+)
 from src.filter_widgets import (
     COMBO_STYLE, CheckableComboBox, build_ecoregion_tree,
 )
-from src.flow_layout import FlowLayout
 from src.plant_list_view import (
     _PLANT_OBJ_ROLE, _RESULTS_LIST_STYLE, PlantListModel, PlantRowDelegate,
     _colour_icon, _type_icon,
 )
 
-_CHIP_STYLE = (
-    "QPushButton { background: #1e2e1e; color: #a8b8b0; "
-    "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px 8px; "
-    "font-size: 12px; min-height: 18px; }"
-    "QPushButton:checked { background: #2e5a2e; color: #e8f5e9; "
-    "border-color: #66bb6a; }"
-    "QPushButton:hover { border-color: #4a7a4a; }"
-    "QPushButton:focus { border: 2px solid #ffe082; }"
-)
 _SEARCH = ("QLineEdit { background: #16241a; border: 1px solid #2e4a2e; "
            "border-radius: 4px; padding: 5px 8px; color: #c8e6c9; "
            "font-size: 13px; }"
@@ -219,31 +211,13 @@ class PlantPicker(QWidget):
             self.combos[f.key] = combo
         area.addLayout(grid)
 
-        chips = QWidget()
-        flow = FlowLayout(chips, h_spacing=4, v_spacing=4)
-        flow.setContentsMargins(0, 0, 0, 0)
-        self.chips: dict = {}
-        for q in pf.QUALITIES:
-            btn = QPushButton(q.label)
-            btn.setCheckable(True)
-            btn.setChecked(bool(self._criteria.get(q.key)))
-            btn.setToolTip(wrapped(q.tip))
-            btn.setAccessibleDescription(q.tip)
-            btn.setStyleSheet(_CHIP_STYLE)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.toggled.connect(lambda _on, k=q.key: self._on_quality(k))
-            flow.addWidget(btn)
-            self.chips[q.key] = btn
-        # The site's soil pH, beside the qualities and drawn like them, so a
-        # filter the app switched on can be switched back on once taken off.
-        self.soil_toggle = QPushButton("")
-        self.soil_toggle.setCheckable(True)
-        self.soil_toggle.setStyleSheet(_CHIP_STYLE)
-        self.soil_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        # The qualities, and the site's soil pH drawn like them.
+        self.quality_chips = QualityChips(pf.QUALITIES, self._criteria)
+        self.chips: dict = self.quality_chips.buttons
+        self.soil_toggle = self.quality_chips.soil
+        self.quality_chips.toggled.connect(self._on_quality)
         self.soil_toggle.toggled.connect(self.set_soil_on)
-        self.soil_toggle.hide()
-        flow.addWidget(self.soil_toggle)
-        area.addWidget(chips)
+        area.addWidget(self.quality_chips)
         col.addWidget(self.filter_area)
 
     def set_filters_open(self, on: bool):
@@ -411,22 +385,15 @@ class PlantPicker(QWidget):
 
     def province(self) -> str:
         """``"AB"`` or ``"SK"`` for the pin, ``""`` without one (F200)."""
-        if not self._site:
-            return ""
         from src.site_fit import province_at
-        return province_at(*self._site[:2])
+        return province_at(*self._site[:2]) if self._site else ""
 
     def _follow_province(self, before: str) -> None:
         """Native and the row badge name the pin's province (F200, V3.05)."""
-        now = self.province()
-        shown = now or "AB"
-        self.delegate.province = shown
-        self.model.province = shown
-        btn = self.chips.get("native_only")
-        if btn is not None:
-            btn.setToolTip(wrapped(pf.native_tip(shown)))
-            btn.setAccessibleDescription(pf.native_tip(shown))
-        if now != before and self._criteria.get("native_only"):
+        shown = self.province() or "AB"
+        self.delegate.province = self.model.province = shown
+        self.quality_chips.describe("native_only", pf.native_tip(shown))
+        if self.province() != before and self._criteria.get("native_only"):
             self.refresh()
         else:
             self.view.viewport().update()

@@ -1844,6 +1844,8 @@ EXAMPLE_POLYCULTURES = [
             ('White Geranium', 'pollinator', -2.1, 0.0),
             ('Sweet-scented Bedstraw', 'groundcover', -0.8, -1.3),
             ('Wild Vetch', 'vine', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Tall Anemone (Thimbleweed)', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2041,6 +2043,8 @@ EXAMPLE_POLYCULTURES = [
             ('Many-flowered Aster (Tufted White Prairie Aster)', 'pollinator', -2.1, 0.0),
             ('Western Meadow Aster', 'pollinator', -0.8, -1.3),
             ('Prairie Thistle', 'pollinator', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Stiff Sunflower (Rhombic-leaved Sunflower)', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2222,6 +2226,8 @@ EXAMPLE_POLYCULTURES = [
             ('Little-leaved Alumroot', 'pollinator', -2.1, 0.0),
             ('Showy Pussytoes', 'pollinator', -0.8, -1.3),
             ('Roseroot', 'herbaceous', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Round-leaved Alumroot', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2240,6 +2246,8 @@ EXAMPLE_POLYCULTURES = [
             ('Hairy Arnica', 'pollinator', -1.5, -1.5),
             ('Desert Shooting Star', 'pollinator', -0.0, -1.5),
             ('Western Mountain Ash', 'shrub_layer', 1.5, -1.5),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('False Box (Mountain Boxwood)', 'shrub_layer', 0.6, -2.9),
         ],
     },
     {
@@ -2308,6 +2316,8 @@ EXAMPLE_POLYCULTURES = [
             ('Greater Northern Aster', 'pollinator', -2.1, 0.0),
             ('Yellow Monkey Flower', 'pollinator', -0.8, -1.3),
             ('Square-stem Monkeyflower', 'pollinator', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Flat-topped White Aster', 'pollinator', -2.2, 1.5),
         ],
     },
     {

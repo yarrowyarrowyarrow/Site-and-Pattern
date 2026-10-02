@@ -841,6 +841,8 @@ class TestMainWindowSmoke(unittest.TestCase):
         win._presentation_still = ("a pixmap", "old")
         win._before_after = (["panels"], "old")
         win._modified = False
+        # The window is the class's: give the next test its title back.
+        self.addCleanup(win.setWindowTitle, win.windowTitle())
         with mock.patch("src.app.QInputDialog.getText",
                         return_value=("Test yard", True)):
             win._on_new()

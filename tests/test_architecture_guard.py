@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2490 now (V3.03)
+        (_SRC / "app.py", 2600),                       # 2503 now (V3.05)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -102,9 +102,9 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "controllers" / "map_events.py", 2100),# 1904 now (V3.03)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
-        (_SRC / "polyculture_panel.py", 2900),         # 2467 now (V3.03)
-        (_SRC / "site_panel.py", 2700),                # 2362 now (V3.03)
-        (_SRC / "analysis_panel.py", 2450),            # 2422 now — 28 LEFT
+        (_SRC / "polyculture_panel.py", 2900),         # 2569 now (V3.05)
+        (_SRC / "site_panel.py", 2700),                # 2371 now (V3.05)
+        (_SRC / "analysis_panel.py", 2450),            # 2428 now — 22 LEFT
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
         # ceilings rather than living in the panel that shows them.
         (_SRC / "confidence.py", 400),                 # 298 now
@@ -124,11 +124,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # result, raised 450 -> 520 as one cohesive Qt-free table; the picker
         # passed its own ceiling and the chips and the empty state went to
         # src/filter_status.py instead, and its copy of src/flow_layout.py's
-        # FlowLayout was deleted.
-        (_SRC / "plant_filters.py", 520),              # 489 now
-        (_SRC / "plant_picker.py", 560),               # 554 now: the order
+        # FlowLayout was deleted. V3.05 (F200): Native began naming the pin's
+        # province, the picker passed 560 again, and its quality toggles went
+        # to filter_status.QualityChips, as the chips had.
+        (_SRC / "plant_filters.py", 520),              # 520 now (V3.05): full
+        (_SRC / "plant_picker.py", 560),               # 545 now (V3.05): the order
         # block (set_site to _reorder, about 60 lines) is the next to go.
-        (_SRC / "filter_status.py", 300),              # 241 now
+        (_SRC / "filter_status.py", 300),              # 292 now (V3.05)
         # V3.02 (F195), opted in on arrival: the ring that follows keyboard
         # focus, and the one table of keys the window and Help both read.
         (_SRC / "focus_ring.py", 200),                 # 180 now
@@ -139,8 +141,8 @@ class TestStructuralCeilings(unittest.TestCase):
         # drawn where it can be seen.
         (_SRC / "target_size.py", 160),                # 127 now
         (_SRC / "indicator_style.py", 180),            # 134 now
-        (_SRC / "species_page.py", 720),               # 645 now
-        (_SRC / "species_flyout.py", 200),             # 136 now
+        (_SRC / "species_page.py", 720),               # 653 now
+        (_SRC / "species_flyout.py", 200),             # 168 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
         # arrival, the V2.41 precedent. What does NOT live in the renderer any
         # more is the stylesheet and the browse script, which were Python
@@ -357,7 +359,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # hand-rolls the toolbar the V2.44 extraction was meant to share (the
         # note at the import explains why that swap was deferred), so the
         # ceiling is set where it is to make the next growth pay for it.
-        (_SRC / "scene3d_window.py", 950),             # 911 now
+        (_SRC / "scene3d_window.py", 950),             # 950 now (V3.05): split before adding
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # 238 now (V3.03)
