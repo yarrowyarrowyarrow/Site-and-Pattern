@@ -89,6 +89,35 @@ def _building_anchors(project: dict) -> list:
     return out
 
 
+def import_tree_result(main, payload, *, boundary, margin, area_note) -> dict:
+    """Add a tree worker's result to the design: the canopy-height map's, or
+    the satellite photo's with the satellite-alignment correction. Shared with
+    *Scan this area* (``src/features_scan_flow.py``, V3.10)."""
+    mode = (payload or {}).get("mode")
+    res = (payload or {}).get("res")
+    if mode == "chm":
+        return tree_detect_chm.import_chm_result(
+            res, main._project, boundary=boundary, margin_m=margin,
+            area_note=area_note)
+    # RGB fallback: needs the satellite-alignment correction (its positions are
+    # read off the displayed basemap, not true coords).
+    east, north = main.site_panel.satellite_offset()
+    out = tree_detect.import_detected_trees(
+        res, main._project, boundary=boundary, margin_m=margin,
+        offset_east_m=east, offset_north_m=north, area_note=area_note)
+    if res is None:
+        out["message"] = (
+            "Couldn't get tree data — the canopy-height map and the satellite "
+            "imagery were both unreachable (offline, or this build lacks the "
+            "'rasterio' package for height data). Nothing was imported; mark "
+            "trees by hand below.")
+    else:
+        out["message"] = ("Couldn't reach the canopy-height map, so read the "
+                          "satellite photo instead (less reliable). "
+                          + out["message"])
+    return out
+
+
 def detect_trees_for_site(main) -> None:
     """Detect existing trees over the drawn boundary (or ≈60 m around the pin)
     off-thread and import them as ``existing_tree`` shade casters. Tries the
@@ -119,34 +148,12 @@ def detect_trees_for_site(main) -> None:
     main._tree_detect_worker = worker
 
     def _apply(payload):
-        mode = (payload or {}).get("mode")
-        res = (payload or {}).get("res")
         persistence = getattr(main, "_persistence", None)
         cm = (persistence.checkpoint("detect trees") if persistence is not None
               else nullcontext())
         with cm:
-            if mode == "chm":
-                out = tree_detect_chm.import_chm_result(
-                    res, main._project, boundary=boundary, margin_m=margin,
-                    area_note=area_note)
-            else:
-                # RGB fallback: needs the satellite-alignment correction (its
-                # positions are read off the displayed basemap, not true coords).
-                east, north = main.site_panel.satellite_offset()
-                out = tree_detect.import_detected_trees(
-                    res, main._project, boundary=boundary, margin_m=margin,
-                    offset_east_m=east, offset_north_m=north,
-                    area_note=area_note)
-                if res is None:
-                    out["message"] = (
-                        "Couldn't get tree data — the canopy-height map and "
-                        "the satellite imagery were both unreachable (offline, "
-                        "or this build lacks the 'rasterio' package for height "
-                        "data). Nothing was imported; mark trees by hand below.")
-                else:
-                    out["message"] = ("Couldn't reach the canopy-height map, "
-                                      "so read the satellite photo instead "
-                                      "(less reliable). " + out["message"])
+            out = import_tree_result(main, payload, boundary=boundary,
+                                     margin=margin, area_note=area_note)
         if out["added"]:
             main._mark_modified()
             main._map_events._reload_existing_features()

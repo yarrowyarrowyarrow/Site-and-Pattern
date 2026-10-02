@@ -831,6 +831,9 @@ class MainWindow(QMainWindow):
         from src import tree_detect_flow
         self.site_panel.tree_detect_requested.connect(
             lambda: tree_detect_flow.detect_trees_for_site(self))
+        from src import features_scan_flow
+        self.site_panel.features_scan_requested.connect(
+            lambda: features_scan_flow.scan_area(self))
         # Wired straight to the controller (MainWindow is at its method ceiling,
         # so no shim) — the building-pack download lives in MapEventRouter.
         self.site_panel.download_buildings_requested.connect(

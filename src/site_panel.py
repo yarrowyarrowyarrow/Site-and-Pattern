@@ -320,6 +320,9 @@ class SitePanel(QWidget):
     # OSM rarely maps individual trees outside cities, so rural/acreage
     # properties get their shade casters from the imagery instead.
     tree_detect_requested = pyqtSignal()
+    # F207 (V3.10): buildings and trees in one scan, then a review
+    # (src/features_scan_flow.py).
+    features_scan_requested = pyqtSignal()
     # Bulk-download a region's building footprints for offline reuse (V1.66).
     download_buildings_requested = pyqtSignal()
 
@@ -1995,10 +1998,20 @@ class SitePanel(QWidget):
         slow_note.setWordWrap(True)
         slow_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(slow_note)
-        # The section's one primary action — the partner of "Show shade".
+        # The section's one primary action since V3.10: both imports below in
+        # one go, as one undo step, then a list to untick what is not there.
+        scan = QPushButton("Scan this area")
+        scan.setStyleSheet(_BTN_PRIMARY)
+        scan.setToolTip(
+            "Buildings from OpenStreetMap (or your offline building pack) and "
+            "trees from the canopy-height map, together, then a list of what "
+            "was found to untick anything that is not really there.")
+        scan.clicked.connect(self.features_scan_requested.emit)
+        v.addWidget(scan)
+
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
         btn = QPushButton("Import Building Outlines")
-        btn.setStyleSheet(_BTN_PRIMARY)
+        btn.setStyleSheet(_BTN_SECONDARY)
         btn.setToolTip(
             "Traces nearby building perimeters — with heights from "
             "OpenStreetMap's height / storey tags where present, otherwise "
@@ -2016,7 +2029,7 @@ class SitePanel(QWidget):
         # import above — this reads crowns off the same satellite photo the
         # map displays, anywhere in the world.
         btn_trees = QPushButton("Import Tree Outlines")
-        btn_trees.setStyleSheet(_BTN_PRIMARY)
+        btn_trees.setStyleSheet(_BTN_SECONDARY)
         btn_trees.setToolTip(
             "Finds individual trees on the property so the shade map has real "
             "casters — OpenStreetMap rarely maps trees outside cities.\n"
