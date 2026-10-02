@@ -59,10 +59,9 @@ DATA_DIR     = PROJECT_ROOT / "data"
 # cleanup backlog stays visible without breaking CI.
 #
 # The split was calibrated against the V1.31 shipped data:
-#   * ``native_to_alberta`` has ``'1?'`` markers — warning, not error.
-#     Five species still carry one, every one recorded in Alberta by VASCAN;
-#     since V3.00 the plant pickers' Native filter reads ``native_provinces``
-#     instead, so the marker no longer hides them.
+#   * ``native_to_alberta`` had ``'1?'`` markers — warning, not error. The
+#     last five, every one recorded in Alberta by VASCAN, were set to 1 in
+#     V3.05 (F199), and the marker is no longer accepted.
 #   * ``permaculture_uses`` carries informal tags like ``overstory`` and
 #     ``food_forest`` that aren't (yet) in ``_USE_DEFINITIONS`` — warning.
 #     Future release can promote them to canonical entries and the
@@ -246,9 +245,11 @@ GROWTH_CURVES     = {"slow_start", "steady", "fast_early"}
 # Calendar status — matches the schema.sql CHECK on planting_calendar.status.
 CALENDAR_STATUS   = {"dormant", "start_indoors", "direct_sow", "transplant",
                      "growing", "harvest", "pruning"}
-# native_to_alberta is documented as 0/1 but the data carries '1?' for
-# uncertain-native records; the pickers read native_provinces (V3.00).
-NATIVE_TO_ALBERTA = {0, 1, "0", "1", "1?", "0?"}
+# native_to_alberta is 0/1. It carried '1?' for uncertain records until V3.05
+# (F199), when the last five, all recorded in Alberta by VASCAN, became 1: a
+# native-only design had been leaving them out. The pickers read
+# native_provinces since V3.00; the generator still reads this flag.
+NATIVE_TO_ALBERTA = {0, 1, "0", "1"}
 
 # Canadian province/territory codes accepted in the native_provinces field
 # (V2.15). The app's coverage is the prairies (AB, SK) with neighbours allowed

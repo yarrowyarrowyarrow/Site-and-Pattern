@@ -487,7 +487,11 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v91 (V2.93): the two prickly pears recorded `growth_form: pads` and the ball
 # cactus `globose` (all three had been `succulent`, which drew them as a mat
 # and a grass-like star), so the viewer draws each by its own body.
-_SCHEMA_VERSION = 91
+# v92 (V3.05): the last five `native_to_alberta: '1?'` rows (False Box,
+# Flat-topped White Aster, Round-leaved Alumroot, Stiff Sunflower, Tall
+# Anemone) set to 1, as VASCAN records every one in Alberta (F199). The
+# generator's native-only filter reads the flag, so it had left them out.
+_SCHEMA_VERSION = 92
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

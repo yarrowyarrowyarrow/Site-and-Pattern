@@ -154,23 +154,27 @@ def zone_words(plant: dict) -> str:
     return ""
 
 
-def native_words(plant: dict) -> str:
-    return ("Native to Alberta" if plant.get("native_to_alberta")
-            else "Not native to Alberta")
+def native_words(plant: dict, province: str = "AB") -> str:
+    """Native or not *where the pin is* (F200, V3.05); Alberta without one."""
+    from src.plant_filters import PROVINCE_NAMES, native_in
+    name = PROVINCE_NAMES.get(province or "AB", "Alberta")
+    return (f"Native to {name}" if native_in(plant, province or "AB")
+            else f"Not native to {name}")
 
 
 def placed_words(placed: int) -> str:
     return f"{placed} in this design" if placed else ""
 
 
-def row_description(plant: dict, placed: int = 0) -> str:
+def row_description(plant: dict, placed: int = 0, province: str = "AB") -> str:
     """What a screen reader is given for a row: "Saskatoon Berry, Amelanchier
     alnifolia. Shrub. Native to Alberta. Hardy in zones 2 to 7. 2 in this
     design." Until V3.00 it was given the common name alone."""
     head = plant.get("common_name") or ""
     if plant.get("scientific_name"):
         head += f", {plant['scientific_name']}"
-    parts = [head, type_words(plant), native_words(plant), zone_words(plant),
+    parts = [head, type_words(plant), native_words(plant, province),
+             zone_words(plant),
              placed_words(placed)]
     return ". ".join(p for p in parts if p) + "."
 
@@ -222,7 +226,8 @@ class PlantListModel(QAbstractListModel):
             return plant.get("common_name", "")
         if role == Qt.ItemDataRole.AccessibleTextRole:
             return row_description(
-                plant, self._placed_counts.get(plant.get("id"), 0))
+                plant, self._placed_counts.get(plant.get("id"), 0),
+                getattr(self, "province", "AB"))
         if role == Qt.ItemDataRole.ToolTipRole:
             return f"{plant.get('common_name','')} ({plant.get('scientific_name','—')})"
         return None
@@ -515,16 +520,18 @@ class PlantRowDelegate(QStyledItemDelegate):
             painter.drawText(lay["zone"], int(Qt.AlignmentFlag.AlignCenter),
                              _zone_badge_text(plant))
 
-        # Native-AB badge: "AB" if native, an en dash otherwise, so it reads
-        # without the colour.
-        is_native = bool(plant.get("native_to_alberta"))
+        # Native badge: the pin's province ("AB" or "SK", F200) if native
+        # there, an en dash otherwise, so it reads without the colour.
+        from src.plant_filters import native_in
+        province = getattr(self, "province", "AB") or "AB"
+        is_native = native_in(plant, province)
         painter.setBrush(QColor(self.AB_NATIVE_BG if is_native else self.AB_OTHER_BG))
         painter.setPen(QPen(QColor("#0d160d"), 0.5))
         painter.drawRoundedRect(lay["native"], 3, 3)
         painter.setPen(QColor(self.AB_NATIVE_FG if is_native else self.AB_OTHER_FG))
         painter.setFont(self._small_font)
         painter.drawText(lay["native"], int(Qt.AlignmentFlag.AlignCenter),
-                         "AB" if is_native else "–")
+                         province if is_native else "–")
         painter.restore()
 
     # Tooltips -----------------------------------------------------------
@@ -537,7 +544,7 @@ class PlantRowDelegate(QStyledItemDelegate):
         if lay["zone"] is not None and lay["zone"].contains(pos):
             return zone_words(plant)
         if lay["native"].contains(pos):
-            return native_words(plant)
+            return native_words(plant, getattr(self, "province", "AB"))
         text = (f"{plant.get('common_name', '')} "
                 f"({plant.get('scientific_name') or '—'})")
         if placed:

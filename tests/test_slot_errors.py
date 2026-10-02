@@ -114,7 +114,8 @@ class TestTheAppLivesThroughIt(unittest.TestCase):
                    SITEANDPATTERN_ALLOW_NETWORK="")
         return subprocess.run(
             [sys.executable, "-c", _CHILD.format(root=_ROOT, install=install)],
-            capture_output=True, text=True, timeout=120, env=env)
+            capture_output=True, text=True, encoding="utf-8", timeout=120,
+            env=env)
 
     def test_without_the_hook_a_raising_button_ends_the_process(self):
         # The premise: if this ever stops being true, the module is moot.

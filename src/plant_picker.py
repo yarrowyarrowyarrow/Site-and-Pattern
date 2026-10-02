@@ -400,12 +400,36 @@ class PlantPicker(QWidget):
         coords = tuple(coords) if coords else None
         if coords == self._site and zone == self._zone:
             return
+        before = self.province()
         self._site, self._zone = coords, zone
+        self._follow_province(before)
         if not self._user_ordered or (self._order == "suits" and not coords):
             self._order = "suits" if coords else (
                 "name" if self._order == "suits" else self._order)
         self._sync_order_combo()
         self._reorder()
+
+    def province(self) -> str:
+        """``"AB"`` or ``"SK"`` for the pin, ``""`` without one (F200)."""
+        if not self._site:
+            return ""
+        from src.site_fit import province_at
+        return province_at(*self._site[:2])
+
+    def _follow_province(self, before: str) -> None:
+        """Native and the row badge name the pin's province (F200, V3.05)."""
+        now = self.province()
+        shown = now or "AB"
+        self.delegate.province = shown
+        self.model.province = shown
+        btn = self.chips.get("native_only")
+        if btn is not None:
+            btn.setToolTip(wrapped(pf.native_tip(shown)))
+            btn.setAccessibleDescription(pf.native_tip(shown))
+        if now != before and self._criteria.get("native_only"):
+            self.refresh()
+        else:
+            self.view.viewport().update()
 
     def set_hint(self, hint: Optional[Callable]):
         """Lift the rows ``hint(row)`` is true for to the top (the builder's
@@ -463,7 +487,7 @@ class PlantPicker(QWidget):
         search_fn = self._search_fn
         if search_fn is None:
             from src.db.plants import search_plants as search_fn
-        kwargs = pf.criteria_to_kwargs(criteria)
+        kwargs = pf.criteria_to_kwargs(criteria, self.province())
         if soil and self._soil_ph is not None:
             kwargs["soil_ph"] = self._soil_ph
         return search_fn(**kwargs)

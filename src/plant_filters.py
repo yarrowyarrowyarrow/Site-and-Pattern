@@ -191,12 +191,40 @@ def facet_params() -> set:
 
 # ── Criteria ─────────────────────────────────────────────────────────────────
 
-def criteria_to_kwargs(criteria: Optional[dict]) -> dict:
+#: The provinces a pin can be in, by the code VASCAN's lists use (F200).
+PROVINCE_NAMES: dict = {"AB": "Alberta", "SK": "Saskatchewan"}
+
+
+def native_in(plant: dict, province: str = "AB") -> bool:
+    """Whether VASCAN records ``plant`` native in ``province``, read off its
+    ``native_provinces`` (every row's since V2.80); a row without them falls
+    back to the Alberta flag, and to nothing elsewhere."""
+    provs = (plant or {}).get("native_provinces")
+    if provs:
+        return (province or "AB") in {p.strip() for p in str(provs).split(",")}
+    return (province or "AB") == "AB" and bool(
+        (plant or {}).get("native_to_alberta"))
+
+
+def native_tip(province: str = "AB") -> str:
+    """The Native filter's tooltip, naming the province it filters to."""
+    name = PROVINCE_NAMES.get(province or "AB", "Alberta")
+    return f"Native to {name}, as VASCAN records it."
+
+
+def criteria_to_kwargs(criteria: Optional[dict], province: str = "") -> dict:
     """Turn ``{facet_key: [values], quality_key: True, "query": "..."}`` into
     ``search_plants`` keyword arguments.
 
     Empty selections are dropped rather than passed as empty lists: "no
     restriction" and "match nothing" are one typo apart downstream.
+
+    ``province`` is where the pin is (F200, V3.05): Native keeps the plants
+    VASCAN records in *that* province. Until V3.05 it was Alberta wherever the
+    pin was, so a Saskatoon yard's list filtered to Alberta's natives while the
+    generator beside it, which has followed the pin since V2.85, used
+    Saskatchewan's. Empty (no pin, or a pin outside the catalogue's provinces)
+    keeps Alberta, as before.
     """
     criteria = criteria or {}
     kwargs: dict = {}
@@ -223,7 +251,8 @@ def criteria_to_kwargs(criteria: Optional[dict]) -> dict:
             kwargs[f.param] = list(chosen)
     for q in QUALITIES:
         if criteria.get(q.key):
-            kwargs[q.param] = q.value
+            kwargs[q.param] = (province if q.key == "native_only"
+                               and province in PROVINCE_NAMES else q.value)
     return kwargs
 
 
