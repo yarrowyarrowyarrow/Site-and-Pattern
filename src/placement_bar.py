@@ -57,6 +57,7 @@ _STYLE = """
 #placementBar QWidget { background-color: transparent; }
 #placementBar QLabel { color: #e8f5e9; font-size: 13px; border: none; }
 #placementBar QLabel#placementStatus { color: #fff3c4; }
+#placementBar QLabel#placementNote { color: #ffe0b2; font-size: 12px; }
 #placementBar QFrame#placementDot {
     background-color: #ffb300; border: none; border-radius: 5px;
 }
@@ -143,6 +144,8 @@ class PlacementBar(QFrame):
     #: Done was pressed. The flow routes it to MainWindow._cancel_draw, the one
     #: cancel path, exactly as Esc does.
     done_requested = pyqtSignal()
+    #: Undo beside the note on where the last placement landed (F198).
+    undo_requested = pyqtSignal()
 
     def __init__(self, parent: QWidget, anchor: QWidget):
         super().__init__(parent)
@@ -180,6 +183,27 @@ class PlacementBar(QFrame):
         self._done.clicked.connect(self.done_requested)
         top.addWidget(self._done, 0, Qt.AlignmentFlag.AlignTop)
         outer.addLayout(top)
+
+        # Where the last placement landed (F198, V3.05): outside the boundary,
+        # inside another plant's circle. Says so and offers Undo; never refuses,
+        # because a groundcover under a shrub is often the design.
+        self._note_row = QWidget()
+        note_line = QHBoxLayout(self._note_row)
+        note_line.setContentsMargins(18, 0, 0, 0)
+        note_line.setSpacing(8)
+        self._note = QLabel("")
+        self._note.setObjectName("placementNote")
+        self._note.setWordWrap(True)
+        note_line.addWidget(self._note, 1)
+        self._undo = QPushButton("Undo")
+        self._undo.setObjectName("placementUndo")
+        self._undo.setAccessibleName("Undo that placement")
+        self._undo.setToolTip("Take the last placement back (Ctrl+Z)")
+        self._undo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._undo.clicked.connect(self.undo_requested)
+        note_line.addWidget(self._undo, 0, Qt.AlignmentFlag.AlignTop)
+        self._note_row.setVisible(False)
+        outer.addWidget(self._note_row)
 
         self._pages_holder = QWidget()
         self._pages_layout = QVBoxLayout(self._pages_holder)
@@ -236,8 +260,22 @@ class PlacementBar(QFrame):
         self.show()
         self.refit()
 
+    def show_note(self, text: str) -> None:
+        """Say where the last placement landed, with Undo; ``""`` clears."""
+        self._note.setText(text)
+        self._note.setAccessibleName(text)
+        self._note_row.setVisible(bool(text))
+        if text:
+            self.setAccessibleDescription(
+                f"{self._status.accessibleName()} {text}")
+        self.refit()
+
+    def note_text(self) -> str:
+        return self._note.text() if self._note_row.isVisibleTo(self) else ""
+
     def hide_bar(self) -> None:
         self._source = ""
+        self.show_note("")
         self.hide()
 
     # ── Geometry ─────────────────────────────────────────────────────────────

@@ -770,6 +770,37 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(seen["still_pixmap"].width(), 64)
         self.assertEqual(seen.get("still_caption"), "Year 5, June")
 
+    def test_the_bar_says_where_a_placement_landed(self):
+        """F198 (V3.05): a row of shrubs came down half outside the yard and on
+        top of other plants, and nothing said so. The bar now says, with Undo;
+        it never refuses. An undo clears it."""
+        from src import placement_bar_flow as flow
+        from src.db.plants import search_plants
+        win = self._win
+        bar = win.placement_bar
+        lat0, lng0 = 53.5, -113.5
+        ring = [[lng0, lat0], [lng0 + 0.0001, lat0], [lng0 + 0.0001, lat0 + 0.0001],
+                [lng0, lat0 + 0.0001], [lng0, lat0]]
+        win._project["features"].append({
+            "type": "Feature", "geometry": {"type": "Polygon",
+                                            "coordinates": [ring]},
+            "properties": {"element_type": "property_boundary"}})
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        shrub = next(p for p in search_plants() if p.get("plant_type") == "shrub")
+        flow.on_armed(win, "plants", {"armed": True, "kind": "single",
+                                      "what": shrub["common_name"]})
+        self.addCleanup(flow.stand_down, win)
+        self.assertEqual(bar.note_text(), "")
+        # Well outside the 7 m square drawn above.
+        win._map_events._on_plant_placed(shrub["id"], shrub["common_name"],
+                                         lat0 + 0.001, lng0 + 0.001)
+        self.assertEqual(bar.note_text(), "It landed outside the boundary.")
+        self.assertTrue(bar._undo.isVisibleTo(bar))
+        bar._undo.click()                                  # the real undo
+        self.assertEqual(len(win._placed_plants), 0)
+        self.assertEqual(bar.note_text(), "")
+
     def test_a_new_design_drops_the_old_designs_renders(self):
         """A still or before/after of the last design must not land in the
         next one's PDF (V3.05)."""

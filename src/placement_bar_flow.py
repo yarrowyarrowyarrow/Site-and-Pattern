@@ -38,6 +38,9 @@ def install(main) -> None:
                  accessory=main.plant_panel.placement_accessory())
     bar.add_page("communities", main.polyculture_panel.placement_controls())
     bar.done_requested.connect(main._cancel_draw)
+    bar.undo_requested.connect(main._do_undo)
+    main.plant_panel.placed_counts_changed.connect(
+        lambda: on_design_changed(main))
     main.plant_panel.armed_changed.connect(
         lambda info: on_armed(main, "plants", info))
     main.polyculture_panel.armedChanged.connect(
@@ -66,6 +69,9 @@ def on_armed(main, source: str, info: dict) -> None:
         headline, instruction = describe(
             source, info.get("kind", "single"), info.get("what", ""),
             qty=int(info.get("qty") or 1), mix=int(info.get("mix") or 0))
+        if not bar.source:                             # F198's baseline
+            main._landing_known = _placed_ids(main)
+            bar.show_note("")
         bar.show_page(source, headline, instruction)
     elif bar.source == source:
         bar.hide_bar()
@@ -102,6 +108,33 @@ def on_map_mode(main, mode: str, seq: int) -> None:
             main.toolbar.reset_draw_buttons()
         except (AttributeError, RuntimeError):
             pass
+
+
+def _placed_ids(main) -> set:
+    return {p.get("feature_id") or id(p)
+            for p in getattr(main, "_placed_plants", []) or []}
+
+
+def on_design_changed(main) -> None:
+    """Plants were added or taken away. While placing, say where the new ones
+    landed (F198, src/landing_check.py); a removal, an undo among them, clears
+    the note, which was about plants that may no longer be there."""
+    bar = getattr(main, "placement_bar", None)
+    if bar is None or not bar.source:          # not placing
+        return
+    from src import landing_check
+    plants = list(getattr(main, "_placed_plants", []) or [])
+    known = getattr(main, "_landing_known", set())
+    new = [p for p in plants if (p.get("feature_id") or id(p)) not in known]
+    old = [p for p in plants if (p.get("feature_id") or id(p)) in known]
+    main._landing_known = _placed_ids(main)
+    if not new:
+        bar.show_note("")
+        return
+    landing = landing_check.check(
+        new, old, landing_check.boundary_rings(main._project),
+        lambda pid: main._plant_info(pid)[0] / 2.0)
+    bar.show_note(landing_check.note(landing))
 
 
 def stand_down(main) -> None:
