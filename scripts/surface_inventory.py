@@ -91,7 +91,8 @@ def _sandbox(font: str) -> None:
     home = tempfile.mkdtemp(prefix="surface_home_")
     cfg = os.path.join(home, ".config")
     os.makedirs(os.path.join(cfg, "fontconfig"))
-    with open(os.path.join(cfg, "fontconfig", "fonts.conf"), "w") as fh:
+    with open(os.path.join(cfg, "fontconfig", "fonts.conf"), "w",
+              encoding="utf-8") as fh:
         fh.write(_FONTS_CONF.format(font=font))
     env = dict(os.environ, HOME=home, XDG_CONFIG_HOME=cfg,
                XDG_DATA_HOME=os.path.join(home, ".local", "share"),
@@ -1120,7 +1121,8 @@ if __name__ == "__main__":
         traceback.print_exc()
         sys.stderr.flush()
         os._exit(2)
-    with open(os.path.join(args.out, "inventory.json"), "w") as fh:
+    with open(os.path.join(args.out, "inventory.json"), "w",
+              encoding="utf-8") as fh:
         json.dump(rep, fh, indent=1, default=str)
     print(summarise(rep), flush=True)
     sys.stdout.flush()
