@@ -965,6 +965,20 @@ class TestMainWindowSmoke(unittest.TestCase):
             share.buttons["Export PDF…"].click()
         pdf.assert_called_once()
 
+    def test_a_community_opens_its_page_and_placing_closes_it(self):
+        """F206 (V3.09): a community chosen in Placement › Communities opens
+        its page in the plant page's frame; arming the map closes it."""
+        from src.db import polycultures
+        win = self._win
+        fly = win.species_flyout
+        self.addCleanup(fly.hide)
+        cid = polycultures.get_all_polycultures(top_level_only=True)[0]["id"]
+        win.polyculture_panel.page_requested.emit(cid)
+        self.assertTrue(fly.showing_community())
+        self.assertEqual(fly.community.shown_id(), cid)
+        win.polyculture_panel.armedChanged.emit({"armed": True})
+        self.assertTrue(fly.isHidden())
+
     def test_the_cost_link_opens_where_the_buy_list_is(self):
         from PyQt6.QtCore import QUrl
         win = self._win

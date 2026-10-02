@@ -158,6 +158,8 @@ Distribution is deterministic and spread-optimised: same-species plants are auto
 
 The **Communities** page beside it (**Placement → Communities**) ships with 18 pre-built communities. The original 8 are food-forest-flavoured (Apple, Saskatoon, Evans Cherry, Bur Oak, Prairie Pollinator Garden, Boreal Shade, Medicinal Herb Circle, Native Berry Hedge). The **10 newer communities** are tuned around Habitat Value Score and forage categories — drop them when the score / forage tabs flag a deficiency:
 
+**A community's page (V3.09).** Click a community in **Placement → Communities** (or move to it with the arrow keys) and its page opens beside the list, over the map, as a plant's does: its name and what it is (*8 plants · Full Sun · Mesic*), **Place this community**, its plants as small photographs, and its description. Click a plant's photograph for that plant's page; **◀ Back to …** above it returns to the community. **✕** or **Esc** closes it, and it closes when you start placing.
+
 - **Keystone Pollinator Mound** — lifts the keystone-species score
 - **Caterpillar Host Garden** — lifts the host-plant score
 - **Songbird Berry Patch** — lifts the bird-food score, staggered berries Jun–Sep

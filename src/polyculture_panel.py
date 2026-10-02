@@ -1001,6 +1001,9 @@ class PolyculturePanel(QWidget):
     # "Save stack as Community" from the Plants tab), so external views
     # can refresh their library lists.
     communityCreated = pyqtSignal()
+    # F206 (V3.09): looking at a community opens its page beside the list
+    # (src/community_page.py, in src/species_flyout.py's frame).
+    page_requested = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1983,6 +1986,16 @@ class PolyculturePanel(QWidget):
         if self._armed and pid is not None and (
                 self._armed_mix or pid != self._armed_community_id):
             self._place_community(pid)
+        elif not self._armed and pid is not None:
+            self.page_requested.emit(int(pid))
+
+    def place_by_id(self, polyculture_id: int) -> None:
+        """Place this community: its page's Place button (F206)."""
+        self._place_community(int(polyculture_id))
+
+    def focus_list(self) -> None:
+        """The keyboard back in the list, when the page it opened closes."""
+        self.polyculture_tree.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _place_community(self, polyculture_id):
         """A Place action named this community: arm the map with it. Its

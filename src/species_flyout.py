@@ -19,7 +19,8 @@ interface reports only the web page, so a child of the view would be invisible
 to a screen reader (measured in V2.98).
 
 ``install`` is a free function, as ``placement_bar_flow.install`` is, so the
-page costs MainWindow no methods (their number is guarded).
+page costs MainWindow no methods (their number is guarded). Since V3.09 the
+frame shows a community too (F206, ``src/community_flyout.py``).
 """
 
 from __future__ import annotations
@@ -98,10 +99,12 @@ class SpeciesFlyout(QFrame):
 
 def install(main) -> None:
     """Build the page over the map and wire it to the Browse tab."""
+    from src import community_flyout
     holder = main.map_widget.parentWidget()
     panel = main.plant_panel
-    fly = SpeciesFlyout(holder, anchor=main.map_widget,
-                        photo_warmer=panel.picker.model.warm_photo)
+    fly = community_flyout.CommunityFlyout(
+        holder, anchor=main.map_widget,
+        photo_warmer=panel.picker.model.warm_photo)
     main.species_flyout = fly
     panel.page_requested.connect(lambda info: _on_page_requested(main, info))
     panel.page_closed.connect(fly.hide)
@@ -121,6 +124,7 @@ def install(main) -> None:
                                           time.monotonic()))
     bridge.plant_marker_clicked.connect(
         lambda _mid, pid, lat, lng: on_plant_clicked(main, pid, lat, lng))
+    community_flyout.wire(main, fly)
 
 
 def _on_page_requested(main, info: dict) -> None:
