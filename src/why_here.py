@@ -18,7 +18,7 @@ and the page then shows none: absent is not "for no reason".
 
 Measured on one generated design with a tree, a vine, a mixed stand and a
 community: 71 of 102 plants carried a reason when only scored cells wrote one,
-107 of 108 once the rules below did, the last being the review's.
+108 of 108 once the rules below did, the design review's addition included.
 """
 
 from __future__ import annotations

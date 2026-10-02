@@ -6,6 +6,15 @@ load-bearing?** Written in V3.05. The owner decides every keep, merge, move and
 retire below; the evidence is here so the decision does not have to be made from
 memory.*
 
+**Where the decisions are recorded.** A page made from this audit, readable on a
+phone, keeps the owner's choice for every page and question below:
+<https://claude.ai/artifact/Q57cbnchvARZBSgiiBojqE> (private to the owner). A
+session reads them with the `ArtifactData` tool, `list` on the collection
+`decisions`: one document per page (its id is the page's path in lower case,
+`analysis-wind`) or question (`q-…`), holding `choice` (keep, merge, move, retire;
+yes, later, no), `note` and `at`. Read them before restructuring anything; the
+table below stays the reasoning, the page holds the answers.
+
 ![Every page of the side panel at 1366 × 768, the worked example open](img/ui/V3.05-every-page.jpg)
 
 ## How it was measured
@@ -42,17 +51,19 @@ prints a summary. The next pass can diff its JSON against this one.
 
 ## The numbers
 
-| | |
-|---|---|
-| Side-panel tabs | **6**, holding **26 pages**, up to **3 levels deep** (Plants › On This Design › Stats) |
-| Controls on those pages | **169**: 66 buttons, 28 checkboxes, 21 number boxes, 19 dropdowns, 16 text fields, 6 sliders, 5 text areas, 7 lists and trees, 1 tool button |
-| Menus | **27** items in File, View and Help |
-| Toolbar | **19** items on two rows above the map; the zoom-sensitivity dropdown does not fit at 1366 and lives behind the » chevron |
-| Windows | **5** from the View menu: 3D Preview (18 controls), Plant Directory (23), Reference ecosystem walk (15), Growth Snapshots (1), 3D Sprite Gallery (4) |
-| Dialogs reached | **7**: the start screen, the Learn menu, Generate Design, the community builder, the creature picker, Send Feedback, Where This Data Came From |
-| Words on the 26 pages | **1,816**, of which **1,252 are in paragraphs of 15 words or more**, on **20 of the 26 pages** |
-| Pages that scroll at 1366 × 768 | **6**: Analysis › Habitat (2.3 screens), Site › Site Info (1.9), Site › Field Notes (1.9), Slope, Features and Wind (1.1 each). 24 controls start below the fold |
-| Buttons clicked | **106**: 1 crashed the app, 0 were dead, 28 showed no change, each explained below |
+The same probe, run on V3.04's code before anything here changed, and on V3.05's.
+
+| | Before (V3.04) | After (V3.05) |
+|---|---|---|
+| Side-panel tabs | **6**, holding **26 pages**, up to **3 levels deep** (Plants › On This Design › Stats) | the same |
+| Controls on those pages | **169**: 66 buttons, 28 checkboxes, 21 number boxes, 19 dropdowns, 16 text fields, 6 sliders, 5 text areas, 7 lists and trees, 1 tool button | **165**: five *Calculate* and *Show* buttons gone (finding 1), *Print this sheet…* added (F32) |
+| Menus | **27** items in File, View and Help | the same |
+| Toolbar | **19** items on two rows above the map; the zoom-sensitivity dropdown does not fit at 1366 and lives behind the » chevron | the same |
+| Windows | **5** from the View menu: 3D Preview (18 controls), Plant Directory (23), Reference ecosystem walk (15), Growth Snapshots (1), 3D Sprite Gallery (4) | the same |
+| Dialogs reached | **7**: the start screen, the Learn menu, Generate Design, the community builder, the creature picker, Send Feedback, Where This Data Came From | the same; the creature picker and Generate Design each gained a find box |
+| Words on the 26 pages | **1,816**, of which **1,252 are in paragraphs of 15 words or more**, on **20 of the 26 pages** | **2,127**, 1,559 in paragraphs, on the same 20 pages. Not more instruction: the five pages that opened on an empty box now show their result |
+| Pages that scroll at 1366 × 768 | **6**: Analysis › Habitat (2.3 screens), Site › Site Info (1.9), Site › Field Notes (1.9), Slope, Features and Wind (1.1 each). 24 controls start below the fold | the same 6; Habitat is 2.8 screens now that it is filled |
+| Buttons clicked | **106**: 1 crashed the app, 0 were dead, 28 showed no change, each explained below | **102**: **0 crashed**, 0 dead, 28 no change (the same 28) |
 
 ## What the click pass found
 
@@ -386,7 +397,9 @@ And the leftovers from picking and placing (V2.98 to V3.04) and the take-it-outs
 document, bundled into the same release:
 
 10. **F19**: a plant clicked on the map opens its page, and a generated plant's
-    page starts with why it is there.
+    page starts with why it is there: the chosen cell's score in words, or the
+    rule that placed it (a vine at its host's foot, a mixed stand, a community,
+    the design review, the pond).
 11. **F32**: Field Notes prints as a sheet to carry outside, alone or as the first
     job in the design PDF.
 12. **F123**: a presentation still rendered in the 3D preview goes into the PDF.

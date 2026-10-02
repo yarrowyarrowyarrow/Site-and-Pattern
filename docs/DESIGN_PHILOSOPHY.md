@@ -166,6 +166,10 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > first surface in the app that treats the data as something to *read* rather than something to
 > place, and it made thirteen filters pressable that had worked for years with no control
 > attached to them.
+> Since V3.05 a generated design explains itself: a click on a placed plant opens its page, led by
+> why the generator put it there, in the terms of the score that chose the spot or the rule that
+> placed it (`src/why_here.py`, roadmap F19). Until then the generator's reasoning was computed
+> for every cell and thrown away.
 > **State: strong** — site forces, seasonality, the real site, winter snow microsites, a single
 > bee's world, the food web itself, active recall, a guided course, a presentable tour and now the
 > catalogue as a reference work are all made visible. What is *not* yet visible is the thing the
@@ -329,8 +333,11 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > the maintenance cadence — assembled in the order the work happens
 > (`src/planting_plan_export.py`). The drawing is deliberately *not* the satellite capture: a
 > screenshot is unusable in a yard with a tape measure, and a keyed plan at a stated scale is what
-> you can lay out from. The remaining reach: pinning individual observations to map points and
-> feeding them back into generation as soft constraints (the "pinned" slice of F6).
+> you can lay out from. V3.05 printed the walk itself: Field Notes' ten questions on one page with
+> room to write (`src/field_sheet_flow.py`, roadmap F32), alone or as the design PDF's first job,
+> so the questions only the ground can answer no longer need a laptop carried into the yard. The
+> remaining reach: pinning individual observations to map points and feeding them back into
+> generation as soft constraints (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 
