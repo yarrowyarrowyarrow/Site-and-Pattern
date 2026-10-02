@@ -2168,6 +2168,8 @@ class MainWindow(QMainWindow):
                 sd = props.get("struct_def", {})
                 structs.append(sd)
         self.planning_panel.set_structures(structs)
+        from src.design_inputs import boundary_area_m2
+        self.planning_panel.set_site_area(boundary_area_m2(self._project))
 
         # Map notes (Draw → 📝 Note) mirrored into Planning → Notes so the
         # journal and the on-map observations read as one record (V2.25).

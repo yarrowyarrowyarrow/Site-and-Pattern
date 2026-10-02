@@ -69,6 +69,11 @@ def main():
 
     # One ring that follows keyboard focus in every window, the start screen
     # included (F195, V3.02): the panels' own stylesheets remove Qt's.
+    # V3.05: an exception escaping a button's code is logged and reported,
+    # not the end of the session (PyQt6 aborts on one otherwise).
+    from src import slot_errors
+    slot_errors.install()
+
     from src import focus_ring
     focus_ring.install(app)
     # And every control at least 24 px across, and every checkbox's box

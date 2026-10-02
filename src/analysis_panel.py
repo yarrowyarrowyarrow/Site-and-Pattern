@@ -126,6 +126,12 @@ class AnalysisPanel(QWidget):
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
+        # V3.05: the score fills itself when its page is on screen and the
+        # design changes; it had a Calculate button over an empty box, and a
+        # result that went stale with the next edit (src/live_refresh.py).
+        from src.live_refresh import LiveRefresh
+        self._live = LiveRefresh(self, self._tabs,
+                                 {self._habitat_page: self._calc_habitat_score})
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A1 — Sun Path / Shadow
@@ -889,19 +895,6 @@ class AnalysisPanel(QWidget):
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
-        btn = QPushButton("Calculate Habitat Value")
-        btn.setToolTip(
-            "Score what this design actually provides for wildlife, out of 100,\n"
-            "and list what would raise it. Needs at least one placed plant."
-        )
-        btn.setStyleSheet(
-            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #388e3c; }"
-        )
-        btn.clicked.connect(self._calc_habitat_score)
-        layout.addWidget(btn)
-
         # Big score readout
         self._habitat_score_label = QLabel("—")
         self._habitat_score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1012,8 +1005,7 @@ class AnalysisPanel(QWidget):
 
         self._chickadee_result = QLabel(
             "One clutch of chickadees needs 6,000–9,000 caterpillars to fledge. "
-            "Calculate your Habitat Value Score to see whether your host plants "
-            "could feed a brood.")
+            "Place plants to see whether your host plants could feed a brood.")
         self._chickadee_result.setWordWrap(True)
         self._chickadee_result.setStyleSheet(
             "color: #cfe3f0; font-size: 12px; padding: 8px; "
@@ -1065,6 +1057,7 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
+        self._habitat_page = page
         self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -1112,7 +1105,7 @@ class AnalysisPanel(QWidget):
         layout.addWidget(hint)
 
         self._confidence_text = QLabel(
-            "Calculate the Habitat Value Score to fill this in.")
+            "Place plants to fill this in.")
         self._confidence_text.setWordWrap(True)
         self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
         self._confidence_text.setStyleSheet(
@@ -1782,6 +1775,7 @@ class AnalysisPanel(QWidget):
         # both of these change the moment a species is added or removed.
         self._refresh_confidence(self._placed_plants or [],
                                  self._site_ecoregion())
+        self._live.poke()                  # the score follows it too (V3.05)
 
     @staticmethod
     def _layer_lines(result) -> list:
@@ -1836,6 +1830,7 @@ class AnalysisPanel(QWidget):
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
+        self._live.poke()
 
     def set_lawn_conversion(self, summary: dict | None):
         """Store the lawn-conversion summary (from ``lawn_zones.conversion_summary``)
