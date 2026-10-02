@@ -197,9 +197,13 @@ class SpeciesPage(QWidget):
         self._col.addWidget(hint)
         self._col.addStretch()
 
-    def show_plant(self, row: dict, *, placed: int = 0, in_mix: bool = False):
+    def show_plant(self, row: dict, *, placed: int = 0, in_mix: bool = False,
+                   why: Optional[list] = None):
         """Fill the page for ``row`` (a catalogue row; only its id is read
-        here, and it is what Place and Add to mix hand back)."""
+        here, and it is what Place and Add to mix hand back). ``why`` is the
+        generator's reasons for one placed plant's spot (F19), shown first
+        when the page was opened from that plant on the map."""
+        self._why = [w for w in (why or []) if w]
         entry_fn = self._entry_fn
         if entry_fn is None:
             from src.plant_directory import species_entry as entry_fn
@@ -271,6 +275,10 @@ class SpeciesPage(QWidget):
         add = self._col.addWidget
 
         add(self._photo_block(entry))
+        if getattr(self, "_why", None):
+            # F19 (V3.05): why the generator put this one here, read back
+            # from the score that chose the spot.
+            self._section("Why here", ". ".join(self._why) + ".")
         if entry.get("badges"):
             self._section("Why it matters", " · ".join(entry["badges"]))
         if entry.get("roles"):

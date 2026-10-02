@@ -271,6 +271,49 @@ def score_cell_for_plant(plant: dict, cell: CellEnv) -> float:
         0.35 * shade_s + 0.35 * moist_s + 0.15 * slope_s + 0.15 * edge_s))
 
 
+#: Said when the generator had no terrain or shade for the site: the plant was
+#: spread through the space, and nothing about the ground chose its spot.
+NO_SITE_DATA_WHY = ("Spread to fill the space; there was no terrain or shade "
+                    "data for this site to match it to")
+
+
+def explain_cell_for_plant(plant: dict, cell: CellEnv) -> list:
+    """Why this cell, in words (F19, V3.05): the score above, read back.
+
+    The light and the ground are always named, as they are what the score
+    weighs most (35% each); each says whether it suits the plant or was the
+    best left, so a compromise reads as one (P9). The slope and the edge are
+    named only when they counted for the plant."""
+    sun_tokens = condition_tokens(plant.get("sun_requirement")) or [""]
+    water_tokens = condition_tokens(plant.get("water_needs")) or [""]
+    shade_s = max(_shade_match(s, cell.shade_fraction) for s in sun_tokens)
+    moist_s = max(_moisture_match(w, cell) for w in water_tokens)
+
+    light = ("full sun" if cell.shade_fraction < 0.2
+             else "part shade" if cell.shade_fraction <= 0.55 else "shade")
+    ground = ("low, moister ground" if cell.elevation_pct < 0.33
+              else "higher, drier ground" if cell.elevation_pct > 0.66
+              else "middle ground")
+
+    def judged(what: str, fit: float) -> str:
+        if fit >= 0.7:
+            return f"{what}, as it likes"
+        if fit >= 0.4:
+            return f"{what}, which it tolerates"
+        return f"{what}, not its best: the closest fit left"
+
+    out = [judged(light.capitalize(), shade_s), judged(ground.capitalize(),
+                                                       moist_s)]
+    plant_type = (plant.get("plant_type") or "").lower()
+    if cell.slope_pct >= 8 and _slope_suitability(plant_type,
+                                                  cell.slope_pct) >= 0.7:
+        out.append("On the slope, which suits a " + (plant_type or "plant"))
+    if cell.is_edge and _edge_preference(plant.get("_uses") or set(),
+                                         True) > 0.6:
+        out.append("At the yard's edge, where it screens and shelters")
+    return out
+
+
 # ── Aesthetic composition scoring (V1.62) ────────────────────────────────────
 #
 # Ecology decides whether a plant THRIVES in a cell; these terms decide

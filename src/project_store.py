@@ -57,6 +57,10 @@ _OPTIONAL_FIELDS = (
     # needs no schema bump. Absent on everything made before V2.44, which is
     # exactly what keeps those designs rendering unchanged.
     "planted_year",
+    # V3.05 (F19): the reasons the generator chose this plant's spot, in
+    # words, shown on its page when it is clicked on the map. Project data:
+    # a hand-placed plant has none, and an empty list is not written.
+    "why_here",
 )
 
 
@@ -223,7 +227,8 @@ class ProjectStore:
                   pattern_kind: str = "",
                   quantity: int = 1,
                   feature_id: str = "",
-                  planted_year=None) -> dict:
+                  planted_year=None,
+                  why_here=None) -> dict:
         """Append one placed plant to both structures. Returns the index
         record (callers feed it to the map widget / panels).
 
@@ -255,6 +260,8 @@ class ProjectStore:
             record["polyculture_center_lng"] = polyculture_center_lng
         if placement_group_id:
             record["placement_group_id"] = placement_group_id
+        if why_here:
+            record["why_here"] = list(why_here)
         self._placed.append(record)
         self.features.append(
             plant_feature(record, pattern_kind=pattern_kind,

@@ -1618,6 +1618,14 @@ class ScoredPositioner:
             # Keep fallback in sync so remaining count stays accurate.
             self._fallback._used.add(best_cell)
             self._note_spread(best_cell)
+            # Why this cell, for the plant's page (F19, V3.05).
+            from src.placement_score import explain_cell_for_plant
+            env = self._env_map.get(best_cell)
+            self.last_why = (explain_cell_for_plant(plant, env)
+                             if env is not None and plant else [])
+            if plant and self._bonus_cells.get(best_cell, 0.0) > 0:
+                self.last_why.append("Under a tree's drip line, where "
+                                     "understory does best")
             return best_cell
         return None
 
@@ -1630,6 +1638,25 @@ class ScoredPositioner:
     def clear_bonus(self) -> None:
         """Clear temporary drip-line bonuses."""
         self._bonus_cells.clear()
+
+
+from src.placement_score import NO_SITE_DATA_WHY  # noqa: E402
+
+
+def _stamp_why(project, n: int, why) -> None:
+    """Write ``why`` onto the last ``n`` plant features placed (one group):
+    the reasons the generator chose the spot, which the plant's page shows
+    when it is clicked on the map (F19, V3.05). Empty reasons write nothing."""
+    if not why or n <= 0:
+        return
+    try:
+        features = project.as_dict()["features"]
+    except (AttributeError, KeyError, TypeError):
+        return
+    for f in features[-n:]:
+        props = f.get("properties", {})
+        if props.get("element_type") == "plant":
+            props["why_here"] = list(why)
 
 
 def _apply_dripline_bonus(positioner: ScoredPositioner,
@@ -2167,6 +2194,10 @@ def _place_within_boundary(project, plant_items, community_groups,
             positions = [anchor]
         for la, ln in positions:
             project.place_plant(plant_id, la, ln, quantity=1)
+        _stamp_why(project, len(positions),
+                   getattr(positioner, "last_why", None)
+                   if getattr(positioner, "_env_map", None) is not None
+                   else [NO_SITE_DATA_WHY])
         # Reserve the group's footprint so later groups don't reuse those cells.
         positioner.reserve_near(positions, spacing)
         if holds_vines(plant_row):             # a tree or shrub with a crown

@@ -801,6 +801,38 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(len(win._placed_plants), 0)
         self.assertEqual(bar.note_text(), "")
 
+    def test_a_plant_on_the_map_opens_its_page_with_why_here(self):
+        """F19 (V3.05): clicking a placed plant showed nothing about it. It
+        opens the plant's page now, led by why the generator put it there;
+        not while placing, when the list is a palette (V2.99)."""
+        from PyQt6.QtWidgets import QLabel
+        from src.db.plants import search_plants
+        from src.project_store import store_for
+        win = self._win
+        fly = win.species_flyout
+        self.addCleanup(fly.hide)
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(lambda: win._placed_plants.clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        row = search_plants()[0]
+        store_for(win).add_plant(row["id"], row["common_name"], 53.5, -113.5,
+                                 why_here=["Full sun, as it likes"])
+
+        def page_says():
+            return " ".join(l.text() for l in fly.page.findChildren(QLabel))
+
+        win._current_mode = "plant"
+        self.addCleanup(setattr, win, "_current_mode", "none")
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertNotIn("Why here", page_says())
+        win._current_mode = "none"
+        win._plant_moved_at = -9.0
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertIn("Why here", page_says())
+        self.assertIn("Full sun, as it likes.", page_says())
+
     def test_a_new_design_drops_the_old_designs_renders(self):
         """A still or before/after of the last design must not land in the
         next one's PDF (V3.05)."""

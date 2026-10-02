@@ -63,8 +63,8 @@ class SpeciesFlyout(QFrame):
         parent.installEventFilter(self)
 
     def show_plant(self, row: dict, *, placed: int = 0, in_mix: bool = False,
-                   focus: bool = False):
-        self.page.show_plant(row, placed=placed, in_mix=in_mix)
+                   focus: bool = False, why=None):
+        self.page.show_plant(row, placed=placed, in_mix=in_mix, why=why)
         self.show()
         self.refit()
         if focus:
@@ -110,6 +110,17 @@ def install(main) -> None:
     fly.page.mix_requested.connect(panel.add_to_mix)
     # The list fetches photos on a worker thread; the page asked for this one.
     panel.picker.model.imageReady.connect(fly.page.refresh_photo)
+    # A plant on the map opens its page too (F19, V3.05): until now a click
+    # on a placed plant showed nothing about it, in a window whose whole
+    # argument is what each plant is for. A drag ends in a click as well, so a
+    # click straight after a move is not a request to read.
+    import time
+    bridge = main.map_widget.bridge
+    for moved in (bridge.plant_moved, bridge.plant_group_moved):
+        moved.connect(lambda *_a: setattr(main, "_plant_moved_at",
+                                          time.monotonic()))
+    bridge.plant_marker_clicked.connect(
+        lambda _mid, pid, lat, lng: on_plant_clicked(main, pid, lat, lng))
 
 
 def _on_page_requested(main, info: dict) -> None:
@@ -119,6 +130,27 @@ def _on_page_requested(main, info: dict) -> None:
     fly.show_plant(info.get("plant") or {}, placed=int(info.get("placed") or 0),
                    in_mix=bool(info.get("in_mix")),
                    focus=bool(info.get("focus")))
+
+
+def on_plant_clicked(main, plant_id: int, lat: float, lng: float) -> bool:
+    """Open the page of the plant clicked on the map, with why it is there
+    when the generator said (``why_here``). Not while placing, when the list
+    is a palette and no page opens (V2.99), and not at the end of a drag.
+    Returns whether a page opened."""
+    import time
+    from src.placement_bar_flow import PLACING_MODES
+    fly = getattr(main, "species_flyout", None)
+    if fly is None or getattr(main, "_current_mode", "none") in PLACING_MODES:
+        return False
+    if time.monotonic() - getattr(main, "_plant_moved_at", -9.0) < 0.6:
+        return False
+    plants = getattr(main, "_placed_plants", []) or []
+    here = next((p for p in plants if p.get("plant_id") == plant_id
+                 and abs(p.get("lat", 0) - lat) < 1e-6
+                 and abs(p.get("lng", 0) - lng) < 1e-6), {})
+    placed = sum(1 for p in plants if p.get("plant_id") == plant_id)
+    fly.show_plant({"id": plant_id}, placed=placed, why=here.get("why_here"))
+    return True
 
 
 def _on_close(main) -> None:
