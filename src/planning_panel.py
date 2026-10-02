@@ -97,7 +97,10 @@ class PlanningPanel(QWidget):
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
         self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        self._tabs.setStyleSheet(inner_tab_stylesheet())
+        # The Analysis strip's tighter padding: at 4px 10px six labels need
+        # more than the panel's width and "Timeline" was cut off (V3.05).
+        self._tabs.setStyleSheet(inner_tab_stylesheet()
+                                 + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_maintenance_tab()
         self._build_wildlife_forage_tab()

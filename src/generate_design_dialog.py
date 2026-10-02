@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout,
-    QLabel, QListWidget, QListWidgetItem, QPlainTextEdit, QSpinBox,
-    QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+    QPlainTextEdit, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from src.design_goals import GOALS
@@ -33,7 +33,15 @@ class GenerateDesignDialog(QDialog):
         preselected = set(preselected or [])
         self._fauna_list: QListWidget | None = None  # set below if options given
 
-        layout = QVBoxLayout(self)
+        # V3.05: the goals and options scroll, the buttons stay put. The dialog
+        # was 769 px tall, a whole 1366 x 768 screen and more, so on the most
+        # common laptop Generate and Cancel sat below the bottom edge (the
+        # surface audit measured it). ``outer`` holds the scroll and the
+        # buttons; everything else is built into ``layout`` as before.
+        outer = QVBoxLayout(self)
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 6, 0)
 
         intro = QLabel(
             "<b>Generate a starting design</b><br>"
@@ -74,6 +82,14 @@ class GenerateDesignDialog(QDialog):
                           "that feed or host them.")
             hint.setWordWrap(True)
             fauna_layout.addWidget(hint)
+            # Hundreds of animals: typing finds one (the Monarch was entry
+            # 446 of a list nobody could search; F196 names the same list).
+            self._fauna_find = QLineEdit()
+            self._fauna_find.setPlaceholderText("Find an animal…")
+            self._fauna_find.setAccessibleName("Find an animal in the list")
+            self._fauna_find.setClearButtonEnabled(True)
+            self._fauna_find.textChanged.connect(self._filter_fauna)
+            fauna_layout.addWidget(self._fauna_find)
             self._fauna_list = QListWidget()
             self._fauna_list.setMaximumHeight(140)
             _taxon_label = {"lepidoptera": "butterfly/moth", "bird": "bird",
@@ -164,7 +180,15 @@ class GenerateDesignDialog(QDialog):
         placement = QLabel(note)
         placement.setWordWrap(True)
         placement.setStyleSheet("color: #90a4ae;")
-        layout.addWidget(placement)
+        layout.addStretch(1)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(body)
+        outer.addWidget(scroll, 1)
+        outer.addWidget(placement)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok |
@@ -176,7 +200,16 @@ class GenerateDesignDialog(QDialog):
         ok_button.setEnabled(has_boundary or has_pin)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        outer.addWidget(buttons)
+        self.resize(self.width(), fitted_height(
+            body.sizeHint().height() + placement.sizeHint().height()
+            + buttons.sizeHint().height() + 48, self))
+
+    def _filter_fauna(self, text: str) -> None:
+        needle = text.strip().lower()
+        for i in range(self._fauna_list.count()):
+            item = self._fauna_list.item(i)
+            item.setHidden(bool(needle) and needle not in item.text().lower())
 
     def match_site(self) -> bool:
         """Whether to derive wet/dry/shaded micro-zones from the terrain and
@@ -211,3 +244,13 @@ class GenerateDesignDialog(QDialog):
         """Total plant budget in CAD, or ``None`` for no limit (value 0)."""
         v = self._budget.value()
         return float(v) if v > 0 else None
+
+
+def fitted_height(wanted: int, widget: QWidget | None = None) -> int:
+    """``wanted``, or the height of the screen the dialog opens on less room
+    for a title bar and a margin, whichever is smaller."""
+    screen = (widget.screen() if widget is not None else None) \
+        or QApplication.primaryScreen()
+    if screen is None:
+        return wanted
+    return max(320, min(wanted, screen.availableGeometry().height() - 72))

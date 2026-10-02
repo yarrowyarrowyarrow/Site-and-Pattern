@@ -320,11 +320,13 @@ class Scene3DWindow(QWidget):
         bar.addSpacing(16)
         bar.addWidget(QLabel("Detail:"))
         bar.addWidget(self._detail)
-        bar.addWidget(reset_view)
-        bar.addWidget(refresh)
-        bar.addWidget(self._bake_btn)
-        bar.addWidget(self._still_btn)
-        bar.addWidget(self._ba_btn)
+        # V3.05: this row is *when*, and only that. It also held Reset view,
+        # Refresh and the three outputs, and at the 1148 px the window opens at
+        # on a 1366 x 768 screen those squeezed Year, Time of year and Time of
+        # day to 15 px each: a handle that looked like a checkbox, on the
+        # controls that watch the design grow (the surface audit measured it).
+        for slider in (self._year, self._month, self._hour):
+            slider.setMinimumWidth(110)
 
         # Row 2 — how you move through the scene first, then whose eyes you
         # borrow. The old order led with "Creature: [combo]", so the strip
@@ -358,6 +360,9 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
+        for btn in (reset_view, refresh, self._bake_btn, self._still_btn,
+                    self._ba_btn):
+            bar3.addWidget(btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)

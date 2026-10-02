@@ -338,7 +338,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 15.0 - (getattr(score, "score_keystone", 0.0) or 0.0)
         add(head, f"Only {n_key} keystone species so far — these carry the most "
                   "of the food web; a few more add up to "
-                  f"+{int(round(head))} pts (filter Plants → Use → Keystone).")
+                  f"+{int(round(head))} pts (Plants → Browse → Filters → "
+                  "Role: Keystone Species).")
 
     # Larval-host plants (full at 10).
     n_host = len(getattr(score, "host_species", []) or [])
@@ -347,7 +348,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         add(head, f"{n_host} caterpillar-host plant"
                   f"{'s' if n_host != 1 else ''} — hosts make the caterpillars "
                   "most songbirds feed their young; more add up to "
-                  f"+{int(round(head))} pts (Plants → Use → Host Plant).")
+                  f"+{int(round(head))} pts (Plants → Browse → Filters → "
+                  "Role: Larval Host).")
 
     # Bird-food plants (full at 10).
     n_bird = len(getattr(score, "bird_species", []) or [])
@@ -355,7 +357,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 10.0 - (getattr(score, "score_bird", 0.0) or 0.0)
         add(head, f"{n_bird} bird-food plant{'s' if n_bird != 1 else ''} — "
                   "seed and fruit producers extend the design into fall/winter "
-                  f"(up to +{int(round(head))} pts, Plants → Use → Bird Food).")
+                  f"(up to +{int(round(head))} pts, Plants → Browse → "
+                  "Filters → Role: Bird Food).")
 
     # Vegetation layers (3 pts each, up to 5).
     present = set(getattr(score, "layers_present", []) or [])

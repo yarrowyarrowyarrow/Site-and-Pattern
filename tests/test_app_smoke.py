@@ -743,6 +743,75 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertTrue(w.is_ready)
         self.assertGreater(w.receivers(w.loadStarted), 0)
 
+    def test_every_pointer_in_the_words_leads_somewhere(self):
+        """V3.05: the app tells people where to go in its own words, "Analysis
+        → Habitat", and two of those directions had rotted. The worked
+        example's notes sent a new user to "Planning → Planting Plan", which
+        is File → Export Planting Plan…, and the score's tips said "filter
+        Plants → Use → Keystone" two releases after Use became Role (the
+        surface audit found both). Every "A → B" written in the source whose
+        A is a side tab, a menu or a toolbar row must have a B beneath it in
+        this window. Docstrings are left out: they talk about the code."""
+        import ast
+        import re
+        from pathlib import Path
+        from PyQt6.QtWidgets import QTabWidget, QToolBar
+
+        def norm(text):
+            text = (text or "").replace("&&", "\0").replace("&", "")
+            text = re.sub(r"[^\w\0' ]+", " ", text.replace("\0", "&&"))
+            return re.sub(r"\s+", " ", text.replace("&&", "&")).strip().lower()
+
+        win = self._win
+        places: dict = {}
+        tabs = win._side_tabs
+        for i in range(tabs.count()):
+            kids = places.setdefault(norm(tabs.tabText(i)), set())
+            for inner in tabs.widget(i).findChildren(QTabWidget):
+                kids.update(norm(inner.tabText(j)) for j in range(inner.count()))
+        for a in win.menuBar().actions():
+            if a.menu() is not None:
+                places.setdefault(norm(a.text()), set()).update(
+                    norm(b.text()) for b in a.menu().actions() if b.text())
+        for bar in win.findChildren(QToolBar):
+            places.setdefault(norm(bar.windowTitle()), set()).update(
+                norm(a.text()) for a in bar.actions() if a.text())
+        places = {k: {c for c in v if len(c) >= 3} for k, v in places.items()
+                  if k}
+        # Case-sensitive, as the labels are written: "keystone plants →
+        # closing the food web" (a lesson's subtitle) is a sentence, not a
+        # pointer at the Plants tab.
+        heads = "|".join(re.escape(h.title()) for h in sorted(
+            places, key=len, reverse=True))
+        pointer = re.compile(rf"(?<![\w])({heads})\s*(?:→|›)\s*([^→›\n]+)")
+
+        root = Path(__file__).resolve().parent.parent / "src"
+        broken, seen = [], 0
+        for path in sorted(root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            docs = set()
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                     ast.AsyncFunctionDef)) and node.body:
+                    first = node.body[0]
+                    if isinstance(first, ast.Expr) and isinstance(
+                            getattr(first, "value", None), ast.Constant):
+                        docs.add(id(first.value))
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Constant)
+                        and isinstance(node.value, str)) or id(node) in docs:
+                    continue
+                for m in pointer.finditer(node.value):
+                    seen += 1
+                    head, rest = norm(m.group(1)), norm(m.group(2))
+                    if not any(rest.startswith(c) or (len(rest) >= 3
+                                                      and c.startswith(rest))
+                               for c in places[head]):
+                        broken.append(f"{path.relative_to(root.parent)}:"
+                                      f"{node.lineno}: {m.group(0).strip()!r}")
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places that are not there")
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):

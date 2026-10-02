@@ -137,7 +137,7 @@ def first_step(project: dict) -> dict:
     return {"index": len(progress), "total": len(progress), "complete": True,
             "key": "done", "title": "Your design is under way",
             "detail": "Analysis → Habitat scores what it provides; "
-                      "Planning → Planting Plan tells you what to buy "
+                      "File → Export Planting Plan… says what to buy "
                       "and when to plant it."}
 
 
@@ -200,13 +200,13 @@ EXAMPLE_NOTES = (
     "Showy Milkweed) into fall (Canada Goldenrod), and a short grass matrix "
     "along the street edge so it still reads as tended.\n\n"
     "Things worth doing to it:\n"
-    "  • Analysis → Habitat: score it, then tick “Show the "
+    "  • Analysis → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"
     "  • Analysis → Habitat → Pull-a-plant: remove the "
     "milkweed and watch what it costs.\n"
     "  • View → 3D Preview: drag the year slider and watch the "
     "shrubs close over the forbs.\n"
-    "  • Planning → Planting Plan: what to buy, and when to plant it."
+    "  • File → Export Planting Plan…: what to buy, and when to plant it."
 )
 
 

@@ -81,5 +81,59 @@ class TestGenerateDialogFaunaPicker(unittest.TestCase):
         dlg.deleteLater()
 
 
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestTheDialogFitsALaptop(unittest.TestCase):
+    """V3.05: the dialog was 769 px tall, taller than a 1366 x 768 screen,
+    so Generate and Cancel sat below its bottom edge (the surface audit)."""
+
+    _app = None
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def _many(self, n=720):
+        return [{"id": i, "common_name": f"Animal {i}", "taxon": "bee",
+                 "icon": "🐝"} for i in range(1, n)] + [
+            {"id": 9999, "common_name": "Monarch", "taxon": "lepidoptera",
+             "icon": "🦋"}]
+
+    def _make(self):
+        from src.generate_design_dialog import GenerateDesignDialog
+        return GenerateDesignDialog(has_boundary=True, has_pin=True,
+                                    fauna_options=self._many())
+
+    def test_it_is_never_taller_than_the_screen(self):
+        dlg = self._make()
+        avail = dlg.screen().availableGeometry().height()
+        self.assertLessEqual(dlg.height(), avail - 72)
+        dlg.deleteLater()
+
+    def test_the_buttons_are_outside_the_scroll(self):
+        from PyQt6.QtWidgets import QDialogButtonBox, QScrollArea
+        dlg = self._make()
+        scroll = dlg.findChild(QScrollArea)
+        buttons = dlg.findChild(QDialogButtonBox)
+        self.assertIsNotNone(scroll)
+        self.assertFalse(scroll.isAncestorOf(buttons),
+                         "Generate would scroll out of sight with the goals")
+        dlg.deleteLater()
+
+    def test_typing_finds_an_animal(self):
+        dlg = self._make()
+        dlg._fauna_find.setText("monarch")
+        shown = [dlg._fauna_list.item(i).text()
+                 for i in range(dlg._fauna_list.count())
+                 if not dlg._fauna_list.item(i).isHidden()]
+        self.assertEqual(len(shown), 1)
+        self.assertIn("Monarch", shown[0])
+        dlg._fauna_find.setText("")
+        hidden = sum(dlg._fauna_list.item(i).isHidden()
+                     for i in range(dlg._fauna_list.count()))
+        self.assertEqual(hidden, 0)
+        dlg.deleteLater()
+
+
 if __name__ == "__main__":
     unittest.main()
