@@ -1,0 +1,381 @@
+# Every surface, counted
+
+*The retirement pass that F94 (a task-shaped home) and F89 (the 3D preview's
+toolbar) both say must come before any restructure: **what is genuinely
+load-bearing?** Written in V3.05. The owner decides every keep, merge, move and
+retire below; the evidence is here so the decision does not have to be made from
+memory.*
+
+![Every page of the side panel at 1366 × 768, the worked example open](img/ui/V3.05-every-page.jpg)
+
+## How it was measured
+
+From the real window, not from the source and not from memory.
+[`scripts/surface_inventory.py`](../scripts/surface_inventory.py) boots
+`MainWindow` in a throwaway home folder, opens the worked example (19 plants, 14
+species, a boundary and a pin), and:
+
+- **walks every tab at every depth**, and records each control's kind, words,
+  tooltip, screen-reader name, whether it is wired to anything, how far down its
+  column it sits, and whether a person at 1366 × 768 must scroll to reach it;
+  every page's words, its paragraphs, and a screenshot;
+- **clicks every enabled button** and records what changed: a window or dialog,
+  a question asked, the map told something, the design changed, the mode, the
+  status line, controls appearing, text on the page changing, or nothing. Every
+  dialog, question, file picker and web link is intercepted and cancelled, so
+  nothing is saved, deleted or sent;
+- **opens every window** on the View menu and **every dialog** the clicks and the
+  File and Help menus reach, and photographs and inventories each.
+
+At 1366 × 768, the most common laptop screen, in Liberation Sans (Arial's
+metrics, which Windows text is close to), under a virtual X display on Linux.
+Re-run it with:
+
+```bash
+QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --ignore-gpu-blocklist" QT_QPA_PLATFORM=xcb \
+  xvfb-run -a -s "-screen 0 1366x768x24" \
+  python scripts/surface_inventory.py --out /tmp/surface --click --windows --dialogs
+```
+
+It writes `inventory.json` and a screenshot per page, window and dialog, and
+prints a summary. The next pass can diff its JSON against this one.
+
+## The numbers
+
+| | |
+|---|---|
+| Side-panel tabs | **6**, holding **26 pages**, up to **3 levels deep** (Plants › On This Design › Stats) |
+| Controls on those pages | **169**: 66 buttons, 28 checkboxes, 21 number boxes, 19 dropdowns, 16 text fields, 6 sliders, 5 text areas, 7 lists and trees, 1 tool button |
+| Menus | **27** items in File, View and Help |
+| Toolbar | **19** items on two rows above the map; the zoom-sensitivity dropdown does not fit at 1366 and lives behind the » chevron |
+| Windows | **5** from the View menu: 3D Preview (18 controls), Plant Directory (23), Reference ecosystem walk (15), Growth Snapshots (1), 3D Sprite Gallery (4) |
+| Dialogs reached | **7**: the start screen, the Learn menu, Generate Design, the community builder, the creature picker, Send Feedback, Where This Data Came From |
+| Words on the 26 pages | **1,816**, of which **1,252 are in paragraphs of 15 words or more**, on **20 of the 26 pages** |
+| Pages that scroll at 1366 × 768 | **6**: Analysis › Habitat (2.3 screens), Site › Site Info (1.9), Site › Field Notes (1.9), Slope, Features and Wind (1.1 each). 24 controls start below the fold |
+| Buttons clicked | **106**: 1 crashed the app, 0 were dead, 28 showed no change, each explained below |
+
+## What the click pass found
+
+**One button killed the app.** Site › Slope › *Download Edmonton Data* raised
+`ImportError: cannot import name '_USER_AGENT' from 'src.terrain'` on every click.
+The name had moved out of `src/terrain.py` and the downloader still imported it
+from there. `tests/test_imports_resolved.py` exists to catch exactly this class,
+and passed, because it checked that the name was *bound* in the importing module,
+which an import statement does even when the module it names no longer has it.
+Nothing in the app catches an exception escaping a Qt slot (there is no
+`sys.excepthook`), so PyQt6 calls `qFatal` and the process aborts, unsaved work
+and all, with the traceback written only to a stderr that a packaged build does
+not show and the app's own log never receives. **Both fixed in V3.05**, and the
+guard now checks the import's source module too. It found nothing else in the
+tree.
+
+**No dead controls.** 28 clicks changed nothing visible, and every one is
+accounted for:
+
+- 10 Field Notes ticks save after a 400 ms pause, longer than the probe waited.
+- 11 options style an overlay that was not drawn at the time: the three contour
+  options before *Generate*, the two shadow options before *Show sun path*, two
+  wind options, and the relationship web's four filters while the web is off.
+  They do what they say once their overlay is up, but nothing tells a person
+  that, and they are enabled the whole time. *(Small: disable them, or say "applies
+  when the contours are drawn", until there is something to style.)*
+- *Find* with an empty address box, *Reset to Year 0* already at Year 0, and five
+  toolbar entries that are labels or are reached through their own button.
+
+## The findings
+
+### 1. Results that wait for a button
+
+Five pages open on a button and an empty box: Analysis › Habitat (*Calculate
+Habitat Value*), Planning › Effort (*Calculate Establishment Effort*), Wildlife
+(*Show Wildlife Forage*), Harvest (*Show Human Forage*) and Water (*Calculate
+Establishment Water Budget*). Every one of them has the design already: the panel
+is handed the placed plants and structures on every edit. So the button only
+gates work the app could do itself, and its result does not follow the design:
+press it, add six plants, and the number on the page still describes the old
+design, with nothing saying so. That is a stale figure presented as a current one,
+which is P9's complaint about false precision in another form.
+
+The code had already named this. `analysis_panel.set_placed_plants` says a
+read-out that updates only when a button is pressed is "the V2.42 stale-list
+bug", and over three releases the relationship web, pull-a-plant and the
+confidence bands were each moved off the button. The score itself, the number
+they all explain, was not. Meanwhile the same score is live in two other places:
+Plants › On This Design › Stats and the subtitle of Learn › Present (63/100 for
+the example), while Analysis › Habitat shows "—".
+
+**Fixed in V3.05**: all five follow the design. They compute when their page is
+shown and again on every edit while it is; the buttons are gone.
+
+### 2. One thing in several places
+
+| What | Where it is |
+|---|---|
+| **The habitat score** | Analysis › Habitat; Plants › On This Design › Stats; Learn › Present's subtitle |
+| **Which animals the design feeds** | Analysis › Habitat (relationship web, chickadee brood, pull-a-plant); Analysis › Bees; Planning › Wildlife (forage calendar); Stats ("589 wildlife species supported") |
+| **Time** | Planning › Timeline (succession slider); Analysis › This Month; View › Growth Snapshots; the 3D preview's Year slider; Planning › Effort (hours by year) |
+| **Notes** | Site › Field Notes; Planning › Notes; Draw › Note on the map (F86 counts five stores) |
+| **Drawing on the map** | the Draw row (Boundary, Measure, Note, Select); Structures › Hedgerow and Shapes; Site › Features (Draw tree canopy, Draw building, Mark tree, Mark building) |
+| **A photograph on the map** | Site › Field Notes › *Site photo (map underlay)*; the View row's *Yard photo*; the 3D preview's *Add yard photo to map* |
+| **Placing things** | Plants › Browse; Plants › Plant Communities; Structures › Habitat |
+
+Seven concepts, each split across two to five places. None of them is wrong where
+it is; together they are why the question a person brings ("what does this
+design feed?") has no single place to go.
+
+The sharpest case is the score. **Plants › On This Design › Stats is the best page
+in the app**: the score, live, what to plant next and how many points each would
+add, the cues that make a neighbour read the planting as tended, and the cost
+range. It is three levels deep, under a tab named for browsing plants.
+
+### 3. One word for two things, two words for one
+
+- **"Boundary"** is a drawing tool on the Draw row and a layer switch on the View
+  row, one line apart. **"Measure"** and **"Measurement"** likewise.
+- **"Habitat"** is a Structures page (bee hotels, brush piles) and an Analysis page
+  (the score). **"Communities"** is Plants › Plant Communities and Plants › On This
+  Design › Communities.
+- **"Yard photo"** (View row) and **"Site photo"** (Field Notes) are different
+  features with the same meaning in English.
+- **The Plant Directory** is called *Plant Directory…* on the View menu and *Field
+  Guide* on the Learn menu; **the reference walk** is *Walk a Reference Ecosystem…*
+  and *Walk a wild landscape*. One window, two names, twice. The Field Guide's note
+  says "1568 species to find", which counts animals; the window it opens lists 424
+  plants.
+- **"Native"**: Stats says "95% Alberta-native" (18 of 19 plants), Present says
+  "93% of them native" (13 of 14 species), about the same design. Both true; the
+  reader cannot tell why they differ. **Fixed in V3.05**: each says what it counts.
+- **The status bar's "Mode:"** reads "Mode: Site data ready" and "Mode: Sun path
+  removed": the label is a mode and the text is a status. (V2.98 left this on
+  purpose; recorded, not changed.)
+
+### 4. Instructions where the page should speak
+
+20 of the 26 pages carry at least one paragraph of 15 words or more, 1,252 words in
+all, most of them at the top, above the first control. `UI_PRINCIPLES.md` is
+plain about this ("Instructions must die"); the start screen was rewritten to it
+in V2.41, and the side panel never was. Examples: Site Info opens with 31 words on
+how to drop a pin, above a search box and a button that say the same; Planning ›
+Water opens with 29 words defining establishment water, above five inputs.
+
+*Not changed in V3.05.* Halving these is a page-by-page writing job and the owner's
+voice; the per-page word counts are in the inventory to work from.
+
+### 5. Pointers that point nowhere
+
+The app tells people where to go in its own words, and two of those directions
+had rotted:
+
+- **The worked example's notes** say "Planning → Planting Plan: what to buy, and
+  when to plant it". There is no Planting Plan page; it is *File → Export Planting
+  Plan…*. This is the first thing a new user is told to read ("Planning → Notes
+  says what to try").
+- **The habitat score's tips** say "filter Plants → Use → Keystone", "→ Host
+  Plant" and "→ Bird Food". There is no Use filter since V3.00 folded it into
+  *Role*, whose values are Keystone Species, Larval Host and Bird Food.
+
+**Fixed in V3.05**, and `tests/test_app_smoke.py` now reads every "A → B" written
+in the source whose first word is a tab, a menu or a toolbar row, and fails when B
+is not there in the real window. Of the 40 such pointers, these were the two that
+had gone stale.
+
+### 6. Sizes that only work on a bigger screen
+
+- **The Generate Design dialog is 769 px tall.** A 1366 × 768 screen is 768 px,
+  less a taskbar and a title bar, so on the most common budget laptop the Generate
+  and Cancel buttons are off the bottom of the screen. **Fixed in V3.05**: the goals
+  and options scroll inside a dialog that fits the screen, and the buttons stay
+  put.
+- **The 3D preview's Year, Time of year and Time of day sliders are 15 px wide.**
+  The window opens at 1148 px on this screen and the first toolbar row also holds
+  the detail level and five buttons, so the three sliders that *watch the design
+  grow* are squeezed to a handle that looks like a checkbox. **Fixed in V3.05**:
+  the sliders have their row; the five buttons moved to the row below.
+- **Two sub-tab labels are cut off**: Analysis' *Sun & Sh…* and Planning's
+  *Timel…*. **Fixed in V3.05**: the sub-tab strip's padding was the difference.
+- The View row's zoom-sensitivity dropdown does not fit at 1366 and is reachable
+  only through the » chevron. *(A preference; it belongs in View › Map Settings.)*
+
+### 7. Asking for what the design already knows
+
+Planning › Water asks for the garden's area (200 m²), the number of rain barrels
+(2), swales (0) and ponds (0), with those defaults, whatever the design holds. The
+example's yard is 88 m²; a design with a pond and two barrels placed still started
+from "0 ponds". **Fixed in V3.05**: the inputs start from the design (the
+boundary's area, the barrels, ponds and swales placed) and stay editable.
+
+### 8. Empty states that look broken
+
+Structures › Habitat shows three empty bordered boxes under the list until a
+structure is chosen; the Bees page shows an empty dark square where a photograph
+would be (62 of 69 bees have none); Analysis › Habitat opened on two empty boxes
+before its score was live. **The first two fixed in V3.05** (the boxes appear with
+something in them), the third by finding 1.
+
+### 9. Smaller things
+
+- The Bees dropdown reads "Agapostemon femoratus · Agapostemon femoratus" for
+  every bee with no English name: the name printed twice. **Fixed.**
+- The Wind page says "No data yet — drop a site pin (Site tab), then fetch" when a
+  pin is already down. **Fixed** (it says what is missing). Wind is also the one
+  site figure fetched by hand rather than with the pin's other data.
+- Planning › Notes says "0 words" over a page of notes until the first keystroke:
+  loading a design sets the text with signals blocked, so the counter never hears
+  of it. **Fixed.**
+- Growth Snapshots says "years 1, 5, 15 and 30" above panels labelled 1, 5, 15 and
+  20 (the years stop where the design's slowest species matures), and draws an
+  11 × 8 m yard inside a 50 m frame, a tenth of each panel. **Both fixed**: the
+  sentence names the years shown, and the drawing is framed to the yard.
+- When WebGL cannot start, the 3D preview says "3D viewer error / Uncaught Error:
+  Error creating WebGL context." Accurate, and graceful, but not words a gardener
+  can act on. **Fixed**: it says the computer's graphics are not available to the
+  viewer and that everything else works. (Chromium refuses WebGL on graphics
+  drivers it has blocklisted; a setting to fall back to software rendering is a
+  possible later step.)
+- Six primary buttons in five colours (green, red-orange, purple, blue, teal),
+  with no meaning attached to the colour. *(Recorded.)*
+- The 3D preview, Growth Snapshots and Sprite Gallery windows are drawn in the
+  light system style beside a dark main window. *(Recorded.)*
+- Generate Design offers two goals labelled "(guidance only — needs data)". A
+  control that says it does not work yet teaches people that controls here may
+  not work. *(Recorded: hide them until they do, the owner's call.)*
+
+## The tasks, walked
+
+Clicks from the main window with a design open. Krug's second law says the count
+is not the problem when each click is obvious; the column that matters is the last.
+
+| A person wants to… | Today | Clicks | Where they hesitate |
+|---|---|---|---|
+| find a plant for a shady, wet corner | Plants › Filters › Sun › Shade › Water › Wet | 6 | — the filters read well since V3.01 |
+| put it in | its row › Place › the map | 3 | — |
+| place a community | Plants › Plant Communities › a row › Place › the map | 5 | 61 names, A–Z, details only after a click (F196) |
+| know how the design is doing | Plants › On This Design › Stats | 3 | **Why is the score under Plants?** Analysis › Habitat looks like the place, and showed "—" |
+| see what it feeds | Analysis › Habitat › tick the web | 3 | or Planning › Wildlife, or Analysis › Bees: three answers |
+| find the gaps in bloom | Planning › Wildlife (› Show) | 2–3 | why Planning? |
+| know what to do this month | Analysis › This Month | 2 | why Analysis, when Effort is in Planning? |
+| see the shade | Analysis › Sun & Shade › Show shade | 3 | — but shade is about the site, and Site has no shade |
+| see it in 3D | View › 3D Preview… | 2 | — |
+| watch it grow | the 3D preview's Year slider | 3 | **the slider was 15 px wide at 1366** |
+| print the plan | File › Export PDF… | 2 | three exports side by side; fine |
+| show a neighbour | Learn › Present | 2 | **presenting is not learning** |
+| note what I saw outside | Site › Field Notes, Planning › Notes, or Draw › Note | 2 | three places, no single record (F86) |
+| know the water it needs | Planning › Water (› Calculate) | 2–3 | started from 200 m², not this yard |
+| generate a design | File › Generate Design… › Generate | 3 | **Generate was off-screen at 768 px tall** |
+
+## Page by page
+
+**Keep** as it is · **Merge** into another page · **Move** somewhere it will be
+looked for · **Retire** from the interface. The last column is the owner's.
+
+| Page | What it is for | Proposal | Why | Decision |
+|---|---|---|---|---|
+| Site › Site Info | pin, zone, climate, rainfall, soil, where to buy | Keep; move *Where to buy* | Where to buy is about the buy list, not the site | |
+| Site › Slope | elevation, contours, slope ramp, terrain pack | Keep | its download crashed (fixed) | |
+| Site › Features | existing buildings and trees, imported or drawn; satellite alignment | Keep; move *Satellite alignment* | alignment is a setting of the satellite layer, which lives on the View row | |
+| Site › Field Notes | ten site-walk prompts, free notes, site photo | Keep; print it (F32); move the site photo | the photo is a map layer, beside *Yard photo* | |
+| Plants › Browse | find and place plants | Keep | the core, and it reads well | |
+| Plants › Plant Communities | find and place communities | Keep (F196) | | |
+| Plants › On This Design › Species | what is planted | Merge with Communities | two lists of what is on the design | |
+| Plants › On This Design › Communities | what communities are planted | Merge with Species | | |
+| Plants › On This Design › Stats | **the report card** | **Move to the front of Analysis** | the best summary in the app, three levels deep | |
+| Structures › Habitat | bee hotels, brush piles, ponds | Move beside Plants | placing a structure is placing a thing | |
+| Structures › Hedgerow | draw a hedgerow line | Merge into Shapes, or the Draw row | a drawing tool with settings | |
+| Structures › Shapes | draw beds, paths, patios | Move to the Draw row | a drawing tool with settings | |
+| Analysis › Sun & Shade | sun path, cast shade, planting zones | Move to Site | it describes the site, not the design | |
+| Analysis › Wind | wind rose, prevailing wind, shelter | Move to Site; fetch with the pin | likewise, and the one site figure fetched by hand | |
+| Analysis › Habitat | score breakdown, confidence, the web, pull-a-plant, chickadee, tips | Keep, under the report card | live since V3.05 | |
+| Analysis › This Month | what is happening now, and the job | Merge with Timeline and Effort | time, in one place | |
+| Analysis › Bees | one bee's plan | Keep, or merge into a "What it feeds" page | | |
+| Planning › Effort | hours, by year | Merge into "Through the years" | | |
+| Planning › Wildlife | forage calendar | Merge into "What it feeds" | | |
+| Planning › Harvest | what people can eat from it | Merge as a row of the Wildlife calendar | a permaculture-era page in a native-habitat app, and the same calendar | |
+| Planning › Water | establishment water budget | Keep | follows the design since V3.05 | |
+| Planning › Timeline | succession slider, phased conversion plan | Keep, as "Through the years" | | |
+| Planning › Notes | the design's journal | Merge (F86) | | |
+| Learn › Field Study | the quiz | Keep | | |
+| Learn › Lessons | the short course | Keep | | |
+| Learn › Present | the narrated tour | **Move out of Learn** | presenting a design is an output, beside Export PDF and Before / after | |
+| View › 3D Sprite Gallery… | every 3D archetype, for tuning | **Retire from the menu** | a developer's bench in a gardener's menu; keep the window, open it from a script | |
+| The View row's zoom sensitivity | scroll-wheel step | Move to View › Map Settings | a preference, and off-screen at 1366 | |
+
+## A task-shaped home (F94), sketched
+
+Four tabs where there are six, by the question a person brings:
+
+| Tab | Holds | From today's |
+|---|---|---|
+| **Site** — *what is here* | Site Info · Terrain · Sun & Shade · Wind · Existing features · Field notes | Site, plus Analysis' two site pages |
+| **Plants** — *what goes in* | Browse · Communities · Structures | Plants, plus Structures › Habitat |
+| **Design** — *how it is doing* | Report card · What it feeds (web, forage, bees, chickadee, pull-a-plant) · Through the years (timeline, this month, effort, water) · Notes | Analysis, Planning and Stats |
+| **Learn** | Field Study · Lessons | Learn, less Present |
+
+And one **Share** place for what leaves the app: Export PDF, the planting plan,
+the order file, Present, Before / after, the presentation still and Growth
+Snapshots. All drawing on the Draw row: Boundary, Shape, Hedgerow, Existing tree,
+Existing building, Measure, Note, Select. Twenty-six pages become about fourteen,
+and nothing is deleted: every page above has a place in it.
+
+This is a sketch for a decision, not a plan. F94 is rated high risk because every
+test, lesson, tooltip and line of documentation that names a tab moves with it,
+and the guard added in V3.05 will at least say which.
+
+## The 3D preview (F89)
+
+18 controls in three rows. After the V3.05 fix the first row is *when* (Year,
+Time of year, Time of day, Detail), the second *how you move* (Walk, Flyover,
+Identify, Fly as a bee, the creature, Tour the year, Show its plants) and the third
+*what you do* (Plant, Remove, Reset view, Refresh, Add yard photo, Presentation
+still, Before / after). What is left for the owner:
+
+- **Refresh from design** is a manual sync, the 3D form of finding 1. Split view
+  already follows edits; the window could too.
+- **The creature dropdown** is the 721-entry list F196 names in the community
+  builder: no typing to find the Monarch.
+- **Presentation still** and **Before / after** are outputs; they belong with the
+  Share place above, and are reachable from the 3D window because that is where
+  they render.
+- **The light window** beside a dark app.
+
+## Fixed in V3.05
+
+1. *Download Edmonton Data* no longer kills the app; the import guard checks the
+   module an import names.
+2. An exception in a slot is logged and reported, and the app keeps running.
+3. The five *Calculate* pages follow the design.
+4. Planning › Water starts from the design.
+5. Generate Design fits a 768 px screen.
+6. The 3D preview's sliders have room.
+7. *Sun & Shade* and *Timeline* fit their tabs.
+8. The worked example's notes and the score's tips point at pages that exist, and
+   a test reads every such pointer against the real window.
+9. Notes counts its words on load; Growth Snapshots names its years and frames the
+   yard; Wind says what is missing; Bees names a bee once; the 3D preview says what
+   to do when WebGL is unavailable; native shares say what they count; empty
+   structure and bee boxes do not show until they hold something.
+
+## Left for the owner
+
+Every *Proposal* in the page-by-page table, the F94 sketch, and:
+
+- one name for the Plant Directory / Field Guide and for the reference walk;
+- whether the two "guidance only — needs data" goals stay on Generate Design;
+- whether wind is fetched with the pin's other site data;
+- the instruction paragraphs (finding 4), page by page;
+- the colours of primary buttons, and the light windows;
+- a software-rendering fallback for 3D on blocklisted graphics drivers.
+
+## What this cannot tell
+
+- **What anyone actually uses.** There is no usage data, on purpose (the desktop
+  app sends nothing). "Load-bearing" here means *works*, *is reachable* and *is not
+  said better elsewhere*, not *is used*. Three people for an hour with the
+  checklist in `UI_PRINCIPLES.md` would tell more than this pass about where they
+  hesitate.
+- **One screen, one font, one platform.** 1366 × 768, Arial's metrics, Linux. CI's
+  DejaVu Sans is about 12% wider (V3.03), so anything tight here is tighter there;
+  macOS and Windows draw their own controls.
+- **One design.** The worked example: 19 plants, a boundary, a pin, no structures,
+  no wind data (no network here). Pages read differently empty and full.
+- **The 3D canvas.** The viewer ran on Mesa's software renderer; what it draws was
+  checked in V3.04's harness, not here. This pass looked at the window's controls.
