@@ -126,6 +126,12 @@ class AnalysisPanel(QWidget):
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
+        # V3.05: the score fills itself when its page is on screen and the
+        # design changes; it had a Calculate button over an empty box, and a
+        # result that went stale with the next edit (src/live_refresh.py).
+        from src.live_refresh import LiveRefresh
+        self._live = LiveRefresh(self, self._tabs,
+                                 {self._habitat_page: self._calc_habitat_score})
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A1 — Sun Path / Shadow
@@ -495,6 +501,13 @@ class AnalysisPanel(QWidget):
             return
         self._sun_lat, self._sun_lng = lat, lng
         self._reclamp_time_to_date()
+        # The Wind tab's empty state asked for a pin that was already down
+        # (V3.05 audit); say what is actually missing.
+        if not getattr(self, "_wind_fetched", False):
+            self.set_wind_status(
+                "No data yet — drop a site pin (Site tab), then fetch."
+                if lat is None else "Not fetched yet — press Fetch wind data "
+                "for this site's real wind history.")
 
     def _reclamp_time_to_date(self):
         from src import sun_shade
@@ -816,6 +829,7 @@ class AnalysisPanel(QWidget):
             return
         annual = rose.get("annual") or {}
         self._wind_rose.set_block(annual)
+        self._wind_fetched = True
 
         from src.wind import speed_category
         prevailing = annual.get("prevailing_deg")
@@ -888,19 +902,6 @@ class AnalysisPanel(QWidget):
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
-
-        btn = QPushButton("Calculate Habitat Value")
-        btn.setToolTip(
-            "Score what this design actually provides for wildlife, out of 100,\n"
-            "and list what would raise it. Needs at least one placed plant."
-        )
-        btn.setStyleSheet(
-            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #388e3c; }"
-        )
-        btn.clicked.connect(self._calc_habitat_score)
-        layout.addWidget(btn)
 
         # Big score readout
         self._habitat_score_label = QLabel("—")
@@ -1012,8 +1013,7 @@ class AnalysisPanel(QWidget):
 
         self._chickadee_result = QLabel(
             "One clutch of chickadees needs 6,000–9,000 caterpillars to fledge. "
-            "Calculate your Habitat Value Score to see whether your host plants "
-            "could feed a brood.")
+            "Place plants to see whether your host plants could feed a brood.")
         self._chickadee_result.setWordWrap(True)
         self._chickadee_result.setStyleSheet(
             "color: #cfe3f0; font-size: 12px; padding: 8px; "
@@ -1065,6 +1065,7 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
+        self._habitat_page = page
         self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -1112,7 +1113,7 @@ class AnalysisPanel(QWidget):
         layout.addWidget(hint)
 
         self._confidence_text = QLabel(
-            "Calculate the Habitat Value Score to fill this in.")
+            "Place plants to fill this in.")
         self._confidence_text.setWordWrap(True)
         self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
         self._confidence_text.setStyleSheet(
@@ -1404,6 +1405,8 @@ class AnalysisPanel(QWidget):
                     item.setEnabled(False)
             if b["is_group"]:
                 label = f"    {b['common_name']} (any {b['genus']})"
+            elif b["common_name"] == b["scientific_name"]:
+                label = f"    {b['scientific_name']}"     # no English name (V3.05)
             else:
                 label = f"    {b['common_name']}  ·  {b['scientific_name']}"
             combo.addItem(label, userData=b["id"])
@@ -1556,7 +1559,8 @@ class AnalysisPanel(QWidget):
     def _bee_match_row(self, m) -> str:
         bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
         chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
-                f"padding:0 4px; font-size:12px;'>{txt}</span>")
+                f"padding:0 4px; font-size:12px;'>{txt}</span>"
+                if txt != "—" else "")     # a pill saying "—" says nothing (V3.05)
         bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
         basis = "" if m.confidence == "documented" else \
                 " <span style='color:#90a4ae; font-size:12px;'>(genus match)</span>"
@@ -1782,6 +1786,7 @@ class AnalysisPanel(QWidget):
         # both of these change the moment a species is added or removed.
         self._refresh_confidence(self._placed_plants or [],
                                  self._site_ecoregion())
+        self._live.poke()                  # the score follows it too (V3.05)
 
     @staticmethod
     def _layer_lines(result) -> list:
@@ -1836,6 +1841,7 @@ class AnalysisPanel(QWidget):
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
+        self._live.poke()
 
     def set_lawn_conversion(self, summary: dict | None):
         """Store the lawn-conversion summary (from ``lawn_zones.conversion_summary``)

@@ -19,9 +19,9 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.93`,
-`_SCHEMA_VERSION = 91` (in `src/db/plants.py`; V2.93 recorded the cacti's
-`growth_form` as `pads` and `globose`).
+**Current facts (verify before quoting):** branch `V3.05`,
+`_SCHEMA_VERSION = 92` (in `src/db/plants.py`; V3.05 set the five rows whose
+`native_to_alberta` was still '1?' to 1, F199).
 
 v79 adds `plants.native_provinces_source` (V2.80) and reseeds. It is the worked
 example of the half of a seed change that fails **silently**: the apply wrote

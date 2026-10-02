@@ -743,6 +743,181 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertTrue(w.is_ready)
         self.assertGreater(w.receivers(w.loadStarted), 0)
 
+    def test_export_pdf_carries_the_presentation_still(self):
+        """F123 (V3.05): the PDF has drawn a full-page still since F69, and
+        Export PDF never passed one, so the page was unreachable. The 3D
+        window now keeps the last still it rendered on the main window."""
+        import tempfile
+        from unittest import mock
+        from PyQt6.QtGui import QColor, QPixmap
+        from src.scene3d_window import keep_still
+        win = self._win
+        self.addCleanup(setattr, win, "_presentation_still", (None, ""))
+        png = os.path.join(tempfile.mkdtemp(), "still.png")
+        pm = QPixmap(64, 48)
+        pm.fill(QColor("#4c7a3a"))
+        pm.save(png)
+        self.assertTrue(keep_still(win, png, {"caption": "Year 5, June",
+                                              "title": "Five years on"}))
+        out = os.path.join(tempfile.mkdtemp(), "design.pdf")
+        seen = {}
+        with mock.patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+                        return_value=(out, "")), \
+                mock.patch("src.pdf_export.export_pdf",
+                           side_effect=lambda *a, **k: seen.update(k)):
+            win._on_export_pdf()
+        self.assertIsNotNone(seen.get("still_pixmap"))
+        self.assertEqual(seen["still_pixmap"].width(), 64)
+        self.assertEqual(seen.get("still_caption"), "Year 5, June")
+
+    def test_the_bar_says_where_a_placement_landed(self):
+        """F198 (V3.05): a row of shrubs came down half outside the yard and on
+        top of other plants, and nothing said so. The bar now says, with Undo;
+        it never refuses. An undo clears it."""
+        from src import placement_bar_flow as flow
+        from src.db.plants import search_plants
+        win = self._win
+        bar = win.placement_bar
+        lat0, lng0 = 53.5, -113.5
+        ring = [[lng0, lat0], [lng0 + 0.0001, lat0], [lng0 + 0.0001, lat0 + 0.0001],
+                [lng0, lat0 + 0.0001], [lng0, lat0]]
+        win._project["features"].append({
+            "type": "Feature", "geometry": {"type": "Polygon",
+                                            "coordinates": [ring]},
+            "properties": {"element_type": "property_boundary"}})
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        shrub = next(p for p in search_plants() if p.get("plant_type") == "shrub")
+        flow.on_armed(win, "plants", {"armed": True, "kind": "single",
+                                      "what": shrub["common_name"]})
+        self.addCleanup(flow.stand_down, win)
+        self.assertEqual(bar.note_text(), "")
+        # Well outside the 7 m square drawn above.
+        win._map_events._on_plant_placed(shrub["id"], shrub["common_name"],
+                                         lat0 + 0.001, lng0 + 0.001)
+        self.assertEqual(bar.note_text(), "It landed outside the boundary.")
+        self.assertTrue(bar._undo.isVisibleTo(bar))
+        bar._undo.click()                                  # the real undo
+        self.assertEqual(len(win._placed_plants), 0)
+        self.assertEqual(bar.note_text(), "")
+
+    def test_a_plant_on_the_map_opens_its_page_with_why_here(self):
+        """F19 (V3.05): clicking a placed plant showed nothing about it. It
+        opens the plant's page now, led by why the generator put it there;
+        not while placing, when the list is a palette (V2.99)."""
+        from PyQt6.QtWidgets import QLabel
+        from src.db.plants import search_plants
+        from src.project_store import store_for
+        win = self._win
+        fly = win.species_flyout
+        self.addCleanup(fly.hide)
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(lambda: win._placed_plants.clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        row = search_plants()[0]
+        store_for(win).add_plant(row["id"], row["common_name"], 53.5, -113.5,
+                                 why_here=["Full sun, as it likes"])
+
+        def page_says():
+            return " ".join(l.text() for l in fly.page.findChildren(QLabel))
+
+        win._current_mode = "plant"
+        self.addCleanup(setattr, win, "_current_mode", "none")
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertNotIn("Why here", page_says())
+        win._current_mode = "none"
+        win._plant_moved_at = -9.0
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertIn("Why here", page_says())
+        self.assertIn("Full sun, as it likes.", page_says())
+
+    def test_a_new_design_drops_the_old_designs_renders(self):
+        """A still or before/after of the last design must not land in the
+        next one's PDF (V3.05)."""
+        win = self._win
+        from unittest import mock
+        win._presentation_still = ("a pixmap", "old")
+        win._before_after = (["panels"], "old")
+        win._modified = False
+        # The window is the class's: give the next test its title back.
+        self.addCleanup(win.setWindowTitle, win.windowTitle())
+        with mock.patch("src.app.QInputDialog.getText",
+                        return_value=("Test yard", True)):
+            win._on_new()
+        self.assertEqual(win._presentation_still, (None, ""))
+        self.assertEqual(win._before_after, (None, ""))
+
+    def test_every_pointer_in_the_words_leads_somewhere(self):
+        """V3.05: the app tells people where to go in its own words, "Analysis
+        → Habitat", and two of those directions had rotted. The worked
+        example's notes sent a new user to "Planning → Planting Plan", which
+        is File → Export Planting Plan…, and the score's tips said "filter
+        Plants → Use → Keystone" two releases after Use became Role (the
+        surface audit found both). Every "A → B" written in the source whose
+        A is a side tab, a menu or a toolbar row must have a B beneath it in
+        this window. Docstrings are left out: they talk about the code."""
+        import ast
+        import re
+        from pathlib import Path
+        from PyQt6.QtWidgets import QTabWidget, QToolBar
+
+        def norm(text):
+            text = (text or "").replace("&&", "\0").replace("&", "")
+            text = re.sub(r"[^\w\0' ]+", " ", text.replace("\0", "&&"))
+            return re.sub(r"\s+", " ", text.replace("&&", "&")).strip().lower()
+
+        win = self._win
+        places: dict = {}
+        tabs = win._side_tabs
+        for i in range(tabs.count()):
+            kids = places.setdefault(norm(tabs.tabText(i)), set())
+            for inner in tabs.widget(i).findChildren(QTabWidget):
+                kids.update(norm(inner.tabText(j)) for j in range(inner.count()))
+        for a in win.menuBar().actions():
+            if a.menu() is not None:
+                places.setdefault(norm(a.text()), set()).update(
+                    norm(b.text()) for b in a.menu().actions() if b.text())
+        for bar in win.findChildren(QToolBar):
+            places.setdefault(norm(bar.windowTitle()), set()).update(
+                norm(a.text()) for a in bar.actions() if a.text())
+        places = {k: {c for c in v if len(c) >= 3} for k, v in places.items()
+                  if k}
+        # Case-sensitive, as the labels are written: "keystone plants →
+        # closing the food web" (a lesson's subtitle) is a sentence, not a
+        # pointer at the Plants tab.
+        heads = "|".join(re.escape(h.title()) for h in sorted(
+            places, key=len, reverse=True))
+        pointer = re.compile(rf"(?<![\w])({heads})\s*(?:→|›)\s*([^→›\n]+)")
+
+        root = Path(__file__).resolve().parent.parent / "src"
+        broken, seen = [], 0
+        for path in sorted(root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            docs = set()
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                     ast.AsyncFunctionDef)) and node.body:
+                    first = node.body[0]
+                    if isinstance(first, ast.Expr) and isinstance(
+                            getattr(first, "value", None), ast.Constant):
+                        docs.add(id(first.value))
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Constant)
+                        and isinstance(node.value, str)) or id(node) in docs:
+                    continue
+                for m in pointer.finditer(node.value):
+                    seen += 1
+                    head, rest = norm(m.group(1)), norm(m.group(2))
+                    if not any(rest.startswith(c) or (len(rest) >= 3
+                                                      and c.startswith(rest))
+                               for c in places[head]):
+                        broken.append(f"{path.relative_to(root.parent)}:"
+                                      f"{node.lineno}: {m.group(0).strip()!r}")
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places that are not there")
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):

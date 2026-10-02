@@ -134,6 +134,18 @@ def _save_data_url(url: str, path: str) -> bool:
         return False
 
 
+def keep_still(main, path: str, spec: dict) -> bool:
+    """Hold the last presentation still on the main window, as ``(pixmap,
+    caption)``, for the PDF export (F123). False when the file will not load."""
+    from PyQt6.QtGui import QPixmap
+    pixmap = QPixmap(path)
+    if pixmap.isNull():
+        return False
+    caption = (spec.get("caption") or spec.get("title") or "").strip()
+    main._presentation_still = (pixmap, caption)
+    return True
+
+
 class Scene3DWindow(QWidget):
     """3D preview of the current design (growth year + sun controls)."""
 
@@ -320,11 +332,13 @@ class Scene3DWindow(QWidget):
         bar.addSpacing(16)
         bar.addWidget(QLabel("Detail:"))
         bar.addWidget(self._detail)
-        bar.addWidget(reset_view)
-        bar.addWidget(refresh)
-        bar.addWidget(self._bake_btn)
-        bar.addWidget(self._still_btn)
-        bar.addWidget(self._ba_btn)
+        # V3.05: this row is *when*, and only that. It also held Reset view,
+        # Refresh and the three outputs, and at the 1148 px the window opens at
+        # on a 1366 x 768 screen those squeezed Year, Time of year and Time of
+        # day to 15 px each: a handle that looked like a checkbox, on the
+        # controls that watch the design grow (the surface audit measured it).
+        for slider in (self._year, self._month, self._hour):
+            slider.setMinimumWidth(110)
 
         # Row 2 — how you move through the scene first, then whose eyes you
         # borrow. The old order led with "Creature: [combo]", so the strip
@@ -358,6 +372,9 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
+        for btn in (reset_view, refresh, self._bake_btn, self._still_btn,
+                    self._ba_btn):
+            bar3.addWidget(btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -527,8 +544,13 @@ class Scene3DWindow(QWidget):
         def _capture():
             def _done(url):
                 if _save_data_url(url, path):
+                    # Kept for File → Export PDF (F123, V3.05): the PDF has
+                    # drawn a still page since F69, and nothing ever handed
+                    # it one. Kept the way before_after_flow keeps F76's.
+                    keep_still(self._main, path, spec)
                     self._main.statusBar().showMessage(
-                        f"Presentation still saved to {path}", 6000)
+                        f"Presentation still saved to {path}; Export PDF "
+                        "will include it", 6000)
                 else:
                     self._main.statusBar().showMessage(
                         "Could not render the still — let the 3D view finish "

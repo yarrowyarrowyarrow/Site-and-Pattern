@@ -100,7 +100,9 @@ Multiple boundaries are allowed; each needs a unique `boundary_id`.
     // present only for community members:
     "polyculture_name": "Apple Tree Community",
     "polyculture_center_lat": 53.546,
-    "polyculture_center_lng": -113.496
+    "polyculture_center_lng": -113.496,
+    // present only on generated plants (V3.05, F19):
+    "why_here": ["Full sun, as it likes", "Low, moister ground, as it likes"]
   }
 }
 ```
@@ -108,6 +110,14 @@ Multiple boundaries are allowed; each needs a unique `boundary_id`.
 grid, circle, community) together so they select/delete as a unit.
 Legacy projects with no group id get a fresh singleton id assigned on
 load.
+
+`why_here` is why the design generator put the plant where it is, as
+short sentences the plant's page shows first when it is clicked on the
+map: the chosen cell's score in words, or the rule that placed it (a vine
+at the foot of its host, a mixed stand, a community, the design review, a
+pond). A plant placed by hand has none, and an empty list is not written,
+so every file made before V3.05 reads unchanged. Optional, so the
+format's version does not change.
 
 ### `structure` — Point
 ```jsonc

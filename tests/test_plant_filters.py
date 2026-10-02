@@ -322,18 +322,21 @@ class TestAgainstTheCatalogue(unittest.TestCase):
         _plants.init_db()
 
     def test_native_includes_the_five_the_flag_left_out(self):
-        """Five species carry the seed's '1?' in native_to_alberta, and the
+        """Five species carried the seed's '1?' in native_to_alberta, and the
         flag's filter dropped them although VASCAN records every one in
-        Alberta and the list's AB badge said native."""
+        Alberta and the list's AB badge said native. V3.00 moved the pickers
+        to VASCAN's provinces; V3.05 (F199) set the five flags to 1, so the
+        generator's native-only filter, which reads the flag, agrees too."""
         from src.db.plants import search_plants
         flagged = {r["id"] for r in search_plants(native_only=True)}
         sourced = {r["id"] for r in search_plants(
             **pf.criteria_to_kwargs({"native_only": True}))}
         self.assertTrue(flagged <= sourced)
-        extra = {r["common_name"] for r in search_plants()
-                 if r["id"] in sourced - flagged}
-        self.assertIn("Tall Anemone (Thimbleweed)", extra)
-        self.assertLessEqual(len(extra), 5)
+        names = {r["id"]: r["common_name"] for r in search_plants()}
+        for name in ("Tall Anemone (Thimbleweed)", "False Box (Mountain Boxwood)",
+                     "Flat-topped White Aster", "Round-leaved Alumroot",
+                     "Stiff Sunflower (Rhombic-leaved Sunflower)"):
+            self.assertIn(name, {names[i] for i in flagged})
 
     def test_animals_are_counted_distinct(self):
         """Distinct animals, not relationship rows: one bee can take nectar
@@ -350,6 +353,29 @@ class TestAgainstTheCatalogue(unittest.TestCase):
         self.assertTrue(all(counts[pid] <= rows[pid] for pid in counts))
         self.assertTrue(any(counts[pid] < rows[pid] for pid in counts))
 
+
+
+class TestNativeTakesTheProvince(unittest.TestCase):
+    """F200 (V3.05): Native filters to the pin's province."""
+
+    def test_the_province_reaches_the_search(self):
+        on = {"native_only": True}
+        self.assertEqual(pf.criteria_to_kwargs(on, "SK"),
+                         {"native_province": "SK"})
+        self.assertEqual(pf.criteria_to_kwargs(on, "AB"),
+                         {"native_province": "AB"})
+
+    def test_no_pin_or_an_unknown_one_keeps_alberta(self):
+        on = {"native_only": True}
+        self.assertEqual(pf.criteria_to_kwargs(on), {"native_province": "AB"})
+        self.assertEqual(pf.criteria_to_kwargs(on, "BC"),
+                         {"native_province": "AB"})
+
+    def test_native_in_reads_vascan_then_the_flag(self):
+        self.assertTrue(pf.native_in({"native_provinces": "AB,SK"}, "SK"))
+        self.assertFalse(pf.native_in({"native_provinces": "AB"}, "SK"))
+        self.assertTrue(pf.native_in({"native_to_alberta": 1}, "AB"))
+        self.assertFalse(pf.native_in({"native_to_alberta": 1}, "SK"))
 
 if __name__ == "__main__":
     unittest.main()

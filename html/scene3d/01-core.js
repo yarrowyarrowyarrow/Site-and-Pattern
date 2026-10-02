@@ -96,9 +96,9 @@ try {
   renderer = new THREE.WebGLRenderer({ antialias: true,
                                        preserveDrawingBuffer: true });
 } catch (e) {
-  window.permaBootError = '<b>3D needs WebGL</b><br>This system\'s graphics '
-    + 'stack doesn\'t offer WebGL, so the 3D preview can\'t render here. '
-    + 'The 2D map is unaffected.';
+  window.permaBootError = '<b>3D needs WebGL</b><br>This computer\'s graphics '
+    + 'are not available to the viewer (an old or blocked driver, a virtual '
+    + 'machine or a remote desktop). The map and everything else still work.';
   window.permaFatal(window.permaBootError);
   throw e;
 }

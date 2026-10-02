@@ -200,7 +200,7 @@ class GenerationController:
             store_for(main).add_plant(
                 pid, name, lat, lng, placement_group_id=group_id,
                 polyculture_name=poly_name, pattern_kind="generated",
-                quantity=qty)
+                quantity=qty, why_here=props.get("why_here"))
             batch.append((pid, name))
 
         # The structures come too (V2.95, F185). The generator places a pond,

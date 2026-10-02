@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QHeaderView,
     QFrame,
     QGroupBox,
     QHBoxLayout,
@@ -43,6 +44,25 @@ from src.member_colors import plant_color
 # Drag a community from the library tree → drop on the "Plant Communities Mix"
 # (V1.87, mirrors the plant drag-to-mix on the Plant Library tab).
 _COMMUNITY_MIME = "application/x-sap-community-id"
+
+
+#: The facts column's grey: V3.03's one muted text colour, 5.5:1 or better
+#: on the panels' grounds.
+_FACTS_GREY = "#90a4ae"
+
+
+def community_facts(entry: dict) -> str:
+    """"8 plants · Full Sun · Mesic": what a community is, in the row, so a
+    list of them can be compared without opening each (F196, V3.05). Unknown
+    sun or moisture is left out rather than printed as "Unknown"."""
+    n = int(entry.get("member_count") or 0)
+    parts = [f"{n} plant{'s' if n != 1 else ''}"]
+    facets = entry.get("facets") or {}
+    for key in ("sun", "moisture"):
+        value = facets.get(key)
+        if value and value not in ("Unknown", "Mixed"):
+            parts.append(value)
+    return " · ".join(parts)
 
 
 class _CommunityTree(QTreeWidget):
@@ -457,6 +477,37 @@ class PolycultureBuilderDialog(QDialog):
         if polyculture_id is not None:
             self._load_existing(polyculture_id)
         self._refresh_member_list()
+        # What Cancel compares against (F196): the community as it opened.
+        self._opened_as = self._work()
+
+    def _work(self) -> tuple:
+        """The parts of the community a person builds: name, notes, members."""
+        import json
+        return (self.name_input.text().strip(), self.desc_input.text().strip(),
+                json.dumps(self.canvas.get_members(), sort_keys=True,
+                           default=str))
+
+    def reject(self):
+        """Cancel, Esc or the window's close: ask before throwing work away.
+        Until V3.05 a community of eight plants laid out by hand went with one
+        click on Cancel (F196, the V2.98 review)."""
+        if getattr(self, "_opened_as", None) not in (None, self._work()):
+            n = len(self.canvas.get_members())
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Question)
+            box.setWindowTitle("Discard this community?")
+            box.setText("Your changes to this community are not saved"
+                        + (f" ({n} plant{'s' if n != 1 else ''} laid out)."
+                           if n else "."))
+            discard = box.addButton("Discard",
+                                    QMessageBox.ButtonRole.DestructiveRole)
+            keep = box.addButton("Keep editing",
+                                 QMessageBox.ButtonRole.RejectRole)
+            box.setDefaultButton(keep)
+            box.exec()
+            if box.clickedButton() is not discard:
+                return
+        super().reject()
 
     def _build_ui(self):
         outer = QVBoxLayout(self)
@@ -841,6 +892,15 @@ class _CreaturePickerDialog(QDialog):
             "Choose a native pollinator. Its nectar plants — and, for a "
             "butterfly or moth, the host plants its caterpillars need — become "
             "a ready-to-plant community."))
+        # Hundreds of animals and a list typing could not search: the Monarch
+        # was entry 446 (F196, V3.05). Typing narrows the list and picks the
+        # first match; the headers stay over any group that still has one.
+        self._find = QLineEdit()
+        self._find.setPlaceholderText("Find a bee, butterfly or moth…")
+        self._find.setAccessibleName("Find a creature")
+        self._find.setClearButtonEnabled(True)
+        self._find.textChanged.connect(self._filter)
+        layout.addWidget(self._find)
         self._combo = QComboBox()
         self._populate(self._combo)
         layout.addWidget(self._combo)
@@ -889,6 +949,37 @@ class _CreaturePickerDialog(QDialog):
 
     def selected(self):
         return self._combo.itemData(self._combo.currentIndex())
+
+    def _filter(self, text: str) -> None:
+        """Hide the rows that do not match, keep a group's header while any of
+        its rows does, and choose the first match."""
+        needle = text.strip().lower()
+        view = self._combo.view()
+        header, header_shown, first = None, False, None
+        for i in range(self._combo.count()):
+            if self._combo.itemData(i) is None:            # a group header
+                if header is not None:
+                    view.setRowHidden(header, not header_shown)
+                header, header_shown = i, False
+                continue
+            hit = not needle or needle in self._combo.itemText(i).lower()
+            view.setRowHidden(i, not hit)
+            if hit:
+                header_shown = True
+                if first is None:
+                    first = i
+        if header is not None:
+            view.setRowHidden(header, not header_shown)
+        if first is not None:
+            self._combo.setCurrentIndex(first)
+
+    def visible_names(self) -> list:
+        """The rows the list would show (tests)."""
+        view = self._combo.view()
+        return [self._combo.itemText(i).strip()
+                for i in range(self._combo.count())
+                if self._combo.itemData(i) is not None
+                and not view.isRowHidden(i)]
 
     @classmethod
     def pick(cls, parent):
@@ -1079,6 +1170,14 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree = _CommunityTree()
         self.polyculture_tree.setAccessibleName("Plant communities")
         self.polyculture_tree.setHeaderHidden(True)
+        # F196 (V3.05): each row carries its facts, so 61 communities can be
+        # compared by eye: until now size, sun and moisture came only after a
+        # click, one community at a time.
+        self.polyculture_tree.setColumnCount(2)
+        _hdr = self.polyculture_tree.header()
+        _hdr.setStretchLastSection(False)
+        _hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        _hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.polyculture_tree.setIndentation(16)
         self.polyculture_tree.setMouseTracking(True)
         # Drag a community out of the library onto the "Plant Communities Mix"
@@ -1730,14 +1829,17 @@ class PolyculturePanel(QWidget):
         variations nested. When the parent only got in because a variation
         matched, just the matching variations are shown (and expanded)."""
         entry = index[cid]
-        item = QTreeWidgetItem([entry["name"]])
+        item = QTreeWidgetItem([entry["name"], community_facts(entry)])
         item.setData(0, Qt.ItemDataRole.UserRole, cid)
         item.setToolTip(0, self._community_tooltip(entry))
+        item.setForeground(1, QColor(_FACTS_GREY))
 
         child_ids = (entry["children"] if (not filtering or passinfo["self"])
                      else passinfo["children"])
         for kid in child_ids:
-            child_item = QTreeWidgetItem([index[kid]["name"]])
+            child_item = QTreeWidgetItem([index[kid]["name"],
+                                          community_facts(index[kid])])
+            child_item.setForeground(1, QColor(_FACTS_GREY))
             child_item.setData(0, Qt.ItemDataRole.UserRole, kid)
             child_item.setToolTip(0, self._community_tooltip(index[kid]))
             item.addChild(child_item)

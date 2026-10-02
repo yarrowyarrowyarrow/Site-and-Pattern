@@ -61,3 +61,58 @@ class TestFillTabWidget(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestNoLabelIsCutOff(unittest.TestCase):
+    """V3.05: each tab was widened to an equal share of the bar, so a label
+    wider than its share lost the room it needed to the narrow ones, and
+    Analysis' "Sun & Shade" and Planning's "Timeline" read "Sun & Sh…" and
+    "Timel…" on a 1366-wide screen with room to spare (the surface audit)."""
+
+    _app = None
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def _settle(self, w):
+        w.show()
+        for _ in range(4):
+            self._app.processEvents()
+
+    def _assert_whole(self, tabs, label=""):
+        from PyQt6.QtWidgets import QTabBar
+        bar = tabs.tabBar()
+        natural = [QTabBar.tabSizeHint(bar, i).width() for i in range(bar.count())]
+        if sum(natural) > bar.width():
+            self.skipTest(f"{label}: the labels need more than the strip")
+        for i in range(bar.count()):
+            self.assertGreaterEqual(
+                bar.tabRect(i).width(), natural[i],
+                f"{label}: '{bar.tabText(i)}' is narrower than its label")
+
+    def test_a_wide_label_keeps_its_width(self):
+        from PyQt6.QtWidgets import QWidget
+        from src.fill_tab_widget import FillTabWidget
+        w = FillTabWidget(allow_shrink=True)
+        w.setStyleSheet("QTabBar::tab { padding: 4px 6px; }")
+        for text in ("Sun && Shade", "Wind", "Habitat", "This Month", "Bees"):
+            w.addTab(QWidget(), text)
+        w.resize(420, 200)
+        self._settle(w)
+        self._assert_whole(w, "synthetic")
+        last = w.tabBar().tabRect(w.count() - 1)
+        self.assertGreaterEqual(last.right(), w.width() - 8, "the row no longer fills")
+
+    def test_the_analysis_and_planning_strips_at_a_laptops_width(self):
+        from src.analysis_panel import AnalysisPanel
+        from src.planning_panel import PlanningPanel
+        for cls in (AnalysisPanel, PlanningPanel):
+            panel = cls()
+            panel.resize(420, 700)
+            self._settle(panel)
+            self._assert_whole(panel._tabs, cls.__name__)
+            panel.close()

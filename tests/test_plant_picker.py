@@ -532,5 +532,62 @@ class TestTheBuilderUsesThePicker(unittest.TestCase):
         self.assertFalse(hasattr(pp, "OffsetCanvas"))
 
 
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestNativeFollowsThePin(unittest.TestCase):
+    """F200 (V3.05): Native read Alberta's natives wherever the pin was, and
+    the row badge was the Alberta flag, so a Saskatoon yard's list filtered to
+    Alberta's plants while the generator beside it used Saskatchewan's."""
+
+    SASKATOON = (52.13, -106.67)
+    EDMONTON = (53.55, -113.49)
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = _app()
+        _plants.init_db()
+
+    def _picker(self, site):
+        from src.plant_picker import PlantPicker
+        holder = QWidget()
+        self.addCleanup(holder.deleteLater)
+        picker = PlantPicker(holder)
+        picker.set_site(site)
+        picker.chips["native_only"].setChecked(True)
+        picker.refresh()
+        return picker
+
+    def test_a_saskatchewan_pin_lists_saskatchewan_natives(self):
+        from src.plant_filters import native_in
+        picker = self._picker(self.SASKATOON)
+        self.assertEqual(picker.province(), "SK")
+        rows = picker.rows()
+        self.assertTrue(rows)
+        self.assertTrue(all(native_in(r, "SK") for r in rows))
+        alberta_only = [r for r in _plants.search_plants()
+                        if native_in(r, "AB") and not native_in(r, "SK")]
+        self.assertTrue(alberta_only, "the catalogue has no Alberta-only row")
+        shown = {r["id"] for r in rows}
+        self.assertFalse(shown & {r["id"] for r in alberta_only})
+
+    def test_an_alberta_pin_is_as_before(self):
+        picker = self._picker(self.EDMONTON)
+        self.assertEqual(picker.province(), "AB")
+        flagged = {r["id"] for r in _plants.search_plants(native_province="AB")}
+        self.assertEqual({r["id"] for r in picker.rows()}, flagged)
+
+    def test_the_badge_and_the_tip_name_the_province(self):
+        picker = self._picker(self.SASKATOON)
+        self.assertEqual(picker.delegate.province, "SK")
+        self.assertIn("Saskatchewan", picker.chips["native_only"].toolTip())
+
+    def test_the_words_follow_the_province(self):
+        from src.plant_list_view import native_words
+        row = {"native_provinces": "AB", "native_to_alberta": 1}
+        self.assertEqual(native_words(row, "AB"), "Native to Alberta")
+        self.assertEqual(native_words(row, "SK"), "Not native to Saskatchewan")
+        self.assertEqual(native_words({"native_provinces": "AB,SK"}, "SK"),
+                         "Native to Saskatchewan")
+
 if __name__ == "__main__":
     unittest.main()

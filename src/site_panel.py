@@ -338,6 +338,8 @@ class SitePanel(QWidget):
     # Site-walk field notes (F6, P11) — emitted (debounced) when the user edits
     # the checklist / free text; MainWindow stores it on the project.
     field_notes_changed = pyqtSignal(dict)
+    #: "Print this sheet" on Field Notes (F32): the prompts as a page.
+    print_field_sheet_requested = pyqtSignal()
 
     # Site photo overlay (F24, P11). Import a yard/drone photo as a map underlay,
     # adjust its on-map width + opacity, toggle it, or remove it.
@@ -800,6 +802,13 @@ class SitePanel(QWidget):
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
+
+        # F32 (V3.05): the same questions on paper, for the walk itself.
+        print_btn = QPushButton("Print this sheet…")
+        print_btn.setToolTip("Save these questions as a page to take outside, "
+                             "with anything you have noted so far")
+        print_btn.clicked.connect(self.print_field_sheet_requested)
+        layout.addWidget(print_btn)
 
         # Debounce so a flurry of keystrokes emits one update.
         self._fn_timer = QTimer(self)

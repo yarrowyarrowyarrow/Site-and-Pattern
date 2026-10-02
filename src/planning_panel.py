@@ -97,7 +97,10 @@ class PlanningPanel(QWidget):
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
         self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        self._tabs.setStyleSheet(inner_tab_stylesheet())
+        # The Analysis strip's tighter padding: at 4px 10px six labels need
+        # more than the panel's width and "Timeline" was cut off (V3.05).
+        self._tabs.setStyleSheet(inner_tab_stylesheet()
+                                 + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_maintenance_tab()
         self._build_wildlife_forage_tab()
@@ -107,6 +110,23 @@ class PlanningPanel(QWidget):
         self._build_notes_tab()
 
         layout.addWidget(self._tabs)
+
+        # V3.05: these four pages fill themselves from the design, on screen,
+        # where each used to open on a Calculate button over an empty box whose
+        # result then went stale with the next edit (src/live_refresh.py).
+        from src.live_refresh import LiveRefresh
+        self._live = LiveRefresh(self, self._tabs, {
+            self._maint_page: self._calc_maintenance,
+            self._wildlife_page: self._calc_wildlife_forage,
+            self._harvest_page: self._calc_human_forage,
+            self._water_page: self._calc_water,
+        })
+
+    def _poke(self, *_args) -> None:
+        """An input of a live page changed: refill whichever is on screen."""
+        live = getattr(self, "_live", None)
+        if live is not None:
+            live.poke()
 
     # ═════════════════════════════════════════════════════════════════════════
     #  P2 — Maintenance / Labour Estimator
@@ -136,17 +156,9 @@ class PlanningPanel(QWidget):
         self._avail_hours.setRange(0, 100)
         self._avail_hours.setValue(10)
         self._avail_hours.setSingleStep(1)
+        self._avail_hours.valueChanged.connect(self._poke)
         hours_row.addWidget(self._avail_hours)
         layout.addLayout(hours_row)
-
-        btn = QPushButton("Calculate Establishment Effort")
-        btn.setStyleSheet(
-            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #388e3c; }"
-        )
-        btn.clicked.connect(self._calc_maintenance)
-        layout.addWidget(btn)
 
         # Results
         self._maint_results = QLabel("")
@@ -161,6 +173,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(self._maint_results, 1)
 
         layout.addStretch()
+        self._maint_page = tab
         self._tabs.addTab(tab, "Effort")
 
     # Year-1 establishment + Year-3+ stewardship multipliers, applied to the
@@ -394,14 +407,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(info)
 
         btn_row = QHBoxLayout()
-        btn = QPushButton("Show Wildlife Forage")
-        btn.setStyleSheet(
-            "QPushButton { background: #6a1b9a; color: #f3e5f5; border: 1px solid #8e24aa; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #8e24aa; }"
-        )
-        btn.clicked.connect(self._calc_wildlife_forage)
-        btn_row.addWidget(btn, 1)
+        btn_row.addStretch(1)
 
         btn_expand = QPushButton("Expand all")
         btn_expand.setStyleSheet(
@@ -441,6 +447,7 @@ class PlanningPanel(QWidget):
         self._wildlife_tree.setRootIsDecorated(True)
         layout.addWidget(self._wildlife_tree, 1)
 
+        self._wildlife_page = tab
         self._tabs.addTab(tab, "Wildlife")
 
     def _calc_wildlife_forage(self):
@@ -585,14 +592,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(info)
 
         btn_row = QHBoxLayout()
-        btn = QPushButton("Show Human Forage")
-        btn.setStyleSheet(
-            "QPushButton { background: #bf360c; color: #fff3e0; border: 1px solid #e65100; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #c8410f; }"
-        )
-        btn.clicked.connect(self._calc_human_forage)
-        btn_row.addWidget(btn, 1)
+        btn_row.addStretch(1)
 
         btn_expand = QPushButton("Expand all")
         btn_expand.setStyleSheet(
@@ -626,6 +626,7 @@ class PlanningPanel(QWidget):
         )
         layout.addWidget(self._human_tree, 1)
 
+        self._harvest_page = tab
         self._tabs.addTab(tab, "Harvest")
 
     def _calc_human_forage(self):
@@ -787,15 +788,9 @@ class PlanningPanel(QWidget):
         form.addRow("Ponds:", self._has_pond)
 
         layout.addLayout(form)
-
-        btn = QPushButton("Calculate Establishment Water Budget")
-        btn.setStyleSheet(
-            "QPushButton { background: #01579b; color: #e1f5fe; border: 1px solid #0277bd; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0266ad; }"
-        )
-        btn.clicked.connect(self._calc_water)
-        layout.addWidget(btn)
+        for box in (self._garden_area, self._rain_barrels, self._roof_area,
+                    self._has_swale, self._has_pond):
+            box.valueChanged.connect(self._poke)
 
         self._water_results = QLabel("")
         self._water_results.setWordWrap(True)
@@ -809,6 +804,7 @@ class PlanningPanel(QWidget):
         layout.addWidget(self._water_results, 1)
 
         layout.addStretch()
+        self._water_page = tab
         self._tabs.addTab(tab, "Water")
 
     # Year-1 establishment / Year-3+ stewardship water multipliers, applied
@@ -1270,6 +1266,7 @@ class PlanningPanel(QWidget):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
         self._update_timeline_horizon()
+        self._poke()
 
     def _update_timeline_horizon(self):
         """Extend the timeline slider to the slowest placed plant's maturity so
@@ -1292,8 +1289,27 @@ class PlanningPanel(QWidget):
             slider.setValue(max_year)
 
     def set_structures(self, structures: list[dict]):
-        """Update the list of placed structures (from app.py)."""
+        """Update the list of placed structures (from app.py). The Water page's
+        barrels, ponds and swales start from what is placed (V3.05)."""
         self._structures = structures
+        from src.design_inputs import water_features
+        found = water_features(structures)
+        for box, key in ((self._rain_barrels, "rain_barrels"),
+                         (self._has_pond, "ponds"),
+                         (self._has_swale, "swales")):
+            box.blockSignals(True)
+            box.setValue(found[key])
+            box.blockSignals(False)
+        self._poke()
+
+    def set_site_area(self, area_m2: float) -> None:
+        """The Water page's garden area starts from the drawn boundary (V3.05);
+        with no boundary it keeps whatever it held."""
+        if area_m2 and area_m2 > 0:
+            self._garden_area.blockSignals(True)
+            self._garden_area.setValue(round(float(area_m2), 1))
+            self._garden_area.blockSignals(False)
+            self._poke()
 
     def set_notes(self, text: str):
         """Load notes from project (called on project open)."""
@@ -1301,6 +1317,9 @@ class PlanningPanel(QWidget):
         self._notes_edit.setPlainText(text)
         self._notes_edit.blockSignals(False)
         self._project_notes = text
+        # The counter listens to edits, which the block above silences: count
+        # what was loaded, or a page of notes reads "0 words" (V3.05 audit).
+        self._notes_count.setText(f"{len(text.split()) if text.strip() else 0} words")
 
     def get_notes(self) -> str:
         """Return current notes text."""

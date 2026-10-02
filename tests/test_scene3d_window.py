@@ -97,6 +97,23 @@ class TestScene3DWindow(unittest.TestCase):
         win.close()          # closeEvent stops its workers
         win.deleteLater()
 
+    def test_the_time_sliders_have_room_on_a_laptop(self):
+        """V3.05: at the 1148 px the window opens at on a 1366 x 768 screen,
+        Year, Time of year and Time of day were 15 px wide, a handle that read
+        as a checkbox, because their row also held six buttons (the surface
+        audit measured it). Their row now holds only when and how it looks."""
+        from src.scene3d_window import Scene3DWindow
+        win = Scene3DWindow(self._fake_main())
+        win.viewer.run_js = lambda js: None
+        win.resize(1148, 700)
+        win.show()
+        for _ in range(5):
+            self._app.processEvents()
+        for slider in (win._year, win._month, win._hour):
+            self.assertGreaterEqual(slider.width(), 100)
+        win.close()
+        win.deleteLater()
+
     def test_open_3d_view_singleton(self):
         from src.scene3d_window import open_3d_view
         main = self._fake_main()

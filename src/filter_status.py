@@ -4,8 +4,8 @@ filter_status.py — what is narrowing a plant list, and why it came back empty
 
 Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
 
-Two widgets the plant picker (``src/plant_picker.py``) draws over its list.
-Neither runs a search; the picker does that and hands them words.
+Three widgets the plant picker (``src/plant_picker.py``) draws over its list.
+None runs a search; the picker does that and hands them words.
 
   * :class:`FilterLine` — Filters ▸, then one chip per restriction that is on,
     each removing its own ("Type: Tree or Shrub ×"), then Clear all. Until V3.01
@@ -14,6 +14,9 @@ Neither runs a search; the picker does that and hands them words.
   * :class:`WhyEmpty` — said instead of nothing when no plant passes: which
     restriction emptied the list, and what removing it would bring back. Until
     V3.01 an empty result read "No plants match" over a blank list.
+  * :class:`QualityChips` — the qualities as toggles, and the site's soil pH
+    beside them. Moved out of the picker in V3.05, when Native began naming the
+    pin's province (F200) and the picker passed its line ceiling again.
 """
 
 from __future__ import annotations
@@ -58,6 +61,18 @@ def wrapped(tip: str) -> str:
     a 1,366 px screen, over the map. A screen reader is given the plain text
     (``setAccessibleDescription``), not this."""
     return f"<p>{html.escape(tip)}</p>" if tip else tip
+
+
+# A quality toggle, off and on.
+CHIP_STYLE = (
+    "QPushButton { background: #1e2e1e; color: #a8b8b0; "
+    "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px 8px; "
+    "font-size: 12px; min-height: 18px; }"
+    "QPushButton:checked { background: #2e5a2e; color: #e8f5e9; "
+    "border-color: #66bb6a; }"
+    "QPushButton:hover { border-color: #4a7a4a; }"
+    "QPushButton:focus { border: 2px solid #ffe082; }"
+)
 
 
 def _button(text: str, style: str) -> QPushButton:
@@ -239,3 +254,39 @@ class WhyEmpty(QWidget):
     def has_keyboard(self) -> bool:
         focus = self.window().focusWidget()
         return focus is not None and (focus is self or self.isAncestorOf(focus))
+
+
+class QualityChips(QWidget):
+    """The qualities as toggles ("Native", "Keystone", ...), each told what it
+    keeps, and the site's soil pH beside them, drawn like them, so a filter the
+    app switched on can be switched back on once taken off. The soil toggle is
+    hidden until the picker has a pH to offer."""
+
+    #: A quality's key, when its toggle is flipped.
+    toggled = pyqtSignal(str)
+
+    def __init__(self, qualities, criteria: dict, parent=None):
+        super().__init__(parent)
+        flow = FlowLayout(self, h_spacing=4, v_spacing=4)
+        flow.setContentsMargins(0, 0, 0, 0)
+        self.buttons: dict = {}
+        for q in qualities:
+            btn = _button(q.label, CHIP_STYLE)
+            btn.setCheckable(True)
+            btn.setChecked(bool(criteria.get(q.key)))
+            btn.toggled.connect(lambda _on, k=q.key: self.toggled.emit(k))
+            flow.addWidget(btn)
+            self.buttons[q.key] = btn
+            self.describe(q.key, q.tip)
+        self.soil = _button("", CHIP_STYLE)
+        self.soil.setCheckable(True)
+        self.soil.hide()
+        flow.addWidget(self.soil)
+
+    def describe(self, key: str, tip: str) -> None:
+        """What a toggle keeps, to the eye and to a screen reader. Native's
+        names the pin's province (F200)."""
+        btn = self.buttons.get(key)
+        if btn is not None:
+            btn.setToolTip(wrapped(tip))
+            btn.setAccessibleDescription(tip)

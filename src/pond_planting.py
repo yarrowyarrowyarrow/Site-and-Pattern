@@ -32,7 +32,7 @@ from __future__ import annotations
 import math
 from typing import Callable, Iterable, Optional
 
-from src import pond_habit
+from src import pond_habit, why_here
 from src.projection import Projector
 from src.zoning import needs_standing_water
 
@@ -353,6 +353,7 @@ def seat_water(project, water, pond_communities, seats: PondSeats, *,
             if spot is None:
                 break
             project.place_plant(pid, spot[0], spot[1], quantity=1)
+            why_here.stamp(project, 1, [why_here.POND])
             placed += 1
         if placed < qty:
             short.append((row.get("common_name") or "plant", placed, qty))
@@ -366,6 +367,8 @@ def seat_water(project, water, pond_communities, seats: PondSeats, *,
                     continue
                 project.place_plant(row["id"], spot[0], spot[1],
                                     polyculture_name=name, quantity=1)
+                why_here.stamp(project, 1, [
+                    why_here.COMMUNITY_MEMBER.format(name=name), why_here.POND])
     return [_short_note(short)] if short else []
 
 
@@ -423,6 +426,7 @@ def plant_bare_ponds(project, ponds, pool: Iterable[dict], site=None, *,
                 if spot is None:
                     break
                 project.place_plant(row["id"], spot[0], spot[1], quantity=1)
+                why_here.stamp(project, 1, [why_here.BARE_POND, why_here.POND])
                 n += 1
             if n:
                 planted.append(row.get("common_name") or "plant")
