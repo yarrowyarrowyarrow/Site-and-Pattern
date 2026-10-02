@@ -612,6 +612,10 @@ class MainWindow(QMainWindow):
         act_gallery.triggered.connect(lambda: _open_sprite_gallery(self))
 
         view_menu.addSeparator()
+        # F205 (V3.06): a north arrow and a scale bar on the map, and so in
+        # Export PDF's picture of it; the switches live in a flow module.
+        from src import map_furniture_flow
+        map_furniture_flow.install(self, view_menu)
         act_map_settings = view_menu.addAction("&Map Settings…")
         act_map_settings.setStatusTip(
             "Configure optional map provider tokens (e.g. Mapbox high-res satellite)"

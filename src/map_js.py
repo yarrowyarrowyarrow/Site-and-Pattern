@@ -667,6 +667,22 @@ def clear_auto_terrain() -> str:
     return "clearAutoTerrain();"
 
 
+# ── North arrow and scale bar (F205, V3.06) ─────────────────────────────────
+
+#: The scale bar's units: kilometres by default (the owner's choice), metres
+#: on request. Anything else is read as kilometres, in the page too.
+SCALE_UNITS = ("km", "m")
+
+
+def set_north_arrow(visible: bool) -> str:
+    return f"setNorthArrow({_jsbool(visible)});"
+
+
+def set_scale_bar(visible: bool, unit: str = "km") -> str:
+    unit = unit if unit in SCALE_UNITS else "km"
+    return f"setScaleBar({_jsbool(visible)}, {_jsstr(unit)});"
+
+
 # ── Resize / invalidate (load-bearing — see map_widget.py block comment) ────
 
 def invalidate_size() -> str:

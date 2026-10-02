@@ -166,6 +166,9 @@ class MapBridge(QObject):
     # fill) and Python has to follow; see src/placement_bar_flow.py.
     mode_changed = pyqtSignal(str, int)                   # mode, python_seq
 
+    # A click on the scale bar switched its units ("km" or "m", F205).
+    scale_unit_changed = pyqtSignal(str)
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -398,6 +401,10 @@ class MapBridge(QObject):
     @pyqtSlot(str, int)
     def onModeChanged(self, mode: str, python_seq: int):
         self.mode_changed.emit(mode or "none", int(python_seq))
+
+    @pyqtSlot(str)
+    def onScaleUnitChanged(self, unit: str):
+        self.scale_unit_changed.emit("m" if unit == "m" else "km")
 
 
 class _LoggingPage(QWebEnginePage):
@@ -931,6 +938,14 @@ class MapWidget(QWebEngineView):
 
     def clear_wind_overlay(self):
         self.run_js(map_js.clear_wind_overlay())
+
+    # ── North arrow and scale bar (F205, V3.06) ──────────────────────────────
+
+    def set_north_arrow(self, visible: bool):
+        self.run_js(map_js.set_north_arrow(visible))
+
+    def set_scale_bar(self, visible: bool, unit: str = "km"):
+        self.run_js(map_js.set_scale_bar(visible, unit))
 
     # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
     # call sites in src/app.py. Each is a one-line wrapper around the

@@ -124,6 +124,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawSitePhotoOverlay", "setSitePhotoVisible", "setSitePhotoOpacity",
         "clearSitePhoto",
         "drawSnowCatch", "setSnowCatchVisible", "clearSnowCatch",
+        "setNorthArrow", "setScaleBar",
         "_removeBoundaryEntry",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",

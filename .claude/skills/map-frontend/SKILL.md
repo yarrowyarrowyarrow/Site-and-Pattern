@@ -1,6 +1,6 @@
 ---
 name: map-frontend
-description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, ten files since V3.03; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
+description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, eleven files since V3.06; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
 ---
 
 # Map frontend — Leaflet inside QWebEngineView
@@ -58,7 +58,8 @@ into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
 `07-network.js`, joined them in V2.31 for the relationship-web overlay, an
 eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor, a
 ninth, `09-keyboard.js`, in V3.02 for the map without a mouse, and a tenth,
-`10-plant-key.js`, in V3.03 for how a plant is drawn and the legend):
+`10-plant-key.js`, in V3.03 for how a plant is drawn and the legend, and an
+eleventh, `11-map-furniture.js`, in V3.06 for the north arrow and the scale bar):
 
 ```html
 <script src="map/01-core.js"></script>
@@ -71,6 +72,7 @@ ninth, `09-keyboard.js`, in V3.02 for the map without a mouse, and a tenth,
 <script src="map/08-footprint.js"></script>
 <script src="map/09-keyboard.js"></script>
 <script src="map/10-plant-key.js"></script>
+<script src="map/11-map-furniture.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -105,6 +107,7 @@ That block **is** the load-order definition. Rules that follow from it:
 | `html/map/08-footprint.js` | The footprint under the cursor while placing (F191, V2.99): the plant, a Qty cluster, a pattern's first plant, a community's members (shape from `src/placement_footprint.py`). Built once per arming, moved per mousemove, in a pane that takes no pointer events |
 | `html/map/09-keyboard.js` | The map without a mouse (F195, V3.02): Enter on the focused map calls `onMapClick` at the centre with whatever tool is chosen, Shift+Enter calls `finishDrawing`, a centre mark and the footprint follow the keyboard, the map's own focus ring (the browser's sat outside a container that fills the page), and `L.Marker.mergeOptions({keyboard: false})`, so a label marker is not a Tab stop unless it passes `keyboard: true` because activating it does something. **A new click tool belongs in `_KEYBOARD_TOOLS`** or Enter will not act for it |
 | `html/map/10-plant-key.js` | How a plant is drawn (F195, V3.03): `TYPE_COLORS` (mirrors `src/member_colors.py`, the one table; a test fails if they differ), `plantColour(pd)` (your colour, else the type's) and `plantMarkerStyle(colour)` (an outline 60% darker, 2 px), which every place that draws or restores a marker calls; the legend's plant section, built from the table; and `roundCircles`, which makes every `L.Circle` as wide as it is tall, because Leaflet 1.9's `acos` drew sub-metre circles up to 44% out of round. No other script reads `TYPE_COLORS` (tested) |
+| `html/map/11-map-furniture.js` | The north arrow and the scale bar (F205, V3.06): `setNorthArrow(on)` (a Leaflet control under the zoom buttons; the map never rotates, so it never turns) and `setScaleBar(on, unit)` (a `<button>` at the bottom centre, outside the map's container so a click never places anything; a click switches km and m and tells Python through `bridge.onScaleUnitChanged`). `scaleBarFor(metresPerPixel, maxPx, unit)` is pure and run in node by `tests/test_map_furniture.py`. The switches and their memory are `src/map_furniture_flow.py` |
 
 ## Bridge: Python → JS
 

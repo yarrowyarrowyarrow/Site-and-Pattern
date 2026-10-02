@@ -391,6 +391,9 @@ class TestStructuralCeilings(unittest.TestCase):
         # shape) and the legend that says so, in one place: the type table
         # moved here from 03-plants.js.
         (_HTML / "map" / "10-plant-key.js", 200),      # 117 now
+        # V3.06 (F205): the north arrow and the scale bar, opted in on
+        # arrival, as the map's furniture rather than any one overlay's.
+        (_HTML / "map" / "11-map-furniture.js", 200),  # 132 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in
