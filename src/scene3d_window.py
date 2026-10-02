@@ -134,6 +134,18 @@ def _save_data_url(url: str, path: str) -> bool:
         return False
 
 
+def keep_still(main, path: str, spec: dict) -> bool:
+    """Hold the last presentation still on the main window, as ``(pixmap,
+    caption)``, for the PDF export (F123). False when the file will not load."""
+    from PyQt6.QtGui import QPixmap
+    pixmap = QPixmap(path)
+    if pixmap.isNull():
+        return False
+    caption = (spec.get("caption") or spec.get("title") or "").strip()
+    main._presentation_still = (pixmap, caption)
+    return True
+
+
 class Scene3DWindow(QWidget):
     """3D preview of the current design (growth year + sun controls)."""
 
@@ -532,8 +544,13 @@ class Scene3DWindow(QWidget):
         def _capture():
             def _done(url):
                 if _save_data_url(url, path):
+                    # Kept for File → Export PDF (F123, V3.05): the PDF has
+                    # drawn a still page since F69, and nothing ever handed
+                    # it one. Kept the way before_after_flow keeps F76's.
+                    keep_still(self._main, path, spec)
                     self._main.statusBar().showMessage(
-                        f"Presentation still saved to {path}", 6000)
+                        f"Presentation still saved to {path}; Export PDF "
+                        "will include it", 6000)
                 else:
                     self._main.statusBar().showMessage(
                         "Could not render the still — let the 3D view finish "

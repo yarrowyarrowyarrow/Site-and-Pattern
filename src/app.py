@@ -1867,7 +1867,7 @@ class MainWindow(QMainWindow):
                 return
 
         name, ok = QInputDialog.getText(
-            self, "New Design", "Project name:", text="My Food Forest"
+            self, "New Design", "Project name:", text="My yard"
         )
         if not ok:
             return
@@ -1879,6 +1879,8 @@ class MainWindow(QMainWindow):
         self._project_path = None
         self._modified     = False
         self._clear_undo()
+        # Renders of the old design must not reach the new one's PDF (V3.05).
+        self._presentation_still = self._before_after = (None, "")
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
@@ -1941,6 +1943,7 @@ class MainWindow(QMainWindow):
         self._project_path = path
         self._modified     = False
         self._clear_undo()
+        self._presentation_still = self._before_after = (None, "")
         # So the start menu can offer "Continue" next launch (F87/V2.40).
         from src import saves
         saves.remember_last_design(path)
@@ -2114,8 +2117,13 @@ class MainWindow(QMainWindow):
             # rendered it. Passed through rather than re-rendered here: export
             # is synchronous and the viewer's capture is a chain of callbacks.
             ba_panels, ba_caption = getattr(self, "_before_after", (None, ""))
+            # F69's still, which never reached the PDF until F123 (V3.05):
+            # kept by the 3D window when one is rendered.
+            still, still_caption = getattr(self, "_presentation_still",
+                                           (None, ""))
 
             export_pdf(path, self._project, enriched, structs, notes, pixmap,
+                       still_pixmap=still, still_caption=still_caption,
                        before_after=ba_panels,
                        before_after_caption=ba_caption)
             self.statusBar().showMessage(f"PDF exported: {path}", 3000)

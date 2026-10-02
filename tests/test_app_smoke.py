@@ -743,6 +743,47 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertTrue(w.is_ready)
         self.assertGreater(w.receivers(w.loadStarted), 0)
 
+    def test_export_pdf_carries_the_presentation_still(self):
+        """F123 (V3.05): the PDF has drawn a full-page still since F69, and
+        Export PDF never passed one, so the page was unreachable. The 3D
+        window now keeps the last still it rendered on the main window."""
+        import tempfile
+        from unittest import mock
+        from PyQt6.QtGui import QColor, QPixmap
+        from src.scene3d_window import keep_still
+        win = self._win
+        self.addCleanup(setattr, win, "_presentation_still", (None, ""))
+        png = os.path.join(tempfile.mkdtemp(), "still.png")
+        pm = QPixmap(64, 48)
+        pm.fill(QColor("#4c7a3a"))
+        pm.save(png)
+        self.assertTrue(keep_still(win, png, {"caption": "Year 5, June",
+                                              "title": "Five years on"}))
+        out = os.path.join(tempfile.mkdtemp(), "design.pdf")
+        seen = {}
+        with mock.patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+                        return_value=(out, "")), \
+                mock.patch("src.pdf_export.export_pdf",
+                           side_effect=lambda *a, **k: seen.update(k)):
+            win._on_export_pdf()
+        self.assertIsNotNone(seen.get("still_pixmap"))
+        self.assertEqual(seen["still_pixmap"].width(), 64)
+        self.assertEqual(seen.get("still_caption"), "Year 5, June")
+
+    def test_a_new_design_drops_the_old_designs_renders(self):
+        """A still or before/after of the last design must not land in the
+        next one's PDF (V3.05)."""
+        win = self._win
+        from unittest import mock
+        win._presentation_still = ("a pixmap", "old")
+        win._before_after = (["panels"], "old")
+        win._modified = False
+        with mock.patch("src.app.QInputDialog.getText",
+                        return_value=("Test yard", True)):
+            win._on_new()
+        self.assertEqual(win._presentation_still, (None, ""))
+        self.assertEqual(win._before_after, (None, ""))
+
     def test_every_pointer_in_the_words_leads_somewhere(self):
         """V3.05: the app tells people where to go in its own words, "Analysis
         → Habitat", and two of those directions had rotted. The worked
