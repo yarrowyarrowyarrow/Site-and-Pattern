@@ -244,7 +244,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # through this module, so a second one that wants a hierarchy gets it
         # for free rather than growing a private copy.
         (_SRC / "ecoregion_tree.py", 340),             # 282 now
-        (_SRC / "filter_widgets.py", 560),             # 522 now (V3.03)
+        (_SRC / "filter_widgets.py", 560),             # 546 now (V3.04)
         # V2.68: 460 -> 560. `_subregion_pages` builds the third level of the
         # drill-down. It is MODEL code and stays with the model: moving it into
         # the renderer would put "what is a subregion page" in the view layer,
@@ -306,7 +306,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "static_site_wildlife.py", 340),       # 274 now
         (_HTML / "site" / "browse.js", 200),           # 156 now
         (_SRC / "start_screen.py", 380),               # 292 now
-        (_SRC / "onboarding_flow.py", 620),            # ~551 now
+        (_SRC / "onboarding_flow.py", 620),            # 571 now (V3.04)
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
         # ceiling added late is a ceiling set around whatever shape the file
         # drifted into. learn_flow.py exists *because* this guard fired — the
@@ -362,13 +362,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # 238 now (V3.03)
         (_HTML / "map" / "01-core.js", 950),           # 923 now (V3.03)
-        (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
+        (_HTML / "map" / "02-boundary.js", 750),       # 675 now (V3.04)
         (_HTML / "map" / "03-plants.js", 950),         # 937 now (V3.03)
         (_HTML / "map" / "04-tools.js", 450),          # ~367 now
         # V2.26: +editable existing features (drag + scroll-resize of detected/
         # marked trees & buildings) — in-domain growth for the features file,
         # kept together to avoid the cross-chunk load-order traps a split adds.
-        (_HTML / "map" / "05-features.js", 1200),      # ~1120 now
+        (_HTML / "map" / "05-features.js", 1200),      # 1184 now (V3.04)
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
         (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
         # V2.31 (F5): the relationship-web overlay went into its own chunk
@@ -398,7 +398,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # 400 now (V2.94, 01c-leaves.js), NONE LEFT: the next chunk needs the
         # bootstrap's FILES list moved out of the page, not a bigger number.
         (_HTML / "scene3d.html", 400),
-        (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
+        (_HTML / "scene3d" / "01-core.js", 700),       # 606 now (V3.04)
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
         # the surface work and the real-wind work land in the same function, so
@@ -408,17 +408,19 @@ class TestStructuralCeilings(unittest.TestCase):
         # reached 548/550 with it inline. Light through a leaf and the bake on
         # the sky; anything more about light belongs in its own chunk too.
         (_HTML / "scene3d" / "01c-leaves.js", 150),    # 74 now
-        (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
+        # 687 now (V3.04, one ground on a slope). The next ground work is a chunk
+        # of its own, which needs the bootstrap's FILES list moved out first.
+        (_HTML / "scene3d" / "02-plants.js", 700),
         (_HTML / "scene3d" / "03-herbs.js", 700),      # ~432 now
         # V2.92 (F178): the procedural trees, split out of 03-herbs.js when the
         # Stylised half of F178 took it to 758/700 — the split the ceiling
         # asks for, along the herbs/trees seam.
         (_HTML / "scene3d" / "03b-trees.js", 450),     # ~339 now
         (_HTML / "scene3d" / "04-quality.js", 900),    # 896 now (V2.93): move code out first
-        (_HTML / "scene3d" / "05-flowers.js", 800),    # ~772 now (V2.93)
+        (_HTML / "scene3d" / "05-flowers.js", 800),    # 775 now (V3.04)
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
-        (_HTML / "scene3d" / "08-modes.js", 600),      # ~496 now
+        (_HTML / "scene3d" / "08-modes.js", 600),      # 503 now
         # V2.46b: the walker's body and his held net, extracted when the net
         # took 08-modes.js to 625/600. The seam was chosen for load order as
         # much as for size: nothing in here is called from the animation
@@ -467,11 +469,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # coordinates out — if this file grows past its ceiling the cause is
         # almost certainly placement logic that belongs in
         # src/reference_edit.py, where the single write path is.
-        (_HTML / "scene3d" / "16-editing.js", 300),    # 206 now
+        (_HTML / "scene3d" / "16-editing.js", 300),    # 292 now (V3.04, a click meets the slope)
         # V2.44: the tween registry and the plant/pull/catch animations. If
         # this outgrows its ceiling the cause is almost certainly a fourth
         # animation that wants its own chunk, not a bigger number here.
-        (_HTML / "scene3d" / "17-anim.js", 340),       # 239 now
+        (_HTML / "scene3d" / "17-anim.js", 340),       # 254 now
         # V2.45: the flight model's viewer half — real hertz, the bout
         # envelope, and the body offset that comes out of it. The physics and
         # every number live in src/flight_model.py; if this file grows past its

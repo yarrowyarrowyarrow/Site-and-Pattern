@@ -731,6 +731,18 @@ class TestMainWindowSmoke(unittest.TestCase):
             self.assertEqual(colour, win._plant_info(pid)[2])
             self.assertNotEqual(colour, "#1b5e20")     # the old overstory green
 
+    def test_the_map_says_whether_it_has_loaded(self):
+        """F197 (V3.04): a start-screen choice made after the map loaded had
+        waited for a map_ready that had already fired. The choice now asks
+        first; the answer must follow a reload too."""
+        w = self._win.map_widget
+        self.addCleanup(setattr, w, "is_ready", w.is_ready)
+        w._on_load_started()
+        self.assertFalse(w.is_ready)
+        w._on_map_ready()
+        self.assertTrue(w.is_ready)
+        self.assertGreater(w.receivers(w.loadStarted), 0)
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):

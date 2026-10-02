@@ -40,9 +40,10 @@ Open the **Plants** tab (**Browse**).
   **Restoring toward Aspen Parkland ×** once you have dropped a pin on your site. Click a
   chip's **×** to remove that filter alone; **Clear all** removes every one. **Filters ▸**
   unfolds them all. The count says how much they leave: *339 of 424 plants*.
-  - Nine dropdowns, each of which takes more than one value. Each list opens on a line
-    saying how the values you tick combine, and once you tick some the box names its
-    filter and joins them the same way: *Type: Tree or Shrub*. **Type**, **Sun**,
+  - Nine dropdowns, each of which takes more than one value. Click a name to choose it
+    and close the list; tick the boxes to choose several, and the list stays open. Each
+    list opens on a line saying how the values you tick combine, and once you tick some
+    the box names its filter and joins them the same way: *Type: Tree or Shrub*. **Type**, **Sun**,
     **Water**, **Where to buy**, **Restoring toward** (ecoregions; ticking a system
     includes everything inside it), **Blooms in**, **Fruits in** and **Flower colour**
     keep a plant that has *any* of the values you tick. **Role** is the other way round:
@@ -237,6 +238,12 @@ The 3D preview is where the design stops being a plan and starts being a place.
 - **Time of day** — drives the sun and the shadows (the same engine as the 2D
   shade map, so the two always agree). Drag past dusk for a moonlit scene with
   moths and bats instead of the day's bees and butterflies.
+- **The ground follows the slope** when the site's elevation could be fetched
+  (the corner badge then says *terrain*): the yard, its boundary line, the
+  shadows under the trees and anything you plant in 3D all sit on it, and a
+  click lands where you point. Elevation is fetched for the boundary's box; past
+  it the ground keeps the height at the boundary's edge, so a hillside reads as
+  a level terrace beyond the fence rather than as a guess at the hill.
 - **Click any plant or creature** to open its card: what it is, when it blooms
   and fruits, how big it gets at years 1 / 5 / 15 / 25, every animal documented
   to use it and how — and, when it applies, *"pull this plant and N species lose

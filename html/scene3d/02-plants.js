@@ -81,8 +81,9 @@ function makeSnowTexture() {
 }
 
 // One shared ground material across every scene rebuild (its texture is never
-// disposed — disposeDesignGroup skips it via the shared-material set). Plane
-// UVs are scaled so one texture tile always covers ~_GROUND_TILE_M metres.
+// disposed — disposeDesignGroup skips it via the shared-material set). The
+// ground's UVs are its own metres over _GROUND_TILE_M, so one texture tile
+// always covers that many metres, wherever on the ground it falls.
 let GROUND_MAT = null;
 const _GROUND_TILE_M = 7;
 function ensureGroundMat() {
@@ -90,12 +91,6 @@ function ensureGroundMat() {
     GROUND_MAT = new THREE.MeshStandardMaterial({
       map: makeMeadowTexture(), roughness: 1 });
   return GROUND_MAT;
-}
-function scaleGroundUv(geo, w, d) {
-  const uv = geo.attributes.uv;
-  for (let i = 0; i < uv.count; i++)
-    uv.setXY(i, uv.getX(i) * (w / _GROUND_TILE_M),
-                uv.getY(i) * (d / _GROUND_TILE_M));
 }
 
 // A second cached material for snow, plus a seasonal picker: deep winter
@@ -121,36 +116,47 @@ function groundMatFor(month) {
   return mat;
 }
 
+// ONE ground, everywhere (V3.04). The terrain used to be a patch the size of
+// the boundary's bounding box, laid over a flat apron at the site's lowest point.
+// Everything else stood at terrainHeightAt, which holds the grid's edge heights
+// outside it, so on a slope the patch's far edge stood metres above the apron,
+// the sky showed through the gap under it as a white band, and a plant outside
+// the boundary stood on air at the edge's height with its shadow on the apron
+// below: the owner's screenshots of a sloped yard showed all three. Now the
+// ground IS terrainHeightAt: the grid's own vertices inside, its edge carried
+// outward by the same clamp, so the ground and what stands on it cannot
+// disagree, out to where the fog has taken it, so no edge of the world shows.
+// Drawn 2 cm under, as the apron was, so nothing lying on it z-fights.
+const _GROUND_REACH_M = 1500;              // 01-core.js: the fog is opaque at 1500 m
+function _groundLines(lo, hi, a, b, n) {   // vertex positions along one axis
+  const out = [Math.min(lo, a - 1)];
+  for (let i = 0; i < n; i++) out.push(a + (b - a) * i / (n - 1));
+  out.push(Math.max(hi, b + 1));
+  return out;
+}
 function buildGround(group, sc) {
-  const b = sc.bounds, t = sc.terrain;
-  const mat = groundMatFor(sc.month);
-  if (t && t.rows > 1 && t.cols > 1) {
-    const w = t.max_x - t.min_x, d = t.max_y - t.min_y;
-    const geo = new THREE.PlaneGeometry(w, d, t.cols - 1, t.rows - 1);
-    // PlaneGeometry grid: row 0 = +y edge (north after rotation) — matches
-    // the contract's "heights row 0 = north".
-    const pos = geo.attributes.position;
-    for (let r = 0; r < t.rows; r++)
-      for (let c = 0; c < t.cols; c++)
-        pos.setZ(r * t.cols + c, t.heights[r][c]);
-    geo.computeVertexNormals();
-    scaleGroundUv(geo, w, d);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(t.min_x + w / 2, 0, -(t.min_y + d / 2));
-    mesh.receiveShadow = true;
-    group.add(mesh);
+  const b = sc.bounds, t = sc.terrain && sc.terrain.rows > 1 && sc.terrain.cols > 1
+    ? sc.terrain : null;
+  const cx = (b.min_x + b.max_x) / 2, cy = (b.min_y + b.max_y) / 2, R = _GROUND_REACH_M;
+  const xs = t ? _groundLines(cx - R, cx + R, t.min_x, t.max_x, t.cols) : [cx - R, cx + R];
+  const ys = t ? _groundLines(cy - R, cy + R, t.min_y, t.max_y, t.rows) : [cy - R, cy + R];
+  const geo = new THREE.PlaneGeometry(1, 1, xs.length - 1, ys.length - 1);
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  // PlaneGeometry's row 0 is its +y edge, which is north: the contract's
+  // "heights row 0 = north". Written straight into world space (x, h, -y).
+  for (let r = 0; r < ys.length; r++) {
+    const y = ys[ys.length - 1 - r];
+    for (let c = 0; c < xs.length; c++) {
+      const k = r * xs.length + c;
+      pos.setXYZ(k, xs[c], terrainHeightAt(xs[c], y, t) - 0.02, -y);
+      uv.setXY(k, xs[c] / _GROUND_TILE_M, y / _GROUND_TILE_M);
+    }
   }
-  // A wide flat apron under/around everything (also the only ground when
-  // no terrain came with the scene).
-  const aw = (b.max_x - b.min_x) * 3, ad = (b.max_y - b.min_y) * 3;
-  const ageo = new THREE.PlaneGeometry(aw, ad);
-  scaleGroundUv(ageo, aw, ad);
-  const apron = new THREE.Mesh(ageo, mat);
-  apron.rotation.x = -Math.PI / 2;
-  apron.position.set((b.min_x + b.max_x) / 2, -0.02, -(b.min_y + b.max_y) / 2);
-  apron.receiveShadow = true;
-  group.add(apron);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, groundMatFor(sc.month));
+  mesh.name = 'ground';
+  mesh.receiveShadow = true;
+  group.add(mesh);
 }
 
 // The ground stays a PAINTED plane (makeMeadowTexture / makeSnowTexture).
@@ -164,12 +170,24 @@ function buildGround(group, sc) {
 // to make it look full works against the thing the view is for. Texture is the
 // right place to say "there is lawn here"; geometry is not.
 
-function buildBoundary(group, ring) {
+// Draped over the ground (V3.04): each edge cut into steps of a metre, each
+// 12 cm above the ground under it. A ring at a flat 12 cm ran under a slope.
+function buildBoundary(group, ring, terrain) {
   if (!ring || ring.length < 3) return;
-  const pts = ring.concat([ring[0]]).map(p => new THREE.Vector3(p[0], 0.12, -p[1]));
+  const pts = [], closed = ring.concat([ring[0]]);
+  for (let i = 0; i + 1 < closed.length; i++) {
+    const [x0, y0] = closed[i], [x1, y1] = closed[i + 1];
+    const n = terrain ? Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))) : 1;
+    for (let k = 0; k < n; k++) {
+      const x = x0 + (x1 - x0) * k / n, y = y0 + (y1 - y0) * k / n;
+      pts.push(new THREE.Vector3(x, terrainHeightAt(x, y, terrain) + 0.12, -y));
+    }
+  }
+  pts.push(pts[0].clone());
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints(pts),
     new THREE.LineBasicMaterial({ color: 0xf9a825 }));
+  line.name = 'boundary';
   group.add(line);
 }
 
@@ -178,16 +196,21 @@ function buildBoundary(group, ring) {
 // Static footprints (spec idea 2): extrude each ring, then merge all same-kind
 // geometries into one mesh so N buildings cost ≤2 draw calls. The −90° rotation
 // is baked into each geometry (so merged parts share orientation) rather than
-// set on the mesh: shape (x,y) → (x, −z), extrude depth → +y.
-function buildBuildings(group, buildings) {
+// set on the mesh: shape (x,y) → (x, −z), extrude depth → +y. On a slope
+// (V3.04) each stands on the lowest ground under its ring, so no side hangs in
+// the air, and keeps its height above the highest, so none is buried.
+function buildBuildings(group, buildings, terrain) {
   const byKind = { building: [], canopy: [] };
   for (const bld of buildings || []) {
     const ring = bld.ring || [];
     if (ring.length < 3) continue;
     const shape = new THREE.Shape(ring.map(p => new THREE.Vector2(p[0], p[1])));
+    const hs = ring.map(p => terrainHeightAt(p[0], p[1], terrain));
+    const lo = Math.min(...hs), hi = Math.max(...hs);
     const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: Math.max(0.3, bld.height_m || 3), bevelEnabled: false });
+      depth: Math.max(0.3, bld.height_m || 3) + (hi - lo), bevelEnabled: false });
     geo.rotateX(-Math.PI / 2);
+    geo.translate(0, lo, 0);
     byKind[bld.kind === 'canopy' ? 'canopy' : 'building'].push(geo);
   }
   const mats = {
@@ -200,6 +223,7 @@ function buildBuildings(group, buildings) {
     if (!geos.length) continue;
     const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
     const mesh = new THREE.Mesh(merged, mats[kind]);
+    mesh.name = kind + 's';
     mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
   }
@@ -243,6 +267,17 @@ function terrainHeightAt(sceneX, sceneY, terrain) {
   const h00 = t.heights[r0][c0],     h01 = t.heights[r0][c0 + 1];
   const h10 = t.heights[r0 + 1][c0], h11 = t.heights[r0 + 1][c0 + 1];
   return (h00 * (1 - fc) + h01 * fc) * (1 - fr) + (h10 * (1 - fc) + h11 * fc) * fr;
+}
+
+// Lay something flat on the ground at scene (x, y), `lift` metres up: sets _v
+// to the spot and _q to the turn from +y onto the ground's normal there, so a
+// contact shadow lies along a slope instead of cutting into it (V3.04).
+const _gn = new THREE.Vector3();
+function onGround(x, y, terrain, lift) {
+  const e = 0.5, h = (dx, dy) => terrainHeightAt(x + dx, y + dy, terrain);
+  _gn.set(h(-e, 0) - h(e, 0), 2 * e, h(0, e) - h(0, -e)).normalize();
+  _v.set(x, h(0, 0) + lift, -y);
+  _q.setFromUnitVectors(_yAxis, _gn);
 }
 
 // Compose a per-instance matrix with a Y rotation and set a pre-computed colour.

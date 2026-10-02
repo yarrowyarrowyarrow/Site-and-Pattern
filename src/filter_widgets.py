@@ -42,11 +42,15 @@ DEPTH_ROLE = Qt.ItemDataRole.UserRole + 90
 PARENT_ROLE = Qt.ItemDataRole.UserRole + 91
 EXPANDED_ROLE = Qt.ItemDataRole.UserRole + 92
 LABEL_ROLE = Qt.ItemDataRole.UserRole + 93
-#: Marks the line a list opens on ("Tick as many as you like…", V3.01): a row
+#: Marks the line a list opens on ("Tick boxes to choose several…", V3.01): a row
 #: that is read, never ticked, counted or cleared.
 RULE_ROLE = Qt.ItemDataRole.UserRole + 94
-#: Pixels from a parent row's left edge that open/close it rather than check it.
-_DISCLOSURE_WIDTH = 18
+#: What a click on a row means (V3.04): the first pixels from its left edge
+#: are its box, which ticks it and leaves the list open for more; a branch's
+#: arrow opens or closes it; the name ticks it and closes the list.
+_BOX_ZONE = 22
+#: Where a two-line row's text begins: the box (5 + 12 px) and a 7 px gap.
+_TEXT_X = 23
 
 SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -302,22 +306,42 @@ class CheckableComboBox(QComboBox):
             return True
         if (obj is self.view().viewport()
                 and event.type() == QEvent.Type.MouseButtonRelease):
-            idx = self.view().indexAt(self._event_point(event))
+            point = self._event_point(event)
+            idx = self.view().indexAt(point)
             it = self.model().itemFromIndex(idx) if idx.isValid() else None
             if it is not None and it.isCheckable():
-                point = self._event_point(event)
-                if self._has_children(it) and point.x() < _DISCLOSURE_WIDTH:
-                    # The left edge of a parent row opens and closes it; the
-                    # rest of the row still checks. Two jobs, one row, and the
-                    # arrow is the affordance that says so.
+                part = self._part_clicked(it, idx, point)
+                if part == "arrow":
                     self._set_expanded(it, not self._is_expanded(it))
                 else:
                     it.setCheckState(
                         Qt.CheckState.Unchecked
                         if it.checkState() == Qt.CheckState.Checked
                         else Qt.CheckState.Checked)
-            return True  # keep the popup open for further toggles
+                    if part == "name":
+                        self.hidePopup()
+            return True  # the click was the list's: nothing else acts on it
         return super().eventFilter(obj, event)
+
+    def _part_clicked(self, item, index, point) -> str:
+        """``"box"``, ``"arrow"`` or ``"name"``: what a click on a row meant.
+
+        Until V3.04 every click left the list open, for ticking several in one
+        trip, so closing it took another click on the filter: the owner's
+        report. A name now ticks and closes, as a choice from any dropdown
+        does, and the box still ticks and stays open. A branch's left edge had
+        opened it, and that edge is where its box is drawn, so a branch's box
+        could not be ticked; the arrow before its name opens it now."""
+        x = point.x() - self.view().visualRect(index).left()
+        if x < _BOX_ZONE:
+            return "box"
+        if self._has_children(item):
+            fm = self.view().fontMetrics()
+            depth = int(item.data(DEPTH_ROLE) or 0)
+            start = _TEXT_X + fm.horizontalAdvance("      " * depth)
+            if start - 4 <= x <= start + fm.horizontalAdvance("\u25be ") + 4:
+                return "arrow"
+        return "name"
 
     def _keep_no_current(self, index: int):
         if index >= 0:

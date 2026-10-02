@@ -144,6 +144,30 @@
       return null;
     }
 
+    // ── Framing a design the map cannot see yet (V3.04) ──────────────────────
+    // The start screen opens a design into a map still hidden behind it. Its
+    // page is 0 x 0 there, then Qt's 100 x 30 for a moment as the window shows,
+    // and Leaflet frames to the size it has: the example yard opened at zoom
+    // 18.4 where a laid-out map frames it at 22.8, a dot in an empty map. A fit
+    // made while the map is hidden or that small is made again, once, when the
+    // map is first given a real size.
+    var _fitOnShow = null, _fitOnShowHooked = false;
+    function _tooSmallToFit() {
+      var s = map.getSize();
+      return document.visibilityState === 'hidden' || s.x < 200 || s.y < 150;
+    }
+    function fitWhenShown(bounds, options) {
+      map.fitBounds(bounds, options);
+      _fitOnShow = _tooSmallToFit() ? [bounds, options] : null;
+      if (!_fitOnShow || _fitOnShowHooked) return;
+      _fitOnShowHooked = true;
+      map.on('resize', function () {
+        if (!_fitOnShow || _tooSmallToFit()) return;
+        var f = _fitOnShow; _fitOnShow = null;
+        map.fitBounds(f[0], f[1]);
+      });
+    }
+
     function _addBoundaryToMap(id, pts, colorName, showLengths, showArea) {
       var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
       var layer = L.polygon(pts, {

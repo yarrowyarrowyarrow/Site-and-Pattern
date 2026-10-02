@@ -1,0 +1,251 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">measuring…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script>
+// The ground on a slope (dev page + the harness behind tests/test_slope_render.py,
+// V3.04). The owner's screenshots of a sloped yard showed the yard as a raised
+// patch with the sky showing under its edge as a white band, and the trees'
+// shadows lying on flat ground below them. Everything that stands on the ground
+// asks terrainHeightAt (02-plants.js); this page pushes a sloped scene and asks
+// each thing that LIES on the ground whether it agrees: the ground itself, the
+// contact shadows, the boundary line, a building, a structure, the planting
+// animation, where a click lands, and where the orbit camera may go.
+//
+// Results go into document.title as JSON so a headless `--dump-dom` run can read
+// them without CDP, as aspect_probe.html does.
+
+// 20 m x 20 m of grid rising 4 m to the north and 2 m to the east: 6 m of
+// relief, far more than a lawn and about what a hillside yard has.
+const ROWS = 5, COLS = 5;
+const HEIGHTS = [];
+for (let r = 0; r < ROWS; r++) {
+  HEIGHTS.push([]);
+  for (let c = 0; c < COLS; c++) HEIGHTS[r].push(+((ROWS - 1 - r) + c * 0.5).toFixed(2));
+}
+const TERRAIN = { rows: ROWS, cols: COLS, min_x: -10, max_x: 10, min_y: -10, max_y: 10,
+                  base_m: 640, heights: HEIGHTS };
+// Two trees on the grid, one well outside it (a plant past the boundary stands at
+// the edge's height, which is where the screenshots' floating trees came from),
+// and a tall shrub.
+const PLANTS = [[1, 'betula', 'tree', 12, 6, 2, 3], [2, 'populus', 'tree', 15, 6, -7, -6],
+                [3, 'picea', 'tree', 18, 5, 18, 15], [4, 'cornus', 'shrub', 2.5, 3, -3, 7]];
+
+function plant([id, genus, type, h, cw, x, y]) {
+  return {
+    plant_id: id, common_name: genus, x: x, y: y, height_m: h, canopy_m: cw,
+    mature_height_m: h, plant_type: type, genus: genus,
+    foliage_type: type === 'tree' && genus === 'picea' ? 'evergreen' : 'deciduous',
+    scale_factor: 1, spread_factor: 1, spread_rate: 0, growth_curve: 'steady',
+    color: '#5a8f4e', flower_color: '', flower_form: 'none', bloom_start: 0, bloom_end: 0,
+    fruit_color: '', fruit_start: 0, fruit_end: 0, opacity: 1, health: 1,
+    health_state: 'healthy',
+  };
+}
+
+function scene(terrain) {
+  return {
+    version: 1, year: 0, month: 7, is_night: false,
+    origin: { lat: 51.05, lng: -114.07 },
+    bounds: { min_x: -25, min_y: -25, max_x: 25, max_y: 25 },
+    boundary: [[-9, -9], [9, -9], [9, 9], [-9, 9]],
+    sun: { azimuth_deg: 200, altitude_deg: 48 },
+    buildings: [{ kind: 'building', height_m: 3, ring: [[-8, 4], [-4, 4], [-4, 8], [-8, 8]] }],
+    structures: [{ x: 5, y: 5, size_m: 1, height_m: 1 }],    // no struct_id: the box
+    scan_points: [], splat: null, terrain: terrain, plants: PLANTS.map(plant),
+  };
+}
+
+function measure(w) {
+  const E = (s) => w.eval(s);
+  const THREE = w.THREE, T = E('lastTerrain');
+  const H = (x, y) => w.terrainHeightAt(x, y, T);
+  const out = {};
+  const group = E('designGroup'), plantsGroup = E('plantsGroup');
+  group.updateMatrixWorld(true);    // no frame may have been drawn since the push
+
+  // 1. The ground under every point, including past the grid and the bounds.
+  // The ground meshes are the PlaneGeometry children of the design group (one
+  // since V3.04; before it, the terrain patch and the apron).
+  const grounds = group.children.filter(o => o.isMesh && o.geometry
+                                         && o.geometry.type === 'PlaneGeometry');
+  const rc = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0);
+  const groundAt = (x, y) => {
+    rc.set(new THREE.Vector3(x, 1000, -y), down);
+    const hit = rc.intersectObjects(grounds, false)[0];
+    return hit ? hit.point.y : null;
+  };
+  const pts = [];
+  for (let x = -60; x <= 60; x += 7.5) for (let y = -60; y <= 60; y += 7.5) pts.push([x, y]);
+  for (const v of [-10.5, 10.5]) for (let u = -9; u <= 9; u += 3) pts.push([v, u], [u, v]);
+  for (const p of PLANTS) pts.push([p[5], p[6]]);
+  let worst = 0, worstAt = null, misses = 0;
+  for (const [x, y] of pts) {
+    const g = groundAt(x, y);
+    if (g === null) { misses++; continue; }
+    const err = Math.abs(g - (H(x, y) - 0.02));
+    if (err > worst) { worst = err; worstAt = [x, y, +g.toFixed(2), +H(x, y).toFixed(2)]; }
+  }
+  out.ground = { samples: pts.length, misses, worst_m: +worst.toFixed(3), worst_at: worstAt };
+  // The ground reaches into the fog in every direction, so no edge of it shows.
+  const far = [];
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    far.push(groundAt(1400 * Math.cos(a), 1400 * Math.sin(a)) !== null);
+  }
+  out.ground.reaches_fog = far.every(Boolean);
+
+  // 2. The contact shadows: on the ground under each plant, tilted with it.
+  const shadowMat = E('MATS.shadow');
+  const sh = plantsGroup.children.find(o => o.isInstancedMesh && o.material === shadowMat);
+  out.shadows = { count: sh ? sh.count : 0, worst_m: 0, worst_dot: 1 };
+  if (sh) {
+    const m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(),
+          s = new THREE.Vector3(), n = new THREE.Vector3(), want = new THREE.Vector3();
+    for (let i = 0; i < sh.count; i++) {
+      sh.getMatrixAt(i, m); m.decompose(p, q, s);
+      const x = p.x, y = -p.z, e = 0.5;
+      n.set(0, 1, 0).applyQuaternion(q);
+      want.set(H(x - e, y) - H(x + e, y), 2 * e, H(x, y + e) - H(x, y - e)).normalize();
+      out.shadows.worst_m = Math.max(out.shadows.worst_m, +Math.abs(p.y - (H(x, y) + 0.03)).toFixed(3));
+      out.shadows.worst_dot = Math.min(out.shadows.worst_dot, +n.dot(want).toFixed(5));
+    }
+  }
+
+  // 3. The boundary line: on the ground at its vertices and between them.
+  const line = group.children.find(o => o.isLine && o.material.color.getHex() === 0xf9a825);
+  out.boundary = { vertices: 0, worst_vertex_m: 0, worst_midpoint_m: 0 };
+  if (line) {
+    const a = line.geometry.attributes.position;
+    out.boundary.vertices = a.count;
+    for (let i = 0; i < a.count; i++) {
+      const err = Math.abs(a.getY(i) - (H(a.getX(i), -a.getZ(i)) + 0.12));
+      out.boundary.worst_vertex_m = Math.max(out.boundary.worst_vertex_m, +err.toFixed(3));
+      if (i + 1 < a.count) {
+        const mx = (a.getX(i) + a.getX(i + 1)) / 2, mz = (a.getZ(i) + a.getZ(i + 1)) / 2;
+        const my = (a.getY(i) + a.getY(i + 1)) / 2;
+        const merr = Math.abs(my - (H(mx, -mz) + 0.12));
+        out.boundary.worst_midpoint_m = Math.max(out.boundary.worst_midpoint_m, +merr.toFixed(3));
+      }
+    }
+  }
+
+  // 4. The building: standing on the lowest ground under it, its height above the highest.
+  const bld = group.children.find(o => o.isMesh && o.material && o.material.color
+                                  && o.material.color.getHex() === 0xb0a18c);
+  if (bld) {
+    const box = new THREE.Box3().setFromObject(bld);
+    const hs = [[-8, 4], [-4, 4], [-4, 8], [-8, 8]].map(([x, y]) => H(x, y));
+    out.building = { base_m: +box.min.y.toFixed(3), top_m: +box.max.y.toFixed(3),
+                     low_ground_m: +Math.min(...hs).toFixed(3),
+                     high_ground_m: +Math.max(...hs).toFixed(3), height_m: 3 };
+  }
+
+  // 5. The structure drawn as a box (no model for it): its foot on the ground.
+  const box = group.children.find(o => o.isMesh && o.geometry && o.geometry.type === 'BoxGeometry');
+  if (box) {
+    out.structure = { foot_m: +(box.position.y - box.geometry.parameters.height / 2).toFixed(3),
+                      ground_m: +H(5, 5).toFixed(3) };
+  }
+
+  // 6. The planting animation starts on the ground where the plant goes.
+  const before = E('scene').children.length;
+  w.animatePlant(3, 3, () => {});
+  const added = E('scene').children.slice(before);
+  out.plant_anim = { y_m: added.length ? +added[0].position.y.toFixed(3) : null,
+                     ground_m: +H(3, 3).toFixed(3) };
+
+  // 7. Where a click lands: the ground point under the cursor, not one beyond it.
+  E('camera.position.set(-3, 4, 22); controls.target.set(0, 1.5, 0); controls.update();'
+    + ' camera.updateMatrixWorld();');
+  const cam = E('camera'), canvas = E('renderer.domElement');
+  const rect = canvas.getBoundingClientRect();
+  // Per point: [x, y, ground height, metres off now, metres off on the flat
+  // plane at height 0 that answered before V3.04 (null: that ray never met it)].
+  out.click = { worst_m: 0, missed: 0, points: [] };
+  for (const [x, y] of [[3, 3], [-4, -3], [5, -3.5], [0, 0], [-5, 8], [7, 9]]) {
+    const v = new THREE.Vector3(x, H(x, y), -y).project(cam);
+    const cx = rect.left + (v.x + 1) / 2 * rect.width;
+    const cy = rect.top + (1 - v.y) / 2 * rect.height;
+    const hit = w.groundPointAt(cx, cy);
+    if (!hit) { out.click.missed++; continue; }
+    const err = +Math.hypot(hit.x - x, hit.y - y).toFixed(3);
+    out.click.worst_m = Math.max(out.click.worst_m, err);
+    const ray = new THREE.Raycaster(), flat = new THREE.Vector3();
+    ray.setFromCamera(new THREE.Vector2(v.x, v.y), cam);
+    const met = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), flat);
+    out.click.points.push([x, y, +H(x, y).toFixed(2), err,
+                           met ? +Math.hypot(flat.x - x, -flat.z - y).toFixed(2) : null]);
+  }
+  return out;
+}
+
+const out = document.getElementById('out');
+let phase = 0, result = null;
+function step() {
+  const w = document.getElementById('v').contentWindow;
+  if (!w || typeof w.permaSetScene !== 'function' || typeof w.groundPointAt !== 'function') {
+    setTimeout(step, 250); return;
+  }
+  if (phase === 0) {
+    // First push with no terrain (the 3D window's first push, before the fetch
+    // lands), then the same design with it: the orbit's pivot has to move onto
+    // the ground rather than stay at the lowest point under the hill.
+    phase = 1;
+    w.permaSetScene(scene(null));
+    setTimeout(step, 1500);
+    return;
+  }
+  if (phase === 1) {
+    phase = 2;
+    const E = (s) => w.eval(s);
+    const before = { gap: E('camera.position.y - controls.target.y') };
+    w.permaSetScene(scene(TERRAIN));
+    const t = E('controls.target'), T = E('lastTerrain');
+    result = { orbit: { pivot_m: +t.y.toFixed(3),
+                        ground_m: +w.terrainHeightAt(t.x, -t.z, T).toFixed(3),
+                        view_kept: Math.abs(E('camera.position.y - controls.target.y')
+                                            - before.gap) < 1e-6 } };
+    setTimeout(step, 1500);
+    return;
+  }
+  if (phase === 2) {
+    phase = 3;
+    Object.assign(result, measure(w));
+    // 8. The orbit camera turned low on the uphill side: the render loop has to
+    // keep it out of the hill. The camera is put inside it and the loop given
+    // three frames, counted rather than timed. Headless Chromium stops drawing
+    // frames a few seconds in, so where none come the function the loop calls
+    // is called here instead; tests/test_slope_render.py checks the call.
+    w.eval('controls.target.set(0, terrainHeightAt(0, 0, lastTerrain), 0);'
+           + ' camera.position.set(8, 1.6, -30); controls.update();');
+    waitFrames(w, 3, 20, (frames) => {
+      result.frames = frames;
+      if (!frames) w.eval('typeof keepAboveGround === "function" && keepAboveGround()');
+      step();
+    });
+    return;
+  }
+  const c = w.eval('camera.position');
+  result.camera = { y_m: +c.y.toFixed(3),
+                    ground_m: +w.terrainHeightAt(c.x, -c.z, w.eval('lastTerrain')).toFixed(3) };
+  document.title = 'MEASURED ' + JSON.stringify(result);
+  out.textContent = JSON.stringify(result, null, 2);
+}
+
+// Call done(n) once the viewer's render loop has drawn n frames, or after
+// `tries` polls with however many it managed.
+function waitFrames(w, n, tries, done) {
+  let seen = 0, last = w.eval('_lastFrame');
+  (function poll() {
+    const now = w.eval('_lastFrame');
+    if (now !== last) { seen++; last = now; }
+    if (seen >= n || --tries <= 0) { done(seen); return; }
+    setTimeout(poll, 100);
+  })();
+}
+step();
+</script></body></html>

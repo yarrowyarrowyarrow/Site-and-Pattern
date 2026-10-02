@@ -495,9 +495,31 @@ function frameCamera(bounds) {
   const r = Math.max(w, d) * 0.75;
   const cx = (bounds.min_x + bounds.max_x) / 2;
   const cz = -(bounds.min_y + bounds.max_y) / 2;
-  controls.target.set(cx, 0, cz);
-  camera.position.set(cx + r * 0.9, r * 0.85, cz + r * 1.1);
+  const gy = terrainHeightAt(cx, -cz, lastTerrain);    // the pivot is ON the ground
+  controls.target.set(cx, gy, cz);
+  camera.position.set(cx + r * 0.9, gy + r * 0.85, cz + r * 1.1);
   controls.update();
+}
+
+// The orbit on a slope (V3.04). The terrain's heights are metres above the
+// site's lowest point, and maxPolarAngle only keeps the camera above the plane
+// through its pivot, so with the pivot at 0 an orbit turned low went into the
+// hill on the uphill side, where the one-sided ground vanishes and the sky
+// shows through. The pivot sits on the ground (frameCamera, and here when the
+// terrain arrives after the first push, carrying the view with it), and the
+// render loop keeps the camera half a metre above the ground under it.
+function groundKey(t) {
+  return t ? [t.base_m, t.rows, t.cols, t.min_x, t.min_y, t.max_x, t.max_y].join() : '';
+}
+function settleOrbitOnGround() {
+  const dy = terrainHeightAt(controls.target.x, -controls.target.z, lastTerrain)
+    - controls.target.y;
+  controls.target.y += dy; camera.position.y += dy;
+  controls.update();
+}
+function keepAboveGround() {
+  const g = terrainHeightAt(camera.position.x, -camera.position.z, lastTerrain) + 0.5;
+  if (camera.position.y < g) camera.position.y = g;
 }
 
 function fadeToward(hex, opacity) {

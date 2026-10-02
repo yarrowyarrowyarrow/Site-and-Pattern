@@ -873,7 +873,7 @@ function buildPlants(group, plants, month, year, terrain) {
                      Math.max(0.18, p.canopy_m)], month, year, true, terrain,
              groundcoverBucket);
 
-  // Contact shadows under trees and tall shrubs (skip near-vanished plants).
+  // Contact shadows under trees and tall shrubs, not near-vanished ones, on the slope (V3.04).
   const shadowed = byKind.tree
     .concat(byKind.shrub.filter(p => (p.height_m || 0) > 1.2))
     .filter(p => (p.opacity ?? 1) >= 0.2);
@@ -881,11 +881,11 @@ function buildPlants(group, plants, month, year, terrain) {
     const sh = instancedMesh(GEO.shadow, shadowed.length, MATS.shadow, false);
     shadowed.forEach((p, i) => {
       const c = Math.max(0.4, p.canopy_m) * 1.35;
-      _v.set(p.x, 0.03, -p.y); _s.set(c, 1, c); _q.identity();
+      onGround(p.x, p.y, terrain, 0.03); _s.set(c, 1, c);   // sets _v and _q
       _m.compose(_v, _q, _s);
       sh.setMatrixAt(i, _m);
     });
-    plantsGroup.add(sh);
+    sh.name = 'contact-shadows'; plantsGroup.add(sh);
   }
 
   // Flowers — real-coloured blooms on plants in flower for this month (V1.90).

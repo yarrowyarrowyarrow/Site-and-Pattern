@@ -157,7 +157,7 @@ class TestTheRule(unittest.TestCase):
         plants with any value ticked. Only a tooltip said so before V3.01."""
         for f in pf.FACETS:
             rule = pf.rule(f)
-            self.assertTrue(rule.startswith("Tick as many as you like."), f.key)
+            self.assertTrue(rule.startswith("Tick boxes to choose several."), f.key)
             if f.combine == "all":
                 self.assertTrue(rule.endswith("needs every one."), f.key)
             else:

@@ -466,7 +466,7 @@ function buildStructures(group, structures) {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size, h, size),
       new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 }));
-    mesh.position.set(s.x, h / 2, -s.y);
+    mesh.position.set(s.x, terrainHeightAt(s.x, s.y, lastTerrain) + h / 2, -s.y);
     mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
   }
@@ -684,11 +684,12 @@ window.permaSetScene = function (sc) {
   if (window.applySceneWind) applySceneWind(sc.wind);
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
+  const groundWas = groundKey(lastTerrain);
   lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
-  buildBoundary(designGroup, sc.boundary);
-  buildBuildings(designGroup, sc.buildings);
+  buildBoundary(designGroup, sc.boundary, sc.terrain);
+  buildBuildings(designGroup, sc.buildings, sc.terrain);
   buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
@@ -709,6 +710,8 @@ window.permaSetScene = function (sc) {
     // cinematic flyover — those modes own the camera.
     if (!beeMode && !walkMode && !cinematic) frameCamera(sc.bounds);
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
+  } else if (groundKey(lastTerrain) !== groundWas && !beeMode && !walkMode && !cinematic) {
+    settleOrbitOnGround();   // the terrain came after the first push (V3.04)
   }
   // Re-place the bee's flower beacons against the freshly-built scene.
   if (beeMode) rebuildBeacons();

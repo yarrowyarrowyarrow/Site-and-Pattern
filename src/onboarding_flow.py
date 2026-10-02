@@ -202,12 +202,32 @@ def act_on_start_choice(main, choice: str) -> None:
         if is_alive(main):
             _dispatch(main, choice)
 
+    # The map has usually loaded already: the window is built behind the start
+    # screen, and map_ready fires once per page load, while the screen is still
+    # up. Waiting for it then waited forever, and Continue, Open a design, See
+    # a finished design and Recover did nothing (F197, V3.04).
+    if _map_is_ready(main):
+        QTimer.singleShot(0, _go)
+        return
     try:
         main.map_widget.bridge.map_ready.connect(_go)
     except Exception:                                      # noqa: BLE001
         # No bridge to wait on (headless, or a test double). Fall back to the
         # timer rather than dropping the user's choice on the floor.
         QTimer.singleShot(_WELCOME_DELAY_MS, _go)
+
+
+def _map_is_ready(main) -> bool:
+    """Whether the window's map has already said ``map_ready``. False for a
+    window that is gone or has no map: asking a deleted widget for an attribute
+    raises ``RuntimeError``, which ``getattr``'s default does not catch."""
+    from src.qt_safety import is_alive
+    if not is_alive(main):
+        return False
+    try:
+        return bool(main.map_widget.is_ready)
+    except Exception:                                      # noqa: BLE001
+        return False
 
 
 def _pending_recovery_name() -> str:

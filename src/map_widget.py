@@ -469,6 +469,13 @@ class MapWidget(QWebEngineView):
         self._last_zoom:   int | None = None
         self.bridge.map_moved.connect(self._on_map_moved)
         self.bridge.map_ready.connect(self._on_map_ready)
+        # Whether the page has said it is ready, since it last started loading
+        # (V3.04). map_ready fires once per load, and the window is built
+        # behind the start screen, so it has usually fired before anything
+        # that wants the map asks: onboarding_flow.act_on_start_choice waited
+        # for it anyway, and the start screen's choice was dropped (F197).
+        self.is_ready = False
+        self.loadStarted.connect(self._on_load_started)
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()
@@ -482,7 +489,11 @@ class MapWidget(QWebEngineView):
         self._last_center = (lat, lng)
         self._last_zoom = zoom
 
+    def _on_load_started(self):
+        self.is_ready = False
+
     def _on_map_ready(self):
+        self.is_ready = True
         token = get_mapbox_token()
         if token:
             self.set_mapbox_token(token)

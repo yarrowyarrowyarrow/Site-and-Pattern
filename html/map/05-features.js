@@ -1151,7 +1151,7 @@
         showArea    = data.showArea !== false;
       }
       var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
-      if (fit !== false) map.fitBounds(entry.layer.getBounds());
+      if (fit !== false) fitWhenShown(entry.layer.getBounds());   // 02-boundary.js
     }
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {

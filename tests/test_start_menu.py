@@ -588,5 +588,55 @@ class TestTheLastDesignMemory(unittest.TestCase):
         saves.remember_last_design("/tmp/x")       # must not raise
 
 
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestAChoiceAfterTheMapHasLoaded(unittest.TestCase):
+    """F197 (V3.04). The window is built behind the start screen, so the map
+    usually says it is ready while the screen is still up; the choice then
+    waited for a ``map_ready`` that had already gone by, and Continue, Open a
+    design, See a finished design and Recover did nothing. Traced in the V2.98
+    review: map ready at 1.92 s, Continue at 25.87 s, no design."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def _main(self, ready: bool):
+        """A stand-in window: a live Qt object (the choice is dropped for a
+        window that has gone), whose map has or has not loaded."""
+        from types import SimpleNamespace
+        from PyQt6.QtCore import QObject, pyqtSignal
+
+        class Bridge(QObject):
+            map_ready = pyqtSignal()
+
+        main = QObject()
+        main.map_widget = SimpleNamespace(is_ready=ready, bridge=Bridge(main))
+        self.addCleanup(main.deleteLater)
+        return main
+
+    def _act(self, main, choice="continue"):
+        from src import onboarding_flow
+        done = []
+        original = onboarding_flow._dispatch
+        onboarding_flow._dispatch = lambda m, c: done.append(c)
+        self.addCleanup(setattr, onboarding_flow, "_dispatch", original)
+        onboarding_flow.act_on_start_choice(main, choice)
+        self._app.processEvents()
+        return done
+
+    def test_a_choice_made_after_the_map_loaded_is_carried_out(self):
+        for choice in ("continue", "open", "example", "recover"):
+            with self.subTest(choice=choice):
+                self.assertEqual(self._act(self._main(ready=True), choice), [choice])
+
+    def test_a_choice_made_before_still_waits_for_the_map_and_runs_once(self):
+        main = self._main(ready=False)
+        done = self._act(main)
+        self.assertEqual(done, [])
+        main.map_widget.bridge.map_ready.emit()
+        main.map_widget.bridge.map_ready.emit()     # a reload: not twice
+        self.assertEqual(done, ["continue"])
+
+
 if __name__ == "__main__":
     unittest.main()

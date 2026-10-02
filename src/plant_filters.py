@@ -271,9 +271,11 @@ def face(f: Facet, keys) -> str:
 
 def rule(f: Facet) -> str:
     """The line each dropdown's list opens on. The boxes look like ordinary
-    single-choice dropdowns, and Role combines the other way from the rest."""
+    single-choice dropdowns, and Role combines the other way from the rest.
+    Since V3.04 a click on a name chooses it and closes the list, as any
+    dropdown does, and the boxes are how to choose several."""
     need = "every one" if f.combine == "all" else "one"
-    return f"Tick as many as you like. A plant needs {need}."
+    return f"Tick boxes to choose several. A plant needs {need}."
 
 
 def filters_on(criteria: Optional[dict]) -> list:

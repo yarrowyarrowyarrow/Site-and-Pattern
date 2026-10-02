@@ -163,7 +163,7 @@ class TestInputMeaning(unittest.TestCase):
 class TestTheRuleLine(unittest.TestCase):
     """The line a list opens on, saying how its ticked values combine."""
 
-    RULE = "Tick as many as you like. A plant needs one."
+    RULE = "Tick boxes to choose several. A plant needs one."
 
     @classmethod
     def setUpClass(cls):
@@ -215,6 +215,80 @@ class TestTheRuleLine(unittest.TestCase):
         self.assertGreaterEqual(
             combo.view().minimumWidth(),
             combo.fontMetrics().horizontalAdvance(self.RULE))
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestWhatAClickOnARowMeans(unittest.TestCase):
+    """V3.04, the owner's report: one click on a filter opened its list, and
+    every click inside it left it open, so closing it took another click on
+    the filter. A name now chooses and closes; the box still ticks and stays
+    open, for several in one trip."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = _app()
+
+    def _combo(self, *, tree=False):
+        from src.filter_widgets import CheckableComboBox, build_ecoregion_tree
+        combo = CheckableComboBox(placeholder="Anywhere")
+        if tree:
+            build_ecoregion_tree(combo)
+        else:
+            for key, label in TYPES.items():
+                combo.add_check_item(label, key)
+        combo.show()
+        self.addCleanup(combo.deleteLater)
+        self.addCleanup(combo.hidePopup)
+        combo.showPopup()
+        self._app.processEvents()
+        return combo
+
+    def _click(self, combo, row, x):
+        view = combo.view()
+        rect = view.visualRect(combo.model().index(row, 0))
+        point = QPoint(rect.left() + x, rect.center().y())
+        release = QMouseEvent(
+            QEvent.Type.MouseButtonRelease, QPointF(point),
+            QPointF(view.viewport().mapToGlobal(point)),
+            Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier)
+        combo.eventFilter(view.viewport(), release)
+        self._app.processEvents()
+
+    def test_a_name_chooses_it_and_closes_the_list(self):
+        combo = self._combo()
+        self._click(combo, 1, 60)                 # "Shrub"
+        self.assertEqual(combo.checked_keys(), ["shrub"])
+        self.assertFalse(combo.view().isVisible())
+
+    def test_the_box_ticks_it_and_the_list_stays_open(self):
+        combo = self._combo()
+        self._click(combo, 1, 10)
+        self._click(combo, 3, 10)
+        self.assertEqual(combo.checked_keys(), ["shrub", "fern"])
+        self.assertTrue(combo.view().isVisible())
+
+    def test_a_branchs_arrow_opens_it_and_ticks_nothing(self):
+        from src.filter_widgets import _TEXT_X
+        combo = self._combo(tree=True)
+        zone = combo.model().item(0)
+        self.assertTrue(combo._has_children(zone))
+        was = combo._is_expanded(zone)
+        self._click(combo, 0, _TEXT_X + 4)
+        self.assertNotEqual(combo._is_expanded(zone), was)
+        self.assertEqual(combo.checked_keys(), [])
+        self.assertTrue(combo.view().isVisible())
+
+    def test_a_branchs_box_ticks_it(self):
+        """Its box sits where the old opening edge was: it could not be
+        ticked at all from there."""
+        combo = self._combo(tree=True)
+        zone = combo.model().item(0)
+        was = combo._is_expanded(zone)
+        self._click(combo, 0, 10)
+        self.assertEqual(combo.checked_keys(), [zone.data(Qt.ItemDataRole.UserRole)])
+        self.assertEqual(combo._is_expanded(zone), was)
+        self.assertTrue(combo.view().isVisible())
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

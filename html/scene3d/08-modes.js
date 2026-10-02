@@ -401,7 +401,7 @@ renderer.setAnimationLoop((t) => {
     windUniforms.uTime.value = clock.getElapsedTime();
     if (beeMode) beeStep(t);
     else if (walkMode) walkStep(t);
-    else { if (cinematic) cineStep(t); controls.update(); }   // dolly, then auto-orbit
+    else { if (cinematic) cineStep(t); controls.update(); keepAboveGround(); }   // dolly, then auto-orbit
     animateWildlife(t);             // ambient life (no-op when the group is hidden)
     // "Show its plants" tour (orbit/walk overlay). `typeof`-guarded because
     // stepSpotlight lives in 19-roster.js, which loads AFTER this chunk —

@@ -75,7 +75,7 @@ const ANIM_CATCH_MS = 460;
 // so the shoot is a plausible stand-in rather than a promise the rebuild breaks.
 function animatePlant(x, y, done) {
   const group = new THREE.Group();
-  group.position.set(x, 0, -y);
+  group.position.set(x, terrainHeightAt(x, y, lastTerrain), -y);   // on the slope (V3.04)
 
   const soil = new THREE.Mesh(
     new THREE.RingGeometry(0.12, 0.30, 20).rotateX(-Math.PI / 2),
