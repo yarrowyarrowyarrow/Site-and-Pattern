@@ -340,7 +340,7 @@ class OnThisDesignPanel(QWidget):
         bits = []
         ns, n = getattr(sc, "native_species", 0), getattr(sc, "n_species", 0)
         if n:
-            bits.append(f"{ns} of {n} plants native")
+            bits.append(f"{ns} of {n} species native")
         fbt = getattr(sc, "fauna_by_taxon", None)
         if fbt:
             n_wild = sum(fbt.values())
@@ -570,7 +570,7 @@ class OnThisDesignPanel(QWidget):
         rows.append(
             f"<p><b>{total}</b> plants placed · "
             f"<b>{len(species)}</b> species · "
-            f"<b>{native_pct:.0f}%</b> Alberta-native</p>"
+            f"<b>{native_pct:.0f}%</b> of plants Alberta-native</p>"
         )
         if type_counts:
             rows.append("<p><b>Plant types</b><br>")

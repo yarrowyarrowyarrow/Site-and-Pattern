@@ -501,6 +501,13 @@ class AnalysisPanel(QWidget):
             return
         self._sun_lat, self._sun_lng = lat, lng
         self._reclamp_time_to_date()
+        # The Wind tab's empty state asked for a pin that was already down
+        # (V3.05 audit); say what is actually missing.
+        if not getattr(self, "_wind_fetched", False):
+            self.set_wind_status(
+                "No data yet — drop a site pin (Site tab), then fetch."
+                if lat is None else "Not fetched yet — press Fetch wind data "
+                "for this site's real wind history.")
 
     def _reclamp_time_to_date(self):
         from src import sun_shade
@@ -822,6 +829,7 @@ class AnalysisPanel(QWidget):
             return
         annual = rose.get("annual") or {}
         self._wind_rose.set_block(annual)
+        self._wind_fetched = True
 
         from src.wind import speed_category
         prevailing = annual.get("prevailing_deg")
@@ -1397,6 +1405,8 @@ class AnalysisPanel(QWidget):
                     item.setEnabled(False)
             if b["is_group"]:
                 label = f"    {b['common_name']} (any {b['genus']})"
+            elif b["common_name"] == b["scientific_name"]:
+                label = f"    {b['scientific_name']}"     # no English name (V3.05)
             else:
                 label = f"    {b['common_name']}  ·  {b['scientific_name']}"
             combo.addItem(label, userData=b["id"])
@@ -1549,7 +1559,8 @@ class AnalysisPanel(QWidget):
     def _bee_match_row(self, m) -> str:
         bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
         chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
-                f"padding:0 4px; font-size:12px;'>{txt}</span>")
+                f"padding:0 4px; font-size:12px;'>{txt}</span>"
+                if txt != "—" else "")     # a pill saying "—" says nothing (V3.05)
         bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
         basis = "" if m.confidence == "documented" else \
                 " <span style='color:#90a4ae; font-size:12px;'>(genus match)</span>"

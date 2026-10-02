@@ -123,9 +123,15 @@ class StructurePanel(QWidget):
         # Detail area
         self._detail_frame = QFrame()
         self._detail_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        # By name: a bare "QFrame { border }" also reached the three labels
+        # inside (a QLabel is a QFrame), which drew as three empty boxes until
+        # a structure was chosen (V3.05 surface audit). Hidden until then.
+        self._detail_frame.setObjectName("structureDetail")
         self._detail_frame.setStyleSheet(
-            "QFrame { background: #1e2e1e; border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; }"
+            "QFrame#structureDetail { background: #1e2e1e; border: 1px solid "
+            "#2e4a2e; border-radius: 4px; padding: 6px; }"
         )
+        self._detail_frame.setVisible(False)
         detail_layout = QVBoxLayout(self._detail_frame)
         detail_layout.setContentsMargins(6, 6, 6, 6)
         detail_layout.setSpacing(4)
@@ -203,11 +209,13 @@ class StructurePanel(QWidget):
             self._detail_name.setText("")
             self._detail_desc.setText("")
             self._detail_info.setText("")
+            self._detail_frame.setVisible(False)
             return
         sid = current.data(Qt.ItemDataRole.UserRole)
         s = get_structure(sid)
         if not s:
             return
+        self._detail_frame.setVisible(True)
         self._btn_place.setEnabled(True)
         self._detail_name.setText(f"{s['icon']}  {s['name']}")
         self._detail_desc.setText(s["description"])

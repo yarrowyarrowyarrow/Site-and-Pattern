@@ -297,9 +297,9 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
     console.error('[scene3d] ' + detail);   // → stderr via the host's log page
     var hud = document.getElementById('hud');
     if (hud) hud.innerHTML = '3D viewer error: ' + detail.slice(0, 200);
-    if (!window.permaSetScene) {
-      window.permaFatal('<b>3D viewer error</b><br>' + detail.slice(0, 400)
-        + '<br><br>The 2D map is unaffected.');
+    if (!window.permaSetScene) {   // a boot message, if set, says it better
+      window.permaFatal(window.permaBootError || ('<b>3D viewer error</b><br>'
+        + detail.slice(0, 400) + '<br><br>The 2D map is unaffected.'));
     }
   }
   // capture = true so module/resource load failures (which don't bubble) are

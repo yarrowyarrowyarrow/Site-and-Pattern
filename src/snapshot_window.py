@@ -134,12 +134,10 @@ class SnapshotWindow(QWidget):
         self.resize(720, 700)
 
         root = QVBoxLayout(self)
-        intro = QLabel(
-            "Watch your design mature: the same plan at years 1, 5, 15 and 30. "
-            "Plants grow and self-seeders spread; faint plants are pioneers "
-            "fading as the community matures.")
-        intro.setWordWrap(True)
-        root.addWidget(intro)
+        # Filled by refresh(), from the years actually shown (V3.05).
+        self._intro = QLabel("")
+        self._intro.setWordWrap(True)
+        root.addWidget(self._intro)
 
         grid = QGridLayout()
         grid.setSpacing(8)
@@ -166,7 +164,13 @@ class SnapshotWindow(QWidget):
         except Exception:  # noqa: BLE001 — a snapshot view should never crash
             snaps = []
 
-        bounds = _union_bounds([s["scene"] for s in snaps])
+        from src.snapshot_timeline import content_bounds, years_line
+        scenes = [s["scene"] for s in snaps]
+        bounds = content_bounds(scenes) or _union_bounds(scenes)
+        self._intro.setText(
+            years_line([s["year"] for s in snaps]) + " Plants grow and "
+            "self-seeders spread; faint plants are pioneers fading as the "
+            "community matures.")
         for i, canvas in enumerate(self._canvases):
             if i < len(snaps):
                 canvas.set_panel(snaps[i]["scene"], snaps[i]["year"], bounds)
