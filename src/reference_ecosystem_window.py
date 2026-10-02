@@ -82,7 +82,7 @@ class ReferenceEcosystemWindow(QWidget):
                  center: Optional[tuple] = None,
                  toolbar_groups=_TOOLBAR_GROUPS):
         super().__init__(None)   # top-level window
-        self.setWindowTitle(f"{APP_NAME}: Reference Ecosystem")
+        self.setWindowTitle(f"{APP_NAME}: Walk a Wild Landscape")
         self.resize(960, 700)
         self._center = center or (51.05, -114.07)
         self._project: dict = {}

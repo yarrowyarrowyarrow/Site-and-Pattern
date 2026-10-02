@@ -305,34 +305,34 @@ looked for · **Retire** from the interface. The last column is the owner's.
 
 | Page | What it is for | Proposal | Why | Decision |
 |---|---|---|---|---|
-| Site › Site Info | pin, zone, climate, rainfall, soil, where to buy | Keep; move *Where to buy* | Where to buy is about the buy list, not the site | |
-| Site › Slope | elevation, contours, slope ramp, terrain pack | Keep | its download crashed (fixed) | |
-| Site › Features | existing buildings and trees, imported or drawn; satellite alignment | Keep; move *Satellite alignment* | alignment is a setting of the satellite layer, which lives on the View row | |
-| Site › Field Notes | ten site-walk prompts, free notes, site photo | Keep (it prints since V3.05, F32); move the site photo | the photo is a map layer, beside *Yard photo* | |
-| Plants › Browse | find and place plants | Keep | the core, and it reads well | |
-| Plants › Plant Communities | find and place communities | Keep | each row says what it is since V3.05 (F196) | |
-| Plants › On This Design › Species | what is planted | Merge with Communities | two lists of what is on the design | |
-| Plants › On This Design › Communities | what communities are planted | Merge with Species | | |
-| Plants › On This Design › Stats | **the report card** | **Move to the front of Analysis** | the best summary in the app, three levels deep | |
-| Structures › Habitat | bee hotels, brush piles, ponds | Move beside Plants | placing a structure is placing a thing | |
-| Structures › Hedgerow | draw a hedgerow line | Merge into Shapes, or the Draw row | a drawing tool with settings | |
-| Structures › Shapes | draw beds, paths, patios | Move to the Draw row | a drawing tool with settings | |
-| Analysis › Sun & Shade | sun path, cast shade, planting zones | Move to Site | it describes the site, not the design | |
-| Analysis › Wind | wind rose, prevailing wind, shelter | Move to Site; fetch with the pin | likewise, and the one site figure fetched by hand | |
-| Analysis › Habitat | score breakdown, confidence, the web, pull-a-plant, chickadee, tips | Keep, under the report card | live since V3.05 | |
-| Analysis › This Month | what is happening now, and the job | Merge with Timeline and Effort | time, in one place | |
-| Analysis › Bees | one bee's plan | Keep, or merge into a "What it feeds" page | | |
-| Planning › Effort | hours, by year | Merge into "Through the years" | | |
-| Planning › Wildlife | forage calendar | Merge into "What it feeds" | | |
-| Planning › Harvest | what people can eat from it | Merge as a row of the Wildlife calendar | a permaculture-era page in a native-habitat app, and the same calendar | |
-| Planning › Water | establishment water budget | Keep | follows the design since V3.05 | |
-| Planning › Timeline | succession slider, phased conversion plan | Keep, as "Through the years" | | |
-| Planning › Notes | the design's journal | Merge (F86) | | |
-| Learn › Field Study | the quiz | Keep | | |
-| Learn › Lessons | the short course | Keep | | |
-| Learn › Present | the narrated tour | **Move out of Learn** | presenting a design is an output, beside Export PDF and Before / after | |
-| View › 3D Sprite Gallery… | every 3D archetype, for tuning | **Retire from the menu** | a developer's bench in a gardener's menu; keep the window, open it from a script | |
-| The View row's zoom sensitivity | scroll-wheel step | Move to View › Map Settings | a preference, and off-screen at 1366 | |
+| Site › Site Info | pin, zone, climate, rainfall, soil, where to buy | Keep; move *Where to buy* | Where to buy is about the buy list, not the site | **Keep**, and move Where to buy: “moving where to buy makes sense to me” |
+| Site › Slope | elevation, contours, slope ramp, terrain pack | Keep | its download crashed (fixed) | **Keep** |
+| Site › Features | existing buildings and trees, imported or drawn; satellite alignment | Keep; move *Satellite alignment* | alignment is a setting of the satellite layer, which lives on the View row | **Keep**, and rework: “a scan of both the map layer and the satellite layer to work in synchronicity”, placing existing buildings and trees for 2D and 3D |
+| Site › Field Notes | ten site-walk prompts, free notes, site photo | Keep (it prints since V3.05, F32); move the site photo | the photo is a map layer, beside *Yard photo* | **Keep** |
+| Plants › Browse | find and place plants | Keep | the core, and it reads well | **Keep**, as Placement › Plants |
+| Plants › Plant Communities | find and place communities | Keep | each row says what it is since V3.05 (F196) | **Keep**, and give it a pop-up beside the list like a plant's page: the members' pictures, small enough to see at once, the description, and each plant's own page |
+| Plants › On This Design › Species | what is planted | Merge with Communities | two lists of what is on the design | **Move**: “Possibly in the Design tab?”, with “the other stats of what eats this when” |
+| Plants › On This Design › Communities | what communities are planted | Merge with Species | | **Move**, as Species |
+| Plants › On This Design › Stats | **the report card** | **Move to the front of Analysis** | the best summary in the app, three levels deep | **Move** |
+| Structures › Habitat | bee hotels, brush piles, ponds | Move beside Plants | placing a structure is placing a thing | **Move**, as Placement › Structures |
+| Structures › Hedgerow | draw a hedgerow line | Merge into Shapes, or the Draw row | a drawing tool with settings | **Merge** |
+| Structures › Shapes | draw beds, paths, patios | Move to the Draw row | a drawing tool with settings | **Move** |
+| Analysis › Sun & Shade | sun path, cast shade, planting zones | Move to Site | it describes the site, not the design | **Move** |
+| Analysis › Wind | wind rose, prevailing wind, shelter | Move to Site; fetch with the pin | likewise, and the one site figure fetched by hand | **Move** |
+| Analysis › Habitat | score breakdown, confidence, the web, pull-a-plant, chickadee, tips | Keep, under the report card | live since V3.05 | **Keep** |
+| Analysis › This Month | what is happening now, and the job | Merge with Timeline and Effort | time, in one place | **Merge** |
+| Analysis › Bees | one bee's plan | Keep, or merge into a "What it feeds" page | | **Merge** into What it feeds: “a per species analysis but not one limited to just bees” |
+| Planning › Effort | hours, by year | Merge into "Through the years" | | **Merge** |
+| Planning › Wildlife | forage calendar | Merge into "What it feeds" | | **Merge**, so “it is clear and distinct what is human forage and what is animal forage” |
+| Planning › Harvest | what people can eat from it | Merge as a row of the Wildlife calendar | a permaculture-era page in a native-habitat app, and the same calendar | **Merge**, as Wildlife |
+| Planning › Water | establishment water budget | Keep | follows the design since V3.05 | **Keep** |
+| Planning › Timeline | succession slider, phased conversion plan | Keep, as "Through the years" | | **Keep** |
+| Planning › Notes | the design's journal | Merge (F86) | | **Merge** |
+| Learn › Field Study | the quiz | Keep | | **Keep**, and improve: “currently quite rudimentary” |
+| Learn › Lessons | the short course | Keep | | **Keep** |
+| Learn › Present | the narrated tour | **Move out of Learn** | presenting a design is an output, beside Export PDF and Before / after | **Move** |
+| View › 3D Sprite Gallery… | every 3D archetype, for tuning | **Retire from the menu** | a developer's bench in a gardener's menu; keep the window, open it from a script | **Retire** |
+| The View row's zoom sensitivity | scroll-wheel step | Move to View › Map Settings | a preference, and off-screen at 1366 | **Move** |
 
 ## A task-shaped home (F94), sketched
 
@@ -413,16 +413,30 @@ document, bundled into the same release:
     to Alberta, as VASCAN records all five, so a native-only generated design no
     longer leaves them out.
 
-## Left for the owner
+## The owner's answers
 
-Every *Proposal* in the page-by-page table, the F94 sketch, and:
+Given on 2 October 2026, on the page linked at the top; the page-by-page choices
+are in the Decision column above. Every question was a yes:
 
-- one name for the Plant Directory / Field Guide and for the reference walk;
-- whether the two "guidance only — needs data" goals stay on Generate Design;
-- whether wind is fetched with the pin's other site data;
-- the instruction paragraphs (finding 4), page by page;
-- the colours of primary buttons, and the light windows;
-- a software-rendering fallback for 3D on blocklisted graphics drivers.
+- **The F94 sketch**, with the owner's naming: the Plants tab becomes
+  **Placement**, holding **Plants**, **Communities** and **Structures**.
+- **One name each** for the Plant Directory / Field Guide and for the reference
+  walk (no names given; V3.07 chose *Plant Directory* and *Walk a Wild
+  Landscape*).
+- **Hide** the two "guidance only — needs data" goals on Generate Design.
+- **Fetch wind with the pin's** other site data.
+- **The instruction paragraphs**: "I'd like each page to be concise in its
+  instruction. There is often superfluous data in there."
+- **One primary-button colour**, and dark windows.
+- **The 3D preview follows edits** (Refresh retired), and its **outputs** move
+  to the Share place.
+- **A software-rendering fallback** for 3D on blocklisted graphics drivers.
+
+Enacted over three releases, one full test run each (the owner asked for half
+the testing): V3.07 the containers and the quick yeses, V3.08 the Design tab's
+merges, Share and the 3D preview, V3.09 the community pop-up, the Features scan,
+Field Study and software 3D. The reasoning is in
+[`V3.07-placement-and-the-site-tab.md`](plans/V3.07-placement-and-the-site-tab.md).
 
 ## What this cannot tell
 

@@ -10,8 +10,9 @@ focus", and Help → Keyboard shortcuts lists them from :data:`MAP_LETTERS`, the
 table the window's key handler reads, so the list cannot drift from the keys.
 
 Two of them did nothing at all: P and G called ``setCurrentWidget`` on the
-side tabs with a panel that sits inside the Plants tab, which Qt ignores.
-:func:`show_panel` opens every tab level a panel is nested in.
+side tabs with a panel that sits inside the Plants tab (Placement since
+V3.07), which Qt ignores. :func:`show_panel` opens every tab level a panel is
+nested in.
 """
 
 from __future__ import annotations
@@ -31,10 +32,11 @@ MAP_LETTERS: tuple = (
     ("M", "measure", "Measure a distance"),
     ("N", "note", "Pin a note"),
     ("L", "legend", "Show or hide the map legend"),
-    ("P", "plants", "Go to Plants: Browse"),
-    ("G", "communities", "Go to Plants: Plant Communities"),
-    ("S", "structures", "Go to Structures"),
-    ("A", "analysis", "Go to Analysis"),
+    ("P", "plants", "Go to Placement: Plants"),
+    ("G", "communities", "Go to Placement: Communities"),
+    ("S", "structures", "Go to Placement: Structures"),
+    # D since V3.07, when Analysis became Design (it was A).
+    ("D", "design", "Go to Design"),
     ("T", "planning", "Go to Planning"),
 )
 
@@ -57,7 +59,7 @@ LIST_KEYS: tuple = (
     ("Enter", "In a plant list: place the plant. In the community builder: "
               "add it to the community"),
     ("→", "In Browse: open the plant's page; Esc closes it"),
-    ("Enter, Space", "In On This Design: frame the row on the map"),
+    ("Enter, Space", "In Design › Planted: frame the row on the map"),
     ("Delete", "In the builder's Members: remove the member"),
     ("Menu key, Shift+F10", "Open a row's menu"),
     ("↑, ↓, Space", "Open a filter's list; Space ticks a value in it"),

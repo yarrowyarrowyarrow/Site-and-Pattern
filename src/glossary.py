@@ -121,7 +121,7 @@ _ENTRIES = (
         "The direction the wind most often comes from across the year, from "
         "hourly ERA5 history and cached for offline use. Wind dries plants out "
         "and strips winter snow cover, so it decides where a windbreak earns "
-        "its place. The full seasonal rose is in Analysis → Wind."),
+        "its place. The full seasonal rose is in Site → Wind."),
     Entry(
         RAIN_ANNUAL, "Annual mean rainfall",
         "Total precipitation in an average year, as liquid water. Useful for "

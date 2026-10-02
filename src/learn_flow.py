@@ -36,7 +36,7 @@ def _safely(fn) -> None:
 def open_learn_menu(parent) -> str:
     """Show the Learn menu, built against what the learner has actually done."""
     from src.learn_menu import LearnMenu
-    dlg = LearnMenu(parent, discovery_line=discovery_line(),
+    dlg = LearnMenu(parent, plant_line=plant_line(),
                     communities=community_count(),
                     sandbox=sandbox_name())
     if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -116,6 +116,22 @@ def community_count() -> int:
         return len(community_keys())
     except Exception:                                      # noqa: BLE001
         return 0
+
+
+def plant_line() -> str:
+    """"12 of 424 plants seen", or "424 native plants": the Plant Directory's
+    row on the Learn menu, counting what that window lists. ``""`` when the
+    ledger cannot be read."""
+    try:
+        from src.db import progress
+        c = progress.coverage()
+    except Exception:                                      # noqa: BLE001
+        return ""
+    total, seen = c.get("plants_total") or 0, c.get("plants_seen") or 0
+    if not total:
+        return ""
+    return (f"{seen} of {total} plants seen" if seen
+            else f"{total} native plants")
 
 
 def discovery_line() -> str:

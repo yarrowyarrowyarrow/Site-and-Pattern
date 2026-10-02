@@ -107,21 +107,25 @@ the template that almost every other feature is a variation of.
    docstrings and function names). Journal its jobs: fetch from
    Open-Meteo, cache in the DB, compute the rose. Notice: no Qt imports
    anywhere.
-2. The glue: `src/wind_flow.py` (137 lines). Read `fetch_wind_for_site`.
-   Its job is traffic direction: run the slow fetch off the UI thread,
-   then hand results to the panel. Journal one sentence on why the fetch
-   must not run on the UI thread (what would the user feel?).
-3. The trigger: open `src/controllers/map_events.py` and search for
-   `wind_flow` (~line 1408). This is the hop where "user set the site
-   pin" becomes "go get wind data."
+2. The glue: `src/wind_flow.py`. Read `fetch_wind_for_site` (the page's
+   *Refresh wind data*) and `on_site_wind` (the pin). Their job is traffic
+   direction: run the slow fetch off the UI thread, then hand results to
+   the panel. Journal one sentence on why the fetch must not run on the UI
+   thread (what would the user feel?).
+3. The trigger: open `src/site_panel.py` and search for `wind`. Dropping a
+   pin starts `_SiteFetchWorker`, which reads the rose with the site's
+   other data; `_on_wind` shows one line on Site Info and emits
+   `wind_rose_ready`, which `src/app.py` hands to `wind_flow.on_site_wind`.
+   This is the hop where "user set the site pin" becomes "the Wind page
+   has its rose" (V3.07; before it, the page waited for its own button).
 4. The pixels: `src/wind_rose_widget.py` (69 lines). It receives finished
    numbers and draws petals — no fetching, no math beyond angles. Then
-   find where the Analysis panel houses it (search for `wind` in
-   `src/analysis_panel.py`).
+   find where the Wind page houses it (search for `wind` in
+   `src/analysis_panel.py`, which builds the page; the Site tab shows it).
 5. Assemble the call-map in your journal:
-   `map_events.py (pin set) → wind_flow.fetch_wind_for_site → wind.py (fetch+cache+compute) → analysis_panel (Wind tab) → wind_rose_widget (paints)`
+   `site_panel (pin set → _SiteFetchWorker) → wind.py (fetch+cache+compute) → site_panel._on_wind → wind_flow.on_site_wind → analysis_panel.set_wind_data (Wind page) → wind_rose_widget (paints)`
    — then verify the whole thing live: run the app, set a site pin, open
-   Analysis → Wind, and narrate the hops as it appears.
+   Site → Wind, and narrate the hops as it appears.
 
 **Done when:** the call-map is in your journal with a file per hop, and
 you watched it happen in the running app.

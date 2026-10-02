@@ -81,7 +81,7 @@ STEPS: tuple[dict, ...] = (
         # screen — `short` has always said "Add plants", so this is the title
         # catching up with the label beside it.
         "title": "Add your plants — or let the app draft it",
-        "detail": "Pick plants from the Plants tab and click to place them. "
+        "detail": "Pick plants from the Placement tab and click to place them. "
                   "Or use ✨ Generate Design to fill the boundary from your "
                   "goals and edit from there.",
     },
@@ -136,7 +136,7 @@ def first_step(project: dict) -> dict:
                     "detail": step["detail"]}
     return {"index": len(progress), "total": len(progress), "complete": True,
             "key": "done", "title": "Your design is under way",
-            "detail": "Analysis → Habitat scores what it provides; "
+            "detail": "Design → Habitat scores what it provides; "
                       "File → Export Planting Plan… says what to buy "
                       "and when to plant it."}
 
@@ -200,9 +200,9 @@ EXAMPLE_NOTES = (
     "Showy Milkweed) into fall (Canada Goldenrod), and a short grass matrix "
     "along the street edge so it still reads as tended.\n\n"
     "Things worth doing to it:\n"
-    "  • Analysis → Habitat: see its score, then tick “Show the "
+    "  • Design → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"
-    "  • Analysis → Habitat → Pull-a-plant: remove the "
+    "  • Design → Habitat → Pull-a-plant: remove the "
     "milkweed and watch what it costs.\n"
     "  • View → 3D Preview: drag the year slider and watch the "
     "shrubs close over the forbs.\n"

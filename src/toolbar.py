@@ -4,20 +4,22 @@ toolbar.py — Top toolbars for drawing tools, view layout, and project actions.
 Layout (two stacked rows):
 
   ┌────────────────────────────────────────────────────────────────┐
-  │ Draw: ⬡ Boundary  📏 Measure  📝 Note  ⤺ Undo  ✕ Cancel        │
+  │ Draw: ⬡ Boundary ▱ Shape▼ 📏 Measure 📝 Note ⬚ Select ⤺ ⤻ ✕     │
   ├────────────────────────────────────────────────────────────────┤
   │ View: 🛰 Satellite ⬡ Boundary 📏 Measurement # Grid▼            │
-  │       ✿ Plants 🌳 Canopy 🏗 Structures … 🔍 Zoom: …             │
+  │       ✿ Plants 🌳 Canopy 🏗 Structures 📷 Yard photo            │
   └────────────────────────────────────────────────────────────────┘
 
 The View row order is fixed: Satellite, Boundary, Measurement, Grid,
 Plants, Canopy, Structures (per the UI spec). The Grid action exposes a
 popup menu for base size (1×1 / 5×5 / 10×10 / 100×100 m), opacity, and
-colour. The main click on Grid still toggles the snap on/off.
+colour. The main click on Grid still toggles the snap on/off. The scroll-wheel
+zoom step was the row's last control until V3.07 and is in View › Map
+Settings… now (``src/map_settings_flow.py``).
 """
 
 from PyQt6.QtWidgets import (
-    QToolBar, QLabel, QComboBox, QToolButton, QMenu, QWidget,
+    QToolBar, QLabel, QToolButton, QMenu, QWidget,
     QVBoxLayout, QHBoxLayout, QSlider, QPushButton, QColorDialog,
     QWidgetAction, QSizePolicy,
 )
@@ -147,6 +149,9 @@ class MainToolbar(QToolBar):
 
     # Drawing mode signals
     draw_boundary_requested   = pyqtSignal()
+    # Draw › Shape (V3.07): an area or a line, from src/shape_tool.py.
+    place_shape_requested     = pyqtSignal(dict)
+    place_hedgerow_requested  = pyqtSignal(dict)
     measure_requested         = pyqtSignal()
     annotate_requested        = pyqtSignal()
     select_requested          = pyqtSignal()
@@ -164,9 +169,6 @@ class MainToolbar(QToolBar):
     yard_photo_toggled   = pyqtSignal(bool)
     grid_settings_changed = pyqtSignal(dict)
     # ^ payload: {"enabled": bool, "size_m": float, "opacity": float, "color": str}
-
-    # Zoom sensitivity changed ('fine'|'normal'|'fast'|'coarse')
-    zoom_step_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__("Draw", parent)
@@ -200,6 +202,17 @@ class MainToolbar(QToolBar):
         self._act_boundary.setToolTip("Click to add points; click first point (or double-click) to close")
         self._act_boundary.triggered.connect(self._on_boundary_toggled)
         self.addAction(self._act_boundary)
+
+        # Shape (V3.07): beds, paths, lawn-conversion zones, and the hedge,
+        # fence and windbreak lines, which were the Structures tab's Shapes
+        # and Hedgerow pages until the owner moved them here. Its menu is the
+        # form; Draw on the map closes it and arms the map, and the button
+        # shows as on while the shape is being drawn.
+        from src.shape_tool import shape_button
+        self._shape_btn, self.shape_tool = shape_button(self)
+        self.shape_tool.place_shape_requested.connect(self._on_shape_draw)
+        self.shape_tool.place_hedgerow_requested.connect(self._on_line_draw)
+        self.addWidget(self._shape_btn)
 
         self._act_measure = QAction("📏 Measure", self)
         self._act_measure.setCheckable(True)
@@ -387,22 +400,6 @@ class MainToolbar(QToolBar):
         self._act_yard_photo.toggled.connect(self.yard_photo_toggled)
         bar.addAction(self._act_yard_photo)
 
-        bar.addSeparator()
-
-        # ── Zoom sensitivity ───────────────────────────────────────
-        bar.addWidget(QLabel("  🔍 Zoom: "))
-        self._zoom_combo = QComboBox()
-        self._zoom_combo.setAccessibleName("Zoom sensitivity")
-        self._zoom_combo.addItems(["Fine (1.1×)", "Normal (1.26×)", "Fast (1.5×)", "Coarse (2×)"])
-        self._zoom_combo.setCurrentIndex(0)
-        self._zoom_combo.setToolTip(
-            "Scroll-wheel zoom sensitivity per tick\n"
-            "Fine ≈ 1.1× per scroll tick (smoothest)\n"
-            "Coarse ≈ 2× per tick (original Leaflet default)"
-        )
-        self._zoom_combo.currentIndexChanged.connect(self._on_zoom_combo_changed)
-        bar.addWidget(self._zoom_combo)
-
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def set_yard_photo_available(self, available: bool, *, checked=None):
@@ -472,12 +469,25 @@ class MainToolbar(QToolBar):
                     self._act_select]:
             if act is not keep:
                 act.setChecked(False)
+        self._shape_btn.setChecked(False)
+
+    def _on_shape_draw(self, config: dict):
+        self._uncheck_except(None)
+        self.place_shape_requested.emit(config)
+        # After the emit: entering the mode resets the draw buttons.
+        self._shape_btn.setChecked(True)
+
+    def _on_line_draw(self, config: dict):
+        self._uncheck_except(None)
+        self.place_hedgerow_requested.emit(config)
+        self._shape_btn.setChecked(True)
 
     def _on_cancel(self):
         self._act_boundary.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
         self._act_select.setChecked(False)
+        self._shape_btn.setChecked(False)
         self.cancel_draw_requested.emit()
 
     def _emit_grid_settings(self, *_):
@@ -485,12 +495,6 @@ class MainToolbar(QToolBar):
         payload = dict(self._grid_menu.current_settings())
         payload["enabled"] = bool(self._grid_btn.isChecked())
         self.grid_settings_changed.emit(payload)
-
-    _ZOOM_LEVELS = ['fine', 'normal', 'fast', 'coarse']
-
-    def _on_zoom_combo_changed(self, idx: int):
-        level = self._ZOOM_LEVELS[idx] if 0 <= idx < len(self._ZOOM_LEVELS) else 'fine'
-        self.zoom_step_changed.emit(level)
 
     # ── Public helpers ────────────────────────────────────────────────────────
 
@@ -507,9 +511,11 @@ class MainToolbar(QToolBar):
         self._act_boundary.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
+        self._shape_btn.setChecked(False)
 
     def enter_plant_mode(self):
         """Called by plant panel 'Place on Map' — visually deactivate draw buttons."""
         self._act_boundary.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
+        self._shape_btn.setChecked(False)

@@ -142,7 +142,21 @@ Trouble? It still says "damaged" or won't open:
 Re-download the .dmg (a half-finished download can corrupt it), then
 repeat Step 1 and Step 2.
 EOF
-    hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg
+    # hdiutil fails now and then on GitHub's macOS runners with "create
+    # failed - Resource busy" while a background diskimages-helper or a
+    # security scan still holds the staging folder: V3.06's DMG failed that
+    # way after the app had built and its signature verified. Wait and retry.
+    for attempt in 1 2 3 4 5; do
+        if hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg; then
+            break
+        fi
+        if [ "$attempt" -eq 5 ]; then
+            echo "hdiutil create failed five times" >&2
+            exit 1
+        fi
+        echo -e "${YELLOW}hdiutil create failed (attempt $attempt of 5); retrying in $((attempt * 10)) s...${NC}"
+        sleep $((attempt * 10))
+    done
     rm -rf "$STAGING"
     echo -e "${GREEN}✓ Created dist/SiteAndPattern.dmg${NC}"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then

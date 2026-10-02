@@ -86,16 +86,16 @@ def remove_species(main, plant_id: int) -> None:
 
 
 def show_in_library(main, plant_id: int) -> None:
-    """Context-menu 'Show in Plant Library' — jump to the Plants tab with the
-    species name in the search box."""
+    """Context-menu 'Show in Plant Library' — jump to Placement › Plants with
+    the species name in the search box."""
     try:
         from src.db.plants import get_plant
         plant = get_plant(plant_id) or {}
     except Exception:  # noqa: BLE001
         plant = {}
     name = plant.get("common_name") or ""
-    main._side_tabs.setCurrentWidget(main._plant_poly_tab)
-    main._plants_inner_tabs.setCurrentWidget(main.plant_panel)
+    from src.keyboard_help import show_panel
+    show_panel(main.plant_panel)
     if name:
         main.plant_panel._search_box.setText(name)
 
@@ -162,18 +162,17 @@ def browse_communities(main, eco_keys) -> None:
     """
     if isinstance(eco_keys, str):
         eco_keys = [eco_keys] if eco_keys else []
-    main._side_tabs.setCurrentWidget(main._plant_poly_tab)
-    main._plants_inner_tabs.setCurrentWidget(main.polyculture_panel)
+    from src.keyboard_help import show_panel
+    show_panel(main.polyculture_panel)
     main.polyculture_panel.set_habitat_filter(list(eco_keys or []))
 
 
 def open_habitat_analysis(main) -> None:
-    """Stats 'Habitat value ›' deep-link → the Analysis panel's Habitat tab."""
-    main._side_tabs.setCurrentWidget(main.analysis_panel)
-    if hasattr(main.analysis_panel, "show_habitat_tab"):
-        main.analysis_panel.show_habitat_tab()
+    """The report card's 'Habitat value ›' deep-link → Design › Habitat."""
+    main.analysis_panel.show_habitat_tab()
 
 
 def open_planning(main) -> None:
-    """Stats 'Estimated cost ›' deep-link → the Planning panel."""
-    main._side_tabs.setCurrentWidget(main.planning_panel)
+    """The report card's 'Estimated cost ›' deep-link → the Planning panel."""
+    from src.keyboard_help import show_panel
+    show_panel(main.planning_panel)

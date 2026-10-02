@@ -7,7 +7,7 @@ the zone labels below — so zones reuse the whole existing shape-drawing pipeli
 Qt-free source of truth for:
 
   * the zone catalogue (key → label / fill / stroke / opacity / stage), shared by
-    the Structures → Shapes drawer presets and the tally here, so the drawer and
+    the Draw › Shape presets (src/shape_tool.py) and the tally here, so the drawer and
     the readout never drift;
   * ``conversion_summary`` — tallies m² per zone from the project features and
     derives "lawn remaining", "converted so far" and a stage-by-stage breakdown;

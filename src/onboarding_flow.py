@@ -326,8 +326,7 @@ def _dispatch(main, choice: str) -> None:
     elif choice == DESIGN:
         # Nothing to build — just point at step one and put the cursor where
         # the user has to act.
-        _safely(lambda: (main._side_tabs.setCurrentWidget(main.site_panel),
-                         main.site_panel.focus_address_search()))
+        _safely(lambda: main.site_panel.focus_address_search())
     refresh(main)
 
 
@@ -561,11 +560,12 @@ def on_step_clicked(main, key: str) -> None:
     """
     try:
         if key == "pin":
-            main._side_tabs.setCurrentWidget(main.site_panel)
+            # Opens Site › Site Info whatever page is in front, then the box.
             main.site_panel.focus_address_search()
         elif key == "boundary":
             main.toolbar.activate_boundary_tool()
         elif key == "plants":
-            main._side_tabs.setCurrentWidget(main._plant_poly_tab)
+            from src.keyboard_help import show_panel
+            show_panel(main.plant_panel)
     except Exception:                                      # noqa: BLE001
         pass

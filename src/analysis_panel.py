@@ -193,6 +193,9 @@ class AnalysisPanel(QWidget):
         layout.addWidget(self._sun_info)
 
         layout.addStretch()
+        # Hosted by the Site tab since V3.07 (src/side_panel_layout.py); built
+        # and run here, so nothing about how it works moved with it.
+        self._sun_page = page
         self._tabs.addTab(page, "Sun && Shade")
 
     def _build_sun_when_group(self, layout):
@@ -502,12 +505,13 @@ class AnalysisPanel(QWidget):
         self._sun_lat, self._sun_lng = lat, lng
         self._reclamp_time_to_date()
         # The Wind tab's empty state asked for a pin that was already down
-        # (V3.05 audit); say what is actually missing.
+        # (V3.05 audit); say what is actually missing. Since V3.07 the rose
+        # comes with the pin's site data (src/wind_flow.py).
         if not getattr(self, "_wind_fetched", False):
             self.set_wind_status(
-                "No data yet — drop a site pin (Site tab), then fetch."
-                if lat is None else "Not fetched yet — press Fetch wind data "
-                "for this site's real wind history.")
+                "No wind yet: it comes with the site pin (Site Info)."
+                if lat is None else "No wind for this pin yet: it arrives with "
+                "the site's data, or press Refresh wind data.")
 
     def _reclamp_time_to_date(self):
         from src import sun_shade
@@ -624,28 +628,29 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Where does the wind come from — and which parts of your site are "
-            "sheltered? Fetch this site's real wind history, check the "
-            "direction, then overlay the sheltered zones on the map."
+            "Where the wind comes from, and which parts of the site it misses. "
+            "The rose comes with the site pin."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # ── Step 1: real wind data (seasonal rose + current reading) ────────
-        data_group = QGroupBox("1 · Get this site's wind")
+        data_group = QGroupBox("1 · This site's wind")
         data_group.setStyleSheet(self._GROUP_STYLE)
         dg = QVBoxLayout(data_group)
         dg.setSpacing(6)
 
-        btn_fetch = QPushButton("Fetch wind data (Open-Meteo)")
+        # The rose arrives with the pin (V3.07, src/wind_flow.py); this
+        # fetches it again, with a reading of the wind now.
+        btn_fetch = QPushButton("Refresh wind data")
         btn_fetch.setStyleSheet(
             "QPushButton { background: #00695c; color: #e0f2f1; "
             "border: 1px solid #00897b; border-radius: 4px; padding: 6px; "
             "font-weight: bold; } QPushButton:hover { background: #00897b; }")
         btn_fetch.setToolTip(
-            "Download a seasonal wind rose + current reading for this location. "
-            "Cached for offline use after the first fetch.")
+            "Fetch this site's wind again from Open-Meteo, with a reading of "
+            "the wind right now. The rose is kept for use offline.")
         btn_fetch.clicked.connect(self.wind_data_requested.emit)
         dg.addWidget(btn_fetch)
 
@@ -662,7 +667,7 @@ class AnalysisPanel(QWidget):
         dg.addWidget(self._wind_current_lbl)
 
         self._wind_status_lbl = QLabel(
-            "No data yet — drop a site pin (Site tab), then fetch.")
+            "No wind yet: it comes with the site pin (Site Info).")
         self._wind_status_lbl.setWordWrap(True)
         self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 12px;")
         dg.addWidget(self._wind_status_lbl)
@@ -789,6 +794,8 @@ class AnalysisPanel(QWidget):
         layout.addWidget(overlay_group)
 
         layout.addStretch()
+        # Hosted by the Site tab since V3.07, like Sun & Shade.
+        self._wind_page = page
         self._tabs.addTab(page, "Wind")
 
     @staticmethod
@@ -1066,7 +1073,7 @@ class AnalysisPanel(QWidget):
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
         self._habitat_page = page
-        self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+        self._tabs.addTab(page, "Habitat")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Relationship web (F5) — P3/P5/P10
@@ -1255,11 +1262,11 @@ class AnalysisPanel(QWidget):
         self.relationship_overlay_requested.emit(graph)
 
     def show_habitat_tab(self):
-        """Raise the Habitat Value tab (On This Design → habitat-value
-        deep-link, V2.13)."""
-        idx = getattr(self, "_habitat_tab_index", None)
-        if idx is not None:
-            self._tabs.setCurrentIndex(idx)
+        """Raise the Habitat Value page (the report card's habitat-value
+        deep-link, V2.13), by the page and not its place in the strip, which
+        V3.07 changed."""
+        from src.keyboard_help import show_panel
+        show_panel(self._habitat_page)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Bees — "Design for a bee" habitat builder (F37)
@@ -1372,16 +1379,17 @@ class AnalysisPanel(QWidget):
         # Re-render the bee photo when a warmed image lands (shared signal).
         self.galleryImageReady.connect(self._render_bee_photo)
 
+        self._bee_page = page
         self._tabs.addTab(page, "Bees")
-        self._bee_tab_index = self._tabs.indexOf(page)
         # Recompute the plan lazily when the Bees tab is opened, so "in your
         # design" and forage coverage stay live without recomputing on every
-        # plant placement.
+        # plant placement. By the page, not its index: V3.07 put pages ahead
+        # of it.
         self._tabs.currentChanged.connect(self._on_tab_changed)
         self._update_bee_plan()
 
-    def _on_tab_changed(self, idx: int):
-        if idx == getattr(self, "_bee_tab_index", -1):
+    def _on_tab_changed(self, _idx: int):
+        if self._tabs.currentWidget() is getattr(self, "_bee_page", None):
             self.refresh_bee_tab()
 
     def _populate_bee_selector(self):
@@ -1768,8 +1776,8 @@ class AnalysisPanel(QWidget):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
         # Keep the bee plan live if its tab is the one on screen.
-        if (hasattr(self, "_bee_tab_index")
-                and self._tabs.currentIndex() == self._bee_tab_index):
+        if (getattr(self, "_bee_page", None) is not None
+                and self._tabs.currentWidget() is self._bee_page):
             self.refresh_bee_tab()
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
@@ -2011,7 +2019,7 @@ class AnalysisPanel(QWidget):
             # to find the plants that fill it was the complaint: "gap months are
             # shown for a design but there is no option to choose plants that
             # flower or fruit a particular month". There is one now.
-            lines.append("    → Plants → Browse → “Blooms in…” to fill them")
+            lines.append("    → Placement → Plants → “Blooms in…” to fill them")
         lines.append("")
         lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 

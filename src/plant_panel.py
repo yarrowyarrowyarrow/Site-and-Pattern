@@ -1,5 +1,5 @@
 """
-plant_panel.py — the Plants → Browse tab: the plant picker, Place, and the mix.
+plant_panel.py — Placement › Plants (Plants › Browse until V3.07): the plant picker, Place, and the mix.
 
 The search, filters, order and list are ``src/plant_picker.py``, the same
 widget the Plant Directory and the community builder show (F192, V3.00). A

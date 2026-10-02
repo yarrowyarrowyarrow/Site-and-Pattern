@@ -507,8 +507,13 @@ def walk_tabs(root_tabs, root_path=()) -> list:
             pg = Page(list(path) + [label], page_w, c)
             registry[id(page_w)] = pg
             pages.append(pg)
-            nested = [t for t in page_w.findChildren(W.QTabWidget)
-                      if _directly_inside(t, page_w)]
+            # A page that is itself a strip (Placement since V3.07) holds its
+            # pages in that strip, which findChildren does not return.
+            if isinstance(page_w, W.QTabWidget):
+                nested = [page_w]
+            else:
+                nested = [t for t in page_w.findChildren(W.QTabWidget)
+                          if _directly_inside(t, page_w)]
             for t in nested:
                 visit(t, pg.path, c, pg)
 

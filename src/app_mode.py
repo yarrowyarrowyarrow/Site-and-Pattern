@@ -76,7 +76,7 @@ BACK = "back"             # return to the start screen
 #: start-screen lesson, applied to its second screen.
 LEARN_DOORS = (
     (WALK, "🌲", "Walk a wild landscape"),
-    (GUIDE, "🔎", "Field Guide"),
+    (GUIDE, "🔎", "Plant Directory"),
     (STUDIO, "📚", "Lessons & Field Study"),
 )
 
@@ -102,7 +102,7 @@ def opens_main_window(choice: str) -> bool:
     return not is_learn_choice(choice)
 
 
-def learn_notes(discovery_line: str = "", communities: int = 0,
+def learn_notes(plant_line: str = "", communities: int = 0,
                 sandbox: str = "") -> dict:
     """The note column for each Learn door — one short fact per row.
 
@@ -110,6 +110,11 @@ def learn_notes(discovery_line: str = "", communities: int = 0,
     display, and so the five-word ceiling the start-screen tests enforce is
     checkable in one place. Every string must survive its inputs being empty:
     this runs before any project exists.
+
+    The directory's row counts plants (``plant_line``). Until V3.07 it carried
+    the discovery count, plants and animals together ("1568 species to find"),
+    beside a window that lists the 424 plants (the V3.05 surface audit); that
+    count is still the start screen's, on its Learn door.
     """
     if communities:
         walk = f"{communities} communities"
@@ -119,6 +124,6 @@ def learn_notes(discovery_line: str = "", communities: int = 0,
         walk = f"continue in {sandbox}"
     return {
         WALK: walk,
-        GUIDE: discovery_line or "look up any native species",
+        GUIDE: plant_line or "look up any native plant",
         STUDIO: "about the landscape you're in",
     }

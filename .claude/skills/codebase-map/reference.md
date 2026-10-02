@@ -11,14 +11,14 @@ added; trust the source over this list).
 |---|---|
 | `main.py` | Site & Pattern entry point |
 | `src/app.py` | Main application window for Site & Pattern |
-| `src/toolbar.py` | Top toolbars for drawing tools, view layout, and project actions |
+| `src/toolbar.py` | The Draw row (Boundary, Shape, Measure, Note, Select, Undo/Redo/Cancel) and the View row's layer toggles |
 | `src/ui_style.py` | shared Qt stylesheet snippets so panels look consistent |
 | `src/collapsible_panel.py` | Reusable header-with-chevron panel widget |
 | `src/fill_tab_widget.py` | a QTabWidget whose tabs stretch to fill the full strip |
 | `src/filter_widgets.py` | Shared search/filter widgets for the side-panel browsers |
 | `src/branding.py` | the app's display identity (V1.69 rebrand) |
 | `src/settings.py` | Persistent configuration storage |
-| `src/preferences_dialog.py` | Map settings dialog for optional API tokens |
+| `src/preferences_dialog.py` | View › Map Settings: the scroll-wheel zoom step and an optional Mapbox token |
 | `src/user_paths.py` | the single source of truth for the per-user data directory (incl. the PermaDesign→Site & Pattern rename migration) |
 | `src/resources.py` | locate bundled, read-only data files in both source checkouts and frozen builds |
 | `src/app_version.py` | what version the running build identifies as |
@@ -78,12 +78,15 @@ added; trust the source over this list).
 | `src/accessible_names.py` | Names the scroll areas and tab widgets no panel builds, after their tab (V3.02) |
 | `src/target_size.py` | Every control at least 24 px, by one app-wide filter that only ever raises a minimum (V3.03) |
 | `src/indicator_style.py` | A checkbox's box and a radio button's ring drawn where they can be seen, the platform style otherwise (V3.03) |
-| `src/on_this_design_panel.py` | The "On this design" review tab |
+| `src/on_this_design_panel.py` | What is on the design: Species + Communities (Design › Planted) and Stats (Design › Report card) |
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |
-| `src/structure_panel.py` | Side-panel tab for browsing and placing structures, hedgerows, and shapes |
+| `src/structure_panel.py` | Placement › Structures: browse and place habitat structures |
+| `src/side_panel_layout.py` | The side panel's five tabs (F94, V3.07): moves built pages between tab widgets; address pages by widget, never index |
+| `src/shape_tool.py` | Draw › Shape: areas, lawn-conversion zones and hedge/fence/windbreak lines in one form under a Draw-row button (V3.07) |
+| `src/map_settings_flow.py` | View › Map Settings: the zoom step, saved and sent on every map load (V3.07) |
 | `src/site_panel.py` | Side-panel tab for the property pin and auto-filled site data |
-| `src/analysis_panel.py` | Side-panel tab for site analysis overlays |
+| `src/analysis_panel.py` | The Design tab (Habitat, This Month, Bees) and the Site tab's Sun & Shade and Wind pages, which it builds and runs |
 | `src/planning_panel.py` | Side-panel tab for planning and analysis features |
 | `src/wind_rose_widget.py` | a small QPainter wind-rose (V1.67) |
 | `src/phenology_widget.py` | the "what's happening now" dashboard UI (F51) |
@@ -157,7 +160,7 @@ added; trust the source over this list).
 | `src/water_flow.py` | map-side glue for the water flow & accumulation overlay (V2.13) |
 | `src/precip_split.py` | separate precipitation by *when its water is available* |
 | `src/wind.py` | seasonal wind rose + live current wind from Open-Meteo (V1.67) |
-| `src/wind_flow.py` | orchestration for fetching site wind data (V1.67) |
+| `src/wind_flow.py` | the site's wind: the pin's rose to the Wind page (V3.07), Refresh's fetch, the cached rose on open (V1.67) |
 | `src/wind_shadow.py` | porosity-aware shelterbelt (wind shadow) geometry (V1.68) |
 | `src/wind_shadow_flow.py` | orchestration for the live wind-shadow overlay (V1.68) |
 | `src/snow.py` | winter snow cover & survival metrics (the *insulation* function) |

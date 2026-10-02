@@ -1,14 +1,21 @@
 """
-on_this_design_panel.py — The "On this design" review tab.
+on_this_design_panel.py — what is on the design: the planted lists and the
+report card.
 
 Split out of ``src/plant_panel.py`` in Chunk 4 of the strengthening plan.
 Pure structural move: ``OnThisDesignPanel`` is now standalone and lives
 beside the plant browser instead of inside it.
 
 Three sub-tabs:
-  • Plants — species → count (driven by PlantPanel._placed_counts).
+  • Species — species → count (driven by PlantPanel._placed_counts).
   • Communities — community-name → instance count + member count.
-  • Stats — species count, Alberta-native %, layer / function tallies.
+  • Stats — the score, what to plant next, cues to care, cost.
+
+**Since V3.07 they sit in the Design tab** (``src/side_panel_layout.py``): the
+Stats page, as **Report card**, is its first page, and this panel, with Species
+and Communities, its second, **Planted**. Until then all three were under
+Plants › On This Design, "the best page in the app, three levels deep, under a
+tab named for browsing plants" (the V3.05 surface audit).
 
 App.py owns the instance and drives both inputs:
 ``set_plants_counts(plant_panel._placed_counts)`` whenever the Plants
@@ -77,8 +84,8 @@ class OnThisDesignPanel(QWidget):
         root.setSpacing(2)
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
-        # Third level in the tree (Plants → On This Design → here), so it takes
-        # the quietest tab style. This strip used to invent a boxed look of its
+        # Third level in the tree (Design › Planted › here since V3.07), so it
+        # takes the quietest tab style. This strip used to invent a boxed look of its
         # own, which made the deepest level the loudest of the three.
         from src.ui_style import leaf_tab_stylesheet
         self._tabs.setStyleSheet(leaf_tab_stylesheet())
@@ -154,6 +161,8 @@ class OnThisDesignPanel(QWidget):
         self._stats_text.setOpenLinks(False)
         self._stats_text.anchorClicked.connect(self._on_stats_anchor)
         sl.addWidget(self._stats_text, 1)
+        # The Design tab's Report card since V3.07 (src/side_panel_layout.py).
+        self._stats_page = stats_widget
         self._tabs.addTab(stats_widget, "Stats")
 
         # Latest enriched snapshot — stashed so Stats can refresh without

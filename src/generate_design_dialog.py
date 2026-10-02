@@ -56,17 +56,14 @@ class GenerateDesignDialog(QDialog):
         goals_box = QGroupBox("Design goals")
         goals_layout = QVBoxLayout(goals_box)
         self._checks: dict[str, QCheckBox] = {}
-        for g in GOALS:
-            label = g.label if g.backed \
-                else f"{g.label}  (guidance only — needs data)"
-            cb = QCheckBox(label)
+        # A goal no plant data backs is not offered (the owner's answer to the
+        # V3.05 surface audit): it read "(guidance only — needs data)" and
+        # could not be kept. The generator still understands one, so a
+        # caller that names it keeps working.
+        for g in (g for g in GOALS if g.backed):
+            cb = QCheckBox(g.label)
             cb.setChecked(g.key in preselected)
-            if not g.backed:
-                cb.setToolTip(
-                    "There's no plant data backing this goal yet, so it's "
-                    "passed to the AI as guidance and can't be guaranteed."
-                )
-            elif g.caveat:
+            if g.caveat:
                 cb.setToolTip(g.caveat)
             goals_layout.addWidget(cb)
             self._checks[g.key] = cb

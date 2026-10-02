@@ -338,6 +338,11 @@ class SitePanel(QWidget):
     # Site-walk field notes (F6, P11) — emitted (debounced) when the user edits
     # the checklist / free text; MainWindow stores it on the project.
     field_notes_changed = pyqtSignal(dict)
+
+    # The wind rose the pin's fetch read (or None), for the Wind page (V3.07):
+    # it was read here since V2.13 for one line on Site Info while the Wind
+    # page waited for its own button and fetched it again.
+    wind_rose_ready = pyqtSignal(object)
     #: "Print this sheet" on Field Notes (F32): the prompts as a page.
     print_field_sheet_requested = pyqtSignal()
 
@@ -379,9 +384,12 @@ class SitePanel(QWidget):
 
     def focus_address_search(self):
         """Put the cursor in the address box (F44 — 'Start from my yard' and
-        the step-1 chip both land here). Selects any existing text so typing
+        the step-1 chip both land here), with Site Info in front: a cursor in
+        a page behind another is nowhere. Selects any existing text so typing
         replaces it."""
         try:
+            from src.keyboard_help import show_panel
+            show_panel(self._addr_input)
             self._addr_input.setFocus(Qt.FocusReason.OtherFocusReason)
             self._addr_input.selectAll()
         except (AttributeError, RuntimeError):
@@ -395,8 +403,10 @@ class SitePanel(QWidget):
     # ── Construction ────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        """Site panel split into three sub-tabs (mirrors the Plants panel):
-        Site Information, Slope, and Shade."""
+        """Site Info, Slope, Features and Field Notes. Since V3.07 the Design
+        tab's Sun & Shade and Wind pages join them, between Slope and Features
+        (``src/side_panel_layout.py``): they describe the site, not the
+        design (the owner's answers to the V3.05 surface audit)."""
         from src.ui_style import inner_tab_stylesheet
         outer = QVBoxLayout(self)
         outer.setContentsMargins(4, 4, 4, 4)
@@ -417,9 +427,14 @@ class SitePanel(QWidget):
         tabs.setStyleSheet(inner_tab_stylesheet()
                            + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)
+        # Kept, with two of the pages, so pages can be put beside them and a
+        # jump can open Site Info whatever page is in front.
+        self._tabs = tabs
 
         self._build_info_page(self._add_scroll_page(tabs, "Site Info"))
+        self.info_page = tabs.widget(tabs.count() - 1)
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
+        self.slope_page = tabs.widget(tabs.count() - 1)
         self._build_features_page(self._add_scroll_page(tabs, "Features"))
         self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
@@ -621,7 +636,7 @@ class SitePanel(QWidget):
 
         # ── Climate context (V2.13) ──────────────────────────────────
         # Elevation/aspect ride along from the Slope tab's fetch; the
-        # prevailing wind is a one-line summary of the Analysis → Wind rose
+        # prevailing wind is a one-line summary of the Wind page's rose
         # (windbreaks are one of the most actionable site responses).
         self._climate_box = QGroupBox("Climate context")
         self._climate_box.setStyleSheet(_GROUP_STYLE)
@@ -1187,8 +1202,8 @@ class SitePanel(QWidget):
 
         This was "Features && Shade" until V2.38, and it was two things under
         one label — capturing existing trees and buildings is data entry, and
-        the shade they cast is analysis. The shade map now lives on
-        Analysis → Sun & Shade, next to the sun that casts it."""
+        the shade they cast is analysis. The shade map lives on Sun & Shade,
+        next to the sun that casts it (Analysis until V3.07, now this tab)."""
         self._build_osm_section(layout)
         self._build_existing_features_section(layout)
         self._build_imagery_align_section(layout)
@@ -1531,6 +1546,12 @@ class SitePanel(QWidget):
             return 0
 
     def _on_wind(self, data):
+        """The pin's fetch read the wind rose: show it here, and hand it on to
+        the Wind page (``wind_rose_ready``)."""
+        self.show_wind(data)
+        self.wind_rose_ready.emit(data)
+
+    def show_wind(self, data):
         """One-line prevailing-wind summary for the Climate-context group.
         ``data`` is the wind.get_wind_summary rose dict or ``None``."""
         if not data:
@@ -1543,6 +1564,10 @@ class SitePanel(QWidget):
         if label:
             mean_txt = f"  (~{mean:.0f} km/h mean)" if mean is not None else ""
             cached = "  (cached)" if data.get("cached") else ""
+            # Offline with nothing cached, the Wind page falls back to the
+            # region's prevailing wind (V3.07 shows it here too): say so.
+            if data.get("approximate"):
+                cached = "  (a regional estimate)"
             self._lbl_info_wind.setText(f"from {label}{mean_txt}{cached}")
         else:
             self._lbl_info_wind.setText("No dominant direction")
@@ -1759,7 +1784,7 @@ class SitePanel(QWidget):
         self._auto_status.setText(text)
 
     # ── The caster inventory ───────────────────────────────────────────────
-    # The shade *map* moved to Analysis → Sun & Shade in V2.38. This line
+    # The shade *map* moved to Sun & Shade in V2.38 (Site since V3.07). This line
     # stayed, because it belongs where the casters are entered: it answers
     # "did my import land?" the moment you press the button, not one tab away.
     # Analysis shows the same line from the same formatter, where it answers
@@ -1946,7 +1971,7 @@ class SitePanel(QWidget):
     def _build_osm_section(self, parent_layout):
         box = QGroupBox("Existing features — import")
         box.setToolTip("Start here: pull what's already on and around the "
-                       "site from OpenStreetMap so the shade map (Analysis → "
+                       "site from OpenStreetMap so the shade map (Site → "
                        "Sun & Shade) has real casters to work with. Anything "
                        "missing can be drawn or marked by hand in the next "
                        "section.")

@@ -644,11 +644,11 @@ class MapEventRouter:
         self._main._site_pin_mode = False
         self._main.map_widget.set_site_pin_drop_mode(False)
         self._main.site_panel.set_pin(lat, lng, label)
-        # Switch to the Site tab so results are visible.
+        # Bring Site › Site Info forward so the results are visible, whatever
+        # page the Site tab was on (it holds six since V3.07).
         try:
-            idx = self._main._side_tabs.indexOf(self._main.site_panel)
-            if idx >= 0:
-                self._main._side_tabs.setCurrentIndex(idx)
+            from src.keyboard_help import show_panel
+            show_panel(self._main.site_panel.info_page)
         except Exception:
             pass
         # Persist coordinates immediately; site data fills in when fetcher returns.

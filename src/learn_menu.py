@@ -44,7 +44,7 @@ class LearnMenu(QDialog):
     :mod:`src.app_mode` keys, or ``""`` if they closed it."""
 
     def __init__(self, parent: QWidget | None = None, *,
-                 discovery_line: str = "", communities: int = 0,
+                 plant_line: str = "", communities: int = 0,
                  sandbox: str = ""):
         super().__init__(parent)
         self.setWindowTitle(f"{APP_NAME}: Learn")
@@ -69,7 +69,7 @@ class LearnMenu(QDialog):
         layout.addWidget(sub)
         layout.addSpacing(6)
 
-        notes = app_mode.learn_notes(discovery_line=discovery_line,
+        notes = app_mode.learn_notes(plant_line=plant_line,
                                      communities=communities,
                                      sandbox=sandbox)
         for i, (key, icon, title) in enumerate(app_mode.LEARN_DOORS):

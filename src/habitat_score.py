@@ -338,7 +338,7 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 15.0 - (getattr(score, "score_keystone", 0.0) or 0.0)
         add(head, f"Only {n_key} keystone species so far — these carry the most "
                   "of the food web; a few more add up to "
-                  f"+{int(round(head))} pts (Plants → Browse → Filters → "
+                  f"+{int(round(head))} pts (Placement → Plants → Filters → "
                   "Role: Keystone Species).")
 
     # Larval-host plants (full at 10).
@@ -348,7 +348,7 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         add(head, f"{n_host} caterpillar-host plant"
                   f"{'s' if n_host != 1 else ''} — hosts make the caterpillars "
                   "most songbirds feed their young; more add up to "
-                  f"+{int(round(head))} pts (Plants → Browse → Filters → "
+                  f"+{int(round(head))} pts (Placement → Plants → Filters → "
                   "Role: Larval Host).")
 
     # Bird-food plants (full at 10).
@@ -357,7 +357,7 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 10.0 - (getattr(score, "score_bird", 0.0) or 0.0)
         add(head, f"{n_bird} bird-food plant{'s' if n_bird != 1 else ''} — "
                   "seed and fruit producers extend the design into fall/winter "
-                  f"(up to +{int(round(head))} pts, Plants → Browse → "
+                  f"(up to +{int(round(head))} pts, Placement → Plants → "
                   "Filters → Role: Bird Food).")
 
     # Vegetation layers (3 pts each, up to 5).
@@ -377,7 +377,7 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         add(head, f"{n_struct} habitat structure type"
                   f"{'s' if n_struct != 1 else ''} — a bee hotel, brush pile or "
                   f"small pond adds up to +{int(round(head))} pts "
-                  "(Structures tab).")
+                  "(Placement → Structures).")
 
     nudges.sort(key=lambda d: -d["headroom"])
     return nudges[:limit]

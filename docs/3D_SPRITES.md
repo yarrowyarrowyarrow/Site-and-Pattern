@@ -61,9 +61,11 @@ the **live gallery** below lets you rotate and inspect each one.
 
 ## See them live
 
-**In the app:** **View → 3D Sprite Gallery…** — a native window that drives the
-real viewer; pick any sprite from the sidebar, and set a **Detail** level
-(Low / Medium / High) if the view is sluggish on your machine.
+**As a window:** `python -m src.sprite_gallery_window` — a native window that
+drives the real viewer; pick any sprite from the sidebar, and set a **Detail**
+level (Stylised / Balanced / Lifelike) if the view is sluggish on your machine.
+It was **View → 3D Sprite Gallery…** until V3.07, when the owner retired it from
+the menu: a developer's bench, not a gardener's tool.
 
 **Standalone (browser):** the same gallery as a web page — drag to orbit, scroll
 to zoom, pick any item from the sidebar.

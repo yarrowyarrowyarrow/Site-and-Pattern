@@ -60,7 +60,6 @@ from src.reference_ecosystem_window import (
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.plant_directory_window import (
     open_plant_directory as _open_plant_directory)
-from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
 from src.log import get_logger
 
@@ -190,41 +189,33 @@ class MainWindow(QMainWindow):
         self.site_panel.attach_map_widget(self.map_widget)
         self.plant_panel     = PlantPanel(self)
         self.polyculture_panel     = PolyculturePanel(self)
-        # Third sibling inner tab — displays Plants / Communities / Stats
-        # for the current design. Driven by _sync_planning_panel + a
-        # placed_counts_changed signal from PlantPanel.
+        # What is on the design: Species / Communities / Stats, driven by
+        # _sync_planning_panel + PlantPanel's placed_counts_changed. Its pages
+        # sit in the Design tab since V3.07 (src/side_panel_layout.py).
         self.on_this_design = OnThisDesignPanel()
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
         self.learn_panel     = LearnPanel(self)
 
-        # Tabbed side panel — six top-level tabs (Site, Plants, Structures,
-        # Analysis, Planning, Learn). The Polyculture library lives under an
-        # inner tab inside "Plants".
-        self._plant_poly_tab = self._build_plants_polycultures_tab()
-
+        # Tabbed side panel — five top-level tabs since V3.07 (Site,
+        # Placement, Design, Planning, Learn), by the question a person brings
+        # (F94, the owner's answers to the V3.05 surface audit). The panels
+        # build their pages; side_panel_layout moves them into place.
         from src.fill_tab_widget import FillTabWidget
-        # allow_shrink + elide as a safety net: with six labels the strip can
-        # overflow the panel minimum on wide-font systems (macOS); eliding a
-        # label beats clipping the first tab off-screen entirely.
+        from src import side_panel_layout
+        # allow_shrink + elide as a safety net: a strip can overflow the panel
+        # minimum on wide-font systems (macOS); eliding a label beats clipping
+        # the first tab off-screen entirely.
         self._side_tabs = FillTabWidget(allow_shrink=True)
         self._side_tabs.setAccessibleName("Side panel")
         # Document mode lets the tab bar span the full width, which is what lets
         # FillTabWidget stretch the tabs edge-to-edge (no gap after "Learn").
         self._side_tabs.setDocumentMode(True)
-        self._side_tabs.addTab(self.site_panel, "Site")
-        self._side_tabs.addTab(self._plant_poly_tab, "Plants")
-        self._side_tabs.addTab(self.structure_panel, "Structures")
-        self._side_tabs.addTab(self.analysis_panel, "Analysis")
-        self._side_tabs.addTab(self.planning_panel, "Planning")
-        self._side_tabs.addTab(self.learn_panel, "Learn")
-        # Side panel width. The old comment here claimed 300px was the point
-        # below which labels elide; measuring it (V2.37) showed that was never
-        # true — FillTabWidget(allow_shrink=True) gives every tab an equal
-        # share, so full labels need widest×6 ≈ 456px and the strip elided at
-        # 300px before and after. 320px is a modest floor that fits four of the
-        # six labels whole; drag the splitter (max 480) to see all six.
+        for page, label in side_panel_layout.arrange(self):
+            self._side_tabs.addTab(page, label)
+        # Side panel width. 320 px is a modest floor (the five labels need
+        # about 270 in DejaVu Sans); drag the splitter (max 480) for more.
         self._side_tabs.setMinimumWidth(320)
         self._side_tabs.setMaximumWidth(480)
         # Stretch the tabs to fill the whole tab strip (no empty gap to the
@@ -316,52 +307,10 @@ class MainWindow(QMainWindow):
         # Window style
         self.setStyleSheet(_APP_STYLE)
 
-    def _build_plants_polycultures_tab(self) -> QWidget:
-        """Build the 'Plants' tab.
-
-        Houses the plant browser/placer and the saved-polyculture library
-        under a compact inner tab strip so users can move between the two
-        without leaving this outer tab.
-
-        The PlantPanel already owns the inline polyculture-mix builder
-        used to place mixes on the map; the PolyculturePanel is for
-        editing the saved library of multi-plant templates.
-        """
-        wrap = QWidget()
-        v = QVBoxLayout(wrap)
-        v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(0)
-
-        from src.ui_style import inner_tab_stylesheet
-        from src.fill_tab_widget import FillTabWidget
-        inner = FillTabWidget(wrap)
-        inner.setDocumentMode(True)
-        inner.tabBar().setUsesScrollButtons(False)
-        inner.tabBar().setExpanding(True)
-        inner.setStyleSheet(inner_tab_stylesheet())
-        # "Browse", not "Plants": this sits under the top-level Plants tab and
-        # above On This Design's own Species tab, and having the same word at
-        # three nesting levels at once is what made the strips unreadable
-        # (V2.37 user feedback). Each label now says what its level does.
-        inner.addTab(self.plant_panel, "Browse")
-        inner.addTab(self.polyculture_panel, "Plant Communities")
-        inner.addTab(self.on_this_design, "On This Design")
-        v.addWidget(inner)
-        # Kept for programmatic tab jumps (Site tab's ecoregion → community
-        # library cross-link, V2.13).
-        self._plants_inner_tabs = inner
-        return wrap
-
     def _on_map_settings(self):
-        """View → Map Settings — configure optional map tokens."""
-        from src.preferences_dialog import MapPreferencesDialog
-        from src.settings import get_mapbox_token, set_mapbox_token
-        dlg = MapPreferencesDialog(current_token=get_mapbox_token() or "", parent=self)
-        if dlg.exec() == MapPreferencesDialog.DialogCode.Accepted:
-            token = dlg.token()
-            set_mapbox_token(token)
-            if token:
-                self.map_widget.set_mapbox_token(token)
+        """View → Map Settings: the satellite token and the zoom step."""
+        from src import map_settings_flow
+        map_settings_flow.open_dialog(self)
 
     def _on_toggle_sidebar(self, checked: bool):
         """View → Show Side Panel (Ctrl+\\). Mirrors the chevron click."""
@@ -583,7 +532,7 @@ class MainWindow(QMainWindow):
         # the start screen opens it before any MainWindow exists.
         act_directory.triggered.connect(lambda: _open_plant_directory(self))
 
-        act_reference = view_menu.addAction("Walk a &Reference Ecosystem…")
+        act_reference = view_menu.addAction("Walk a &Wild Landscape…")
         act_reference.setStatusTip(
             "Walk the natural community your ecoregion is reaching toward — "
             "the reference target for this design (F50)"
@@ -602,14 +551,8 @@ class MainWindow(QMainWindow):
         # src/snapshot_window.py, off MainWindow's method ledger.
         act_snapshots.triggered.connect(lambda: _open_snapshot_view(self))
 
-        act_gallery = view_menu.addAction("3D &Sprite Gallery…")
-        act_gallery.setStatusTip(
-            "Browse every 3D plant archetype + flower sprite — compare species "
-            "(spruce vs pine vs fir, etc.) and pick a detail level"
-        )
-        # Lambda for the same reason: the window self-manages in
-        # src/sprite_gallery_window.py, off MainWindow's method ledger.
-        act_gallery.triggered.connect(lambda: _open_sprite_gallery(self))
+        # The 3D Sprite Gallery left this menu in V3.07 (the owner retired it
+        # on the surface audit): `python -m src.sprite_gallery_window`.
 
         view_menu.addSeparator()
         # F205 (V3.06): a north arrow and a scale bar on the map, and so in
@@ -618,7 +561,8 @@ class MainWindow(QMainWindow):
         map_furniture_flow.install(self, view_menu)
         act_map_settings = view_menu.addAction("&Map Settings…")
         act_map_settings.setStatusTip(
-            "Configure optional map provider tokens (e.g. Mapbox high-res satellite)"
+            "How far the mouse wheel zooms, and an optional Mapbox token "
+            "for high-resolution satellite imagery"
         )
         act_map_settings.triggered.connect(self._on_map_settings)
 
@@ -811,8 +755,10 @@ class MainWindow(QMainWindow):
 
         # Structure panel → map
         self.structure_panel.place_structure_requested.connect(self._enter_structure_mode)
-        self.structure_panel.place_hedgerow_requested.connect(self._enter_hedgerow_mode)
-        self.structure_panel.place_shape_requested.connect(self._enter_shape_mode)
+        # Draw › Shape (V3.07): what the Structures tab's Hedgerow and Shapes
+        # pages emitted, now from the Draw row, to the same handlers.
+        self.toolbar.place_hedgerow_requested.connect(self._enter_hedgerow_mode)
+        self.toolbar.place_shape_requested.connect(self._enter_shape_mode)
 
         # Map → structures/hedgerows/shapes
         b.structure_placed.connect(self._on_structure_placed)
@@ -896,6 +842,11 @@ class MainWindow(QMainWindow):
         # Satellite imagery alignment nudge → shift the basemap tiles (cosmetic).
         self.site_panel.satellite_offset_changed.connect(
             self.map_widget.set_satellite_offset)
+        # The wind comes with the pin (V3.07): the rose the pin's fetch read
+        # fills the Wind page too, rather than waiting for its own fetch.
+        from src import wind_flow
+        self.site_panel.wind_rose_ready.connect(
+            lambda rose: wind_flow.on_site_wind(self, rose))
 
         # Site-walk field notes (F6) — store on the project + mark modified.
         # Two thin lambdas (MainWindow is at its method ceiling).
@@ -987,8 +938,10 @@ class MainWindow(QMainWindow):
         b.sun_path_removed.connect(self._on_sun_path_removed)
         b.anchor_cancelled.connect(self._on_anchor_cancelled)
 
-        # Toolbar → zoom sensitivity
-        self.toolbar.zoom_step_changed.connect(self.map_widget.set_zoom_sensitivity)
+        # The scroll-wheel zoom step, from View › Map Settings… (V3.07),
+        # sent each time the map's page loads.
+        from src import map_settings_flow
+        map_settings_flow.install(self)
 
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
@@ -1979,6 +1932,9 @@ class MainWindow(QMainWindow):
             ):
                 if sc.get(key):
                     slot(sc[key])
+            if has_cache:       # the wind too, from its cache (V3.07)
+                from src import wind_flow
+                wind_flow.show_cached(self, plat, plng)
         # The soil-pH constraint from cached site data, or none: a design with no
         # pin kept the last design's until V3.01, and its chip said "Your soil".
         self.plant_panel.set_soil_ph(sc.get("soil_ph") if plat is not None
@@ -2399,7 +2355,7 @@ class MainWindow(QMainWindow):
             "plants": lambda: show(self.plant_panel),
             "communities": lambda: show(self.polyculture_panel),
             "structures": lambda: show(self.structure_panel),
-            "analysis": lambda: show(self.analysis_panel),
+            "design": lambda: show(self.analysis_panel),
             "planning": lambda: show(self.planning_panel),
         }.get(keyboard_help.letter_action(event))
         if act is not None:

@@ -431,7 +431,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         self._focus_on(button)
         tab = self._win._side_tabs.currentIndex()
         self._press(Qt.Key.Key_B)
-        self._press(Qt.Key.Key_A)
+        self._press(Qt.Key.Key_D)
         self.assertEqual(self._win._current_mode, "none")
         self.assertEqual(self._win._side_tabs.currentIndex(), tab)
         with mock.patch.object(self._win.map_widget, "delete_selected") as delete:
@@ -482,10 +482,11 @@ class TestMainWindowSmoke(unittest.TestCase):
 
     def test_f6_moves_between_the_panel_and_the_map(self):
         from PyQt6.QtWidgets import QApplication
+        from src.keyboard_help import show_panel
         panel_widget = self._win.plant_panel.picker.view
-        self.addCleanup(self._win._side_tabs.setCurrentIndex,
-                        self._win._side_tabs.currentIndex())
-        self._win._side_tabs.setCurrentIndex(1)
+        for tabs in (self._win._side_tabs, self._win._placement_tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(self._win.plant_panel)
         self._focus_on(panel_widget)
         self._win._panes.switch()
         self._app.processEvents()
@@ -849,6 +850,127 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(win._presentation_still, (None, ""))
         self.assertEqual(win._before_after, (None, ""))
 
+    # ── The side panel, as the owner answered the surface audit (V3.07) ──────
+
+    def _labels(self, tabs):
+        return [tabs.tabText(i).replace("&&", "&") for i in range(tabs.count())]
+
+    def test_the_side_panel_follows_the_owners_answers(self):
+        from src import side_panel_layout
+        win = self._win
+        self.assertEqual(self._labels(win._side_tabs),
+                         list(side_panel_layout.TOP_TABS))
+        self.assertEqual(self._labels(win.site_panel._tabs),
+                         ["Site Info", "Slope", "Sun & Shade", "Wind",
+                          "Features", "Field Notes"])
+        self.assertEqual(self._labels(win._placement_tabs),
+                         ["Plants", "Communities", "Structures"])
+        self.assertEqual(self._labels(win.analysis_panel._tabs),
+                         ["Report card", "Planted", "Habitat", "This Month",
+                          "Bees"])
+        self.assertEqual(self._labels(win.on_this_design._tabs),
+                         ["Species", "Communities"])
+        # Moved, not rebuilt: the pages are the panels' own.
+        self.assertIs(win.site_panel._tabs.widget(2),
+                      win.analysis_panel._sun_page)
+        self.assertIs(win.analysis_panel._tabs.widget(0),
+                      win.on_this_design._stats_page)
+
+    def test_a_jump_opens_its_page_from_anywhere(self):
+        """Every jump goes by the page, through every level it is in: three
+        lookups that went by a page's index would have opened the wrong one."""
+        from src.keyboard_help import show_panel
+        win = self._win
+        for tabs in (win._side_tabs, win.site_panel._tabs,
+                     win.analysis_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(win.analysis_panel._wind_page)          # Site › Wind
+        self.assertIs(win._side_tabs.currentWidget(), win.site_panel)
+        win.analysis_panel.show_habitat_tab()               # the report card's link
+        self.assertIs(win._side_tabs.currentWidget(), win.analysis_panel)
+        self.assertIs(win.analysis_panel._tabs.currentWidget(),
+                      win.analysis_panel._habitat_page)
+        win.site_panel.focus_address_search()               # the pin step
+        self.assertIs(win._side_tabs.currentWidget(), win.site_panel)
+        self.assertIs(win.site_panel._tabs.currentWidget(),
+                      win.site_panel.info_page)
+
+    def test_the_bees_page_follows_the_design_where_it_now_sits(self):
+        from unittest import mock
+        panel = self._win.analysis_panel
+        self.addCleanup(panel._tabs.setCurrentIndex, panel._tabs.currentIndex())
+        panel._tabs.setCurrentWidget(panel._bee_page)
+        with mock.patch.object(panel, "refresh_bee_tab") as refresh:
+            panel.set_placed_plants([])
+        refresh.assert_called_once()
+        panel._tabs.setCurrentWidget(panel._habitat_page)
+        with mock.patch.object(panel, "refresh_bee_tab") as refresh:
+            panel.set_placed_plants([])
+        refresh.assert_not_called()
+
+    def test_d_goes_to_design(self):
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from src import keyboard_help
+        # Both strips put back: later tests expect Plants in front.
+        for tabs in (self._win._side_tabs, self._win._placement_tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        with mock.patch.object(keyboard_help, "map_has_focus", return_value=True):
+            self._press(Qt.Key.Key_D)
+            self.assertIs(self._win._side_tabs.currentWidget(),
+                          self._win.analysis_panel)
+            self._press(Qt.Key.Key_S)
+            self.assertTrue(self._win.structure_panel.isVisibleTo(self._win))
+
+    def test_shape_on_the_draw_row_arms_the_map(self):
+        """The Structures tab's Shapes and Hedgerow pages, from the Draw row,
+        to the same handlers."""
+        win = self._win
+        sent = []
+        original = (win.map_widget.set_shape_mode,
+                    win.map_widget.set_hedgerow_mode)
+        win.map_widget.set_shape_mode = lambda cfg: sent.append(("shape", cfg))
+        win.map_widget.set_hedgerow_mode = lambda cfg: sent.append(("line", cfg))
+        self.addCleanup(setattr, win.map_widget, "set_shape_mode", original[0])
+        self.addCleanup(setattr, win.map_widget, "set_hedgerow_mode", original[1])
+        self.addCleanup(win._cancel_draw)
+        tool = win.toolbar.shape_tool
+        tool.set_type("Garden Bed")
+        tool._draw.click()
+        self.assertEqual(win._current_mode, "shape")
+        self.assertEqual(sent[-1][0], "shape")
+        self.assertTrue(win.toolbar._shape_btn.isChecked())
+        tool.set_type("Hedge")
+        tool._draw.click()
+        self.assertEqual(win._current_mode, "hedgerow")
+        self.assertEqual(sent[-1], ("line", tool.line_payload()))
+        win._cancel_draw()
+        self.assertFalse(win.toolbar._shape_btn.isChecked())
+
+    def test_the_pins_wind_reaches_the_wind_page(self):
+        win = self._win
+        # Keeping the wind marks the design changed; put that back, or the
+        # class's teardown waits on "Exit anyway?" for ever.
+        self.addCleanup(setattr, win, "_modified", win._modified)
+        sc = win._project["properties"].setdefault("site_config", {})
+        self.addCleanup(lambda: [sc.pop(k, None) for k in
+                                 ("wind_prevailing_deg", "wind_mean_kmh",
+                                  "wind_exposure")])
+        win.site_panel.wind_rose_ready.emit(
+            {"annual": {"prevailing_deg": 315.0, "prevailing_label": "NW",
+                        "mean_speed": 16.0, "calm_pct": 2.0},
+             "source": "test"})
+        self.assertEqual(win.analysis_panel._wind_dial.value(), 315)
+        self.assertIn("Prevailing NW", win.analysis_panel._wind_status_lbl.text())
+        self.assertEqual(sc.get("wind_prevailing_deg"), 315.0)
+
+    def test_the_sprite_gallery_left_the_view_menu(self):
+        words = [a.text().replace("&", "")
+                 for a in self._win.menuBar().actions() if a.menu()
+                 for a in a.menu().actions()]
+        self.assertFalse([w for w in words if "Sprite" in w])
+        self.assertIn("Walk a Wild Landscape…", words)
+
     def test_every_pointer_in_the_words_leads_somewhere(self):
         """V3.05: the app tells people where to go in its own words, "Analysis
         → Habitat", and two of those directions had rotted. The worked
@@ -873,7 +995,12 @@ class TestMainWindowSmoke(unittest.TestCase):
         tabs = win._side_tabs
         for i in range(tabs.count()):
             kids = places.setdefault(norm(tabs.tabText(i)), set())
-            for inner in tabs.widget(i).findChildren(QTabWidget):
+            page = tabs.widget(i)
+            # A tab whose page is itself a strip (Placement, V3.07) holds
+            # its pages in that strip, which findChildren does not return.
+            inners = ([page] if isinstance(page, QTabWidget) else []) \
+                + page.findChildren(QTabWidget)
+            for inner in inners:
                 kids.update(norm(inner.tabText(j)) for j in range(inner.count()))
         for a in win.menuBar().actions():
             if a.menu() is not None:
@@ -884,6 +1011,11 @@ class TestMainWindowSmoke(unittest.TestCase):
                 norm(a.text()) for a in bar.actions() if a.text())
         places = {k: {c for c in v if len(c) >= 3} for k, v in places.items()
                   if k}
+        # Tabs that were and are not (V3.07): a pointer at one leads nowhere.
+        # The heads are read off the window, so without these a pointer at a
+        # removed tab would not be looked at at all.
+        for gone in ("analysis", "structures", "plants"):
+            places.setdefault(gone, set())
         # Case-sensitive, as the labels are written: "keystone plants →
         # closing the food web" (a lesson's subtitle) is a sentence, not a
         # pointer at the Plants tab.
@@ -929,12 +1061,17 @@ class TestGenerateDesignDialog(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_one_checkbox_per_goal_and_getters(self):
+        """One per goal that plant data backs: the two "guidance only — needs
+        data" goals are not offered (the owner's V3.07 answer)."""
         from src.generate_design_dialog import GenerateDesignDialog
         from src.design_goals import GOALS
         dlg = GenerateDesignDialog(has_boundary=True, has_pin=False,
-                                   preselected=["native_only"])
+                                   preselected=["native_only",
+                                                "flowers_all_season"])
         try:
-            self.assertEqual(len(dlg._checks), len(GOALS))
+            self.assertEqual(set(dlg._checks),
+                             {g.key for g in GOALS if g.backed})
+            self.assertNotIn("flowers_all_season", dlg.selected_goals())
             self.assertTrue(dlg._checks["native_only"].isChecked())
             self.assertIn("native_only", dlg.selected_goals())
             self.assertFalse(dlg.offline())

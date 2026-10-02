@@ -228,7 +228,7 @@ builder-function names (`buildConiferGeo`, `generateDaVinciTree`,
 - `src/sprite_gallery.py:gallery_scenes()` builds one specimen scene per
   archetype/flower form **through the real `build_scene`** — so the gallery
   can never drift from the contract.
-- In-app: View → 3D Sprite Gallery (`src/sprite_gallery_window.py`).
+- As a window: `python -m src.sprite_gallery_window` (off the View menu since V3.07).
 - Standalone: `html/sprite_gallery.html` + generated
   `html/sprite_gallery_scenes.json`; regenerate with
   `scripts/make_gallery_scene.py` (and `scripts/render_flower_sprites.py` for
