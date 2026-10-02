@@ -850,7 +850,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(win._presentation_still, (None, ""))
         self.assertEqual(win._before_after, (None, ""))
 
-    # ── The side panel, as the owner answered the surface audit (V3.07) ──────
+    # ── The side panel, as the owner answered the surface audit (V3.07-08) ───
 
     def _labels(self, tabs):
         return [tabs.tabText(i).replace("&&", "&") for i in range(tabs.count())]
@@ -862,19 +862,118 @@ class TestMainWindowSmoke(unittest.TestCase):
                          list(side_panel_layout.TOP_TABS))
         self.assertEqual(self._labels(win.site_panel._tabs),
                          ["Site Info", "Slope", "Sun & Shade", "Wind",
-                          "Features", "Field Notes"])
+                          "Features", "Notes"])
         self.assertEqual(self._labels(win._placement_tabs),
                          ["Plants", "Communities", "Structures"])
         self.assertEqual(self._labels(win.analysis_panel._tabs),
-                         ["Report card", "Planted", "Habitat", "This Month",
-                          "Bees"])
+                         ["Report card", "Planted", "Habitat", "Food",
+                          "Over time", "Water"])
         self.assertEqual(self._labels(win.on_this_design._tabs),
                          ["Species", "Communities"])
+        self.assertEqual(self._labels(win.share_panel._tabs),
+                         ["Present", "Export"])
+        self.assertEqual(self._labels(win.learn_panel._tabs),
+                         ["Field Study", "Lessons"])
         # Moved, not rebuilt: the pages are the panels' own.
         self.assertIs(win.site_panel._tabs.widget(2),
                       win.analysis_panel._sun_page)
         self.assertIs(win.analysis_panel._tabs.widget(0),
                       win.on_this_design._stats_page)
+        self.assertIs(win.analysis_panel._tabs.widget(5),
+                      win.planning_panel._water_page)
+        self.assertIs(win.share_panel._tabs.widget(0),
+                      win.learn_panel._present_page)
+        # Every page of Planning went, and its empty strip; the panel stays,
+        # unseen, for their state and signals.
+        self.assertIsNone(win.planning_panel._tabs)
+        self.assertFalse(win.planning_panel.isVisibleTo(win))
+
+    def test_over_time_reads_this_month_then_the_years_then_the_hours(self):
+        from src.side_panel_layout import OVER_TIME
+        win = self._win
+        page = win.analysis_panel._over_time_page
+        self.assertEqual(tuple(page.sections), OVER_TIME)
+        self.assertEqual(list(page.sections.values()),
+                         [win.analysis_panel._phenology,
+                          win.planning_panel._timeline_page,
+                          win.planning_panel._maint_page])
+        lay = page.widget().layout()
+        at = [lay.indexOf(w) for w in page.sections.values()]
+        self.assertEqual(at, sorted(at), "the sections are out of order")
+        # Shown, not only placed: a strip hides the page it gives up, and the
+        # first build drew two headings over nothing.
+        from src.keyboard_help import show_panel
+        win.show()
+        for tabs in (win._side_tabs, win.analysis_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(page)
+        self._app.processEvents()
+        for heading, part in page.sections.items():
+            self.assertTrue(part.isVisible(), f"{heading} is not shown")
+            self.assertGreater(part.height(), 40, heading)
+
+    def test_the_hours_and_water_fill_themselves_in_design(self):
+        """Planning's two live pages (V3.05) are Design's now: their refills
+        follow the Design strip, or they open empty for good."""
+        from src.keyboard_help import show_panel
+        win = self._win
+        planning, design = win.planning_panel, win.analysis_panel
+        win.show()
+        for tabs in (win._side_tabs, design._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        for page, label in ((design._over_time_page, planning._maint_results),
+                            (planning._water_page, planning._water_results)):
+            with self.subTest(page=design._tabs.tabText(
+                    design._tabs.indexOf(page))):
+                label.setText("")
+                show_panel(page)
+                self.assertTrue(planning._live.fill_now())
+                self.assertTrue(label.text(), "the page stayed empty")
+        show_panel(design._habitat_page)
+        self.assertFalse(planning._live.fill_now(),
+                         "a page that is not Planning's was filled by it")
+
+    def test_notes_holds_the_walk_the_journal_and_the_maps_notes(self):
+        from PyQt6.QtCore import QPoint
+        from src.keyboard_help import show_panel
+        win = self._win
+        page = win.site_panel.notes_page
+        win.show()
+        for tabs in (win._side_tabs, win.site_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(page)                    # laid out, so positions mean it
+        self._app.processEvents()
+        body = page.widget()
+        walk = win.site_panel._fn_free
+        journal = win.planning_panel._notes_edit
+        pins = win.planning_panel._map_notes_header
+        for w in (walk, journal, pins):
+            self.assertTrue(page.isAncestorOf(w))
+            self.assertTrue(w.isVisible(), type(w).__name__)
+        y = [w.mapTo(body, QPoint(0, 0)).y() for w in (walk, journal, pins)]
+        self.assertEqual(y, sorted(y), "the site walk comes first")
+
+    def test_share_holds_present_the_exports_and_where_to_buy(self):
+        from unittest import mock
+        win = self._win
+        share = win.share_panel
+        self.assertTrue(share.export_page.isAncestorOf(
+            win.site_panel._nursery_box))
+        self.assertFalse(win.site_panel.info_page.isAncestorOf(
+            win.site_panel._nursery_box))
+        with mock.patch.object(win, "_on_export_pdf") as pdf:
+            share.buttons["Export PDF…"].click()
+        pdf.assert_called_once()
+
+    def test_the_cost_link_opens_where_the_buy_list_is(self):
+        from PyQt6.QtCore import QUrl
+        win = self._win
+        self.addCleanup(win._side_tabs.setCurrentIndex,
+                        win._side_tabs.currentIndex())
+        win.on_this_design._on_stats_anchor(QUrl("sap:buy"))
+        self.assertIs(win._side_tabs.currentWidget(), win.share_panel)
+        self.assertIs(win.share_panel._tabs.currentWidget(),
+                      win.share_panel.export_page)
 
     def test_a_jump_opens_its_page_from_anywhere(self):
         """Every jump goes by the page, through every level it is in: three
@@ -895,18 +994,25 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertIs(win.site_panel._tabs.currentWidget(),
                       win.site_panel.info_page)
 
-    def test_the_bees_page_follows_the_design_where_it_now_sits(self):
-        from unittest import mock
-        panel = self._win.analysis_panel
-        self.addCleanup(panel._tabs.setCurrentIndex, panel._tabs.currentIndex())
-        panel._tabs.setCurrentWidget(panel._bee_page)
-        with mock.patch.object(panel, "refresh_bee_tab") as refresh:
-            panel.set_placed_plants([])
-        refresh.assert_called_once()
-        panel._tabs.setCurrentWidget(panel._habitat_page)
-        with mock.patch.object(panel, "refresh_bee_tab") as refresh:
-            panel.set_placed_plants([])
-        refresh.assert_not_called()
+    def test_food_follows_the_design_where_it_sits(self):
+        from src.keyboard_help import show_panel
+        win = self._win
+        panel, food = win.analysis_panel, win.analysis_panel._food
+        win.show()
+        for tabs in (win._side_tabs, panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(food)
+        food._summary_line.setText("")
+        panel.set_placed_plants([])
+        panel._live.fill_now()
+        self.assertEqual(food._summary_line.text(),
+                         "Place plants to see who they feed.")
+        show_panel(panel._habitat_page)
+        food._summary_line.setText("")
+        panel.set_placed_plants([])
+        panel._live.fill_now()
+        self.assertEqual(food._summary_line.text(), "",
+                         "Food was worked out while nobody could see it")
 
     def test_d_goes_to_design(self):
         from unittest import mock
@@ -1014,7 +1120,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         # Tabs that were and are not (V3.07): a pointer at one leads nowhere.
         # The heads are read off the window, so without these a pointer at a
         # removed tab would not be looked at at all.
-        for gone in ("analysis", "structures", "plants"):
+        for gone in ("analysis", "structures", "plants", "planning"):
             places.setdefault(gone, set())
         # Case-sensitive, as the labels are written: "keystone plants →
         # closing the food web" (a lesson's subtitle) is a sentence, not a

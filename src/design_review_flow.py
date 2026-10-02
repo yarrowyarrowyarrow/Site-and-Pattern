@@ -172,7 +172,9 @@ def open_habitat_analysis(main) -> None:
     main.analysis_panel.show_habitat_tab()
 
 
-def open_planning(main) -> None:
-    """The report card's 'Estimated cost ›' deep-link → the Planning panel."""
+def open_buying(main) -> None:
+    """The report card's 'Estimated cost ›' deep-link → Share › Export, where
+    the buy list is exported and Where to buy sits (V3.08; it opened the
+    Planning tab, which had no page about cost)."""
     from src.keyboard_help import show_panel
-    show_panel(main.planning_panel)
+    show_panel(main.share_panel.export_page)

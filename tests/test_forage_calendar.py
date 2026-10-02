@@ -180,10 +180,11 @@ def _qt_available():
 
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
-class TestPlanningWildlifeCalendar(unittest.TestCase):
-    """Planning → Wildlife is a second forage calendar, reading ``bloom_period``
-    straight from the database. It listed every grass under "Pollinator
-    blooms" and let grasses close a "nectar gap" (V2.91, F182)."""
+class TestFoodMonthByMonth(unittest.TestCase):
+    """Design › Food's month by month (Planning › Wildlife until V3.08) is a
+    second forage calendar, reading ``bloom_period`` straight from the
+    database. It listed every grass under "Pollinator blooms" and let grasses
+    close a "nectar gap" (V2.91, F182)."""
 
     @classmethod
     def setUpClass(cls):
@@ -202,21 +203,25 @@ class TestPlanningWildlifeCalendar(unittest.TestCase):
         cls.rows = {r["common_name"]: r for r in api.query_plants()}
 
     def _june_and_july(self, names):
-        from src.planning_panel import PlanningPanel
-        panel = PlanningPanel()
+        """Design › Food's month by month (V3.08; Planning › Wildlife until
+        then): the pollinators' blooms in June and July, and the gap line."""
+        from src.food_page import FoodPage
+        from src.what_it_feeds import month_by_month
+        ids = [self.rows[n]["id"] for n in names]
+        year = month_by_month(ids)
+        out = {m: year["months"][m - 1]["pollinators"] for m in (6, 7)}
+        page = FoodPage()
         try:
-            panel.set_placed_plants([
-                {"plant_id": self.rows[n]["id"], "common_name": n}
-                for n in names])
-            panel._calc_wildlife_forage()
-            out = {}
-            for month in (6, 7):
-                blooms = panel._wildlife_tree.topLevelItem(month - 1).child(0)
-                out[month] = [blooms.child(i).text(1)
-                              for i in range(blooms.childCount())]
-            return out, panel._wildlife_gap_label.text()
+            page.set_placed_plants([{"plant_id": i} for i in ids])
+            page.refresh()
+            for m in (6, 7):
+                blooms = page._tree.topLevelItem(m - 1).child(0)
+                self.assertEqual([blooms.child(i).text(1)
+                                  for i in range(blooms.childCount())],
+                                 out[m] or ["—"])
+            return out, page._gap_label.text()
         finally:
-            panel.close()
+            page.close()
 
     def test_no_grass_is_listed_as_a_pollinator_bloom(self):
         months, gaps = self._june_and_july(
@@ -227,7 +232,7 @@ class TestPlanningWildlifeCalendar(unittest.TestCase):
                 self.assertNotIn("Rough Fescue", names)
                 self.assertNotIn("Blue Grama Grass", names)
         # So June and July show as the gap they are for a bee.
-        self.assertIn("Nectar gaps in growing season: Jun, Jul.", gaps)
+        self.assertIn("Nectar gaps in the growing season: Jun, Jul.", gaps)
 
 
 if __name__ == "__main__":

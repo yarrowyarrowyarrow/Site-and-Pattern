@@ -41,9 +41,8 @@ class DocentWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "Present your design — a short narrated tour built from its own "
-            "numbers, to walk a neighbour, an HOA board, or a class through what "
-            "it does.")
+            "A short narrated tour built from the design's own numbers, for a "
+            "neighbour, a board or a class.")
         intro.setWordWrap(True)
         intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)

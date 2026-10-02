@@ -71,9 +71,8 @@ class FieldStudyWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "Test your recall — identify plants, trace specialist relationships, "
-            "and spot the gaps in your own design. Great prep for a nursery or "
-            "trail visit.")
+            "Identify plants, trace who depends on whom, and find the gaps in "
+            "your design.")
         intro.setWordWrap(True)
         intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)

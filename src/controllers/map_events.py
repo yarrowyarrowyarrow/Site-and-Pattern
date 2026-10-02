@@ -489,7 +489,7 @@ class MapEventRouter:
             }
         })
         self._main._mark_modified()
-        # Mirror into Planning → Notes ("Notes on the map" list).
+        # Mirror into Site › Notes ("Notes on the map" list).
         self._main._sync_planning_panel()
 
     @undoable("remove note")

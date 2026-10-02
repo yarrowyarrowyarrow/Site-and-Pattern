@@ -25,7 +25,7 @@ from typing import Optional
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QColor, QPainter, QPolygonF
 from PyQt6.QtWidgets import (
-    QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QGridLayout, QLabel, QVBoxLayout, QWidget,
 )
 
 from src.branding import APP_NAME
@@ -132,6 +132,10 @@ class SnapshotWindow(QWidget):
         self._main = main
         self.setWindowTitle(f"{APP_NAME}: Growth Snapshots")
         self.resize(720, 700)
+        # Dark like the app (F209), and no Refresh button: it follows the
+        # design (src/follow_design.py, V3.08).
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
 
         root = QVBoxLayout(self)
         # Filled by refresh(), from the years actually shown (V3.05).
@@ -148,13 +152,8 @@ class SnapshotWindow(QWidget):
             grid.addWidget(canvas, i // 2, i % 2)
         root.addLayout(grid, 1)
 
-        row = QHBoxLayout()
         self._status = QLabel("")
-        row.addWidget(self._status, 1)
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh)
-        row.addWidget(refresh_btn)
-        root.addLayout(row)
+        root.addWidget(self._status)
 
     def refresh(self):
         """Re-read the live project and rebuild the four panels."""

@@ -37,7 +37,8 @@ MAP_LETTERS: tuple = (
     ("S", "structures", "Go to Placement: Structures"),
     # D since V3.07, when Analysis became Design (it was A).
     ("D", "design", "Go to Design"),
-    ("T", "planning", "Go to Planning"),
+    # T went with the Planning tab, whose pages joined Design and Site in
+    # V3.08; Share has no letter of its own.
 )
 
 #: The map's own keys (html/map/09-keyboard.js, Leaflet), and the two the

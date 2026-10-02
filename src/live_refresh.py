@@ -43,8 +43,21 @@ class LiveRefresh(QObject):
         self._timer.setSingleShot(True)
         self._timer.setInterval(delay_ms)
         self._timer.timeout.connect(self._run)
-        tabs.currentChanged.connect(lambda _i: self.poke())
+        tabs.currentChanged.connect(self._on_current)
         owner.installEventFilter(self)
+
+    def move_to(self, owner: QWidget, tabs: QTabWidget, pages: dict) -> None:
+        """The pages now live in ``tabs``, shown with ``owner``: watch there
+        (V3.08: ``src/side_panel_layout.py`` moves built pages between strips,
+        and Planning's went into Design)."""
+        self._tabs.currentChanged.disconnect(self._on_current)
+        self._owner.removeEventFilter(self)
+        self._owner, self._tabs, self._pages = owner, tabs, dict(pages)
+        tabs.currentChanged.connect(self._on_current)
+        owner.installEventFilter(self)
+
+    def _on_current(self, _index: int) -> None:
+        self.poke()
 
     def poke(self) -> None:
         """An input changed, or something may now be on screen."""

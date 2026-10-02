@@ -83,6 +83,10 @@ class ReferenceEcosystemWindow(QWidget):
                  toolbar_groups=_TOOLBAR_GROUPS):
         super().__init__(None)   # top-level window
         self.setWindowTitle(f"{APP_NAME}: Walk a Wild Landscape")
+        # Dark like the app (F209, V3.08): its pale-green words were written
+        # for a dark window and sat on light grey, nearly invisible.
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
         self.resize(960, 700)
         self._center = center or (51.05, -114.07)
         self._project: dict = {}

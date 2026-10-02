@@ -48,7 +48,7 @@ def is_pollinator_forage(p: dict) -> bool:
     filled May to September with forage no bee can use. Four wind-pollinated
     wetland plants filed ``aquatic`` (cattail, bur-reed, a bulrush and a sedge)
     still count: the catalogue records no pollination mode to tell them by.
-    Planning → Wildlife reads this too."""
+    Design › Food's month by month reads this too."""
     if (p.get("plant_type") or "").strip().lower() in WIND_POLLINATED_TYPES:
         return False
     if (p.get("bloom_period") or "").strip():

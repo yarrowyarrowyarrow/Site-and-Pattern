@@ -122,6 +122,12 @@ class PersistenceController:
             split_view.request_sync(self._main)
         except Exception:                                  # noqa: BLE001
             pass
+        # V3.08: the 3D preview and Growth Snapshots follow it too (F89).
+        try:
+            from src import follow_design
+            follow_design.request_sync(self._main)
+        except Exception:                                  # noqa: BLE001
+            pass
         # Caster inventory (V2.13): every feature mutation lands here, so the
         # "Casting shade: …" line stays live after imports, marks, draws,
         # removals and undo. Cheap pure feature scan. Both surfaces show it
@@ -515,7 +521,7 @@ class PersistenceController:
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
         self._apply_view_state(view)
-        # Feature-derived panel readouts (incl. the Planning → Notes map-note
+        # Feature-derived panel readouts (incl. the Site › Notes map-note
         # list) track the restored features.
         m._sync_planning_panel()
 

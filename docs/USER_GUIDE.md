@@ -10,12 +10,12 @@ When the app opens you'll see four areas:
 
 - **Map** (centre) — Edmonton by default; pan with click-and-drag, zoom with the mouse wheel.
 - **Toolbar** (top) — drawing tools (**Draw** row) and layer toggles (**View** row).
-- **Side panel** (right) — five tabs, by the question you bring (V3.07):
-  - **Site** — what is here: Site Info, Slope, Sun & Shade, Wind, Features, Field Notes.
+- **Side panel** (right) — five tabs, by the question you bring (V3.08):
+  - **Site** — what is here: Site Info, Slope, Sun & Shade, Wind, Features, Notes.
   - **Placement** — what goes in: Plants, Communities, Structures.
-  - **Design** — how it is doing: Report card, Planted, Habitat, This Month, Bees.
-  - **Planning** — Effort, Wildlife, Harvest, Water, Notes, Timeline.
-  - **Learn** — Field Study, Lessons, Present.
+  - **Design** — what it is and what it does: Report card, Planted, Habitat, Food, Over time, Water.
+  - **Share** — what leaves the app: Present, Export.
+  - **Learn** — Field Study, Lessons.
 - **Status bar** (bottom) — coordinates, hardiness zone, current mode (e.g. "Placing: Yarrow — click map").
 
 **What the colours on the map mean.** Each plant is a circle as wide as its spacing,
@@ -183,7 +183,7 @@ The **Communities** page beside it (**Placement → Communities**) ships with 18
 ## 8. Other drawing tools
 
 - **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
-- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it. Every map note is also listed under **Planning → Notes** — click one there to jump to it on the map.
+- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it. Every map note is also listed under **Site → Notes** — click one there to jump to it on the map.
 - **▱ Shape** (beside Boundary) — opens a small form: pick a **Type**, set what it needs, then **Draw on the map**. Areas are beds and surfaces (Garden Bed, Pathway, Patio / Deck, Lawn, Mulch, Water Feature, Custom, and the lawn-conversion zones), with a label, fill, outline and an optional shade height. Lines are **Hedge**, **Fence**, **Living fence** and **Windbreak**, with a width, plant spacing and species. Click the corners (or along the line) and double-click to finish. The button stays lit while you draw; **Esc** stops.
 - **Placement → Structures** — search the structure library (bee hotels, brush piles, ponds…) and place one.
 
@@ -206,19 +206,46 @@ The teaching tools live on their own top-level **Learn** tab (V2.25):
 
 - **Field Study** — a five-question recall quiz built from your design and the plant catalogue: photo ID (only plants whose photo is actually downloaded), specialist relationships, and spot-the-gap questions about your own food web.
 - **Lessons** — a short guided course narrated against your own project.
-- **Present** — a docent-style walkthrough for showing the design to a neighbour or client.
+
+**Present**, the docent-style walkthrough for showing the design to a neighbour or
+client, is on the **Share** tab since V3.08.
 
 ---
 
-## 10. Planning helpers (Planning tab)
+## 10. What the design does (Design tab), notes (Site tab) and sharing (Share tab)
 
-- **Establishment Effort estimator** — splits maintenance hours into **Year 1** (heavy: watering-in, weeding bare zones, mulching, smother prep) and **Year 3+** (stewardship floor — established natives drop to ~30% of Y1 effort while cultivated plants stay closer to 100%). Enter your available hrs/week; the tool checks Year 1 against your capacity and reports the post-establishment drop-off.
-- **Wildlife Forage** — month-by-month expandable tree of pollinator blooms and bird food (berries / seeds) from your placed plants. Expand a month to see the individual plants. Apr–Oct months with no bloom source are flagged red as **nectar gaps**.
-- **Human Forage** — companion calendar for edible plants in your design. Shows what you can harvest each month with the edible part annotated (berries, leaves, roots, etc.).
-- **Habitat Value Score** (**Design** tab: the **Report card** sums it up, **Habitat** breaks it down) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
-- **Establishment Water Budget** — same garden / catchment inputs, but the demand splits into **Year 1** (1.5× baseline for establishment irrigation) and **Year 3+** (natives drop to ~0.2× baseline once rooted; cultivars stay at 1.0×). Shows both surpluses / deficits side-by-side, plus a suggested extra-barrel count for the Year-1 deficit.
-- **Succession timeline** — drag the year slider 0–20 to see how the design matures.
-- **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons, plus a **Notes pinned on the map** list of your 📝 Note pins — click one to frame it on the map.
+The Planning tab's pages were merged into these in V3.08.
+
+- **Planted** — every species and community in the design. Under each species, what
+  eats it and when: *feeds 137: 53 bees, 35 butterflies and moths, 13 birds, 36 other
+  insects · flowers May–Jun · fruit Aug–Sep*. Under each community, the same for its
+  members together, each animal counted once. Click a row to find it on the map.
+- **Habitat Value Score** (the **Report card** sums it up, **Habitat** breaks it down) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity, with **Tips for raising your score** aimed at the lowest-scoring parts. Based on Doug Tallamy's keystone-species framework.
+- **Food** — two questions on one page.
+  - **One animal, any animal.** Pick one from the list (it opens on the animal your
+    design feeds most; type in *Find an animal…* to narrow 700-odd rows): which of your
+    plants feed it and how (nectar, pollen, caterpillar host, fruit, seed, nest site,
+    cover), which other plants in the catalogue would, and the months it finds food
+    here. A bee also gets its tongue fit with each flower, where it nests, and its flight
+    season. **Show it on the map** greys every plant that does not feed it.
+  - **Month by month** — each month in three groups, always in this order: **for
+    pollinators** (what is in flower), **for birds** (fruit and seed), and **for
+    people** (what you can harvest, with the part you eat), so a harvest is never read
+    as forage. Growing-season months with nothing in flower are flagged as **nectar gaps**.
+- **Over time** — *This month* (what is happening in the design and what to go outside
+  and check), *Year by year* (drag the succession slider from planting day to maturity,
+  and the phased conversion plan for your lawn zones), and *Hours of work* (Year 1
+  against Year 3+, checked against the hours a week you have).
+- **Water** — Year 1 and Year 3+ water demand against the season's rain and what your
+  barrels, ponds and swales catch; the area and the catchments start from the design.
+- **Notes** (Site tab) — the site walk's ten questions and *Anything else you noticed
+  on site*, then the **design journal** (with **+ Add Timestamp** and **+ Section**) and
+  the **notes pinned on the map** (click one to frame it), then the site photo underlay.
+- **Share** — **Present** (the narrated tour) and **Export**: *Export PDF…*, *Planting
+  plan…*, *Order file…*, *Growth Snapshots…*, *Presentation still…* and *Before /
+  after…* (the last two open the 3D preview, where they are rendered), and **Where to
+  buy** near your pin, beside the buy list it serves. The report card's *Estimated cost ›*
+  link opens it.
 
 ---
 
@@ -238,6 +265,9 @@ The 3D preview is where the design stops being a plan and starts being a place.
   plants those from seed; herbs and grasses start from plugs as before.
   Designs made before V2.44 carry no planting dates and render exactly as they
   always did.
+- **It follows the design.** Change the design on the map and an open 3D preview
+  rebuilds once you pause; there is no Refresh button (V3.08). Growth Snapshots
+  follows the same way.
 - **Split view (View → Split view, or Ctrl+Shift+3)** — the 3D scene under the
   map, both showing the same design and both editable. The map answers *where*;
   the 3D answers *what it will be like*. Close it and the map takes the whole
@@ -324,7 +354,7 @@ while you use the keyboard; it goes away when you use the mouse.
 | Shift+Enter | Finish a boundary, hedgerow, shape, fill area or contour |
 | Delete, Backspace | Delete what is selected |
 | B · M · N · L | Draw the boundary · measure · pin a note · show or hide the legend |
-| P · G · S · D · T | Go to Placement: Plants · Communities · Structures · Design · Planning |
+| P · G · S · D | Go to Placement: Plants · Communities · Structures · Design |
 
 The single letters act only while the map has focus, so typing in a panel never
 starts a tool. In the community builder, **Enter** in its plant list adds the plant

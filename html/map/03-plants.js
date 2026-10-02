@@ -905,10 +905,11 @@
           'padding:6px 10px;line-height:1.5;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25);';
         document.body.appendChild(el);
       }
-      el.innerHTML = '🐝 <b>What ' + escH(beeLabel || 'this bee') + ' sees</b><br>' +
+      // Any animal since V3.08 (Design › Food), not only a bee.
+      el.innerHTML = '<b>What ' + escH(beeLabel || 'this animal') + ' finds here</b><br>' +
         '<span style="display:inline-block;width:10px;height:10px;background:#ffd54f;' +
-        'border-radius:50%;margin-right:4px;"></span>glowing = nectar / pollen it uses' +
-        ' · <span style="color:#5b6b7a;">grey = not a host</span>';
+        'border-radius:50%;margin-right:4px;"></span>glowing = a plant that feeds it' +
+        ' · <span style="color:#5b6b7a;">grey = one that does not</span>';
       el.style.display = 'block';
     }
 

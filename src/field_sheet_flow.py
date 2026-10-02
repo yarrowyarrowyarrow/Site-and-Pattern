@@ -4,8 +4,9 @@ src/field_sheet_flow.py — print the site-walk sheet (F32, V3.05).
 Design principle P11 — see docs/DESIGN_PHILOSOPHY.md: the body and the site
 know things the screen does not.
 
-Site › Field Notes asks ten questions only the ground can answer, and until
-V3.05 the only way to answer them was to stand in the yard holding a laptop.
+Site › Notes (Field Notes until V3.08) asks ten questions only the ground can
+answer, and until V3.05 the only way to answer them was to stand in the yard
+holding a laptop.
 *Print this sheet* saves them as a page for a clipboard (``pdf_export.
 export_field_sheet``), with anything already noted printed under its question;
 the full design PDF carries the same page first, before Site prep, because

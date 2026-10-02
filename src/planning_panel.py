@@ -18,7 +18,6 @@ from PyQt6.QtWidgets import (
     QTabWidget, QTextEdit, QFrame, QScrollArea, QFormLayout,
     QDoubleSpinBox, QSpinBox, QGroupBox, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QTreeWidget, QTreeWidgetItem,
     QSlider,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
@@ -33,9 +32,13 @@ from src.plant_conditions import condition_tokens
 # the year-by-year calendar can never quote different hours for the same design.
 from src.maintenance_calendar import PLANT_MAINTENANCE_HOURS as _PLANT_MAINTENANCE_HOURS
 
-# Month names
-_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+#: A plant type, as the effort table's rows name it.
+_TYPE_PLURAL = {
+    "tree": "Trees", "shrub": "Shrubs", "wildflower": "Wildflowers",
+    "herb": "Herbs", "groundcover": "Groundcovers", "grass": "Grasses",
+    "sedge": "Sedges", "rush": "Rushes", "vine": "Vines", "fern": "Ferns",
+    "aquatic": "Water plants", "root": "Roots and bulbs",
+}
 
 # Edmonton climate data (approximate)
 _EDMONTON_MONTHLY_RAINFALL_MM = [
@@ -61,7 +64,11 @@ _WATER_MULTIPLIER: dict[str, float] = {
 
 
 class PlanningPanel(QWidget):
-    """Panel housing maintenance estimator, wildlife/human forage calendars, water budget, and notes."""
+    """The pages that were the Planning tab, until V3.08 moved each where its
+    question is asked: Effort and Timeline to Design › Over time, Water to
+    Design › Water, Notes to Site › Notes (src/side_panel_layout.py). The
+    wildlife and harvest calendars became Design › Food. This class still
+    builds and runs the four pages it kept."""
 
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
@@ -103,8 +110,8 @@ class PlanningPanel(QWidget):
                                  + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_maintenance_tab()
-        self._build_wildlife_forage_tab()
-        self._build_human_forage_tab()
+        # Wildlife and Harvest became Design › Food in V3.08 (src/food_page.py),
+        # one calendar with people's food kept apart from the animals'.
         self._build_water_tab()
         self._build_timeline_tab()
         self._build_notes_tab()
@@ -114,11 +121,11 @@ class PlanningPanel(QWidget):
         # V3.05: these four pages fill themselves from the design, on screen,
         # where each used to open on a Calculate button over an empty box whose
         # result then went stale with the next edit (src/live_refresh.py).
+        # Since V3.08 these pages sit in the Design tab, and
+        # src/side_panel_layout.py points ``_live`` at its strip.
         from src.live_refresh import LiveRefresh
         self._live = LiveRefresh(self, self._tabs, {
             self._maint_page: self._calc_maintenance,
-            self._wildlife_page: self._calc_wildlife_forage,
-            self._harvest_page: self._calc_human_forage,
             self._water_page: self._calc_water,
         })
 
@@ -139,9 +146,8 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment vs. stewardship effort. Year 1 front-loads "
-            "watering-in, weeding, and mulching; established native "
-            "plantings settle into a much lower maintenance floor by Year 3+."
+            "Year 1 is the most work: watering in, weeding, mulching. By year "
+            "3 an established native planting needs far less."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -226,12 +232,15 @@ class PlanningPanel(QWidget):
 
         # ── Build the HTML output ───────────────────────────────────────
         rows: list[str] = []
-        # Plant rows
-        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            if ptype not in type_totals:
-                continue
+        # A row for every type in the design, in the catalogue's order. Until
+        # V3.08 a fixed six were listed, so wildflowers (198 of the 424 plants)
+        # and grasses, sedges and rushes went into the subtotal with no row.
+        from src.member_colors import TYPE_COLORS
+        order = ([t for t in TYPE_COLORS if t in type_totals]
+                 + sorted(t for t in type_totals if t not in TYPE_COLORS))
+        for ptype in order:
             slot = type_totals[ptype]
-            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+            label = _TYPE_PLURAL.get(ptype) or str(ptype).replace("_", " ").title()
             native_tag = (
                 f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
                 if slot["native"] else ""
@@ -378,365 +387,6 @@ class PlanningPanel(QWidget):
         )
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  P3a — Wildlife Forage Calendar (pollinator nectar + bird food)
-    # ═════════════════════════════════════════════════════════════════════════
-
-    _TREE_STYLE = (
-        "QTreeWidget { background: #1a2a1a; border: 1px solid #2e4a2e; "
-        "color: #c8e6c9; }"
-        "QTreeWidget::item { padding: 2px 4px; }"
-        "QTreeWidget::item:has-children { color: #a5d6a7; }"
-        "QHeaderView::section { background: #1e2e1e; color: #a5d6a7; "
-        "border: 1px solid #2e4a2e; padding: 4px; }"
-    )
-
-    def _build_wildlife_forage_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
-
-        info = QLabel(
-            "When pollinators feed (blooms) and when birds feed "
-            "(berries/seeds). Expand a month to see the individual plants "
-            "providing forage. Apr–Oct months with no bloom source are "
-            "flagged as nectar gaps."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        layout.addWidget(info)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-
-        btn_expand = QPushButton("Expand all")
-        btn_expand.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_expand.clicked.connect(lambda: self._wildlife_tree.expandAll())
-        btn_row.addWidget(btn_expand)
-
-        btn_collapse = QPushButton("Collapse all")
-        btn_collapse.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_collapse.clicked.connect(lambda: self._wildlife_tree.collapseAll())
-        btn_row.addWidget(btn_collapse)
-        layout.addLayout(btn_row)
-
-        self._wildlife_gap_label = QLabel("")
-        self._wildlife_gap_label.setWordWrap(True)
-        self._wildlife_gap_label.setStyleSheet("color: #ef9a9a; font-size: 12px; padding: 2px;")
-        layout.addWidget(self._wildlife_gap_label)
-
-        self._wildlife_tree = QTreeWidget()
-        self._wildlife_tree.setAccessibleName("Food for wildlife through the year")
-        self._wildlife_tree.setColumnCount(2)
-        self._wildlife_tree.setHeaderLabels(["When", "Forage"])
-        self._wildlife_tree.setStyleSheet(self._TREE_STYLE)
-        self._wildlife_tree.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self._wildlife_tree.header().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        self._wildlife_tree.setRootIsDecorated(True)
-        layout.addWidget(self._wildlife_tree, 1)
-
-        self._wildlife_page = tab
-        self._tabs.addTab(tab, "Wildlife")
-
-    def _calc_wildlife_forage(self):
-        self._wildlife_tree.clear()
-
-        if not self._placed_plants:
-            self._wildlife_gap_label.setText("")
-            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
-            self._wildlife_tree.addTopLevelItem(placeholder)
-            return
-
-        try:
-            from src.db.plants import get_connection
-        except Exception:
-            return
-
-        plant_ids = list({p["plant_id"] for p in self._placed_plants})
-        bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-        berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-
-        # A grass, sedge or rush flowers but not for bees: not a pollinator
-        # bloom (V2.91, F182), the forage calendar's one test.
-        from src.forage_calendar import is_pollinator_forage
-        conn = get_connection()
-        try:
-            for pid in plant_ids:
-                row = conn.execute(
-                    "SELECT common_name, plant_type, flower_form, "
-                    "bloom_period, fruit_period FROM plants WHERE id = ?",
-                    (pid,)
-                ).fetchone()
-                if not row:
-                    continue
-                name = row["common_name"]
-                if row["bloom_period"] and is_pollinator_forage(dict(row)):
-                    for m in self._parse_month_range(row["bloom_period"]):
-                        if name not in bloom_by_month[m]:
-                            bloom_by_month[m].append(name)
-                if row["fruit_period"]:
-                    for m in self._parse_month_range(row["fruit_period"]):
-                        if name not in berry_by_month[m]:
-                            berry_by_month[m].append(name)
-        finally:
-            conn.close()
-
-        # Build tree: Month → [Pollinator Blooms, Bird Food] → plant names
-        growing = set(range(4, 11))
-        gap_months = sorted(
-            m for m in growing if not bloom_by_month.get(m)
-        )
-        bloom_color  = QColor("#ce93d8")
-        berry_color  = QColor("#ffcc80")
-        muted_color  = QColor("#546e7a")
-        gap_color    = QColor("#ef5350")
-
-        for i in range(12):
-            month_num = i + 1
-            blooms  = sorted(bloom_by_month.get(month_num, []))
-            berries = sorted(berry_by_month.get(month_num, []))
-            summary_bits = []
-            if blooms:
-                summary_bits.append(f"{len(blooms)} blooms")
-            if berries:
-                summary_bits.append(f"{len(berries)} fruits")
-            if not summary_bits:
-                if month_num in growing:
-                    summary = "— nectar gap"
-                else:
-                    summary = "—"
-            else:
-                summary = " · ".join(summary_bits)
-
-            month_item = QTreeWidgetItem([_MONTHS[i], summary])
-            if not summary_bits and month_num in growing:
-                month_item.setForeground(0, gap_color)
-                month_item.setForeground(1, gap_color)
-            elif not summary_bits:
-                month_item.setForeground(0, muted_color)
-                month_item.setForeground(1, muted_color)
-
-            # Pollinator blooms sub-tree
-            bloom_node = QTreeWidgetItem(
-                [f"Pollinator blooms", f"({len(blooms)})"]
-            )
-            bloom_node.setForeground(0, bloom_color)
-            if blooms:
-                for n in blooms:
-                    bloom_node.addChild(QTreeWidgetItem(["", n]))
-            else:
-                bloom_node.addChild(QTreeWidgetItem(["", "—"]))
-            month_item.addChild(bloom_node)
-
-            # Bird food sub-tree
-            berry_node = QTreeWidgetItem(
-                [f"Bird food", f"({len(berries)})"]
-            )
-            berry_node.setForeground(0, berry_color)
-            if berries:
-                for n in berries:
-                    berry_node.addChild(QTreeWidgetItem(["", n]))
-            else:
-                berry_node.addChild(QTreeWidgetItem(["", "—"]))
-            month_item.addChild(berry_node)
-
-            self._wildlife_tree.addTopLevelItem(month_item)
-
-        # Gap label
-        if gap_months:
-            names = ", ".join(_MONTHS[m - 1] for m in gap_months)
-            self._wildlife_gap_label.setText(
-                f"⚠ Nectar gaps in growing season: {names}. "
-                f"Add a species blooming in these months to support pollinators."
-            )
-            self._wildlife_gap_label.setStyleSheet(
-                "color: #ef9a9a; font-size: 12px; padding: 2px;"
-            )
-        else:
-            self._wildlife_gap_label.setText(
-                "✓ Continuous bloom across the growing season (Apr–Oct)."
-            )
-            self._wildlife_gap_label.setStyleSheet(
-                "color: #a5d6a7; font-size: 12px; padding: 2px;"
-            )
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  P3b — Human Forage Calendar (edible plants by harvest window)
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_human_forage_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
-
-        info = QLabel(
-            "What you can harvest from your design, by month. Includes only "
-            "plants with an edible part recorded in the database — berries, "
-            "fruits, edible leaves / roots / shoots."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        layout.addWidget(info)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-
-        btn_expand = QPushButton("Expand all")
-        btn_expand.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_expand.clicked.connect(lambda: self._human_tree.expandAll())
-        btn_row.addWidget(btn_expand)
-
-        btn_collapse = QPushButton("Collapse all")
-        btn_collapse.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_collapse.clicked.connect(lambda: self._human_tree.collapseAll())
-        btn_row.addWidget(btn_collapse)
-        layout.addLayout(btn_row)
-
-        self._human_tree = QTreeWidget()
-        self._human_tree.setAccessibleName("What you can harvest through the year")
-        self._human_tree.setColumnCount(2)
-        self._human_tree.setHeaderLabels(["When", "Edible plant — part"])
-        self._human_tree.setStyleSheet(self._TREE_STYLE)
-        self._human_tree.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self._human_tree.header().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        layout.addWidget(self._human_tree, 1)
-
-        self._harvest_page = tab
-        self._tabs.addTab(tab, "Harvest")
-
-    def _calc_human_forage(self):
-        self._human_tree.clear()
-
-        if not self._placed_plants:
-            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
-            self._human_tree.addTopLevelItem(placeholder)
-            return
-
-        try:
-            from src.db.plants import get_connection
-        except Exception:
-            return
-
-        plant_ids = list({p["plant_id"] for p in self._placed_plants})
-
-        # entry per plant: (name, edible_parts) by month
-        edible_by_month: dict[int, list[tuple[str, str]]] = {m: [] for m in range(1, 13)}
-
-        conn = get_connection()
-        try:
-            for pid in plant_ids:
-                row = conn.execute(
-                    "SELECT common_name, edible_parts, fruit_period "
-                    "FROM plants WHERE id = ?",
-                    (pid,)
-                ).fetchone()
-                if not row:
-                    continue
-                edible = (row["edible_parts"] or "").strip()
-                if not edible:
-                    continue
-                name = row["common_name"]
-
-                # Prefer planting_calendar harvest months when present (curated),
-                # else parse fruit_period (covers berries, nuts, fruit).
-                cal_rows = conn.execute(
-                    "SELECT month FROM planting_calendar "
-                    "WHERE plant_id = ? AND status = 'harvest'",
-                    (pid,)
-                ).fetchall()
-                months: list[int] = []
-                if cal_rows:
-                    months = sorted({cr["month"] for cr in cal_rows})
-                elif row["fruit_period"]:
-                    months = self._parse_month_range(row["fruit_period"])
-
-                for m in months:
-                    pair = (name, edible)
-                    if pair not in edible_by_month[m]:
-                        edible_by_month[m].append(pair)
-        finally:
-            conn.close()
-
-        muted_color = QColor("#546e7a")
-        warm_color  = QColor("#ffcc80")
-        total_count = 0
-        for i in range(12):
-            month_num = i + 1
-            items = sorted(edible_by_month.get(month_num, []), key=lambda x: x[0].lower())
-            summary = f"{len(items)} plants" if items else "—"
-            month_item = QTreeWidgetItem([_MONTHS[i], summary])
-            if not items:
-                month_item.setForeground(0, muted_color)
-                month_item.setForeground(1, muted_color)
-            else:
-                month_item.setForeground(1, warm_color)
-                for name, parts in items:
-                    child = QTreeWidgetItem(["", f"{name} — {parts}"])
-                    month_item.addChild(child)
-                total_count += len(items)
-            self._human_tree.addTopLevelItem(month_item)
-
-        if total_count == 0:
-            note = QTreeWidgetItem(
-                ["", "None of your placed plants have edible parts recorded. "
-                     "Try Saskatoon, raspberry, chokecherry, or wild strawberry."]
-            )
-            note.setForeground(1, muted_color)
-            self._human_tree.addTopLevelItem(note)
-
-    @staticmethod
-    def _parse_month_range(text: str) -> list[int]:
-        """Parse a period string like 'August-September' or 'May' into month numbers."""
-        month_map = {
-            "jan": 1, "january": 1, "feb": 2, "february": 2,
-            "mar": 3, "march": 3, "apr": 4, "april": 4,
-            "may": 5, "jun": 6, "june": 6,
-            "jul": 7, "july": 7, "aug": 8, "august": 8,
-            "sep": 9, "september": 9, "oct": 10, "october": 10,
-            "nov": 11, "november": 11, "dec": 12, "december": 12,
-        }
-        text = text.lower().strip()
-        parts = text.replace("–", "-").replace("—", "-").split("-")
-        months = []
-        for part in parts:
-            part = part.strip()
-            for key, num in month_map.items():
-                if part.startswith(key):
-                    months.append(num)
-                    break
-        if len(months) == 2:
-            start, end = months
-            if start <= end:
-                return list(range(start, end + 1))
-            return list(range(start, 13)) + list(range(1, end + 1))
-        return months
-
-    # ═════════════════════════════════════════════════════════════════════════
     #  P6 — Water Budget Calculator
     # ═════════════════════════════════════════════════════════════════════════
 
@@ -747,9 +397,9 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment water (Year 1, heavy hand-watering) vs. "
-            "stewardship water (Year 3+, mostly natives at 0.2× base demand). "
-            "Compared against growing-season rainfall and catchment capacity."
+            "Water in year 1, when everything is watered in, and from year 3, "
+            "when natives need a fifth as much, against the season's rain and "
+            "what you catch."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -1015,16 +665,16 @@ class PlanningPanel(QWidget):
     def _build_notes_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
+        # Below the site walk on Site › Notes since V3.08, whose page has the
+        # margins already.
+        layout.setContentsMargins(0, 4, 0, 0)
         layout.setSpacing(6)
 
-        info = QLabel(
-            "Record observations, soil test results, and design rationale "
-            "for this project."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        layout.addWidget(info)
+        heading = QLabel("Design journal")
+        heading.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 4px 0 2px 0;")
+        layout.addWidget(heading)
 
         # Timestamp button
         btn_row = QHBoxLayout()
@@ -1066,6 +716,9 @@ class PlanningPanel(QWidget):
             "border-radius: 4px; padding: 6px; font-size: 12px; font-family: 'Consolas', 'Courier New', monospace; }"
         )
         self._notes_edit.textChanged.connect(self._on_notes_changed)
+        heading.setBuddy(self._notes_edit)
+        # In a scrolling page, so it holds a height rather than taking one.
+        self._notes_edit.setMinimumHeight(180)
         layout.addWidget(self._notes_edit, 1)
 
         # Word count
@@ -1095,6 +748,8 @@ class PlanningPanel(QWidget):
         self._map_notes_list.setSpacing(2)
         layout.addWidget(map_notes_box)
 
+        # Site › Notes since V3.08, beside the site walk's questions.
+        self._notes_page = tab
         self._tabs.addTab(tab, "Notes")
 
     def set_map_notes(self, notes: list[dict]):
@@ -1156,10 +811,8 @@ class PlanningPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Watch the planting move through ecological succession. Drag the "
-            "slider from planting day toward maturity: pioneer forbs fill in "
-            "first and fade as shrubs and climax trees take over. The slider "
-            "reaches the slowest species' mature age."
+            "Drag from planting day to maturity: pioneer forbs fill in first, "
+            "then fade as shrubs and trees take over."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -1229,6 +882,8 @@ class PlanningPanel(QWidget):
         layout.addLayout(btn_row)
 
         layout.addStretch()
+        # Design › Over time since V3.08 (src/side_panel_layout.py).
+        self._timeline_page = tab
         self._tabs.addTab(tab, "Timeline")
 
     def _on_year_slider_changed(self, value: int):

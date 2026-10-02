@@ -21,7 +21,7 @@ nesting bees inside hollow and pithy stems, lepidoptera eggs and pupae on and
 under standing growth, seed heads for winter birds. The calendar says why, and
 names the species in *your* design it applies to.
 
-The hour figures share their constants with the Planning → Effort tab
+The hour figures share their constants with Design › Over time's hours
 (:data:`PLANT_MAINTENANCE_HOURS` lives here now and is imported there), so the
 two surfaces cannot drift into quoting different numbers for the same design.
 
@@ -81,7 +81,7 @@ _BANDS = (
             "lose that race.",
             "Top the mulch up if it has thinned, keeping it off the stems.",
             "Do not fertilise. It feeds the weeds and makes the natives leggy.",
-            "Walk it monthly and write down what you see — Planning → Notes. "
+            "Walk it monthly and write down what you see — Site → Notes. "
             "Year-one observations are the most useful ones you will ever take.",
         ),
     },

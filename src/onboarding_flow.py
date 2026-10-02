@@ -479,7 +479,7 @@ def open_example(main) -> None:
     # now on disk under its own name, so leave it unmodified and let Save
     # write back to it.
     note = ("Opened the example design — a front-yard lawn conversion. "
-            "Everything in it is editable; Planning → Notes says what to try.")
+            "Everything in it is editable; Site → Notes says what to try.")
     if missing:
         # Never quietly ship a thinner design than the one described (P9).
         note += (f"  ({len(missing)} species in the example aren't in this "

@@ -82,15 +82,19 @@ added; trust the source over this list).
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |
 | `src/structure_panel.py` | Placement › Structures: browse and place habitat structures |
-| `src/side_panel_layout.py` | The side panel's five tabs (F94, V3.07): moves built pages between tab widgets; address pages by widget, never index |
+| `src/side_panel_layout.py` | The side panel's five tabs, Site · Placement · Design · Share · Learn (F94, V3.07–V3.08): moves built pages between tab widgets; address pages by widget, never index; a page put in a layout must be shown again |
+| `src/food_page.py` | Design › Food: one animal, any animal, and month by month with people's harvest kept apart (V3.08) |
+| `src/what_it_feeds.py` | Food's Qt-free arithmetic over the edges layer, and Planted's "feeds N · flowers … · fruit …" line (V3.08) |
+| `src/share_panel.py` | Share: Present and Export (every export, Growth Snapshots, the 3D outputs, Where to buy) (V3.08) |
+| `src/follow_design.py` | The 3D preview and Growth Snapshots rebuild when the design changes; no Refresh (F89, V3.08) |
 | `src/shape_tool.py` | Draw › Shape: areas, lawn-conversion zones and hedge/fence/windbreak lines in one form under a Draw-row button (V3.07) |
 | `src/map_settings_flow.py` | View › Map Settings: the zoom step, saved and sent on every map load (V3.07) |
 | `src/site_panel.py` | Side-panel tab for the property pin and auto-filled site data |
-| `src/analysis_panel.py` | The Design tab (Habitat, This Month, Bees) and the Site tab's Sun & Shade and Wind pages, which it builds and runs |
-| `src/planning_panel.py` | Side-panel tab for planning and analysis features |
+| `src/analysis_panel.py` | The Design tab's widget (its strip: Report card, Planted, Habitat, Food, Over time, Water) and the Site tab's Sun & Shade and Wind pages, which it builds and runs |
+| `src/planning_panel.py` | Builds and runs the pages Planning had: Over time's year by year and hours, Design › Water, the journal on Site › Notes; hidden itself since V3.08 |
 | `src/wind_rose_widget.py` | a small QPainter wind-rose (V1.67) |
 | `src/phenology_widget.py` | the "what's happening now" dashboard UI (F51) |
-| `src/learn_panel.py` | the Learn side tab: Field Study / Lessons / Present (V2.25) |
+| `src/learn_panel.py` | the Learn side tab: Field Study / Lessons (V2.25); still builds Present, which is Share › Present since V3.08 |
 | `src/docent_widget.py` | the docent / presentation-mode UI (F52) |
 | `src/field_study_widget.py` | the Field Study quiz runner UI (F48) |
 | `src/lesson_track_widget.py` | the guided lesson-track stepper UI (F53) |

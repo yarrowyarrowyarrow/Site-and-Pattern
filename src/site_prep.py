@@ -333,7 +333,7 @@ def build_site_prep(site_config: dict, placed_plants: Optional[list] = None, *,
         order=order, title="Leave some ground bare",
         detail="About 70% of native bees nest in bare, undisturbed soil. Leave "
                "a sunny, unmulched patch — even a square metre on a south-facing "
-               "edge — and do not landscape-fabric it. Design → Bees names the "
+               "edge — and do not landscape-fabric it. Design → Food names the "
                "species this serves in your design.",
         basis="general"))
     order += 1

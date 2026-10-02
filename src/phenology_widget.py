@@ -41,8 +41,8 @@ class PhenologyWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "What your design is doing this month — and what to walk outside "
-            "and confirm. A landscape is a trajectory, not an install day.")
+            "What is happening in the design, and what to go outside and "
+            "check.")
         intro.setWordWrap(True)
         intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)

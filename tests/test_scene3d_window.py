@@ -114,6 +114,27 @@ class TestScene3DWindow(unittest.TestCase):
         win.close()
         win.deleteLater()
 
+    def test_it_follows_the_design_in_the_apps_colours(self):
+        """F89: no Refresh from design, the window rebuilds when the design
+        changes (src/follow_design.py); F209: dark like the app."""
+        from PyQt6.QtWidgets import QPushButton
+        from src.scene3d_window import Scene3DWindow
+        from src.ui_style import WINDOW_STYLE
+        main = self._fake_main()
+        win = Scene3DWindow(main)
+        captured = []
+        win.viewer.run_js = lambda js: captured.append(js)
+        words = [b.text() for b in win.findChildren(QPushButton)]
+        self.assertFalse([w for w in words if "Refresh" in w], words)
+        self.assertEqual(win.styleSheet(), WINDOW_STYLE)
+        tree = dict(main._project["features"][0])
+        tree["geometry"] = {"type": "Point", "coordinates": [-113.5001, 53.5]}
+        main._project["features"].append(tree)
+        win.follow_design()
+        self.assertEqual(len(_scene_payloads(captured)[-1]["plants"]), 2)
+        win.close()
+        win.deleteLater()
+
     def test_open_3d_view_singleton(self):
         from src.scene3d_window import open_3d_view
         main = self._fake_main()

@@ -7,7 +7,8 @@ the 3D view useful for lawn-to-habitat persuasion:
   * a growth-timeline year slider ("watch your yard at year 1 / 5 / 15"),
   * month + hour sliders driving the shadow-casting sun (same
     ``src/solar`` path as the 2D shade engine, so the two always agree),
-  * a Refresh button that re-reads the live project.
+  * since V3.08 no Refresh button: the window follows the design, rebuilding
+    once edits pause (``src/follow_design.py``, F89).
 
 The scene itself comes from :func:`src.scene_contract.build_scene` — the
 window owns no geometry. Terrain is fetched cache-first on a worker
@@ -21,15 +22,16 @@ the architecture guard's method ceiling stays meaningful).
 
 from __future__ import annotations
 
-import threading
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QSettings
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
 from src.map3d_widget import Map3DWidget
+from src.scene3d_workers import (PhotoWarmWorker as _PhotoWarmWorker,
+                                 TerrainWorker as _TerrainWorker)
 from src.scene_contract import build_scene
 from src.branding import APP_NAME
 
@@ -60,65 +62,6 @@ _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
-
-
-class _TerrainWorker(QObject):
-    """Cache-first elevation fetch off the UI thread."""
-    done = pyqtSignal(object)   # elevation dict or None
-
-    def __init__(self, boundary, site_config):
-        super().__init__()
-        self._boundary = boundary
-        self._site_config = site_config
-
-    def run(self):
-        elev = None
-        try:
-            from src.zoning import site_elevation_grid
-            elev = site_elevation_grid(self._boundary, self._site_config)
-        except Exception:
-            elev = None
-        self.done.emit(elev)
-
-
-class _PhotoWarmWorker(QObject):
-    """Fill the species-photo cache off the UI thread (src/photo_warm.py).
-
-    Emits ``batch`` every so often rather than per photo: the only thing the
-    window does with it is re-push the dossier so newly-cached photos appear, and
-    doing that ~380 times would rebuild the whole dossier for each one.
-    """
-    batch = pyqtSignal()
-    done = pyqtSignal()
-    _BATCH = 12
-
-    def __init__(self):
-        super().__init__()
-        # Owned here, not by the warmer: closeEvent can fire before run() has
-        # built one (the catalogue query happens first), and a cancel that landed
-        # in that window would be lost.
-        self._cancel = threading.Event()
-
-    def run(self):
-        try:
-            from src.photo_warm import PhotoWarmer, catalogue_photo_rows
-            rows = catalogue_photo_rows()
-            PhotoWarmer(rows, on_progress=self._progress,
-                        cancel_event=self._cancel).run()
-        except Exception:      # noqa: BLE001 — photos are a nicety, never a dep
-            pass
-        self.done.emit()
-
-    def _progress(self, done, _total, newly_cached):
-        if newly_cached and done % self._BATCH == 0:
-            self.batch.emit()
-
-    def cancel(self):
-        self._cancel.set()
-
-
-_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
-           "August", "September", "October", "November", "December")
 
 
 def _save_data_url(url: str, path: str) -> bool:
@@ -159,6 +102,10 @@ class Scene3DWindow(QWidget):
         self._photo_worker = None
         self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
+        # The app's dark surface (F209, V3.08): a top-level window inherits
+        # nothing from the main window's stylesheet.
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
 
         self.viewer = Map3DWidget(self)
 
@@ -200,10 +147,6 @@ class Scene3DWindow(QWidget):
         self._detail.setCurrentIndex(
             max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
         self._detail.currentIndexChanged.connect(self._on_detail)
-
-        refresh = QPushButton("Refresh from design")
-        refresh.setToolTip("Re-read the live project and rebuild the scene")
-        refresh.clicked.connect(self.refresh)
 
         # The camera now stays put while the sliders move; this re-centers it.
         reset_view = QPushButton("Reset view")
@@ -372,8 +315,7 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
-        for btn in (reset_view, refresh, self._bake_btn, self._still_btn,
-                    self._ba_btn):
+        for btn in (reset_view, self._bake_btn, self._still_btn, self._ba_btn):
             bar3.addWidget(btn)
 
         root = QVBoxLayout(self)
@@ -495,7 +437,7 @@ class Scene3DWindow(QWidget):
         options, specs = [], []
         for st in ([cover] if cover else []) + stills:
             label = (f"{st['title']} — year {st['year']}, "
-                     f"{_MONTHS[st['month'] - 1]}, {st['camera']}")
+                     f"{_MONTH_FULL[st['month'] - 1]}, {st['camera']}")
             if label in options:
                 continue
             options.append(label)
@@ -834,6 +776,17 @@ class Scene3DWindow(QWidget):
         self._update_labels()
         self.viewer.set_cinematic_caption(big, sub)
         self._push_scene()
+
+    def follow_design(self):
+        """The design changed (``src/follow_design.py``): rebuild the scene,
+        as the retired Refresh button did, without warming the photo cache
+        again for every edit."""
+        self._push_scene()
+        from src.splat_backdrop import feature_from_project
+        self._bake_btn.setEnabled(
+            feature_from_project(self._main._project) is not None)
+        if self._elevation is None and self._thread is None:
+            self._start_terrain_fetch()
 
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't

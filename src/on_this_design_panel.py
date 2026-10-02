@@ -25,12 +25,37 @@ inside ``_sync_planning_panel`` for Communities + Stats.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
-    QSizePolicy,
+    QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem,
 )
+
+
+class _WrapToList(QStyledItemDelegate):
+    """A wrapped row as wide as its list, and as tall as its words need there.
+    Qt measured the wrap without the stylesheet's item padding, so the rows of
+    "what eats it" came out 12 to 30 px wider than the list (V3.08): a
+    sideways scroll bar under it, and the end of each line cut off."""
+
+    def __init__(self, view: QListWidget):
+        super().__init__(view)
+        self._view = view
+
+    def sizeHint(self, option, index):                    # noqa: N802
+        width = self._view.viewport().width()
+        if width <= 0:
+            return super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        room, hint = width, QSize()
+        for _ in range(3):              # padding is learnt from the overshoot
+            opt.rect = QRect(0, 0, room, 10000)
+            hint = super().sizeHint(opt, index)
+            if hint.width() <= width:
+                break
+            room -= hint.width() - width
+        return QSize(min(hint.width(), width), hint.height())
 
 
 def _activate_on_keys(view: QListWidget, handler) -> None:
@@ -74,7 +99,7 @@ class OnThisDesignPanel(QWidget):
     species_substitute_requested = pyqtSignal(int)       # ctx: the nursery is out (F91)
     community_focus_requested = pyqtSignal(str)          # click → zoom to members
     open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
-    open_planning_requested = pyqtSignal()               # Stats: cost → Planning
+    open_buying_requested = pyqtSignal()                 # Stats: cost → Share › Export
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -103,6 +128,11 @@ class OnThisDesignPanel(QWidget):
         self._plants_list.setMinimumHeight(60)
         self._plants_list.setStyleSheet(_RESULTS_LIST_STYLE)
         self._plants_list.setAccessibleName("Species in this design")
+        # Two lines a row since V3.08, the second what eats it and when, which
+        # wraps in a narrow panel rather than running off its edge.
+        self._plants_list.setWordWrap(True)
+        self._plants_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._plants_list.setItemDelegate(_WrapToList(self._plants_list))
         self._plants_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -133,6 +163,10 @@ class OnThisDesignPanel(QWidget):
         self._communities_list.setMinimumHeight(60)
         self._communities_list.setStyleSheet(_RESULTS_LIST_STYLE)
         self._communities_list.setAccessibleName("Communities in this design")
+        self._communities_list.setWordWrap(True)
+        self._communities_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._communities_list.setItemDelegate(
+            _WrapToList(self._communities_list))
         self._communities_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -155,8 +189,8 @@ class OnThisDesignPanel(QWidget):
             "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"
         )
-        # Deep-links: the habitat-value and cost headings are anchors into the
-        # Analysis and Planning tabs (V2.13). Handle them ourselves rather than
+        # Deep-links: the habitat-value and cost headings are anchors into
+        # Design › Habitat and Share › Export (V2.13; V3.08). Handle them ourselves rather than
         # letting QTextBrowser try to navigate to a made-up URL.
         self._stats_text.setOpenLinks(False)
         self._stats_text.anchorClicked.connect(self._on_stats_anchor)
@@ -180,6 +214,38 @@ class OnThisDesignPanel(QWidget):
         # in three years (P13).
         self._cues_lines: list = []
         self._cues_tally = None
+        # What each plant feeds (src/what_it_feeds.py), by plant id, and what
+        # each community's members feed between them, by their ids: neither
+        # changes while the app runs, and these lists redraw on every edit.
+        self._food_of: dict = {}
+        self._group_food: dict = {}
+
+    def _eater_lines(self, plant_ids) -> dict:
+        """``{plant_id: "feeds 12: … · flowers Jul–Aug"}`` (V3.08: the
+        owner's "what eats this when", under each species)."""
+        from src.what_it_feeds import eaters_line, plant_food
+        need = [p for p in plant_ids if p not in self._food_of]
+        if need:
+            try:
+                found = plant_food(need)
+            except Exception:  # noqa: BLE001 — the rows still name the plants
+                return {}
+            for pid in need:
+                self._food_of[pid] = found.get(pid)
+        return {pid: eaters_line(self._food_of[pid]) for pid in plant_ids
+                if self._food_of.get(pid) is not None}
+
+    def _group_line(self, plant_ids) -> str:
+        """One line for a community: what its members feed between them, each
+        animal once, and when."""
+        from src.what_it_feeds import eaters_line, together
+        key = frozenset(plant_ids)
+        if key not in self._group_food:
+            try:
+                self._group_food[key] = together(key)
+            except Exception:  # noqa: BLE001
+                return ""
+        return eaters_line(self._group_food[key])
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -191,10 +257,13 @@ class OnThisDesignPanel(QWidget):
         try:
             from src.db.plants import get_plant
             total = 0
+            lines = self._eater_lines([int(pid) for pid in counts])
             for pid, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
                 p = get_plant(pid)
                 name = p["common_name"] if p else f"Plant #{pid}"
-                item = QListWidgetItem(f"{name}  ×{count}")
+                line = lines.get(int(pid))
+                item = QListWidgetItem(f"{name}  ×{count}"
+                                       + (f"\n{line}" if line else ""))
                 item.setIcon(_type_icon(p["plant_type"] if p else ""))
                 item.setData(Qt.ItemDataRole.UserRole, int(pid))
                 self._plants_list.addItem(item)
@@ -255,8 +324,8 @@ class OnThisDesignPanel(QWidget):
         target = url.toString()
         if target == "sap:analysis-habitat":
             self.open_habitat_analysis_requested.emit()
-        elif target == "sap:planning":
-            self.open_planning_requested.emit()
+        elif target == "sap:buy":
+            self.open_buying_requested.emit()
 
     # ── Communities + Stats sub-tabs ──────────────────────────────────
 
@@ -276,6 +345,7 @@ class OnThisDesignPanel(QWidget):
         from collections import defaultdict
         instances: dict[str, set] = defaultdict(set)
         member_counts: dict[str, int] = defaultdict(int)
+        species: dict[str, set] = defaultdict(set)
         for p in enriched:
             name = (p.get("polyculture_name") or "").strip()
             if not name:
@@ -287,15 +357,19 @@ class OnThisDesignPanel(QWidget):
             ) else p.get("placement_group_id")
             instances[name].add(key)
             member_counts[name] += 1
+            if p.get("plant_id") is not None:
+                species[name].add(int(p["plant_id"]))
         if not instances:
             self._communities_count_label.setText("No communities placed yet")
             return
         for name in sorted(instances.keys(), key=str.lower):
             n_inst = len(instances[name])
             n_mem = member_counts[name]
+            line = self._group_line(species[name]) if species[name] else ""
             item = QListWidgetItem(
                 f"{name}  — {n_inst} instance{'s' if n_inst != 1 else ''}"
                 f", {n_mem} member{'s' if n_mem != 1 else ''}"
+                + (f"\n{line}" if line else "")
             )
             item.setData(Qt.ItemDataRole.UserRole, name)
             self._communities_list.addItem(item)
@@ -485,7 +559,7 @@ class OnThisDesignPanel(QWidget):
             v = bd.get(key)
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
-        parts = ["<p><a href='sap:planning' "
+        parts = ["<p><a href='sap:buy' "
                  "style='color:#a5d6a7;text-decoration:none;'>"
                  "<b>Estimated cost (CAD)</b> ›</a><br>",
                  row("Plants", "plants")]

@@ -436,7 +436,11 @@ Enacted over three releases, one full test run each (the owner asked for half
 the testing): V3.07 the containers and the quick yeses, V3.08 the Design tab's
 merges, Share and the 3D preview, V3.09 the community pop-up, the Features scan,
 Field Study and software 3D. The reasoning is in
-[`V3.07-placement-and-the-site-tab.md`](plans/V3.07-placement-and-the-site-tab.md).
+[`V3.07-placement-and-the-site-tab.md`](plans/V3.07-placement-and-the-site-tab.md)
+and [`V3.08-design-and-share.md`](plans/V3.08-design-and-share.md). **After
+V3.08** every page decision above is enacted. The probe counts 5 tabs and 26
+pages, as it counted 6 and 26 here (it counts each tab as a page too): Site 6,
+Placement 3, Design 6 with Planted's 2, Share 2, Learn 2.
 
 ## What this cannot tell
 

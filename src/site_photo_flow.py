@@ -103,7 +103,7 @@ def import_site_photo(main, path: str) -> bool:
     _push_panel_state(main, feature, visible=True)
     main._mark_modified()
     main.statusBar().showMessage(
-        "Site photo added — set its width and opacity on the Field Notes tab.",
+        "Site photo added — set its width and opacity on Site → Notes.",
         4000)
     return True
 

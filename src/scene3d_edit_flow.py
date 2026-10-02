@@ -348,6 +348,9 @@ def _resync(win, main) -> None:
             pass
     try:
         win._push_scene()
+        # Pushed already: the rebuild the edit queued would be a second one.
+        from src import follow_design
+        follow_design.settled(win)
     except Exception:      # noqa: BLE001
         pass
 

@@ -343,7 +343,7 @@ class SitePanel(QWidget):
     # it was read here since V2.13 for one line on Site Info while the Wind
     # page waited for its own button and fetched it again.
     wind_rose_ready = pyqtSignal(object)
-    #: "Print this sheet" on Field Notes (F32): the prompts as a page.
+    #: "Print this sheet" on Notes (F32): the prompts as a page.
     print_field_sheet_requested = pyqtSignal()
 
     # Site photo overlay (F24, P11). Import a yard/drone photo as a map underlay,
@@ -403,7 +403,7 @@ class SitePanel(QWidget):
     # ── Construction ────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        """Site Info, Slope, Features and Field Notes. Since V3.07 the Design
+        """Site Info, Slope, Features and Notes. Since V3.07 the Design
         tab's Sun & Shade and Wind pages join them, between Slope and Features
         (``src/side_panel_layout.py``): they describe the site, not the
         design (the owner's answers to the V3.05 surface audit)."""
@@ -436,7 +436,11 @@ class SitePanel(QWidget):
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
         self.slope_page = tabs.widget(tabs.count() - 1)
         self._build_features_page(self._add_scroll_page(tabs, "Features"))
-        self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
+        # "Notes" since V3.08: the site walk's questions, and below them the
+        # design journal and the notes pinned on the map, which the Planning
+        # tab built (src/side_panel_layout.py puts them in _journal_slot).
+        self._build_field_notes_page(self._add_scroll_page(tabs, "Notes"))
+        self.notes_page = tabs.widget(tabs.count() - 1)
 
     def _add_scroll_page(self, tabs, title):
         """Add a scrollable page to the inner tab strip; return its body layout."""
@@ -466,9 +470,8 @@ class SitePanel(QWidget):
         layout.addWidget(self._first_step)
 
         info = QLabel(
-            "Search an Alberta address below to drop a property pin and "
-            "auto-fill site data from public sources. Drag the pin to refine; "
-            "right-click on the pin to remove."
+            "Search an Alberta address, or drop the pin on the map, and the "
+            "site's climate and soil fill in. Drag the pin to adjust it."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -777,10 +780,9 @@ class SitePanel(QWidget):
         self._lbl_nurseries.setOpenExternalLinks(True)
         nl.addWidget(self._lbl_nurseries)
         self._lbl_nursery_note = QLabel(
-            "Native-specific sources from the Native Plant Society of "
-            "Saskatchewan list (npss.sk.ca). Native plants and seed are seasonal "
-            "and often grown to order — confirm availability before visiting or "
-            "ordering; many suppliers ship province-wide.")
+            "From the Native Plant Society of Saskatchewan's list "
+            "(npss.sk.ca). Stock is seasonal and often grown to order: check "
+            "before you go.")
         self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_nursery_note.setWordWrap(True)
         nl.addWidget(self._lbl_nursery_note)
@@ -801,7 +803,7 @@ class SitePanel(QWidget):
         self._soil_dl_btn.setEnabled(not busy)
         self._soil_cancel_btn.setVisible(busy)
 
-    # ── Field Notes sub-tab (F6, P11) ─────────────────────────────────────────
+    # ── Notes sub-tab: the site walk (F6, P11) ──────────────────────────────
 
     def _build_field_notes_page(self, layout):
         """Site-walk field notes: a prompted checklist + free text that capture
@@ -810,9 +812,8 @@ class SitePanel(QWidget):
         from src.field_notes import FIELD_PROMPTS
 
         info = QLabel(
-            "Walk the site — don't design it all from the screen. Tick what you "
-            "notice on the ground and jot a quick observation; it's saved with "
-            "the project and informs the design."
+            "Walk the site and note what the ground tells you; it is saved "
+            "with the design."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -883,6 +884,13 @@ class SitePanel(QWidget):
         self._fn_free.textChanged.connect(self._fn_edited)
         layout.addWidget(self._fn_free)
 
+        # The design journal and the map's notes arrive here (V3.08).
+        self._journal_slot = QWidget()
+        slot = QVBoxLayout(self._journal_slot)
+        slot.setContentsMargins(0, 0, 0, 0)
+        slot.setSpacing(0)
+        layout.addWidget(self._journal_slot)
+
         self._build_site_photo_group(layout)
 
         layout.addStretch()
@@ -899,9 +907,8 @@ class SitePanel(QWidget):
         v.setSpacing(6)
 
         hint = QLabel(
-            "Drop a photo of your yard (or a drone shot) onto the map as a "
-            "georeferenced underlay, centred on your pin. Drop annotation pins "
-            "to mark what you see.")
+            "A photo of your yard, or a drone shot, laid under the map and "
+            "centred on your pin.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
@@ -1057,10 +1064,9 @@ class SitePanel(QWidget):
         slope_layout.addWidget(auto_header)
 
         slope_info = QLabel(
-            "Choose an area, then Generate. Edmonton uses the City's 0.5 m "
-            "LiDAR contours; elsewhere falls back to Copernicus DEM. 30 m "
-            "grid matches the DEM's native resolution — finer settings "
-            "interpolate but don't add real detail."
+            "Choose an area, then Generate. Edmonton has the City's 0.5 m "
+            "LiDAR; elsewhere the elevation is 30 m, and a finer grid only "
+            "interpolates it."
         )
         slope_info.setWordWrap(True)
         slope_info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -1977,18 +1983,15 @@ class SitePanel(QWidget):
                        "section.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
-        hint = QLabel("Captures what's already there using your drawn "
-                      "property boundary (plus the neighbour margin below); "
-                      "with no boundary it searches ≈60 m around the pin. "
-                      "The shade map is only as real as these features.")
+        hint = QLabel("Imports what is already there, inside your boundary "
+                      "and the margin below (60 m around the pin with no "
+                      "boundary). The shade is only as real as these.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
-        slow_note = QLabel("First import in a new area can take ~10–30 s while "
-                           "OpenStreetMap responds (slower outside big cities) — "
-                           "later imports nearby are quicker. For buildings you "
-                           "can also “Download buildings for this area” "
-                           "below for instant offline access.")
+        slow_note = QLabel("A first import in a new area can take 10–30 s; "
+                           "later ones nearby are quicker. Buildings can also "
+                           "be downloaded for use offline, below.")
         slow_note.setWordWrap(True)
         slow_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(slow_note)
@@ -2186,9 +2189,8 @@ class SitePanel(QWidget):
         vl.setSpacing(6)
 
         note = QLabel(
-            "Download the full City of Edmonton 0.5 m LiDAR contour dataset "
-            "for instant offline access. One-time download (~1 GB unpacked). "
-            "SRTM data outside Edmonton is cached automatically as you use it."
+            "Edmonton's 0.5 m LiDAR contours for use offline: one download, "
+            "about 1 GB. Elsewhere the elevation is kept as you use it."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #90a4ae; font-size: 12px;")

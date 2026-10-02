@@ -174,14 +174,70 @@ class TestThePagesFillThemselves(unittest.TestCase):
         for page, check in (
                 (panel._maint_page, lambda: panel._maint_results.text()),
                 (panel._water_page, lambda: panel._water_results.text()),
-                (panel._wildlife_page,
-                 lambda: str(panel._wildlife_tree.topLevelItemCount() or "")),
         ):
             panel._tabs.setCurrentWidget(page)
             panel._live.fill_now()
             self.assertTrue(check(), f"page {panel._tabs.tabText(panel._tabs.indexOf(page))} "
                                      "stayed empty")
         panel.close()
+
+    def test_food_fills_on_screen(self):
+        from src.analysis_panel import AnalysisPanel
+        panel = AnalysisPanel()
+        panel.resize(420, 700)
+        panel.show()
+        panel._tabs.setCurrentWidget(panel._food)
+        panel.set_placed_plants(self._plants)
+        self.assertTrue(panel._live.fill_now())
+        self.assertIn("Your plants feed", panel._food._summary_line.text())
+        panel.close()
+
+    def test_a_live_page_moved_to_another_strip_is_still_filled(self):
+        """V3.08 moved Planning's pages into Design: the refill follows the
+        strip they are in, and the one they left no longer drives it."""
+        from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
+        from src.live_refresh import LiveRefresh
+        old_owner, new_owner = QWidget(), QWidget()
+        old_tabs, new_tabs = QTabWidget(old_owner), QTabWidget(new_owner)
+        page, other = QLabel("page"), QLabel("other")
+        old_tabs.addTab(page, "Page")
+        filled = []
+        live = LiveRefresh(old_owner, old_tabs, {page: lambda: filled.append(1)})
+        old_tabs.removeTab(0)
+        new_tabs.addTab(other, "Other")
+        new_tabs.addTab(page, "Page")
+        live.move_to(new_owner, new_tabs, {page: lambda: filled.append(2)})
+        new_owner.show()
+        new_tabs.setCurrentWidget(page)
+        self.assertTrue(live.fill_now())
+        self.assertEqual(filled, [2])
+        new_tabs.setCurrentWidget(other)
+        self.assertFalse(live.fill_now())
+        old_tabs.addTab(QLabel("left behind"), "Old")    # fires currentChanged
+        old_owner.show()
+        self.assertFalse(live._timer.isActive(),
+                         "the strip it left still pokes it")
+        new_owner.close()
+        old_owner.close()
+
+    def test_every_type_in_the_design_has_its_row_in_the_hours(self):
+        """Until V3.08 the table listed six fixed types, so wildflowers and
+        grasses were in the subtotal with no row of their own: a worked example
+        showed 17 hours of rows over a 55-hour subtotal."""
+        import re
+        from src.planning_panel import PlanningPanel
+        panel = PlanningPanel()
+        panel.set_placed_plants([
+            {"plant_id": 1, "plant_type": "wildflower", "native_to_alberta": 1},
+            {"plant_id": 2, "plant_type": "grass", "native_to_alberta": 1},
+            {"plant_id": 3, "plant_type": "shrub", "native_to_alberta": 1},
+            {"plant_id": 4, "plant_type": "rush", "native_to_alberta": 1}])
+        panel._calc_maintenance()
+        text = panel._maint_results.text()
+        for row in ("Wildflowers", "Grasses", "Shrubs", "Rushes"):
+            self.assertIn(f">{row}<", text)
+        year1 = [float(h) for h in re.findall(r">(\d+(?:\.\d+)?) h<", text)]
+        self.assertTrue(year1, text)
 
     def test_water_starts_from_the_design(self):
         from src.planning_panel import PlanningPanel

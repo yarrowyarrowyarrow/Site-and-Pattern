@@ -1,15 +1,19 @@
 """
-analysis_panel.py — Side-panel tab for site analysis overlays.
+analysis_panel.py — the Design tab's widget, and the builder of two Site pages.
 
-Contains inner tabs:
-  A1: Sun Path / Shadow overlay
-  A4: Wind / Windbreak effect
+Builds:
+  A1: Sun Path / Shadow overlay   } Site › Sun & Shade and Site › Wind since
+  A4: Wind / Windbreak effect     } V3.07 (src/side_panel_layout.py moves them)
   H1: Habitat Value Score (Tallamy-style composite scoring of native habitat quality)
-  plus the observation/design tabs: This Month (phenology) and Bees.
+  F51: This Month (phenology), the first section of Design › Over time (V3.08)
+  Food: src/food_page.py, the Bees page and the Wildlife and Harvest
+        calendars as one (V3.08)
+The Design tab's other pages (Report card, Planted, Over time, Water) are built
+by other panels and put in this strip by src/side_panel_layout.py.
 
 (The Sector, Season and Forage tabs were retired in V2.25: sun and wind cover
 the sector wedges' job, the season tile filter added no design value, and the
-forage calendar lives in Planning → Wildlife. The Field Study / Lessons /
+forage calendar is Design › Food's month by month (V3.08). The Field Study / Lessons /
 Present teaching tabs moved to the top-level Learn tab — src/learn_panel.py.)
 """
 
@@ -27,12 +31,9 @@ from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
 from PyQt6.QtGui import QPixmap
 
 
-# Quiet companion to the orange primary on the Sun & Shade tab.
-_SUN_BTN_SECONDARY = (
-    "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-    "border-radius: 4px; padding: 6px; }"
-    "QPushButton:hover { background: #455a64; }"
-)
+# One colour for the main action, the app's green, and grey for the rest
+# (F209, V3.08): Sun & Shade's primary was orange, Wind's teal and blue.
+from src.ui_style import BTN_PRIMARY, BTN_SECONDARY
 
 
 class AnalysisPanel(QWidget):
@@ -123,7 +124,7 @@ class AnalysisPanel(QWidget):
         self._build_phenology_tab()
         # Field Study / Lessons / Present moved to the top-level Learn tab
         # (src/learn_panel.py, V2.25) — teaching tools, not analysis.
-        self._build_bee_tab()
+        self._build_food_tab()
 
         layout.addWidget(self._tabs)
         # V3.05: the score fills itself when its page is on screen and the
@@ -131,7 +132,8 @@ class AnalysisPanel(QWidget):
         # result that went stale with the next edit (src/live_refresh.py).
         from src.live_refresh import LiveRefresh
         self._live = LiveRefresh(self, self._tabs,
-                                 {self._habitat_page: self._calc_habitat_score})
+                                 {self._habitat_page: self._calc_habitat_score,
+                                  self._food: self._food.refresh})
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A1 — Sun Path / Shadow
@@ -163,8 +165,7 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Where the light falls, and what stands in its way. Pick a date, "
-            "drag the clock: the sun moves along its arc and the shadows sweep "
+            "Pick a date and drag the clock: the sun moves, and the shadows "
             "with it."
         )
         info.setWordWrap(True)
@@ -314,11 +315,7 @@ class AnalysisPanel(QWidget):
         btn_show.setToolTip(
             "Draw the sun's arc centred on your property.\n"
             "Use 'Move…' to centre it somewhere specific instead.")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #bf360c; color: #fff3e0; border: 1px solid #e65100; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #c8410f; }"
-        )
+        btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
 
@@ -326,12 +323,12 @@ class AnalysisPanel(QWidget):
         btn_move.setToolTip(
             "Click this, then click the map to centre the arc on a "
             "particular bed or tree.")
-        btn_move.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_move.setStyleSheet(BTN_SECONDARY)
         btn_move.clicked.connect(self._on_move_sun_path)
         btn_row.addWidget(btn_move)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.setStyleSheet(BTN_SECONDARY)
         btn_clear.clicked.connect(self.sun_path_cleared.emit)
         btn_row.addWidget(btn_clear)
         v.addLayout(btn_row)
@@ -376,7 +373,7 @@ class AnalysisPanel(QWidget):
         btn_show.clicked.connect(self._on_show_shade)
         btn_row.addWidget(btn_show)
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.setStyleSheet(BTN_SECONDARY)
         btn_clear.clicked.connect(self.shade_cleared.emit)
         btn_row.addWidget(btn_clear)
         v.addLayout(btn_row)
@@ -395,7 +392,7 @@ class AnalysisPanel(QWidget):
         # the tags (src/db/shade_zones.py) so plant matching can read them
         # without recomputing.
         btn_classify = QPushButton("Classify planting zones")
-        btn_classify.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_classify.setStyleSheet(BTN_SECONDARY)
         btn_classify.setToolTip(
             "Tag every spot full sun / partial shade / full shade from the "
             "season-average shade, and cache it for plant matching.")
@@ -644,10 +641,8 @@ class AnalysisPanel(QWidget):
         # The rose arrives with the pin (V3.07, src/wind_flow.py); this
         # fetches it again, with a reading of the wind now.
         btn_fetch = QPushButton("Refresh wind data")
-        btn_fetch.setStyleSheet(
-            "QPushButton { background: #00695c; color: #e0f2f1; "
-            "border: 1px solid #00897b; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; } QPushButton:hover { background: #00897b; }")
+        # Secondary since the pin brings the rose (V3.07).
+        btn_fetch.setStyleSheet(BTN_SECONDARY)
         btn_fetch.setToolTip(
             "Fetch this site's wind again from Open-Meteo, with a reading of "
             "the wind right now. The rose is kept for use offline.")
@@ -772,11 +767,7 @@ class AnalysisPanel(QWidget):
         btn_show.setToolTip(
             "Draw the arrows and windbreak shelter zones for the direction on "
             "the dial. (The two checkboxes above draw live, on toggle.)")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #01579b; color: #e1f5fe; border: 1px solid #0277bd; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0266ad; }"
-        )
+        btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_wind)
         btn_row.addWidget(btn_show)
 
@@ -881,6 +872,9 @@ class AnalysisPanel(QWidget):
         self._phenology = PhenologyWidget(
             plants_provider=lambda: self._placed_plants)
         page.setWidget(self._phenology)
+        # Design › Over time takes the dashboard since V3.08
+        # (src/side_panel_layout.py), first of its three sections.
+        self._phenology_page = page
         self._tabs.addTab(page, "This Month")
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -901,10 +895,8 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "How much native habitat your design actually provides — scored "
-            "0–100 from native ratio, keystone species, host plants, bird "
-            "food, vegetation-layer diversity, habitat structures, and bloom "
-            "continuity."
+            "How much habitat the design provides, out of 100; what the score "
+            "is made of is below it."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -991,9 +983,8 @@ class AnalysisPanel(QWidget):
         layout.addWidget(pull_label)
 
         pull_hint = QLabel(
-            "Pick a plant to preview what removing it would cost — the wildlife "
-            "that lose all their support, whether the food-web chain snaps, and "
-            "the score change.")
+            "Pick a plant to see what removing it would cost: the animals "
+            "left with nothing, and the score.")
         pull_hint.setWordWrap(True)
         pull_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(pull_hint)
@@ -1112,9 +1103,9 @@ class AnalysisPanel(QWidget):
         layout.addWidget(head)
 
         hint = QLabel(
-            "Two questions the score itself cannot answer: has anyone actually "
-            "recorded these species growing where you are, and does the design "
-            "have the shape of the natural community for this place.")
+            "What the score cannot say: whether these species are recorded "
+            "growing near you, and whether the design has the shape of the "
+            "natural community here.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
@@ -1182,11 +1173,9 @@ class AnalysisPanel(QWidget):
         layout.addWidget(head)
 
         hint = QLabel(
-            "Draw the invisible half of the design on the map: which plants "
-            "feed, host and shelter which animals, and which plants are tied "
-            "to each other. Wildlife sit on a ring outside the planting — a "
-            "diagram, not a place, because an animal has no address in your "
-            "yard.")
+            "Draws on the map which plants feed, host and shelter which "
+            "animals. The animals sit on a ring outside the planting: a "
+            "diagram, not where they live.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
@@ -1269,375 +1258,20 @@ class AnalysisPanel(QWidget):
         show_panel(self._habitat_page)
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  Bees — "Design for a bee" habitat builder (F37)
+    #  Food — who the design feeds (V3.08; the Bees page, F37, generalised)
     # ═════════════════════════════════════════════════════════════════════════
 
-    _FIT_CHIP = {
-        "good":      ("#1b5e20", "#a5d6a7", "good fit"),
-        "plausible": ("#33450f", "#dcedc8", "workable"),
-        "unknown":   ("#37474f", "#b0bec5", "—"),
-    }
-    _MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-    def _build_bee_tab(self):
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        tab = QWidget()
-        page.setWidget(tab)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
-
-        info = QLabel(
-            "Design habitat for a specific native bee. Pick a target — a whole "
-            "genus or a single species — to see which of your plants feed it, how "
-            "to give it a place to nest, and whether your design blooms across its "
-            "flight season."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        layout.addWidget(info)
-
-        self._bee_selector = QComboBox()
-        self._bee_selector.setAccessibleName("Bee to design for")
-        # Sized to its longest bee it was 429 px, wider than the panel at
-        # 12 px text (V3.03); it shrinks now, and its list shows names whole.
-        self._bee_selector.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self._bee_selector.setMinimumContentsLength(18)
-        self._bee_selector.setStyleSheet("QComboBox { padding: 4px; }")
-        self._populate_bee_selector()
-        self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)
-        layout.addWidget(self._bee_selector)
-
-        # "What the bee sees" — recolour the 2D map as this bee's resource map.
-        self._bee_map_btn = QPushButton("🗺  Show what this bee sees on the map")
-        self._bee_map_btn.setCheckable(True)
-        self._bee_map_btn.setToolTip(
-            "Recolour the 2D map as this bee's floral-resource map — its host "
-            "plants glow like nectar, everything else greys out")
-        self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
-        layout.addWidget(self._bee_map_btn)
-
-        # Summary: photo (+ credit) + facts
-        summ = QHBoxLayout()
-        summ.setSpacing(8)
-        photo_col = QVBoxLayout()
-        photo_col.setSpacing(2)
-        self._bee_photo = QLabel("🐝")
-        self._bee_photo.setFixedSize(96, 72)
-        self._bee_photo.setScaledContents(False)
-        self._bee_photo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._bee_photo.setStyleSheet(
-            "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "background: #14241a; font-size: 30px;")
-        photo_col.addWidget(self._bee_photo)
-        # Visible photo credit — required for CC-BY reuse (harmless for CC0).
-        self._bee_photo_credit = QLabel("")
-        self._bee_photo_credit.setFixedWidth(96)
-        self._bee_photo_credit.setWordWrap(True)
-        self._bee_photo_credit.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        self._bee_photo_credit.setVisible(False)
-        photo_col.addWidget(self._bee_photo_credit)
-        summ.addLayout(photo_col, 0)
-        self._bee_summary = QLabel("")
-        self._bee_summary.setWordWrap(True)
-        self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
-        self._bee_summary.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._bee_summary.setStyleSheet("color: #c8e6c9; font-size: 12px;")
-        summ.addWidget(self._bee_summary, 1)
-        layout.addLayout(summ)
-
-        def _section(title: str) -> QLabel:
-            hdr = QLabel(title)
-            hdr.setStyleSheet(
-                "color: #a5d6a7; font-size: 12px; font-weight: bold; "
-                "padding: 6px 0 2px 0;")
-            layout.addWidget(hdr)
-            body = QLabel("")
-            body.setWordWrap(True)
-            body.setTextFormat(Qt.TextFormat.RichText)
-            body.setStyleSheet(
-                "color: #c8e6c9; font-size: 12px; padding: 8px; "
-                "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
-            body.setAlignment(Qt.AlignmentFlag.AlignTop)
-            layout.addWidget(body)
-            return body
-
-        self._bee_floral = _section("Floral hosts — plants that feed this bee")
-        self._bee_nesting = _section("Nesting — give it a place to live")
-        self._bee_forage = _section("Forage across the flight season")
-
-        self._bee_footnote = QLabel("")
-        self._bee_footnote.setWordWrap(True)
-        self._bee_footnote.setStyleSheet(
-            "color: #90a4ae; font-size: 12px; font-style: italic;")
-        layout.addWidget(self._bee_footnote)
-
-        # Re-render the bee photo when a warmed image lands (shared signal).
-        self.galleryImageReady.connect(self._render_bee_photo)
-
-        self._bee_page = page
-        self._tabs.addTab(page, "Bees")
-        # Recompute the plan lazily when the Bees tab is opened, so "in your
-        # design" and forage coverage stay live without recomputing on every
-        # plant placement. By the page, not its index: V3.07 put pages ahead
-        # of it.
-        self._tabs.currentChanged.connect(self._on_tab_changed)
-        self._update_bee_plan()
-
-    def _on_tab_changed(self, _idx: int):
-        if self._tabs.currentWidget() is getattr(self, "_bee_page", None):
-            self.refresh_bee_tab()
-
-    def _populate_bee_selector(self):
-        """Fill the target-bee combo, grouped genus-first with disabled headers."""
-        combo = self._bee_selector
-        combo.blockSignals(True)
-        combo.clear()
-        try:
-            from src.bee_habitat import list_target_bees
-            bees = list_target_bees()
-        except Exception:  # noqa: BLE001 — never let a data issue break the panel
-            bees = []
-        current_genus = None
-        for b in bees:
-            if b["genus"] != current_genus:
-                current_genus = b["genus"]
-                combo.addItem(f"── {current_genus} ──", userData=None)
-                idx = combo.count() - 1
-                item = combo.model().item(idx)
-                if item is not None:
-                    item.setEnabled(False)
-            if b["is_group"]:
-                label = f"    {b['common_name']} (any {b['genus']})"
-            elif b["common_name"] == b["scientific_name"]:
-                label = f"    {b['scientific_name']}"     # no English name (V3.05)
-            else:
-                label = f"    {b['common_name']}  ·  {b['scientific_name']}"
-            combo.addItem(label, userData=b["id"])
-        combo.blockSignals(False)
-        # Select the first real (enabled) entry.
-        for i in range(combo.count()):
-            if combo.itemData(i) is not None:
-                combo.setCurrentIndex(i)
-                break
-
-    def _current_bee_id(self):
-        return self._bee_selector.itemData(self._bee_selector.currentIndex())
-
-    def _placed_plant_ids(self) -> list[int]:
-        ids: list[int] = []
-        for p in (self._placed_plants or []):
-            pid = p.get("plant_id")
-            if pid is not None:
-                try:
-                    ids.append(int(pid))
-                except (TypeError, ValueError):
-                    pass
-        return ids
-
-    def _update_bee_plan(self, *args):
-        """Build and render the habitat plan for the selected bee."""
-        fid = self._current_bee_id()
-        if fid is None:
-            return
-        try:
-            from src.bee_habitat import build_bee_habitat_plan
-            plan = build_bee_habitat_plan(fid, plant_ids=self._placed_plant_ids())
-        except Exception:  # noqa: BLE001
-            plan = None
-        if plan is None:
-            self._bee_summary.setText("<i>No data for this bee yet.</i>")
-            for lbl in (self._bee_floral, self._bee_nesting, self._bee_forage):
-                lbl.setText("—")
-            self._bee_footnote.setText("")
-            return
-        self._bee_plan = plan
-        self._render_bee_summary(plan)
-        self._render_bee_photo()
-        self._render_bee_floral(plan)
-        self._render_bee_nesting(plan)
-        self._render_bee_forage(plan)
-        src = (plan.attrs or {}).get("source") or ""
-        conf = {"documented": "well-documented", "partial": "partly documented",
-                "thin": "sparse"}.get(plan.data_confidence, plan.data_confidence)
-        self._bee_footnote.setText(
-            f"Data confidence: {conf}. Floral matches shown as documented "
-            f"(plant↔bee records) or inferred (genus-level hosts). {src}")
-        # Keep the map overlay live when the user switches bee while it's on.
-        if getattr(self, "_bee_map_btn", None) is not None and self._bee_map_btn.isChecked():
-            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
-
-    def _render_bee_summary(self, plan):
-        bee = plan.bee or {}
-        a = plan.attrs or {}
-        tongue = a.get("tongue_length")
-        nest = a.get("nesting_habit")
-        season = a.get("flight_season")
-        cons = a.get("conservation_status")
-        bits = [f"<b>{bee.get('common_name','')}</b> "
-                f"<span style='color:#90a4ae;'><i>{bee.get('scientific_name','')}</i></span>"]
-        facts = []
-        if tongue and tongue != "unknown":
-            facts.append(f"{tongue}-tongued")
-        elif tongue == "unknown":
-            facts.append("tongue not characterised")
-        if season:
-            facts.append(f"flies {season}")
-        if facts:
-            bits.append("<span style='color:#a5d6a7;'>" + " · ".join(facts) + "</span>")
-        if cons:
-            colour = "#ff8a65" if "risk" in cons.lower() else "#90a4ae"
-            bits.append(f"<span style='color:{colour};'>{cons}</span>")
-        desc = bee.get("description") or ""
-        if desc:
-            bits.append(f"<span style='color:#c8e6c9;'>{desc}</span>")
-        self._bee_summary.setText("<br>".join(bits))
-
-    def _set_bee_credit(self, on: bool):
-        """Show the bee photo's attribution credit when a real photo is on screen
-        (CC-BY compliance); hide it for the 🐝 fallback."""
-        cr = getattr(self, "_bee_photo_credit", None)
-        if cr is None:
-            return
-        from src.image_cache import credit_line
-        bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
-        txt = credit_line(bee.get("image_attribution", ""),
-                          bee.get("image_license", "")) if on else ""
-        cr.setText(txt or "")
-        cr.setVisible(bool(txt))
-
-    def _render_bee_photo(self):
-        """Show the selected bee's cached photo (warming it if needed), else 🐝."""
-        plan = getattr(self, "_bee_plan", None)
-        if plan is None:
-            return
-        url = (plan.bee or {}).get("image_url") or ""
-        if not url:
-            self._bee_photo.setText("🐝")
-            self._bee_photo.setPixmap(QPixmap())
-            self._set_bee_credit(False)
-            return
-        try:
-            from src.image_cache import get_cached_image
-            path = get_cached_image(url)
-        except Exception:  # noqa: BLE001
-            path = None
-        if path:
-            pm = QPixmap(path)
-            if not pm.isNull():
-                self._bee_photo.setText("")
-                self._bee_photo.setScaledContents(True)
-                self._bee_photo.setPixmap(pm)
-                self._set_bee_credit(True)
-                return
-        # not cached yet — keep the icon and warm it in the background
-        self._bee_photo.setText("🐝")
-        self._set_bee_credit(False)
-        if url not in self._gallery_warmed:
-            self._gallery_warmed.add(url)
-            self._warm_gallery_images([(url,
-                                        (plan.bee or {}).get("image_attribution", ""),
-                                        (plan.bee or {}).get("image_license", ""))])
-
-    def _render_bee_floral(self, plan):
-        matches = plan.floral_matches or []
-        if not matches:
-            self._bee_floral.setText(
-                "<i>No floral-host plants matched — this is often a cuckoo bee "
-                "that feeds itself by parasitising a host bee (see Nesting).</i>")
-            return
-        in_design = [m for m in matches if m.in_users_list]
-        rows = []
-        if in_design:
-            rows.append("<b>In your design:</b>")
-            rows.extend(self._bee_match_row(m) for m in in_design[:12])
-            rows.append("<br><b>Also good to add:</b>")
-            others = [m for m in matches if not m.in_users_list]
-        else:
-            rows.append("<b>Plants that feed this bee:</b>")
-            others = matches
-        rows.extend(self._bee_match_row(m) for m in others[:14])
-        self._bee_floral.setText("".join(f"<div style='padding:1px 0;'>{r}</div>"
-                                          for r in rows))
-
-    def _bee_match_row(self, m) -> str:
-        bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
-        chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
-                f"padding:0 4px; font-size:12px;'>{txt}</span>"
-                if txt != "—" else "")     # a pill saying "—" says nothing (V3.05)
-        bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
-        basis = "" if m.confidence == "documented" else \
-                " <span style='color:#90a4ae; font-size:12px;'>(genus match)</span>"
-        star = "★ " if m.in_users_list else ""
-        return (f"{star}{m.common_name} {chip}{bloom}{basis}")
-
-    def _render_bee_nesting(self, plan):
-        g = plan.nesting
-        parts = [f"<b>{g.headline}</b>"]
-        if g.structures:
-            names = ", ".join(s.get("name", "") for s in g.structures)
-            parts.append(f"<span style='color:#a5d6a7;'>Structures: {names}</span>")
-        for a in g.actions:
-            parts.append(f"• {a}")
-        self._bee_nesting.setText("".join(f"<div style='padding:1px 0;'>{p}</div>"
-                                           for p in parts))
-
-    def _render_bee_forage(self, plan):
-        f = plan.forage
-        if not f.flight_months:
-            self._bee_forage.setText(f"<i>{f.note}</i>")
-            return
-        flight = set(f.flight_months)
-        covered = set(f.covered_months)
-        cells = []
-        for mo in range(3, 11):    # Mar–Oct strip
-            abbr = self._MONTH_ABBR[mo]
-            if mo not in flight:
-                style = "color:#4a5a4a;"
-            elif mo in covered:
-                style = "background:#1b5e20; color:#c8e6c9; border-radius:3px;"
-            else:
-                style = "background:#5d3a1a; color:#ffcc80; border-radius:3px;"
-            cells.append(f"<span style='{style} padding:2px 5px; margin:0 1px;'>{abbr}</span>")
-        strip = "".join(cells)
-        legend = ("<div style='color:#90a4ae; font-size:12px; padding-top:4px;'>"
-                  "green = a plant in bloom for it · orange = flying but no bloom "
-                  "(a gap to fill)</div>")
-        note = f"<div style='padding-top:4px;'>{f.note}</div>"
-        sug = ""
-        if f.suggestions:
-            names = ", ".join(s.common_name for s in f.suggestions[:6])
-            sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
-                   f"Fill the gap with: {names}</div>")
-        self._bee_forage.setText(strip + note + legend + sug)
-
-    def _bee_map_payload(self, plan) -> dict:
-        """Build the {bee, styles:{pid: fit}} payload the 2D map uses to recolour
-        by this bee's floral-resource value ('good'/'plausible' for graded
-        tongue-fit, else 'host')."""
-        styles = {}
-        for m in plan.floral_matches:
-            fit = m.tongue_form_fit if m.tongue_form_fit in ("good", "plausible") else "host"
-            styles[str(m.plant_id)] = fit
-        return {"bee": (plan.bee or {}).get("common_name", ""), "styles": styles}
-
-    def _on_bee_map_toggle(self, on: bool):
-        """Toggle the 'what the bee sees' recolour on the 2D map."""
-        plan = getattr(self, "_bee_plan", None)
-        if on and plan is not None:
-            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
-        else:
-            self.bee_map_overlay_cleared.emit()
-
-    def refresh_bee_tab(self):
-        """Re-render the bee plan against the current placed plants (call after
-        the design changes so 'in your design' / forage coverage stay live)."""
-        if hasattr(self, "_bee_selector"):
-            self._update_bee_plan()
+    def _build_food_tab(self):
+        """Design › Food (src/food_page.py): the owner's "what it feeds" page,
+        the Bees page and Planning's Wildlife and Harvest calendars in one. It
+        borrows this panel's photo warmer, and its map view rides the Bees
+        page's two signals, which app.py already sends to the map."""
+        from src.food_page import FoodPage
+        self._food = FoodPage(warm_images=self._warm_gallery_images)
+        self._food.map_overlay_requested.connect(self.bee_map_overlay_requested)
+        self._food.map_overlay_cleared.connect(self.bee_map_overlay_cleared)
+        self.galleryImageReady.connect(self._food.on_image_ready)
+        self._tabs.addTab(self._food, "Food")
 
     # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
 
@@ -1775,10 +1409,8 @@ class AnalysisPanel(QWidget):
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
-        # Keep the bee plan live if its tab is the one on screen.
-        if (getattr(self, "_bee_page", None) is not None
-                and self._tabs.currentWidget() is self._bee_page):
-            self.refresh_bee_tab()
+        # Food fills itself when it is on screen (the LiveRefresh poke below).
+        self._food.set_placed_plants(plants)
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
             self._phenology.refresh()

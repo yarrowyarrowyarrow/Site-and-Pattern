@@ -54,6 +54,7 @@ from src import indicator_style, target_size
 from src import onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.ui_style import APP_STYLE as _APP_STYLE
 from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
     open_reference_ecosystem as _open_reference_ecosystem)
@@ -198,10 +199,12 @@ class MainWindow(QMainWindow):
         self.planning_panel  = PlanningPanel(self)
         self.learn_panel     = LearnPanel(self)
 
-        # Tabbed side panel — five top-level tabs since V3.07 (Site,
-        # Placement, Design, Planning, Learn), by the question a person brings
-        # (F94, the owner's answers to the V3.05 surface audit). The panels
-        # build their pages; side_panel_layout moves them into place.
+        # Tabbed side panel — five top-level tabs (Site, Placement, Design,
+        # Share, Learn since V3.08), by the question a person brings (F94,
+        # the owner's answers to the V3.05 surface audit). The panels build
+        # their pages; side_panel_layout moves them into place, and makes the
+        # Share panel (self.share_panel). Planning's pages all moved: the
+        # panel stays, hidden, as the owner of their state and signals.
         from src.fill_tab_widget import FillTabWidget
         from src import side_panel_layout
         # allow_shrink + elide as a safety net: a strip can overflow the panel
@@ -946,7 +949,7 @@ class MainWindow(QMainWindow):
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
-        # Planning → Notes lists the map's 📝 Note pins; clicking one frames
+        # Site › Notes lists the map's 📝 Note pins; clicking one frames
         # it on the map (~40 m box around the pin).
         self.planning_panel.map_note_focus_requested.connect(
             lambda lat, lng: self.map_widget.fit_bounds(
@@ -988,11 +991,12 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.substitute_species(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
-        # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
+        # Report card deep-links: habitat value → Design › Habitat, cost →
+        # Share › Export, where the buy list is (V2.13; V3.08).
         self.on_this_design.open_habitat_analysis_requested.connect(
             lambda: _drf.open_habitat_analysis(self))
-        self.on_this_design.open_planning_requested.connect(
-            lambda: _drf.open_planning(self))
+        self.on_this_design.open_buying_requested.connect(
+            lambda: _drf.open_buying(self))
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
@@ -2142,7 +2146,7 @@ class MainWindow(QMainWindow):
         from src.design_inputs import boundary_area_m2
         self.planning_panel.set_site_area(boundary_area_m2(self._project))
 
-        # Map notes (Draw → 📝 Note) mirrored into Planning → Notes so the
+        # Map notes (Draw → 📝 Note) mirrored into Site › Notes so the
         # journal and the on-map observations read as one record (V2.25).
         map_notes = []
         for f in self._project.get("features", []):
@@ -2227,6 +2231,10 @@ class MainWindow(QMainWindow):
                 self.on_this_design.set_habitat_value(None)
         except Exception:
             pass
+        # A design opened or undone reaches the open 3D preview and Growth
+        # Snapshots here; an edit, through _mark_modified (V3.08, F89).
+        from src import follow_design
+        follow_design.request_sync(self)
 
     def _push_undo(self, entry: dict):
         # Shim → PersistenceController; see src/controllers/persistence.py.
@@ -2356,7 +2364,6 @@ class MainWindow(QMainWindow):
             "communities": lambda: show(self.polyculture_panel),
             "structures": lambda: show(self.structure_panel),
             "design": lambda: show(self.analysis_panel),
-            "planning": lambda: show(self.planning_panel),
         }.get(keyboard_help.letter_action(event))
         if act is not None:
             act()
@@ -2387,77 +2394,3 @@ def _vsep() -> QWidget:
     w.setFixedWidth(1)
     w.setStyleSheet("background: #37474f;")
     return w
-
-
-# ── Application-wide stylesheet ───────────────────────────────────────────────
-
-_APP_STYLE = """
-QMainWindow, QWidget {
-    background-color: #1a2a1a;
-    color: #c8e6c9;
-    font-family: 'Segoe UI', 'Arial', sans-serif;
-    font-size: 13px;
-}
-
-QMenuBar {
-    background-color: #1b2b1b;
-    color: #c8e6c9;
-    border-bottom: 1px solid #2e4a2e;
-}
-QMenuBar::item:selected {
-    background-color: #2e4a2e;
-}
-QMenu {
-    background-color: #1e2e1e;
-    color: #c8e6c9;
-    border: 1px solid #2e4a2e;
-}
-QMenu::item:selected {
-    background-color: #2e4a2e;
-}
-
-QToolBar {
-    background-color: #1b2b1b;
-    border-bottom: 1px solid #2e4a2e;
-    spacing: 4px;
-    padding: 2px 4px;
-}
-QToolButton {
-    color: #c8e6c9;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 3px 8px;
-}
-QToolButton:hover {
-    background: #2e4a2e;
-    border-color: #4a7a4a;
-}
-QToolButton:checked {
-    background: #2e5a2e;
-    border-color: #66bb6a;
-    color: #a5d6a7;
-}
-
-QStatusBar {
-    background-color: #152015;
-    color: #90a4ae;
-    border-top: 1px solid #2e4a2e;
-    font-size: 12px;
-}
-
-QSplitter::handle {
-    background-color: #2e4a2e;
-    width: 2px;
-}
-
-QScrollBar:vertical {
-    background: #1a2a1a;
-    width: 14px;
-}
-QScrollBar::handle:vertical {
-    background: #5a8a5a;
-    border-radius: 6px;
-    min-height: 24px;
-}
-"""

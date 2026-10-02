@@ -2,7 +2,7 @@
 src/design_inputs.py — what the design already knows, for the pages that ask
 (V3.05).
 
-Planning › Water asked for the garden's area (200 m²), its rain barrels (2),
+Planning › Water (Design › Water since V3.08) asked for the garden's area (200 m²), its rain barrels (2),
 swales (0) and ponds (0), with those defaults whatever the design held: the
 worked example's 88 m² yard was budgeted as 200 m², and a design with a pond
 placed still started from "0 ponds". The V3.05 surface audit found it. These

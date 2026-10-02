@@ -814,9 +814,9 @@ def _draw_site_walk(painter: QPainter, w: float, h: float, s: float,
                     rows: list) -> float:
     """The site-walk sheet (F32): a box, the question, what is already noted,
     and ruled lines to write on, for each field prompt. Taken outside on a
-    clipboard; what is written goes back in under Site › Field Notes."""
+    clipboard; what is written goes back in under Site › Notes."""
     y = _page_title(painter, w, s, "Walk the site",
-                    "Write what you notice; enter it in Site › Field Notes after")
+                    "Write what you notice; enter it in Site › Notes after")
     left, right = 15 * s, w - 15 * s
     # The ruling fills the page: as wide as narrow-ruled paper (about 6 mm)
     # when it can be, never so tight a pencil cannot use it, and every
