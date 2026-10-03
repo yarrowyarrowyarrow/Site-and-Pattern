@@ -32,7 +32,7 @@ each plant's mature spread. Click **Legend** in the map's lower-left corner, or 
 
 Click **⬡ Boundary** in the toolbar, then click on the map to add corner points. **Double-click** (or click the first point again) to close the polygon. The hardiness zone is auto-detected from the boundary and shown in the status bar.
 
-You can edit a boundary later by clicking it: drag white vertices to reshape, drag orange corner handles to resize, drag the interior to move. Right-click for colour, label toggles, or delete. **Esc** exits edit mode.
+You can edit a boundary later by clicking it, anywhere inside it or on its line (a plant, shape or structure inside it keeps its own click). Drag a blue handle to move that corner, an orange one (on the box around it) to resize, or the inside to move the whole boundary. The handles stay until you click outside the boundary or press **Esc**, so you can drag one corner after another (since V3.11; before, every corner needed a fresh click, and with plants on the map the boundary could not be clicked at all). Right-click inside it for colour, label toggles, or delete.
 
 ---
 

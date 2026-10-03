@@ -599,6 +599,33 @@ release tags and recreated the V-branch/tag collision CLAUDE.md warns about.
 Cleared with the documented `git tag -d $(git tag)`, but a clone that starts
 from scratch starts with that trap re-armed.
 
+## 24. Two right layering choices that hid the boundary (V2.37 → V3.11)
+
+**What happened.** The plants are drawn by one Leaflet canvas renderer
+(`canvasRenderer`, 04-tools.js), chosen because SVG plants starved the
+satellite tiles. V2.37 put the property boundary in its own pane under the
+overlay pane, so it is the ground everything is drawn on. Both were right.
+But a canvas renderer is one `<canvas>` **the size of the whole map**, kept for
+the session once anything is drawn on it, so from the first plant on it lay over
+the boundary everywhere and took every click, right-click and drag meant for
+it. From V2.37 to V3.10 the boundary could not be pressed in any design with a
+plant in it, and nobody noticed, because **a design with no plants still
+worked**: drawing a boundary and clicking it, the obvious check, passed. The
+owner reported it as a regression in V3.11.
+
+**The scar.** The fix found an older one: letting go of a dragged corner
+clicked on the handle, the click reached the map, and the map's "background
+click ends the edit" took it, so a boundary was reshaped one corner per press.
+
+**The rule.** The boundary takes no events itself; the map decides when an
+event is on it (`boundaryClicked` and its neighbours in `02-boundary.js`),
+treating anything `leaflet-interactive` as a layer on top. **Anything in a
+pane below the overlay pane cannot take a click once a plant exists** (the
+relationship web still sits there, F214). Test what the user sees in the state
+the user is in: `tests/test_boundary_press.py` presses the real page in
+headless Chromium **with a plant on the map**, sending each event to whatever
+the browser finds under that pixel.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

@@ -363,8 +363,8 @@ class TestStructuralCeilings(unittest.TestCase):
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # 238 now (V3.03)
-        (_HTML / "map" / "01-core.js", 950),           # 923 now (V3.03)
-        (_HTML / "map" / "02-boundary.js", 750),       # 675 now (V3.04)
+        (_HTML / "map" / "01-core.js", 950),           # 933 now (V3.11)
+        (_HTML / "map" / "02-boundary.js", 750),       # 743 now (V3.11)
         (_HTML / "map" / "03-plants.js", 950),         # 937 now (V3.03)
         (_HTML / "map" / "04-tools.js", 450),          # ~367 now
         # V2.26: +editable existing features (drag + scroll-resize of detected/

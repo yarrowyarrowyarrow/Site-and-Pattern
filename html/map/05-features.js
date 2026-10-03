@@ -880,10 +880,10 @@
           _resetPatternState();
           drawnItems.clearLayers();
       }
-      // Keep the placement crosshair over interactive layers (boundaries,
-      // shapes, …) instead of Leaflet's default pointer, so hovering a
-      // boundary while placing still reads as "click to place here". Idle
-      // mode (no crosshair) keeps the pointer as an edit affordance.
+      // Keep the placement crosshair over interactive layers (shapes,
+      // markers, …) instead of Leaflet's default pointer, so hovering one
+      // while placing still reads as "click to place here". Idle mode (no
+      // crosshair) keeps the pointer as an edit affordance.
       var _container = map.getContainer();
       if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
       else _container.classList.remove('placing');

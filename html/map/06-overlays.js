@@ -1302,7 +1302,11 @@
 
     // While pin-drop mode is armed, give the map a crosshair cursor so
     // the user has a visual "you are placing a point" affordance.
+    // The pin drop leaves the mode at 'none' (Python takes the next click), so
+    // the boundary asks this before treating a click as a press (V3.11).
+    var _sitePinDropArmed = false;
     function setSitePinDropMode(active) {
+      _sitePinDropArmed = !!active;
       try {
         map.getContainer().style.cursor = active ? 'crosshair' : '';
       } catch (e) {}

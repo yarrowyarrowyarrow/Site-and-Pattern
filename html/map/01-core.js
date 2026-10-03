@@ -614,6 +614,9 @@
       map.on('mousemove', _terrainRectOnMouseMove);
       map.on('mouseup',   _terrainRectOnMouseUp);
 
+      // A press inside the boundary being edited drags it (02-boundary.js).
+      map.on('mousedown', boundaryPressed);
+
       // Drag-to-reposition for placed plants (singletons + polyculture
       // groups). The drag itself is armed from the plant marker's own
       // mousedown via _onPlantMouseDown; the map-level handlers below
@@ -641,7 +644,10 @@
             && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
           L.DomEvent.stop(e);
           _resetPatternState();
+          return;
         }
+        // Otherwise a right-click on the boundary opens its menu (V3.11).
+        boundaryContextMenu(e);
       });
 
       // Escape exits edit mode / cancels in-progress polygon
@@ -657,10 +663,13 @@
         }
       });
 
-      // Click on map background while in boundary/shape-edit → exit edit mode
-      // (polygon clicks stop propagation so this only fires on background)
-      map.on('click', function() {
+      // A click on the boundary edits it, decided here because the plants'
+      // canvas covers its pane (02-boundary.js, V3.11). Any other click on the
+      // background ends an outline edit (shape and plant clicks stop
+      // propagation, so they never arrive here).
+      map.on('click', function(e) {
         if (currentMode !== 'none') return;
+        if (boundaryClicked(e)) return;
         if (shapeEditId !== null) {
           exitShapeEditMode();
         } else if (boundaryEditId !== null) {
@@ -795,6 +804,7 @@
         _drawPatternPreview(e.latlng);
       }
       if (typeof updateCursorFootprint === 'function') updateCursorFootprint(e.latlng);
+      boundaryHover(e);
     }
 
     function onMapDblClick(e) {

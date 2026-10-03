@@ -98,7 +98,7 @@ That block **is** the load-order definition. Rules that follow from it:
 | File | Owns |
 |------|------|
 | `html/map/01-core.js` | All shared state (`map`, `plantMarkers`, `boundaries`, `currentMode`, `bridge`, …), unified selection model + marquee, `initMap`, map click routing, context menu, `deleteSelected` |
-| `html/map/02-boundary.js` | Boundary draw/edit (vertex + bbox-scale handles), length/area labels, footprint-outline editing |
+| `html/map/02-boundary.js` | Boundary draw/edit (vertex + bbox-scale handles), length/area labels, footprint-outline editing. **The boundary polygon takes no events** (V3.11): the plants' canvas covers its pane, so the map decides when a click, right-click or drag is on it (`boundaryClicked`, `boundaryContextMenu`, `boundaryPressed`, `boundaryHover`) |
 | `html/map/03-plants.js` | `escH()` HTML-escape guard, plant markers (`placePlantMarker`/`loadPlantMarker`), drag-to-reposition + drag-scope cycling, pattern placement (row/grid/circle), `plantLabels` |
 | `html/map/04-tools.js` | Canvas renderer, geometry utils, snap-to-grid, canopy preview, growth timeline (`setTimelineYearByPlantId`), season view, measurement, annotations |
 | `html/map/05-features.js` | Structures, hedgerows, custom shapes, `setMode` (mode control), satellite alignment (`initMapboxLayer`), layer visibility, project load/`clearAll`, zoom |

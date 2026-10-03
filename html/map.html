@@ -180,10 +180,13 @@
     }
 
     /* While a placement tool is armed (setMode adds .placing), keep the
-       crosshair over interactive layers — boundaries, shapes, markers —
-       instead of Leaflet's default pointer, so hovering a boundary still
-       reads as "click to place here". Idle mode keeps the pointer. */
+       crosshair over interactive layers — shapes, markers — instead of
+       Leaflet's default pointer, so hovering one still reads as "click to
+       place here". Idle mode keeps the pointer. */
     .leaflet-container.placing .leaflet-interactive { cursor: crosshair !important; }
+    /* Idle, over a boundary: it can be pressed to edit it (boundaryHover,
+       V3.11). Not while the map is being dragged, which keeps its own hand. */
+    body:not(.leaflet-dragging) .leaflet-container.sp-over-boundary { cursor: pointer; }
   </style>
 </head>
 <body>

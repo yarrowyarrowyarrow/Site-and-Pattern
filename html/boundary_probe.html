@@ -1,0 +1,193 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">pressing…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// Pressing the boundary (dev page + the harness behind
+// tests/test_boundary_press.py, V3.11). The owner: "I want to be able to press
+// the boundary to change it." From the first plant on, nothing pressed it: the
+// plants' canvas covers the whole map in the pane above the boundary's and took
+// every click. This page drives the real map.html in a frame with mouse events
+// sent to whatever is under each point (document.elementFromPoint, the browser's
+// own hit test), so a layer drawn over another catches them as it would a hand.
+//
+// Results go into document.title as JSON so a headless `--dump-dom` run can read
+// them without CDP, as aspect_probe.html and slope_probe.html do.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;     // a yard about 42 x 44 m
+// Five corners, none on the corners of its box, so a corner's handle is not
+// under a scale handle.
+const YARD = [[LAT - D, LNG], [LAT - D * 0.6, LNG + D * 1.6], [LAT + D, LNG + D * 1.4],
+              [LAT + D * 0.9, LNG - D * 1.5], [LAT - D * 0.6, LNG - D * 1.6]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Pixel of a map point, in the frame's own coordinates.
+function px(lat, lng) {
+  const p = w.map.latLngToContainerPoint([lat, lng]);
+  const r = w.map.getContainer().getBoundingClientRect();
+  return { x: r.left + p.x, y: r.top + p.y };
+}
+function at(lat, lng, dx, dy) { const p = px(lat, lng); return { x: p.x + (dx || 0), y: p.y + (dy || 0) }; }
+
+function fire(type, p, mods) {
+  const el = w.document.elementFromPoint(p.x, p.y);
+  const right = type === 'contextmenu';
+  el.dispatchEvent(new w.MouseEvent(type, Object.assign({
+    bubbles: true, cancelable: true, view: w, clientX: p.x, clientY: p.y,
+    button: right ? 2 : 0, buttons: type === 'mousedown' ? 1 : 0,
+  }, mods || {})));
+  return el;
+}
+function click(p, mods) { fire('mousedown', p, mods); fire('mouseup', p, mods); fire('click', p, mods); }
+function drag(a, b) {
+  fire('mousedown', a);
+  for (let i = 1; i <= 6; i++) {
+    fire('mousemove', { x: a.x + (b.x - a.x) * i / 6, y: a.y + (b.y - a.y) * i / 6 });
+  }
+  fire('mouseup', b);
+  fire('click', b);
+}
+
+function calledWith(name) { return calls.filter(c => c[0] === name); }
+function idle() {
+  w.hideContextMenu();
+  if (w.boundaryEditId !== null) w.exitBoundaryEditMode();
+  if (w.shapeEditId !== null) w.exitShapeEditMode();
+  w.setMode('none');
+  calls = [];
+}
+function points() { return w.boundaries[0].points.map(q => q.slice()); }
+// How far corner i moved, in pixels at the current view (a pan moves nothing).
+function shiftedPx(before, after, i) {
+  i = i || 0;
+  const a = px(before[i][0], before[i][1]), b = px(after[i][0], after[i][1]);
+  return Math.round(Math.hypot(b.x - a.x, b.y - a.y));
+}
+
+async function run() {
+  // Until initMap runs, `map` is the frame's <div id="map"> (a named element).
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  // Every bridge call is recorded rather than sent to Python.
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD }), false);
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [90, 90] });   // room outside it
+  await wait(300);
+  const ground = at(LAT - D * 0.4, LNG - D * 0.4);    // open ground inside the yard
+  const outside = at(LAT - D * 1.3, LNG);              // past the south corner
+
+  // No plants yet: no canvas over the boundary.
+  idle(); click(ground);
+  out.no_plants = { edit: w.boundaryEditId };
+
+  // A plant, a shed and a pond inside the yard. The plant's canvas now covers
+  // the whole map, over the boundary's pane.
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D, 4, 'herb', null);
+  w.loadShape({ shape_id: 's1', shape_type: 'Shed', label: 'Shed',
+    points: [[LAT + D * 0.2, LNG - D * 1.4], [LAT + D * 0.2, LNG - D * 0.8],
+             [LAT + D * 0.8, LNG - D * 0.8], [LAT + D * 0.8, LNG - D * 1.4]],
+    fill_color: '#8d6e63', stroke_color: '#5d4037', fill_opacity: 0.4 });
+  w.placeStructureOnMap({ id: 'pond', name: 'Pond', size_m: 4, shape: 'circle' },
+                        LAT - D * 0.5, LNG + D * 1.0);
+  await wait(100);
+  const plant = at(LAT + D * 0.5, LNG + D);
+  const shed = at(LAT + D * 0.5, LNG - D * 1.1);
+  const pond = at(LAT - D * 0.5, LNG + D * 1.0);
+  out.canvas_over_ground = w.document.elementFromPoint(ground.x, ground.y).tagName;
+
+  idle(); click(ground);
+  out.press = { edit: w.boundaryEditId, handles: w.boundaryEditHandles.length };
+  click(outside);
+  out.press_outside = { edit: w.boundaryEditId };
+
+  // On the north line, and 3 px outside it.
+  const north = [(YARD[2][0] + YARD[3][0]) / 2, (YARD[2][1] + YARD[3][1]) / 2];
+  idle(); click(at(north[0], north[1]));
+  out.press_line = { edit: w.boundaryEditId };
+  idle(); click(at(north[0], north[1], 0, -3));
+  out.press_near_line = { edit: w.boundaryEditId };
+
+  idle(); click(plant);
+  out.press_plant = { edit: w.boundaryEditId, plant_clicks: calledWith('onPlantMarkerClick').length };
+  idle(); click(shed);
+  out.press_shed = { edit: w.boundaryEditId, shape_edit: w.shapeEditId };
+  idle(); click(pond);
+  out.press_pond = { edit: w.boundaryEditId };
+
+  idle(); click(ground, { shiftKey: true });
+  out.shift_press = { edit: w.boundaryEditId,
+                      selected: w.selectedItems.filter(s => s.kind === 'boundary').length };
+  w.clearSelection();
+
+  idle(); fire('contextmenu', ground);
+  const menu = w.document.getElementById('_pd_ctx_menu');
+  out.right_click = { menu: !!menu, remove: !!menu && menu.textContent.indexOf('Remove Boundary') >= 0 };
+
+  // In edit mode: a drag in the middle moves the boundary, once.
+  idle(); click(ground);
+  let before = points();
+  drag(ground, { x: ground.x + 40, y: ground.y });
+  out.drag_middle = { moved_px: shiftedPx(before, points()),
+                      sent: calledWith('onBoundaryGeomChanged').length, edit: w.boundaryEditId };
+  // A press that never moves changes nothing and says nothing.
+  calls = []; before = points();
+  click(ground);
+  out.press_still = { moved_px: shiftedPx(before, points()),
+                      sent: calledWith('onBoundaryGeomChanged').length, edit: w.boundaryEditId };
+  // A drag that starts on the plant moves the plant, not the boundary.
+  calls = []; before = points();
+  drag(at(LAT + D * 0.5, LNG + D), at(LAT + D * 0.5, LNG + D, 30, 0));
+  out.drag_plant = { moved_px: shiftedPx(before, points()),
+                     sent: calledWith('onBoundaryGeomChanged').length };
+  // A corner dragged and let go: the release clicks on its handle, and the
+  // edit carries on to the next corner.
+  calls = []; before = points();
+  const corner = at(before[3][0], before[3][1]);
+  drag(corner, { x: corner.x + 25, y: corner.y + 20 });
+  out.drag_corner = { moved_px: shiftedPx(before, points(), 3),
+                      edit: w.boundaryEditId, handles: w.boundaryEditHandles.length };
+
+  // While placing, a click inside the yard places, once.
+  idle();
+  w.setMode('plant', { id: 7, common_name: 'Harebell', spacing_m: 0.3, plant_type: 'herb' });
+  click(at(LAT - D * 0.2, LNG - D * 0.2));
+  out.placing = { placed: calledWith('onPlantPlaced').length, edit: w.boundaryEditId };
+
+  // The pin drop leaves the mode at 'none': its click is for the pin only.
+  idle(); w.setSitePinDropMode(true);
+  click(ground);
+  out.pin_drop = { map_clicks: calledWith('onMapClick').length, edit: w.boundaryEditId };
+  w.setSitePinDropMode(false);
+
+  // A hidden boundary is not there to press.
+  idle(); w.setBoundaryVisible(false);
+  click(ground);
+  out.hidden = { edit: w.boundaryEditId };
+  w.setBoundaryVisible(true);
+
+  // The pointer says the boundary can be pressed. The canvas reports a move to
+  // the map at most every 32 ms, so each move waits.
+  idle(); await wait(60);
+  fire('mousemove', ground);
+  const over = w.map.getContainer().classList.contains('sp-over-boundary');
+  await wait(60);
+  fire('mousemove', outside);
+  out.hover = { over: over, outside: w.map.getContainer().classList.contains('sp-over-boundary') };
+}
+
+function report(obj) {
+  document.title = 'MEASURED ' + JSON.stringify(obj);
+  document.getElementById('out').textContent = JSON.stringify(obj, null, 1);
+}
+
+run().then(() => report(out)).catch(e => report(Object.assign(out, { error: String(e && e.stack || e) })));
+</script>
+</body></html>
