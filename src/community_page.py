@@ -15,8 +15,9 @@ It shares the plant page's frame over the map's right edge
 (``src/species_flyout.py``): the community's name and its facts, Place, its
 members as small photographs three across, then its description (the pattern
 card the panel writes). A member's photograph opens that plant's page in the
-same frame, with the way back above it. The panel's own card is left as it was
-until the owner has used this one (the plan's T9).
+same frame, with the way back above it. Since V3.11 a photograph keeps its
+type's colour as a thin frame, names wrap to two lines rather than being cut,
+and the panel stops repeating the page (``set_details_in_page``).
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPixmap
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
     QToolButton, QVBoxLayout, QWidget,
@@ -33,6 +34,10 @@ from PyQt6.QtWidgets import (
 #: A member's photograph: small, so most communities fit on one screen.
 TILE = QSize(96, 64)
 COLUMNS = 3
+#: The type's colour round a photograph, so a photo still says what kind of
+#: plant it is (the owner, V3.11: the colours "disappear with the plants that
+#: have pictures").
+FRAME = 3
 
 _HEAD = "color: #e8f5e9; font-size: 16px; font-weight: bold;"
 _DIM = "color: #90a4ae; font-size: 12px;"
@@ -194,17 +199,23 @@ class CommunityPage(QWidget):
             btn.setIconSize(TILE)
             btn.setIcon(QIcon(self._tile_pixmap(pid, m)))
             name = m.get("common_name") or f"Plant #{pid}"
-            btn.setText(btn.fontMetrics().elidedText(
-                name, Qt.TextElideMode.ElideRight, TILE.width()))
+            btn.setStyleSheet(_TILE_STYLE)
+            btn.ensurePolished()        # measure in the tile's own font
+            btn.setText(two_lines(name, btn.fontMetrics(), TILE.width()))
             btn.setAccessibleName(name)
             btn.setToolTip(f"{name}: open its page")
-            btn.setStyleSheet(_TILE_STYLE)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(
                 lambda _c=False, p=pid: self.member_requested.emit({"id": p}))
             self._grid.addWidget(btn, len(seen) // COLUMNS, len(seen) % COLUMNS)
             self._tiles[pid] = btn
             seen.append(pid)
+        # One height for every tile, so a one-line name's photograph lines up
+        # with a two-line name's beside it.
+        tallest = max((b.sizeHint().height() for b in self._tiles.values()),
+                      default=0)
+        for b in self._tiles.values():
+            b.setMinimumHeight(tallest)
         n = len(seen)
         self._members_head.setText(
             f"The plants ({n} species)" if n else "No plants in it yet")
@@ -231,21 +242,29 @@ class CommunityPage(QWidget):
                 path = get_cached_image(url)
             except Exception:                              # noqa: BLE001
                 path = None
+        from src.member_colors import plant_color
+        colour = QColor(plant_color({**(member or {}), **plant}))
         pix = QPixmap(path) if path else QPixmap()
         if not pix.isNull():
             scaled = pix.scaled(TILE, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                                 Qt.TransformationMode.SmoothTransformation)
             x = max(0, (scaled.width() - TILE.width()) // 2)
             y = max(0, (scaled.height() - TILE.height()) // 2)
-            return scaled.copy(x, y, TILE.width(), TILE.height())
+            photo = scaled.copy(x, y, TILE.width(), TILE.height())
+            painter = QPainter(photo)
+            w, h = TILE.width(), TILE.height()
+            for x, y, fw, fh in ((0, 0, w, FRAME), (0, h - FRAME, w, FRAME),
+                                 (0, 0, FRAME, h), (w - FRAME, 0, FRAME, h)):
+                painter.fillRect(x, y, fw, fh, colour)
+            painter.end()
+            return photo
         if url and self._photo_warmer is not None:
             try:
                 self._photo_warmer(plant)
             except Exception:                              # noqa: BLE001
                 pass
-        from src.member_colors import plant_color
         swatch = QPixmap(TILE)
-        swatch.fill(QColor(plant_color({**(member or {}), **plant})))
+        swatch.fill(colour)
         return swatch
 
     def _on_link(self, href: str) -> None:
@@ -254,6 +273,22 @@ class CommunityPage(QWidget):
                 self.community_requested.emit(int(href.split(":", 1)[1]))
             except ValueError:
                 pass
+
+
+def two_lines(name: str, metrics, width: int) -> str:
+    """A tile's name on up to two lines of ``width`` px, cut only when it will
+    not fit in two ("Northern Bedstraw" read "Northern Bed…" on one, V3.09)."""
+    words, first = name.split(), ""
+    while words and metrics.horizontalAdvance(
+            (first + " " + words[0]).strip()) <= width:
+        first = (first + " " + words.pop(0)).strip()
+    if not first:                    # one word longer than the tile
+        return metrics.elidedText(name, Qt.TextElideMode.ElideRight, width)
+    rest = " ".join(words)
+    if not rest:
+        return first
+    return first + "\n" + metrics.elidedText(rest, Qt.TextElideMode.ElideRight,
+                                             width)
 
 
 def _facts_for(polyculture: dict) -> str:

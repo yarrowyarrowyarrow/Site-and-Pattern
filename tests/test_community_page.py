@@ -83,6 +83,55 @@ class TestCommunityPage(unittest.TestCase):
         page._place.click()
         self.assertEqual(placed, [self.community["id"]])
 
+    def test_a_photograph_keeps_its_types_colour_as_a_frame(self):
+        # The owner, V3.11: the colours "disappear with the plants that have
+        # pictures. Maybe a simple thin border can remain".
+        from unittest import mock
+        from PyQt6.QtGui import QColor, QImage
+        from src.community_page import FRAME, TILE, CommunityPage
+        from src.member_colors import plant_color
+        photo = os.path.join(_TMP, "blue.png")
+        img = QImage(240, 160, QImage.Format.Format_RGB32)
+        img.fill(QColor("#0000ff"))
+        img.save(photo)
+        plant = {"id": 7, "plant_type": "Tree", "image_url": "http://x/7.jpg"}
+        page = CommunityPage(plant_fn=lambda _pid: plant)
+        self.addCleanup(page.close)
+        with mock.patch("src.image_cache.get_cached_image",
+                        return_value=photo):
+            pix = page._tile_pixmap(7, {"plant_id": 7})
+        out = pix.toImage()
+        self.assertEqual((out.width(), out.height()),
+                         (TILE.width(), TILE.height()))
+        frame = QColor(plant_color(plant)).name()
+        self.assertEqual(out.pixelColor(0, 0).name(), frame)
+        self.assertEqual(out.pixelColor(TILE.width() - 1,
+                                        TILE.height() // 2).name(), frame)
+        self.assertEqual(out.pixelColor(FRAME + 2, FRAME + 2).name(), "#0000ff")
+        self.assertEqual(out.pixelColor(TILE.width() // 2,
+                                        TILE.height() // 2).name(), "#0000ff")
+
+    def test_a_name_wraps_to_two_lines_before_it_is_cut(self):
+        from src.community_page import two_lines
+
+        class _Metrics:                     # 8 px a character, for certainty
+            def horizontalAdvance(self, text):
+                return 8 * len(text)
+
+            def elidedText(self, text, _mode, width):
+                if 8 * len(text) <= width:
+                    return text
+                return text[:width // 8 - 1] + "…"
+
+        m = _Metrics()
+        self.assertEqual(two_lines("Yarrow", m, 96), "Yarrow")
+        self.assertEqual(two_lines("Northern Bedstraw", m, 96),
+                         "Northern\nBedstraw")
+        self.assertEqual(two_lines("Western Spotted Coralroot", m, 96),
+                         "Western\nSpotted Cor…")
+        self.assertEqual(two_lines("Chokecherryblossoms", m, 96),
+                         "Chokecherry…")
+
     def test_the_frame_drops_into_a_plant_and_back(self):
         from src.community_flyout import CommunityFlyout as SpeciesFlyout
         holder = QWidget()
@@ -145,6 +194,29 @@ class TestTheListOpensIt(unittest.TestCase):
         panel._armed = True                 # the list is a palette now
         panel._on_list_choose(index)
         self.assertEqual(len(asked), 1, "a page opened while placing")
+
+    def test_with_the_page_beside_it_the_list_keeps_its_height(self):
+        # V3.11: the card under the list repeated the page and squeezed the
+        # list to a few rows. With the page, only the name and Place stay.
+        from src.polyculture_panel import _TREE_EXPANDED_MAX, PolyculturePanel
+        panel = PolyculturePanel()
+        self.addCleanup(panel.close)
+        panel.set_details_in_page(True)
+        item = self._first_community(panel)
+        panel.polyculture_tree.setCurrentItem(item)
+        self.assertEqual(panel.polyculture_tree.maximumHeight(),
+                         _TREE_EXPANDED_MAX)
+        self.assertFalse(panel._community_header_row.isHidden())
+        self.assertTrue(panel._place_btn.subject)
+        self.assertTrue(panel.detail_text.isHidden())
+        self.assertTrue(panel._members_label.isHidden())
+        # Without the page (the panel on its own) the card is still drawn.
+        alone = PolyculturePanel()
+        self.addCleanup(alone.close)
+        alone.polyculture_tree.setCurrentItem(self._first_community(alone))
+        self.assertLess(alone.polyculture_tree.maximumHeight(),
+                        _TREE_EXPANDED_MAX)
+        self.assertFalse(alone._members_label.isHidden())
 
 
 if __name__ == "__main__":

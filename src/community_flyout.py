@@ -33,6 +33,14 @@ class CommunityFlyout(SpeciesFlyout):
         # The way back to the community a member's page was opened from.
         self._back = QPushButton("◀ Back")
         self._back.setObjectName("communityBack")
+        # A link back, at the page's left edge, not a second toolbar (V3.11).
+        self._back.setStyleSheet(
+            "QPushButton { text-align: left; padding: 6px 14px; "
+            "color: #a5d6a7; background: transparent; border: none; "
+            "border-bottom: 1px solid #2e4a2e; font-size: 13px; }"
+            "QPushButton:hover { color: #e8f5e9; }"
+            "QPushButton:focus { border: 2px solid #ffe082; }")
+        self._back.setCursor(Qt.CursorShape.PointingHandCursor)
         self._back.clicked.connect(self.back_to_community)
         self._back.hide()
         col.insertWidget(0, self._back)
@@ -92,6 +100,7 @@ def wire(main, fly: CommunityFlyout) -> None:
     """Connect the community list and the page (from ``species_flyout.install``,
     so the page costs MainWindow no methods)."""
     communities = main.polyculture_panel
+    communities.set_details_in_page(True)
     communities.page_requested.connect(
         lambda cid: _on_community_requested(main, cid))
     communities.armedChanged.connect(

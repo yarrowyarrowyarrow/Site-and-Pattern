@@ -1989,6 +1989,13 @@ class PolyculturePanel(QWidget):
         elif not self._armed and pid is not None:
             self.page_requested.emit(int(pid))
 
+    #: Set by ``community_flyout.wire``: a chosen community is shown on its
+    #: page beside the list, so the panel keeps the list and draws no card.
+    _details_in_page = False
+
+    def set_details_in_page(self, on: bool) -> None:
+        self._details_in_page = bool(on)
+
     def place_by_id(self, polyculture_id: int) -> None:
         """Place this community: its page's Place button (F206)."""
         self._place_community(int(polyculture_id))
@@ -2038,9 +2045,14 @@ class PolyculturePanel(QWidget):
         is_top_level = has_selection and not parent_is_community
         self.variation_btn.setEnabled(is_top_level)
 
-        if not has_selection:
+        in_page = self._details_in_page
+        if not has_selection or in_page:
             # Let the community list reclaim the whole panel: uncap the tree
             # and hide the (empty) description card so it doesn't hold space.
+            # Since V3.11 also when the community's page beside the list shows
+            # it (src/community_flyout.py): the card repeated the page and
+            # squeezed the list to a few rows, which the owner found awkward.
+            # Its name and Place stay, as Plants keeps its Place button.
             self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
             self._community_header_row.setVisible(False)
             self._place_btn.set_subject("")
@@ -2049,17 +2061,19 @@ class PolyculturePanel(QWidget):
             self.detail_text.clear()
             self.detail_text.setVisible(False)
             self._render_member_rows([])
-            return
-
-        # A community is selected: shrink the tree to _TREE_COLLAPSED_ROWS so
-        # the members list + description card get the room. Derive the height
-        # from the live row height (+4 for the frame) rather than a fixed px so
-        # it tracks the actual row metrics.
-        row_h = self.polyculture_tree.sizeHintForRow(0)
-        if row_h <= 0:
-            row_h = 19  # fallback before first layout
-        self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
-        self._apply_tree_floor()
+            if not has_selection:
+                return
+        else:
+            # A community is selected: shrink the tree to _TREE_COLLAPSED_ROWS
+            # so the members list + description card get the room. Derive the
+            # height from the live row height (+4 for the frame) rather than a
+            # fixed px so it tracks the actual row metrics.
+            row_h = self.polyculture_tree.sizeHintForRow(0)
+            if row_h <= 0:
+                row_h = 19  # fallback before first layout
+            self.polyculture_tree.setMaximumHeight(
+                row_h * _TREE_COLLAPSED_ROWS + 4)
+            self._apply_tree_floor()
 
         polyculture = polycultures.get_polyculture_by_id(current_id)
         if not polyculture:
@@ -2078,6 +2092,8 @@ class PolyculturePanel(QWidget):
         )
         self._community_header_row.setVisible(True)
         self._place_btn.set_subject(name if name != "—" else "")
+        if in_page:
+            return
         self._members_label.setVisible(True)
         self.description_toggle_btn.setVisible(True)
         self.detail_text.setVisible(self._show_description)
