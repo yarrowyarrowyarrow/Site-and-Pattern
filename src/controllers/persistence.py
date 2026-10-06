@@ -589,6 +589,7 @@ class PersistenceController:
         m.map_widget.clear_all()
         # clearAll() leaves these alone, so wipe them explicitly before redraw.
         m.map_widget.clear_annotations()
+        m.map_widget.clear_measure()          # part of the design since V3.11
         m.map_widget.clear_shade_overlay()
 
         data = project_io.project_to_map_data(proj)
@@ -636,6 +637,8 @@ class PersistenceController:
         for ann in data.get("annotations", []):
             m.map_widget.place_annotation(
                 ann["annotation_id"], ann["lat"], ann["lng"], ann["text"])
+        for ms in data.get("measurements", []):
+            m.map_widget.load_measurement(ms["id"], ms["points"])
 
         auto_contours = data.get("auto_contours") or []
         if auto_contours:

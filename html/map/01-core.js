@@ -11,11 +11,10 @@
     var map, osmLayer, satelliteLayer, mapboxSat, drawnItems, drawControl;
 
     // ── Multi-boundary state ─────────────────────────────────────────────────
-    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths, showArea}
+    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths,
+    // showArea, showHandles, name} (the last two V3.11, 02-boundary.js)
     var boundaries      = [];
     var boundaryAreaUnit = 0;          // 0=m² 1=ha 2=acre 3=km²
-    // Legacy single refs used only by setBoundaryVisible/clearAll redirects
-    var _legacyBoundaryLayer = null;   // unused sentinel
 
     // Edit-mode state for boundary vertex dragging
     var boundaryEditId      = null;    // id of boundary currently in edit mode
@@ -71,10 +70,10 @@
 
     // ── Unified selection model ──────────────────────────────────────────────
     // Each entry is a `_pd`-style descriptor with at least { kind, ... }
-    // where kind ∈ 'plant' | 'boundary' | 'structure' | 'shape'
+    // where kind ∈ 'plant' | 'boundary' | 'structure' | 'shape' | 'measure'
     // | 'sunpath' and the rest of the fields identify the underlying object
-    // (markerId, boundaryId, shapeId, etc.). 'shape' covers OSM buildings,
-    // shade-casting footprints and custom area shapes — all in shapeLayers.
+    // (markerId, boundaryId, shapeId, measureId, etc.). 'shape' covers OSM
+    // buildings, shade-casting footprints and custom area shapes (shapeLayers).
     // Keeping a flat list lets marquee/Delete/right-click operate uniformly
     // across feature types — the previous code had per-type isolated state.
     var selectedItems = [];
@@ -108,6 +107,7 @@
       if (a.kind === 'boundary')  return a.boundaryId === b.boundaryId;
       if (a.kind === 'structure') return a.structureId === b.structureId;
       if (a.kind === 'shape')     return a.shapeId === b.shapeId;
+      if (a.kind === 'measure')   return a.measureId === b.measureId;
       if (a.kind === 'sunpath')   return true;   // single sunpath at a time
       return false;
     }
@@ -213,6 +213,7 @@
           });
         });
       }
+      refreshMeasureSelection();                      // 04-tools.js
       _updateSelectionBadge();
     }
 
@@ -422,6 +423,7 @@
           if (hit) hits.push({ kind: 'shape', shapeId: shid });
         });
       }
+      measureMarqueeHits(bounds, hits);               // 04-tools.js
       // Sun path — represented by its centre tooltip; we check the
       // existing centre marker via sunPathLayer if present.
       if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
@@ -437,54 +439,48 @@
       return hits;
     }
 
-    // Delete every currently-selected item across types, emitting the
-    // appropriate per-type bridge signal so Python project state stays
-    // synchronised. Uses a snapshot since underlying maps mutate.
+    // Delete every currently-selected item across types. Each is taken off the
+    // map here, and Python is told once, with the lot (V3.11, F215): until then
+    // each kind was its own bridge call and so its own undo step, and five
+    // plants and two boundaries took three presses of Ctrl+Z to bring back.
+    // Python hands each kind to the handler its own removal always used.
     function deleteSelected() {
       var snapshot = selectedItems.slice();
       selectedItems = [];
-      var removedPlants = [];   // batch plant removals into one bridge call
+      var gone = { plants: [], boundaries: [], structures: [], shapes: [],
+                   measurements: [], sunpath: false };
       for (var i = 0; i < snapshot.length; i++) {
         var item = snapshot[i];
         if (item.kind === 'plant') {
           var c = plantMarkers[item.markerId];
           if (c && c._pd) {
-            removedPlants.push({ plantId: c._pd.plantId,
-                                 lat: c._pd.lat, lng: c._pd.lng });
+            gone.plants.push({ plantId: c._pd.plantId,
+                               lat: c._pd.lat, lng: c._pd.lng });
           }
           _removeSinglePlantMarker(item.markerId, true);
         } else if (item.kind === 'boundary') {
-          if (boundaryEditId === item.boundaryId && typeof exitBoundaryEditMode === 'function') {
-            exitBoundaryEditMode();
-          }
-          if (typeof _removeBoundaryEntry === 'function') {
-            _removeBoundaryEntry(item.boundaryId);
-            if (bridge) bridge.onBoundaryRemoved(item.boundaryId);
-          }
+          if (boundaryEditId === item.boundaryId) exitBoundaryEditMode();
+          _removeBoundaryEntry(item.boundaryId);
+          gone.boundaries.push(item.boundaryId);
         } else if (item.kind === 'structure') {
           var sg2 = structureMarkers[item.structureId];
           if (sg2) { map.removeLayer(sg2); delete structureMarkers[item.structureId]; }
-          if (bridge && bridge.onStructureRemoved) {
-            bridge.onStructureRemoved(item.structureId, item.structId,
-                                      item.lat, item.lng);
-          }
+          gone.structures.push([item.structureId, item.structId, item.lat, item.lng]);
         } else if (item.kind === 'shape') {
-          if (typeof shapeEditId !== 'undefined' && shapeEditId === item.shapeId
-              && typeof exitShapeEditMode === 'function') {
-            exitShapeEditMode();
-          }
-          var shg = (typeof shapeLayers !== 'undefined') ? shapeLayers[item.shapeId] : null;
+          if (shapeEditId === item.shapeId) exitShapeEditMode();
+          var shg = shapeLayers[item.shapeId];
           if (shg) { map.removeLayer(shg); delete shapeLayers[item.shapeId]; }
-          if (bridge && bridge.onShapeRemoved) bridge.onShapeRemoved(item.shapeId);
+          gone.shapes.push(item.shapeId);
+        } else if (item.kind === 'measure') {
+          _removeMeasureById(item.measureId);
+          gone.measurements.push(item.measureId);
         } else if (item.kind === 'sunpath') {
-          if (typeof clearSunPath === 'function') {
-            clearSunPath();
-            if (bridge) bridge.onSunPathRemoved();
-          }
+          clearSunPath();
+          gone.sunpath = true;
         }
       }
-      if (removedPlants.length && bridge && bridge.onPlantsRemovedBatch) {
-        bridge.onPlantsRemovedBatch(JSON.stringify(removedPlants));
+      if (snapshot.length && bridge && bridge.onSelectionDeleted) {
+        bridge.onSelectionDeleted(JSON.stringify(gone));
       }
       _refreshSelectionVisuals();
     }
@@ -705,6 +701,8 @@
 
       // Enter acts at the centre, Shift+Enter finishes (V3.02).
       if (typeof initMapKeyboard === 'function') initMapKeyboard();
+      // The legend follows what is drawn (V3.11, 12-legend.js).
+      if (typeof initLegend === 'function') initLegend();
     }
 
     // Emit the current view centre to Python — wired to map.moveend

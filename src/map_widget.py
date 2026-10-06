@@ -77,11 +77,30 @@ class MapBridge(QObject):
     # Boundary geometry changed via vertex/move/scale drag (id, new points)
     boundary_geom_changed = pyqtSignal(str, list)
 
-    # Boundary color or label toggles changed (id, color, showLengths, showArea)
-    boundary_props_changed = pyqtSignal(str, str, bool, bool)
+    # Boundary color or a switch changed (id, color, showLengths, showArea,
+    # showHandles: the corner handles, V3.11)
+    boundary_props_changed = pyqtSignal(str, str, bool, bool, bool)
 
     # Boundary removed via context menu (id)
     boundary_removed = pyqtSignal(str)
+
+    # Name these boundaries (ids, their name now): from the legend or the
+    # boundary's menu; Python asks for the name (V3.11, F217)
+    boundary_name_requested = pyqtSignal(list, str)
+
+    # A measurement is part of the design (V3.11, F215): made (id, two
+    # [lat, lng] points) and removed (ids)
+    measurement_added = pyqtSignal(str, list)
+    measurements_removed = pyqtSignal(list)
+
+    # Everything one Delete removed, as one JSON payload, so it is one undo
+    # step (V3.11): {plants, boundaries, structures, shapes, measurements,
+    # sunpath}
+    selection_deleted = pyqtSignal(str)
+
+    # The legend's switches (plants 'type'|'species', boundaries
+    # 'simple'|'named'), to be remembered (V3.11, F217)
+    legend_detail_changed = pyqtSignal(str, str)
 
     # A plant was placed on the map
     plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
@@ -213,13 +232,52 @@ class MapBridge(QObject):
         except Exception:
             pass
 
-    @pyqtSlot(str, str, bool, bool)
-    def onBoundaryPropsChanged(self, bid: str, color: str, show_lengths: bool, show_area: bool):
-        self.boundary_props_changed.emit(bid, color, show_lengths, show_area)
+    @pyqtSlot(str, str, bool, bool, bool)
+    def onBoundaryPropsChanged(self, bid: str, color: str, show_lengths: bool,
+                               show_area: bool, show_handles: bool):
+        self.boundary_props_changed.emit(bid, color, show_lengths, show_area,
+                                         show_handles)
 
     @pyqtSlot(str)
     def onBoundaryRemoved(self, bid: str):
         self.boundary_removed.emit(bid)
+
+    @pyqtSlot(str, str)
+    def onBoundaryNameRequested(self, ids_json: str, current: str):
+        import json
+        try:
+            ids = [str(i) for i in json.loads(ids_json or "[]")]
+        except Exception:
+            return
+        if ids:
+            self.boundary_name_requested.emit(ids, current or "")
+
+    @pyqtSlot(str, str)
+    def onMeasurementAdded(self, measure_id: str, coords_json: str):
+        import json
+        try:
+            coords = json.loads(coords_json)
+        except Exception:
+            return
+        self.measurement_added.emit(measure_id, coords)
+
+    @pyqtSlot(str)
+    def onMeasurementsRemoved(self, ids_json: str):
+        import json
+        try:
+            ids = [str(i) for i in json.loads(ids_json or "[]")]
+        except Exception:
+            return
+        if ids:
+            self.measurements_removed.emit(ids)
+
+    @pyqtSlot(str)
+    def onSelectionDeleted(self, payload_json: str):
+        self.selection_deleted.emit(payload_json or "{}")
+
+    @pyqtSlot(str, str)
+    def onLegendDetailChanged(self, plants: str, boundaries: str):
+        self.legend_detail_changed.emit(plants or "", boundaries or "")
 
     @pyqtSlot(float, float)
     def onSunAnchorPlaced(self, lat: float, lng: float):
@@ -995,6 +1053,10 @@ class MapWidget(QWebEngineView):
         """Delete every currently-selected map item."""
         self.run_js(map_js.delete_selected())
 
+    def load_measurement(self, measure_id: str, points: list):
+        """Draw a measurement from the design, telling nobody (V3.11)."""
+        self.run_js(map_js.load_measurement(measure_id, points))
+
     def place_plant_marker(self, plant_id: int, common_name: str,
                             lat: float, lng: float,
                             spacing_m: float = 1.0, plant_type: str = "herb",
@@ -1017,10 +1079,18 @@ class MapWidget(QWebEngineView):
             plant_id, from_lat, from_lng, to_lat, to_lng,
         ))
 
+    def set_boundary_names(self, boundary_ids: list, name: str):
+        """The name the legend shows for these boundaries (V3.11)."""
+        self.run_js(map_js.set_boundary_names(boundary_ids, name))
+
     def set_crosshair_cursor(self):
         """Force a crosshair cursor on the map — used while arming a
         plant-community click-to-place gesture."""
         self.run_js(map_js.set_crosshair_cursor())
+
+    def set_legend_detail(self, plants: str, boundaries: str):
+        """Plants by type or species, boundaries simple or named (V3.11)."""
+        self.run_js(map_js.set_legend_detail(plants, boundaries))
 
     def set_plant_group_for_latest(self, plant_id: int, lat: float, lng: float,
                                     group_id: str):

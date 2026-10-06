@@ -23,6 +23,7 @@ tile servers for its basemap, and the suite stays offline (tests/__init__.py).
 Self-skips with no Chromium. The source guards at the bottom need neither.
 """
 
+import html
 import json
 import os
 import pathlib
@@ -38,14 +39,16 @@ from tests.test_scene3d_render import _find_chromium, _Server  # noqa: E402
 _MAP = pathlib.Path(__file__).resolve().parent.parent / "html" / "map"
 
 
-def _run_probe():
+def _run_probe(page: str = "boundary_probe.html"):
+    """Run one of html/'s probe pages headlessly; its MEASURED JSON. Shared by
+    tests/test_measurements.py and tests/test_legend.py (V3.11)."""
     chrome = _find_chromium()
     try:
         server = _Server()
     except OSError as exc:                              # no loopback port
         raise unittest.SkipTest(f"cannot bind a local port: {exc}")
     try:
-        url = f"http://127.0.0.1:{server.port}/boundary_probe.html"
+        url = f"http://127.0.0.1:{server.port}/{page}"
         proc = subprocess.run(
             [chrome, "--headless", "--no-sandbox",
              "--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE 127.0.0.1",
@@ -60,7 +63,9 @@ def _run_probe():
     if not match:
         raise unittest.SkipTest(
             f"the probe never reported (chromium exit {proc.returncode})")
-    return json.loads(match.group(1))
+    # --dump-dom writes the title as text, so a < or & in it comes back as an
+    # entity (a legend line can hold either).
+    return json.loads(html.unescape(match.group(1)))
 
 
 @unittest.skipIf(_find_chromium() is None,

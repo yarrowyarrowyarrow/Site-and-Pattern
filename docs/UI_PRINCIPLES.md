@@ -163,9 +163,11 @@ self-evident, and to fix that instead.
       actually drawn on (a symbol 3:1), a checkbox's box 3:1, every control at
       least 24 px, and nothing that scrolls sideways at 1366 × 768, in a wide
       font as well as a narrow one. A colour that means something
-      is in the legend, and the legend names only what is drawn. (Until V3.03 two
-      panels drew 90% of their text at 11 px, and the map's legend listed six of
-      eleven plant types and a community outline nothing drew.)
+      is in the legend, and the legend names only what is drawn, and only while
+      it is. (Until V3.03 two panels drew 90% of their text at 11 px, and the
+      map's legend listed six of eleven plant types and a community outline
+      nothing drew; until V3.11 it listed every kind of thing whether or not any
+      was on the map, and a structure colour no structure is drawn in.)
 
 ## Where this is enforced
 

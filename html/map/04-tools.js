@@ -194,87 +194,139 @@
     }
 
     // ── Measurement tool ───────────────────────────────────────────────────────
+    // A measurement is part of the design since V3.11 (F215). Until then it
+    // lived only here: Python never heard of one, so undo could not take it
+    // back (Ctrl+Z after measuring undid the thing before it), the selection
+    // box could not catch it, nothing saved it and nothing cleared it. Now
+    // the page draws it and tells Python (onMeasurementAdded), Python keeps it
+    // as a feature, and a redraw (open, undo) puts it back via loadMeasurement.
+    var _MEASURE_LOOK   = { color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9 };
+    // Selected: solid and heavier, since the selection's yellow is its colour.
+    var _MEASURE_PICKED = { color: '#fdd835', weight: 4, dashArray: null, opacity: 1 };
+
+    function _measureDot(ll) {
+      return L.circleMarker(ll, { radius: 5, color: '#fdd835',
+                                  fillColor: '#fdd835', fillOpacity: 1 });
+    }
+
     function handleMeasureClick(lat, lng) {
       if (!measureStart) {
-        // First click — drop a temporary start marker and remember the
-        // anchor. We don't commit a layerGroup yet because the user
-        // hasn't picked the second endpoint.
-        if (_measureWipMarker) {
-          try { map.removeLayer(_measureWipMarker); } catch (e) {}
-        }
+        // First click: a dot where it starts, nothing committed yet.
+        _cancelMeasureStart();
         measureStart = L.latLng(lat, lng);
-        _measureWipMarker = L.circleMarker([lat, lng], {
-          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
-        }).addTo(map);
-      } else {
-        // Second click — commit a measurement layer group with the
-        // line, both endpoint markers, and a midpoint distance label.
-        var end = L.latLng(lat, lng);
-        var dist = measureStart.distanceTo(end);
-        var labelText = dist < 1000
-          ? dist.toFixed(1) + ' m'
-          : (dist / 1000).toFixed(2) + ' km';
-
-        var group = L.layerGroup();
-        var line = L.polyline([measureStart, end], {
-          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9,
-          interactive: true
-        }).addTo(group);
-
-        var startMk = L.circleMarker([measureStart.lat, measureStart.lng], {
-          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
-        }).addTo(group);
-        var endMk = L.circleMarker([end.lat, end.lng], {
-          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
-        }).addTo(group);
-
-        var mid = L.latLng(
-          (measureStart.lat + end.lat) / 2,
-          (measureStart.lng + end.lng) / 2
-        );
-        var labelTip = L.tooltip({
-          permanent: true, direction: 'top', offset: [0, -10],
-          className: 'measure-label', opacity: 0.95
-        }).setContent(labelText).setLatLng(mid);
-        labelTip.addTo(group);
-
-        if (measureVisible) group.addTo(map);
-        measureLayers.push(group);
-
-        // Right-click any part of this measurement to delete just it.
-        var deleteHandler = function(ev) {
-          L.DomEvent.stop(ev);
-          _removeMeasureGroup(group);
-        };
-        line.on('contextmenu', deleteHandler);
-        startMk.on('contextmenu', deleteHandler);
-        endMk.on('contextmenu', deleteHandler);
-
-        if (_measureWipMarker) {
-          try { map.removeLayer(_measureWipMarker); } catch (e) {}
-          _measureWipMarker = null;
-        }
-        measureStart = null; // ready for next measurement
+        _measureWipMarker = _measureDot([lat, lng]).addTo(map);
+        return;
+      }
+      var pts = [[measureStart.lat, measureStart.lng], [lat, lng]];
+      var id = 'm' + Date.now() + Math.random().toString(36).slice(2, 6);
+      _cancelMeasureStart();                 // ready for the next one
+      drawMeasurement(id, pts);
+      if (bridge && bridge.onMeasurementAdded) {
+        bridge.onMeasurementAdded(id, JSON.stringify(pts));
       }
     }
 
-    function _removeMeasureGroup(group) {
-      try { map.removeLayer(group); } catch (e) {}
-      var idx = measureLayers.indexOf(group);
-      if (idx >= 0) measureLayers.splice(idx, 1);
+    // Drop a half-made measurement. Any change of mode does (setMode): until
+    // V3.11 its dot stayed after Esc and the next measurement started from it.
+    function _cancelMeasureStart() {
+      if (_measureWipMarker) {
+        try { map.removeLayer(_measureWipMarker); } catch (e) {}
+      }
+      _measureWipMarker = null;
+      measureStart = null;
     }
 
+    // One measurement: a dashed line, a dot at each end, its length on top.
+    function drawMeasurement(id, pts) {
+      var a = L.latLng(pts[0]), b = L.latLng(pts[1]);
+      var dist = a.distanceTo(b);
+      var group = L.layerGroup();
+      var line = L.polyline([a, b], Object.assign({ interactive: true },
+                                                  _MEASURE_LOOK)).addTo(group);
+      var ends = [_measureDot(a).addTo(group), _measureDot(b).addTo(group)];
+      L.tooltip({ permanent: true, direction: 'top', offset: [0, -10],
+                  className: 'measure-label', opacity: 0.95 })
+        .setContent(dist < 1000 ? dist.toFixed(1) + ' m'
+                                : (dist / 1000).toFixed(2) + ' km')
+        .setLatLng([(a.lat + b.lat) / 2, (a.lng + b.lng) / 2]).addTo(group);
+      group._measure = { id: id, points: [[a.lat, a.lng], [b.lat, b.lng]],
+                         line: line, ends: ends };
+      [line].concat(ends).forEach(function (part) {
+        // Right-click removes just this one; Shift/Ctrl/Cmd-click selects it.
+        part.on('contextmenu', function (ev) {
+          L.DomEvent.stop(ev);
+          _removeMeasureById(id);
+          _refreshSelectionVisuals();
+          if (bridge && bridge.onMeasurementsRemoved) {
+            bridge.onMeasurementsRemoved(JSON.stringify([id]));
+          }
+        });
+        part.on('click', function (ev) {
+          var oe = ev.originalEvent;
+          if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+            L.DomEvent.stop(ev);
+            toggleSelection({ kind: 'measure', measureId: id });
+          }
+        });
+      });
+      if (measureVisible) group.addTo(map);
+      measureLayers.push(group);
+      return group;
+    }
+
+    // From the design (render_project_to_map): draw it, tell nobody.
+    function loadMeasurement(id, pts) {
+      _removeMeasureById(id);
+      if (pts && pts.length === 2) drawMeasurement(id, pts);
+    }
+
+    function _removeMeasureById(id) {
+      for (var i = measureLayers.length - 1; i >= 0; i--) {
+        var g = measureLayers[i];
+        if (g._measure && g._measure.id === id) {
+          try { map.removeLayer(g); } catch (e) {}
+          measureLayers.splice(i, 1);
+        }
+      }
+      for (var j = selectedItems.length - 1; j >= 0; j--) {
+        if (selectedItems[j].kind === 'measure' &&
+            selectedItems[j].measureId === id) selectedItems.splice(j, 1);
+      }
+    }
+
+    // The selection's look, from _refreshSelectionVisuals (01-core.js).
+    function refreshMeasureSelection() {
+      measureLayers.forEach(function (g) {
+        var m = g._measure;
+        if (!m) return;
+        var sel = _selectionContains({ kind: 'measure', measureId: m.id });
+        m.line.setStyle(sel ? _MEASURE_PICKED : _MEASURE_LOOK);
+        m.ends.forEach(function (dot) { dot.setRadius(sel ? 7 : 5); });
+      });
+    }
+
+    // The selection box catches a shown measurement when an end, or its middle
+    // (where its length is written), is inside (_marqueeHitTest, 01-core.js).
+    function measureMarqueeHits(bounds, hits) {
+      if (!measureVisible) return;
+      measureLayers.forEach(function (g) {
+        var p = g._measure && g._measure.points;
+        if (!p) return;
+        var mid = [(p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2];
+        if ([p[0], p[1], mid].some(function (q) { return bounds.contains(L.latLng(q)); })) {
+          hits.push({ kind: 'measure', measureId: g._measure.id });
+        }
+      });
+    }
+
+    // Every measurement off the map and nothing said: a redraw is about to
+    // load the design's own (render_project_to_map), or a new design starts.
     function clearMeasure() {
-      // Remove every committed measurement and any in-progress anchor.
       measureLayers.forEach(function(g) {
         try { map.removeLayer(g); } catch (e) {}
       });
       measureLayers = [];
-      if (_measureWipMarker) {
-        try { map.removeLayer(_measureWipMarker); } catch (e) {}
-        _measureWipMarker = null;
-      }
-      measureStart = null;
+      _cancelMeasureStart();
     }
 
     function setMeasureVisible(visible) {

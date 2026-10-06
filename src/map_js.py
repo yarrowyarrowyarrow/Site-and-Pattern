@@ -139,6 +139,13 @@ def clear_measure() -> str:
     return "clearMeasure();"
 
 
+def load_measurement(measure_id: str, points: list) -> str:
+    """Draw a measurement from the design without telling Python about it
+    (open, undo's redraw; F215, V3.11). ``points`` is two ``[lat, lng]``."""
+    pts = [[float(p[0]), float(p[1])] for p in points]
+    return f"loadMeasurement({_jsstr(measure_id)}, {_jsobj(pts)});"
+
+
 def clear_all() -> str:
     return "clearAll();"
 
@@ -158,6 +165,12 @@ def delete_selected() -> str:
 
 def toggle_legend() -> str:
     return "toggleLegend();"
+
+
+def set_legend_detail(plants: str, boundaries: str) -> str:
+    """How far down the legend goes (F217, V3.11): plants by ``'type'`` or
+    ``'species'``, boundaries ``'simple'`` or ``'named'``."""
+    return f"setLegendDetail({_jsstr(plants)}, {_jsstr(boundaries)});"
 
 
 def focus_by_keyboard() -> str:
@@ -204,6 +217,13 @@ def load_boundary(boundary_data: dict, fit: bool = True) -> str:
     pass ``fit=False`` so the camera stays put."""
     fit_lit = "true" if fit else "false"
     return f"loadBoundary({_jslit(json.dumps(boundary_data))}, {fit_lit});"
+
+
+def set_boundary_names(boundary_ids: list, name: str) -> str:
+    """Give these boundaries the name the legend shows (F217, V3.11); an
+    empty name takes it away, and they read "Boundary" again."""
+    return (f"setBoundaryNames({_jsobj([str(b) for b in boundary_ids])}, "
+            f"{_jsstr(name or '')});")
 
 
 def undo_boundary(boundary_id: str) -> str:

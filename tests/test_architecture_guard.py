@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2503 now (V3.05)
+        (_SRC / "app.py", 2600),                       # 2417 now (V3.11)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -99,7 +99,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
         # in flow modules; the terrain-queue block is the natural extraction
         # when this trips again.
-        (_SRC / "controllers" / "map_events.py", 2100),# 1904 now (V3.03)
+        (_SRC / "controllers" / "map_events.py", 2100),# 1988 now (V3.11)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
         (_SRC / "polyculture_panel.py", 2900),         # 2569 now (V3.05)
@@ -362,17 +362,24 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "scene3d_window.py", 950),             # 950 now (V3.05): split before adding
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
-        (_HTML / "map.html", 400),                     # 238 now (V3.03)
-        (_HTML / "map" / "01-core.js", 950),           # 933 now (V3.11)
-        (_HTML / "map" / "02-boundary.js", 750),       # 743 now (V3.11)
-        (_HTML / "map" / "03-plants.js", 950),         # 937 now (V3.03)
-        (_HTML / "map" / "04-tools.js", 450),          # ~367 now
+        (_HTML / "map.html", 400),                     # 260 now (V3.11)
+        (_HTML / "map" / "01-core.js", 950),           # 930 now (V3.11)
+        (_HTML / "map" / "02-boundary.js", 750),       # 626 now (V3.11)
+        # V3.11 (F216, F217): the corner-handle switch and names had 7 lines
+        # left, so a shape's outline editing, which only lived here because it
+        # copies the boundary's vertex drag, moved out whole, loaded straight
+        # after this file so nothing runs in a new order.
+        (_HTML / "map" / "02b-shape-edit.js", 200),    # 142 now
+        (_HTML / "map" / "03-plants.js", 950),         # 939 now (V3.11)
+        (_HTML / "map" / "04-tools.js", 450),          # 378 now (V3.11)
         # V2.26: +editable existing features (drag + scroll-resize of detected/
         # marked trees & buildings) — in-domain growth for the features file,
         # kept together to avoid the cross-chunk load-order traps a split adds.
-        (_HTML / "map" / "05-features.js", 1200),      # 1184 now (V3.04)
+        (_HTML / "map" / "05-features.js", 1200),      # 1193 now (V3.11): 7 left,
+        # and the next feature here needs a split first (structures or the
+        # satellite alignment are the seams)
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
-        (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
+        (_HTML / "map" / "06-overlays.js", 1560),      # 1323 now (V3.11)
         # V2.31 (F5): the relationship-web overlay went into its own chunk
         # rather than onto 06-overlays.js, which was already the biggest of
         # the six. Geometry stays in src/relationship_graph.py — if this file
@@ -390,10 +397,14 @@ class TestStructuralCeilings(unittest.TestCase):
         # V3.03 (F195): how a plant is drawn (its colour, its outline, its
         # shape) and the legend that says so, in one place: the type table
         # moved here from 03-plants.js.
-        (_HTML / "map" / "10-plant-key.js", 200),      # 117 now
+        (_HTML / "map" / "10-plant-key.js", 200),      # 102 now (V3.11)
         # V3.06 (F205): the north arrow and the scale bar, opted in on
         # arrival, as the map's furniture rather than any one overlay's.
         (_HTML / "map" / "11-map-furniture.js", 200),  # 132 now
+        # V3.11 (F217): the legend, built from what is drawn, opted in on
+        # arrival: a pure model and renderer node can test, the part that reads
+        # the map, and the species numbers drawn on the plants.
+        (_HTML / "map" / "12-legend.js", 520),         # 460 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in

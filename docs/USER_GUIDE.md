@@ -24,7 +24,20 @@ grasses lime…) and ringed in a darker shade of the same colour, so it stands o
 against the yard. A plant in a community is coloured the same way, and a plant you
 gave its own colour keeps it. With **🌳 Canopy** on, a dashed light-green ring shows
 each plant's mature spread. Click **Legend** in the map's lower-left corner, or press
-**L** with the map focused, for the key.
+**L** with the map focused, for the key. It names only what is on the map, and only
+while it is shown: hide the boundaries with the View bar and "Boundary" leaves it.
+Two of its sections have a switch on their title (remembered between sessions):
+
+- **Plants: Type | Species.** *Type* lists the kinds of plant on the map (Tree,
+  Wildflower…), plus any plant you gave its own colour, by name. *Species* lists every
+  species, numbered and with how many are placed, and puts each number on its plants
+  while the legend is open (zoom in if a plant is too small to hold one). The numbers
+  are the ones the PDF's planting map and the buy list use, so a 7 is the same plant on
+  screen and on paper.
+- **Boundaries: Simple | Named.** *Simple* is one line, "Boundary". *Named* gives a line
+  to each colour and name; click a line to name it (say "City park land" for the blue
+  ones and "Private lot" for the green), or right-click a boundary → **Name…** to name
+  just that one.
 
 ---
 
@@ -32,7 +45,7 @@ each plant's mature spread. Click **Legend** in the map's lower-left corner, or 
 
 Click **⬡ Boundary** in the toolbar, then click on the map to add corner points. **Double-click** (or click the first point again) to close the polygon. The hardiness zone is auto-detected from the boundary and shown in the status bar.
 
-You can edit a boundary later by clicking it, anywhere inside it or on its line (a plant, shape or structure inside it keeps its own click). Drag a blue handle to move that corner, an orange one (on the box around it) to resize, or the inside to move the whole boundary. The handles stay until you click outside the boundary or press **Esc**, so you can drag one corner after another (since V3.11; before, every corner needed a fresh click, and with plants on the map the boundary could not be clicked at all). Right-click inside it for colour, label toggles, or delete.
+You can edit a boundary later by clicking it, anywhere inside it or on its line (a plant, shape or structure inside it keeps its own click). Drag a blue handle to move that corner, an orange one (on the box around it) to resize, or the inside to move the whole boundary. The handles stay until you click outside the boundary or press **Esc**, so you can drag one corner after another (since V3.11; before, every corner needed a fresh click, and with plants on the map the boundary could not be clicked at all). Right-click inside it for **Edge Labels**, **Area Label**, **Corner Handles**, **Name…**, Remove Boundary and its colour. With **Corner Handles** off, clicking the boundary shows no handles, so it cannot be dragged out of shape by accident; switch it back on and they appear straight away. Each boundary remembers its own switches.
 
 ---
 
@@ -175,7 +188,8 @@ The **Communities** page beside it (**Placement → Communities**) ships with 18
 
 ## 7. Selection & multi-delete
 
-- **Shift+drag** on empty map → marquee-selects every plant, boundary, and sun-path inside the rectangle.
+- **Shift+drag** on empty map → marquee-selects every plant, boundary, structure, shape, measurement and sun path inside the rectangle (a measurement when an end or its length label is inside).
+- **Delete** removes the whole selection as one step, so one **Ctrl+Z** brings all of it back.
 - **Shift+click** an item to toggle its membership in the selection.
 - **Ctrl+Shift+drag** = additive marquee (extends instead of replaces).
 - The top-right **selection badge** shows the count plus **Delete** and **Clear** links.
@@ -184,7 +198,7 @@ The **Communities** page beside it (**Placement → Communities**) ships with 18
 
 ## 8. Other drawing tools
 
-- **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
+- **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Since V3.11 a measurement is part of the design: **Ctrl+Z** takes it back, it is saved with the design, and Shift+click or the selection box selects it. **Esc** after the first click drops it. Use the View bar's Measurement toggle to hide them all without deleting.
 - **📝 Note** — click to drop a draggable text note. Right-click the note to remove it. Every map note is also listed under **Site → Notes** — click one there to jump to it on the map.
 - **▱ Shape** (beside Boundary) — opens a small form: pick a **Type**, set what it needs, then **Draw on the map**. Areas are beds and surfaces (Garden Bed, Pathway, Patio / Deck, Lawn, Mulch, Water Feature, Custom, and the lawn-conversion zones), with a label, fill, outline and an optional shade height. Lines are **Hedge**, **Fence**, **Living fence** and **Windbreak**, with a width, plant spacing and species. Click the corners (or along the line) and double-click to finish. The button stays lit while you draw; **Esc** stops.
 - **Placement → Structures** — search the structure library (bee hotels, brush piles, ponds…) and place one.

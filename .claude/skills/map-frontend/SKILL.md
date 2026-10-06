@@ -1,6 +1,6 @@
 ---
 name: map-frontend
-description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, eleven files since V3.06; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
+description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, thirteen files since V3.11; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
 ---
 
 # Map frontend — Leaflet inside QWebEngineView
@@ -58,12 +58,16 @@ into six files loaded **in order** at the bottom of `html/map.html` (a seventh,
 `07-network.js`, joined them in V2.31 for the relationship-web overlay, an
 eighth, `08-footprint.js`, in V2.99 for the footprint under the cursor, a
 ninth, `09-keyboard.js`, in V3.02 for the map without a mouse, and a tenth,
-`10-plant-key.js`, in V3.03 for how a plant is drawn and the legend, and an
-eleventh, `11-map-furniture.js`, in V3.06 for the north arrow and the scale bar):
+`10-plant-key.js`, in V3.03 for how a plant is drawn, an eleventh,
+`11-map-furniture.js`, in V3.06 for the north arrow and the scale bar, and in
+V3.11 `02b-shape-edit.js` (a shape's outline editing, moved out of
+02-boundary.js unchanged and loaded straight after it) and `12-legend.js`
+(the legend, built from what is drawn)):
 
 ```html
 <script src="map/01-core.js"></script>
 <script src="map/02-boundary.js"></script>
+<script src="map/02b-shape-edit.js"></script>
 <script src="map/03-plants.js"></script>
 <script src="map/04-tools.js"></script>
 <script src="map/05-features.js"></script>
@@ -73,6 +77,7 @@ eleventh, `11-map-furniture.js`, in V3.06 for the north arrow and the scale bar)
 <script src="map/09-keyboard.js"></script>
 <script src="map/10-plant-key.js"></script>
 <script src="map/11-map-furniture.js"></script>
+<script src="map/12-legend.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -98,16 +103,18 @@ That block **is** the load-order definition. Rules that follow from it:
 | File | Owns |
 |------|------|
 | `html/map/01-core.js` | All shared state (`map`, `plantMarkers`, `boundaries`, `currentMode`, `bridge`, …), unified selection model + marquee, `initMap`, map click routing, context menu, `deleteSelected` |
-| `html/map/02-boundary.js` | Boundary draw/edit (vertex + bbox-scale handles), length/area labels, footprint-outline editing. **The boundary polygon takes no events** (V3.11): the plants' canvas covers its pane, so the map decides when a click, right-click or drag is on it (`boundaryClicked`, `boundaryContextMenu`, `boundaryPressed`, `boundaryHover`) |
+| `html/map/02-boundary.js` | Boundary draw/edit (vertex + bbox-scale handles), length/area labels, the right-click menu (labels, **Corner Handles** `showHandles`, **Name…** via `askBoundaryName` → Python's dialog → `setBoundaryNames`; V3.11). **The boundary polygon takes no events** (V3.11): the plants' canvas covers its pane, so the map decides when a click, right-click or drag is on it (`boundaryClicked`, `boundaryContextMenu`, `boundaryPressed`, `boundaryHover`) |
+| `html/map/02b-shape-edit.js` | A shape's outline editing (imported buildings, drawn footprints): vertex drag and whole-outline drag. Moved out of 02-boundary.js in V3.11, unchanged |
 | `html/map/03-plants.js` | `escH()` HTML-escape guard, plant markers (`placePlantMarker`/`loadPlantMarker`), drag-to-reposition + drag-scope cycling, pattern placement (row/grid/circle), `plantLabels` |
-| `html/map/04-tools.js` | Canvas renderer, geometry utils, snap-to-grid, canopy preview, growth timeline (`setTimelineYearByPlantId`), season view, measurement, annotations |
+| `html/map/04-tools.js` | Canvas renderer, geometry utils, snap-to-grid, canopy preview, growth timeline (`setTimelineYearByPlantId`), season view, measurement, annotations. **A measurement is part of the design (V3.11)**: the page tells Python (`onMeasurementAdded` / `onMeasurementsRemoved`), `loadMeasurement` draws one from the design saying nothing, and it is selectable (`refreshMeasureSelection`, `measureMarqueeHits`) |
 | `html/map/05-features.js` | Structures, hedgerows, custom shapes, `setMode` (mode control), satellite alignment (`initMapboxLayer`), layer visibility, project load/`clearAll`, zoom |
-| `html/map/06-overlays.js` | Sun path, sectors, contours/terrain, shade/slope/water/splat/site-photo image overlays, wind + wind shadow + snow catch, legend, site pin, **QWebChannel bootstrap** |
+| `html/map/06-overlays.js` | Sun path, sectors, contours/terrain, shade/slope/water/splat/site-photo image overlays, wind + wind shadow + snow catch, site pin, **QWebChannel bootstrap** |
 | `html/map/07-network.js` | The relationship-web overlay (F5): draws what `src/relationship_graph.py` computed |
 | `html/map/08-footprint.js` | The footprint under the cursor while placing (F191, V2.99): the plant, a Qty cluster, a pattern's first plant, a community's members (shape from `src/placement_footprint.py`). Built once per arming, moved per mousemove, in a pane that takes no pointer events |
 | `html/map/09-keyboard.js` | The map without a mouse (F195, V3.02): Enter on the focused map calls `onMapClick` at the centre with whatever tool is chosen, Shift+Enter calls `finishDrawing`, a centre mark and the footprint follow the keyboard, the map's own focus ring (the browser's sat outside a container that fills the page), and `L.Marker.mergeOptions({keyboard: false})`, so a label marker is not a Tab stop unless it passes `keyboard: true` because activating it does something. **A new click tool belongs in `_KEYBOARD_TOOLS`** or Enter will not act for it |
 | `html/map/10-plant-key.js` | How a plant is drawn (F195, V3.03): `TYPE_COLORS` (mirrors `src/member_colors.py`, the one table; a test fails if they differ), `plantColour(pd)` (your colour, else the type's) and `plantMarkerStyle(colour)` (an outline 60% darker, 2 px), which every place that draws or restores a marker calls; the legend's plant section, built from the table; and `roundCircles`, which makes every `L.Circle` as wide as it is tall, because Leaflet 1.9's `acos` drew sub-metre circles up to 44% out of round. No other script reads `TYPE_COLORS` (tested) |
 | `html/map/11-map-furniture.js` | The north arrow and the scale bar (F205, V3.06): `setNorthArrow(on)` (a Leaflet control under the zoom buttons; the map never rotates, so it never turns) and `setScaleBar(on, unit)` (a `<button>` at the bottom centre, outside the map's container so a click never places anything; a click switches km and m and tells Python through `bridge.onScaleUnitChanged`). `scaleBarFor(metresPerPixel, maxPx, unit)` is pure and run in node by `tests/test_map_furniture.py`. The switches and their memory are `src/map_furniture_flow.py` |
+| `html/map/12-legend.js` | The legend (F217, V3.11): names only what is on the map and shown, rebuilt on Leaflet's `layeradd`/`layerremove` (debounced, only while open; its own number markers and every tooltip are ignored, or it would chase itself). Pure `legendModel(snap, detail)` + `legendHtml(sections, targets)` run in node by `tests/test_legend.py`; `legendSnapshot()` reads the map. Plants by Type or Species (numbered by `speciesNumbers`, which mirrors `planting_map._numbering`, a test keeps them equal; the numbers are drawn on the plants while open), boundaries Simple or Named. `toggleLegend`/`setLegendVisible` live here; `setLegendDetail` comes from `src/legend_flow.py`. Every colour from a design file passes `_colour` before it reaches a style attribute |
 
 ## Bridge: Python → JS
 
@@ -211,11 +218,12 @@ replacing each other.
 ## Line ceilings — extract, don't grow
 
 `tests/test_architecture_guard.py:TestStructuralCeilings.LINE_CEILINGS` caps
-(current ceilings): `src/app.py` 2600, `src/plant_panel.py` 1600,
-`src/controllers/map_events.py` 1950, `html/map.html` 400,
-`01-core.js` 950, `02-boundary.js` 750, `03-plants.js` 950, `04-tools.js` 450,
-`05-features.js` 1100, `06-overlays.js` 1560. `MainWindow` is also capped at
-135 methods. When your change would trip one:
+(current ceilings, V3.11): `src/app.py` 2600, `src/plant_panel.py` 1600,
+`src/controllers/map_events.py` 2100, `html/map.html` 400,
+`01-core.js` 950, `02-boundary.js` 750, `02b-shape-edit.js` 200,
+`03-plants.js` 950, `04-tools.js` 450, `05-features.js` 1200 (1193 used: split
+before adding), `06-overlays.js` 1560, `12-legend.js` 520. `MainWindow` is also
+capped at 140 methods. When your change would trip one:
 
 - Python: put behaviour in a new/existing flow module (the
   `src/wind_shadow_flow.py` pattern) or controller, wired from `app.py`.

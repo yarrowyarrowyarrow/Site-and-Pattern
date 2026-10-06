@@ -14,8 +14,8 @@
 // types, with no purple for the wildflowers. Now every plant is coloured by
 // its type, outlined in that colour darkened by 60% (the worst, grass, is
 // 4.9:1 on the yard and the worst under a canopy 3.4:1), and the legend's
-// plant section is built from the same tables. And a plant is drawn round:
-// see roundCircles below.
+// plant section is built from the same tables (12-legend.js since V3.11). And
+// a plant is drawn round: see roundCircles below.
 
     // Mirror of src/member_colors.py TYPE_COLORS; tests/test_plant_key.py
     // fails if the two differ.
@@ -71,28 +71,11 @@
                fillColor: colour, fillOpacity: MARKER_FILL_OPACITY };
     }
 
-    function _swatch(colour) {
-      return '<span class="legend-swatch" style="background:' + colour +
-             ';border:2px solid ' + markerEdge(colour) + ';"></span>';
-    }
-
-    // The legend's plant section, from the tables above.
-    function buildPlantLegend() {
-      var el = document.getElementById('legend-plants');
-      if (!el) return;
-      var html = '<div class="legend-section-title">Plants, by type</div>';
-      TYPE_WORDS.forEach(function (pair) {
-        html += '<div class="legend-item">' + _swatch(TYPE_COLORS[pair[0]]) +
-                ' ' + pair[1] + '</div>';
-      });
-      // The dashed ring is the Canopy view's (04-tools.js) and the footprint's
-      // (08-footprint.js). V3.02's legend called it "Community outline", which
-      // nothing on the map draws.
-      html += '<div class="legend-item"><span class="legend-swatch outline-only"' +
-              ' style="border-color:#a5d6a7;"></span> Mature spread, with Canopy on</div>' +
-              '<div class="legend-note">A plant you gave its own colour keeps it.</div>';
-      el.innerHTML = html;
-    }
+    // The legend's plant section is 12-legend.js's since V3.11 (F217): it
+    // lists only the types on the map, or the species, through plantColour,
+    // markerEdge and TYPE_WORDS here, so it still cannot drift from the
+    // markers. Its dashed ring is the Canopy view's (04-tools.js); V3.02's
+    // legend called it "Community outline", which nothing on the map draws.
 
     // A circle in metres is a circle on screen. Leaflet 1.9 works out a
     // circle's width with an acos that loses its precision below about a
@@ -117,4 +100,3 @@
     }
 
     if (typeof L !== 'undefined' && L.Circle) roundCircles(L);
-    if (typeof document !== 'undefined' && document.getElementById) buildPlantLegend();

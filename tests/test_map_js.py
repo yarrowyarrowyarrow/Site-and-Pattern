@@ -126,6 +126,8 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawSnowCatch", "setSnowCatchVisible", "clearSnowCatch",
         "setNorthArrow", "setScaleBar",
         "_removeBoundaryEntry",
+        # V3.11: measurements in the design, names, the legend's detail.
+        "loadMeasurement", "setBoundaryNames", "setLegendDetail",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",
         "structureMarkers", "hedgerowLayers", "shapeLayers",
@@ -231,6 +233,28 @@ class TestClears(unittest.TestCase):
         self.assertEqual(mj.clear_selection(),"clearSelection();")
         self.assertEqual(mj.delete_selected(),"deleteSelected();")
         self.assertEqual(mj.toggle_legend(),  "toggleLegend();")
+
+
+class TestV311Builders(unittest.TestCase):
+    """Measurements in the design (F215), boundary names and the legend's
+    detail (F217): strings go through JSON, so a quote in a name cannot end
+    the call early."""
+
+    def test_load_measurement(self):
+        self.assertEqual(
+            mj.load_measurement("m1", [[53.5, -113.5], ("53.6", -113.4)]),
+            'loadMeasurement("m1", JSON.parse("[[53.5, -113.5], [53.6, -113.4]]"));')
+
+    def test_set_boundary_names(self):
+        js = mj.set_boundary_names(["b1", 2], 'Bob\'s "lot"')
+        self.assertEqual(js, 'setBoundaryNames(JSON.parse("[\\"b1\\", \\"2\\"]"), '
+                             '"Bob\'s \\"lot\\"");')
+        self.assertEqual(mj.set_boundary_names(["b1"], None),
+                         'setBoundaryNames(JSON.parse("[\\"b1\\"]"), "");')
+
+    def test_set_legend_detail(self):
+        self.assertEqual(mj.set_legend_detail("species", "named"),
+                         'setLegendDetail("species", "named");')
 
 
 class TestMapView(unittest.TestCase):

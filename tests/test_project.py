@@ -452,7 +452,23 @@ class TestSchemaVersionStable(unittest.TestCase):
         # 1.9 (V2.22): plant features carry a stable feature_id (additive;
         # legacy files keep working through the coordinate fallback —
         # see tests/test_project_store.py TestFeatureIdentity).
-        self.assertEqual(SCHEMA_VERSION, "1.9")
+        # 1.10 (V3.11): the `measurement` feature type and a boundary's
+        # `name` and `show_handles` (additive; their round trips are in
+        # tests/test_measurements.py TestTheFeature).
+        self.assertEqual(SCHEMA_VERSION, "1.10")
+
+    def test_a_file_from_before_1_10_loads_with_the_old_defaults(self):
+        p = new_project("t")
+        p["properties"]["schema_version"] = "1.9"
+        p["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[
+                [-113.5, 53.5], [-113.49, 53.5], [-113.49, 53.51], [-113.5, 53.5]]]},
+            "properties": {"element_type": "property_boundary", "boundary_id": "b1"}})
+        data = project_to_map_data(p)
+        self.assertEqual((data["boundaries"][0]["showHandles"],
+                          data["boundaries"][0]["name"]), (True, ""))
+        self.assertEqual(data["measurements"], [])
 
     def test_existing_feature_types_round_trip(self):
         # The new shade-caster features must survive save → reload, and the

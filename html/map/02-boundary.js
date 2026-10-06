@@ -1,4 +1,5 @@
-// html/map/02-boundary.js — boundary drawing/editing, length labels, multi-boundary helpers, footprint outline editing.
+// html/map/02-boundary.js — boundary drawing/editing, length labels, multi-boundary helpers, the corner-handle switch and names.
+// (A shape's outline editing moved to 02b-shape-edit.js in V3.11.)
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -61,11 +62,6 @@
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
 
-    function addBoundaryLengthLabels(points) {
-      // Legacy stub — used only during loadBoundary; real implementation is _makeBoundaryLengthLabels
-      return _makeBoundaryLengthLabels(points, BOUNDARY_COLORS['green'].stroke);
-    }
-
     function calcPolygonAreaM2(points) {
       // Shoelace on projected metre coords relative to centroid
       var n = points.length;
@@ -96,11 +92,6 @@
       if (unit === 2) return (m2 / 4046.86).toFixed(3) + ' ac';
       if (unit === 3) return (m2 / 1e6).toFixed(4) + ' km²';
       return (m2 >= 10 ? Math.round(m2) : m2.toFixed(1)) + ' m²';
-    }
-
-    function addBoundaryAreaLabel(points) {
-      // Legacy stub — used only during loadBoundary
-      return _makeBoundaryAreaLabel(points);
     }
 
     function _makeBoundaryId() {
@@ -168,7 +159,10 @@
       });
     }
 
-    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea) {
+    // showHandles (V3.11, F216): whether a press shows the corner handles;
+    // name (F217): what the legend calls it when its boundaries are Named.
+    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea,
+                               showHandles, name) {
       var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
       var layer = L.polygon(pts, {
         color: c.stroke, weight: 2,
@@ -189,7 +183,8 @@
 
       var entry = {
         id: id, layer: layer, labelsLayer: labelsLayer, areaLabel: areaLabel,
-        points: pts, color: colorName, showLengths: showLengths, showArea: showArea
+        points: pts, color: colorName, showLengths: showLengths, showArea: showArea,
+        showHandles: showHandles !== false, name: name || ''
       };
       boundaries.push(entry);
       return entry;
@@ -257,6 +252,8 @@
       if (!b) return false;
       if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
         toggleSelection({ kind: 'boundary', boundaryId: b.id });
+      } else if (!b.showHandles) {
+        return false;     // its handles are off (V3.11): ground, like outside it
       } else if (boundaryEditId !== b.id) {
         enterBoundaryEditMode(b.id);     // already editing it: keep the handles
       }
@@ -284,8 +281,8 @@
     // A pointer over a boundary while idle says it can be pressed, the cue an
     // interactive polygon gave by itself.
     function boundaryHover(e) {
-      var on = currentMode === 'none' && !_landedOnAFeature(e) && !!boundaryAt(e.latlng);
-      map.getContainer().classList.toggle('sp-over-boundary', on);
+      var b = currentMode === 'none' && !_landedOnAFeature(e) && boundaryAt(e.latlng);
+      map.getContainer().classList.toggle('sp-over-boundary', !!b && b.showHandles);
     }
 
     function _removeBoundaryEntry(id) {
@@ -314,42 +311,64 @@
     function _showBoundaryContextMenu(x, y, id) {
       var b = _getBoundaryEntry(id);
       if (!b) return;
+      function toggle(label, key, then) {
+        return { label: label, checked: b[key], action: function() {
+          b[key] = !b[key];
+          then();
+          _sendBoundaryProps(b);
+        } };
+      }
+      function relabel() { _refreshBoundaryLabels(id); }
       var items = [
-        {
-          label: 'Edge Labels',
-          checked: b.showLengths,
-          action: function() {
-            b.showLengths = !b.showLengths;
-            _refreshBoundaryLabels(id);
-            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
-          }
-        },
-        {
-          label: 'Area Label',
-          checked: b.showArea,
-          action: function() {
-            b.showArea = !b.showArea;
-            _refreshBoundaryLabels(id);
-            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
-          }
-        },
+        toggle('Edge Labels', 'showLengths', relabel),
+        toggle('Area Label', 'showArea', relabel),
+        // V3.11 (F216): off, a press shows no handles, so it cannot be dragged
+        // out of shape by accident; on, they show now, as a label would.
+        toggle('Corner Handles', 'showHandles', function() {
+          if (b.showHandles) enterBoundaryEditMode(id);
+          else if (boundaryEditId === id) exitBoundaryEditMode();
+        }),
+        { label: 'Name…', action: function() { askBoundaryName([id], b.name); } },
         'sep',
+        { label: 'Remove Boundary', action: function() {
+          if (boundaryEditId === id) exitBoundaryEditMode();
+          _removeBoundaryEntry(id);
+          if (bridge) bridge.onBoundaryRemoved(id);
+        } },
+        'sep',
+        // Last: showContextMenu adds the swatches after the final item, and
+        // until V3.11 they sat under Remove Boundary, away from this label.
         { label: 'Color:', action: function() {} }
       ];
       items._colorTarget = b.color;
       items._colorAction = function(newColor) {
         _setBoundaryColor(id, newColor);
       };
-      items.push('sep');
-      items.push({
-        label: 'Remove Boundary',
-        action: function() {
-          if (boundaryEditId === id) exitBoundaryEditMode();
-          _removeBoundaryEntry(id);
-          if (bridge) bridge.onBoundaryRemoved(id);
-        }
-      });
       showContextMenu(x, y, items);
+    }
+
+    // The colour and every switch, in one call (V3.11).
+    function _sendBoundaryProps(b) {
+      if (bridge) bridge.onBoundaryPropsChanged(b.id, b.color, b.showLengths,
+                                                b.showArea, b.showHandles);
+      scheduleLegend();                                   // 12-legend.js
+    }
+
+    // Name boundaries for the legend (V3.11, F217), from this menu or a line of
+    // the legend: Python asks, with a dialog of its own, as it does for a note,
+    // and answers through setBoundaryNames.
+    function askBoundaryName(ids, current) {
+      if (bridge && bridge.onBoundaryNameRequested) {
+        bridge.onBoundaryNameRequested(JSON.stringify(ids), current || '');
+      }
+    }
+
+    function setBoundaryNames(ids, name) {
+      ids.forEach(function(id) {
+        var b = _getBoundaryEntry(id);
+        if (b) b.name = name || '';
+      });
+      scheduleLegend();
     }
 
     function _setBoundaryColor(id, newColor) {
@@ -359,7 +378,7 @@
       var c = BOUNDARY_COLORS[newColor] || BOUNDARY_COLORS['green'];
       b.layer.setStyle({ color: c.stroke, fillColor: c.fill });
       _refreshBoundaryLabels(id);
-      if (bridge) bridge.onBoundaryPropsChanged(id, newColor, b.showLengths, b.showArea);
+      _sendBoundaryProps(b);
     }
 
     // ── Boundary label factories (use fresh layer groups each time) ───────────
@@ -605,139 +624,3 @@
       boundaryEditId = null;
       map.getContainer().style.cursor = '';
     }
-
-
-    // ── Shape (footprint) outline edit mode ───────────────────────────────────
-    // Reuses the boundary vertex-drag pattern so imported OSM building outlines
-    // (and any drawn canopy footprint) can be resized/reshaped to match reality.
-    // Drag a vertex → the polygon updates and Python is told the new ring.
-    var shapeEditId      = null;       // shape_id currently in outline-edit mode
-    var shapeEditHandles = [];         // draggable vertex handle markers
-
-    function _getShapePolygon(id) {
-      var group = shapeLayers[id];
-      if (!group) return null;
-      var found = null;
-      group.eachLayer(function(layer) {
-        if (!found && layer instanceof L.Polygon) found = layer;
-      });
-      return found;
-    }
-
-    function enterShapeEditMode(id) {
-      if (boundaryEditId !== null) exitBoundaryEditMode();
-      if (shapeEditId !== null) exitShapeEditMode();
-      var poly = _getShapePolygon(id);
-      if (!poly || !poly._shape) return;
-      shapeEditId = id;
-      map.getContainer().style.cursor = 'move';
-      poly._shape.points.forEach(function(pt, idx) {
-        var h = L.circleMarker([pt[0], pt[1]], {
-          radius: 7, color: '#fff', fillColor: '#5d4037', fillOpacity: 1,
-          weight: 2, interactive: true
-        }).addTo(map);
-        _makeShapeVertexDraggable(h, id, idx);
-        shapeEditHandles.push(h);
-      });
-      // Drag on the polygon interior → translate the whole outline (mirrors the
-      // boundary edit). Vertex handles sit on top, so a grab on one still wins.
-      poly.on('mousedown', _onShapePolyMousedown);
-    }
-
-    // Refresh a shape's stored area + on-map tooltip after its outline changes.
-    function _refreshShapeReadout(poly) {
-      if (!poly || !poly._shape) return;
-      var sh = poly._shape;
-      sh.areaM2 = _polygonArea(sh.points);
-      if (!poly.getTooltip()) return;
-      var cast = sh.heightM > 0;
-      var aStr = sh.areaM2 < 10000 ? sh.areaM2.toFixed(1) + ' m²'
-        : (sh.areaM2 / 10000).toFixed(2) + ' ha';
-      var line = cast
-        ? '<br>Casts shade — ' + escH(String(sh.heightM)) + ' m tall'
-          + '<br>Click to edit outline · right-click for height/remove'
-        : '<br>Click to edit outline · right-click to remove';
-      poly.setTooltipContent(
-        '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
-        '<span style="color:#b0bec5;font-size:12px">Area: ' + escH(aStr)
-          + line + '</span>');
-    }
-
-    function _makeShapeVertexDraggable(marker, sid, idx) {
-      marker.on('mousedown', function(e) {
-        L.DomEvent.stop(e);
-        map.dragging.disable();
-        function onMove(ev) {
-          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
-          marker.setLatLng(ll);
-          var poly = _getShapePolygon(sid);
-          if (!poly || !poly._shape) return;
-          poly._shape.points[idx] = [ll.lat, ll.lng];
-          poly.setLatLngs(poly._shape.points);
-        }
-        function onUp() {
-          map.dragging.enable();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          var poly = _getShapePolygon(sid);
-          if (poly && poly._shape) {
-            _refreshShapeReadout(poly);
-            if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(poly._shape.points));
-          }
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
-
-    // Drag the whole outline (every vertex together), keyed on the shape in edit
-    // mode. Mirrors _onBoundaryPolyMousedown.
-    function _onShapePolyMousedown(e) {
-      if (e.originalEvent.button !== 0) return;     // left-drag only
-      if (shapeEditId === null) return;
-      L.DomEvent.stop(e);
-      var sid = shapeEditId;
-      var startLL = e.latlng;
-      var poly = _getShapePolygon(sid);
-      if (!poly || !poly._shape) return;
-      var origPts = poly._shape.points.map(function(p) { return [p[0], p[1]]; });
-      map.dragging.disable();
-      function onMove(ev) {
-        var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
-        var dLat = ll.lat - startLL.lat;
-        var dLng = ll.lng - startLL.lng;
-        var p2 = _getShapePolygon(sid);
-        if (!p2 || !p2._shape) return;
-        p2._shape.points = origPts.map(function(p) {
-          return [p[0] + dLat, p[1] + dLng];
-        });
-        p2.setLatLngs(p2._shape.points);
-        shapeEditHandles.forEach(function(vh, vi) {
-          if (p2._shape.points[vi]) vh.setLatLng(p2._shape.points[vi]);
-        });
-      }
-      function onUp() {
-        map.dragging.enable();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        var p3 = _getShapePolygon(sid);
-        if (p3 && p3._shape) {
-          _refreshShapeReadout(p3);
-          if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(p3._shape.points));
-        }
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    }
-
-    function exitShapeEditMode() {
-      if (shapeEditId === null) return;
-      var poly = _getShapePolygon(shapeEditId);
-      if (poly) poly.off('mousedown', _onShapePolyMousedown);
-      shapeEditHandles.forEach(function(h) { map.removeLayer(h); });
-      shapeEditHandles = [];
-      shapeEditId = null;
-      map.getContainer().style.cursor = '';
-    }
-
-

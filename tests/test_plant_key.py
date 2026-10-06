@@ -6,7 +6,8 @@ Until V3.03 a marker was outlined in its own pale fill colour (1.0:1 to 2.1:1
 against the yard), community members were coloured by layer until the design
 was reopened, the community builder had a third table of its own, and the map
 legend listed six of the twelve types. ``html/map/10-plant-key.js`` now holds
-the colour table, the outline rule and the legend; it is run here in node, the
+the colour table and the outline rule, and the legend (``12-legend.js`` since
+V3.11) draws its plant swatches through them; both are run here in node, the
 way ``test_map_keyboard`` runs 09-keyboard.js.
 """
 
@@ -35,13 +36,9 @@ def _node():
 
 
 def _run(steps: str):
-    """Run 10-plant-key.js, then ``steps``; return what they put in ``out``."""
-    stubs = r"""
-var elements = {plants: {innerHTML: ''}};
-var document = {getElementById: function (id) {
-  return id === 'legend-plants' ? elements.plants : null; }};
-"""
-    script = "\n".join([stubs, _KEY, "var out = {};", steps,
+    """Run 10-plant-key.js, then ``steps``; return what they put in ``out``.
+    (It touches no page since V3.11, when the legend moved to 12-legend.js.)"""
+    script = "\n".join([_KEY, "var out = {};", steps,
                         "console.log(JSON.stringify(out));"])
     proc = subprocess.run([_node(), "-e", script], capture_output=True,
                           text=True, timeout=60, encoding="utf-8")
@@ -139,39 +136,68 @@ class TestTheOutline(unittest.TestCase):
         self.assertTrue(got["bad"].startswith("#"))
 
 
+def _legend_html(snap: dict) -> str:
+    """The legend's HTML for a snapshot, from 10-plant-key.js and the legend
+    that has drawn its plant section since V3.11 (12-legend.js)."""
+    script = "\n".join([
+        _KEY, (_MAP / "12-legend.js").read_text(encoding="utf-8"),
+        "console.log(JSON.stringify(legendHtml(legendModel(" + json.dumps(snap) +
+        ", {plants: 'type', boundaries: 'simple'}))));"])
+    proc = subprocess.run([_node(), "-"], input=script, capture_output=True,
+                          text=True, timeout=60, encoding="utf-8")
+    if proc.returncode != 0:
+        raise AssertionError(f"node failed: {proc.stderr}")
+    return json.loads(proc.stdout)
+
+
 @unittest.skipIf(_node() is None, "no node binary")
 class TestTheLegend(unittest.TestCase):
+    """Since V3.11 the legend names only the types on the map (F217,
+    tests/test_legend.py); what V3.03 pinned here still holds for every type
+    that is drawn: its words, and a swatch drawn like its marker, from the
+    one table."""
 
-    def test_it_lists_every_type_in_its_colour(self):
+    def test_a_type_on_the_map_is_listed_in_its_colour(self):
         from src.member_colors import TYPE_COLORS
         from src.plant_facets import _TYPE_LABELS
-        html = _run("out.html = elements.plants.innerHTML;")["html"]
+        snap = {"plants": [{"id": i, "name": k, "type": k, "colour": TYPE_COLORS[k],
+                            "custom": False} for i, k in enumerate(_TYPE_LABELS)]}
+        html = _legend_html(snap)
+        edges = _run("out.e = {}; Object.keys(TYPE_COLORS).forEach(function (k) {"
+                     " out.e[k] = markerEdge(TYPE_COLORS[k]); });")["e"]
         for kind, words in _TYPE_LABELS.items():
             with self.subTest(kind=kind):
                 self.assertIn(words, html)
-                self.assertIn("background:" + TYPE_COLORS[kind], html)
+                self.assertIn("background:" + TYPE_COLORS[kind] + ";border:2px solid "
+                              + edges[kind], html)
         # Wildflowers, purple, 11 of the example's 19 plants: not in the
         # V3.02 legend at all.
         self.assertIn("Wildflower", html)
-        self.assertIn("own colour", html)
 
     def test_the_dashed_ring_is_named_for_what_draws_it(self):
         """V3.02's legend called it "Community outline", and nothing on the
-        map draws one: the dashed light-green ring is the Canopy view's and
-        the placing footprint's."""
-        html = _run("out.html = elements.plants.innerHTML;")["html"]
+        map draws one: the dashed light-green ring is the Canopy view's (and
+        the placing footprint's), and since V3.11 it is named only while the
+        Canopy view draws it."""
+        plant = {"id": 1, "name": "Harebell", "type": "wildflower",
+                 "colour": "#ab47bc", "custom": False}
+        html = _legend_html({"plants": [plant], "canopy": True})
         self.assertNotIn("Community outline", html)
-        self.assertIn("Mature spread, with Canopy on", html)
+        self.assertIn("Mature spread (Canopy view)", html)
+        self.assertIn("border-color:#a5d6a7", html)
+        self.assertNotIn("Mature spread", _legend_html({"plants": [plant]}))
         for script in ("04-tools.js", "08-footprint.js"):
             with self.subTest(script=script):
                 self.assertIn("color: '#a5d6a7'", (_MAP / script).read_text(encoding="utf-8"))
 
-    def test_map_html_holds_the_hook_and_loads_the_script_last(self):
+    def test_map_html_holds_the_hook_and_loads_the_scripts_in_order(self):
         page = (_ROOT / "html" / "map.html").read_text(encoding="utf-8")
-        self.assertIn('id="legend-plants"', page)
+        self.assertIn('id="legend-body"', page)
         self.assertNotIn("Vegetation Layers", page)
         self.assertLess(page.index('src="map/09-keyboard.js"'),
                         page.index('src="map/10-plant-key.js"'))
+        self.assertLess(page.index('src="map/10-plant-key.js"'),
+                        page.index('src="map/12-legend.js"'))
         # The close control is a button, so the keyboard reaches it.
         self.assertIn('<button class="legend-close"', page)
 

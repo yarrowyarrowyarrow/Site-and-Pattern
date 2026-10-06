@@ -874,6 +874,7 @@
           c._pd.customColor = newColor;
         }
       });
+      scheduleLegend();        // a colour changed, nothing added (12-legend.js)
     }
 
     // ── "What the bee sees" — floral-resource recolour (F37 increment 3) ──────

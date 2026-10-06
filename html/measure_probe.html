@@ -1,0 +1,225 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">measuring…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// Measurements, the selection box, one Delete and the boundary's corner-handle
+// switch (dev page + the harness behind tests/test_measurements.py, V3.11).
+// The owner: "undo does not work for measurements, they also do not get
+// selected when I go to select an area. Also the dots on the corner points of
+// a boundary ... should be able to toggle on and off". Drives the real map.html
+// in a frame with mouse events sent to whatever is under each point
+// (document.elementFromPoint), as boundary_probe.html does, and records every
+// call the page makes to Python instead of sending it.
+//
+// Results go into document.title as JSON, read by a headless `--dump-dom` run.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;
+const YARD = [[LAT - D, LNG - D * 1.5], [LAT - D, LNG + D * 1.5],
+              [LAT + D, LNG + D * 1.5], [LAT + D, LNG - D * 1.5]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function px(lat, lng) {
+  const p = w.map.latLngToContainerPoint([lat, lng]);
+  const r = w.map.getContainer().getBoundingClientRect();
+  return { x: r.left + p.x, y: r.top + p.y };
+}
+function at(lat, lng, dx, dy) { const p = px(lat, lng); return { x: p.x + (dx || 0), y: p.y + (dy || 0) }; }
+function fire(type, p, mods) {
+  const el = w.document.elementFromPoint(p.x, p.y);
+  el.dispatchEvent(new w.MouseEvent(type, Object.assign({
+    bubbles: true, cancelable: true, view: w, clientX: p.x, clientY: p.y,
+    button: type === 'contextmenu' ? 2 : 0, buttons: type === 'mousedown' ? 1 : 0,
+  }, mods || {})));
+  return el;
+}
+function click(p, mods) { fire('mousedown', p, mods); fire('mouseup', p, mods); fire('click', p, mods); }
+// The selection box: Shift+drag from a to b, with the moves on the document.
+function marquee(a, b) {
+  const down = new w.MouseEvent('mousedown', { bubbles: true, cancelable: true, view: w,
+    clientX: a.x, clientY: a.y, button: 0, buttons: 1, shiftKey: true });
+  w.map.getContainer().dispatchEvent(down);
+  for (let i = 1; i <= 4; i++) {
+    w.document.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, view: w,
+      clientX: a.x + (b.x - a.x) * i / 4, clientY: a.y + (b.y - a.y) * i / 4, shiftKey: true }));
+  }
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true, view: w,
+    clientX: b.x, clientY: b.y, shiftKey: true }));
+}
+function called(name) { return calls.filter(c => c[0] === name); }
+function idle() {
+  w.hideContextMenu();
+  if (w.boundaryEditId !== null) w.exitBoundaryEditMode();
+  w.clearSelection();
+  w.setMode('none');
+  calls = [];
+}
+function measureBetween(a, b) {
+  w.setMode('measure');
+  click(at(a[0], a[1]));
+  click(at(b[0], b[1]));
+  w.setMode('none');
+}
+function menuLabels() {
+  const m = w.document.getElementById('_pd_ctx_menu');
+  return m ? Array.from(m.children).map(el => el.textContent.trim()) : [];
+}
+function menuClick(label) {
+  const m = w.document.getElementById('_pd_ctx_menu');
+  const el = Array.from(m.children).find(e => e.textContent.trim().replace(/^✓\s*/, '') === label);
+  el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
+}
+
+async function run() {
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD }), false);
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [80, 80] });
+  await wait(300);
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D, 2, 'wildflower', null);
+  await wait(50);
+
+  // ── A measurement tells Python, once, with its two points ───────────────
+  idle();
+  const A = [LAT - D * 0.6, LNG - D * 0.8], B = [LAT - D * 0.6, LNG + D * 0.4];
+  measureBetween(A, B);
+  const added = called('onMeasurementAdded');
+  out.measure = { sent: added.length, layers: w.measureLayers.length,
+                  points: added.length ? JSON.parse(added[0][2]).length : 0,
+                  id: added.length ? added[0][1] : null };
+  const mid = out.measure.id;
+
+  // ── Esc after a first click leaves no dot and no start behind ───────────
+  idle();
+  w.setMode('measure');
+  click(at(LAT + D * 0.2, LNG - D));
+  const dotAfterFirst = !!w._measureWipMarker;
+  w.setMode('none');                                  // what Esc does
+  out.esc = { dot_after_first: dotAfterFirst, dot_after_esc: !!w._measureWipMarker,
+              start_after_esc: w.measureStart !== null };
+  w.setMode('measure');
+  click(at(LAT + D * 0.2, LNG + D * 0.2));            // a first click again
+  out.esc.added_by_one_click = called('onMeasurementAdded').length;
+  w.setMode('none');
+
+  // ── The selection box catches it, and it is drawn as selected ───────────
+  idle();
+  marquee(at(A[0], A[1], -20, -20), at(A[0], A[1], 20, 20));     // around one end
+  const m0 = w.measureLayers[0]._measure;
+  out.marquee = { selected: w.selectedItems.filter(s => s.kind === 'measure').length,
+                  weight: m0.line.options.weight, dashed: !!m0.line.options.dashArray };
+  idle();
+  out.marquee.after_clear = { weight: m0.line.options.weight, dashed: !!m0.line.options.dashArray };
+  const mid_pt = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+  marquee(at(mid_pt[0], mid_pt[1], -15, -25), at(mid_pt[0], mid_pt[1], 15, 5));
+  out.marquee.by_its_middle = w.selectedItems.filter(s => s.kind === 'measure').length;
+  idle();
+  w.setMeasureVisible(false);
+  marquee(at(A[0], A[1], -20, -20), at(A[0], A[1], 20, 20));
+  out.marquee.hidden = w.selectedItems.filter(s => s.kind === 'measure').length;
+  w.setMeasureVisible(true);
+
+  // ── Shift-click on it toggles it (on an end's dot: the line is dashed, and
+  // a click in one of its gaps is a click on the ground) ──────────────────
+  idle();
+  click(at(A[0], A[1]), { shiftKey: true });
+  out.shift_click = { selected: w.selectedItems.filter(s => s.kind === 'measure').length,
+                      boundary_edit: w.boundaryEditId };
+
+  // ── One Delete, one call, everything in it ──────────────────────────────
+  idle();
+  const before = calls.length;
+  marquee(at(LAT + D * 1.4, LNG - D * 1.8), at(LAT - D * 1.4, LNG + D * 1.8));    // the lot
+  const kinds = w.selectedItems.map(s => s.kind).sort();
+  w.deleteSelected();
+  const sent = calls.slice(before);
+  const payload = called('onSelectionDeleted').length ? JSON.parse(called('onSelectionDeleted')[0][1]) : {};
+  out.delete = { kinds: kinds, calls: sent.map(c => c[0]),
+                 plants: (payload.plants || []).length,
+                 boundaries: payload.boundaries || [], measurements: payload.measurements || [],
+                 left: { layers: w.measureLayers.length, boundaries: w.boundaries.length,
+                         plants: Object.keys(w.plantMarkers).length } };
+
+  // ── Drawn again from the design, it says nothing; cleared, it goes ──────
+  idle();
+  w.loadMeasurement('m-saved', [A, B]);
+  w.loadMeasurement('m-saved', [A, B]);               // twice: still one
+  out.load = { layers: w.measureLayers.length, sent: calls.length };
+  // A right-click on it removes just it, and says so.
+  fire('contextmenu', at(A[0], A[1]));
+  out.right_click = { removed: called('onMeasurementsRemoved').map(c => JSON.parse(c[1])),
+                      layers: w.measureLayers.length };
+  w.loadMeasurement('m-a', [A, B]);
+  w.loadMeasurement('m-b', [[LAT, LNG], [LAT + D * 0.3, LNG]]);
+  const sentBefore = calls.length;
+  w.clearMeasure();
+  out.clear = { layers: w.measureLayers.length, sent: calls.length - sentBefore };
+
+  // ── The corner handles switch ───────────────────────────────────────────
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD }), false);
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D, 2, 'wildflower', null);
+  await wait(50);
+  const ground = at(LAT - D * 0.3, LNG - D * 0.9);
+  idle();
+  fire('contextmenu', ground);
+  const labels = menuLabels();
+  out.menu = { labels: labels,
+               swatches_follow_colour: (() => {
+                 const m = w.document.getElementById('_pd_ctx_menu');
+                 const kids = Array.from(m.children);
+                 const i = kids.findIndex(e => e.textContent.trim() === 'Color:');
+                 return i >= 0 && i === kids.length - 2 && kids[i + 1].children.length > 0;
+               })() };
+  menuClick('Corner Handles');                        // off
+  const off = called('onBoundaryPropsChanged');
+  out.handles_off = { sent: off.map(c => c.slice(1)),
+                      edit_now: w.boundaryEditId };
+  calls = [];
+  click(ground);
+  out.handles_off.press = { edit: w.boundaryEditId, handles: w.boundaryEditHandles.length };
+  w.boundaryHover({ latlng: w.map.mouseEventToLatLng({ clientX: ground.x, clientY: ground.y }),
+                    originalEvent: { target: w.map.getContainer() } });
+  out.handles_off.pointer = w.map.getContainer().classList.contains('sp-over-boundary');
+  click(ground, { shiftKey: true });
+  out.handles_off.shift_selects = w.selectedItems.filter(s => s.kind === 'boundary').length;
+  idle();
+  fire('contextmenu', ground);
+  out.handles_off.menu_still = menuLabels().indexOf('Remove Boundary') >= 0;
+  menuClick('Corner Handles');                        // on again: shown now
+  out.handles_on = { sent: called('onBoundaryPropsChanged').map(c => c.slice(1)),
+                     edit_now: w.boundaryEditId, handles: w.boundaryEditHandles.length };
+  idle();
+  click(ground);
+  out.handles_on.press = w.boundaryEditId;
+
+  // Saved off, it loads off.
+  idle();
+  w.clearAll();
+  w.loadBoundary(JSON.stringify({ id: 'b2', color: 'blue', points: YARD, showHandles: false }), false);
+  await wait(50);
+  click(ground);
+  out.loaded_off = { edit: w.boundaryEditId, flag: w.boundaries[0].showHandles };
+
+  // Name… asks Python, with the boundary's id and its name now.
+  idle();
+  w.setBoundaryNames(['b2'], 'Private lot');
+  fire('contextmenu', ground);
+  menuClick('Name…');
+  out.name = { asked: called('onBoundaryNameRequested').map(c => [JSON.parse(c[1]), c[2]]),
+               stored: w.boundaries[0].name };
+}
+
+run().then(
+  () => { document.title = 'MEASURED ' + JSON.stringify(out); },
+  e => { out.error = String(e && e.stack || e); document.title = 'MEASURED ' + JSON.stringify(out); }
+).finally(() => { document.getElementById('out').textContent = JSON.stringify(out, null, 1); });
+</script>
+</body></html>

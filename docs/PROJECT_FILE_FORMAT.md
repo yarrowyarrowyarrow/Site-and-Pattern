@@ -20,7 +20,7 @@ The authoritative reader/writer is [`src/project.py`](../src/project.py)
 {
   "type": "FeatureCollection",
   "properties": {
-    "schema_version": "1.6",          // project-file format version (see below)
+    "schema_version": "1.10",         // project-file format version (see below)
     "project_name": "My Yard",
     "created": "2026-05-28T12:00:00",  // naive UTC ISO-8601
     "hardiness_zone": 3,               // or null
@@ -43,9 +43,9 @@ The authoritative reader/writer is [`src/project.py`](../src/project.py)
 }
 ```
 
-`schema_version` here is the **project-file** version (`"1.6"`,
-`src.project.SCHEMA_VERSION`). It is unrelated to the **database**
-schema version (`17`) documented in
+`schema_version` here is the **project-file** version (`"1.10"` since
+V3.11, `src.project.SCHEMA_VERSION`). It is unrelated to the **database**
+schema version (`_SCHEMA_VERSION` in `src/db/plants.py`) documented in
 [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 
 `site_config` additionally accumulates fetched data at runtime:
@@ -79,11 +79,18 @@ carries.
     "boundary_id": "b_api_1a2b3c4d",
     "color": "green",
     "show_lengths": true,
-    "show_area": true
+    "show_area": true,
+    "show_handles": true,          // 1.10: a press shows the corner handles
+    "name": "City park land"       // 1.10: optional, what the legend calls it
   }
 }
 ```
 Multiple boundaries are allowed; each needs a unique `boundary_id`.
+`show_handles` (default `true`) is the boundary menu's **Corner Handles**:
+off, pressing the boundary shows no handles, so it cannot be reshaped by
+accident. `name` is what the map's legend shows for it when its Boundaries
+section is set to Named; absent or empty, it reads "Boundary". Both
+default when missing, so a file from before 1.10 loads unchanged.
 
 ### `plant` — Point
 ```jsonc
@@ -224,6 +231,19 @@ bounds + stats so a re-open knows an overlay existed.
 }
 ```
 
+### `measurement` — LineString (1.10)
+A distance measured on the map with **📏 Measure**: exactly two points.
+Until V3.11 a measurement lived only in the map page, so undo could not
+take one back and it was never saved; it is part of the design now
+([`src/measurements.py`](../src/measurements.py)). The length is not stored:
+the map works it out from the two points.
+```jsonc
+{
+  "geometry": { "type": "LineString", "coordinates": [[lng, lat], [lng, lat]] },
+  "properties": { "element_type": "measurement", "measurement_id": "m1791…" }
+}
+```
+
 ---
 
 ## Evolution rules
@@ -234,9 +254,12 @@ bounds + stats so a re-open knows an overlay existed.
 - **Default missing values.** `project_to_map_data` supplies defaults for
   absent properties (e.g. boundary `color` → `"green"`), so older files
   keep loading. Preserve that when adding fields.
-- **Bump `SCHEMA_VERSION`** in `src/project.py` only for a change that
-  older code couldn't load safely, and add a migration path in
-  `project_to_map_data`. Day-to-day additive fields don't need a bump.
+- **Bump `SCHEMA_VERSION`** in `src/project.py` for a new element type
+  (1.7, 1.8 and 1.10 did, each additive) or a change older code couldn't load
+  safely, with a migration path in `project_to_map_data` for the latter. An
+  optional property on an existing type needs none (`why_here`, V3.05).
+  Nothing compares versions: the value is stamped on new designs and shown
+  in diagnostics.
 - Round-trip fidelity is covered by
   [`tests/test_project.py`](../tests/test_project.py); add a case there
   for any new element type.

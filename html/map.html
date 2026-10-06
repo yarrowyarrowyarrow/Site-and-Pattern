@@ -115,6 +115,44 @@
       color: #90a4ae;
       margin-top: 2px;
     }
+    /* V3.11 (F217): the legend names what is drawn, by 12-legend.js. A
+       section's switch sits on its title; a swatch is a plant, an area, a
+       line or a ring, as the thing it stands for is drawn. */
+    #map-legend .legend-section-title {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    #map-legend .legend-switch { display: inline-flex; text-transform: none; }
+    #map-legend .legend-switch button {
+      background: none; border: 1px solid #4a7a4a; color: #a5d6a7;
+      font: inherit; font-size: 12px; min-height: 24px; padding: 0 6px; cursor: pointer;
+    }
+    #map-legend .legend-switch button:first-child { border-radius: 4px 0 0 4px; }
+    #map-legend .legend-switch button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+    #map-legend .legend-switch button[aria-pressed="true"] {
+      background: #2e4a2e; color: #e8f5e9; font-weight: 600;
+    }
+    #map-legend .legend-swatch.legend-area { border-radius: 2px; }
+    #map-legend .legend-swatch.legend-line {
+      width: 16px; height: 0; border: none; border-radius: 0;
+    }
+    #map-legend .legend-num { color: #e8f5e9; }
+    #map-legend .legend-count { color: #90a4ae; }
+    #map-legend button.legend-name {
+      width: 100%; background: none; border: none; color: inherit; font: inherit;
+      text-align: left; cursor: pointer; min-height: 24px; border-radius: 3px;
+    }
+    #map-legend button.legend-name:hover { background: rgba(165, 214, 167, 0.12); }
+    /* Only while the pointer is over the legend, so Export PDF's picture of
+       the map does not print a pencil beside every name. */
+    #map-legend .legend-edit { margin-left: auto; opacity: 0; color: #a5d6a7; }
+    #map-legend:hover .legend-edit,
+    #map-legend .legend-name:focus-visible .legend-edit { opacity: 1; }
+    /* A species' number on each of its plants, with the legend in Species. */
+    .sp-species-num {
+      color: #fff; font: 700 12px 'Segoe UI', Arial, sans-serif; line-height: 16px;
+      text-align: center; white-space: nowrap;
+      text-shadow: 0 0 2px #000, 0 0 3px #000, 0 0 1px #000;
+    }
     #legend-toggle {
       position: absolute;
       bottom: 30px;
@@ -195,30 +233,8 @@
   <button id="legend-toggle" onclick="toggleLegend()">Legend</button>
   <div id="map-legend">
     <h4>Legend <button class="legend-close" onclick="toggleLegend()" aria-label="Close the legend">&times;</button></h4>
-    <!-- Built from TYPE_COLORS by html/map/10-plant-key.js (V3.03). -->
-    <div class="legend-section" id="legend-plants"></div>
-    <div class="legend-section">
-      <div class="legend-section-title">Structures</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Water</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#8d6e63;"></span> Growing</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#ffca28;"></span> Animal</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Storage</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#90a4ae;"></span> Infrastructure</div>
-    </div>
-    <div class="legend-section">
-      <div class="legend-section-title">Other</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a; border-radius:2px;"></span> Boundary</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#4caf50; border-radius:2px;"></span> Hedgerow</div>
-      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#78909c;"></span> Custom shape</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#fdd835;"></span> Measurement</div>
-    </div>
-    <div class="legend-section">
-      <div class="legend-section-title">Analysis</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#ffb300;"></span> Sun path</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#455a64;"></span> Shadow</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Contour</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Wind</div>
-    </div>
+    <!-- Built from what is on the map by html/map/12-legend.js (V3.11). -->
+    <div id="legend-body"></div>
   </div>
 
   <!-- Leaflet JS + Leaflet Draw (vendored; see the note in <head>) -->
@@ -229,6 +245,7 @@
 
   <script src="map/01-core.js"></script>
   <script src="map/02-boundary.js"></script>
+  <script src="map/02b-shape-edit.js"></script>
   <script src="map/03-plants.js"></script>
   <script src="map/04-tools.js"></script>
   <script src="map/05-features.js"></script>
@@ -238,5 +255,6 @@
   <script src="map/09-keyboard.js"></script>
   <script src="map/10-plant-key.js"></script>
   <script src="map/11-map-furniture.js"></script>
+  <script src="map/12-legend.js"></script>
 </body>
 </html>

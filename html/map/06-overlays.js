@@ -1,4 +1,4 @@
-// html/map/06-overlays.js — sun path, contours/terrain, shade overlays, wind, legend, site pin, QWebChannel bootstrap.
+// html/map/06-overlays.js — sun path, contours/terrain, shade overlays, wind, site pin, QWebChannel bootstrap.
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -1220,21 +1220,7 @@
 
     function windShadowDragEnd() { _windDrag = null; }
 
-    // ── Legend toggle ──────────────────────────────────────────────────────
-    function toggleLegend() {
-      var legend = document.getElementById('map-legend');
-      var btn    = document.getElementById('legend-toggle');
-      var show   = !legend.classList.contains('visible');
-      legend.classList.toggle('visible', show);
-      btn.classList.toggle('active', show);
-    }
-
-    function setLegendVisible(visible) {
-      var legend = document.getElementById('map-legend');
-      var btn    = document.getElementById('legend-toggle');
-      legend.classList.toggle('visible', visible);
-      btn.classList.toggle('active', visible);
-    }
+    // The legend's toggle moved to 12-legend.js in V3.11, with the legend.
 
     // ── Site pin ──────────────────────────────────────────────────────────
     // Geocoding moved to the Python-side Site panel (src/site_panel.py +

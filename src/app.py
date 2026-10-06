@@ -938,6 +938,19 @@ class MainWindow(QMainWindow):
         b.boundary_geom_changed.connect(self._on_boundary_geom_changed)
         b.boundary_props_changed.connect(self._on_boundary_props_changed)
         b.boundary_removed.connect(self._on_boundary_removed)
+        b.boundary_name_requested.connect(
+            self._map_events._on_boundary_name_requested)
+
+        # Map → measurements, part of the design since V3.11 (F215), and
+        # one Delete as one undo step
+        b.measurement_added.connect(self._map_events._on_measurement_added)
+        b.measurements_removed.connect(
+            self._map_events._on_measurements_removed)
+        b.selection_deleted.connect(self._map_events._on_selection_deleted)
+
+        # The legend's switches, remembered and sent on every load (F217)
+        from src import legend_flow
+        legend_flow.install(self)
 
         # Map → sun path anchor & removal
         b.sun_anchor_placed.connect(self._on_sun_anchor_placed)
@@ -1647,9 +1660,10 @@ class MainWindow(QMainWindow):
         return self._map_events._on_boundary_geom_changed(bid, coords)
 
     def _on_boundary_props_changed(self, bid: str, color: str,
-                                    show_lengths: bool, show_area: bool):
+                                    show_lengths: bool, show_area: bool,
+                                    show_handles: bool = True):
         return self._map_events._on_boundary_props_changed(
-            bid, color, show_lengths, show_area,
+            bid, color, show_lengths, show_area, show_handles,
         )
 
     def _on_boundary_removed(self, bid: str):
@@ -1851,6 +1865,10 @@ class MainWindow(QMainWindow):
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
+        # clearAll leaves the map's notes and measurements, and until V3.11
+        # a new design kept the last one's on the map.
+        self.map_widget.clear_annotations()
+        self.map_widget.clear_measure()
         self.map_widget.clear_site_pin()
         self.site_panel.clear_pin()
         self.plant_panel.clear_placed()

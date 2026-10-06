@@ -162,6 +162,7 @@
       if (st.layer.setStyle) st.layer.setStyle({ color: s.color,
                                                  fillColor: s.fill });
       st.foliage = foliage;
+      scheduleLegend();                                   // 12-legend.js
       if (st.label && st.label.setIcon) {
         st.label.setIcon(L.divIcon({ className: 'structure-label',
           html: '<span class="struct-icon">' + s.icon + '</span> ' +
@@ -368,18 +369,21 @@
         lineJoin: 'round'
       }).addTo(group);
 
+      // The line's length, for every style. Until V3.11 it was measured only
+      // where plants are dotted along it, so a fence (no dots) threw on the
+      // tooltip below and was never kept, saved or sent to Python.
+      var totalLen = 0, segments = [];
+      for (var i = 1; i < hedgerowPoints.length; i++) {
+        var from = L.latLng(hedgerowPoints[i-1]);
+        var to   = L.latLng(hedgerowPoints[i]);
+        var segLen = from.distanceTo(to);
+        segments.push({ from: from, to: to, len: segLen });
+        totalLen += segLen;
+      }
+      var numPlants = s.fillDots ? Math.floor(totalLen / spacing) + 1 : 0;
+
       // Plant markers along the line
       if (s.fillDots) {
-        var totalLen = 0;
-        var segments = [];
-        for (var i = 1; i < hedgerowPoints.length; i++) {
-          var from = L.latLng(hedgerowPoints[i-1]);
-          var to   = L.latLng(hedgerowPoints[i]);
-          var segLen = from.distanceTo(to);
-          segments.push({ from: from, to: to, len: segLen });
-          totalLen += segLen;
-        }
-        var numPlants = Math.floor(totalLen / spacing) + 1;
         var distAlong = 0;
         var segIdx = 0;
         var segDist = 0;
@@ -409,7 +413,8 @@
 
       // Label at midpoint
       var midIdx = Math.floor(hedgerowPoints.length / 2);
-      var labelText = species || (style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }));
+      var styleWords = style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var labelText = species || styleWords;
       var labelIcon = L.divIcon({
         className: 'hedgerow-label',
         html: escH(labelText),
@@ -419,9 +424,10 @@
       L.marker(hedgerowPoints[midIdx], { icon: labelIcon, interactive: false }).addTo(group);
 
       // Tooltip
-      var tooltipText = '<b>Hedgerow</b>';
+      var tooltipText = '<b>' + escH(styleWords) + '</b>';
       if (species) tooltipText += '<br>' + escH(species);
-      tooltipText += '<br><span style="color:#b0bec5;font-size:12px">~' + Number(numPlants) + ' plants · ' +
+      tooltipText += '<br><span style="color:#b0bec5;font-size:12px">' +
+        (numPlants ? '~' + Number(numPlants) + ' plants · ' : '') +
         totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
       mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
 
@@ -782,6 +788,7 @@
       // Starting any tool ends an in-progress outline edit so its vertex
       // handles (added to the map, not the shape group) don't orphan.
       if (shapeEditId !== null) exitShapeEditMode();
+      if (mode !== 'measure') _cancelMeasureStart();  // its first dot (04-tools.js)
 
       switch (mode) {
         case 'boundary':
@@ -1134,7 +1141,8 @@
     }
 
     function loadBoundary(dataJson, fit) {
-      // dataJson: JSON string of {id, points, color, showLengths, showArea}
+      // dataJson: JSON string of {id, points, color, showLengths, showArea,
+      // showHandles, name} (the last two V3.11)
       // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
       // fit (default true): recenter the map on the boundary. Undo/redo
       // re-renders pass false so the camera doesn't jump on every Ctrl+Z.
@@ -1150,7 +1158,8 @@
         showLengths = data.showLengths !== false;
         showArea    = data.showArea !== false;
       }
-      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
+      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea,
+                                    data.showHandles !== false, data.name || '');
       if (fit !== false) fitWhenShown(entry.layer.getBounds());   // 02-boundary.js
     }
 

@@ -46,6 +46,26 @@ def _when_from_config(config: dict):
     return datetime(2025, int(w[0]), int(w[1]), int(w[2]), minute)
 
 
+def name_boundaries(project: dict, ids, name: str) -> bool:
+    """Give these boundaries the name the legend shows, or with an empty name
+    take it away (F217, V3.11). ``True`` when any boundary changed. Pure, so
+    the handler's dialog is all a test has to stand in for."""
+    wanted = {str(i) for i in ids or []}
+    changed = False
+    for f in project.get("features", []):
+        props = f.get("properties") or {}
+        if (props.get("element_type") != "property_boundary"
+                or props.get("boundary_id") not in wanted
+                or (props.get("name") or "") == name):
+            continue
+        if name:
+            props["name"] = name
+        else:
+            props.pop("name", None)
+        changed = True
+    return changed
+
+
 class MapEventRouter:
     """MapBridge slot handlers. Holds a MainWindow reference so handlers
     can mutate ``_project["features"]`` and call back into the other
@@ -104,16 +124,80 @@ class MapEventRouter:
 
     @undoable("edit boundary")
     def _on_boundary_props_changed(self, bid: str, color: str,
-                                    show_lengths: bool, show_area: bool):
-        """Update color/label toggles for an existing boundary."""
+                                    show_lengths: bool, show_area: bool,
+                                    show_handles: bool = True):
+        """Update the colour and the switches (labels; corner handles, V3.11)
+        of an existing boundary."""
         for f in self._main._project.get("features", []):
             if (f.get("properties", {}).get("element_type") == "property_boundary"
                     and f["properties"].get("boundary_id") == bid):
                 f["properties"]["color"] = color
                 f["properties"]["show_lengths"] = show_lengths
                 f["properties"]["show_area"] = show_area
+                f["properties"]["show_handles"] = bool(show_handles)
                 break
         self._main._mark_modified()
+
+    @undoable("name boundary")
+    def _on_boundary_name_requested(self, ids: list, current: str):
+        """Ask for the name the legend shows for these boundaries (F217,
+        V3.11): from a line of the legend, which can stand for several
+        boundaries of one colour, or from one boundary's menu. A cancelled
+        dialog changes nothing, so it leaves no undo step."""
+        from PyQt6.QtWidgets import QInputDialog
+        many = len(ids) > 1
+        name, ok = QInputDialog.getText(
+            self._main, "Name boundary",
+            (f"Name these {len(ids)} boundaries in the legend:" if many
+             else "Name this boundary in the legend:")
+            + "\n(Leave it empty to show it as “Boundary”.)",
+            text=current or "")
+        if not ok:
+            return
+        name = " ".join(name.split())[:60]
+        if name_boundaries(self._main._project, ids, name):
+            self._main.map_widget.set_boundary_names(ids, name)
+            self._main._mark_modified()
+
+    # ── Measurement handlers (F215, V3.11) ───────────────────────────────────
+
+    @undoable("measure")
+    def _on_measurement_added(self, measure_id: str, coords: list):
+        from src.measurements import add_measurement
+        if add_measurement(self._main._project, measure_id, coords):
+            self._main._mark_modified()
+
+    @undoable("remove measurement")
+    def _on_measurements_removed(self, ids: list):
+        from src.measurements import remove_measurements
+        if remove_measurements(self._main._project, ids):
+            self._main._mark_modified()
+
+    @undoable("delete selection")
+    def _on_selection_deleted(self, payload_json: str):
+        """Everything one Delete took off the map, as one undo step (V3.11).
+        Each kind goes to the handler its own removal has always used; they
+        are undoable too, and inside this checkpoint they record nothing of
+        their own."""
+        import json as _json
+        try:
+            gone = _json.loads(payload_json or "{}")
+        except ValueError:
+            return
+        if not isinstance(gone, dict):
+            return
+        if gone.get("plants"):
+            self._on_plants_removed_batch(_json.dumps(gone["plants"]))
+        for bid in gone.get("boundaries") or []:
+            self._on_boundary_removed(bid)
+        for marker_id, struct_id, lat, lng in gone.get("structures") or []:
+            self._on_structure_removed(marker_id, struct_id, lat, lng)
+        for shape_id in gone.get("shapes") or []:
+            self._on_shape_removed(shape_id)
+        if gone.get("measurements"):
+            self._on_measurements_removed(gone["measurements"])
+        if gone.get("sunpath"):
+            self._on_sun_path_removed()
 
     @undoable("remove boundary")
     def _on_boundary_removed(self, bid: str):
