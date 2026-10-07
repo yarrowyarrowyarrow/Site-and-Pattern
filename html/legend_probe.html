@@ -13,7 +13,10 @@ iframe{width:900px;height:600px;border:0;display:block}
 // the real map.html in a frame: adds, hides and removes things the way the
 // app does, waits for the legend to follow (it rebuilds on Leaflet's own
 // layeradd/layerremove, debounced), and reads what it says. Every call the
-// page makes to Python is recorded instead of sent.
+// page makes to Python is recorded instead of sent. Since F218 it also reads
+// the species numbers at three zooms (each plant its own, a close pair
+// sharing one, a crowd that leaves some waiting) and the rings a legend line
+// draws round its species' plants.
 //
 // Results go into document.title as JSON, read by a headless `--dump-dom` run.
 
@@ -44,6 +47,46 @@ function press(section, value) {
 }
 function numbers() {
   return Array.from(w.document.querySelectorAll('.sp-species-num'));
+}
+function tags() { return w._speciesNumberLayer ? w._speciesNumberLayer.getLayers() : []; }
+// Pairs of numbers drawn over one another, as the page lays them out.
+function overlapping() {
+  const r = numbers().map(n => n.getBoundingClientRect());
+  let n = 0;
+  for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) {
+    if (r[i].left < r[j].right - 0.5 && r[j].left < r[i].right - 0.5 &&
+        r[i].top < r[j].bottom - 0.5 && r[j].top < r[i].bottom - 0.5) n++;
+  }
+  return n;
+}
+// How far, in px, each number's middle is from the plant it sits on.
+function offPlant() {
+  const box = w.map.getContainer().getBoundingClientRect();
+  return Math.max(0, ...tags().map(mk => {
+    const r = mk.getElement().getBoundingClientRect();
+    const p = w.map.latLngToContainerPoint(mk._spCircle.getLatLng());
+    return Math.hypot((r.left + r.right) / 2 - box.left - p.x, (r.top + r.bottom) / 2 - box.top - p.y);
+  }));
+}
+function hiddenNote() {
+  const n = w.document.querySelector('#legend-body .legend-hidden');
+  return n ? n.textContent : null;
+}
+function rings() { return w._findLayer ? w._findLayer.getLayers().length : 0; }
+function findRow(name) {
+  return Array.from(w.document.querySelectorAll('#legend-body button[data-find]'))
+    .find(b => b.textContent.indexOf(name) >= 0);
+}
+function fire(el, type) {
+  el.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w }));
+}
+// The zoom at which a metre is `px` pixels on screen, here.
+function zoomFor(px) {
+  return Math.log2(px * 156543.03392 * Math.cos(LAT * Math.PI / 180));
+}
+async function zoomTo(px) {
+  w.map.setView([LAT, LNG], zoomFor(px), { animate: false });
+  await settle();
 }
 async function settle() { await wait(150); }
 
@@ -120,30 +163,86 @@ async function run() {
   w.setPlantsVisible(true);
   await settle();
 
-  // Species: numbered as the planting plan numbers them, and each plant
-  // carries its number while the legend is open.
+  // Species: numbered as the planting plan numbers them, at every zoom (F218).
   calls = [];
   press('plants', 'species');
   await settle();
   out.species = { lines: legend().plants, told: called('onLegendDetailChanged').map(c => c.slice(1)),
-                  numbers: numbers().map(n => n.textContent),
-                  shown: numbers().filter(n => n.style.opacity !== '0').length,
-                  focus: w.document.activeElement && w.document.activeElement.dataset.value };
+                  focus: w.document.activeElement && w.document.activeElement.dataset.value,
+                  look: (() => {
+                    const n = numbers()[0], s = n && w.getComputedStyle(n);
+                    return s ? [s.backgroundColor, s.fontSize] : null;
+                  })() };
+  // Close in (a metre is 20 px), every plant holds its own number, on it.
+  await zoomTo(20);
+  out.own = { numbers: numbers().map(n => n.textContent).sort(), off: offPlant(),
+              note: hiddenNote() };
   // A dragged plant takes its number with it.
   const oak = Object.values(w.plantMarkers).find(c => c._pd.plantId === 3);
   oak.setLatLng([LAT - D * 0.3, LNG + D * 0.1]);
-  const oakNum = numbers().find(n => n.textContent === '1');
   out.follows = (() => {
-    const mk = w._speciesNumberLayer.getLayers().find(m => m._spCircle === oak);
+    const mk = tags().find(m => m._spCircle === oak);
     const a = mk.getLatLng(), b = oak.getLatLng();
     return Math.abs(a.lat - b.lat) < 1e-9 && Math.abs(a.lng - b.lng) < 1e-9;
   })();
-  // Zoomed out until a plant is a dot, the numbers stand aside.
-  w.map.setZoom(w.map.getZoom() - 4, { animate: false });
+  // Further out (2.5 px a metre: a 2 m plant is 5 px across), the two Wild
+  // Bergamots 2.6 m apart share one number, where until F218 there was none.
+  await zoomTo(2.5);
+  out.grouped = { numbers: numbers().map(n => n.textContent).sort(),
+                  bergamot: tags().filter(mk => mk._spCircle._pd.plantId === 42)
+                    .map(mk => mk._spMembers.length),
+                  overlapping: overlapping(), note: hiddenNote() };
+  // The whole yard 4 px across, with eight more species in it: no number
+  // covers another, and the legend says how many wait for a closer zoom.
+  await zoomTo(0.1);
+  const extra = [];
+  for (let i = 0; i < 8; i++) {
+    extra.push(w.placePlantMarker(100 + i, 'Extra ' + i, LAT + D * 0.1 * (i % 3),
+                                  LNG + D * 0.1 * Math.floor(i / 3), 1, 'wildflower', null));
+  }
   await settle();
-  out.zoomed_out_shown = numbers().filter(n => n.style.opacity !== '0').length;
+  out.crowded = { species: w.document.querySelectorAll('#legend-body button[data-find]').length,
+                  tags: tags().length, overlapping: overlapping(), note: hiddenNote() };
+  extra.forEach(id => w._removeSinglePlantMarker(id, true));
   w.map.fitBounds(YARD, { padding: [80, 80], animate: false });
   await settle();
+  out.crowded.after = hiddenNote();
+
+  // Pointing at a species in the legend rings its plants and leaving lets them
+  // go; a click keeps them, through a rebuild, until a second click.
+  const berg = () => findRow('Wild Bergamot');
+  out.find = { buttons: w.document.querySelectorAll('#legend-body button[data-find]').length,
+               label: berg().getAttribute('aria-label') };
+  fire(berg(), 'mouseover');
+  out.find.hover = rings();
+  out.find.on_plants = w._findLayer.getLayers().every(r => Object.values(w.plantMarkers).some(
+    c => c._pd.plantId === 42 && c.getLatLng().equals(r.getLatLng())));
+  fire(berg(), 'mouseout');
+  out.find.left = rings();
+  fire(berg(), 'click');
+  out.find.pinned = [rings(), berg().getAttribute('aria-pressed')];
+  const yarrow = w.placePlantMarker(55, 'Yarrow', LAT - D * 0.2, LNG - D * 0.5, 1, 'wildflower', null);
+  await settle();                                     // the legend is built again
+  out.find.rebuilt = [rings(), berg().getAttribute('aria-pressed')];
+  w._removeSinglePlantMarker(yarrow, true);
+  await settle();
+  findRow('Harebell').dispatchEvent(new w.FocusEvent('focusin', { bubbles: true }));
+  out.find.tabbed = rings();                          // Harebell's one plant
+  findRow('Harebell').dispatchEvent(new w.FocusEvent('focusout', { bubbles: true }));
+  out.find.tabbed_away = rings();                     // the kept Bergamots again
+  await zoomTo(0.5);                                  // a 2 m plant is a 1 px dot
+  out.find.far_radius = Math.min(...w._findLayer.getLayers().map(r => r.getRadius()));
+  w.map.fitBounds(YARD, { padding: [80, 80], animate: false });
+  await settle();
+  fire(berg(), 'click');
+  out.find.unpinned = [rings(), berg().getAttribute('aria-pressed')];
+  fire(berg(), 'click');
+  press('plants', 'type');
+  await settle();
+  out.find.type = [rings(), w.document.querySelectorAll('#legend-body button[data-find]').length];
+  press('plants', 'species');
+  await settle();
+  out.find.species_again = rings();
 
   // Boundaries, named: a line per colour and name; a click names its line.
   press('boundaries', 'named');
@@ -174,9 +273,12 @@ async function run() {
     .dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
   out.named.asked_both = called('onBoundaryNameRequested').map(c => JSON.parse(c[1]));
 
-  // Closed, the numbers go; Python's word sets the detail back.
+  // Closed, the numbers and the rings go; Python's word sets the detail back.
+  fire(findRow('Wild Bergamot'), 'click');
+  out.open_rings = rings();
   w.setLegendVisible(false);
   out.closed_numbers = numbers().length;
+  out.closed_rings = rings();
   w.setLegendDetail('type', 'simple');
   w.setLegendDetail('nonsense', 42);                  // ignored
   w.setLegendVisible(true);

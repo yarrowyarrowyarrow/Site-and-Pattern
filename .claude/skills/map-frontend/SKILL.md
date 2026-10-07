@@ -1,6 +1,6 @@
 ---
 name: map-frontend
-description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, thirteen files since V3.11; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
+description: Use when editing the Leaflet map, html/map JS, overlays, map modes/tools, src/map_widget.py, src/map_js.py, or src/controllers/map_events.py. Covers the classic-script split (V1.64, fourteen files since V3.11; shared globals, load order), the QWebChannel Python↔JS bridge in both directions, the contract tests that pin it, the wind-shadow worked exemplar for adding an overlay, JS line ceilings, and how to see JS console output / renderer crashes.
 ---
 
 # Map frontend — Leaflet inside QWebEngineView
@@ -61,8 +61,9 @@ ninth, `09-keyboard.js`, in V3.02 for the map without a mouse, and a tenth,
 `10-plant-key.js`, in V3.03 for how a plant is drawn, an eleventh,
 `11-map-furniture.js`, in V3.06 for the north arrow and the scale bar, and in
 V3.11 `02b-shape-edit.js` (a shape's outline editing, moved out of
-02-boundary.js unchanged and loaded straight after it) and `12-legend.js`
-(the legend, built from what is drawn)):
+02-boundary.js unchanged and loaded straight after it), `12-legend.js`
+(the legend, built from what is drawn) and `13-species-numbers.js` (its
+species numbers on the map at every zoom, and the rings that find a species)):
 
 ```html
 <script src="map/01-core.js"></script>
@@ -78,6 +79,7 @@ V3.11 `02b-shape-edit.js` (a shape's outline editing, moved out of
 <script src="map/10-plant-key.js"></script>
 <script src="map/11-map-furniture.js"></script>
 <script src="map/12-legend.js"></script>
+<script src="map/13-species-numbers.js"></script>
 ```
 
 That block **is** the load-order definition. Rules that follow from it:
@@ -114,7 +116,8 @@ That block **is** the load-order definition. Rules that follow from it:
 | `html/map/09-keyboard.js` | The map without a mouse (F195, V3.02): Enter on the focused map calls `onMapClick` at the centre with whatever tool is chosen, Shift+Enter calls `finishDrawing`, a centre mark and the footprint follow the keyboard, the map's own focus ring (the browser's sat outside a container that fills the page), and `L.Marker.mergeOptions({keyboard: false})`, so a label marker is not a Tab stop unless it passes `keyboard: true` because activating it does something. **A new click tool belongs in `_KEYBOARD_TOOLS`** or Enter will not act for it |
 | `html/map/10-plant-key.js` | How a plant is drawn (F195, V3.03): `TYPE_COLORS` (mirrors `src/member_colors.py`, the one table; a test fails if they differ), `plantColour(pd)` (your colour, else the type's) and `plantMarkerStyle(colour)` (an outline 60% darker, 2 px), which every place that draws or restores a marker calls; the legend's plant section, built from the table; and `roundCircles`, which makes every `L.Circle` as wide as it is tall, because Leaflet 1.9's `acos` drew sub-metre circles up to 44% out of round. No other script reads `TYPE_COLORS` (tested) |
 | `html/map/11-map-furniture.js` | The north arrow and the scale bar (F205, V3.06): `setNorthArrow(on)` (a Leaflet control under the zoom buttons; the map never rotates, so it never turns) and `setScaleBar(on, unit)` (a `<button>` at the bottom centre, outside the map's container so a click never places anything; a click switches km and m and tells Python through `bridge.onScaleUnitChanged`). `scaleBarFor(metresPerPixel, maxPx, unit)` is pure and run in node by `tests/test_map_furniture.py`. The switches and their memory are `src/map_furniture_flow.py` |
-| `html/map/12-legend.js` | The legend (F217, V3.11): names only what is on the map and shown, rebuilt on Leaflet's `layeradd`/`layerremove` (debounced, only while open; its own number markers and every tooltip are ignored, or it would chase itself). Pure `legendModel(snap, detail)` + `legendHtml(sections, targets)` run in node by `tests/test_legend.py`; `legendSnapshot()` reads the map. Plants by Type or Species (numbered by `speciesNumbers`, which mirrors `planting_map._numbering`, a test keeps them equal; the numbers are drawn on the plants while open), boundaries Simple or Named. `toggleLegend`/`setLegendVisible` live here; `setLegendDetail` comes from `src/legend_flow.py`. Every colour from a design file passes `_colour` before it reaches a style attribute |
+| `html/map/12-legend.js` | The legend (F217, V3.11): names only what is on the map and shown, rebuilt on Leaflet's `layeradd`/`layerremove` (debounced, only while open; its own number markers and every tooltip are ignored, or it would chase itself). Pure `legendModel(snap, detail)` + `legendHtml(sections, targets)` run in node by `tests/test_legend.py`; `legendSnapshot()` reads the map. Plants by Type or Species (numbered by `speciesNumbers`, which mirrors `planting_map._numbering`, a test keeps them equal; a species line is a `data-find` button), boundaries Simple or Named. `toggleLegend`/`setLegendVisible` live here; `setLegendDetail` comes from `src/legend_flow.py`. Every colour from a design file passes `_colour` before it reaches a style attribute |
+| `html/map/13-species-numbers.js` | The species numbers on the map and finding a species (F218, V3.11). `numberGroups(points, opts)` is pure (screen pixels in, tags out; node runs it in `tests/test_legend.py`): a plant 9 px or more in radius holds its own number, smaller plants of one species within 40 px share one on the member nearest their middle, a plant's own number is placed first, no number covers another (it tries the eight places one tag around its plant, else waits and the legend counts it), and the map's own labels (`_labelBoxes`, the marker and tooltip panes) are avoided when there is room and covered when not. Regrouped on zoom (`_refitSpeciesNumbers`, also called by the timeline), on every legend rebuild, and 150 ms after a plant stops moving. `_ringSpecies(id)` rings a species' plants in `speciesFindPane` (z 590, no pointer events); `_hoverFind`/`_pinSpecies` are the legend line's hover, focus and click. `_endSpeciesView` clears numbers, rings and the kept species when the legend closes or leaves Species |
 
 ## Bridge: Python → JS
 

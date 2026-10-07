@@ -30,10 +30,15 @@ Two of its sections have a switch on their title (remembered between sessions):
 
 - **Plants: Type | Species.** *Type* lists the kinds of plant on the map (Tree,
   Wildflower…), plus any plant you gave its own colour, by name. *Species* lists every
-  species, numbered and with how many are placed, and puts each number on its plants
-  while the legend is open (zoom in if a plant is too small to hold one). The numbers
-  are the ones the PDF's planting map and the buy list use, so a 7 is the same plant on
-  screen and on paper.
+  species, numbered and with how many are placed, and puts the numbers on the map
+  while the legend is open, at any zoom: a plant big enough carries its own, and
+  smaller plants of one species standing close together share one, on the plant in
+  their middle, the way a planting plan tags a drift. Zoom in and the groups split
+  until every plant has its own. Numbers never cover each other; when there is no
+  room for some, the legend says *Zoom in for 3 more numbers*. Point at a species in
+  the legend to ring its plants on the map, or click it to keep them ringed (click
+  again to let go). The numbers are the ones the PDF's planting map and the buy list
+  use, so a 7 is the same plant on screen and on paper.
 - **Boundaries: Simple | Named.** *Simple* is one line, "Boundary". *Named* gives a line
   to each colour and name; click a line to name it (say "City park land" for the blue
   ones and "Private lot" for the green), or right-click a boundary → **Name…** to name

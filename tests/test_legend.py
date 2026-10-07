@@ -14,6 +14,10 @@ or not, all eleven plant types, and a Structures section that was not true
 longer exists). ``html/map/12-legend.js`` builds it from what is drawn, in
 three parts, two of them pure, so node runs them here; the browser half runs
 the real page (``html/legend_probe.html``) in headless Chromium.
+
+F218: "I didn't realize there were numbers as I did not zoom in enough." The
+species numbers are laid out at every zoom by ``html/map/13-species-numbers.js``
+(``numberGroups``, pure, run here too), and a species line rings its plants.
 """
 
 import json
@@ -35,11 +39,12 @@ def _node():
 
 
 def _run(steps: str):
-    """10-plant-key.js and 12-legend.js, then ``steps``; what they put in
-    ``out``."""
+    """10-plant-key.js, 12-legend.js and 13-species-numbers.js, then
+    ``steps``; what they put in ``out``."""
     script = "\n".join([
         (_MAP / "10-plant-key.js").read_text(encoding="utf-8"),
         (_MAP / "12-legend.js").read_text(encoding="utf-8"),
+        (_MAP / "13-species-numbers.js").read_text(encoding="utf-8"),
         "var out = {};", steps, "console.log(JSON.stringify(out));"])
     proc = subprocess.run([_node(), "-"], input=script, capture_output=True,
                           text=True, timeout=60, encoding="utf-8")
@@ -139,6 +144,89 @@ class TestSpecies(unittest.TestCase):
         self.assertEqual({int(k): v for k, v in js.items()}, py)
 
 
+def _groups(points, **opts):
+    """numberGroups (13-species-numbers.js) on plain points."""
+    return _run(f"out.g = numberGroups({json.dumps(points)}, {json.dumps(opts)});")["g"]
+
+
+def _plant(key, species, num, x, y, r=3):
+    return {"key": key, "id": species, "num": num, "x": x, "y": y, "r": r}
+
+
+@unittest.skipIf(_node() is None, "no node binary")
+class TestNumbersAtEveryZoom(unittest.TestCase):
+    """F218. The owner, of the first Species legend: "I didn't realize there
+    were numbers as I did not zoom in enough." A number was drawn only on a
+    plant at least 7 px across on screen, so at a whole yard's zoom there were
+    none, and nothing said so. Where they go is worked out in screen pixels by
+    a pure function, run here."""
+
+    def test_a_plant_big_enough_holds_its_own_number(self):
+        g = _groups([_plant("a", "3", 1, 100, 100, r=20), _plant("b", "3", 1, 160, 100, r=20)])
+        self.assertEqual([(t["key"], t["dx"], t["dy"], t["members"]) for t in g["tags"]],
+                         [("a", 0, 0, ["a"]), ("b", 0, 0, ["b"])])
+        self.assertEqual(g["hidden"], 0)
+
+    def test_a_drift_of_small_plants_shares_one_number_on_its_middle_plant(self):
+        drift = [_plant(f"a{i}", "7", 7, 100 + 6 * i, 100 + 4 * (i % 2)) for i in range(5)]
+        g = _groups(drift)
+        self.assertEqual([(t["key"], sorted(t["members"])) for t in g["tags"]],
+                         [("a2", ["a0", "a1", "a2", "a3", "a4"])])
+
+    def test_far_apart_the_same_species_is_numbered_twice(self):
+        g = _groups([_plant("a", "7", 7, 100, 100), _plant("b", "7", 7, 104, 102),
+                     _plant("c", "7", 7, 220, 100)])
+        self.assertEqual(sorted(sorted(t["members"]) for t in g["tags"]), [["a", "b"], ["c"]])
+
+    def test_two_species_never_share_a_number(self):
+        mixed = [_plant("a1", "1", 1, 100, 100), _plant("b1", "2", 2, 104, 100),
+                 _plant("a2", "1", 1, 108, 100), _plant("b2", "2", 2, 112, 100)]
+        g = _groups(mixed)
+        self.assertEqual({t["num"]: sorted(t["members"]) for t in g["tags"]},
+                         {1: ["a1", "a2"], 2: ["b1", "b2"]})
+
+    def test_none_covers_another_none_strays_and_none_is_lost_silently(self):
+        crowd = [_plant(f"c{s}", str(s), s, 50 + s % 3, 50 + s % 2) for s in range(1, 13)]
+        g = _groups(crowd)
+        self.assertGreater(g["hidden"], 0)
+        self.assertEqual(len(g["tags"]) + g["hidden"], 12)
+        boxes = [(t["x"] - t["w"] / 2, t["y"] - 8, t["x"] + t["w"] / 2, t["y"] + 8)
+                 for t in g["tags"]]
+        for i, a in enumerate(boxes):
+            for b in boxes[i + 1:]:
+                self.assertFalse(a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3],
+                                 f"{a} covers {b}")
+        for t in g["tags"]:                     # beside its plant: one step at most
+            self.assertLessEqual(abs(t["dx"]), t["w"] + 2)
+            self.assertLessEqual(abs(t["dy"]), 18)
+
+    def test_a_plants_own_number_keeps_its_middle(self):
+        """A drift of five round a shrub's middle would otherwise put its
+        number there, where it reads as the shrub's."""
+        drift = [_plant(f"g{i}", "2", 2, 100 + d, 100) for i, d in enumerate((-8, -4, 0, 4, 8))]
+        g = _groups(drift + [_plant("s", "9", 9, 100, 100, r=30)])
+        where = {t["num"]: (t["dx"], t["dy"]) for t in g["tags"]}
+        self.assertEqual(where[9], (0, 0))
+        self.assertNotEqual(where[2], (0, 0))
+
+    def test_a_label_on_the_map_is_avoided_when_there_is_room_and_covered_when_not(self):
+        small = _groups([_plant("a", "1", 1, 100, 100)], labels=[[92, 94, 108, 106]])
+        self.assertNotEqual((small["tags"][0]["dx"], small["tags"][0]["dy"]), (0, 0))
+        # A small yard's labels are bigger than it: covering beats hiding.
+        huge = _groups([_plant("a", "1", 1, 100, 100)], labels=[[0, 0, 300, 300]])
+        self.assertEqual((huge["tags"][0]["dx"], huge["tags"][0]["dy"], huge["hidden"]), (0, 0, 0))
+
+    def test_the_same_map_lays_out_the_same(self):
+        pts = [_plant(f"p{i}", str(i % 5), i % 5 + 1, (i * 37) % 200, (i * 53) % 150,
+                      r=(i % 4) * 4) for i in range(40)]
+        self.assertEqual(_groups(pts), _groups(pts))
+
+    def test_the_old_rule_is_gone(self):
+        js = (_MAP / "12-legend.js").read_text(encoding="utf-8")
+        self.assertNotIn("_NUMBER_MIN_RADIUS_PX", js)
+        self.assertNotIn("setOpacity", js)
+
+
 @unittest.skipIf(_node() is None, "no node binary")
 class TestBoundaries(unittest.TestCase):
 
@@ -196,6 +284,14 @@ class TestTheHtml(unittest.TestCase):
         self.assertIn('data-legend="plants" data-value="type" aria-pressed="false"', got["h"])
         self.assertIn('<b class="legend-num">1</b> Bur Oak', got["h"])
 
+    def test_a_species_is_a_button_that_finds_its_plants(self):
+        got = self._html({"plants": _PLANTS}, plants="species")
+        self.assertIn('class="legend-item legend-find" data-find="42" aria-pressed="false"',
+                      got["h"])
+        self.assertIn('aria-label="Show on the map: 4 Wild Bergamot, 2 plants"', got["h"])
+        self.assertIn('aria-label="Show on the map: 1 Bur Oak, 1 plant"', got["h"])
+        self.assertNotIn("data-find", self._html({"plants": _PLANTS})["h"])
+
     def test_a_named_line_is_a_button_with_a_name_a_screen_reader_says(self):
         got = self._html({"boundaries": [{"id": "b1", "colour": "#4caf50", "name": "Lot"}]},
                          boundaries="named")
@@ -218,11 +314,11 @@ class TestTheSwitchesAreRemembered(unittest.TestCase):
         self.assertEqual(normalise(None, 42), ("type", "simple"))
         self.assertEqual(normalise("everything", ""), ("type", "simple"))
 
-    def test_the_page_loads_the_legend_last_and_the_shape_edit_where_it_was(self):
+    def test_the_page_loads_the_legend_and_its_numbers_last_and_the_shape_edit_where_it_was(self):
         page = (_ROOT / "html" / "map.html").read_text(encoding="utf-8")
         order = [line.split('"')[1] for line in page.splitlines()
                  if '<script src="map/' in line]
-        self.assertEqual(order[-1], "map/12-legend.js")
+        self.assertEqual(order[-2:], ["map/12-legend.js", "map/13-species-numbers.js"])
         self.assertEqual(order.index("map/02b-shape-edit.js"),
                          order.index("map/02-boundary.js") + 1)
 
@@ -269,12 +365,48 @@ class OnTheMap(unittest.TestCase):
         self.assertEqual(s["lines"], ["1 Bur Oak ×1", "2 Harebell ×1",
                                       "3 Prairie Smoke ×1", "4 Wild Bergamot ×2"])
         self.assertEqual(s["told"], [["species", "simple"]])
-        self.assertEqual(sorted(s["numbers"]), ["1", "2", "3", "4", "4"])
-        self.assertEqual(s["shown"], 5)
         self.assertEqual(s["focus"], "species", "the switch lost the keyboard")
+        # A white tag, so it reads on a satellite photo, at the 12 px floor.
+        self.assertEqual(s["look"], ["rgb(255, 255, 255)", "12px"])
         self.assertTrue(self.m["follows"], "a dragged plant left its number behind")
-        self.assertEqual(self.m["zoomed_out_shown"], 0,
-                         "numbers stayed over plants too small to hold them")
+
+    def test_close_in_every_plant_holds_its_own_number(self):
+        own = self.m["own"]
+        self.assertEqual(own["numbers"], ["1", "2", "3", "4", "4"])
+        self.assertLess(own["off"], 1.0, "a number is not on the plant it names")
+        self.assertIsNone(own["note"])
+
+    def test_further_out_a_close_pair_shares_one_number(self):
+        """F218: at this zoom every plant was under 7 px and none had one."""
+        g = self.m["grouped"]
+        self.assertEqual(g["numbers"], ["1", "2", "3", "4"])
+        self.assertEqual(g["bergamot"], [2], "the two Wild Bergamots did not share one")
+        self.assertEqual(g["overlapping"], 0)
+        self.assertIsNone(g["note"])
+
+    def test_crowded_none_covers_another_and_the_legend_counts_the_rest(self):
+        c = self.m["crowded"]
+        self.assertEqual(c["species"], 12)
+        self.assertEqual(c["overlapping"], 0)
+        waiting = c["species"] - c["tags"]
+        self.assertGreater(waiting, 0)
+        self.assertEqual(c["note"], f"Zoom in for {waiting} more number" +
+                         ("" if waiting == 1 else "s"))
+        self.assertIsNone(c["after"], "the note outlived the crowd")
+
+    def test_a_species_in_the_legend_rings_its_plants(self):
+        f = self.m["find"]
+        self.assertEqual(f["buttons"], 4)
+        self.assertEqual(f["label"], "Show on the map: 4 Wild Bergamot, 2 plants")
+        # Two plants, a dark ring and a white one each, on the plants.
+        self.assertEqual((f["hover"], f["on_plants"], f["left"]), (4, True, 0))
+        self.assertEqual(f["pinned"], [4, "true"])
+        self.assertEqual(f["rebuilt"], [4, "true"], "a rebuild let the kept species go")
+        self.assertEqual((f["tabbed"], f["tabbed_away"]), (2, 4))
+        self.assertGreaterEqual(f["far_radius"], 7, "a dot's ring is too small to find")
+        self.assertEqual(f["unpinned"], [0, "false"])
+        self.assertEqual(f["type"], [0, 0])
+        self.assertEqual(f["species_again"], 0)
 
     def test_named_boundaries(self):
         n = self.m["named"]
@@ -286,8 +418,9 @@ class OnTheMap(unittest.TestCase):
         self.assertEqual(n["grouped"], ["City park land", "Private lot"])
         self.assertEqual(n["asked_both"], [["b2", "b3"]])
 
-    def test_closed_it_takes_its_numbers_and_python_sets_it_back(self):
-        self.assertEqual(self.m["closed_numbers"], 0)
+    def test_closed_it_takes_its_numbers_and_rings_and_python_sets_it_back(self):
+        self.assertEqual(self.m["open_rings"], 4)
+        self.assertEqual((self.m["closed_numbers"], self.m["closed_rings"]), (0, 0))
         b = self.m["back"]
         self.assertEqual(b["detail"], {"plants": "type", "boundaries": "simple"})
         self.assertEqual(b["plants"], ["Tree", "Wildflower", "Prairie Smoke"])

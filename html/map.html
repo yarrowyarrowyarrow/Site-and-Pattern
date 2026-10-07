@@ -137,21 +137,29 @@
     }
     #map-legend .legend-num { color: #e8f5e9; }
     #map-legend .legend-count { color: #90a4ae; }
-    #map-legend button.legend-name {
+    #map-legend button.legend-name, #map-legend button.legend-find {
       width: 100%; background: none; border: none; color: inherit; font: inherit;
       text-align: left; cursor: pointer; min-height: 24px; border-radius: 3px;
     }
-    #map-legend button.legend-name:hover { background: rgba(165, 214, 167, 0.12); }
+    #map-legend button.legend-name:hover,
+    #map-legend button.legend-find:hover { background: rgba(165, 214, 167, 0.12); }
+    /* A species kept ringed on the map by a click (F218). */
+    #map-legend button.legend-find[aria-pressed="true"] { background: #2e4a2e; color: #e8f5e9; }
     /* Only while the pointer is over the legend, so Export PDF's picture of
        the map does not print a pencil beside every name. */
     #map-legend .legend-edit { margin-left: auto; opacity: 0; color: #a5d6a7; }
     #map-legend:hover .legend-edit,
     #map-legend .legend-name:focus-visible .legend-edit { opacity: 1; }
-    /* A species' number on each of its plants, with the legend in Species. */
+    /* A species' number on the map, with the legend in Species (F218): on a
+       plant big enough to hold it, or on the middle plant of a close group of
+       its species, at every zoom (13-species-numbers.js). White, so it reads
+       on a satellite photo; the printed planting map's green. */
     .sp-species-num {
-      color: #fff; font: 700 12px 'Segoe UI', Arial, sans-serif; line-height: 16px;
+      box-sizing: border-box; background: #fff; color: #1b5e20;
+      border: 1px solid #1b5e20; border-radius: 8px;
+      font: 700 12px 'Segoe UI', Arial, sans-serif; line-height: 14px;
       text-align: center; white-space: nowrap;
-      text-shadow: 0 0 2px #000, 0 0 3px #000, 0 0 1px #000;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
     }
     #legend-toggle {
       position: absolute;
@@ -256,5 +264,6 @@
   <script src="map/10-plant-key.js"></script>
   <script src="map/11-map-furniture.js"></script>
   <script src="map/12-legend.js"></script>
+  <script src="map/13-species-numbers.js"></script>
 </body>
 </html>

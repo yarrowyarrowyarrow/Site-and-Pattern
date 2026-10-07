@@ -362,7 +362,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "scene3d_window.py", 950),             # 950 now (V3.05): split before adding
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
-        (_HTML / "map.html", 400),                     # 260 now (V3.11)
+        (_HTML / "map.html", 400),                     # 269 now (V3.11)
         (_HTML / "map" / "01-core.js", 950),           # 930 now (V3.11)
         (_HTML / "map" / "02-boundary.js", 750),       # 626 now (V3.11)
         # V3.11 (F216, F217): the corner-handle switch and names had 7 lines
@@ -371,7 +371,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # after this file so nothing runs in a new order.
         (_HTML / "map" / "02b-shape-edit.js", 200),    # 142 now
         (_HTML / "map" / "03-plants.js", 950),         # 939 now (V3.11)
-        (_HTML / "map" / "04-tools.js", 450),          # 378 now (V3.11)
+        (_HTML / "map" / "04-tools.js", 450),          # 380 now (V3.11)
         # V2.26: +editable existing features (drag + scroll-resize of detected/
         # marked trees & buildings) — in-domain growth for the features file,
         # kept together to avoid the cross-chunk load-order traps a split adds.
@@ -402,9 +402,14 @@ class TestStructuralCeilings(unittest.TestCase):
         # arrival, as the map's furniture rather than any one overlay's.
         (_HTML / "map" / "11-map-furniture.js", 200),  # 132 now
         # V3.11 (F217): the legend, built from what is drawn, opted in on
-        # arrival: a pure model and renderer node can test, the part that reads
-        # the map, and the species numbers drawn on the plants.
-        (_HTML / "map" / "12-legend.js", 520),         # 460 now
+        # arrival: a pure model and renderer node can test, and the part that
+        # reads the map.
+        (_HTML / "map" / "12-legend.js", 520),         # 422 now
+        # V3.11 (F218): the species numbers on the map at every zoom, and the
+        # rings that find a species from the legend, moved out of the legend
+        # on arrival rather than taking it to its ceiling. The layout
+        # (numberGroups) is pure, so node tests it.
+        (_HTML / "map" / "13-species-numbers.js", 360),  # 298 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in

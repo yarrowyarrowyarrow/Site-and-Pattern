@@ -17,14 +17,13 @@
 //   legendModel(snap, detail)  what to say, from a plain snapshot      (pure)
 //   legendHtml(sections)       how it reads                             (pure)
 //   legendSnapshot()           the map, read into that snapshot
-// then the page's side: the switches, a click that names boundaries, and the
-// species numbers drawn on the plants while the legend is open in Species.
+// then the page's side: the switches, and a click that names boundaries or
+// finds a species. The species numbers on the plants, and the rings that find
+// a species, are 13-species-numbers.js's (F218).
 
     var legendDetail = { plants: 'type', boundaries: 'simple' };
     var _legendTimer = null;
     var _legendTargets = [];      // what each Named boundary line names
-    var _speciesNumberLayer = null;
-    var _numberFollow = [];       // [circle, handler]: numbers follow a drag
 
     var _LEGEND_SWITCHES = {
       plants: [['type', 'Type'], ['species', 'Species']],
@@ -32,9 +31,6 @@
     };
     var _HEDGE_WORDS = { hedge: 'Hedge', fence: 'Fence',
                          living_fence: 'Living fence', windbreak: 'Windbreak' };
-    // A number is drawn on a plant only when the plant is at least this wide on
-    // screen; smaller, the number would hide it. Zoom in to read them.
-    var _NUMBER_MIN_RADIUS_PX = 7;
 
     // Text and attribute escaping without the DOM, so node can run it.
     function _esc(s) {
@@ -90,7 +86,8 @@
         Object.keys(first).sort(function (a, b) { return nums[a] - nums[b]; })
           .forEach(function (id) {
             items.push({ swatch: { kind: 'plant', colour: first[id].colour },
-                         label: first[id].name, num: nums[id], count: count[id] });
+                         label: first[id].name, num: nums[id], count: count[id],
+                         find: String(id) });
           });
       } else {
         var typed = {}, own = [];
@@ -212,7 +209,9 @@
     }
 
     // The legend's body, from legendModel's sections. A Named boundary line is
-    // a button carrying `data-item`, its index in `targets` (filled here).
+    // a button carrying `data-item`, its index in `targets` (filled here); a
+    // species is a button carrying `data-find`, its plant id, that rings its
+    // plants on the map (13-species-numbers.js).
     function legendHtml(sections, targets) {
       targets = targets || [];
       if (!sections.length) return '<div class="legend-note">Nothing on the map yet.</div>';
@@ -240,6 +239,12 @@
                  (targets.length - 1) + '" title="Name it" aria-label="' +
                  _esc('Name it: ' + it.label) + '">' + sw + '<span>' + text +
                  '</span><span class="legend-edit" aria-hidden="true">✎</span></button>';
+          } else if (it.find !== undefined) {
+            h += '<button type="button" class="legend-item legend-find" data-find="' +
+                 _esc(it.find) + '" aria-pressed="false" title="Show its plants" aria-label="' +
+                 _esc('Show on the map: ' + it.num + ' ' + it.label + ', ' + it.count +
+                      (it.count === 1 ? ' plant' : ' plants')) +
+                 '">' + sw + '<span>' + text + '</span></button>';
           } else {
             h += '<div class="legend-item">' + sw + '<span>' + text + '</span></div>';
           }
@@ -339,7 +344,7 @@
     // Rebuild soon: Leaflet adds and removes layers in bursts (a pattern, an
     // undo's redraw, a boundary's labels on every frame of a drag).
     function scheduleLegend() {
-      if (!_legendOpen()) { _clearSpeciesNumbers(); return; }
+      if (!_legendOpen()) { _endSpeciesView(); return; }       // 13-species-numbers.js
       if (_legendTimer) clearTimeout(_legendTimer);
       _legendTimer = setTimeout(refreshLegend, 60);
     }
@@ -350,58 +355,7 @@
       if (!body || !map || !map.hasLayer) return;
       _legendTargets = [];
       body.innerHTML = legendHtml(legendModel(legendSnapshot(), legendDetail), _legendTargets);
-      _drawSpeciesNumbers();
-    }
-
-    function _clearSpeciesNumbers() {
-      _numberFollow.forEach(function (f) { f[0].off('move', f[1]); });
-      _numberFollow = [];
-      if (_speciesNumberLayer) map.removeLayer(_speciesNumberLayer);
-      _speciesNumberLayer = null;
-    }
-
-    // In Species, each plant carries its number, so the legend's 7 can be
-    // found on the map, as on the printed planting plan.
-    function _drawSpeciesNumbers() {
-      _clearSpeciesNumbers();
-      if (legendDetail.plants !== 'species' || !_legendOpen() || !_shown(plantLayerGroup)) return;
-      var circles = Object.keys(plantMarkers).map(function (k) { return plantMarkers[k]; })
-        .filter(function (c) { return c && c._pd; });
-      var nums = speciesNumbers(circles.map(function (c) {
-        return { id: c._pd.plantId, name: c._pd.commonName };
-      }));
-      _speciesNumberLayer = L.layerGroup();
-      _speciesNumberLayer._spLegendOwn = true;
-      circles.forEach(function (c) {
-        var mk = L.marker(c.getLatLng(), { interactive: false, keyboard: false,
-          icon: L.divIcon({ className: 'sp-species-num', html: String(nums[c._pd.plantId]),
-                            iconSize: [24, 16], iconAnchor: [12, 8] }) });
-        mk._spLegendOwn = true;
-        mk._spCircle = c;
-        var follow = function (ev) { mk.setLatLng(ev.latlng); };
-        c.on('move', follow);
-        _numberFollow.push([c, follow]);
-        _speciesNumberLayer.addLayer(mk);
-      });
-      _speciesNumberLayer.addTo(map);
-      _fitSpeciesNumbers();
-    }
-
-    // A plant's radius on screen now, from its radius in metres. Not the
-    // circle's own pixel radius: on zoomend this runs before the plants
-    // re-project (it was hooked first), and read that it showed every number.
-    function _pixelRadius(c) {
-      var ll = c.getLatLng();
-      var a = map.latLngToContainerPoint(ll);
-      var b = map.latLngToContainerPoint([ll.lat + c.getRadius() / 111320, ll.lng]);
-      return Math.abs(a.y - b.y);
-    }
-
-    function _fitSpeciesNumbers() {
-      if (!_speciesNumberLayer) return;
-      _speciesNumberLayer.eachLayer(function (mk) {
-        mk.setOpacity(_pixelRadius(mk._spCircle) >= _NUMBER_MIN_RADIUS_PX ? 1 : 0);
-      });
+      _drawSpeciesNumbers();                                   // 13-species-numbers.js
     }
 
     function setLegendDetail(plants, boundaries) {
@@ -430,6 +384,8 @@
       } else if (b.dataset.item !== undefined) {
         var t = _legendTargets[+b.dataset.item];
         if (t) askBoundaryName(t.ids, t.name);               // 02-boundary.js
+      } else if (b.dataset.find !== undefined) {
+        _pinSpecies(b.dataset.find);                         // 13-species-numbers.js
       }
     }
 
@@ -443,18 +399,24 @@
       var btn    = document.getElementById('legend-toggle');
       legend.classList.toggle('visible', !!visible);
       btn.classList.toggle('active', !!visible);
-      if (visible) refreshLegend(); else _clearSpeciesNumbers();
+      if (visible) refreshLegend(); else _endSpeciesView();
     }
 
     // From initMap (01-core.js): every layer the map gains or loses may change
-    // what the legend says. Not its own numbers, and not a hover's tooltip.
+    // what the legend says. Not its own numbers or rings, and not a hover's
+    // tooltip.
     function initLegend() {
       map.on('layeradd layerremove', function (e) {
         var l = e.layer;
         if (!l || l._spLegendOwn || l instanceof L.DivOverlay) return;
         scheduleLegend();
       });
-      map.on('zoomend', _fitSpeciesNumbers);
+      map.on('zoomend', _refitSpeciesNumbers);
       var el = document.getElementById('map-legend');
-      if (el) el.addEventListener('click', _onLegendClick);
+      if (!el) return;
+      el.addEventListener('click', _onLegendClick);
+      el.addEventListener('mouseover', function (ev) { _hoverFind(ev, true); });
+      el.addEventListener('mouseout', function (ev) { _hoverFind(ev, false); });
+      el.addEventListener('focusin', function (ev) { _hoverFind(ev, true); });
+      el.addEventListener('focusout', function (ev) { _hoverFind(ev, false); });
     }

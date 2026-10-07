@@ -156,6 +156,7 @@
         });
         originalRadii = {};
         if (canopyVisible) rebuildCanopyGroup();
+        _refitSpeciesNumbers();         // sizes changed (13-species-numbers.js)
         return;
       }
 
@@ -191,6 +192,7 @@
 
       // Rebuild canopy if visible (canopy scales with markers)
       if (canopyVisible) rebuildCanopyGroup();
+      _refitSpeciesNumbers();
     }
 
     // ── Measurement tool ───────────────────────────────────────────────────────
