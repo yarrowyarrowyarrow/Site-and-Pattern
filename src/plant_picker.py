@@ -13,9 +13,10 @@ this widget now, over one vocabulary (``src/plant_filters.py``) and one list
 (``src/plant_list_view.py``).
 
 Top to bottom: a search box; a line that says which filters are on, with a
-button that unfolds them and one that clears them; the nine facets and nine
-qualities; the count and the order; the list. **Narrow pickers start folded.**
-Eighteen controls do not fit above a list in a 437 px column that already had
+button that unfolds them and one that clears them; the nine facets and the
+qualities (nine at V3.00, ten since V3.12's Edmonton native); the count and the
+order; the list. **Narrow pickers start folded.** At V3.00,
+eighteen controls did not fit above a list in a 437 px column that already had
 fourteen, and the folded line is also where a filter the app set (a dropped
 pin ticks "Restoring toward") stops being silent.
 
