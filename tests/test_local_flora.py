@@ -179,6 +179,151 @@ class TestARenameCarriesTheRuling(unittest.TestCase):
                 self.assertIn("carry_rulings(", fh.read(), script)
 
 
+class TestAReviewIsFoldedIn(unittest.TestCase):
+    """The owner rules on the borderline species on a review page; ``--merge``
+    brings the rulings back, from the page's export or from its database rows
+    one file each, and never half-applies a review with one bad row in it."""
+
+    def setUp(self):
+        import pathlib
+        import tempfile
+        self.dir = pathlib.Path(tempfile.mkdtemp())
+        self.path = self.dir / "rulings.json"
+        self.path.write_text(json.dumps({"version": 1, "comment": "kept",
+                                         "places": {"edmonton": {
+            "Prunus pensylvanica": {"ruling": "not_native",
+                                    "reason": "first look"}}}}),
+            encoding="utf-8")
+
+    def _doc(self):
+        return json.loads(self.path.read_text(encoding="utf-8"))
+
+    def test_rulings_land_replace_and_unsettled_removes(self):
+        from scripts.derive_local_flora import merge_rulings
+        changes = merge_rulings({"places": {"edmonton": {
+            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
+                                    "on": "2026-10-07"},
+            "Viburnum opulus": {"ruling": "native", "reason": "Ravines. "},
+            "Linum lewisii": {"ruling": "unsettled", "reason": "a note"},
+        }}}, self.path)
+        self.assertEqual(changes, [
+            ("edmonton", "Prunus pensylvanica", "not_native -> native"),
+            ("edmonton", "Viburnum opulus", "native")])
+        doc = self._doc()
+        self.assertEqual(doc["comment"], "kept")
+        self.assertEqual(doc["places"]["edmonton"], {
+            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
+                                    "on": "2026-10-07"},
+            "Viburnum opulus": {"ruling": "native", "reason": "Ravines."}})
+        self.assertEqual(merge_rulings({"places": {"edmonton": {
+            "Viburnum opulus": {"ruling": "unsettled"}}}}, self.path),
+            [("edmonton", "Viburnum opulus", "native removed")])
+        self.assertEqual(merge_rulings({"places": {"edmonton": {
+            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
+                                    "on": "2026-10-07"}}}}, self.path), [])
+
+    def test_one_bad_row_writes_nothing(self):
+        from scripts.derive_local_flora import merge_rulings
+        before = self.path.read_text(encoding="utf-8")
+        good = {"Viburnum opulus": {"ruling": "native", "reason": "Ravines."}}
+        for bad, msg in (
+                ({"Fragaria vesca": {"ruling": "native"}}, "reason"),
+                ({"Quercus macrocarpa": {"ruling": "native", "reason": "x"}},
+                 "VASCAN"),
+                ({"Nope nope": {"ruling": "native", "reason": "x"}},
+                 "not in the catalogue"),
+                ({"Fragaria vesca": {"ruling": "maybe", "reason": "x"}},
+                 "one of")):
+            with self.subTest(msg), self.assertRaisesRegex(ValueError, msg):
+                merge_rulings({"places": {"edmonton": dict(good, **bad)}},
+                              self.path)
+            self.assertEqual(self.path.read_text(encoding="utf-8"), before)
+
+    def test_the_pages_rows_read_as_a_review(self):
+        """As ``ArtifactData list`` with ``out_dir`` saves them:
+        ``<dir>/rulings/<doc id>.json``, the page's fields and no wrapper."""
+        from scripts.derive_local_flora import read_review
+        rows = self.dir / "dump" / "rulings"
+        rows.mkdir(parents=True)
+        (rows / "Viburnum_opulus.json").write_text(json.dumps({
+            "by": "u_x", "common_name": "Highbush Cranberry", "group": "thin",
+            "my_read": "native", "on": "2026-10-07", "reason": "Ravines.",
+            "ruling": "native", "scientific_name": "Viburnum opulus"}),
+            encoding="utf-8")
+        review = read_review(self.dir / "dump")
+        self.assertEqual(review, {"places": {"edmonton": {"Viburnum opulus": {
+            "ruling": "native", "reason": "Ravines.", "on": "2026-10-07"}}}})
+        self.assertEqual(read_review(rows), review)
+        export = self.dir / "export.json"
+        export.write_text(json.dumps(review), encoding="utf-8")
+        self.assertEqual(read_review(export), review)
+
+    def test_merge_rewrites_the_list_in_the_same_run(self):
+        """The rulings file and the list must agree, or the data gate fails
+        ("edited but not derived"), so ``--merge`` derives as well."""
+        from unittest import mock
+        import scripts.derive_local_flora as d
+        out = self.dir / "local_flora.json"
+        export = self.dir / "export.json"
+        export.write_text(json.dumps({"places": {"edmonton": {
+            "Prunus pensylvanica": {"ruling": "native",
+                                    "reason": "Aspen woods."}}}}),
+            encoding="utf-8")
+        real = [p.read_bytes() for p in (d.RULINGS_PATH, d.OUTPUT_PATH)]
+        with mock.patch.object(d, "RULINGS_PATH", self.path), \
+                mock.patch.object(d, "OUTPUT_PATH", out), \
+                mock.patch("sys.stdout"):
+            self.assertEqual(d.main(["--merge", str(export)]), 0)
+            self.assertEqual(d.main(["--merge", str(self.dir / "none.json")]),
+                             1)
+        # The shipped files are untouched: a default argument bound at import
+        # once made this test write its ruling into the real one.
+        self.assertEqual([p.read_bytes() for p in (d.RULINGS_PATH,
+                                                   d.OUTPUT_PATH)], real)
+        entry = json.loads(out.read_text(encoding="utf-8"))[
+            "places"]["edmonton"]["species"]["Prunus pensylvanica"]
+        self.assertEqual((entry["tier"], entry["ruling"]), ("thin", "native"))
+        self.assertTrue(lf.is_native(entry))
+
+
+class TestTheReviewPage(unittest.TestCase):
+    """``tools/local_flora_review`` builds the page the owner rules on. Its
+    database ids are what ``--merge`` reads back, so they must be valid path
+    segments and one per species."""
+
+    @classmethod
+    def setUpClass(cls):
+        from tools.local_flora_review import build
+        cls.build = build
+        cls.data, cls.unread = build.page_data()
+
+    def test_it_holds_every_species_the_rule_cannot_settle(self):
+        with open(os.path.join(ROOT, "data", "local_flora.json"),
+                  encoding="utf-8") as fh:
+            edm = json.load(fh)["places"]["edmonton"]["species"]
+        waiting = {n for n, e in edm.items()
+                   if e["tier"] in ("thin", "observed", "no_data")}
+        on_page = {s["s"] for s in self.data["species"] if s["g"] != "flagged"}
+        self.assertEqual(on_page, waiting)
+        for s in self.data["species"]:
+            if s["g"] == "flagged":
+                self.assertEqual(edm[s["s"]]["tier"], "documented", s["s"])
+
+    def test_ids_are_path_segments_one_per_species(self):
+        ids = [s["id"] for s in self.data["species"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        for i in ids:
+            self.assertRegex(i, r"^[A-Za-z0-9_.~:@+-]{1,200}$")
+
+    def test_the_page_embeds_its_data_once_and_names_the_merge(self):
+        html = self.build.render(self.data)
+        self.assertNotIn("/*__DATA__*/", html)
+        self.assertNotIn("</script", html.split("const DATA = ", 1)[1]
+                         .split(";\n", 1)[0])
+        self.assertIn("derive_local_flora.py --merge", html)
+        self.assertNotIn("—", html)
+
+
 class TestTheDataGate(unittest.TestCase):
     """``validate-data`` (CI runs it) catches the edits a person makes by hand."""
 

@@ -287,6 +287,14 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > 105 of 424 at pH 8.0, ordinary on calcareous prairie. It is now a filter like any other, a chip
 > that says "Your soil: pH 8.0", a tooltip that says what it rests on and how many it is hiding,
 > and a × (`src/plant_picker.py`, `src/filter_status.py`). The ranges' provenance is F201.
+> **V3.12 made the third tier explicit, in nativity.** *Native around Edmonton*
+> (`src/local_flora.py`) has three answers, not two. A species is native when VASCAN records it in
+> the province and three herbarium collections lie within 50 km. It is *not native* when VASCAN does
+> not record it there, or the owner rules it out. Below
+> the floor it is **not settled**, and every surface says that in those words, because pin
+> cherry has one collection and 189 observations and is about as Edmonton as a shrub gets. A
+> person settles it, on a page that shows the evidence beside a read labelled as opinion, and the
+> ruling's reason is printed wherever the ruling is.
 > **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects

@@ -11,10 +11,17 @@ ships and which every surface reads through `src/native_here.py`.
     python scripts/derive_local_flora.py            # report, write nothing
     python scripts/derive_local_flora.py --write    # write data/local_flora.json
     python scripts/derive_local_flora.py --check    # exit 1 if the shipped file is stale
+    python scripts/derive_local_flora.py --merge PATH   # fold in a review, then write
 
 When to run it: after a ruling is added, after the cache is re-fetched, after a
 species is added, renamed or removed. `--check` is what the test suite does, so
 a stale file fails the build rather than quietly disagreeing with its inputs.
+
+`--merge` takes the owner's review (V3.12): the review page's export (a file in
+the rulings format), or its database rows saved one JSON file per ruling (a
+directory, which is what `ArtifactData list` with `out_dir` writes). `native`
+and `not_native` replace a species' ruling, `unsettled` removes one, and every
+ruling is checked before anything is written.
 
 See `src/local_flora.py` for the rule and what each tier claims.
 """
@@ -37,15 +44,26 @@ RULINGS_PATH = DATA / "local_flora_rulings.json"
 OUTPUT_PATH = DATA / "local_flora.json"
 
 
+def _shown(path: Path) -> str:
+    """``path`` relative to the repository when it is inside it."""
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _load(path: Path):
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
 
 
 def build(cache_path: Path = CACHE_PATH, catalogue_path: Path = CATALOGUE_PATH,
-          rulings_path: Path = RULINGS_PATH) -> dict:
+          rulings_path: Path | None = None) -> dict:
     """The document a fresh derivation would ship."""
     from src.local_flora import derive, parse_rulings
+    # Read at call time, not bound as a default: a test that points the module
+    # at a temporary file must not have the real one read (or written) instead.
+    rulings_path = rulings_path or RULINGS_PATH
     catalogue = _load(catalogue_path)
     species = {r["scientific_name"]: r for r in catalogue
                if r.get("scientific_name")}
@@ -101,6 +119,70 @@ def carry_rulings(old: str, new: str = "", path: Path = RULINGS_PATH) -> list:
     return changes
 
 
+def read_review(path: Path, place: str = "edmonton") -> dict:
+    """A review's rulings, as ``{"places": {place: {name: ruling}}}``.
+
+    ``path`` is the review page's export (a file already in that shape), or a
+    directory of its database rows, one JSON file each carrying
+    ``scientific_name``, ``ruling``, ``reason`` and ``on`` (the directory
+    itself, or one holding a ``rulings`` folder), which belong to ``place``.
+    """
+    path = Path(path)
+    if not path.is_dir():
+        return _load(path)
+    folder = path / "rulings" if (path / "rulings").is_dir() else path
+    rows = {}
+    for f in sorted(folder.glob("*.json")):
+        row = _load(f)
+        name = row.get("scientific_name") if isinstance(row, dict) else None
+        if not name:
+            raise ValueError(f"{f.name}: a ruling row without a scientific_name")
+        rows[name] = {k: row[k] for k in ("ruling", "reason", "on") if k in row}
+    return {"places": {place: rows}}
+
+
+def merge_rulings(review: dict, path: Path | None = None,
+                  catalogue_path: Path = CATALOGUE_PATH) -> list:
+    """Fold a review into the rulings file; returns ``[(place, name, what)]``.
+
+    ``native`` and ``not_native`` replace whatever ruling a species had;
+    ``unsettled`` (the page's "leave it") removes an earlier one. The merged
+    file is checked whole by :func:`src.local_flora.parse_rulings` before it is
+    written, so one bad row (no reason, a name the catalogue lacks, a "native"
+    across the VASCAN gate) raises ``ValueError`` and writes nothing.
+    """
+    from src.local_flora import parse_rulings
+    path = path or RULINGS_PATH
+    species = {r["scientific_name"]: r for r in _load(catalogue_path)
+               if r.get("scientific_name")}
+    doc = _load(path) if path.exists() else {"version": 1, "places": {}}
+    places = doc.setdefault("places", {})
+    changes = []
+    for place, rows in ((review or {}).get("places") or {}).items():
+        current = dict(places.get(place) or {})
+        for name, row in sorted((rows or {}).items()):
+            row = row or {}
+            before = (current.get(name) or {}).get("ruling")
+            if row.get("ruling") == "unsettled":
+                if name in current:
+                    del current[name]
+                    changes.append((place, name, f"{before} removed"))
+                continue
+            entry = {k: str(row[k]).strip() for k in ("ruling", "reason", "on")
+                     if str(row.get(k) or "").strip()}
+            if current.get(name) == entry:
+                continue
+            current[name] = entry
+            changes.append((place, name, entry.get("ruling", "") if before is None
+                            else f"{before} -> {entry.get('ruling', '')}"))
+        places[place] = dict(sorted(current.items()))
+    parse_rulings(doc, species)
+    if changes:
+        path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8")
+    return changes
+
+
 def summary(doc: dict) -> str:
     from src.local_flora import TIERS, is_native
     out = []
@@ -129,7 +211,26 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--check", action="store_true",
                       help="exit 1 if data/local_flora.json is not what a "
                            "fresh derivation writes")
+    mode.add_argument("--merge", metavar="PATH",
+                      help="fold a review into data/local_flora_rulings.json "
+                           "(the page's export, or a directory of its rows), "
+                           "then write data/local_flora.json")
+    p.add_argument("--place", default="edmonton",
+                   help="the place a directory of rows belongs to "
+                        "(default: edmonton)")
     args = p.parse_args(argv)
+
+    if args.merge:
+        try:
+            changes = merge_rulings(read_review(Path(args.merge), args.place))
+        except (OSError, ValueError) as exc:
+            print(f"Nothing merged: {exc}")
+            return 1
+        for place, name, what in changes:
+            print(f"  {place}: {name}: {what}")
+        print(f"{len(changes)} ruling(s) changed in "
+              f"{_shown(RULINGS_PATH)}.\n")
+        args.write = True
 
     text = dumps(build())
     current = (OUTPUT_PATH.read_text(encoding="utf-8")
@@ -137,14 +238,14 @@ def main(argv: list[str] | None = None) -> int:
     print(summary(json.loads(text)))
     if args.check:
         if text != current:
-            print(f"\n{OUTPUT_PATH.relative_to(PROJECT_ROOT)} is stale: run "
+            print(f"\n{_shown(OUTPUT_PATH)} is stale: run "
                   "python scripts/derive_local_flora.py --write")
             return 1
         print("\nUp to date.")
         return 0
     if args.write:
         OUTPUT_PATH.write_text(text, encoding="utf-8")
-        print(f"\nWrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)}.")
+        print(f"\nWrote {_shown(OUTPUT_PATH)}.")
     elif text != current:
         print("\nWould change data/local_flora.json; --write to write it.")
     else:

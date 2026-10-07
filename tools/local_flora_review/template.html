@@ -1,0 +1,768 @@
+<title>Edmonton List Review</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f3ec;
+  --surface: #fffdf7;
+  --surface-2: #efece2;
+  --ink: #1d251c;
+  --muted: #586255;
+  --line: #d9d4c4;
+  --accent: #2c6639;
+  --accent-ink: #ffffff;
+  --native: #2c6639;
+  --native-soft: #e2efe2;
+  --not: #9b3a26;
+  --not-soft: #f6e3dc;
+  --unsettled: #7d6417;
+  --unsettled-soft: #f3ecd2;
+  --focus: #1f5fbf;
+  --shadow: 0 1px 2px rgba(30, 35, 25, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #131712;
+    --surface: #1b2019;
+    --surface-2: #232a21;
+    --ink: #e6eae1;
+    --muted: #a2ac9d;
+    --line: #333c30;
+    --accent: #86c491;
+    --accent-ink: #10180f;
+    --native: #86c491;
+    --native-soft: #1f3322;
+    --not: #ec9a83;
+    --not-soft: #3a231c;
+    --unsettled: #dcbc63;
+    --unsettled-soft: #352d16;
+    --focus: #8db8ff;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #131712;
+  --surface: #1b2019;
+  --surface-2: #232a21;
+  --ink: #e6eae1;
+  --muted: #a2ac9d;
+  --line: #333c30;
+  --accent: #86c491;
+  --accent-ink: #10180f;
+  --native: #86c491;
+  --native-soft: #1f3322;
+  --not: #ec9a83;
+  --not-soft: #3a231c;
+  --unsettled: #dcbc63;
+  --unsettled-soft: #352d16;
+  --focus: #8db8ff;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 28px 16px 72px; }
+h1, h2, h3 {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+h1 { font-size: clamp(1.7rem, 4.5vw, 2.3rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; margin: 40px 0 10px; }
+h3 { font-size: 1.2rem; }
+p { margin: 0 0 12px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+.eyebrow { color: var(--muted); font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.lede { font-size: 1.05rem; margin-top: 14px; }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.notice {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--unsettled);
+  background: var(--surface);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+.notice[hidden] { display: none; }
+
+.tally {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0 6px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.tally-line { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.95rem; }
+.tally-line strong { font-variant-numeric: tabular-nums; }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.bar span { display: block; height: 100%; transition: width 0.3s; }
+.bar .b-native { background: var(--native); }
+.bar .b-not { background: var(--not); }
+.bar .b-unsettled { background: var(--unsettled); }
+
+details.explain {
+  margin: 14px 0 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 2px 16px;
+}
+details.explain > summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+details.explain dl { margin: 0 0 12px; }
+details.explain dt { font-weight: 600; margin-top: 10px; }
+details.explain dd { margin: 2px 0 0; color: var(--muted); }
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 26px 0 8px;
+}
+.filters label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+select, input[type="search"], textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 100%;
+  min-height: 40px;
+}
+textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+.shown { font-size: 0.9rem; color: var(--muted); margin: 6px 0 14px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 16px 14px;
+  margin: 0 0 14px;
+  box-shadow: var(--shadow);
+}
+.card[hidden] { display: none; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sci { color: var(--muted); margin: 2px 0 0; }
+.group-tag { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+.status {
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.status[data-state="native"] { background: var(--native-soft); color: var(--native); }
+.status[data-state="not_native"] { background: var(--not-soft); color: var(--not); }
+.status[data-state="unsettled"] { background: var(--unsettled-soft); color: var(--unsettled); }
+
+.evidence { margin: 12px 0 0; display: grid; gap: 6px; }
+.evidence div { display: grid; grid-template-columns: minmax(0, 13.5em) minmax(0, 1fr); gap: 2px 12px; }
+.evidence dt { color: var(--muted); font-size: 0.9rem; }
+.evidence dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .evidence div { grid-template-columns: 1fr; }
+  .evidence dt { font-size: 0.82rem; }
+}
+.sheets { color: var(--muted); font-size: 0.92rem; }
+
+.read {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border-left: 4px solid var(--muted);
+}
+.read[data-r="native"] { border-left-color: var(--native); }
+.read[data-r="not"] { border-left-color: var(--not); }
+.read[data-r="unsure"] { border-left-color: var(--unsettled); }
+.read-label { display: block; font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.links { margin: 10px 0 0; font-size: 0.92rem; }
+
+.rule { border: 0; padding: 0; margin: 14px 0 0; border-top: 1px dashed var(--line); padding-top: 12px; }
+.rule legend { font-weight: 600; padding: 0; margin-bottom: 8px; float: left; width: 100%; }
+.rule legend + * { clear: both; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+button {
+  font: inherit;
+  cursor: pointer;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+.choices button[aria-pressed="true"][data-v="native"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); }
+.choices button[aria-pressed="true"][data-v="not_native"] { background: var(--not); border-color: var(--not); color: var(--accent-ink); }
+.choices button[aria-pressed="true"][data-v="unsettled"] { background: var(--unsettled); border-color: var(--unsettled); color: var(--accent-ink); }
+.reason-label { display: grid; gap: 4px; font-size: 0.9rem; }
+.reason-label .hint { color: var(--muted); font-size: 0.84rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+button.save { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.msg { font-size: 0.88rem; color: var(--muted); }
+.msg.err { color: var(--not); }
+.saved-line { font-size: 0.88rem; color: var(--muted); margin: 8px 0 0; }
+.saved-line:empty { display: none; }
+
+.after details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 2px 16px; margin: 10px 0; }
+.after summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+.after ul { margin: 0 0 12px; padding-left: 20px; columns: 2 18em; column-gap: 28px; }
+.after li { break-inside: avoid; margin: 0 0 4px; }
+#export { min-height: 160px; font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.empty { text-align: center; color: var(--muted); padding: 30px 0; }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Site &amp; Pattern · the Edmonton list</p>
+    <h1>Native around Edmonton: your review</h1>
+    <p class="lede" id="lede"></p>
+    <p id="meaning"></p>
+    <p class="muted" id="mine"></p>
+    <div class="notice" id="notice" role="status" hidden></div>
+    <div class="tally" aria-live="polite">
+      <div class="tally-line" id="tally"></div>
+      <div class="bar" aria-hidden="true"><span class="b-native"></span><span class="b-not"></span><span class="b-unsettled"></span></div>
+    </div>
+    <details class="explain">
+      <summary>How to read a card</summary>
+      <dl id="explain"></dl>
+    </details>
+  </header>
+
+  <section class="filters" aria-label="Filter the species">
+    <label>Evidence
+      <select id="f-group"></select>
+    </label>
+    <label>My read
+      <select id="f-read"></select>
+    </label>
+    <label>Your ruling
+      <select id="f-status">
+        <option value="">Any</option>
+        <option value="waiting">Not yet ruled</option>
+        <option value="ruled">Ruled</option>
+      </select>
+    </label>
+    <label>Sort
+      <select id="f-sort">
+        <option value="evidence">Most local evidence first</option>
+        <option value="name">Common name, A to Z</option>
+      </select>
+    </label>
+    <label>Find
+      <input type="search" id="f-q" placeholder="Name or Latin name" autocomplete="off">
+    </label>
+  </section>
+  <p class="shown" id="shown" aria-live="polite"></p>
+  <div id="list"></div>
+
+  <section class="after">
+    <h2>Not on this page</h2>
+    <p id="unrecorded-intro"></p>
+    <details>
+      <summary id="unrecorded-summary"></summary>
+      <ul id="unrecorded"></ul>
+    </details>
+    <p id="outside"></p>
+
+    <h2>Getting your rulings into the app</h2>
+    <p>Your rulings are kept in this page's own database. They reach the app and the website when a Claude Code session folds them in: it reads them from here, checks each one (a ruling needs a reason, and none can make a plant native here that VASCAN does not record native in Alberta), writes them to <code>data/local_flora_rulings.json</code> and regenerates the list. Ask a session to <em>fold in my Edmonton review rulings</em>.</p>
+    <p>The same rulings as a file, if you would rather hand them over yourself:</p>
+    <textarea id="export" readonly aria-label="Your rulings as JSON"></textarea>
+    <div class="actions"><button type="button" id="copy">Copy</button><span class="msg" id="copy-msg" aria-live="polite"></span></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const DATA = /*__DATA__*/null;
+  const P = DATA.place;
+  const SPECIES = DATA.species;
+  const BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
+
+  const GROUPS = {
+    flagged: "Passed the rule, flagged",
+    thin: "1 or 2 collections",
+    observed: "Seen, never collected",
+    none: "No records at all",
+  };
+  const GROUP_ORDER = ["flagged", "thin", "observed", "none"];
+  const READS = { native: "Likely native", unsure: "Unsure", not: "Likely not native" };
+  const RULED = { native: "Ruled native here", not_native: "Ruled not native here", unsettled: "Left unsettled" };
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+  // ---- the words at the top, computed from the data -------------------
+  const counts = {};
+  SPECIES.forEach((s) => { counts[s.g] = (counts[s.g] || 0) + 1; });
+  const readCounts = {};
+  SPECIES.forEach((s) => { readCounts[s.r] = (readCounts[s.r] || 0) + 1; });
+  const generated = new Date(P.generated + "T12:00:00");
+  const asOf = isNaN(generated) ? P.generated : generated.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+
+  $("#lede").textContent =
+    "A plant is on the Edmonton list when VASCAN records it native to Alberta and herbaria hold at least " +
+    P.min + " separate collections of it from within " + P.radius + " km of downtown. " + P.documented +
+    " species pass. These " + SPECIES.length + " do not settle that way: " +
+    (counts.thin || 0) + " have one or two collections, " +
+    (counts.observed || 0) + " were seen nearby but never collected, and " + (counts.none || 0) +
+    " have no records at all. The other " + (counts.flagged || 0) +
+    " passed, and I think they deserve a second look. Each stays as it is until you rule on it.";
+  $("#meaning").textContent =
+    "A ruling is something the app prints. Native here puts the plant on the list, and the app and the website say " +
+    "“Native, on review:” followed by your reason. Not native here keeps it off, with your reason. " +
+    "Leave unsettled changes nothing; its note is for you and is not published.";
+  $("#mine").textContent =
+    "Each card also carries my read of the species. It comes from memory of the regional floras, not from the data, " +
+    "and it is there to argue with. Records are from the GBIF harvest of " + asOf + ".";
+
+  const explain = [
+    ["Herbarium collections within " + P.radius + " km",
+     "Pressed specimens whose whole location uncertainty lies inside the circle. Sheets from the same spot in the same year count once. " +
+     P.min + " make the list. A sheet can be re-examined, which is why only these count."],
+    ["Observations within " + P.radius + " km",
+     "Mostly iNaturalist photographs. Never counted, because a city's observations include its gardens and street trees: Bur Oak has 119 here and 3 herbarium sheets, and VASCAN records it introduced in Alberta, so the province gate keeps it off."],
+    ["Nearest record outside the circle",
+     "The closest record that does not count as inside, measured from downtown. An old label reading “Edmonton” with a 40 km uncertainty is outside even though its point is downtown, which is how this can be under " + P.radius + " km."],
+    ["Recorded in the surrounding ecoregions",
+     "The circle is mostly Aspen Parkland, with Boreal Transition along its west and north edges. These are the species' records credited to either ecoregion anywhere in Alberta and Saskatchewan, with the confidence band the website uses."],
+    ["My read", "Likely native, unsure, or likely not native, with a reason. From memory, not data: check it before you lean on it."],
+  ];
+  $("#explain").innerHTML = explain.map(([t, d]) => "<dt>" + esc(t) + "</dt><dd>" + esc(d) + "</dd>").join("");
+
+  // ---- the cards ---------------------------------------------------------
+  function sheetText(sh) {
+    return sh.map((x) => (x[0] ? x[0] : "year unknown") + " at " + x[1] + " km").join(", ");
+  }
+  function inat(s) {
+    return "https://www.inaturalist.org/observations?taxon_name=" + encodeURIComponent(s.s) +
+      "&lat=" + P.centre[0] + "&lng=" + P.centre[1] + "&radius=" + P.radius + "&subview=map";
+  }
+  function gbif(s) {
+    return "https://www.gbif.org/species/search?q=" + encodeURIComponent(s.s);
+  }
+  function labels(s) {
+    return s.g === "flagged"
+      ? { native: "Native here", not_native: "Not native here", unsettled: "Leave it on the list" }
+      : { native: "Native here", not_native: "Not native here", unsettled: "Leave unsettled" };
+  }
+
+  function cardHtml(s) {
+    const L = labels(s);
+    const rows = [];
+    if (s.g === "none") {
+      rows.push(["Records", "The cache holds no records of this species anywhere."]);
+    } else {
+      rows.push(["Herbarium collections within " + P.radius + " km",
+        s.n ? "<strong>" + s.n + "</strong> <span class=\"sheets\">(" + esc(sheetText(s.sh)) + ")</span>" : "None"]);
+      if (s.also) {
+        rows.push(["Filed under an older name",
+          "<i>" + esc(s.also.name) + "</i>: " + (s.also.sh.length
+            ? "<strong>" + s.also.sh.length + "</strong> <span class=\"sheets\">(" + esc(sheetText(s.also.sh)) + ")</span>"
+            : "none")]);
+      }
+      rows.push(["Observations within " + P.radius + " km", s.o ? String(s.o) : "None"]);
+      rows.push(["Nearest record outside the circle", s.k == null ? "None" : s.k + " km from downtown"]);
+      rows.push(["Recorded in the surrounding ecoregions", s.eco.length
+        ? s.eco.map((e) => esc(e[0]) + ": " + e[1] + " (" + esc(e[2]) + ")").join(" · ")
+        : "None credited to Aspen Parkland or Boreal Transition"]);
+    }
+    return (
+      "<article class=\"card\" id=\"sp-" + esc(s.id) + "\" data-id=\"" + esc(s.id) + "\">" +
+        "<div class=\"card-head\"><div>" +
+          "<h3>" + esc(s.c) + "</h3>" +
+          "<p class=\"sci\"><i>" + esc(s.s) + "</i> · " + esc(s.t) + " · <span class=\"group-tag\">" + esc(GROUPS[s.g]) + "</span></p>" +
+        "</div><span class=\"status\" data-state=\"\">Not yet ruled</span></div>" +
+        "<dl class=\"evidence\">" + rows.map((r) => "<div><dt>" + esc(r[0]) + "</dt><dd>" + r[1] + "</dd></div>").join("") + "</dl>" +
+        "<div class=\"read\" data-r=\"" + esc(s.r) + "\"><span class=\"read-label\">My read, from memory</span>" +
+          "<strong>" + esc(READS[s.r]) + ".</strong> " + esc(s.w) + "</div>" +
+        "<p class=\"links\"><a href=\"" + esc(inat(s)) + "\" target=\"_blank\" rel=\"noopener\">iNaturalist within " + P.radius + " km</a> · " +
+          "<a href=\"" + esc(gbif(s)) + "\" target=\"_blank\" rel=\"noopener\">GBIF</a></p>" +
+        "<fieldset class=\"rule\"><legend>Your ruling</legend>" +
+          "<div class=\"choices\" role=\"group\" aria-label=\"Your ruling on " + esc(s.c) + "\">" +
+            ["native", "not_native", "unsettled"].map((v) =>
+              "<button type=\"button\" data-v=\"" + v + "\" aria-pressed=\"false\">" + esc(L[v]) + "</button>").join("") +
+          "</div>" +
+          "<label class=\"reason-label\"><span>Reason <span class=\"hint\"></span></span>" +
+            "<textarea rows=\"2\" maxlength=\"600\"></textarea></label>" +
+          "<div class=\"actions\"><button type=\"button\" class=\"save\">Save ruling</button>" +
+            "<button type=\"button\" class=\"clear\">Clear</button><span class=\"msg\" aria-live=\"polite\"></span></div>" +
+          "<p class=\"saved-line\"></p>" +
+        "</fieldset>" +
+      "</article>");
+  }
+
+  const list = $("#list");
+  list.innerHTML = SPECIES.map(cardHtml).join("") + "<p class=\"empty\" id=\"empty\" hidden>Nothing matches these filters.</p>";
+
+  // ---- state ---------------------------------------------------------------
+  const saved = new Map();   // id -> saved ruling body
+  const draft = new Map();   // id -> {choice, reason}
+  const pending = new Set();
+  let db = null;
+  let me = null;
+  let writable = false;
+  let readOnlyWhy = "Connecting to the page's database…";
+
+  function draftOf(id) {
+    if (!draft.has(id)) {
+      const sv = saved.get(id);
+      draft.set(id, { choice: sv ? sv.ruling : "", reason: sv ? (sv.reason || "") : "" });
+    }
+    return draft.get(id);
+  }
+  function isDirty(id) {
+    const d = draftOf(id), sv = saved.get(id);
+    return d.choice !== (sv ? sv.ruling : "") || d.reason.trim() !== (sv ? (sv.reason || "") : "").trim();
+  }
+  function needsReason(choice) { return choice === "native" || choice === "not_native"; }
+
+  function paintCard(id) {
+    const card = document.getElementById("sp-" + id);
+    if (!card) return;
+    const s = BY_ID.get(id), d = draftOf(id), sv = saved.get(id);
+    const st = card.querySelector(".status");
+    st.dataset.state = sv ? sv.ruling : "";
+    st.textContent = sv ? (s.g === "flagged" && sv.ruling === "unsettled" ? "Left on the list" : RULED[sv.ruling]) : "Not yet ruled";
+    card.querySelectorAll(".choices button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.v === d.choice));
+      b.disabled = !writable || pending.has(id);
+    });
+    const ta = card.querySelector("textarea");
+    if (document.activeElement !== ta && ta.value !== d.reason) ta.value = d.reason;
+    ta.disabled = !writable || pending.has(id);
+    card.querySelector(".hint").textContent = needsReason(d.choice)
+      ? "(required; printed beside the plant in the app and on the website)"
+      : d.choice === "unsettled" ? "(optional; a note for you, not published)" : "";
+    const dirty = isDirty(id);
+    const save = card.querySelector(".save");
+    save.disabled = !writable || pending.has(id) || !dirty || !d.choice || (needsReason(d.choice) && !d.reason.trim());
+    save.textContent = pending.has(id) ? "Saving…" : (sv ? "Save change" : "Save ruling");
+    card.querySelector(".clear").disabled = !writable || pending.has(id) || (!sv && !d.choice && !d.reason);
+    const line = card.querySelector(".saved-line");
+    if (sv) {
+      const when = sv.on ? " on " + sv.on : "";
+      line.textContent = "Saved" + when + (sv.reason ? ": “" + sv.reason + "”" : ".") + (dirty ? " You have unsaved changes." : "");
+    } else {
+      line.textContent = dirty && (d.choice || d.reason) ? "Not saved yet." : "";
+    }
+  }
+  function paintAll() { SPECIES.forEach((s) => paintCard(s.id)); }
+
+  function setMsg(id, text, isErr) {
+    const card = document.getElementById("sp-" + id);
+    if (!card) return;
+    const m = card.querySelector(".msg");
+    m.textContent = text || "";
+    m.classList.toggle("err", !!isErr);
+  }
+
+  // ---- tally + export ------------------------------------------------------
+  function paintTally() {
+    const c = { native: 0, not_native: 0, unsettled: 0 };
+    saved.forEach((v, id) => { if (BY_ID.has(id) && c[v.ruling] != null) c[v.ruling] += 1; });
+    const done = c.native + c.not_native + c.unsettled;
+    const total = SPECIES.length;
+    $("#tally").innerHTML =
+      "<span><strong>" + done + "</strong> of " + total + " ruled</span>" +
+      "<span><strong>" + c.native + "</strong> native here</span>" +
+      "<span><strong>" + c.not_native + "</strong> not native here</span>" +
+      "<span><strong>" + c.unsettled + "</strong> left as they are</span>";
+    const pct = (n) => (total ? (100 * n / total) : 0) + "%";
+    $(".bar .b-native").style.width = pct(c.native);
+    $(".bar .b-not").style.width = pct(c.not_native);
+    $(".bar .b-unsettled").style.width = pct(c.unsettled);
+    const out = {};
+    Array.from(saved.values()).filter((v) => BY_ID.has(v.id_))
+      .sort((a, b) => a.scientific_name.localeCompare(b.scientific_name))
+      .forEach((v) => {
+        out[v.scientific_name] = { ruling: v.ruling, reason: v.reason || "", on: v.on || "" };
+      });
+    $("#export").value = JSON.stringify({
+      comment: "Rulings from the Edmonton list review. native and not_native go into data/local_flora_rulings.json; unsettled removes any earlier ruling. Merge with: python scripts/derive_local_flora.py --merge <this file>",
+      places: { edmonton: out },
+    }, null, 2);
+  }
+
+  // ---- filters -------------------------------------------------------------
+  const fGroup = $("#f-group"), fRead = $("#f-read"), fStatus = $("#f-status"), fSort = $("#f-sort"), fQ = $("#f-q");
+  fGroup.innerHTML = "<option value=\"\">All (" + SPECIES.length + ")</option>" +
+    GROUP_ORDER.filter((g) => counts[g]).map((g) => "<option value=\"" + g + "\">" + esc(GROUPS[g]) + " (" + counts[g] + ")</option>").join("");
+  fRead.innerHTML = "<option value=\"\">Any</option>" +
+    ["native", "unsure", "not"].map((r) => "<option value=\"" + r + "\">" + esc(READS[r]) + " (" + (readCounts[r] || 0) + ")</option>").join("");
+
+  const PREF_KEY = "edmonton-review-filters";
+  try {
+    const p = JSON.parse(localStorage.getItem(PREF_KEY) || "null");
+    if (p) {
+      if (p.g != null) fGroup.value = p.g;
+      if (p.r != null) fRead.value = p.r;
+      if (p.st != null) fStatus.value = p.st;
+      if (p.so) fSort.value = p.so;
+    }
+  } catch (e) { /* storage unavailable: defaults */ }
+
+  function evidenceKey(s) {
+    return [GROUP_ORDER.indexOf(s.g), -(s.n || 0), -(s.o || 0), s.c.toLowerCase()];
+  }
+  function cmp(a, b) {
+    if (fSort.value === "name") return a.c.localeCompare(b.c);
+    const ka = evidenceKey(a), kb = evidenceKey(b);
+    for (let i = 0; i < ka.length; i++) {
+      if (ka[i] < kb[i]) return -1;
+      if (ka[i] > kb[i]) return 1;
+    }
+    return 0;
+  }
+  function reorder() {
+    const end = $("#empty");
+    SPECIES.slice().sort(cmp).forEach((s) => list.insertBefore(document.getElementById("sp-" + s.id), end));
+  }
+  // Filters apply when the person changes them, never on a save: a card that
+  // vanished the moment it was ruled would take its "Saved." with it.
+  function applyFilters() {
+    const q = fQ.value.trim().toLowerCase();
+    let shown = 0;
+    SPECIES.forEach((s) => {
+      const card = document.getElementById("sp-" + s.id);
+      const ruled = saved.has(s.id);
+      const ok = (!fGroup.value || s.g === fGroup.value) &&
+        (!fRead.value || s.r === fRead.value) &&
+        (!fStatus.value || (fStatus.value === "ruled") === ruled) &&
+        (!q || s.c.toLowerCase().includes(q) || s.s.toLowerCase().includes(q));
+      card.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    $("#empty").hidden = shown > 0;
+    $("#shown").textContent = "Showing " + shown + " of " + SPECIES.length + ".";
+    try {
+      localStorage.setItem(PREF_KEY, JSON.stringify({ g: fGroup.value, r: fRead.value, st: fStatus.value, so: fSort.value }));
+    } catch (e) { /* not kept */ }
+  }
+  [fGroup, fRead, fStatus].forEach((el) => el.addEventListener("change", applyFilters));
+  fSort.addEventListener("change", () => { reorder(); applyFilters(); });
+  fQ.addEventListener("input", applyFilters);
+
+  // ---- editing ---------------------------------------------------------------
+  list.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("button");
+    if (!btn) return;
+    const card = btn.closest(".card");
+    if (!card) return;
+    const id = card.dataset.id;
+    if (btn.dataset.v) {
+      const d = draftOf(id);
+      d.choice = d.choice === btn.dataset.v ? "" : btn.dataset.v;
+      setMsg(id, "");
+      paintCard(id);
+      if (needsReason(d.choice) && !d.reason.trim()) card.querySelector("textarea").focus();
+    } else if (btn.classList.contains("save")) {
+      save(id);
+    } else if (btn.classList.contains("clear")) {
+      clear(id);
+    }
+  });
+  list.addEventListener("input", (ev) => {
+    if (ev.target.tagName !== "TEXTAREA") return;
+    const id = ev.target.closest(".card").dataset.id;
+    draftOf(id).reason = ev.target.value;
+    paintCard(id);
+  });
+
+  function today() {
+    const d = new Date();
+    const z = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate());
+  }
+  function failure(e) {
+    const code = e && e.code;
+    if (code === "invalid_argument" || code === "revoked" || code === "not_granted" ||
+        code === "capability_disabled" || code === "capability_removed") {
+      setReadOnly("This view can read the review but cannot save rulings.");
+      return "Not saved: this view cannot save rulings.";
+    }
+    if (code === "quota_exceeded") return "Not saved: the page's storage is full.";
+    return "Not saved. Try again in a moment.";
+  }
+  async function withRetry(fn) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e && e.code === "unavailable") {
+        await new Promise((r) => setTimeout(r, 600 + Math.random() * 900));
+        return await fn();
+      }
+      throw e;
+    }
+  }
+  async function save(id) {
+    if (!db || !writable || pending.has(id)) return;
+    const s = BY_ID.get(id), d = draftOf(id);
+    if (!d.choice) return;
+    const reason = d.reason.trim();
+    if (needsReason(d.choice) && !reason) {
+      setMsg(id, "A ruling needs a reason.", true);
+      return;
+    }
+    const body = {
+      scientific_name: s.s, common_name: s.c, ruling: d.choice, reason: reason,
+      on: today(), group: s.g, my_read: s.r,
+    };
+    if (me) body.by = me;
+    pending.add(id);
+    setMsg(id, "");
+    paintCard(id);
+    try {
+      await withRetry(() => db.collection("rulings").doc(id).set(body));
+      saved.set(id, Object.assign({ id_: id }, body));
+      d.reason = reason;
+      setMsg(id, "Saved.");
+    } catch (e) {
+      setMsg(id, failure(e), true);
+    } finally {
+      pending.delete(id);
+      paintCard(id);
+      paintTally();
+    }
+  }
+  async function clear(id) {
+    if (!writable || pending.has(id)) return;
+    const had = saved.has(id);
+    draft.set(id, { choice: "", reason: "" });
+    if (!had || !db) { paintCard(id); return; }
+    pending.add(id);
+    paintCard(id);
+    try {
+      await withRetry(() => db.collection("rulings").doc(id).delete());
+      saved.delete(id);
+      setMsg(id, "Cleared.");
+    } catch (e) {
+      setMsg(id, failure(e), true);
+    } finally {
+      pending.delete(id);
+      paintCard(id);
+      paintTally();
+    }
+  }
+
+  function setReadOnly(why) {
+    writable = false;
+    readOnlyWhy = why;
+    const n = $("#notice");
+    n.textContent = why;
+    n.hidden = false;
+    paintAll();
+  }
+
+  // ---- the rest of the page ---------------------------------------------------
+  $("#unrecorded-intro").textContent =
+    DATA.unrecorded.length + " species native elsewhere in Alberta have no record within " + P.radius +
+    " km at all, and stay off the list. If you know one of them grows wild near Edmonton, a session can rule it in the same way.";
+  $("#unrecorded-summary").textContent = "The " + DATA.unrecorded.length + " species with no record within " + P.radius + " km, nearest first";
+  $("#unrecorded").innerHTML = DATA.unrecorded.map((u) =>
+    "<li>" + esc(u[0]) + " <i class=\"muted\">" + esc(u[1]) + "</i>" +
+    (u[2] != null ? " <span class=\"muted\">· " + u[2] + " km</span>" : "") + "</li>").join("");
+  $("#outside").textContent =
+    DATA.outside.length + " more are not native to Alberta at all by VASCAN, so no ruling can put them on the list: " +
+    DATA.outside.map((o) => o[0]).join(", ") + ".";
+
+  $("#copy").addEventListener("click", async () => {
+    const ta = $("#export");
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(ta.value);
+      ok = true;
+    } catch (e) {
+      try { ta.focus(); ta.select(); ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    }
+    $("#copy-msg").textContent = ok ? "Copied." : "Select the text and copy it.";
+  });
+
+  paintAll();
+  paintTally();
+  reorder();
+  applyFilters();
+
+  // ---- the database ------------------------------------------------------------
+  (function connecting() {
+    const n = $("#notice");
+    n.textContent = "Connecting to the page's database…";
+    n.hidden = false;
+  })();
+  (async function connect() {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") {
+      setReadOnly("Rulings can only be saved when this page is opened on claude.ai.");
+      return;
+    }
+    let user = null;
+    try {
+      [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+    } catch (e) {
+      db = null;
+    }
+    if (!db) {
+      setReadOnly("Rulings cannot be saved in this view. Open the page on claude.ai while signed in.");
+      return;
+    }
+    if (user) {
+      try { me = await user.id(); } catch (e) { me = null; }
+      let can = null;
+      try { can = await user.can("data.write"); } catch (e) { can = null; }
+      if (can === false) {
+        setReadOnly("You can read this review, but rulings are the owner's to make.");
+        listen();
+        return;
+      }
+    }
+    writable = true;
+    $("#notice").hidden = true;
+    paintAll();
+    listen();
+  })();
+
+  function listen() {
+    db.collection("rulings").onSnapshot((snap) => {
+      const next = new Map();
+      snap.docs.forEach((d) => {
+        if (!d.exists) return;
+        const v = d.data();
+        if (v && BY_ID.has(d.id) && RULED[v.ruling]) next.set(d.id, Object.assign({ id_: d.id }, v));
+      });
+      const touched = new Set([...saved.keys(), ...next.keys()]);
+      // An edit not yet saved survives a delivery; anything else follows the
+      // saved ruling, including one made on another device.
+      const keep = new Set([...touched].filter((id) => draft.has(id) && (pending.has(id) || isDirty(id))));
+      saved.clear();
+      next.forEach((v, k) => saved.set(k, v));
+      touched.forEach((id) => {
+        if (!keep.has(id)) draft.delete(id);
+        paintCard(id);
+      });
+      paintTally();
+    }, (e) => {
+      setReadOnly("The connection to the page's database was lost. Reload the page to keep ruling.");
+    });
+  }
+})();
+</script>
