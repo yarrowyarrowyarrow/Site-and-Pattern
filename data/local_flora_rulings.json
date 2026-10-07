@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "comment": "The owner's rulings on which species are native around a place, where the herbarium evidence alone cannot settle it (F220, V3.12). One entry per species, keyed by the catalogue's scientific name: {\"ruling\": \"native\" or \"not_native\", \"reason\": the evidence in a sentence, \"on\": the date}. A ruling overrides the derived tier in data/local_flora.json and survives every re-derivation. It cannot make a species native that VASCAN does not record native in the province. Edit this file, then run: python scripts/derive_local_flora.py --write",
+  "comment": "The owner's answers on which species are native around a place, where the herbarium evidence alone cannot settle it (F220, V3.12). One entry per species, keyed by the catalogue's scientific name: {\"ruling\": \"native\" (yes) or \"not_native\" (no), \"on\": the date}. No reasons: the owner answers yes or no where confident and leaves the rest, and pages say only that a species was confirmed on review. An answer overrides the derived tier in data/local_flora.json and survives every re-derivation; it cannot make a species native that VASCAN does not record native in the province. The answers come from the review page (tools/local_flora_review/README.md): python scripts/derive_local_flora.py --merge <its rows or its export>",
   "places": {
     "edmonton": {}
   }

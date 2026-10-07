@@ -293,8 +293,8 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > not record it there, or the owner rules it out. Below
 > the floor it is **not settled**, and every surface says that in those words, because pin
 > cherry has one collection and 189 observations and is about as Edmonton as a shrub gets. A
-> person settles it, on a page that shows the evidence beside a read labelled as opinion, and the
-> ruling's reason is printed wherever the ruling is.
+> person settles it with a yes or a no, on a page that shows the evidence beside a read labelled
+> as opinion, and every page that prints the answer says it rests on review.
 > **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects

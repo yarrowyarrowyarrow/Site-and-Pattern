@@ -19,9 +19,10 @@ a stale file fails the build rather than quietly disagreeing with its inputs.
 
 `--merge` takes the owner's review (V3.12): the review page's export (a file in
 the rulings format), or its database rows saved one JSON file per ruling (a
-directory, which is what `ArtifactData list` with `out_dir` writes). `native`
-and `not_native` replace a species' ruling, `unsettled` removes one, and every
-ruling is checked before anything is written.
+directory, which is what `ArtifactData list` with `out_dir` writes). A yes
+(`native`) or a no (`not_native`) replaces a species' ruling, and `unsettled`,
+which the page writes when an answer is taken back, removes one. Every ruling is
+checked before anything is written. Rulings carry no reason.
 
 See `src/local_flora.py` for the rule and what each tier claims.
 """
@@ -124,8 +125,8 @@ def read_review(path: Path, place: str = "edmonton") -> dict:
 
     ``path`` is the review page's export (a file already in that shape), or a
     directory of its database rows, one JSON file each carrying
-    ``scientific_name``, ``ruling``, ``reason`` and ``on`` (the directory
-    itself, or one holding a ``rulings`` folder), which belong to ``place``.
+    ``scientific_name``, ``ruling`` and ``on`` (the directory itself, or one
+    holding a ``rulings`` folder), which belong to ``place``.
     """
     path = Path(path)
     if not path.is_dir():
@@ -137,7 +138,7 @@ def read_review(path: Path, place: str = "edmonton") -> dict:
         name = row.get("scientific_name") if isinstance(row, dict) else None
         if not name:
             raise ValueError(f"{f.name}: a ruling row without a scientific_name")
-        rows[name] = {k: row[k] for k in ("ruling", "reason", "on") if k in row}
+        rows[name] = {k: row[k] for k in ("ruling", "on") if k in row}
     return {"places": {place: rows}}
 
 
@@ -146,10 +147,11 @@ def merge_rulings(review: dict, path: Path | None = None,
     """Fold a review into the rulings file; returns ``[(place, name, what)]``.
 
     ``native`` and ``not_native`` replace whatever ruling a species had;
-    ``unsettled`` (the page's "leave it") removes an earlier one. The merged
-    file is checked whole by :func:`src.local_flora.parse_rulings` before it is
-    written, so one bad row (no reason, a name the catalogue lacks, a "native"
-    across the VASCAN gate) raises ``ValueError`` and writes nothing.
+    ``unsettled`` (an answer taken back on the page) removes an earlier one.
+    Only the ruling and its date are kept. The merged file is checked whole by
+    :func:`src.local_flora.parse_rulings` before it is written, so one bad row
+    (a name the catalogue lacks, a ruling that is neither yes nor no, a
+    "native" across the VASCAN gate) raises ``ValueError`` and writes nothing.
     """
     from src.local_flora import parse_rulings
     path = path or RULINGS_PATH
@@ -168,7 +170,7 @@ def merge_rulings(review: dict, path: Path | None = None,
                     del current[name]
                     changes.append((place, name, f"{before} removed"))
                 continue
-            entry = {k: str(row[k]).strip() for k in ("ruling", "reason", "on")
+            entry = {k: str(row[k]).strip() for k in ("ruling", "on")
                      if str(row.get(k) or "").strip()}
             if current.get(name) == entry:
                 continue

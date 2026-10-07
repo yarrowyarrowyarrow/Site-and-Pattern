@@ -15,7 +15,6 @@
   --not: #9b3a26;
   --not-soft: #f6e3dc;
   --unsettled: #7d6417;
-  --unsettled-soft: #f3ecd2;
   --focus: #1f5fbf;
   --shadow: 0 1px 2px rgba(30, 35, 25, 0.06);
 }
@@ -35,7 +34,6 @@
     --not: #ec9a83;
     --not-soft: #3a231c;
     --unsettled: #dcbc63;
-    --unsettled-soft: #352d16;
     --focus: #8db8ff;
     --shadow: none;
   }
@@ -55,7 +53,6 @@
   --not: #ec9a83;
   --not-soft: #3a231c;
   --unsettled: #dcbc63;
-  --unsettled-soft: #352d16;
   --focus: #8db8ff;
   --shadow: none;
 }
@@ -110,7 +107,6 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .bar span { display: block; height: 100%; transition: width 0.3s; }
 .bar .b-native { background: var(--native); }
 .bar .b-not { background: var(--not); }
-.bar .b-unsettled { background: var(--unsettled); }
 
 details.explain {
   margin: 14px 0 0;
@@ -141,7 +137,6 @@ select, input[type="search"], textarea {
   width: 100%;
   min-height: 40px;
 }
-textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
 .shown { font-size: 0.9rem; color: var(--muted); margin: 6px 0 14px; }
 
 .card {
@@ -168,7 +163,6 @@ textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
 }
 .status[data-state="native"] { background: var(--native-soft); color: var(--native); }
 .status[data-state="not_native"] { background: var(--not-soft); color: var(--not); }
-.status[data-state="unsettled"] { background: var(--unsettled-soft); color: var(--unsettled); }
 
 .evidence { margin: 12px 0 0; display: grid; gap: 6px; }
 .evidence div { display: grid; grid-template-columns: minmax(0, 13.5em) minmax(0, 1fr); gap: 2px 12px; }
@@ -193,38 +187,43 @@ textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
 .read-label { display: block; font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .links { margin: 10px 0 0; font-size: 0.92rem; }
 
-.rule { border: 0; padding: 0; margin: 14px 0 0; border-top: 1px dashed var(--line); padding-top: 12px; }
-.rule legend { font-weight: 600; padding: 0; margin-bottom: 8px; float: left; width: 100%; }
-.rule legend + * { clear: both; }
-.choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.answer .q { font-weight: 600; margin-right: 4px; }
+@media (max-width: 560px) {
+  .answer .q { flex-basis: 100%; }
+  .answer button { flex: 1 1 0; }
+}
 button {
   font: inherit;
   cursor: pointer;
-  min-height: 40px;
-  padding: 8px 14px;
+  min-height: 44px;
+  min-width: 76px;
+  padding: 8px 18px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
 }
 button:disabled { cursor: not-allowed; opacity: 0.55; }
-.choices button[aria-pressed="true"][data-v="native"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); }
-.choices button[aria-pressed="true"][data-v="not_native"] { background: var(--not); border-color: var(--not); color: var(--accent-ink); }
-.choices button[aria-pressed="true"][data-v="unsettled"] { background: var(--unsettled); border-color: var(--unsettled); color: var(--accent-ink); }
-.reason-label { display: grid; gap: 4px; font-size: 0.9rem; }
-.reason-label .hint { color: var(--muted); font-size: 0.84rem; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
-button.save { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.answer button[aria-pressed="true"][data-v="native"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); font-weight: 600; }
+.answer button[aria-pressed="true"][data-v="not_native"] { background: var(--not); border-color: var(--not); color: var(--accent-ink); font-weight: 600; }
 .msg { font-size: 0.88rem; color: var(--muted); }
 .msg.err { color: var(--not); }
-.saved-line { font-size: 0.88rem; color: var(--muted); margin: 8px 0 0; }
-.saved-line:empty { display: none; }
 
 .after details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 2px 16px; margin: 10px 0; }
 .after summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
 .after ul { margin: 0 0 12px; padding-left: 20px; columns: 2 18em; column-gap: 28px; }
 .after li { break-inside: avoid; margin: 0 0 4px; }
-#export { min-height: 160px; font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+#export { min-height: 160px; resize: vertical; font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .empty { text-align: center; color: var(--muted); padding: 30px 0; }
 </style>
 
@@ -238,7 +237,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     <div class="notice" id="notice" role="status" hidden></div>
     <div class="tally" aria-live="polite">
       <div class="tally-line" id="tally"></div>
-      <div class="bar" aria-hidden="true"><span class="b-native"></span><span class="b-not"></span><span class="b-unsettled"></span></div>
+      <div class="bar" aria-hidden="true"><span class="b-native"></span><span class="b-not"></span></div>
     </div>
     <details class="explain">
       <summary>How to read a card</summary>
@@ -253,11 +252,12 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     <label>My read
       <select id="f-read"></select>
     </label>
-    <label>Your ruling
+    <label>Your answer
       <select id="f-status">
         <option value="">Any</option>
-        <option value="waiting">Not yet ruled</option>
-        <option value="ruled">Ruled</option>
+        <option value="open">Not answered</option>
+        <option value="native">Yes</option>
+        <option value="not_native">No</option>
       </select>
     </label>
     <label>Sort
@@ -282,10 +282,10 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     </details>
     <p id="outside"></p>
 
-    <h2>Getting your rulings into the app</h2>
-    <p>Your rulings are kept in this page's own database. They reach the app and the website when a Claude Code session folds them in: it reads them from here, checks each one (a ruling needs a reason, and none can make a plant native here that VASCAN does not record native in Alberta), writes them to <code>data/local_flora_rulings.json</code> and regenerates the list. Ask a session to <em>fold in my Edmonton review rulings</em>.</p>
-    <p>The same rulings as a file, if you would rather hand them over yourself:</p>
-    <textarea id="export" readonly aria-label="Your rulings as JSON"></textarea>
+    <h2>Getting your answers into the app</h2>
+    <p>Your answers are kept in this page's own database. They reach the app and the website when a Claude Code session folds them in: it reads them from here, checks each one (no answer can make a plant native here that VASCAN does not record native in Alberta), writes them to <code>data/local_flora_rulings.json</code> and regenerates the list. Ask a session to <em>fold in my Edmonton review answers</em>.</p>
+    <p>The same answers as a file, if you would rather hand them over yourself:</p>
+    <textarea id="export" readonly aria-label="Your answers as JSON"></textarea>
     <div class="actions"><button type="button" id="copy">Copy</button><span class="msg" id="copy-msg" aria-live="polite"></span></div>
   </section>
 </main>
@@ -306,7 +306,10 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   };
   const GROUP_ORDER = ["flagged", "thin", "observed", "none"];
   const READS = { native: "Likely native", unsure: "Unsure", not: "Likely not native" };
-  const RULED = { native: "Ruled native here", not_native: "Ruled not native here", unsettled: "Left unsettled" };
+  // What a stored row can say. "unsettled" is an answer taken back: kept so a
+  // later fold-in removes the answer it replaced, and shown as not answered.
+  const ANSWERS = { native: "Yes", not_native: "No" };
+  const STORED = new Set(["native", "not_native", "unsettled"]);
 
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => (
@@ -327,11 +330,12 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     (counts.thin || 0) + " have one or two collections, " +
     (counts.observed || 0) + " were seen nearby but never collected, and " + (counts.none || 0) +
     " have no records at all. The other " + (counts.flagged || 0) +
-    " passed, and I think they deserve a second look. Each stays as it is until you rule on it.";
+    " passed, and I think they deserve a second look.";
   $("#meaning").textContent =
-    "A ruling is something the app prints. Native here puts the plant on the list, and the app and the website say " +
-    "“Native, on review:” followed by your reason. Not native here keeps it off, with your reason. " +
-    "Leave unsettled changes nothing; its note is for you and is not published.";
+    "Answer Yes for the plants you are confident are native around Edmonton and No for the ones you are confident are not. " +
+    "Leave the rest: an unanswered plant stays as the records have it. Yes puts a plant on the list; No keeps it off, " +
+    "and for the two flagged plants takes it off. Nothing else is asked, and the app and the website say only that a plant " +
+    "was confirmed on review. A tap saves; tap your answer again to take it back.";
   $("#mine").textContent =
     "Each card also carries my read of the species. It comes from memory of the regional floras, not from the data, " +
     "and it is there to argue with. Records are from the GBIF harvest of " + asOf + ".";
@@ -346,7 +350,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
      "The closest record that does not count as inside, measured from downtown. An old label reading “Edmonton” with a 40 km uncertainty is outside even though its point is downtown, which is how this can be under " + P.radius + " km."],
     ["Recorded in the surrounding ecoregions",
      "The circle is mostly Aspen Parkland, with Boreal Transition along its west and north edges. These are the species' records credited to either ecoregion anywhere in Alberta and Saskatchewan, with the confidence band the website uses."],
-    ["My read", "Likely native, unsure, or likely not native, with a reason. From memory, not data: check it before you lean on it."],
+    ["My read", "Likely native, unsure, or likely not native, and why I think so. From memory, not data: check it before you lean on it."],
   ];
   $("#explain").innerHTML = explain.map(([t, d]) => "<dt>" + esc(t) + "</dt><dd>" + esc(d) + "</dd>").join("");
 
@@ -361,14 +365,8 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   function gbif(s) {
     return "https://www.gbif.org/species/search?q=" + encodeURIComponent(s.s);
   }
-  function labels(s) {
-    return s.g === "flagged"
-      ? { native: "Native here", not_native: "Not native here", unsettled: "Leave it on the list" }
-      : { native: "Native here", not_native: "Not native here", unsettled: "Leave unsettled" };
-  }
 
   function cardHtml(s) {
-    const L = labels(s);
     const rows = [];
     if (s.g === "none") {
       rows.push(["Records", "The cache holds no records of this species anywhere."]);
@@ -392,23 +390,18 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
         "<div class=\"card-head\"><div>" +
           "<h3>" + esc(s.c) + "</h3>" +
           "<p class=\"sci\"><i>" + esc(s.s) + "</i> · " + esc(s.t) + " · <span class=\"group-tag\">" + esc(GROUPS[s.g]) + "</span></p>" +
-        "</div><span class=\"status\" data-state=\"\">Not yet ruled</span></div>" +
+        "</div><span class=\"status\" data-state=\"\">Not answered</span></div>" +
         "<dl class=\"evidence\">" + rows.map((r) => "<div><dt>" + esc(r[0]) + "</dt><dd>" + r[1] + "</dd></div>").join("") + "</dl>" +
         "<div class=\"read\" data-r=\"" + esc(s.r) + "\"><span class=\"read-label\">My read, from memory</span>" +
           "<strong>" + esc(READS[s.r]) + ".</strong> " + esc(s.w) + "</div>" +
         "<p class=\"links\"><a href=\"" + esc(inat(s)) + "\" target=\"_blank\" rel=\"noopener\">iNaturalist within " + P.radius + " km</a> · " +
           "<a href=\"" + esc(gbif(s)) + "\" target=\"_blank\" rel=\"noopener\">GBIF</a></p>" +
-        "<fieldset class=\"rule\"><legend>Your ruling</legend>" +
-          "<div class=\"choices\" role=\"group\" aria-label=\"Your ruling on " + esc(s.c) + "\">" +
-            ["native", "not_native", "unsettled"].map((v) =>
-              "<button type=\"button\" data-v=\"" + v + "\" aria-pressed=\"false\">" + esc(L[v]) + "</button>").join("") +
-          "</div>" +
-          "<label class=\"reason-label\"><span>Reason <span class=\"hint\"></span></span>" +
-            "<textarea rows=\"2\" maxlength=\"600\"></textarea></label>" +
-          "<div class=\"actions\"><button type=\"button\" class=\"save\">Save ruling</button>" +
-            "<button type=\"button\" class=\"clear\">Clear</button><span class=\"msg\" aria-live=\"polite\"></span></div>" +
-          "<p class=\"saved-line\"></p>" +
-        "</fieldset>" +
+        "<div class=\"answer\" role=\"group\" aria-label=\"Is " + esc(s.c) + " native around Edmonton?\">" +
+          "<span class=\"q\" aria-hidden=\"true\">Native around Edmonton?</span>" +
+          "<button type=\"button\" data-v=\"native\" aria-pressed=\"false\">Yes</button>" +
+          "<button type=\"button\" data-v=\"not_native\" aria-pressed=\"false\">No</button>" +
+          "<span class=\"msg\" aria-live=\"polite\"></span>" +
+        "</div>" +
       "</article>");
   }
 
@@ -416,56 +409,29 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   list.innerHTML = SPECIES.map(cardHtml).join("") + "<p class=\"empty\" id=\"empty\" hidden>Nothing matches these filters.</p>";
 
   // ---- state ---------------------------------------------------------------
-  const saved = new Map();   // id -> saved ruling body
-  const draft = new Map();   // id -> {choice, reason}
+  const saved = new Map();   // id -> stored row (an answer, or one taken back)
   const pending = new Set();
   let db = null;
   let me = null;
   let writable = false;
-  let readOnlyWhy = "Connecting to the page's database…";
 
-  function draftOf(id) {
-    if (!draft.has(id)) {
-      const sv = saved.get(id);
-      draft.set(id, { choice: sv ? sv.ruling : "", reason: sv ? (sv.reason || "") : "" });
-    }
-    return draft.get(id);
+  function answerOf(id) {
+    const v = saved.get(id);
+    return v && ANSWERS[v.ruling] ? v.ruling : "";
   }
-  function isDirty(id) {
-    const d = draftOf(id), sv = saved.get(id);
-    return d.choice !== (sv ? sv.ruling : "") || d.reason.trim() !== (sv ? (sv.reason || "") : "").trim();
-  }
-  function needsReason(choice) { return choice === "native" || choice === "not_native"; }
 
   function paintCard(id) {
     const card = document.getElementById("sp-" + id);
     if (!card) return;
-    const s = BY_ID.get(id), d = draftOf(id), sv = saved.get(id);
+    const a = answerOf(id);
     const st = card.querySelector(".status");
-    st.dataset.state = sv ? sv.ruling : "";
-    st.textContent = sv ? (s.g === "flagged" && sv.ruling === "unsettled" ? "Left on the list" : RULED[sv.ruling]) : "Not yet ruled";
-    card.querySelectorAll(".choices button").forEach((b) => {
-      b.setAttribute("aria-pressed", String(b.dataset.v === d.choice));
+    st.dataset.state = a;
+    st.textContent = a ? ANSWERS[a] : "Not answered";
+    card.querySelectorAll(".answer button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.v === a));
       b.disabled = !writable || pending.has(id);
+      b.title = b.dataset.v === a ? "Tap again to take this answer back" : "";
     });
-    const ta = card.querySelector("textarea");
-    if (document.activeElement !== ta && ta.value !== d.reason) ta.value = d.reason;
-    ta.disabled = !writable || pending.has(id);
-    card.querySelector(".hint").textContent = needsReason(d.choice)
-      ? "(required; printed beside the plant in the app and on the website)"
-      : d.choice === "unsettled" ? "(optional; a note for you, not published)" : "";
-    const dirty = isDirty(id);
-    const save = card.querySelector(".save");
-    save.disabled = !writable || pending.has(id) || !dirty || !d.choice || (needsReason(d.choice) && !d.reason.trim());
-    save.textContent = pending.has(id) ? "Saving…" : (sv ? "Save change" : "Save ruling");
-    card.querySelector(".clear").disabled = !writable || pending.has(id) || (!sv && !d.choice && !d.reason);
-    const line = card.querySelector(".saved-line");
-    if (sv) {
-      const when = sv.on ? " on " + sv.on : "";
-      line.textContent = "Saved" + when + (sv.reason ? ": “" + sv.reason + "”" : ".") + (dirty ? " You have unsaved changes." : "");
-    } else {
-      line.textContent = dirty && (d.choice || d.reason) ? "Not saved yet." : "";
-    }
   }
   function paintAll() { SPECIES.forEach((s) => paintCard(s.id)); }
 
@@ -479,27 +445,27 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
 
   // ---- tally + export ------------------------------------------------------
   function paintTally() {
-    const c = { native: 0, not_native: 0, unsettled: 0 };
-    saved.forEach((v, id) => { if (BY_ID.has(id) && c[v.ruling] != null) c[v.ruling] += 1; });
-    const done = c.native + c.not_native + c.unsettled;
+    let yes = 0, no = 0;
+    SPECIES.forEach((s) => {
+      const a = answerOf(s.id);
+      if (a === "native") yes += 1;
+      if (a === "not_native") no += 1;
+    });
     const total = SPECIES.length;
     $("#tally").innerHTML =
-      "<span><strong>" + done + "</strong> of " + total + " ruled</span>" +
-      "<span><strong>" + c.native + "</strong> native here</span>" +
-      "<span><strong>" + c.not_native + "</strong> not native here</span>" +
-      "<span><strong>" + c.unsettled + "</strong> left as they are</span>";
+      "<span><strong>" + (yes + no) + "</strong> of " + total + " answered</span>" +
+      "<span><strong>" + yes + "</strong> yes</span>" +
+      "<span><strong>" + no + "</strong> no</span>" +
+      "<span><strong>" + (total - yes - no) + "</strong> left as the records have them</span>";
     const pct = (n) => (total ? (100 * n / total) : 0) + "%";
-    $(".bar .b-native").style.width = pct(c.native);
-    $(".bar .b-not").style.width = pct(c.not_native);
-    $(".bar .b-unsettled").style.width = pct(c.unsettled);
+    $(".bar .b-native").style.width = pct(yes);
+    $(".bar .b-not").style.width = pct(no);
     const out = {};
     Array.from(saved.values()).filter((v) => BY_ID.has(v.id_))
       .sort((a, b) => a.scientific_name.localeCompare(b.scientific_name))
-      .forEach((v) => {
-        out[v.scientific_name] = { ruling: v.ruling, reason: v.reason || "", on: v.on || "" };
-      });
+      .forEach((v) => { out[v.scientific_name] = { ruling: v.ruling, on: v.on || "" }; });
     $("#export").value = JSON.stringify({
-      comment: "Rulings from the Edmonton list review. native and not_native go into data/local_flora_rulings.json; unsettled removes any earlier ruling. Merge with: python scripts/derive_local_flora.py --merge <this file>",
+      comment: "Answers from the Edmonton list review: native is yes, not_native is no, and unsettled is an answer taken back, which removes an earlier one. Fold in with: python scripts/derive_local_flora.py --merge <this file>",
       places: { edmonton: out },
     }, null, 2);
   }
@@ -511,7 +477,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   fRead.innerHTML = "<option value=\"\">Any</option>" +
     ["native", "unsure", "not"].map((r) => "<option value=\"" + r + "\">" + esc(READS[r]) + " (" + (readCounts[r] || 0) + ")</option>").join("");
 
-  const PREF_KEY = "edmonton-review-filters";
+  const PREF_KEY = "edmonton-review-filters-v2";
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) || "null");
     if (p) {
@@ -538,17 +504,17 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     const end = $("#empty");
     SPECIES.slice().sort(cmp).forEach((s) => list.insertBefore(document.getElementById("sp-" + s.id), end));
   }
-  // Filters apply when the person changes them, never on a save: a card that
-  // vanished the moment it was ruled would take its "Saved." with it.
+  // Filters apply when the person changes them, never on an answer: a card
+  // that vanished the moment it was answered would take its "Saved." with it.
   function applyFilters() {
     const q = fQ.value.trim().toLowerCase();
     let shown = 0;
     SPECIES.forEach((s) => {
       const card = document.getElementById("sp-" + s.id);
-      const ruled = saved.has(s.id);
+      const a = answerOf(s.id);
       const ok = (!fGroup.value || s.g === fGroup.value) &&
         (!fRead.value || s.r === fRead.value) &&
-        (!fStatus.value || (fStatus.value === "ruled") === ruled) &&
+        (!fStatus.value || (fStatus.value === "open" ? !a : a === fStatus.value)) &&
         (!q || s.c.toLowerCase().includes(q) || s.s.toLowerCase().includes(q));
       card.hidden = !ok;
       if (ok) shown += 1;
@@ -563,30 +529,11 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   fSort.addEventListener("change", () => { reorder(); applyFilters(); });
   fQ.addEventListener("input", applyFilters);
 
-  // ---- editing ---------------------------------------------------------------
+  // ---- answering -------------------------------------------------------------
   list.addEventListener("click", (ev) => {
-    const btn = ev.target.closest("button");
+    const btn = ev.target.closest(".answer button");
     if (!btn) return;
-    const card = btn.closest(".card");
-    if (!card) return;
-    const id = card.dataset.id;
-    if (btn.dataset.v) {
-      const d = draftOf(id);
-      d.choice = d.choice === btn.dataset.v ? "" : btn.dataset.v;
-      setMsg(id, "");
-      paintCard(id);
-      if (needsReason(d.choice) && !d.reason.trim()) card.querySelector("textarea").focus();
-    } else if (btn.classList.contains("save")) {
-      save(id);
-    } else if (btn.classList.contains("clear")) {
-      clear(id);
-    }
-  });
-  list.addEventListener("input", (ev) => {
-    if (ev.target.tagName !== "TEXTAREA") return;
-    const id = ev.target.closest(".card").dataset.id;
-    draftOf(id).reason = ev.target.value;
-    paintCard(id);
+    answer(btn.closest(".card").dataset.id, btn.dataset.v);
   });
 
   function today() {
@@ -598,8 +545,8 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
     const code = e && e.code;
     if (code === "invalid_argument" || code === "revoked" || code === "not_granted" ||
         code === "capability_disabled" || code === "capability_removed") {
-      setReadOnly("This view can read the review but cannot save rulings.");
-      return "Not saved: this view cannot save rulings.";
+      setReadOnly("This view can read the review but cannot save answers.");
+      return "Not saved: this view cannot save answers.";
     }
     if (code === "quota_exceeded") return "Not saved: the page's storage is full.";
     return "Not saved. Try again in a moment.";
@@ -615,47 +562,20 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
       throw e;
     }
   }
-  async function save(id) {
+  // A tap answers; a tap on the answer already given takes it back.
+  async function answer(id, v) {
     if (!db || !writable || pending.has(id)) return;
-    const s = BY_ID.get(id), d = draftOf(id);
-    if (!d.choice) return;
-    const reason = d.reason.trim();
-    if (needsReason(d.choice) && !reason) {
-      setMsg(id, "A ruling needs a reason.", true);
-      return;
-    }
-    const body = {
-      scientific_name: s.s, common_name: s.c, ruling: d.choice, reason: reason,
-      on: today(), group: s.g, my_read: s.r,
-    };
+    const s = BY_ID.get(id);
+    const next = answerOf(id) === v ? "unsettled" : v;
+    const body = { scientific_name: s.s, common_name: s.c, ruling: next, on: today(), group: s.g, my_read: s.r };
     if (me) body.by = me;
     pending.add(id);
-    setMsg(id, "");
+    setMsg(id, "Saving…");
     paintCard(id);
     try {
       await withRetry(() => db.collection("rulings").doc(id).set(body));
       saved.set(id, Object.assign({ id_: id }, body));
-      d.reason = reason;
-      setMsg(id, "Saved.");
-    } catch (e) {
-      setMsg(id, failure(e), true);
-    } finally {
-      pending.delete(id);
-      paintCard(id);
-      paintTally();
-    }
-  }
-  async function clear(id) {
-    if (!writable || pending.has(id)) return;
-    const had = saved.has(id);
-    draft.set(id, { choice: "", reason: "" });
-    if (!had || !db) { paintCard(id); return; }
-    pending.add(id);
-    paintCard(id);
-    try {
-      await withRetry(() => db.collection("rulings").doc(id).delete());
-      saved.delete(id);
-      setMsg(id, "Cleared.");
+      setMsg(id, next === "unsettled" ? "Answer taken back." : "Saved.");
     } catch (e) {
       setMsg(id, failure(e), true);
     } finally {
@@ -667,7 +587,6 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
 
   function setReadOnly(why) {
     writable = false;
-    readOnlyWhy = why;
     const n = $("#notice");
     n.textContent = why;
     n.hidden = false;
@@ -677,13 +596,13 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   // ---- the rest of the page ---------------------------------------------------
   $("#unrecorded-intro").textContent =
     DATA.unrecorded.length + " species native elsewhere in Alberta have no record within " + P.radius +
-    " km at all, and stay off the list. If you know one of them grows wild near Edmonton, a session can rule it in the same way.";
+    " km at all, and stay off the list. If you know one of them grows wild near Edmonton, a session can add a yes for it the same way.";
   $("#unrecorded-summary").textContent = "The " + DATA.unrecorded.length + " species with no record within " + P.radius + " km, nearest first";
   $("#unrecorded").innerHTML = DATA.unrecorded.map((u) =>
     "<li>" + esc(u[0]) + " <i class=\"muted\">" + esc(u[1]) + "</i>" +
     (u[2] != null ? " <span class=\"muted\">· " + u[2] + " km</span>" : "") + "</li>").join("");
   $("#outside").textContent =
-    DATA.outside.length + " more are not native to Alberta at all by VASCAN, so no ruling can put them on the list: " +
+    DATA.outside.length + " more are not native to Alberta at all by VASCAN, so no answer can put them on the list: " +
     DATA.outside.map((o) => o[0]).join(", ") + ".";
 
   $("#copy").addEventListener("click", async () => {
@@ -712,7 +631,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
   (async function connect() {
     const c = window.claude;
     if (!c || typeof c.use !== "function") {
-      setReadOnly("Rulings can only be saved when this page is opened on claude.ai.");
+      setReadOnly("Answers can only be saved when this page is opened on claude.ai.");
       return;
     }
     let user = null;
@@ -722,7 +641,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
       db = null;
     }
     if (!db) {
-      setReadOnly("Rulings cannot be saved in this view. Open the page on claude.ai while signed in.");
+      setReadOnly("Answers cannot be saved in this view. Open the page on claude.ai while signed in.");
       return;
     }
     if (user) {
@@ -730,7 +649,7 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
       let can = null;
       try { can = await user.can("data.write"); } catch (e) { can = null; }
       if (can === false) {
-        setReadOnly("You can read this review, but rulings are the owner's to make.");
+        setReadOnly("You can read this review, but the answers are the owner's to give.");
         listen();
         return;
       }
@@ -743,25 +662,20 @@ button.save { background: var(--accent); border-color: var(--accent); color: var
 
   function listen() {
     db.collection("rulings").onSnapshot((snap) => {
-      const next = new Map();
+      const touched = new Set(saved.keys());
+      saved.clear();
       snap.docs.forEach((d) => {
         if (!d.exists) return;
         const v = d.data();
-        if (v && BY_ID.has(d.id) && RULED[v.ruling]) next.set(d.id, Object.assign({ id_: d.id }, v));
+        if (v && BY_ID.has(d.id) && STORED.has(v.ruling)) {
+          saved.set(d.id, Object.assign({ id_: d.id }, v));
+          touched.add(d.id);
+        }
       });
-      const touched = new Set([...saved.keys(), ...next.keys()]);
-      // An edit not yet saved survives a delivery; anything else follows the
-      // saved ruling, including one made on another device.
-      const keep = new Set([...touched].filter((id) => draft.has(id) && (pending.has(id) || isDirty(id))));
-      saved.clear();
-      next.forEach((v, k) => saved.set(k, v));
-      touched.forEach((id) => {
-        if (!keep.has(id)) draft.delete(id);
-        paintCard(id);
-      });
+      touched.forEach((id) => paintCard(id));
       paintTally();
-    }, (e) => {
-      setReadOnly("The connection to the page's database was lost. Reload the page to keep ruling.");
+    }, () => {
+      setReadOnly("The connection to the page's database was lost. Reload the page to keep answering.");
     });
   }
 })();

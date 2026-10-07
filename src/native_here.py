@@ -185,9 +185,11 @@ def _words(e: Mapping, p: Mapping) -> str:
         return f"Not native. VASCAN does not record it native to {name}."
     evidence = _evidence(e, radius)
     if e.get("ruling") in ("native", "not_native"):
-        verdict = ("Native, on review" if e["ruling"] == "native"
-                   else "Not native here, on review")
-        return f"{verdict}: {_sentence(e.get('reason'))} {evidence}".strip()
+        # A yes or a no, and the evidence it was given on. Never a reason: the
+        # owner answers without one, and asked that none be shown (V3.12).
+        verdict = ("Native, confirmed on review." if e["ruling"] == "native"
+                   else "Not native here, on review.")
+        return f"{verdict} {evidence}".strip()
     if tier == "documented":
         return f"Native. {evidence}"
     if tier == "thin":
@@ -221,7 +223,3 @@ def _evidence(e: Mapping, radius: str) -> str:
 def _times(n: int) -> str:
     return {1: "once", 2: "twice"}.get(n, f"{n} times")
 
-
-def _sentence(text) -> str:
-    text = str(text or "").strip()
-    return text if not text or text[-1] in ".!?" else text + "."

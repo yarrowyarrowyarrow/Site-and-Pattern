@@ -89,8 +89,7 @@ class TestTheVascanGate(unittest.TestCase):
         species = {"Quercus macrocarpa": _row("Quercus macrocarpa", "SK")}
         with self.assertRaisesRegex(ValueError, "VASCAN"):
             lf.parse_rulings({"places": {"edmonton": {"Quercus macrocarpa": {
-                "ruling": "native", "reason": "planted everywhere"}}}},
-                species)
+                "ruling": "native"}}}}, species)
 
 
 class TestRulings(unittest.TestCase):
@@ -116,26 +115,36 @@ class TestRulings(unittest.TestCase):
 
     def test_a_ruling_moves_a_species_either_way_and_keeps_the_evidence(self):
         out = self._derive({
-            "Prunus pensylvanica": {"ruling": "native", "reason": "aspen woods",
-                                    "on": "2026-10-08"},
-            "Acer negundo": {"ruling": "not_native",
-                             "reason": "native in the southeast; planted here"}})
+            "Prunus pensylvanica": {"ruling": "native", "on": "2026-10-08"},
+            "Acer negundo": {"ruling": "not_native"}})
         self.assertTrue(lf.is_native(out["Prunus pensylvanica"]))
         self.assertFalse(lf.is_native(out["Acer negundo"]))
         self.assertEqual(out["Prunus pensylvanica"]["tier"], "thin")
         self.assertEqual(out["Acer negundo"]["collections"], 3)
 
-    def test_a_ruling_must_say_why_and_name_a_catalogue_species(self):
+    def test_a_ruling_is_a_yes_or_a_no_on_a_catalogue_species(self):
         for bad, msg in (
-                ({"Prunus pensylvanica": {"ruling": "native"}}, "reason"),
-                ({"Prunus pensylvanica": {"ruling": "maybe", "reason": "x"}},
-                 "one of"),
-                ({"Prunus virginiana": {"ruling": "native", "reason": "x"}},
+                ({"Prunus pensylvanica": {"ruling": "maybe"}}, "one of"),
+                ({"Prunus virginiana": {"ruling": "native"}},
                  "not in the catalogue")):
             with self.subTest(msg), self.assertRaisesRegex(ValueError, msg):
                 lf.parse_rulings({"places": {"edmonton": bad}}, self.species)
         with self.assertRaisesRegex(ValueError, "unknown place"):
             lf.parse_rulings({"places": {"calgary": {}}}, self.species)
+
+    def test_no_reason_is_asked_for_or_kept(self):
+        """The owner answers yes or no where confident, gives no reasons, and
+        asked that none ever be shown: one written into the file by hand is
+        dropped before it can reach the list."""
+        parsed = lf.parse_rulings({"places": {"edmonton": {
+            "Prunus pensylvanica": {"ruling": "native", "on": "2026-10-08",
+                                    "reason": "SHOULD NOT SHIP"}}}},
+            self.species)
+        self.assertEqual(parsed["edmonton"]["Prunus pensylvanica"],
+                         {"ruling": "native", "on": "2026-10-08"})
+        out = self._derive({"Prunus pensylvanica": {"ruling": "native",
+                                                    "reason": "SHOULD NOT SHIP"}})
+        self.assertNotIn("SHOULD NOT SHIP", json.dumps(out))
 
 
 class TestARenameCarriesTheRuling(unittest.TestCase):
@@ -148,8 +157,8 @@ class TestARenameCarriesTheRuling(unittest.TestCase):
         import tempfile
         self.path = pathlib.Path(tempfile.mkdtemp()) / "rulings.json"
         self.path.write_text(json.dumps({"version": 1, "places": {"edmonton": {
-            "Old name": {"ruling": "native", "reason": "r"},
-            "Kept": {"ruling": "not_native", "reason": "k"}}}}),
+            "Old name": {"ruling": "native", "on": "2026-10-07"},
+            "Kept": {"ruling": "not_native", "on": "2026-10-07"}}}}),
             encoding="utf-8")
 
     def _rows(self):
@@ -167,7 +176,7 @@ class TestARenameCarriesTheRuling(unittest.TestCase):
         from scripts.derive_local_flora import carry_rulings
         carry_rulings("Old name", "Kept", self.path)
         self.assertEqual(self._rows(), {"Kept": {"ruling": "not_native",
-                                                 "reason": "k"}})
+                                                 "on": "2026-10-07"}})
         self.assertEqual(carry_rulings("Kept", "", self.path),
                          [("edmonton", "dropped")])
         self.assertEqual(self._rows(), {})
@@ -192,7 +201,7 @@ class TestAReviewIsFoldedIn(unittest.TestCase):
         self.path.write_text(json.dumps({"version": 1, "comment": "kept",
                                          "places": {"edmonton": {
             "Prunus pensylvanica": {"ruling": "not_native",
-                                    "reason": "first look"}}}}),
+                                    "on": "2026-10-01"}}}}),
             encoding="utf-8")
 
     def _doc(self):
@@ -201,10 +210,9 @@ class TestAReviewIsFoldedIn(unittest.TestCase):
     def test_rulings_land_replace_and_unsettled_removes(self):
         from scripts.derive_local_flora import merge_rulings
         changes = merge_rulings({"places": {"edmonton": {
-            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
-                                    "on": "2026-10-07"},
-            "Viburnum opulus": {"ruling": "native", "reason": "Ravines. "},
-            "Linum lewisii": {"ruling": "unsettled", "reason": "a note"},
+            "Prunus pensylvanica": {"ruling": "native", "on": "2026-10-07"},
+            "Viburnum opulus": {"ruling": "native", "on": "2026-10-07 "},
+            "Linum lewisii": {"ruling": "unsettled", "on": "2026-10-07"},
         }}}, self.path)
         self.assertEqual(changes, [
             ("edmonton", "Prunus pensylvanica", "not_native -> native"),
@@ -212,28 +220,32 @@ class TestAReviewIsFoldedIn(unittest.TestCase):
         doc = self._doc()
         self.assertEqual(doc["comment"], "kept")
         self.assertEqual(doc["places"]["edmonton"], {
-            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
-                                    "on": "2026-10-07"},
-            "Viburnum opulus": {"ruling": "native", "reason": "Ravines."}})
+            "Prunus pensylvanica": {"ruling": "native", "on": "2026-10-07"},
+            "Viburnum opulus": {"ruling": "native", "on": "2026-10-07"}})
         self.assertEqual(merge_rulings({"places": {"edmonton": {
             "Viburnum opulus": {"ruling": "unsettled"}}}}, self.path),
             [("edmonton", "Viburnum opulus", "native removed")])
         self.assertEqual(merge_rulings({"places": {"edmonton": {
-            "Prunus pensylvanica": {"ruling": "native", "reason": "Aspen woods.",
-                                    "on": "2026-10-07"}}}}, self.path), [])
+            "Prunus pensylvanica": {"ruling": "native", "on": "2026-10-07"}}}},
+            self.path), [])
+
+    def test_a_reason_in_a_review_is_dropped(self):
+        from scripts.derive_local_flora import merge_rulings
+        merge_rulings({"places": {"edmonton": {"Viburnum opulus": {
+            "ruling": "native", "reason": "SHOULD NOT SHIP"}}}}, self.path)
+        self.assertNotIn("SHOULD NOT SHIP",
+                         self.path.read_text(encoding="utf-8"))
+        self.assertEqual(self._doc()["places"]["edmonton"]["Viburnum opulus"],
+                         {"ruling": "native"})
 
     def test_one_bad_row_writes_nothing(self):
         from scripts.derive_local_flora import merge_rulings
         before = self.path.read_text(encoding="utf-8")
-        good = {"Viburnum opulus": {"ruling": "native", "reason": "Ravines."}}
+        good = {"Viburnum opulus": {"ruling": "native"}}
         for bad, msg in (
-                ({"Fragaria vesca": {"ruling": "native"}}, "reason"),
-                ({"Quercus macrocarpa": {"ruling": "native", "reason": "x"}},
-                 "VASCAN"),
-                ({"Nope nope": {"ruling": "native", "reason": "x"}},
-                 "not in the catalogue"),
-                ({"Fragaria vesca": {"ruling": "maybe", "reason": "x"}},
-                 "one of")):
+                ({"Quercus macrocarpa": {"ruling": "native"}}, "VASCAN"),
+                ({"Nope nope": {"ruling": "native"}}, "not in the catalogue"),
+                ({"Fragaria vesca": {"ruling": "maybe"}}, "one of")):
             with self.subTest(msg), self.assertRaisesRegex(ValueError, msg):
                 merge_rulings({"places": {"edmonton": dict(good, **bad)}},
                               self.path)
@@ -247,12 +259,12 @@ class TestAReviewIsFoldedIn(unittest.TestCase):
         rows.mkdir(parents=True)
         (rows / "Viburnum_opulus.json").write_text(json.dumps({
             "by": "u_x", "common_name": "Highbush Cranberry", "group": "thin",
-            "my_read": "native", "on": "2026-10-07", "reason": "Ravines.",
+            "my_read": "native", "on": "2026-10-07",
             "ruling": "native", "scientific_name": "Viburnum opulus"}),
             encoding="utf-8")
         review = read_review(self.dir / "dump")
         self.assertEqual(review, {"places": {"edmonton": {"Viburnum opulus": {
-            "ruling": "native", "reason": "Ravines.", "on": "2026-10-07"}}}})
+            "ruling": "native", "on": "2026-10-07"}}}})
         self.assertEqual(read_review(rows), review)
         export = self.dir / "export.json"
         export.write_text(json.dumps(review), encoding="utf-8")
@@ -266,8 +278,7 @@ class TestAReviewIsFoldedIn(unittest.TestCase):
         out = self.dir / "local_flora.json"
         export = self.dir / "export.json"
         export.write_text(json.dumps({"places": {"edmonton": {
-            "Prunus pensylvanica": {"ruling": "native",
-                                    "reason": "Aspen woods."}}}}),
+            "Prunus pensylvanica": {"ruling": "native"}}}}),
             encoding="utf-8")
         real = [p.read_bytes() for p in (d.RULINGS_PATH, d.OUTPUT_PATH)]
         with mock.patch.object(d, "RULINGS_PATH", self.path), \
@@ -323,6 +334,17 @@ class TestTheReviewPage(unittest.TestCase):
         self.assertIn("derive_local_flora.py --merge", html)
         self.assertNotIn("—", html)
 
+    def test_the_page_asks_yes_or_no_and_nothing_else(self):
+        """The owner's word: answer where confident, no reasons. The only
+        text box on the page is the read-only export."""
+        html = self.build.render(self.data)
+        self.assertIn('data-v="native"', html)
+        self.assertIn('data-v="not_native"', html)
+        self.assertNotIn('data-v="unsettled"', html)
+        self.assertEqual(html.count("<textarea"), 1)
+        self.assertIn('<textarea id="export" readonly', html)
+        self.assertNotIn("reason:", html.split("<script>", 1)[1])
+
 
 class TestTheDataGate(unittest.TestCase):
     """``validate-data`` (CI runs it) catches the edits a person makes by hand."""
@@ -340,10 +362,10 @@ class TestTheDataGate(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _rule(self, name, ruling, reason="seen it"):
+    def _rule(self, name, ruling):
         path = self.dir / "local_flora_rulings.json"
         doc = json.loads(path.read_text(encoding="utf-8"))
-        doc["places"]["edmonton"][name] = {"ruling": ruling, "reason": reason}
+        doc["places"]["edmonton"][name] = {"ruling": ruling}
         path.write_text(json.dumps(doc), encoding="utf-8")
 
     def test_the_shipped_pair_passes(self):
@@ -422,16 +444,18 @@ class TestWords(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        species = {n: _row(n) for n in ("A a", "B b", "C c", "D d", "E e")}
+        species = {n: _row(n) for n in ("A a", "B b", "C c", "D d", "E e",
+                                         "G g")}
         species["F f"] = _row("F f", "SK")
         cache = {"basis": BASIS, "generated": "2026-01-01", "species": {
             "A a": [_at(1, year=1915), _at(2, year=1960), _at(3, year=2017)],
             "B b": [_at(1, year=1966)],
             "C c": [_at(2, basis=OBS)] * 7,
             "D d": [_at(160)],
-            "F f": [_at(1)] * 3}}
-        rulings = lf.parse_rulings({"places": {"edmonton": {"B b": {
-            "ruling": "native", "reason": "common in the aspen woods"}}}},
+            "F f": [_at(1)] * 3,
+            "G g": [_at(1, year=1933), _at(2, year=1960), _at(3, year=2008)]}}
+        rulings = lf.parse_rulings({"places": {"edmonton": {
+            "B b": {"ruling": "native"}, "G g": {"ruling": "not_native"}}}},
             species)
         nh.set_document(lf.derive(species.values(), cache, rulings))
 
@@ -440,13 +464,14 @@ class TestWords(unittest.TestCase):
         nh.set_document(None)
 
     def test_each_tier_says_what_it_rests_on(self):
-        words = {n: nh.around(n)["words"] for n in "A a|B b|C c|D d|E e|F f"
+        words = {n: nh.around(n)["words"] for n in "A a|B b|C c|D d|E e|F f|G g"
                  .split("|")}
         self.assertEqual(words["A a"],
                          "Native. Collected 3 times within 50 km, 1915 to 2017.")
-        self.assertEqual(words["B b"], "Native, on review: common in the aspen "
-                                       "woods. Collected once within 50 km, "
-                                       "in 1966.")
+        self.assertEqual(words["B b"], "Native, confirmed on review. Collected "
+                                       "once within 50 km, in 1966.")
+        self.assertEqual(words["G g"], "Not native here, on review. Collected "
+                                       "3 times within 50 km, 1933 to 2008.")
         self.assertIn("never collected there", words["C c"])
         self.assertIn("planted ones are seen too", words["C c"])
         self.assertEqual(words["D d"], "Not recorded within 50 km. The nearest "
@@ -461,6 +486,21 @@ class TestWords(unittest.TestCase):
         try:
             self.assertTrue(nh.around("B b")["words"].startswith("Not settled"))
             self.assertFalse(nh.around("B b")["native"])
+        finally:
+            self.setUpClass()
+
+    def test_a_reason_in_the_list_is_never_printed(self):
+        """Even one hand-written into the shipped file: the owner asked that
+        their answers carry no reasons and that none be shown."""
+        doc = lf.derive([_row("B b")], {
+            "basis": BASIS, "generated": "x", "species": {"B b": [_at(1)]}})
+        doc["places"]["edmonton"]["species"]["B b"].update(
+            {"ruling": "native", "reason": "SHOULD NOT SHOW"})
+        nh.set_document(doc)
+        try:
+            self.assertEqual(nh.around("B b")["words"],
+                             "Native, confirmed on review. Collected once "
+                             "within 50 km, in 2000.")
         finally:
             self.setUpClass()
 

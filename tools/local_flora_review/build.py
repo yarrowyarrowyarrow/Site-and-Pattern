@@ -7,8 +7,9 @@ short or deserve a second look, and settling those is a person's job. This
 builds the page that person works on: one card per species with its evidence
 (every collection's year and distance, observations, the nearest record, the
 surrounding ecoregions' counts), a read from ``reads.py`` labelled as opinion,
-and three buttons. The page keeps the rulings in its own database;
-``scripts/derive_local_flora.py --merge`` brings them back.
+and one question with a Yes and a No. The owner answers only where confident
+and gives no reasons (their word, V3.12). The page keeps the answers in its own
+database; ``scripts/derive_local_flora.py --merge`` brings them back.
 
     python -m tools.local_flora_review.build            # -> build/local_flora_review/edmonton.html
     python -m tools.local_flora_review.build --out PATH

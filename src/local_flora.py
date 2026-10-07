@@ -36,9 +36,10 @@ and somebody presses a specimen of one now and then. So:
 Below the floor a species is *not settled*, never "not native" (P9): pin cherry
 has one collection and 189 observations, and is about as Edmonton as a shrub
 gets. Settling those is a person's job, so the owner's rulings
-(``data/local_flora_rulings.json``) are merged in, each with its reason, and a
-re-derivation keeps them. A ruling can move a species either way except across
-the VASCAN gate.
+(``data/local_flora_rulings.json``) are merged in, and a re-derivation keeps
+them. A ruling is a yes or a no and nothing more: the owner asked to answer only
+where they are confident, without giving reasons, and no page prints one. It can
+move a species either way except across the VASCAN gate.
 
 What a tier claims
 ------------------
@@ -171,8 +172,10 @@ def parse_rulings(doc: Optional[Mapping], species: Mapping) -> dict:
     ``species`` maps every catalogue scientific name to its row. Raises
     ``ValueError`` naming the problem: an unknown place, a species not in the
     catalogue (a rename must carry its ruling along), a ruling outside
-    :data:`RULINGS`, no reason, or a "native" ruling on a species VASCAN does
-    not record in the place's province.
+    :data:`RULINGS`, or a "native" ruling on a species VASCAN does not record in
+    the place's province. Only ``ruling`` and ``on`` are kept: a ``reason`` in
+    the file is dropped, so it can never reach the list or a page (the owner's
+    word, V3.12).
     """
     out: dict = {}
     for place_key, rows in ((doc or {}).get("places") or {}).items():
@@ -187,14 +190,12 @@ def parse_rulings(doc: Optional[Mapping], species: Mapping) -> dict:
             if (ruling or {}).get("ruling") not in RULINGS:
                 raise ValueError(f"{place_key}: {name}: ruling must be one of "
                                  f"{RULINGS}")
-            if not str(ruling.get("reason") or "").strip():
-                raise ValueError(f"{place_key}: {name}: a ruling needs a reason")
             if (ruling["ruling"] == "native"
                     and province not in _provinces(species[name])):
                 raise ValueError(f"{place_key}: {name}: VASCAN does not record "
                                  f"it native in {province}; a review cannot "
                                  "make it native here")
-            kept[name] = {k: ruling[k] for k in ("ruling", "reason", "on")
+            kept[name] = {k: ruling[k] for k in ("ruling", "on")
                           if ruling.get(k)}
         out[place_key] = kept
     return out
