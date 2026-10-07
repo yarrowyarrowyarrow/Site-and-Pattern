@@ -1263,6 +1263,103 @@ _PATTERN_TEXT = {
                     "saskatoon, raspberry, pin and chokecherry, highbush cranberry, "
                     "and hazelnut, most of which feed birds too.",
     },
+    # ── Communities of the Edmonton region (F221, V3.12) ─────────────────────
+    "Edmonton Aspen Grove": {
+        "problem": "A lone aspen on a lawn is a tree, not a woods: nothing nests "
+                   "under it and the ground beneath it is mown bare.",
+        "context": "A yard corner or back lot in the Edmonton region with room for "
+                   "a clump of aspen, in sun to part shade.",
+        "forces": "Aspen suckers into a grove, and the grove's understory is where "
+                  "the parkland's birds and bumble bees live; that layer needs "
+                  "shade-tolerant natives, not the sun perennials a bed is "
+                  "usually planted with.",
+        "solution": "Therefore: let aspen make the canopy and fill the shade under "
+                    "it as the region's own groves do: hazelnut and low-bush "
+                    "cranberry for the shrub layer, prickly rose at the sunny "
+                    "edge, sarsaparilla, lungwort and peavine through the herb "
+                    "layer, and wild lily-of-the-valley to close the ground.",
+    },
+    "Edmonton River Valley Spruce": {
+        "problem": "The shady north side of a house or a ravine lot defeats sun "
+                   "plants and is usually left to a lawn that thins out.",
+        "context": "A shaded, moist corner of an Edmonton-region yard, or a lot "
+                   "backing onto a ravine or the river valley, with room for one "
+                   "conifer.",
+        "forces": "Spruce shade and needle litter suit few garden plants, but the "
+                  "river valley's north-facing slopes carry a whole community "
+                  "made for cool, damp ground under evergreen cover.",
+        "solution": "Therefore: plant the valley's north slope: a white spruce with "
+                    "a birch beside it, dogwood, honeysuckle and currant for "
+                    "berries and cover, and coltsfoot, bishop's cap and "
+                    "twinflower on the shaded floor.",
+    },
+    "Edmonton Fescue Slope": {
+        "problem": "A hot, dry, south-facing slope or boulevard browns out every "
+                   "summer as lawn and takes watering to keep green.",
+        "context": "A sunny, well-drained slope, boulevard or front yard in the "
+                   "Edmonton region where you want to stop watering.",
+        "forces": "Bunchgrasses root deep and leave gaps between their clumps, "
+                  "and those gaps are where the slope's wildflowers and "
+                  "ground-nesting bees live; a sod-forming lawn grass closes "
+                  "them.",
+        "solution": "Therefore: plant rough fescue as the matrix with porcupine "
+                    "grass and June grass, and set crocus, sagewort, harebell, "
+                    "prairie goldenrod and blanketflower in the gaps for bloom "
+                    "from early spring to September.",
+    },
+    "Edmonton Slough Margin": {
+        "problem": "A low corner where water sits after rain kills lawn and stays "
+                   "muddy, so it gets drained or filled.",
+        "context": "A damp low spot, rain garden or downspout outlet in the "
+                   "Edmonton region: wet in spring and moist through summer, but "
+                   "not standing water.",
+        "forces": "Wet ground is the richest habitat in the parkland when it is "
+                  "planted with what grows around its sloughs; draining it loses "
+                  "that, and dry-ground plants rot in it.",
+        "solution": "Therefore: plant the slough's own margin: a basket willow for "
+                    "early catkins, bluejoint and water sedge to hold the soil, "
+                    "and aster, skullcap, mint, goldenrod and hedge nettle for "
+                    "bloom from June to the first frost.",
+    },
+    "Edmonton Berry Thicket": {
+        "problem": "A property line of lawn or a single-species hedge gives birds "
+                   "nowhere to nest and nothing to eat.",
+        "context": "A sunny or part-shade edge in the Edmonton region where a band "
+                   "of shrubs three to five metres deep can grow.",
+        "forces": "A thicket needs several shrubs that fruit at different times "
+                  "and a tangle dense enough to nest in; one species gives a week "
+                  "of fruit and a gap underneath.",
+        "solution": "Therefore: mix saskatoon and chokecherry for summer fruit, "
+                    "rose hips and snowberries that hang into winter, buffaloberry "
+                    "to fix nitrogen, honeysuckle to knit them together, and aster "
+                    "and strawberry along the sunny edge.",
+    },
+    "Edmonton Pollinator Meadow": {
+        "problem": "A front lawn feeds nothing, and a pollinator bed built from "
+                   "nursery perennials often flowers for a month and is done.",
+        "context": "A sunny front yard or boulevard in the Edmonton region being "
+                   "converted from lawn.",
+        "forces": "Bees need flowers from spring to frost without a gap, and the "
+                  "plants that fill this region's late-summer gap are its own "
+                  "blazingstars, hyssops, goldenrods and asters.",
+        "solution": "Therefore: plant a June grass matrix with something in bloom "
+                    "every month: crocus, then golden alexanders, green milkweed "
+                    "(a recorded monarch host), giant hyssop, meadow blazingstar "
+                    "and stiff goldenrod, and smooth aster to finish.",
+    },
+    "Edmonton Marsh Edge": {
+        "problem": "A backyard pond with lawn to its edge has no shallows and no "
+                   "cover, so frogs, dragonflies and birds have nowhere to use "
+                   "it.",
+        "context": "The edge of a pond or wetland in the Edmonton region, with a "
+                   "shallow shelf along part of the shore.",
+        "forces": "Most of a pond's life is at its edge, in water shallow enough "
+                  "for emergent plants; a steep or bare edge removes it.",
+        "solution": "Therefore: plant the shallows with the region's emergents "
+                    "(cattail, bur-reed, arrowhead, water parsnip, horsetail), "
+                    "bulrush and water arum at the waterline, and marsh marigold "
+                    "on the wet shore.",
+    },
 }
 
 
@@ -2538,6 +2635,146 @@ EXAMPLE_POLYCULTURES = [
             ('Rough Fescue', 'herbaceous', -1.5, -2.0),
             ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
              'pollinator', 0.0, 2.5),
+        ],
+    },
+    # ── Communities of the Edmonton region (F221, V3.12) ─────────────────────
+    # The owner's ask: "generate some more local to edmonton plant communities".
+    # Of the 71 communities before these, one had every member on the Edmonton
+    # list. Each of these is built only from DOCUMENTED species (three or more
+    # herbarium collections within 50 km, src/local_flora.py), so a review that
+    # settles the borderline species cannot take one off the list;
+    # tests/test_edmonton_communities.py holds them to it.
+    {
+        "name": "Edmonton Aspen Grove",
+        "description": "The aspen woods of the Edmonton region's uplands: "
+                       "trembling aspen over beaked hazelnut, low-bush "
+                       "cranberry and prickly rose, with wild sarsaparilla, tall "
+                       "lungwort and cream-coloured peavine beneath and wild "
+                       "lily-of-the-valley on the ground. Every member is native "
+                       "around Edmonton.",
+        "members": [
+            ("Trembling Aspen", "overstory", 0.0, 0.0),
+            ("Beaked Hazelnut", "understory", 2.5, 1.0),
+            ("Low-bush Cranberry", "shrub_layer", -2.0, 1.5),
+            ("Prickly Wild Rose", "shrub_layer", 1.0, -2.5),
+            ("Wild Sarsaparilla", "herbaceous", -1.5, -1.0),
+            ("Tall Lungwort (Blue Bells)", "pollinator", 1.5, 1.8),
+            ("Cream-Coloured Peavine", "nitrogen_fixer", -0.8, 2.2),
+            ("Wild Lily-of-the-valley", "groundcover", 0.5, -1.2),
+        ],
+    },
+    {
+        "name": "Edmonton River Valley Spruce",
+        "description": "The cool north-facing woods of the North Saskatchewan "
+                       "valley: white spruce and paper birch over red osier "
+                       "dogwood, bracted honeysuckle and wild red currant, with "
+                       "palmate-leaved coltsfoot, bishop's cap and twinflower in "
+                       "the shade. For the shady, moist side of a yard. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("White Spruce", "overstory", 0.0, 0.0),
+            ("Paper Birch", "understory", 3.0, 1.0),
+            ("Red Osier Dogwood", "shrub_layer", -2.5, 1.5),
+            ("Bracted Honeysuckle", "shrub_layer", 1.5, -2.5),
+            ("Wild Red Currant", "shrub_layer", -1.5, -2.0),
+            ("Palmate-leaved Coltsfoot", "herbaceous", 2.0, 2.2),
+            ("Bishop's Cap", "groundcover", -0.8, 1.2),
+            ("Twinflower", "groundcover", 1.0, -1.0),
+        ],
+    },
+    {
+        "name": "Edmonton Fescue Slope",
+        "description": "The rough fescue grassland of the region's dry, "
+                       "south-facing slopes: rough fescue, western porcupine "
+                       "grass and June grass with prairie crocus, prairie "
+                       "sagewort, harebell, prairie goldenrod and blanketflower. "
+                       "Full sun, dry, no watering once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Rough Fescue", "herbaceous", 0.0, 0.0),
+            ("Western Porcupine Grass", "herbaceous", 1.0, 0.6),
+            ("June Grass", "herbaceous", -0.9, 0.8),
+            ("Prairie Crocus", "pollinator", 0.4, -0.9),
+            ("Prairie Sagewort", "groundcover", -1.1, -0.5),
+            ("Harebell", "pollinator", 0.9, -0.4),
+            ("Prairie Goldenrod", "pollinator", -0.4, 1.3),
+            ("Blanketflower", "pollinator", 1.3, 1.1),
+        ],
+    },
+    {
+        "name": "Edmonton Slough Margin",
+        "description": "The wet meadow around a prairie slough: basket willow "
+                       "over bluejoint and water sedge, with purple-stemmed "
+                       "aster, marsh skullcap, wild mint, flat-topped goldenrod "
+                       "and marsh hedge nettle. For ground that stays damp but is "
+                       "not under water. Every member is native around Edmonton.",
+        "members": [
+            ("Basket Willow", "shrub_layer", 0.0, 0.0),
+            ("Bluejoint Reed Grass", "herbaceous", 1.8, 0.8),
+            ("Water Sedge", "herbaceous", -1.6, 1.0),
+            ("Purple-stemmed Tall Aster (Swamp Aster)", "pollinator", 1.2, -1.5),
+            ("Marsh Skullcap", "herbaceous", -0.8, -1.4),
+            ("Wild Mint", "groundcover", 0.4, 1.6),
+            ("Flat-topped Goldenrod", "pollinator", -1.8, -0.6),
+            ("Marsh Hedge Nettle", "herbaceous", 2.0, -0.4),
+        ],
+    },
+    {
+        "name": "Edmonton Berry Thicket",
+        "description": "The shrub thickets of the parkland's edges and ravines: "
+                       "saskatoon and chokecherry with western snowberry, Woods' "
+                       "rose and Canada buffaloberry, twining honeysuckle through "
+                       "them, and smooth aster and wild strawberry at their feet. "
+                       "Fruit from June into winter for people and birds. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Saskatoon Berry", "shrub_layer", 0.0, 0.0),
+            ("Chokecherry", "understory", 2.5, 1.2),
+            ("Western Snowberry", "shrub_layer", -1.8, 1.4),
+            ("Woods' Rose", "shrub_layer", 1.2, -1.9),
+            ("Canada Buffaloberry", "nitrogen_fixer", -2.2, -1.0),
+            ("Twining Honeysuckle (Limber Honeysuckle)", "vine", 0.6, 1.8),
+            ("Smooth Aster", "pollinator", -0.5, -1.6),
+            ("Wild Strawberry", "groundcover", 1.6, 0.2),
+        ],
+    },
+    {
+        "name": "Edmonton Pollinator Meadow",
+        "description": "A lawn-conversion meadow that flowers from prairie crocus "
+                       "in early spring to smooth aster at the first frost: "
+                       "meadow blazingstar, giant hyssop, stiff goldenrod, golden "
+                       "alexanders and green milkweed, with June grass as the "
+                       "matrix. Full sun, little water once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Meadow Blazingstar", "pollinator", 0.0, 0.0),
+            ("Giant Hyssop", "pollinator", 1.0, 0.6),
+            ("Smooth Aster", "pollinator", -1.0, 0.7),
+            ("Stiff Goldenrod", "pollinator", 0.5, -1.0),
+            ("Prairie Crocus", "pollinator", -0.6, -0.9),
+            ("Heart-leaved Alexanders (Golden Alexanders)", "herbaceous",
+             1.3, -0.5),
+            ("Green Milkweed", "pollinator", -1.4, -0.2),
+            ("June Grass", "herbaceous", 0.2, 1.3),
+        ],
+    },
+    {
+        "name": "Edmonton Marsh Edge",
+        "description": "The emergent edge of a pond: cattail, giant bur-reed, "
+                       "arum-leaved arrowhead, water parsnip and swamp horsetail "
+                       "in the shallows, small-fruited bulrush and water arum at "
+                       "the waterline, and marsh marigold on the wet shore. A pond "
+                       "community, placed in a pond rather than on dry ground. "
+                       "Every member is native around Edmonton.",
+        "members": [
+            ("Cattail", "herbaceous", 0.0, 0.0),
+            ("Giant Bur-reed", "herbaceous", 1.5, 0.8),
+            ("Arum-leaved Arrowhead", "herbaceous", -1.2, 1.0),
+            ("Water Parsnip", "herbaceous", 0.8, -1.4),
+            ("Swamp Horsetail", "herbaceous", -1.5, -0.6),
+            ("Small-fruited Bulrush", "herbaceous", 1.9, -0.3),
+            ("Water Arum (Wild Calla)", "groundcover", -0.4, -1.6),
+            ("Marsh Marigold", "groundcover", 0.3, 1.7),
         ],
     },
 ]

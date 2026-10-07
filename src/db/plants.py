@@ -496,7 +496,15 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # the alumroot on Montane Scree, the sunflower in Mixedgrass Late Aster &
 # Goldenrod, the anemone at Parkland Woodland Wildflowers' edge): counted as
 # natives now, they were the retail natives no community held.
-_SCHEMA_VERSION = 92
+# v93 (V3.12): no DDL. Seven seeded communities of the Edmonton region (F221),
+# built only from species on the Edmonton list, and five notes that
+# contradicted VASCAN corrected (F222): Eastern Red Columbine's "true
+# Alberta-native populations", Purple Coneflower "appropriate for Alberta
+# grassland restoration" (VASCAN: introduced in Alberta), Prairie Dropseed's
+# "Alberta's mixed-grass prairie", Big Bluestem's Alberta recommendation and
+# Bur Oak "of the aspen parkland" (introduced in Alberta). The Edmonton list
+# itself, data/local_flora.json, is read from the file and needs no reseed.
+_SCHEMA_VERSION = 93
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

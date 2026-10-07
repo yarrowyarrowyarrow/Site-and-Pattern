@@ -71,6 +71,8 @@ GOALS: list[Goal] = [
         prompt_hint=("Use only species native around Edmonton, which leaves "
                      "out the mountain and dry-prairie plants native elsewhere "
                      "in Alberta."),
+        # The seeded Edmonton communities (F221) lead the offline pick.
+        community_hints=("Edmonton",),
         caveat=("Edmonton natives only keeps plants collected at least three "
                 "times within 50 km of downtown, or confirmed on review. A "
                 "species the herbarium record is too thin to settle is left "
