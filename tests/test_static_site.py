@@ -207,7 +207,10 @@ class TestTheModelNeedsNoDatabase(unittest.TestCase):
         """A hub axis that generated nothing is a facet whose derivation is
         broken, which looks identical to "the data has none of that"."""
         got = {h["key"] for h in self.model["hubs"]}
-        self.assertEqual(got, {"type", "colour", "bloom", "ecoregion", "role"})
+        # "around" since V3.12 (F220): the fixture's plants include species on
+        # the shipped Edmonton list, which is read off data/local_flora.json.
+        self.assertEqual(got, {"type", "colour", "bloom", "ecoregion", "role",
+                               "around"})
 
     def test_a_photo_without_attribution_is_not_offered(self):
         by_name = {e["name"]: e for e in self.model["species"]}

@@ -167,12 +167,16 @@ def _native(entry: dict) -> str:
     what replaces this (VASCAN, F144) and why the note is derived rather than
     stored until then.
     """
+    from src.native_here import province_words
     from src.nativity import WITHHELD_NOTE, publishable
     value = _esc(_tokens(entry.get("native")))
     if not value:
         return ""
     if publishable(entry):
-        return value
+        # V3.12: the sentence the desktop page prints, naming the province it
+        # is not native to. "SK" alone is how Eastern Red Columbine stayed
+        # unclear while being correct.
+        return _esc(province_words(entry))
     # V2.80: an inferred claim is WITHHELD, not annotated. V2.78 printed it
     # with the heuristic named beside it, which was a real improvement on
     # printing it bare -- and it is still an inference published as this site's
@@ -180,6 +184,20 @@ def _native(entry: dict) -> str:
     # flower-colour note has used since V2.48, reused so the provenance marks
     # on this page read as the same kind of statement.
     return f'<span class="src">{_esc(WITHHELD_NOTE)}</span>'
+
+
+def _around(entry: dict, depth: int, model: dict) -> str:
+    """Native around Edmonton, with its evidence and a link to the list (F220,
+    V3.12): the words the desktop page prints, from the same entry."""
+    around = entry.get("around") or {}
+    if not around.get("words"):
+        return ""
+    hub = {h["key"]: h for h in model.get("hubs") or []}.get("around") or {}
+    slug = {p["value"]: p["slug"] for p in hub.get("pages") or []
+            }.get(around.get("place"))
+    link = (f' <a href="{_up(depth)}{hub["dir"]}/{_esc(slug)}/">The '
+            f'{_esc(around["short"])} list</a>' if slug else "")
+    return _esc(around["words"]) + link
 
 
 def _phenology(entry: dict) -> str:
@@ -231,6 +249,8 @@ def _facts_table(entry: dict, colour_cell: str, depth: int,
         ("In bloom", month_links),
         ("Fruit", _esc(entry.get("fruit"))),
         ("Native to", _native(entry)),
+        (f'Around {(entry.get("around") or {}).get("short") or "Edmonton"}',
+         _around(entry, depth, model)),
     ]
     cells = "".join(f"<tr><th>{_esc(label)}</th><td>{value}</td></tr>"
                     for label, value in rows if value)

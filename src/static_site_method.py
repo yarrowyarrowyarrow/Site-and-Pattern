@@ -156,6 +156,26 @@ def _nativity_claim(nativity: dict) -> str:
             f"carry them at all. I would rather show you nothing than a guess.")
 
 
+def _around_section() -> str:
+    """How the Edmonton list is decided (F220), every number from the list."""
+    from src.native_here import EDMONTON, entry, native_names, places
+    place = places().get(EDMONTON)
+    if not place:
+        return ""
+    oak = entry("Quercus macrocarpa").get("collections") or 0
+    return f"""<h2 id="around">Native around Edmonton</h2>
+<p>Native to Alberta covers the mountains and the dry south as well as the
+parkland. The <a href="../plants/native-area/edmonton/">Edmonton list</a> is
+narrower: a species is on it when VASCAN records it native to Alberta <em>and</em>
+at least {place["min_collections"]} herbarium collections were made within
+{float(place["radius_km"]):g} km of downtown Edmonton, or I confirmed it on
+review. Only specimens count. A city's photographs include its planted trees,
+and so do a few specimens{f" (Bur Oak has {oak}, and VASCAN records it introduced in Alberta)" if oak else ""}.
+A species with fewer collections is left off until it is reviewed, which is not
+a claim that it is foreign to Edmonton. {len(native_names(EDMONTON))} species
+are on the list today.</p>"""
+
+
 def render_method(model: dict) -> str:
     """The Method page."""
     from src.ecoregion_map import CAVEAT, frame_height, map_svg
@@ -189,6 +209,7 @@ search.</p>
 Vascular Plants of Canada. {_nativity_claim(nativity)} So far I have included
 AB and SK and plan to continue this project across the rest of Canada's
 provinces and territories.</p>
+{_around_section()}
 
 <h2>The ecoregions</h2>
 <figure class="mapfig methodfig">{map_svg(None, width=520,

@@ -172,7 +172,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # drift — so splitting makes two half-files with one caller. The next
         # facet that needs more than a one-line derivation should take that
         # extraction rather than this number going to 600.
-        (_SRC / "site_facets.py", 520),                # 476 now
+        (_SRC / "site_facets.py", 520),                # 319 now (V3.12)
+        # V3.12: the derivations went to their own module, the split the
+        # comment above named, when the Edmonton facet needed the room.
+        (_SRC / "site_facet_values.py", 340),          # 263 now
         # V2.68 — the vocabulary itself. Opted in on arrival, the V2.41
         # precedent, and overdue: this file decides what a real property gets
         # recommended, and it grew MultiPolygon support, boundary proximity and
@@ -301,6 +304,10 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "subject_area.py", 180),               # 105 now
         (_SRC / "phenology_bar.py", 220),              # 184 now
         (_SRC / "nativity.py", 180),                   # 116 now
+        # V3.12 (F220): native around Edmonton. The rule and its file format,
+        # and the one read side every surface asks. Opted in on arrival.
+        (_SRC / "local_flora.py", 360),                # 296 now
+        (_SRC / "native_here.py", 280),                # 227 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in

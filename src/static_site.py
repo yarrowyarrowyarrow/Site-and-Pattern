@@ -413,6 +413,8 @@ def _hub_title(facet, value: str, label: str) -> str:
         return f"Native {label.lower()}s of Alberta and Saskatchewan"
     if facet.key == "ecoregion":
         return f"Plants of the {label}"
+    if facet.key == "around":                       # F220
+        return f"Native plants of the {label}"
     return label
 
 

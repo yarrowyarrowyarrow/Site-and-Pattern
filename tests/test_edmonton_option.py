@@ -162,5 +162,63 @@ class TestTheGenerator(unittest.TestCase):
             self.assertNotIn(gone, text)
 
 
+class TestTheWebsite(unittest.TestCase):
+    """The same list on grownativeplants.ca: a filter, a page, a row on every
+    species page and a paragraph on /method/, every number computed."""
+
+    def test_the_facet_reads_the_list(self):
+        from src.site_facets import FACETS_BY_KEY
+        facet = FACETS_BY_KEY["around"]
+        self.assertTrue(facet.hub)
+        self.assertEqual(facet.values({"scientific_name":
+                                       "Amelanchier alnifolia"}), ["edmonton"])
+        self.assertEqual(facet.values({"scientific_name":
+                                       "Aquilegia flavescens"}), [])
+        # The rule's numbers come from the rule, not from a sentence.
+        from src.local_flora import MIN_COLLECTIONS, PLACES
+        self.assertIn(f"at least {MIN_COLLECTIONS} times within "
+                      f"{PLACES['edmonton']['radius_km']:g} km", facet.blurb)
+
+    def test_the_page_counts_the_list_and_names_what_waits(self):
+        from src.static_site_regions import _hub_extra
+        hub = {"key": "around", "dir": "plants/native-area"}
+        model = {"species": [
+            {"row": {"scientific_name": "Amelanchier alnifolia"},
+             "slug": "saskatoon-berry", "name": "Saskatoon Berry"},
+            {"row": {"scientific_name": "Prunus pensylvanica"},
+             "slug": "pin-cherry", "name": "Pin Cherry"},
+            {"row": {"scientific_name": "Aquilegia flavescens"},
+             "slug": "yellow-columbine", "name": "Yellow Columbine"}]}
+        html = _hub_extra(hub, {"value": "edmonton"}, model)
+        self.assertIn("1 species on this list", html)
+        self.assertIn("1 species native elsewhere in Alberta have no record",
+                      html)
+        self.assertIn("<details>", html)
+        self.assertIn('href="../../../plants/pin-cherry/">Pin Cherry</a>', html)
+        self.assertNotIn("Saskatoon Berry</a>", html)
+        self.assertIn('href="../../../method/#around"', html)
+
+    def test_a_species_page_says_it_and_links_the_list(self):
+        from src.plant_directory import species_entry
+        from src.static_site_species import _around
+        from src.db.plants import search_plants
+        pin = search_plants(query="Pin Cherry")[0]
+        entry = species_entry(pin["id"])
+        model = {"hubs": [{"key": "around", "dir": "plants/native-area",
+                           "pages": [{"value": "edmonton",
+                                      "slug": "edmonton"}]}]}
+        cell = _around(entry, 2, model)
+        self.assertTrue(cell.startswith("Not settled."), cell)
+        self.assertIn('href="../../plants/native-area/edmonton/"', cell)
+        self.assertNotIn("<a", _around(entry, 2, {"hubs": []}))
+
+    def test_the_method_page_states_the_rule_from_the_list(self):
+        from src.static_site_method import _around_section
+        text = " ".join(_around_section().split())
+        self.assertIn(f"{len(_local())} species are on the list today", text)
+        self.assertIn("within 50 km of downtown Edmonton", text)
+        self.assertIn('href="../plants/native-area/edmonton/"', text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -169,7 +169,8 @@ class TestItSurvivesEveryLayerOutToThePage(unittest.TestCase):
         against a database, a reseed and a seed file that were all correct."""
         from src.static_site_species import _native
         cell = _native(self._entry(**{SOURCE_FIELD: "flora"}))
-        self.assertIn("SK", cell)
+        # The province in words since V3.12, the sentence the desktop prints.
+        self.assertIn("Saskatchewan", cell)
         self.assertNotIn("not checked", cell)
         self.assertNotIn("ecoregions", cell)
 

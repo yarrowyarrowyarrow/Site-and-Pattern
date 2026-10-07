@@ -202,8 +202,13 @@ class TestEveryPublishedClaimIsMarked(unittest.TestCase):
     def test_the_species_page_renders_a_sourced_claim_plainly(self):
         from src.static_site_species import _native
         cell = _native({"native": "AB,SK", N.SOURCE_FIELD: "flora"})
-        self.assertIn("AB, SK", cell)
+        # In words since V3.12, the sentence the desktop page prints.
+        self.assertIn("Alberta and Saskatchewan", cell)
         self.assertNotIn("Not established", cell)
+        # And a one-province native says which province it is NOT native to:
+        # "SK" alone is how Eastern Red Columbine stayed unclear.
+        self.assertIn("Not native to Alberta",
+                      _native({"native": "SK", N.SOURCE_FIELD: "flora"}))
         # No mark at all: a checked value carries none, or the eye learns to
         # skip the mark and loses the one case that matters.
         self.assertNotIn('class="src"', cell)
