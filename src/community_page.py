@@ -131,6 +131,14 @@ class CommunityPage(QWidget):
         self._grid.setContentsMargins(0, 0, 0, 0)
         self._grid.setSpacing(4)
         col.addWidget(grid_holder)
+        # F220 (V3.12): whether its plants are native around Edmonton, naming
+        # the ones that are not, which is why "Edmonton natives only" hides it.
+        self._local = QLabel("")
+        self._local.setWordWrap(True)
+        self._local.setStyleSheet(_DIM)
+        self._local.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        col.addWidget(self._local)
         about = QLabel("About this community")
         about.setStyleSheet(_SECTION)
         col.addWidget(about)
@@ -164,6 +172,8 @@ class CommunityPage(QWidget):
         self.setAccessibleName(f"About {name}")
         self._facts.setText(facts or _facts_for(self._community))
         self._render_tiles()
+        self._local.setText(around_line(self.members()))
+        self._local.setVisible(bool(self._local.text()))
         self._about.setText(_description_html(self._community))
         self._scroll.verticalScrollBar().setValue(0)
 
@@ -289,6 +299,22 @@ def two_lines(name: str, metrics, width: int) -> str:
         return first
     return first + "\n" + metrics.elidedText(rest, Qt.TextElideMode.ElideRight,
                                              width)
+
+
+def around_line(members: list, place: str = "edmonton") -> str:
+    """Whether a community's plants are native around ``place`` (F220): one
+    sentence, naming each species that is not, once. ``""`` with no members or
+    no list for the place."""
+    from src.native_here import native_names, places
+    if not members or place not in places():
+        return ""
+    local, short = native_names(place), places()[place]["short"]
+    outside = list(dict.fromkeys(
+        m.get("common_name") or "" for m in members
+        if (m.get("scientific_name") or "").strip() not in local))
+    if not outside:
+        return f"Every plant here is native around {short}."
+    return f"Not native around {short}: {', '.join(outside)}."
 
 
 def _facts_for(polyculture: dict) -> str:

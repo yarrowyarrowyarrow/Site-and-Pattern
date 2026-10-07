@@ -48,6 +48,10 @@ from __future__ import annotations
 from typing import Callable, NamedTuple, Optional
 
 from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
+# The province's nativity moved to src/native_here.py (V3.12), the one read
+# side for "native here" at both scales; the names stay importable from here.
+from src.native_here import (PROVINCE_NAMES, around_tip as _around_tip,  # noqa: F401
+                             native_in, native_tip)
 from src.plant_facets import _MONTH_LABELS, _TYPE_LABELS
 
 
@@ -139,6 +143,10 @@ QUALITIES: tuple = (
     # records every one in Alberta and the list's AB badge said so.
     Quality("native_only", "Native", "native_province",
             "Native to Alberta, as VASCAN records it.", "AB"),
+    # F220 (V3.12), the owner's "Edmonton specific native plants": collected
+    # near the city, not only recorded somewhere in the province.
+    Quality("edmonton_native", "Edmonton native", "native_near",
+            _around_tip(), "edmonton"),
     Quality("perennial_only", "Perennial", "perennial_only",
             "Comes back every year."),
     Quality("supports_specialist", "Feeds a specialist", "supports_specialist",
@@ -190,27 +198,6 @@ def facet_params() -> set:
 
 
 # ── Criteria ─────────────────────────────────────────────────────────────────
-
-#: The provinces a pin can be in, by the code VASCAN's lists use (F200).
-PROVINCE_NAMES: dict = {"AB": "Alberta", "SK": "Saskatchewan"}
-
-
-def native_in(plant: dict, province: str = "AB") -> bool:
-    """Whether VASCAN records ``plant`` native in ``province``, read off its
-    ``native_provinces`` (every row's since V2.80); a row without them falls
-    back to the Alberta flag, and to nothing elsewhere."""
-    provs = (plant or {}).get("native_provinces")
-    if provs:
-        return (province or "AB") in {p.strip() for p in str(provs).split(",")}
-    return (province or "AB") == "AB" and bool(
-        (plant or {}).get("native_to_alberta"))
-
-
-def native_tip(province: str = "AB") -> str:
-    """The Native filter's tooltip, naming the province it filters to."""
-    name = PROVINCE_NAMES.get(province or "AB", "Alberta")
-    return f"Native to {name}, as VASCAN records it."
-
 
 def criteria_to_kwargs(criteria: Optional[dict], province: str = "") -> dict:
     """Turn ``{facet_key: [values], quality_key: True, "query": "..."}`` into

@@ -172,12 +172,21 @@ def species_entry(plant_id: int, *,
         "image_license": plant.get("image_license") or "",
         "wildlife": _wildlife(edges),
         "ranges": _ranges(plant_id, plant, ranges_for),
+        # Native around Edmonton, with its evidence (F220, V3.12). Both the
+        # desktop page and the website print ``words`` from here, so they say
+        # the same thing about the same plant.
+        "around": _safely(lambda: _around(plant), {}),
         "calendar": _calendar(plant_id, calendar_for),
         "photos": _photos(plant, photos_for),
         "provenance": _provenance(plant),
     }
     entry["relationships"] = _relationships(plant_id, neighbourhood)
     return entry
+
+
+def _around(plant: dict) -> dict:
+    from src.native_here import around                       # noqa: PLC0415
+    return around(plant)
 
 
 def _roles(plant: dict) -> list:

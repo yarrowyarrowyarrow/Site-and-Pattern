@@ -2691,10 +2691,17 @@ def search_plants(
     bloom_months: Optional[list] = None,
     fruit_months: Optional[list] = None,
     flower_colours: Optional[list] = None,
+    native_near: str = "",
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
     Empty string / None values for a filter means "no restriction".
+
+    ``native_near`` is a place with a local list ("edmonton", F220): only the
+    species native around it, by ``src.native_here``. Applied in Python, after
+    the query, because the list is shipped data keyed by scientific name rather
+    than a column; an unknown place raises ``ValueError`` rather than filtering
+    to nothing.
 
     ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
     matches if its recorded window covers ANY of them. See ``_month_filter``
@@ -2969,6 +2976,11 @@ def search_plants(
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
         result = _colour_filter(result, flower_colours)
+        if native_near:
+            from src.native_here import native_names     # noqa: PLC0415
+            local = native_names(native_near)
+            result = [p for p in result
+                      if (p.get("scientific_name") or "").strip() in local]
         return result
     finally:
         conn.close()

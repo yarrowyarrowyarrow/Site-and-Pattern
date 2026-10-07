@@ -61,6 +61,22 @@ GOALS: list[Goal] = [
         filters={"native_only": True},
         prompt_hint="Use only species native to Alberta.",
     ),
+    # F220 (V3.12): the owner's "Edmonton specific native plants". Narrower
+    # than the province, backed by data/local_flora.json; the generator applies
+    # it to the plant pool, the communities and the critic's repairs alike.
+    Goal(
+        key="edmonton_native",
+        label="Edmonton natives only",
+        filters={"native_near": "edmonton"},
+        prompt_hint=("Use only species native around Edmonton, which leaves "
+                     "out the mountain and dry-prairie plants native elsewhere "
+                     "in Alberta."),
+        caveat=("Edmonton natives only keeps plants collected at least three "
+                "times within 50 km of downtown, or confirmed on review. A "
+                "species the herbarium record is too thin to settle is left "
+                "out until it is reviewed, not because it is known to be "
+                "foreign here."),
+    ),
     Goal(
         key="pollinator",
         label="Pollinator habitat",

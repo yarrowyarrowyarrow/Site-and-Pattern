@@ -1169,6 +1169,27 @@ class PolyculturePanel(QWidget):
         filter_row3.addWidget(self._result_count)
         layout.addLayout(filter_row3)
 
+        # F220 (V3.12), the owner's ask: communities "containing non native (to
+        # Edmonton) plants not showing up". Remembered, like the sort.
+        from src.native_here import around_tip
+        local_row = QHBoxLayout()
+        local_row.setSpacing(6)
+        self._edmonton_only = QCheckBox("Edmonton natives only")
+        self._edmonton_only.setChecked(QSettings().value(
+            "plant_communities/native_near", "", type=str) == "edmonton")
+        self._edmonton_only.setToolTip(
+            "Only communities whose every plant is native around Edmonton. One "
+            "plant from elsewhere and the community is hidden; its page says "
+            "which.\n\n" + around_tip())
+        self._edmonton_only.setAccessibleName("Edmonton natives only")
+        self._edmonton_only.toggled.connect(self._on_edmonton_only)
+        local_row.addWidget(self._edmonton_only)
+        self._local_hidden = QLabel("")
+        self._local_hidden.setStyleSheet("color: #90a4ae; font-size: 12px;")
+        self._local_hidden.setWordWrap(True)
+        local_row.addWidget(self._local_hidden, 1)
+        layout.addLayout(local_row)
+
         # Polyculture tree (parent polycultures + variations as children)
         self.polyculture_tree = _CommunityTree()
         self.polyculture_tree.setAccessibleName("Plant communities")
@@ -1755,8 +1776,10 @@ class PolyculturePanel(QWidget):
         # queries.
         index = polycultures.get_library_index()
         facet_filters = self._active_facet_filters()
+        native_near = self._native_near()
         passed = polycultures.filter_library(
-            index, search=search, facets=facet_filters)
+            index, search=search, facets=facet_filters,
+            native_near=native_near)
         ordered = polycultures.sort_community_ids(
             index, list(passed), getattr(self, "_sort_by", "name"))
 
@@ -1764,8 +1787,15 @@ class PolyculturePanel(QWidget):
             n = len(ordered)
             self._result_count.setText(
                 f"{n} communit{'y' if n == 1 else 'ies'}")
+        if hasattr(self, "_local_hidden"):
+            hidden = (len(polycultures.filter_library(
+                index, search=search, facets=facet_filters)) - len(passed)
+                if native_near else 0)
+            self._local_hidden.setText(
+                f"{hidden} hidden: each has a plant not native around Edmonton"
+                if hidden else "")
 
-        filtering = bool(search or facet_filters)
+        filtering = bool(search or facet_filters or native_near)
         built = [(cid, self._make_community_item(index, cid, passed[cid],
                                                  filtering))
                  for cid in ordered]
@@ -1806,6 +1836,16 @@ class PolyculturePanel(QWidget):
             for item in buckets[label]:
                 group_node.addChild(item)
             group_node.setExpanded(True)
+
+    def _native_near(self) -> str:
+        """``"edmonton"`` while "Edmonton natives only" is ticked, else ``""``."""
+        box = getattr(self, "_edmonton_only", None)
+        return "edmonton" if box is not None and box.isChecked() else ""
+
+    def _on_edmonton_only(self, checked: bool):
+        QSettings().setValue("plant_communities/native_near",
+                             "edmonton" if checked else "")
+        self._refresh_polyculture_list()
 
     def _active_facet_filters(self) -> dict:
         """Facet name → checked labels, for facets with anything checked."""

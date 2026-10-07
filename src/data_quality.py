@@ -709,7 +709,8 @@ def validate_all() -> tuple[list[str], list[str]]:
     # its consistency, not the generator that writes it.
     for validate_nativity in (validate_nativity_consistency,
                               validate_nativity_evidence,
-                              validate_provenance_generator):
+                              validate_provenance_generator,
+                              validate_local_flora):
         e, w = validate_nativity()
         errors.extend(e)
         warnings.extend(w)
@@ -2165,6 +2166,60 @@ def validate_nativity_evidence() -> tuple[list[str], list[str]]:
             "does not prove nativity, but nothing here disagrees with these "
             f"either: {', '.join(sorted(missing))}")
     return errors, warnings
+
+
+def validate_local_flora() -> tuple[list[str], list[str]]:
+    """The local lists (F220, V3.12): ``data/local_flora.json`` and the owner's
+    rulings behind it.
+
+    Errors when the list does not cover the catalogue exactly, when a ruling is
+    malformed or names a species the catalogue no longer has (a rename has to
+    carry it, which ``rename_taxon.py`` does), when a ruling tries to make a
+    species native that VASCAN does not record in the province, or when a
+    ruling has been edited and the list not re-derived. Whether the list is
+    what the occurrence cache gives today is ``tests/test_local_flora.py``'s
+    job: that reads 18 MB, and this gate should not.
+    """
+    from src.local_flora import parse_document, parse_rulings
+    errors: list[str] = []
+    try:
+        doc = json.loads((DATA_DIR / "local_flora.json")
+                         .read_text(encoding="utf-8"))
+        rulings = json.loads((DATA_DIR / "local_flora_rulings.json")
+                             .read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return [f"local_flora: {e}"], []
+    rows = {r.get("scientific_name"): r
+            for r in _load_json_list(DATA_DIR / "plants_master.json")
+            if isinstance(r, dict) and r.get("scientific_name")}
+    try:
+        parsed = parse_rulings(rulings, rows)
+    except ValueError as e:
+        return [f"local_flora_rulings.json: {e}"], []
+    places = parse_document(doc)
+    if not places:
+        return ["local_flora.json: no places, or a version this code cannot "
+                "read"], []
+    fix = "; run python scripts/derive_local_flora.py --write"
+    for key, place in places.items():
+        listed = set(place["species"])
+        if listed != set(rows):
+            errors.append(
+                f"local_flora.json: {key} lists {len(listed)} species and the "
+                f"catalogue has {len(rows)} (missing: "
+                f"{sorted(set(rows) - listed)[:5]}, extra: "
+                f"{sorted(listed - set(rows))[:5]}){fix}")
+        for name, ruling in (parsed.get(key) or {}).items():
+            got = place["species"].get(name) or {}
+            if got.get("ruling") != ruling["ruling"]:
+                errors.append(f"local_flora.json: the {key} ruling on {name} "
+                              f"is not in the derived list{fix}")
+        stale = sorted(n for n, e in place["species"].items()
+                       if e.get("ruling") and n not in (parsed.get(key) or {}))
+        if stale:
+            errors.append(f"local_flora.json: {key} carries rulings the "
+                          f"rulings file no longer has: {stale[:5]}{fix}")
+    return errors, []
 
 
 def validate_provenance_generator() -> tuple[list[str], list[str]]:

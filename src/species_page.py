@@ -294,6 +294,7 @@ class SpeciesPage(QWidget):
         self._season_block(entry)
         if entry.get("morphology"):
             self._section("What it looks like", " · ".join(entry["morphology"]))
+        self._native_block(entry)
         self._range_block(entry)
         self._wildlife_block(entry)
         self._companion_block(entry)
@@ -405,6 +406,17 @@ class SpeciesPage(QWidget):
                                 edible=bool(entry.get("edible_parts")))
         if tasks:
             self._section("", tasks)
+
+    def _native_block(self, entry: dict):
+        """Where it is native, before where it has been found (F220, F222,
+        V3.12). The website has said "Native to" since V2.47 and this page
+        never did, so Eastern Red Columbine, native to Saskatchewan and "Found
+        in" an ecoregion that straddles the border, read as Albertan."""
+        from src.native_here import province_words
+        self._section("Native to", province_words(entry))
+        around = entry.get("around") or {}
+        if around.get("words"):
+            self._section(f"Around {around['short']}", around["words"])
 
     def _range_block(self, entry: dict):
         """Where it has been recorded, **with the count and the confidence**:

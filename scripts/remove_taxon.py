@@ -253,12 +253,14 @@ def survey(scientific: str, merge_into: str = "") -> dict:
         _merged, fields = merge_rows(dict(into), row,
                                      into.get("common_name") or "")
 
+    from scripts.derive_local_flora import rulings_for       # noqa: PLC0415
     return {
         "scientific": scientific, "common": common, "plant_file": plant_file,
         "merge_into": merge_into, "into_common": into_common,
         "edges": mine, "orphaned": orphaned, "data_files": data_hits,
         "sizes": sizes, "fields": fields,
         "source_refs": _source_refs(common),
+        "local_rulings": rulings_for(scientific),
     }
 
 
@@ -299,6 +301,10 @@ def report(s: dict) -> None:
             print("  no animal is left without an edge")
     for name in s["data_files"]:
         print(f"  1 entry in data/{name}")
+    for place in s.get("local_rulings") or {}:
+        print(f"  the owner's {place} ruling in data/local_flora_rulings.json "
+              + (f"moves to {s['merge_into']} unless it has its own"
+                 if s["merge_into"] else "is dropped"))
     if s["merge_into"]:
         for name, (mine, theirs) in s["sizes"].items():
             if name == CACHE:
@@ -402,6 +408,14 @@ def apply(s: dict, authority: str, release: str) -> None:
         blob["species"] = (dict(sorted(species.items())) if was_sorted
                            else species)
         _save(name, blob)
+
+    # The local lists (F220), keyed by scientific name like the files above:
+    # the owner's rulings follow a merge or go with a removal, and the derived
+    # list is re-derived, because the suite refuses a stale one.
+    from scripts.derive_local_flora import carry_rulings, write  # noqa: PLC0415
+    for place, what in carry_rulings(s["scientific"], s["merge_into"]):
+        print(f"  {place} ruling {what}")
+    write()
 
     # V2.80's lesson, automated: `validate_excluded_taxa` maps every listed
     # common name to the exclusion, so listing one that DELIBERATELY continues

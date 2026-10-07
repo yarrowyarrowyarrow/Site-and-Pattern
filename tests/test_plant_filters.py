@@ -35,11 +35,21 @@ class TestTheVocabulary(unittest.TestCase):
         real = set(inspect.signature(search_plants).parameters)
         self.assertEqual(pf.facet_params() - real, set())
 
-    def test_nine_facets_and_nine_qualities(self):
+    def test_nine_facets_and_ten_qualities(self):
+        # Ten since V3.12: Edmonton native (F220) beside Native.
         self.assertEqual(len(pf.FACETS), 9)
-        self.assertEqual(len(pf.QUALITIES), 9)
+        self.assertEqual(len(pf.QUALITIES), 10)
         self.assertEqual(len({f.key for f in pf.FACETS}
-                             | {q.key for q in pf.QUALITIES}), 18)
+                             | {q.key for q in pf.QUALITIES}), 19)
+
+    def test_edmonton_native_asks_for_the_edmonton_list(self):
+        """F220: the quality reaches search_plants as native_near, alongside
+        the pin's province rather than instead of it."""
+        kwargs = pf.criteria_to_kwargs(
+            {"edmonton_native": True, "native_only": True}, "AB")
+        self.assertEqual(kwargs, {"native_province": "AB",
+                                  "native_near": "edmonton"})
+        self.assertIn("Edmonton native", pf.summary({"edmonton_native": True}))
 
     def test_each_facet_says_how_its_values_combine(self):
         """Role is all-of in the query (one EXISTS per tag); everything else

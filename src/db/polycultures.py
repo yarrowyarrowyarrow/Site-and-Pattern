@@ -345,8 +345,11 @@ def get_library_index() -> dict:
       fauna_count (distinct fauna supported by any member),
       members_brief ([(common_name, role), …] for tooltips),
       search_blob (lowercased name + description + member common & scientific
-      names), and facets — the same labels get_community_facets() produces.
+      names), facets — the same labels get_community_facets() produces — and
+      not_around ({place: [common names of members not native around it]},
+      F220: a community is native around a place when every member is).
     """
+    from src.native_here import native_names, places as local_places
     conn = get_connection()
     try:
         comms = conn.execute(
@@ -378,6 +381,7 @@ def get_library_index() -> dict:
     for r in member_rows:
         members_by_cid.setdefault(r["cid"], []).append(dict(r))
     fauna_by_cid = {r["cid"]: r["n"] for r in fauna_rows}
+    local = {key: native_names(key) for key in local_places()}
 
     index: dict = {}
     for c in comms:
@@ -404,6 +408,11 @@ def get_library_index() -> dict:
                                _normalize_role(m.get("role")) or "")
                               for m in ms],
             "search_blob":   " ".join(blob).lower(),
+            "not_around":    {key: sorted({m.get("common_name") or ""
+                                           for m in ms
+                                           if (m.get("scientific_name") or "")
+                                           .strip() not in names})
+                              for key, names in local.items()},
             "facets": {
                 "structure": _community_structure(ms),
                 "habitat":   _community_habitat(ms),
@@ -421,8 +430,14 @@ def get_library_index() -> dict:
     return index
 
 
-def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
+def filter_library(index: dict, *, search: str = "", facets=None,
+                   native_near: str = "") -> dict:
     """Apply search + facet filters over a ``get_library_index()`` result.
+
+    ``native_near`` (F220) keeps only communities whose every member is native
+    around that place ("edmonton"): one member from the mountains or the dry
+    south and the community is hidden, as the owner asked. An empty community
+    has no member to fail and passes.
 
     Returns ``{top_level_id: {"self": bool, "children": [child_id, …]}}``
     holding only the top-level communities that pass. ``self`` says the parent
@@ -438,9 +453,15 @@ def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
     """
     needle = (search or "").strip().lower()
     active = {k: set(v) for k, v in (facets or {}).items() if v}
+    if native_near:
+        from src.native_here import places as local_places
+        if native_near not in local_places():
+            raise ValueError(f"no local list for {native_near!r}")
 
     def _passes(entry) -> bool:
         if needle and needle not in entry["search_blob"]:
+            return False
+        if native_near and (entry.get("not_around") or {}).get(native_near):
             return False
         for name, accepted in active.items():
             val = entry["facets"].get(name)
@@ -515,7 +536,7 @@ def get_polyculture_by_id(polyculture_id):
             return None
         polyculture = dict(row)
         members = conn.execute(
-            "SELECT gm.*, p.common_name, p.plant_type "
+            "SELECT gm.*, p.common_name, p.plant_type, p.scientific_name "
             "FROM polyculture_members gm JOIN plants p ON gm.plant_id = p.id "
             "WHERE gm.polyculture_id = ? ORDER BY gm.id",
             (polyculture_id,),

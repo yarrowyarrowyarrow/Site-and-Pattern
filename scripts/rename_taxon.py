@@ -200,10 +200,12 @@ def survey(old: str, new: str) -> dict:
     carries = bool(nativity.get("accepted_name")
                    and binomial(nativity["accepted_name"]) == new)
 
+    from scripts.derive_local_flora import rulings_for       # noqa: PLC0415
     return {"old": old, "new": new, "plant_file": plant_file, "row": row,
             "common": common, "data_files": hits, "clash": clash,
             "shares_common": shares_common,
-            "nativity": nativity, "carries_nativity": carries}
+            "nativity": nativity, "carries_nativity": carries,
+            "local_rulings": rulings_for(old)}
 
 
 def report(s: dict) -> None:
@@ -214,6 +216,9 @@ def report(s: dict) -> None:
     if not s["data_files"]:
         print("  no keyed data entries (this species has no maps yet)")
     print("  plant-fauna edges follow the common name, so none need touching")
+    for place in s.get("local_rulings") or {}:
+        print(f"  carry the owner's {place} ruling in "
+              f"data/local_flora_rulings.json, then re-derive local_flora.json")
     if s["shares_common"]:
         print(f"  WARNING: another species shares the common name "
               f"'{s['common']}', so the slug is tie-broken by scientific name "
@@ -283,6 +288,14 @@ def apply(s: dict, authority: str) -> None:
         blob = _load(name)
         blob["species"] = _rekey(blob["species"], s["old"], s["new"])
         _save(name, blob)
+
+    # The local lists (F220): the owner's rulings follow the name, and the
+    # derived list is re-derived, because it is keyed by the name too and the
+    # suite refuses a stale one.
+    from scripts.derive_local_flora import carry_rulings, write  # noqa: PLC0415
+    for place, what in carry_rulings(s["old"], s["new"]):
+        print(f"  {place} ruling {what}")
+    write()
 
     print(f"\nRenamed. {len(s['data_files']) + (1 if s['carries_nativity'] else 0)}"
           f" data file(s) re-keyed.")

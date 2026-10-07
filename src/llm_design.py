@@ -302,6 +302,29 @@ def _site_filters(site_config: Optional[dict]) -> dict:
     return out
 
 
+def _with_local(site_filters: dict, goals) -> dict:
+    """``site_filters`` plus the Edmonton list when its goal is ticked (F220,
+    V3.12).
+
+    Folded in once, here, because ``site_filters`` already reaches every step
+    that chooses a plant: the pool, the AI's palette, the communities and the
+    critic's repairs. V2.85 had to make the province reach each of those
+    separately, after Bur Oak arrived by community and a Saskatchewan yard's
+    April bloom by repair.
+    """
+    from src.design_goals import filters_for_goals
+    near = (filters_for_goals(goals) or {}).get("native_near")
+    return {**(site_filters or {}), "native_near": near} if near else (
+        site_filters or {})
+
+
+def _local_only(site_filters: dict) -> dict:
+    """The Edmonton list alone, for the last-resort searches that drop every
+    other site filter: widening must not undo the user's own choice (F220)."""
+    near = (site_filters or {}).get("native_near")
+    return {"native_near": near} if near else {}
+
+
 def _native_default(site_filters: dict) -> dict:
     """The native requirement to use when nothing else asks for one: the yard's
     province when it is known, the legacy Alberta flag when it is not."""
@@ -358,7 +381,7 @@ def _plant_palette(query_plants, site_filters: dict,
         rows = query_plants(**_native_default(site_filters), **site_filters)
     except Exception:  # noqa: BLE001 — context enrichment is best-effort
         try:
-            rows = query_plants(native_only=True)
+            rows = query_plants(native_only=True, **_local_only(site_filters))
         except Exception:  # noqa: BLE001
             return ""
     # The model sees the first `limit_per_group` of each type, so the order is
@@ -643,12 +666,17 @@ def _resolve_plants(entries: list, query_plants,
                          if isinstance(raw_filters, dict) else {})
         base = _without_superseded_native({**goal_filters, **entry_filters})
 
-        # Try most specific first, then progressively relax.
+        # Try most specific first, then progressively relax -- except the
+        # owner's local list (F220): "Edmonton natives only" is the user's own
+        # choice, not a site guess, and a bare retry would let a model that
+        # names Bur Oak plant it.
+        keep = ({"native_near": base["native_near"]}
+                if base.get("native_near") else {})
         attempts: list[dict] = []
         if term:
             attempts.append({**base, "query": term})
             if base:  # goals/entry-filters present — allow a bare-term retry
-                attempts.append({"query": term})
+                attempts.append({"query": term, **keep})
         elif base:
             attempts.append(base)
 
@@ -1085,7 +1113,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     fills = fill_regions(_ctx_dict)
 
     structures = list_structures()
-    site_filters = _site_filters(site_config)
+    site_filters = _with_local(_site_filters(site_config), goals)
     area_m2 = _boundary_area_m2(boundary)
     communities = _communities_for_site(list_polycultures(), site_filters,
                                         area_m2)
@@ -1850,13 +1878,22 @@ def _communities_for_site(communities: list, site_filters: dict,
     Edmonton yard was the "Bur Oak Community" -- Saskatchewan's oak, arriving by
     community after the province filter had kept it out of the plant pool.
     With no province and no area this returns the list unchanged.
+
+    "Edmonton natives only" (F220, ``native_near``) adds the same rule one
+    scale down: every member on the local list. Unlike the province, an
+    empty result stays empty, because the user asked for exactly this.
     """
     prov = (site_filters or {}).get("native_province")
-    if not prov and not area_m2:
+    near = (site_filters or {}).get("native_near")
+    if not prov and not area_m2 and not near:
         return communities
     from src.db.plants import get_plant
     from src.db.polycultures import get_polyculture_by_id
     from src.nativity import provinces as province_codes
+    local = None
+    if near:
+        from src.native_here import native_names
+        local = native_names(near)
 
     kept = []
     for c in communities or []:
@@ -1870,11 +1907,15 @@ def _communities_for_site(communities: list, site_filters: dict,
         if prov and any(prov not in province_codes(r.get("native_provinces"))
                         for r in rows if r):
             continue
+        if local is not None and any(
+                (r.get("scientific_name") or "").strip() not in local
+                for r in rows if r):
+            continue
         centre = get_plant(full.get("center_plant_id")) or {}
         if centre and _too_big_for(centre, area_m2):
             continue
         kept.append(c)
-    return kept or communities
+    return kept if (kept or local is not None) else communities
 
 
 def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
@@ -1889,11 +1930,14 @@ def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
     yard's province, nothing too big for the ground, recorded-nearby first.
     """
     prov = (site_filters or {}).get("native_province")
+    near = (site_filters or {}).get("native_near")
 
     def scoped(**filters):
         if prov:
             filters = _without_superseded_native(
                 {"native_province": prov, **filters})
+        if near:        # F220: the user's own choice; nothing overrides it
+            filters = {**filters, "native_near": near}
         rows = _fits_the_area(query_plants(**filters) or [], area_m2)
         if site:
             from src.site_fit import locality_rank
@@ -2882,7 +2926,7 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
 
     # Bind selection to the measured site (zone/ecoregion/soil pH) on top of the
     # goal filters so the offline design is site-appropriate too (V1.48).
-    site_filters = _site_filters(site_config)
+    site_filters = _with_local(_site_filters(site_config), goals)
     # The native requirement no longer depends on whether a goal was ticked
     # (V2.85, F154): `filters_for_goals(goals) or {"native_only": True}` meant
     # any goal with a filter of its own -- pollinators, pet-safe -- dropped it.
@@ -2902,7 +2946,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
             plants = []
     if not plants:
         try:
-            plants = query_plants(native_only=True)
+            plants = query_plants(native_only=True,
+                                  **_local_only(site_filters))
         except Exception:  # noqa: BLE001
             plants = []
 
@@ -2922,7 +2967,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         for fid in fauna_ids:
             try:
                 hits = (query_plants(supports_fauna_id=int(fid), **goal_filters)
-                        or query_plants(supports_fauna_id=int(fid)))
+                        or query_plants(supports_fauna_id=int(fid),
+                                        **_local_only(site_filters)))
             except Exception:  # noqa: BLE001
                 hits = []
             for pl in _rank_offline_plants(_fits_the_area(hits, area_m2),
