@@ -102,6 +102,10 @@ checkout returns `None` and the updater falls back to the live git branch.
 About / Version, from `version.txt` or a source checkout's `.git/HEAD`, only
 when it is a `V<major>.<minor>`.
 
+## The app's icon (V3.17)
+
+`assets/icon/` holds it, made from a photograph by `scripts/packaging/make_app_icon.py` (run it again after changing `SOURCE` or the crops). The spec gives the `.ico` to `EXE` and the `.icns` to `BUNDLE` and bundles the PNGs at `assets/icon` for the window icon (`src/app_icon.py`); `installer.nsi` uses the `.ico` as `MUI_ICON`/`MUI_UNICON` and calls `SHChangeNotify` so Windows redraws shortcuts after an update. **Never set `icon=None` again**: PyInstaller then embeds its own snake-on-a-floppy icon, which malware commonly carries. `tests/test_app_icon.py` guards all of it.
+
 ## Resource bundling (why installs don't crash with "no such file")
 
 The spec's `datas` entries preserve the relative layout (`data/`, `html/`,

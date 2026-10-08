@@ -63,6 +63,12 @@ AllowSkipFiles off
 
 Var UpdateMode
 
+; The installer's and the uninstaller's own icon is the app's (F232, V3.17):
+; until then NSIS's generic one, beside a program carrying PyInstaller's snake.
+; Made by scripts/packaging/make_app_icon.py.
+!define MUI_ICON "..\..\assets\icon\site_and_pattern.ico"
+!define MUI_UNICON "..\..\assets\icon\site_and_pattern.ico"
+
 ; MUI Settings
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipInUpdateMode
 !insertmacro MUI_PAGE_DIRECTORY
@@ -195,6 +201,11 @@ Section "Site & Pattern"
   CreateDirectory "$SMPROGRAMS\Site & Pattern"
   CreateShortCut "$SMPROGRAMS\Site & Pattern\Site & Pattern.lnk" "$INSTDIR\${APP_EXE}"
   CreateShortCut "$SMPROGRAMS\Site & Pattern\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+
+  ; Windows keeps icons in a cache by file, and can go on drawing a replaced
+  ; program's old icon on its shortcuts until the next sign-in. Tell the shell
+  ; the icons changed (SHCNE_ASSOCCHANGED), as installers that change one do.
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 SectionEnd
 
 Function un.onInit

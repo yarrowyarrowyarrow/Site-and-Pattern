@@ -36,6 +36,8 @@ from src import github_releases as ghr  # noqa: E402
 
 _NSI = (Path(__file__).resolve().parent.parent
         / "scripts" / "packaging" / "installer.nsi")
+_ICO = (Path(__file__).resolve().parent.parent
+        / "assets" / "icon" / "site_and_pattern.ico")
 
 
 def _code_lines(text: str) -> list[str]:
@@ -147,6 +149,9 @@ class TestTheInstallerCompiles(unittest.TestCase):
             root = Path(tmp)
             (root / "scripts" / "packaging").mkdir(parents=True)
             shutil.copy(_NSI, root / "scripts" / "packaging" / "installer.nsi")
+            # The installer's own icon is the app's (F232, V3.17).
+            (root / "assets" / "icon").mkdir(parents=True)
+            shutil.copy(_ICO, root / "assets" / "icon" / _ICO.name)
             bundle = root / "dist" / "SiteAndPattern"
             (bundle / "_internal").mkdir(parents=True)
             (bundle / "SiteAndPattern.exe").write_bytes(b"stand-in")

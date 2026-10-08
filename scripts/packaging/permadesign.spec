@@ -21,7 +21,15 @@ _datas = [
     (os.path.join(_ROOT, 'data'), 'data'),
     (os.path.join(_ROOT, 'html'), 'html'),
     (os.path.join(_ROOT, 'src', 'db', 'schema.sql'), 'src/db'),
+    # The window icon at every size (src/app_icon.py).
+    (os.path.join(_ROOT, 'assets', 'icon', 'app_*.png'), 'assets/icon'),
 ]
+
+# The app's icon (F232, V3.17), made by scripts/packaging/make_app_icon.py.
+# Left at None, PyInstaller puts its own on the program: a snake on a floppy
+# disk, the icon of a great deal of malware.
+_ICON_WINDOWS = os.path.join(_ROOT, 'assets', 'icon', 'site_and_pattern.ico')
+_ICON_MAC = os.path.join(_ROOT, 'assets', 'icon', 'site_and_pattern.icns')
 # version.txt is written by build_installer.sh / .bat (or the release
 # workflow) just before this spec runs; it lets the frozen app know which
 # V<major>.<minor> it is for the in-app updater (src/app_version.py). It is
@@ -76,7 +84,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon=_ICON_WINDOWS,
 )
 
 coll = COLLECT(
@@ -97,7 +105,7 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='SiteAndPattern.app',
-        icon=None,
+        icon=_ICON_MAC,
         bundle_identifier='com.siteandpattern.app',
         info_plist={
             'CFBundleName': 'Site & Pattern',

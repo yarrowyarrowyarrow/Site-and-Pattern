@@ -81,6 +81,10 @@ def main():
     from src import indicator_style, target_size
     target_size.install(app)
     indicator_style.install(app)
+    # The app's own icon on every window, the start screen's included (F232,
+    # V3.17); the .exe and the Mac app carry it from the build.
+    from src import app_icon
+    app_icon.install(app)
 
     # The start screen, ahead of the map (V2.40, page in V2.41). Everything it
     # offers is read from disk — the saves folder, the design you were last in,
