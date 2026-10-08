@@ -77,6 +77,14 @@ def parse_release_version(tag: str) -> Optional[Tuple[int, int]]:
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+def version_label(tag: str) -> str:
+    """A release tag as a person reads it: ``release-V3.15`` -> ``V3.15``.
+    The prefix exists for git's sake (see :data:`_TAG_RE`), not a reader's.
+    A tag that is not a version comes back unchanged."""
+    version = parse_release_version(tag)
+    return f"V{version[0]}.{version[1]}" if version else (tag or "")
+
+
 @dataclass(frozen=True)
 class Asset:
     """A single downloadable file attached to a release."""
@@ -116,6 +124,25 @@ def platform_asset_extensions(platform: Optional[str] = None) -> Tuple[str, ...]
     if p.startswith("win"):
         return (".exe", ".zip")
     return (".appimage", ".zip", ".tar.gz")
+
+
+#: The switch that tells the Windows installer the app started it to update
+#: itself in place (V3.15, F228). With it the installer skips its folder and
+#: finish pages, waits for the running copy to close, replaces it, and opens
+#: Site & Pattern again. ``scripts/packaging/installer.nsi`` reads it;
+#: ``tests/test_installer_script.py`` keeps the two spellings equal.
+UPDATE_SWITCH = "/UPDATE"
+
+
+def installer_update_arguments(install_dir: str) -> str:
+    """The Windows installer's arguments for updating the copy in
+    ``install_dir`` (the folder the running app was started from).
+
+    NSIS reads ``/D=`` only as the LAST argument and takes the rest of the
+    line as the folder, spaces included and never quoted, so it goes last and
+    bare. Passing it means a copy installed somewhere other than the default
+    is updated where it is, instead of a second copy appearing beside it."""
+    return f"{UPDATE_SWITCH} /D={install_dir}"
 
 
 def _default_fetch_json(url: str, timeout: float = 15.0) -> object:

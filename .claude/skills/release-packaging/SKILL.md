@@ -35,6 +35,9 @@ GitHub Release  (tag e.g. V2.19, assets: SiteAndPattern-V2.19.dmg + ...-Setup.ex
       ▼
 in-app updater  src/github_releases.py  (list_releases / latest_release by tag)
                 + src/controllers/update_flow.py  →  Help → Check for Updates downloads it
+      │   Windows (V3.15): app starts the installer with `/UPDATE /D=<its folder>` and closes;
+      ▼   installer.nsi waits for its files, replaces the program, reopens it as the user
+installed copy updated in place
 ```
 
 Key facts (from `.github/workflows/release-macos.yml`):
@@ -85,7 +88,7 @@ pyinstaller scripts/packaging/permadesign.spec      # from the repo root
 | `permadesign.spec` | PyInstaller one-dir spec. Bundles `data/`, `html/`, `src/db/schema.sql` (and `version.txt` when present) via `datas`; artifact base name `SiteAndPattern` (no spaces), display name "Site & Pattern". |
 | `build_installer.sh` | macOS/Linux build: clean, write `version.txt`, run PyInstaller, package DMG/archive. Called by `release-macos.yml`. |
 | `build_installer.bat` | Windows equivalent; runs PyInstaller then NSIS. Called by `release-windows.yml`. |
-| `installer.nsi` | NSIS script for the Windows 1-click installer (shortcuts, Start-Menu). |
+| `installer.nsi` | NSIS script for the Windows installer: shortcuts, Start menu, an uninstaller listed in Settings → Apps, and the `/UPDATE` mode the in-app updater runs (V3.15, F228: skip the pages, wait for the app to let go of its files, replace `_internal`, reopen through Explorer). `AllowSkipFiles off`: a locked file is never skipped. `tests/test_installer_script.py` pins the contract with `update_flow` and compiles it with `-WX`. |
 
 ## How a frozen build knows its version
 
@@ -147,6 +150,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | "NSIS makensis not found" (Windows) | Falls back to ZIP; install NSIS and rebuild for the 1-click installer. |
 | Network features dead in the frozen app | Certs — `src/ssl_bootstrap.py` / `certifi`; see `debugging` §6. |
 | Updater doesn't see a new version | Branch/tag not `V<major>.<minor>`, or no Release published — check the workflow run. |
+| Windows: *Error opening file for writing: …SiteAndPattern.exe* | The app was still running; Windows will not let a running program's files be written. Copies before V3.15 started the installer and stayed open. From V3.15 the app closes and the installer waits for it (`/UPDATE`); if something else holds a file, close it and Retry. There is no Ignore any more: it left the old program carrying the new `version.txt`, which the updater then read as up to date. |
 
 ## Pitfalls
 

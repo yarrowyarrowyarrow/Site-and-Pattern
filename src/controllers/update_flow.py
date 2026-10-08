@@ -30,7 +30,8 @@ import time
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QInputDialog, QMessageBox, QProgressDialog
+from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox,
+                             QProgressDialog)
 
 from src.app_version import build_version
 from src.branding import APP_NAME
@@ -510,8 +511,13 @@ class UpdateFlowController:
     # matching installer. The release tag is the V<major>.<minor> branch name,
     # so the user sees the same version labels as a source install.
     #
+    # On Windows the app then hands over and closes (F228, V3.15): see
+    # _install_windows_update. On macOS it opens the disk image for the person
+    # to drag across, which works with the app still open.
+    #
     # The release artifacts are produced and published automatically by
-    # .github/workflows/release-macos.yml on every push to a V* branch.
+    # .github/workflows/release-macos.yml and release-windows.yml on every
+    # push to a V* branch.
 
     def _frozen_fetch_releases(self):
         """Fetch the published releases (newest first), or show an error
@@ -552,7 +558,8 @@ class UpdateFlowController:
             QMessageBox.information(
                 self._main, "Check for Updates",
                 f"You're up to date.\n\n"
-                f"Installed: {current}\nLatest available: {latest.tag}"
+                f"Installed: {current}\n"
+                f"Latest available: {ghr.version_label(latest.tag)}"
             )
             return
         self._offer_frozen_download(latest, current)
@@ -610,17 +617,38 @@ class UpdateFlowController:
         if len(notes) > 700:
             notes = notes[:700].rstrip() + "\n…"
         notes_block = f"\n\nWhat's new:\n{notes}" if notes else ""
-        prompt = QMessageBox.question(
-            self._main, "Update available",
+        intro = (
             f"A newer version of {APP_NAME} is available.\n\n"
             f"Installed: {current or 'your current version'}\n"
-            f"Latest:      {release.tag}   (~{_human_size(asset.size)})"
+            f"Latest:      {ghr.version_label(release.tag)}   "
+            f"(~{_human_size(asset.size)})"
             f"{notes_block}\n\n"
-            "Download and install it now?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-        if prompt != QMessageBox.StandardButton.Yes:
-            return
+        if sys.platform.startswith("win"):
+            # One click (F228, V3.15). Say before the window disappears that
+            # it will, and that the Windows prompt is expected.
+            box = QMessageBox(
+                QMessageBox.Icon.Question, "Update available",
+                intro + f"Update now downloads it, closes {APP_NAME}, "
+                "installs it and opens it again. Windows will ask whether to "
+                "let the installer make changes: choose Yes.",
+                QMessageBox.StandardButton.NoButton, self._main,
+            )
+            update_btn = box.addButton(
+                "Update now", QMessageBox.ButtonRole.AcceptRole)
+            box.addButton("Not now", QMessageBox.ButtonRole.RejectRole)
+            box.setDefaultButton(update_btn)
+            box.exec()
+            if box.clickedButton() is not update_btn:
+                return
+        else:
+            prompt = QMessageBox.question(
+                self._main, "Update available",
+                intro + "Download and install it now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if prompt != QMessageBox.StandardButton.Yes:
+                return
         self._download_and_open(asset, release.tag)
 
     def _download_and_open(self, asset, tag):
@@ -628,13 +656,14 @@ class UpdateFlowController:
         installer. Keeps the UI responsive during the ~200-300 MB download."""
         from src import github_releases as ghr
 
+        label = ghr.version_label(tag)
         downloads = os.path.join(os.path.expanduser("~"), "Downloads")
         if not os.path.isdir(downloads):
             downloads = tempfile.gettempdir()
         dest = os.path.join(downloads, asset.name or f"SiteAndPattern-{tag}")
 
         progress = QProgressDialog(
-            f"Downloading {tag}…", "Cancel", 0, 100, self._main
+            f"Downloading {label}…", "Cancel", 0, 100, self._main
         )
         progress.setWindowTitle("Downloading update")
         progress.setWindowModality(Qt.WindowModality.WindowModal)
@@ -674,7 +703,7 @@ class UpdateFlowController:
             if total > 0:
                 progress.setValue(min(100, int(done * 100 / total)))
                 progress.setLabelText(
-                    f"Downloading {tag}…\n"
+                    f"Downloading {label}…\n"
                     f"{_human_size(done)} of {_human_size(total)}"
                 )
             if state["finished"]:
@@ -701,7 +730,10 @@ class UpdateFlowController:
 
     def _open_installer(self, path, tag):
         """Open the downloaded installer with the OS handler and tell the
-        user how to finish."""
+        user how to finish. Windows hands over instead (below)."""
+        if sys.platform.startswith("win"):
+            self._install_windows_update(path, tag)
+            return
         try:
             if sys.platform == "darwin":
                 subprocess.Popen(["open", path])
@@ -715,14 +747,6 @@ class UpdateFlowController:
                     "Because the app downloaded the update itself, macOS won't "
                     "show the usual “unverified developer” warning."
                 )
-            elif sys.platform.startswith("win"):
-                os.startfile(path)  # type: ignore[attr-defined]
-                message = (
-                    "The installer has been downloaded and opened.\n\n"
-                    "Click through it to update in place (your designs and "
-                    "database are kept), then reopen Site & Pattern. You can "
-                    "close this older copy now."
-                )
             else:
                 subprocess.Popen(["xdg-open", os.path.dirname(path) or "."])
                 message = f"The update was downloaded to:\n{path}"
@@ -731,7 +755,79 @@ class UpdateFlowController:
                 f"The update was downloaded to:\n{path}\n\n"
                 f"(Couldn't open it automatically: {exc})"
             )
-        QMessageBox.information(self._main, f"Update {tag} downloaded", message)
+        from src.github_releases import version_label
+        QMessageBox.information(
+            self._main, f"Update {version_label(tag)} downloaded", message)
+
+    # ── Windows: one click (F228, V3.15) ──────────────────────────────────────
+    #
+    # Windows will not let a running program's files be opened for writing.
+    # Until V3.15 the app started the installer and stayed open, with "You can
+    # close this older copy now" shown at the same moment and easy to miss, and
+    # an update could stop on "Error opening file for writing" naming
+    # SiteAndPattern.exe. Now the app settles unsaved work, starts the
+    # installer in update mode and closes; the installer waits for it, replaces
+    # the program and opens the new version (scripts/packaging/installer.nsi).
+
+    def _install_windows_update(self, path, tag):
+        from src import github_releases as ghr
+
+        label = ghr.version_label(tag)
+        if not self._settle_unsaved_work(label):
+            self._main.statusBar().showMessage(
+                f"{label} was not installed. Check for Updates offers it "
+                "again whenever you are ready.", 8000)
+            return
+        install_dir = os.path.dirname(os.path.abspath(sys.executable))
+        try:
+            os.startfile(  # type: ignore[attr-defined]
+                path, arguments=ghr.installer_update_arguments(install_dir))
+        except OSError as exc:
+            # Answering No to the Windows prompt lands here (WinError 1223).
+            QMessageBox.information(
+                self._main, "Update not installed",
+                f"{label} was not installed, and nothing has changed.\n\n"
+                "The installer needs Windows' permission to replace the "
+                "program. Choose Check for Updates again and answer Yes when "
+                f"Windows asks.\n\n({exc})")
+            return
+        # Unsaved work was saved, or dropped on purpose, just above: closing
+        # must not ask again while the installer waits for this copy to go.
+        self._main._modified = False
+        self._close_for_update()
+
+    def _settle_unsaved_work(self, label) -> bool:
+        """Save unsaved work, or drop it on purpose, before closing to update.
+        False when the person would rather stay where they are."""
+        if not getattr(self._main, "_modified", False):
+            return True
+        box = QMessageBox(
+            QMessageBox.Icon.Question, "Save before updating?",
+            f"Your design has unsaved changes. {APP_NAME} closes to install "
+            f"{label} and opens again when it is done.",
+            QMessageBox.StandardButton.NoButton, self._main,
+        )
+        save_btn = box.addButton(
+            "Save and update", QMessageBox.ButtonRole.AcceptRole)
+        drop_btn = box.addButton(
+            "Update without saving", QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(save_btn)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save_btn:
+            self._main._on_save()
+            # A failed save has said why already, and leaves the flag set.
+            return not self._main._modified
+        return clicked is drop_btn
+
+    def _close_for_update(self):
+        """Close every window, so the process ends and the waiting installer
+        can replace the program. The main window alone is not enough: Qt keeps
+        running while any other window of the app is open (a Learn window, the
+        Field Guide)."""
+        if self._main.close():
+            QApplication.closeAllWindows()
 
     def _open_releases_page(self):
         QDesktopServices.openUrl(QUrl(_REPO_RELEASES_URL))

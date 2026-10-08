@@ -43,6 +43,16 @@ class TestParseReleaseVersion(unittest.TestCase):
             with self.subTest(tag=repr(tag)):
                 self.assertIsNone(ghr.parse_release_version(tag))
 
+    def test_label_is_what_a_person_reads(self):
+        # V3.15: the update dialogs had shown "Latest: release-V3.15". The
+        # prefix is there for git, not for anyone reading a dialog.
+        cases = {"release-V3.15": "V3.15", "V2.79": "V2.79",
+                 "v1.64": "V1.64", "release_V2.80": "V2.80",
+                 "main": "main", "": "", None: ""}
+        for tag, expected in cases.items():
+            with self.subTest(tag=repr(tag)):
+                self.assertEqual(ghr.version_label(tag), expected)
+
 
 def _sample_payload():
     """Mimics the shape of the GitHub /releases response."""

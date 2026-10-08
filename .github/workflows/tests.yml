@@ -54,13 +54,16 @@ jobs:
 
       # The PyQt6 wheel alone is not enough: without these the Qt and WebEngine
       # imports fail and every widget test skips (CLAUDE.md, "Running tests").
+      # nsis (V3.15): tests/test_installer_script.py compiles the Windows
+      # installer with warnings as errors, which the release build does not,
+      # and which is how the uninstaller that was never written got found.
       - name: Qt runtime libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libegl1 libgl1 libxkbcommon0 libnss3 libxcomposite1 libxdamage1 \
             libxrandr2 libxtst6 libasound2t64 libfontconfig1 libdbus-1-3 \
-            libxkbfile1
+            libxkbfile1 nsis
 
       # requirements-optional.txt adds rasterio + pyproj, which the frozen
       # builds leave out on purpose. Here they unlock 42 raster tests that

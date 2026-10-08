@@ -138,15 +138,22 @@ the bundled plant data (a few extra seconds, one time).
 
 ### Easiest — the in-app button
 Open Site & Pattern → **Help → Check for Updates…**:
-- **Source installs** — the app runs `git pull` for you. If you have unsaved
-  local edits it offers **Stash & update** (keeps them) or **Discard & update**.
-  It shows incoming commits, then asks you to **close and relaunch** so the new
-  code loads.
-- **Frozen installs** (`.exe` / `.dmg`) — the app fetches published versions from
-  GitHub Releases and downloads + opens the matching installer in-app. On macOS,
-  an app-initiated download isn't quarantined, so updates install with **no
-  Gatekeeper warning**. You can also pick a specific version under
-  **Help → Switch to a specific version…**.
+- **Installed on Windows** (`.exe`) — click **Update now**. The app downloads
+  the new version, asks you to save if you have unsaved changes, closes, installs
+  it and opens again by itself. Windows asks whether to let the installer make
+  changes: choose **Yes**. Your designs and plant database are kept.
+  (Copies older than V3.15 update the old way one last time: if the installer
+  says Site & Pattern is still open, close it and click **Retry**.)
+- **Installed on macOS** (`.dmg`) — the app downloads the new version and opens
+  it: drag Site & Pattern onto **Applications**, choose **Replace**, then quit and
+  reopen the app. Because the app downloaded it itself, there is **no
+  Gatekeeper warning**.
+- **Running from source** — the app switches its checkout to the newest version
+  in place (any local edits to the source are set aside safely with `git stash`
+  first) and offers to restart.
+
+You can also pick a specific version under **Help → Switch to a specific
+version…**.
 
 ### From source — terminal
 ```bash
@@ -164,8 +171,10 @@ On the first launch after an update, the database may take a few extra seconds t
 apply schema migrations and reseed new plant communities. That's normal.
 
 ### From the `.exe` installer
-Download the newest `SiteAndPattern-Installer.exe` from the Releases page and run
-it — it updates the existing install in place; your designs and database are kept.
+Download the newest `SiteAndPattern-V<version>-Setup.exe` from the Releases page,
+close Site & Pattern, and run it. It updates the existing install in place; your
+designs and database are kept. If the app is still open it says so and waits for
+you to close it and click **Retry**.
 
 ---
 
