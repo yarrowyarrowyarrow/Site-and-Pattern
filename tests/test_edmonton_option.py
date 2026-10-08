@@ -51,22 +51,29 @@ def _local():
 
 
 @contextlib.contextmanager
-def _unreviewed(*names):
-    """The shipped list with the owner's answers taken off ``names``, so a test
-    of what an unsettled species shows does not hang on how the owner answered
-    it (V3.13 answered every borderline species)."""
+def _answers(given):
+    """The shipped list with the owner's answers on the named species replaced
+    by ``given`` ({scientific name: "native" | "not_native" | None}), so a test
+    of a mechanism does not hang on how the owner answered (V3.13)."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with open(os.path.join(root, "data", "local_flora.json"),
               encoding="utf-8") as fh:
         doc = json.load(fh)
-    for name in names:
+    for name, ruling in given.items():
+        species = doc["places"]["edmonton"]["species"][name]
         for key in ("ruling", "on"):
-            doc["places"]["edmonton"]["species"][name].pop(key, None)
+            species.pop(key, None)
+        if ruling:
+            species["ruling"] = ruling
     nh.set_document(doc)
     try:
         yield
     finally:
         nh.set_document(None)
+
+
+def _unreviewed(*names):
+    return _answers(dict.fromkeys(names))
 
 
 class TestTheSearch(unittest.TestCase):
@@ -239,6 +246,30 @@ class TestTheWebsite(unittest.TestCase):
         self.assertIn('href="../../../plants/pin-cherry/">Pin Cherry</a>', html)
         self.assertNotIn("Saskatoon Berry</a>", html)
         self.assertIn('href="../../../method/#around"', html)
+
+    def test_the_page_says_what_review_left_off_and_on_what(self):
+        """V3.13: the review left 49 species off, 2 of them despite enough
+        collections, and the page called all 49 "left off despite their
+        specimens". Only a documented species is left off despite them."""
+        from src.static_site_regions import _hub_extra
+        model = {"species": [
+            {"row": {"scientific_name": n}, "slug": n, "name": n}
+            for n in ("Acer negundo", "Carex lacustris",
+                      "Amelanchier alnifolia")]}
+        with _answers({"Acer negundo": "not_native",
+                       "Carex lacustris": "not_native"}):
+            html = _hub_extra({"key": "around", "dir": "plants/native-area"},
+                              {"value": "edmonton"}, model)
+        self.assertIn("1 species on this list: 1 documented by at least 3 "
+                      "herbarium collections within 50 km.", html)
+        self.assertIn("2 more were left off on review, 1 of them despite at "
+                      "least 3 collections.", html)
+        with _answers({"Carex lacustris": "not_native"}):
+            html = _hub_extra({"key": "around", "dir": "plants/native-area"},
+                              {"value": "edmonton"},
+                              {"species": model["species"][1:]})
+        self.assertIn("1 more were left off on review.", html)
+        self.assertNotIn("despite", html)
 
     def test_a_species_page_says_it_and_links_the_list(self):
         from src.plant_directory import species_entry

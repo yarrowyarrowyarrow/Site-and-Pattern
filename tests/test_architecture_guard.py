@@ -276,7 +276,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # question, and it was three globals and two functions scattered among
         # the page shells. Opted in on arrival, the V2.41 precedent.
         (_SRC / "site_analytics.py", 220),             # 187 now
-        (_SRC / "static_site_regions.py", 320),        # 246 now
+        (_SRC / "static_site_regions.py", 320),        # 269 now
+        # V3.13: the native-area page split off the regions module at 318/320
+        # when one of its sentences had to grow to stay true. Opted in on
+        # arrival, the V2.41 precedent.
+        (_SRC / "static_site_around.py", 120),         # 71 now
         # V2.75: the species page hit 351 against 340 when the range block
         # learned to say what it claims, and the seam was already named in the
         # module's own docstring -- "a range map with its evidence" is one of

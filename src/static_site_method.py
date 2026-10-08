@@ -169,8 +169,8 @@ parkland. The <a href="../plants/native-area/edmonton/">Edmonton list</a> is
 narrower: a species is on it when VASCAN records it native to Alberta <em>and</em>
 at least {place["min_collections"]} herbarium collections were made within
 {float(place["radius_km"]):g} km of downtown Edmonton, or I confirmed it on
-review. Only specimens count. A city's photographs include its planted trees,
-and so do a few specimens{f" (Bur Oak has {oak}, and VASCAN records it introduced in Alberta)" if oak else ""}.
+review (a review can also take one off). Only specimens count. A city's photographs
+include its planted trees, and so do a few specimens{f" (Bur Oak has {oak}, and VASCAN records it introduced in Alberta)" if oak else ""}.
 A species with fewer collections is left off until it is reviewed, which is not
 a claim that it is foreign to Edmonton. {len(native_names(EDMONTON))} species
 are on the list today.</p>"""

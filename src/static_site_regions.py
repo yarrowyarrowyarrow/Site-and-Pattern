@@ -216,7 +216,8 @@ def _hub_extra(hub: dict, page: dict, model: dict) -> str:
     in the not-recorded grey to say so would be a picture of nothing.
     """
     if hub["key"] == "around":
-        return _around_extra(hub, page, model)
+        from src.static_site_around import around_extra  # noqa: PLC0415
+        return around_extra(hub, page, model)
     if hub["key"] != "ecoregion":
         return ""
     from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
@@ -266,53 +267,3 @@ def _hub_extra(hub: dict, page: dict, model: dict) -> str:
         return ""
     return (f'<figure class="mapfig inline">{svg}{key_html}'
             f'<figcaption class="note">{_esc(CAVEAT)}</figcaption></figure>')
-
-
-
-
-
-def _around_extra(hub: dict, page: dict, model: dict) -> str:
-    """What the Edmonton list rests on, counted from the list itself, and the
-    species it cannot settle yet, by name (F220, V3.12).
-
-    The cards below are what the evidence or a review puts on the list. What it
-    leaves out is not all foreign to Edmonton: pin cherry has one collection
-    and 189 observations. Naming those is the difference between a list and a
-    claim about everything that is not on it (P9).
-    """
-    from src.local_flora import is_native                    # noqa: PLC0415
-    from src.native_here import entry, places                # noqa: PLC0415
-    place = places().get(page["value"])
-    if not place:
-        return ""
-    up = _up(hub["dir"].count("/") + 2)
-    count = {"listed": 0, "review_in": 0, "review_out": 0, "unrecorded": 0}
-    waiting = []
-    for e in model["species"]:
-        got = entry(e["row"].get("scientific_name") or "", page["value"])
-        count["listed"] += is_native(got)
-        count["review_in"] += got.get("ruling") == "native"
-        count["review_out"] += got.get("ruling") == "not_native"
-        count["unrecorded"] += got.get("tier") == "unrecorded"
-        if got.get("tier") in ("thin", "observed") and not got.get("ruling"):
-            waiting.append(f'<a href="{up}plants/{_esc(e["slug"])}/">'
-                           f'{_esc(e["name"])}</a>')
-    radius = f'{float(place["radius_km"]):g} km'
-    parts = [f'{count["listed"] - count["review_in"]} documented by at least '
-             f'{place["min_collections"]} herbarium collections within {radius}']
-    if count["review_in"]:
-        parts.append(f'{count["review_in"]} confirmed on review')
-    if count["review_out"]:
-        parts.append(f'{count["review_out"]} left off on review despite '
-                     'their specimens')
-    lines = [f'<p>{count["listed"]} species on this list: '
-             f'{"; ".join(parts)}. {count["unrecorded"]} species native '
-             f'elsewhere in Alberta have no record within {radius} at all.</p>']
-    if waiting:
-        lines.append(f'<details><summary>{len(waiting)} recorded around '
-                     f'{_esc(place["short"])} too thinly to settle, waiting '
-                     f'for review</summary><p>{", ".join(waiting)}</p>'
-                     '</details>')
-    lines.append(f'<p><a href="{up}method/#around">How this list is '
-                 'decided</a></p>')
-    return "\n".join(lines)
