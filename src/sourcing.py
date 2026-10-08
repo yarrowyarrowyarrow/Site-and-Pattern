@@ -234,6 +234,24 @@ def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
     return {"plants": p, "structures": s, "mulch": m, "total": total}
 
 
+#: How readily a tier can be bought (V3.14). The generator ranks by it, so the
+#: owner's "most useful and available plants" reach designs first; nothing
+#: filters on it except the Easy to find toggle.
+_EASE = {"big_box": 2, "garden_centre": 2, "native_specialist": 1,
+         "seed_or_plug": 1, "rare": 0}
+
+
+def ease(row) -> int:
+    """2 sold by garden centres, 1 by native nurseries or as seed, 0 rarely
+    sold at all. Unrecorded counts as 1: absent is not rare (P9)."""
+    return _EASE.get(((row or {}).get("availability_class") or "").strip(), 1)
+
+
+def hard_to_find(row) -> bool:
+    """Whether a plant is rarely sold at all (``rare``)."""
+    return ease(row) == 0
+
+
 #: ``availability_class`` as a clause a reader can act on.
 #:
 #: The class is *how you get it*, not always a kind of shop, so one frame does

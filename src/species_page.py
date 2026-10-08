@@ -503,11 +503,13 @@ class SpeciesPage(QWidget):
         self._section("Grows with", "\n".join(bits))
 
     def _sourcing_block(self, entry: dict):
-        s = entry.get("sourcing") or {}
-        bits = [s.get("price", ""), s.get("availability", "")]
-        self._section("Where to get it", " · ".join(b for b in bits if b))
-        if s.get("notes"):
-            self._section("", s["notes"], dim=True)
+        # The website's sentence (V3.14): this printed the raw tier, "· rare",
+        # "· big box", where the site says "hard to find in the trade".
+        from src.sourcing import describe
+        text, note = describe(entry.get("sourcing") or {})
+        self._section("Where to get it", text)
+        if note:
+            self._section("", note, dim=True)
 
 
 class SeasonBar(QWidget):

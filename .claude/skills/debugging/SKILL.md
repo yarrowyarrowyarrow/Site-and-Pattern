@@ -86,10 +86,11 @@ Inspect it (Linux example):
 
 ```bash
 sqlite3 "$HOME/.local/share/Site & Pattern/permadesign.db" \
-  ".tables" "SELECT COUNT(*) FROM plants;" "PRAGMA user_version;"
+  ".tables" "SELECT COUNT(*) FROM plants;" "SELECT version FROM _schema_version;"
 ```
 
-`PRAGMA user_version` is where the schema version is stored
+The `_schema_version` table is where the schema version is stored (not
+`PRAGMA user_version`, which stays 0)
 (`_get_schema_version` / `_set_schema_version`); compare it to
 `_SCHEMA_VERSION` in `src/db/plants.py` to see whether a reseed is pending.
 

@@ -504,7 +504,12 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # "Alberta's mixed-grass prairie", Big Bluestem's Alberta recommendation and
 # Bur Oak "of the aspen parkland" (introduced in Alberta). The Edmonton list
 # itself, data/local_flora.json, is read from the file and needs no reseed.
-_SCHEMA_VERSION = 93
+# v94 (V3.14): no DDL. `availability_class` re-ranked by
+# scripts/rank_availability.py, which replaced name keywords ("aster",
+# "currant": Alpine Aster read garden-centre stock): garden centre 66 -> 35,
+# big box 15 -> 9, rare 6 -> 84, each rare species' note saying why. And five
+# seeded "Easy" communities built from plants people can buy.
+_SCHEMA_VERSION = 94
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

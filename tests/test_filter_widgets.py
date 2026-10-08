@@ -290,6 +290,99 @@ class TestWhatAClickOnARowMeans(unittest.TestCase):
         self.assertEqual(combo._is_expanded(zone), was)
         self.assertTrue(combo.view().isVisible())
 
+    def test_a_ticked_name_clicked_again_is_unticked(self):
+        """V3.14: the second click on a chosen value takes it off."""
+        combo = self._combo()
+        self._click(combo, 1, 60)
+        combo.showPopup()
+        self._app.processEvents()
+        self._click(combo, 1, 60)
+        self.assertEqual(combo.checked_keys(), [])
+        self.assertFalse(combo.view().isVisible())
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestASecondClickOnTheBox(unittest.TestCase):
+    """V3.14, the owner's report: a second click on a filter did not close its
+    list. Qt replays the press that closes a popup to whatever is under it
+    (``QApplicationPrivate::closePopup``, then ``QWidgetWindow``). It does this
+    on Windows; X11 and the offscreen platform do not, which is why no click
+    here ever saw it. It spares an editable combo only on its arrow, and our
+    box's text is a line edit whose release opens the list, so the click
+    closed the list and reopened it in one motion.
+
+    The replay itself cannot run here, so :meth:`_as_windows_would` does what
+    Qt 6.11 does next, read off its source: unless the list's window carries
+    ``WA_NoMouseReplay``, the press goes again to the widget under it, and the
+    release follows it there."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = _app()
+
+    def _combo(self):
+        from src.filter_widgets import CheckableComboBox
+        combo = CheckableComboBox(placeholder="Any type")
+        for key, label in TYPES.items():
+            combo.add_check_item(label, key)
+        combo.resize(200, 26)
+        combo.show()
+        self.addCleanup(combo.deleteLater)
+        self.addCleanup(combo.hidePopup)
+        # Events left by an earlier module's windows close the first popup
+        # opened after them (seen after test_plant_panel_smoke): drain them.
+        self._app.processEvents()
+        combo.showPopup()
+        self._app.processEvents()
+        self.assertTrue(combo.view().isVisible())
+        return combo
+
+    def _press(self, combo, global_point):
+        """The press, as the open list's window receives it: a click anywhere
+        outside the list goes to that window while it is open."""
+        popup = combo.view().parentWidget()
+        local = popup.mapFromGlobal(global_point)
+        QApplication.sendEvent(popup, QMouseEvent(
+            QEvent.Type.MouseButtonPress, QPointF(local),
+            QPointF(global_point), Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+        self._app.processEvents()
+        return popup
+
+    def _as_windows_would(self, combo, popup, global_point):
+        if popup.testAttribute(Qt.WidgetAttribute.WA_NoMouseReplay):
+            return
+        line = combo.lineEdit()
+        local = QPointF(line.mapFromGlobal(global_point))
+        for kind, buttons in ((QEvent.Type.MouseButtonPress,
+                               Qt.MouseButton.LeftButton),
+                              (QEvent.Type.MouseButtonRelease,
+                               Qt.MouseButton.NoButton)):
+            QApplication.sendEvent(line, QMouseEvent(
+                kind, local, QPointF(global_point), Qt.MouseButton.LeftButton,
+                buttons, Qt.KeyboardModifier.NoModifier))
+        self._app.processEvents()
+
+    def test_a_second_click_on_the_box_closes_the_list(self):
+        combo = self._combo()
+        line = combo.lineEdit()
+        point = line.mapToGlobal(QPoint(12, line.height() // 2))
+        popup = self._press(combo, point)
+        self.assertFalse(combo.view().isVisible())
+        self._as_windows_would(combo, popup, point)
+        self.assertFalse(combo.view().isVisible(),
+                         "the list reopened under the click that closed it")
+
+    def test_a_click_elsewhere_still_reaches_what_it_landed_on(self):
+        """Only the box is spared: a click on another control closes the list
+        and, on Windows, still acts there, one click from one filter to the
+        next."""
+        combo = self._combo()
+        popup = self._press(combo, combo.mapToGlobal(QPoint(-40, -40)))
+        self.assertFalse(combo.view().isVisible())
+        self.assertFalse(popup.testAttribute(
+            Qt.WidgetAttribute.WA_NoMouseReplay))
+
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
 class TestTheFace(unittest.TestCase):

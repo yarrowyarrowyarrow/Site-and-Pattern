@@ -106,17 +106,20 @@ class TestTheyReachTheApp(unittest.TestCase):
             kept, ["edmonton_native"], {"ecoregion_key": "aspen_parkland"},
             None)
         by_id = {c["id"]: c["name"] for c in kept}
-        names = [by_id[i] for i in picks]
-        self.assertTrue(any(n.startswith("Edmonton ") for n in names), names)
+        self.assertTrue(any(n.startswith("Edmonton ") for n in by_id.values()))
         # Every pick has all its members on the list. Since the owner's answers
         # (V3.13) an older community can qualify too, and one whose words
         # match the site's region (+3) can lead the goal's hint (+2): Pin
         # Cherry Community, "the native cherry of the prairies", does on an
-        # Aspen Parkland yard. What holds is that nothing picked is foreign.
+        # Aspen Parkland yard. Since V3.14 a community people can buy whole
+        # wins a tie (+1), and the "Easy" ones, also all native here, now
+        # follow it ahead of the Edmonton ones. What holds is that nothing
+        # picked is foreign, and nothing picked holds a plant rarely sold.
         index = P.get_library_index()
         for cid in picks:
             self.assertEqual(index[cid]["not_around"]["edmonton"], [],
                              by_id[cid])
+            self.assertEqual(index[cid]["hard_to_find"], [], by_id[cid])
 
 
 class TestTheNotesNoLongerContradictVascan(unittest.TestCase):

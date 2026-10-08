@@ -265,7 +265,8 @@ class QualityChips(QWidget):
     #: A quality's key, when its toggle is flipped.
     toggled = pyqtSignal(str)
 
-    def __init__(self, qualities, criteria: dict, parent=None):
+    def __init__(self, qualities, criteria: dict, parent=None, *,
+                 soil: bool = True):
         super().__init__(parent)
         flow = FlowLayout(self, h_spacing=4, v_spacing=4)
         flow.setContentsMargins(0, 0, 0, 0)
@@ -278,10 +279,12 @@ class QualityChips(QWidget):
             flow.addWidget(btn)
             self.buttons[q.key] = btn
             self.describe(q.key, q.tip)
-        self.soil = _button("", CHIP_STYLE)
-        self.soil.setCheckable(True)
-        self.soil.hide()
-        flow.addWidget(self.soil)
+        # ``soil=False``: a second row of toggles, under More filters (V3.14).
+        self.soil = _button("", CHIP_STYLE) if soil else None
+        if soil:
+            self.soil.setCheckable(True)
+            self.soil.hide()
+            flow.addWidget(self.soil)
 
     def describe(self, key: str, tip: str) -> None:
         """What a toggle keeps, to the eye and to a screen reader. Native's

@@ -51,7 +51,7 @@ d = tempfile.mkdtemp(prefix='verify_schema_')
 p._DATA_DIR = d; p._DB_PATH = os.path.join(d, 'v.db')
 p.init_db()
 c = p.get_connection()
-print('user_version =', c.execute('PRAGMA user_version').fetchone()[0])
+print('schema version =', c.execute('SELECT version FROM _schema_version').fetchone()[0])
 print('plants =', c.execute('SELECT COUNT(*) FROM plants').fetchone()[0])
 print('tables =', sorted(r[0] for r in c.execute(
     \"SELECT name FROM sqlite_master WHERE type='table'\")))
@@ -59,7 +59,8 @@ c.close()
 "
 ```
 
-Check: `user_version` equals your new `_SCHEMA_VERSION`; your new
+Check: the schema version (the `_schema_version` table, not `PRAGMA
+user_version`, which stays 0) equals your new `_SCHEMA_VERSION`; your new
 table/column is present; row counts look right. Then run
 `python3 -m src.cli validate-data` and your temp-DB test module. See
 `schema-change` / `seed-data`.

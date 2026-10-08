@@ -197,6 +197,9 @@ class CheckableComboBox(QComboBox):
         le.setPlaceholderText(placeholder)
         le.installEventFilter(self)
         self.view().viewport().installEventFilter(self)
+        # The list's own window, which takes the click that closes it (V3.14).
+        self._popup = self.view().parentWidget()
+        self._popup.installEventFilter(self)
         self.model().itemChanged.connect(self._on_item_changed)
         # **No current item, ever (V3.01).** A QComboBox draws its current
         # item's icon beside the text, and whenever that item's data changes,
@@ -300,6 +303,17 @@ class CheckableComboBox(QComboBox):
         return event.pos()
 
     def eventFilter(self, obj, event):  # noqa: N802 (Qt override)
+        if (obj is self._popup
+                and event.type() == QEvent.Type.MouseButtonPress
+                and self.rect().contains(
+                    self.mapFromGlobal(event.globalPosition()).toPoint())):
+            # A click on the box only closes its list (V3.14). Windows replays
+            # the press that closes a popup to what is under it, sparing an
+            # editable combo only on its arrow, and this box's release opens
+            # the list: it closed and reopened in one motion. Qt spares a
+            # non-editable combo anywhere, and clears this before each press.
+            obj.setAttribute(Qt.WidgetAttribute.WA_NoMouseReplay, True)
+            return False
         if (obj is self.lineEdit()
                 and event.type() == QEvent.Type.MouseButtonRelease):
             self.showPopup()

@@ -1273,6 +1273,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                           spot=ground.spot_for, pond=ponds)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
+    _note_hard_to_find(project)
     return project
 
 
@@ -1346,6 +1347,24 @@ def _note_vines_without_support(project, existing_features=None) -> None:
         return
     if names:
         _add_warning(project, climb_note(names))
+
+
+def _note_hard_to_find(project) -> None:
+    """Name the plants in the design that are rarely sold at all (V3.14). The
+    generator ranks them last, but one can still arrive with a community the
+    site matched, and a plan with a plant nobody sells should say so."""
+    try:
+        from src.db.plants import get_plant
+        from src.sourcing import hard_to_find
+        names = sorted({p.get("common_name") or "" for p in
+                        project.placed_plants
+                        if hard_to_find(get_plant(p.get("plant_id")) or {})})
+    except Exception:  # noqa: BLE001 — a note must never break a design
+        return
+    if names:
+        _add_warning(project, "Rarely sold, even by native nurseries: "
+                     + ", ".join(names) + ". Ask a nursery before you count "
+                     "on " + ("it." if len(names) == 1 else "them."))
 
 
 def _cell_dist_m(a: tuple, b: tuple) -> float:
@@ -1939,12 +1958,12 @@ def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
         if near:        # F220: the user's own choice; nothing overrides it
             filters = {**filters, "native_near": near}
         rows = _fits_the_area(query_plants(**filters) or [], area_m2)
-        if site:
-            from src.site_fit import locality_rank
-            rows = sorted(rows, key=lambda r: locality_rank(
-                r.get("scientific_name") or "", site[0], site[1]),
-                reverse=True)
-        return rows
+        # A plant rarely sold at all comes last (V3.14), then nearby first.
+        from src.site_fit import locality_rank
+        from src.sourcing import hard_to_find
+        return sorted(rows, key=lambda r: (not hard_to_find(r), locality_rank(
+            r.get("scientific_name") or "", site[0], site[1]) if site else 0),
+            reverse=True)
     return scoped
 
 
@@ -2448,8 +2467,14 @@ def _rank_offline_plants(plants: list, site=None) -> list:
     species nobody has recorded within a hundred kilometres is a worse
     suggestion for this yard than a good one somebody has. A ranking, never a
     filter -- see `src.site_fit` for why an empty grid square is not an
-    absence."""
+    absence.
+
+    Since V3.14 a plant rarely sold at all waits with the wetland specialists,
+    and the easier to buy ranks higher among equals (``sourcing.ease``): the
+    owner asked for "less focus on including all plants and more focus on
+    getting the most useful and available plants into the designs"."""
     from src.site_fit import locality_rank
+    from src.sourcing import ease, hard_to_find
 
     def near(p: dict) -> int:
         if not site:
@@ -2488,11 +2513,13 @@ def _rank_offline_plants(plants: list, site=None) -> list:
     good_pools: list = []
     bad_pools: list = []
     for b in _OFFLINE_BUCKETS:
-        pool = sorted(buckets[b], key=lambda p: (near(p), value(p)),
+        pool = sorted(buckets[b], key=lambda p: (near(p), value(p) + ease(p)),
                       reverse=True)                          # stable sort
-        good_pools.append([p for p in pool if value(p) >= 0])
-        bad_pools.append([p for p in pool if value(p) < 0])
-    other.sort(key=lambda p: (near(p), value(p)), reverse=True)
+        good_pools.append([p for p in pool
+                           if value(p) >= 0 and not hard_to_find(p)])
+        bad_pools.append([p for p in pool
+                          if value(p) < 0 or hard_to_find(p)])
+    other.sort(key=lambda p: (near(p), value(p) + ease(p)), reverse=True)
 
     ordered: list = []
 
@@ -2582,6 +2609,11 @@ def _select_offline_communities(communities: list[dict], goals, site_config,
     from src.design_goals import community_name_hints
     hints = [h.lower() for h in (community_name_hints(goals) or []) if h]
     eco_words = _ecoregion_words((site_config or {}).get("ecoregion_key"))
+    try:
+        from src.db.polycultures import hard_to_find_share
+        rarity = hard_to_find_share()
+    except Exception:  # noqa: BLE001 — a ranking signal, never a failure
+        rarity = {}
 
     def _score(c: dict) -> int:
         text = ((c.get("name") or "") + " " + (c.get("description") or "")).lower()
@@ -2591,6 +2623,14 @@ def _select_offline_communities(communities: list[dict], goals, site_config,
         # than one per level, which would let a deep key outvote the goals.
         if any(word in text for word in eco_words):
             s += 3
+        # Among communities that fit, one people can buy whole wins, one with
+        # a plant rarely sold loses a point, and one with more than a third of
+        # them two (V3.14): a community is placed whole, so one rare member is
+        # a plant the owner cannot buy. Only a fit is adjusted, so availability
+        # alone never picks a community.
+        share = rarity.get(c.get("id"), 0.0)
+        if s > 0:
+            s += 1 if share == 0 else (-2 if share > 1 / 3 else -1)
         return s
 
     scored = [(_score(c), c) for c in communities]
@@ -3069,4 +3109,5 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                           spot=ground.spot_for, pond=ponds)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
+    _note_hard_to_find(project)
     return project

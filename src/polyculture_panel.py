@@ -62,6 +62,11 @@ def community_facts(entry: dict) -> str:
         value = facets.get(key)
         if value and value not in ("Unknown", "Mixed"):
             parts.append(value)
+    # Members rarely sold at all, counted, so a community you cannot buy is
+    # visible as one before it is placed (V3.14).
+    hard = len(entry.get("hard_to_find") or ())
+    if hard:
+        parts.append(f"{hard} hard to find")
     return " · ".join(parts)
 
 
@@ -165,6 +170,7 @@ _SORT_BY_OPTIONS = [
     ("wildlife", "Sort: Most wildlife"),
     ("native",   "Sort: Most native"),
     ("modified", "Sort: Recently changed"),
+    ("easiest",  "Sort: Easiest to buy"),
 ]
 
 # Facet filter dropdowns (V2.13): (facet key, placeholder). Facet keys match
@@ -176,6 +182,24 @@ _FACET_FILTER_SPECS = [
     ("habitat",   "Any habitat"),
     ("function",  "Any function"),
 ]
+
+
+def _habitat_combo(placeholder: str, on_change):
+    """The habitat facet as the plant filter's ecoregion tree (V3.14): six
+    ecozones that open to their ecoregions and Alberta's subregions, the two
+    wet-ground niches, then the two answers that are not a place. It was a flat
+    list of 27 labels. Its keys are matched along the tree
+    (``polycultures.filter_library(regions=...)``). Made by the factory the
+    other four use, and connected once built: drawing a branch's marker
+    changes an item, which would otherwise refresh the list per branch."""
+    from src.community_regions import FALLBACK_LABELS, FALLBACK_NOTES
+    from src.filter_widgets import build_ecoregion_tree
+    combo = make_multi_combo(placeholder, {})
+    build_ecoregion_tree(combo)
+    for key, label in FALLBACK_LABELS.items():
+        combo.add_check_item(label, key, subtitle=FALLBACK_NOTES[key])
+    combo.selectionChanged.connect(on_change)
+    return combo
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -1113,9 +1137,10 @@ class PolyculturePanel(QWidget):
         choices = polycultures.facet_filter_choices()
         self._facet_combos: dict = {}
         for facet, placeholder in _FACET_FILTER_SPECS:
-            combo = make_multi_combo(
-                placeholder, {label: label for label in choices[facet]},
-                on_change=self._refresh_polyculture_list)
+            combo = (_habitat_combo(placeholder, self._refresh_polyculture_list)
+                     if facet == "habitat" else make_multi_combo(
+                         placeholder, {label: label for label in choices[facet]},
+                         on_change=self._refresh_polyculture_list))
             # Named for a screen reader, which read all five as "combo box"
             # (V3.02); the placeholder is not a name.
             combo.setAccessibleName(f"{facet.capitalize()} filter")
@@ -1128,9 +1153,9 @@ class PolyculturePanel(QWidget):
         self._facet_combos["structure"].setToolTip(
             "Tallest vegetation layer the community reaches.")
         self._facet_combos["habitat"].setToolTip(
-            "Ecoregions the member plants are documented from. A community\n"
-            "belongs to every region its plants grow in, so it can appear\n"
-            "under several; Generalist = no recorded region.")
+            "Ecoregions where every plant in the community has been recorded,\n"
+            "so it can appear under several. Mixed regions: no one ecoregion\n"
+            "has records of all its plants.")
         self._facet_combos["function"].setToolTip(
             "Ecological functions the community serves (from its members'\n"
             "use tags). A community can serve several.")
@@ -1776,10 +1801,12 @@ class PolyculturePanel(QWidget):
         # queries.
         index = polycultures.get_library_index()
         facet_filters = self._active_facet_filters()
+        # Habitat ticks are the ecoregion tree's keys, matched along it (V3.14).
+        regions = facet_filters.pop("habitat", None)
         native_near = self._native_near()
         passed = polycultures.filter_library(
             index, search=search, facets=facet_filters,
-            native_near=native_near)
+            native_near=native_near, regions=regions)
         ordered = polycultures.sort_community_ids(
             index, list(passed), getattr(self, "_sort_by", "name"))
 
@@ -1789,13 +1816,13 @@ class PolyculturePanel(QWidget):
                 f"{n} communit{'y' if n == 1 else 'ies'}")
         if hasattr(self, "_local_hidden"):
             hidden = (sum(1 for cid in polycultures.filter_library(
-                index, search=search, facets=facet_filters)
+                index, search=search, facets=facet_filters, regions=regions)
                 if cid not in passed) if native_near else 0)
             self._local_hidden.setText(
                 f"{hidden} hidden: each has a plant not native around Edmonton"
                 if hidden else "")
 
-        filtering = bool(search or facet_filters or native_near)
+        filtering = bool(search or facet_filters or native_near or regions)
         built = [(cid, self._make_community_item(index, cid, passed[cid],
                                                  filtering))
                  for cid in ordered]
@@ -1905,13 +1932,13 @@ class PolyculturePanel(QWidget):
         for this ecoregion" link lands here. Unknown keys are ignored;
         ``clear_others`` resets the other facets first so the user sees the
         ecoregion's communities, not an accidental intersection."""
-        labels = [polycultures.ECOREGION_LABELS[k]
-                  for k in (ecoregion_keys or [])
-                  if k in polycultures.ECOREGION_LABELS]
+        keys = [k for k in (ecoregion_keys or [])
+                if k in polycultures.ECOREGION_LABELS]
         if clear_others:
             for combo in self._facet_combos.values():
                 combo.set_checked_keys([])
-        self._facet_combos["habitat"].set_checked_keys(labels)
+        # Keys since V3.14: the habitat dropdown is the ecoregion tree.
+        self._facet_combos["habitat"].set_checked_keys(keys)
         self._refresh_polyculture_list()
 
     def clear_filters(self):

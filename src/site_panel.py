@@ -1541,16 +1541,13 @@ class SitePanel(QWidget):
             eco_keys = [eco_keys] if eco_keys else []
         if not eco_keys:
             return 0
+        # The library's own filter, so the count is what the link opens on.
+        # This compared a list with a set from V2.37 to V3.14, which raised
+        # into the `except` below: the link never once showed (V3.14).
         try:
             from src.db import polycultures
-            labels = {polycultures.ECOREGION_LABELS.get(k) for k in eco_keys}
-            labels.discard(None)
-            if not labels:
-                return 0
-            idx = polycultures.get_library_index()
-            return sum(1 for e in idx.values()
-                       if e["parent_id"] is None
-                       and e["facets"].get("habitat") in labels)
+            return len(polycultures.filter_library(
+                polycultures.get_library_index(), regions=list(eco_keys)))
         except Exception:
             return 0
 

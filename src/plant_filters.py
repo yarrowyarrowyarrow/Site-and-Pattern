@@ -160,8 +160,11 @@ QUALITIES: tuple = (
             "No recorded toxicity to people and no thorns. Same caveat."),
     Quality("well_behaved_only", "Well behaved", "well_behaved_only",
             "Does not spread aggressively."),
+    # Said "Stocked somewhere other than a specialist grower" until V3.14, while
+    # the search kept the native nurseries' plants, as it still does.
     Quality("common_only", "Easy to find", "common_only",
-            "Stocked somewhere other than a specialist grower."),
+            "Sold as plants by a garden centre or a native-plant nursery: not "
+            "seed or plugs only, and not rare in the trade."),
     Quality("has_image_only", "Has a photo", "has_image_only",
             "Only species this catalogue can show you."),
 )

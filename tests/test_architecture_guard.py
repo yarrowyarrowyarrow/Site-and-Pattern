@@ -128,9 +128,14 @@ class TestStructuralCeilings(unittest.TestCase):
         # province, the picker passed 560 again, and its quality toggles went
         # to filter_status.QualityChips, as the chips had.
         (_SRC / "plant_filters.py", 520),              # 520 now (V3.05): full
-        (_SRC / "plant_picker.py", 560),               # 545 now (V3.05): the order
+        (_SRC / "plant_picker.py", 560),               # 510 now (V3.14): the order
         # block (set_site to _reorder, about 60 lines) is the next to go.
-        (_SRC / "filter_status.py", 300),              # 292 now (V3.05)
+        (_SRC / "filter_status.py", 300),              # 295 now (V3.14)
+        # V3.14, opted in on arrival: the filters in two tiers, everyday first
+        # (the owner: "so so busy"), which took the picker's filter building
+        # with it; and which ecoregions a community belongs in, Qt-free.
+        (_SRC / "filter_area.py", 220),                # 150 now
+        (_SRC / "community_regions.py", 160),          # 100 now
         # V3.02 (F195), opted in on arrival: the ring that follows keyboard
         # focus, and the one table of keys the window and Help both read.
         (_SRC / "focus_ring.py", 200),                 # 180 now

@@ -14,8 +14,10 @@ this widget now, over one vocabulary (``src/plant_filters.py``) and one list
 
 Top to bottom: a search box; a line that says which filters are on, with a
 button that unfolds them and one that clears them; the nine facets and the
-qualities (nine at V3.00, ten since V3.12's Edmonton native); the count and the
-order; the list. **Narrow pickers start folded.** At V3.00,
+qualities (nine at V3.00, ten since V3.12's Edmonton native), the everyday
+ones first and the rest behind More filters since V3.14
+(``src/filter_area.py``); the count and the order; the list. **Narrow pickers
+start folded.** At V3.00,
 eighteen controls did not fit above a list in a 437 px column that already had
 fourteen, and the folded line is also where a filter the app set (a dropped
 pin ticks "Restoring toward") stops being silent.
@@ -37,20 +39,15 @@ from typing import Callable, Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListView,
-    QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QLineEdit, QListView, QVBoxLayout, QWidget,
 )
 
 from src import plant_filters as pf
-from src.filter_status import (
-    DIM as _DIM, FilterLine, QualityChips, WhyEmpty, wrapped,
-)
-from src.filter_widgets import (
-    COMBO_STYLE, CheckableComboBox, build_ecoregion_tree,
-)
+from src.filter_area import FilterArea
+from src.filter_status import DIM as _DIM, FilterLine, WhyEmpty, wrapped
+from src.filter_widgets import COMBO_STYLE
 from src.plant_list_view import (
     _PLANT_OBJ_ROLE, _RESULTS_LIST_STYLE, PlantListModel, PlantRowDelegate,
-    _colour_icon, _type_icon,
 )
 
 _SEARCH = ("QLineEdit { background: #16241a; border: 1px solid #2e4a2e; "
@@ -178,47 +175,15 @@ class PlantPicker(QWidget):
         col.addWidget(self.filter_line)
 
     def _build_filters(self, col):
-        self.filter_area = QWidget()
-        area = QVBoxLayout(self.filter_area)
-        area.setContentsMargins(0, 0, 0, 2)
-        area.setSpacing(4)
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(4)
-        grid.setVerticalSpacing(4)
-        per_row = 5 if self._wide else 2
-        self.combos: dict = {}
-        for i, f in enumerate(pf.FACETS):
-            combo = CheckableComboBox(placeholder=f.placeholder,
-                                      rule=pf.rule(f))
-            combo.set_face(lambda keys, f=f: pf.face(f, keys))
-            if f.values is None:
-                build_ecoregion_tree(combo)
-            else:
-                icon_for = (_type_icon if f.key == "type" else
-                            _colour_icon if f.key == "colour" else None)
-                for key, label in f.values.items():
-                    combo.add_check_item(
-                        label, key, icon=icon_for(key) if icon_for else None)
-            combo.setStyleSheet(COMBO_STYLE)
-            combo.setToolTip(wrapped(f.tip))
-            combo.setAccessibleName(f"{f.label} filter")
-            combo.setAccessibleDescription(f.tip)
-            combo.lineEdit().setAccessibleName(f"{f.label} filter")
-            combo.set_checked_keys([str(v) for v in
-                                    (self._criteria.get(f.key) or [])])
-            combo.selectionChanged.connect(
-                lambda k=f.key: self._on_facet(k))
-            grid.addWidget(combo, i // per_row, i % per_row)
-            self.combos[f.key] = combo
-        area.addLayout(grid)
-
-        # The qualities, and the site's soil pH drawn like them.
-        self.quality_chips = QualityChips(pf.QUALITIES, self._criteria)
-        self.chips: dict = self.quality_chips.buttons
-        self.soil_toggle = self.quality_chips.soil
-        self.quality_chips.toggled.connect(self._on_quality)
+        # The everyday filters first and the rest behind "More filters"
+        # (V3.14, src/filter_area.py); the site's soil pH drawn like a quality.
+        self.filter_area = FilterArea(self._criteria, wide=self._wide)
+        self.combos: dict = self.filter_area.combos
+        self.chips: dict = self.filter_area.chips
+        self.soil_toggle = self.filter_area.soil
+        self.filter_area.facet_changed.connect(self._on_facet)
+        self.filter_area.quality_toggled.connect(self._on_quality)
         self.soil_toggle.toggled.connect(self.set_soil_on)
-        area.addWidget(self.quality_chips)
         col.addWidget(self.filter_area)
 
     def set_filters_open(self, on: bool):
@@ -241,6 +206,7 @@ class PlantPicker(QWidget):
             tips["soil"] = (pf.soil_tip(self._soil_ph, self._soil_hidden)
                             + " Click to remove it.")
         self.filter_line.set_entries(entries, tips)
+        self.filter_area.show_hidden_on(self._criteria)
 
     def chip_texts(self) -> list:
         """The words on the chips, without their ×: what is on, as drawn."""
@@ -393,7 +359,7 @@ class PlantPicker(QWidget):
         """Native and the row badge name the pin's province (F200, V3.05)."""
         shown = self.province() or "AB"
         self.delegate.province = self.model.province = shown
-        self.quality_chips.describe("native_only", pf.native_tip(shown))
+        self.filter_area.describe("native_only", pf.native_tip(shown))
         if self.province() != before and self._criteria.get("native_only"):
             self.refresh()
         else:

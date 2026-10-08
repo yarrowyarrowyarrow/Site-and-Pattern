@@ -175,28 +175,24 @@ def _community_structure(members) -> str:
     return "Unsorted"
 
 
-def _community_habitat(members) -> list:
-    """Every ecoregion this community's members are documented from.
+def _community_habitat(members, ranges=None) -> list:
+    """The labels of the regions this community is filed under.
 
-    Multi-valued, like `_community_functions` and unlike sun/moisture: a plant's
-    `ecoregion` column is a comma-separated list because a species genuinely
-    grows in several, and collapsing that to the single most common token filed
-    a mixed community under one habitat and hid it from the others. Both
-    consumers already handle a list — `filter_library` intersects, and the
-    panel's group-by clones the tree item into each bucket — so the community
-    now appears under every ecoregion it actually belongs to.
+    Multi-valued, like `_community_functions` and unlike sun/moisture: a
+    community can belong in several ecoregions, and collapsing that to one
+    filed it under one habitat and hid it from the others (V2.37). Both
+    consumers handle a list: `filter_library` intersects, and the panel's
+    group-by clones the tree item into each bucket.
 
-    Ordered by how many members carry the tag (strongest association first) so
-    the primary habitat still leads where a caller shows only one.
+    Since V3.14 the regions are the ones *every* member has been recorded in,
+    from the occurrence ranges (`src/community_regions.py`, which says why);
+    before, any member's unsourced column tag, which named Aspen Parkland on no
+    plant at all. Strongest first, so the primary habitat still leads where a
+    caller shows only one. ``ranges`` is ``community_regions.ranges_by_plant``.
     """
-    counts = collections.Counter(
-        token for m in members for token in _csv_tokens(m.get("eco")))
-    labels: list = []
-    for token, _n in counts.most_common():
-        label = _GROUP_ECOREGION.get(token)
-        if label and label not in labels:
-            labels.append(label)
-    return labels or ["Generalist"]
+    from src.community_regions import FALLBACK_LABELS, community_regions
+    return [_GROUP_ECOREGION.get(key) or FALLBACK_LABELS.get(key) or key
+            for key in community_regions(members, ranges or {})]
 
 
 def _community_sun(members) -> str:
@@ -276,6 +272,7 @@ def get_community_facets() -> dict:
         rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
             "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
+            "gm.plant_id AS plant_id, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "GROUP_CONCAT(u.key) AS use_keys "
             "FROM polyculture_members gm "
@@ -286,6 +283,8 @@ def get_community_facets() -> dict:
             "WHERE g.parent_id IS NULL "
             "GROUP BY gm.id"
         ).fetchall()
+        from src.community_regions import ranges_by_plant
+        ranges = ranges_by_plant(conn)
     finally:
         conn.close()
     by_cid: dict = {}
@@ -294,7 +293,7 @@ def get_community_facets() -> dict:
     return {
         cid: {
             "structure": _community_structure(members),
-            "habitat":   _community_habitat(members),
+            "habitat":   _community_habitat(members, ranges),
             "sun":       _community_sun(members),
             "moisture":  _community_moisture(members),
             "function":  _community_functions(members),
@@ -312,7 +311,8 @@ def get_community_facets() -> dict:
 # Public alias for the site→library cross-link: ecoregion key → habitat label.
 ECOREGION_LABELS = dict(_GROUP_ECOREGION)
 
-LIBRARY_SORT_KEYS = ("name", "members", "wildlife", "native", "modified")
+LIBRARY_SORT_KEYS = ("name", "members", "wildlife", "native", "modified",
+                     "easiest")
 
 
 def facet_filter_choices() -> dict:
@@ -325,11 +325,13 @@ def facet_filter_choices() -> dict:
     for _key, label in _GROUP_FUNCTION:
         if label not in functions:
             functions.append(label)
+    from src.community_regions import FALLBACK_LABELS
     return {
         "sun":       list(_GROUP_SUN.values()),
         "moisture":  ["Dry", "Mesic", "Wet"],
         "structure": [label for _key, label in _GROUP_LAYER_ORDER],
-        "habitat":   list(dict.fromkeys(_GROUP_ECOREGION.values())) + ["Generalist"],
+        "habitat":   (list(dict.fromkeys(_GROUP_ECOREGION.values()))
+                      + list(FALLBACK_LABELS.values())),
         "function":  functions + ["Generalist"],
     }
 
@@ -349,6 +351,7 @@ def get_library_index() -> dict:
       not_around ({place: [common names of members not native around it]},
       F220: a community is native around a place when every member is).
     """
+    from src.community_regions import FALLBACK_LABELS, community_regions
     from src.native_here import native_names, places as local_places
     conn = get_connection()
     try:
@@ -358,9 +361,10 @@ def get_library_index() -> dict:
         member_rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
             "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
+            "gm.plant_id AS plant_id, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "p.common_name AS common_name, p.scientific_name AS scientific_name, "
-            "p.native_to_alberta AS native, "
+            "p.native_to_alberta AS native, p.availability_class AS avail, "
             "GROUP_CONCAT(u.key) AS use_keys "
             "FROM polyculture_members gm "
             "JOIN plants p ON gm.plant_id = p.id "
@@ -374,6 +378,8 @@ def get_library_index() -> dict:
             "JOIN plant_fauna pf ON pf.plant_id = gm.plant_id "
             "GROUP BY gm.polyculture_id"
         ).fetchall()
+        from src.community_regions import ranges_by_plant
+        ranges = ranges_by_plant(conn)
     finally:
         conn.close()
 
@@ -394,6 +400,7 @@ def get_library_index() -> dict:
         for m in ms:
             blob.append(m.get("common_name") or "")
             blob.append(m.get("scientific_name") or "")
+        regions = community_regions(ms, ranges)
         index[cid] = {
             "id":            cid,
             "name":          c["name"] or "",
@@ -413,9 +420,16 @@ def get_library_index() -> dict:
                                            if (m.get("scientific_name") or "")
                                            .strip() not in names})
                               for key, names in local.items()},
+            # The keys behind facets["habitat"], for a filter on the ecoregion
+            # tree (V3.14): the ecoregions every member is recorded in.
+            "regions":       regions,
+            # Members rarely sold at all (V3.14, scripts/rank_availability.py).
+            "hard_to_find":  sorted({m.get("common_name") or "" for m in ms
+                                     if m.get("avail") == "rare"}),
             "facets": {
                 "structure": _community_structure(ms),
-                "habitat":   _community_habitat(ms),
+                "habitat":   [_GROUP_ECOREGION.get(k) or FALLBACK_LABELS.get(k)
+                              or k for k in regions],
                 "sun":       _community_sun(ms),
                 "moisture":  _community_moisture(ms),
                 "function":  _community_functions(ms),
@@ -431,8 +445,12 @@ def get_library_index() -> dict:
 
 
 def filter_library(index: dict, *, search: str = "", facets=None,
-                   native_near: str = "") -> dict:
+                   native_near: str = "", regions=None) -> dict:
     """Apply search + facet filters over a ``get_library_index()`` result.
+
+    ``regions`` (V3.14) filters on the ecoregion tree's keys, as the plant
+    filter does: a ticked ecozone finds a community in any of its ecoregions,
+    a subregion one in the ecoregions it lies in (``community_regions.matches``).
 
     ``native_near`` (F220) keeps only communities whose every member is native
     around that place ("edmonton"): one member from the mountains or the dry
@@ -454,6 +472,7 @@ def filter_library(index: dict, *, search: str = "", facets=None,
     (the same semantics as search_plants). The multi-valued "function" facet
     passes on any overlap.
     """
+    from src.community_regions import matches
     needle = (search or "").strip().lower()
     active = {k: set(v) for k, v in (facets or {}).items() if v}
     if native_near:
@@ -469,6 +488,8 @@ def filter_library(index: dict, *, search: str = "", facets=None,
         if needle and needle not in entry["search_blob"]:
             return False
         if not _native(entry):
+            return False
+        if regions and not matches(entry.get("regions"), regions):
             return False
         for name, accepted in active.items():
             val = entry["facets"].get(name)
@@ -493,14 +514,34 @@ def filter_library(index: dict, *, search: str = "", facets=None,
     return out
 
 
+def hard_to_find_share() -> dict:
+    """``{community_id: share of its members rarely sold at all}`` (V3.14),
+    for the offline generator's pick. One query."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT gm.polyculture_id AS cid, COUNT(*) AS n, "
+            "SUM(p.availability_class = 'rare') AS rare "
+            "FROM polyculture_members gm JOIN plants p ON p.id = gm.plant_id "
+            "GROUP BY gm.polyculture_id").fetchall()
+    finally:
+        conn.close()
+    return {r["cid"]: (r["rare"] or 0) / r["n"] for r in rows if r["n"]}
+
+
 def sort_community_ids(index: dict, ids, key: str = "name") -> list:
     """Order ``ids`` by a library sort key: ``name`` (A–Z, default) ·
     ``members`` (most members first) · ``wildlife`` (most distinct fauna
-    supported) · ``native`` (highest native %) · ``modified`` (most recent).
+    supported) · ``native`` (highest native %) · ``modified`` (most recent) ·
+    ``easiest`` (smallest share of members rarely sold, V3.14).
     Numeric sorts tie-break alphabetically; unknown keys fall back to name."""
     def _name(i):
         return index[i]["name"].lower()
 
+    if key == "easiest":
+        return sorted(ids, key=lambda i: (
+            len(index[i].get("hard_to_find") or ())
+            / max(1, index[i]["member_count"]), _name(i)))
     if key == "members":
         return sorted(ids, key=lambda i: (-index[i]["member_count"], _name(i)))
     if key == "wildlife":
@@ -1369,6 +1410,63 @@ _PATTERN_TEXT = {
                     "(cattail, bur-reed, arrowhead, water parsnip, horsetail), "
                     "bulrush and water arum at the waterline, and marsh marigold "
                     "on the wet shore.",
+    },
+    # ── Communities of plants people can buy (V3.14) ─────────────────────────
+    "Easy Pollinator Border": {
+        "problem": "A pollinator garden planned from a native-plant list can "
+                   "stall at the nursery: half the list is not for sale.",
+        "context": "A sunny bed or boulevard where the plants will be bought this "
+                   "spring, from the garden centre down the road.",
+        "forces": "Bees need flowers from spring to frost; a garden centre's "
+                  "natives are few, so each one has to cover part of the season.",
+        "solution": "Therefore: build the border from the natives garden centres "
+                    "actually sell, chosen so one is in flower every month: "
+                    "crocus, flax, harebell, blanketflower, bergamot, hyssop, "
+                    "aster, and a potentilla flowering through all of it.",
+    },
+    "Easy Berry Hedge": {
+        "problem": "A hedge of one cultivar gives birds one week of fruit and "
+                   "nowhere to nest.",
+        "context": "A property line or a windbreak in sun or part shade, planted "
+                   "from stock any garden centre carries.",
+        "forces": "The shrubs that are easiest to buy are also the region's best "
+                  "bird shrubs; mixing them spreads the fruit from June into "
+                  "winter.",
+        "solution": "Therefore: alternate saskatoon, chokecherry, highbush "
+                    "cranberry, dogwood and snowberry, with silverberry and "
+                    "buffaloberry to feed the soil.",
+    },
+    "Easy Shady Corner": {
+        "problem": "The shady side of a house grows nothing but moss and a lawn "
+                   "that will not fill in.",
+        "context": "A north or east side, or under a neighbour's tree, with soil "
+                   "that stays moist.",
+        "forces": "Shade-tolerant natives are scarce in garden centres; the few "
+                  "that are sold have to carry the whole planting.",
+        "solution": "Therefore: a paper birch for light shade, dogwood and "
+                    "cranberry under it, fern and lungwort beneath, and two "
+                    "spreading groundcovers to close the soil.",
+    },
+    "Easy Dry Slope": {
+        "problem": "A hot, dry bank burns out every summer and is hard to mow.",
+        "context": "A south-facing slope or the strip along a south wall, with "
+                   "no water to spare.",
+        "forces": "The prairie's dry-ground plants need no watering once rooted, "
+                  "and several are sold as ordinary garden plants.",
+        "solution": "Therefore: knit the bank with creeping juniper and "
+                    "bearberry, and fill between with crocus, prairie smoke, "
+                    "yarrow, harebell, everlasting and sagewort.",
+    },
+    "Easy Rain Garden": {
+        "problem": "Runoff from a roof or a driveway pools on the lawn, or runs "
+                   "straight to the storm drain.",
+        "context": "A low spot or a dug basin that is wet after rain and dry a "
+                   "few days later.",
+        "forces": "Plants for a rain garden must take both flooding and drought; "
+                  "the region's wet-meadow natives do.",
+        "solution": "Therefore: plant dogwood at the back, Joe-Pye weed and "
+                    "aster for late flowers, mint and loosestrife between, and "
+                    "marsh marigold where the water stands longest.",
     },
 }
 
@@ -2785,6 +2883,105 @@ EXAMPLE_POLYCULTURES = [
             ("Small-fruited Bulrush", "herbaceous", 1.9, -0.3),
             ("Water Arum (Wild Calla)", "groundcover", -0.4, -1.6),
             ("Marsh Marigold", "groundcover", 0.3, 1.7),
+        ],
+    },
+    # ── Communities of plants people can buy (V3.14) ─────────────────────────
+    # The owner: "focus the plant communities on some popular plants". Each
+    # member is sold by garden centres or native nurseries (none is rare in the
+    # trade, scripts/rank_availability.py), native around Edmonton, and
+    # recorded in Aspen Parkland. The "Easy" in each name is what the
+    # Budget-friendly goal's community hint matches (src/design_goals.py).
+    {
+        "name": "Easy Pollinator Border",
+        "description": "A sunny border of plants garden centres sell, in flower "
+                       "from April to the first frost: prairie crocus, then wild "
+                       "blue flax, harebell, blanketflower, wild bergamot and "
+                       "giant hyssop, with smooth aster to finish, around a "
+                       "potentilla that flowers all summer. Full sun, little water "
+                       "once established. Every member is native around Edmonton.",
+        "members": [
+            ("Shrubby Cinquefoil", "shrub_layer", 0.0, 0.0),
+            ("Wild Bergamot", "pollinator", 1.2, 0.6),
+            ("Giant Hyssop", "pollinator", -1.1, 0.8),
+            ("Blanketflower", "pollinator", 0.8, -1.1),
+            ("Smooth Aster", "pollinator", -0.9, -1.0),
+            ("Harebell", "herbaceous", 1.6, -0.3),
+            ("Prairie Crocus", "pollinator", -1.6, 0.0),
+            ("Wild Blue Flax", "herbaceous", 0.2, 1.5),
+        ],
+    },
+    {
+        "name": "Easy Berry Hedge",
+        "description": "A bird hedge from shrubs garden centres and big-box stores "
+                       "carry: saskatoon and chokecherry for summer fruit, "
+                       "highbush cranberry and snowberry that hang into winter, "
+                       "red osier dogwood for red winter stems, and silverberry "
+                       "and silver buffaloberry to fix nitrogen. Sun to part "
+                       "shade. Every member is native around Edmonton.",
+        "members": [
+            ("Saskatoon Berry", "shrub_layer", 0.0, 0.0),
+            ("Chokecherry", "understory", 2.6, 0.8),
+            ("Highbush Cranberry", "shrub_layer", -2.4, 0.9),
+            ("Red Osier Dogwood", "shrub_layer", 1.4, -2.0),
+            ("Common Snowberry", "shrub_layer", -1.2, -1.8),
+            ("Silverberry", "nitrogen_fixer", 3.0, -1.2),
+            ("Silver Buffaloberry", "nitrogen_fixer", -3.0, -0.8),
+        ],
+    },
+    {
+        "name": "Easy Shady Corner",
+        "description": "For the shady, moist side of a house or fence: paper birch "
+                       "over red osier dogwood and highbush cranberry, ostrich fern "
+                       "and tall lungwort beneath, woodland strawberry and wild "
+                       "lily-of-the-valley on the ground. Garden centres sell most "
+                       "of it; the lungwort and the lily-of-the-valley come from "
+                       "native nurseries. Every member is native around Edmonton.",
+        "members": [
+            ("Paper Birch", "overstory", 0.0, 0.0),
+            ("Red Osier Dogwood", "shrub_layer", 2.2, 1.0),
+            ("Highbush Cranberry", "shrub_layer", -2.0, 1.2),
+            ("Ostrich Fern", "herbaceous", 1.0, -1.6),
+            ("Tall Lungwort (Blue Bells)", "pollinator", -1.2, -1.4),
+            ("Woodland Strawberry", "groundcover", 1.8, -0.4),
+            ("Wild Lily-of-the-valley", "groundcover", -0.4, 1.9),
+        ],
+    },
+    {
+        "name": "Easy Dry Slope",
+        "description": "A hot, dry bank or the strip along a south wall: creeping "
+                       "juniper and bearberry as evergreen cover, prairie crocus "
+                       "and prairie smoke in spring, yarrow, harebell and pearly "
+                       "everlasting through summer, and prairie sagewort's silver "
+                       "all year. Full sun, no watering once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Creeping Juniper", "groundcover", 0.0, 0.0),
+            ("Bearberry", "groundcover", 1.8, 0.6),
+            ("Prairie Crocus", "pollinator", -1.2, 0.9),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
+             "pollinator", 0.9, -1.1),
+            ("Boreal Yarrow", "pollinator", -0.8, -1.2),
+            ("Harebell", "herbaceous", 1.4, 1.5),
+            ("Pearly Everlasting", "herbaceous", -1.8, -0.2),
+            ("Prairie Sagewort", "herbaceous", 0.3, 1.8),
+        ],
+    },
+    {
+        "name": "Easy Rain Garden",
+        "description": "A shallow dip that catches roof or driveway runoff and "
+                       "dries out between storms: red osier dogwood at the back, "
+                       "Joe-Pye weed and purple-stemmed aster for late bees and "
+                       "butterflies, wild mint and fringed loosestrife between, "
+                       "and marsh marigold in the wettest spot. The dogwood and "
+                       "Joe-Pye weed are garden-centre plants; the rest come from "
+                       "native nurseries. Every member is native around Edmonton.",
+        "members": [
+            ("Red Osier Dogwood", "shrub_layer", 0.0, 0.0),
+            ("Joe-Pye Weed", "pollinator", 1.5, 0.6),
+            ("Purple-stemmed Tall Aster (Swamp Aster)", "pollinator", -1.4, 0.8),
+            ("Wild Mint", "herbaceous", 0.8, -1.2),
+            ("Fringed Loosestrife", "herbaceous", -0.9, -1.1),
+            ("Marsh Marigold", "groundcover", 0.1, 1.6),
         ],
     },
 ]

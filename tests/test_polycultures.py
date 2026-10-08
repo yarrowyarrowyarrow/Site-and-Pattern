@@ -355,7 +355,12 @@ class TestCommunityFacets(unittest.TestCase):
         The seed data was always multi-valued — `plants.ecoregion` is a
         comma-separated list — but the facet collapsed it to the single most
         common token, so a community spanning two ecoregions was filed under one
-        and invisible under the other."""
+        and invisible under the other.
+
+        Since V3.14 a community is filed under the ecoregions *every* member
+        with a known range shares (tests/test_community_regions.py). The second
+        plant here has no place recorded, only wet ground, so it counts neither
+        way and the first plant's two regions both stand."""
         conn = get_connection()
         try:
             p1 = _add_dummy_plant(conn, "Two Region Plant")
@@ -441,12 +446,17 @@ class TestCommunityFacets(unittest.TestCase):
 
 
 class TestCommunityCoverage(unittest.TestCase):
-    """The seeded library covers the retail-available natives (native nursery /
-    garden centre / big box) and every member name resolves — guards against the
-    silent member-drop drift the legacy presets suffered from."""
+    """The seeded library covers the natives people can buy beyond a native
+    nursery (garden centre, big box), and every member name resolves — guards
+    against the silent member-drop drift the legacy presets suffered from.
+
+    Until V3.14 every species a native nursery sells counted too, which pushed
+    the library toward holding every plant in the catalogue. The owner asked
+    for the opposite: "less focus on including all plants and more focus on
+    getting the most useful and available plants into the designs"."""
 
     _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _RETAIL = {"native_specialist", "garden_centre", "big_box"}
+    _RETAIL = {"garden_centre", "big_box"}
 
     @classmethod
     def setUpClass(cls):
@@ -492,12 +502,11 @@ class TestCommunityCoverage(unittest.TestCase):
         members = {n.lower() for n in self._all_member_names()}
         covered = {n for n in retail if n.lower() in members}
         missing = sorted(retail - covered)
-        # Authored to full coverage; allow a small margin for future catalogue
-        # growth before the breadth guard trips.
-        self.assertGreaterEqual(
-            len(covered), len(retail) - 4,
-            f"retail-native coverage regressed: {len(missing)} uncovered "
-            f"(e.g. {missing[:8]})")
+        # Every one, now that it is the few people can buy everywhere (38 at
+        # V3.14) rather than every species a nursery grows.
+        self.assertGreater(len(retail), 20, "the availability tiers are gone")
+        self.assertEqual(missing, [],
+                         "natives sold at garden centres with no community")
 
 
 if __name__ == "__main__":

@@ -164,6 +164,8 @@ GOALS: list[Goal] = [
             "Prefer affordable, readily available native plants; avoid rare or "
             "seed-only specialties and large specimen trees."
         ),
+        # The communities built from plants people can buy (V3.14).
+        community_hints=("Easy",),
         caveat=("Budget-friendly uses estimated Alberta retail prices (ranges, "
                 "not quotes) and excludes only hard-to-source plants."),
     ),

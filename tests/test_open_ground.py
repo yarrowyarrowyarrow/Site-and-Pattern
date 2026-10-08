@@ -291,10 +291,15 @@ class TestTheFollowUpSteps(_Base):
 
     def test_offline_additions_stand_apart_too(self):
         # An offline design is usually good enough that the review adds one
-        # plant. A thin pool (one species, no communities) makes it add more.
+        # plant. A thin pool (one species, no communities, no meadow mix)
+        # makes it add more. The mix went in V3.14: its forbs rank by
+        # availability too since then, and the Smooth Aster it now takes
+        # flowers into October, the gap this test had relied on.
         with mock.patch.object(llm, "_OFFLINE_PLANT_CAP", 1), \
                 mock.patch.object(llm, "_select_offline_communities",
-                                  lambda *a, **k: []):
+                                  lambda *a, **k: []), \
+                mock.patch.object(llm, "_offline_plant_mix",
+                                  lambda *a, **k: None):
             proj = llm.generate_design_offline(
                 boundary=_box(12, 18), site_config=_EDM, match_site=False)
         notes = proj.as_dict()["properties"].get("generation_warnings", [])

@@ -173,8 +173,10 @@ class AnalysisPanel(QWidget):
         layout.addWidget(info)
 
         self._build_sun_when_group(layout)
-        self._build_sun_arc_group(layout)
+        # The shade first (V3.14, the owner's ask): where the shadow falls is
+        # what a planting decision needs; the arc is the explanation of it.
         self._build_shade_group(layout)
+        self._build_sun_arc_group(layout)
         self._build_shade_zones_group(layout)
         # Wired last, in one place: every one of these handlers reads controls
         # from more than one group, so connecting inside a builder would make
@@ -315,7 +317,8 @@ class AnalysisPanel(QWidget):
         btn_show.setToolTip(
             "Draw the sun's arc centred on your property.\n"
             "Use 'Move…' to centre it somewhere specific instead.")
-        btn_show.setStyleSheet(BTN_PRIMARY)
+        # Secondary since V3.14: Show shade is the page's main action.
+        btn_show.setStyleSheet(BTN_SECONDARY)
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
 
@@ -366,10 +369,12 @@ class AnalysisPanel(QWidget):
 
         btn_row = QHBoxLayout()
         btn_show = QPushButton("Show shade")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #37474f; color: #eceff1; "
-            "border: 1px solid #607d8b; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; } QPushButton:hover { background: #455a64; }")
+        btn_show.setToolTip(
+            "Cast the shade of the site's trees, buildings and the design's "
+            "own canopy\nat the date and time above.")
+        # The primary button, as ui_style's tiers always said it was; it had
+        # a grey of its own beside a green Show sun path (V3.14).
+        btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_shade)
         btn_row.addWidget(btn_show)
         btn_clear = QPushButton("Clear")

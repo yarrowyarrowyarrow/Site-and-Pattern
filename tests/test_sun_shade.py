@@ -397,6 +397,19 @@ class TestMergedPanel(unittest.TestCase):
             {"features": [{"properties": {"element_type": "existing_tree"}}]})
         self.assertIn("1 tree", panel._caster_summary.text())
 
+    def test_show_shade_is_the_main_button_and_comes_first(self):
+        """V3.14, the owner's ask: Show shade over Show sun path."""
+        from PyQt6.QtWidgets import QGroupBox, QPushButton
+        from src.ui_style import BTN_PRIMARY, BTN_SECONDARY
+        panel = self._panel()
+        page = panel._sun_page.widget()
+        buttons = {b.text(): b for b in page.findChildren(QPushButton)}
+        self.assertEqual(buttons["Show shade"].styleSheet(), BTN_PRIMARY)
+        self.assertEqual(buttons["Show sun path"].styleSheet(), BTN_SECONDARY)
+        titles = [g.title() for g in page.findChildren(QGroupBox)]
+        self.assertLess(titles.index("Cast shade"),
+                        titles.index("The sun's arc"))
+
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
 class TestSitePanelKeepsOnlyTheCapture(unittest.TestCase):
