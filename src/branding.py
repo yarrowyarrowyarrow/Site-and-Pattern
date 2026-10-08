@@ -29,6 +29,21 @@ APP_NAME = "Site & Pattern"
 APP_TAGLINE = "Native Habitat Designer"
 APP_TITLE = f"{APP_NAME} — {APP_TAGLINE}"
 
+
+def window_title(document: str | None = None, *, version: str | None) -> str:
+    """The main window's title (F231, V3.16): the name, the release it is
+    running, and the open design, or the tagline before one is named.
+    ``window_title(version=None)`` is ``APP_TITLE``.
+
+    The version is there so a screenshot says which copy it came from, and so
+    an update can be checked at a glance: the words come from the program, the
+    number from the ``version.txt`` installed beside it. It is a required
+    keyword so a new caller cannot leave it out by accident; pass
+    ``app_version.running_version()``."""
+    name = f"{APP_NAME} {version}" if version else APP_NAME
+    return f"{name} — {document or APP_TAGLINE}"
+
+
 # Per-user data-folder names (see ``src/user_paths.py``). The folder is migrated
 # from the legacy name to the new one on first launch after the rebrand.
 DATA_DIR_NAME = "Site & Pattern"

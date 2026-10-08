@@ -89,11 +89,14 @@ class TestMainWindowSmoke(unittest.TestCase):
 
     def test_constructed(self):
         self.assertIsNotNone(self._win)
-        # Against branding.APP_TITLE (what app.py sets), not a literal: the
-        # old literal went stale at the V1.69 rebrand and nobody noticed
-        # because this module only runs on a full Qt stack (CI skips it).
-        from src.branding import APP_TITLE
-        self.assertEqual(self._win.windowTitle(), APP_TITLE)
+        # Against branding (what app.py sets), not a literal: the old literal
+        # went stale at the V1.69 rebrand and nobody noticed because this
+        # module only runs on a full Qt stack (CI skips it). Since V3.16 the
+        # title names the running release (F231), which depends on the build.
+        from src.app_version import running_version
+        from src.branding import window_title
+        self.assertEqual(self._win.windowTitle(),
+                         window_title(version=running_version()))
 
     def test_initial_project_state(self):
         self.assertEqual(self._win._project["type"], "FeatureCollection")
@@ -849,6 +852,31 @@ class TestMainWindowSmoke(unittest.TestCase):
             win._on_new()
         self.assertEqual(win._presentation_still, (None, ""))
         self.assertEqual(win._before_after, (None, ""))
+
+    def test_a_new_designs_title_names_the_running_release(self):
+        """The title says which version is running, design or no design: the
+        quickest check that an update arrived whole (F231, V3.16). Patched,
+        so it holds on CI's detached checkout, which names no release."""
+        win = self._win
+        from unittest import mock
+        win._modified = False
+        self.addCleanup(win.setWindowTitle, win.windowTitle())
+        with mock.patch("src.app.running_version", return_value="V9.99"), \
+                mock.patch("src.app.QInputDialog.getText",
+                           return_value=("Test yard", True)):
+            win._on_new()
+        self.assertEqual(win.windowTitle(), "Site & Pattern V9.99 — Test yard")
+
+    def test_the_help_menu_and_the_title_name_the_same_version(self):
+        from src.app_version import running_version
+        about = [a.text() for menu in self._win.menuBar().actions()
+                 if menu.menu() is not None
+                 for a in menu.menu().actions()
+                 if a.text().startswith("&About / Version: ")]
+        self.assertEqual(about,
+                         [f"&About / Version: {running_version() or 'dev'}"])
+        if running_version():
+            self.assertIn(f" {running_version()} — ", self._win.windowTitle())
 
     # ── The side panel, as the owner answered the surface audit (V3.07-08) ───
 

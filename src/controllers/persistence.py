@@ -28,7 +28,8 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 import src.project as project_io
-from src.branding import APP_NAME
+from src.app_version import running_version
+from src.branding import window_title
 from src.log import get_logger
 
 _log = get_logger(__name__)
@@ -196,7 +197,8 @@ class PersistenceController:
             from src import saves
             saves.remember_last_design(path)
             name = self._main._project["properties"].get("project_name", "Design")
-            self._main.setWindowTitle(f"{APP_NAME} — {name}")
+            self._main.setWindowTitle(
+                window_title(name, version=running_version()))
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
             # The design is now durably on disk — a crash-recovery copy from
             # before this save would only offer to roll the user back.
@@ -296,7 +298,8 @@ class PersistenceController:
             m._project_path = source if source and os.path.exists(source) else None
             m._modified = True         # recovered work is unsaved by definition
             self.render_project_to_map(fit_view=True)
-            m.setWindowTitle(f"{APP_NAME} — {name} *")
+            m.setWindowTitle(
+                window_title(name, version=running_version()) + " *")
             m.statusBar().showMessage("Recovered autosaved design", 5000)
             _log.info("restored autosave (source=%s)", source or "unsaved")
         self.clear_autosave()

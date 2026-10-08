@@ -61,7 +61,8 @@ from src.reference_ecosystem_window import (
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.plant_directory_window import (
     open_plant_directory as _open_plant_directory)
-from src.branding import APP_NAME, APP_TITLE
+from src.app_version import running_version
+from src.branding import window_title
 from src.log import get_logger
 
 _log = get_logger(__name__)
@@ -106,7 +107,7 @@ class MainWindow(QMainWindow):
         target_size.install()
         indicator_style.install()
         _init_database()
-        self.setWindowTitle(APP_TITLE)
+        self.setWindowTitle(window_title(version=running_version()))
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
@@ -576,11 +577,8 @@ class MainWindow(QMainWindow):
         # so the user can read it without opening a dialog. The handler
         # opens an About dialog with more detail (commit hash, schema
         # version, etc).
-        from src.version_branch import parse_version_branch
-        from src.app_version import build_version
-        # Frozen builds have no git; the version is baked in at build time.
-        current_branch = build_version() or self._current_branch_name() or ""
-        version_disp = current_branch if parse_version_branch(current_branch) else "dev"
+        # The same reader as the title bar, so the two cannot disagree (F231).
+        version_disp = running_version() or "dev"
         # F44: the welcome shows once, so it needs a way back — both for
         # someone who dismissed it and for anyone looking for the example
         # design later.
@@ -1884,7 +1882,7 @@ class MainWindow(QMainWindow):
         self.site_panel.set_field_notes({})
         from src import site_photo_flow
         site_photo_flow.restore_site_photo(self)
-        self.setWindowTitle(f"{APP_NAME} — {name}")
+        self.setWindowTitle(window_title(name, version=running_version()))
         self._set_mode_label("Ready")
         # Back to an empty project — step 1 again (F44).
         onboarding_flow.refresh(self)
@@ -1975,7 +1973,7 @@ class MainWindow(QMainWindow):
         self.site_panel.set_field_notes(_field_notes.get_field_notes(proj))
 
         name = proj.get("properties", {}).get("project_name", "Design")
-        self.setWindowTitle(f"{APP_NAME} — {name}")
+        self.setWindowTitle(window_title(name, version=running_version()))
 
         self._sync_planning_panel()
         # A load bypasses _mark_modified (the project is clean), so the

@@ -97,6 +97,10 @@ a one-line `version.txt` holding the `V<major>.<minor>` tag. The spec bundles
 it **only when present** (absent in a plain checkout). `src/app_version.py`
 `build_version()` reads it via `resource_path("version.txt")`; a source
 checkout returns `None` and the updater falls back to the live git branch.
+`running_version()` (V3.16) is what a person sees: the main window's title
+(`Site & Pattern V3.16 — …`, through `branding.window_title`) and Help →
+About / Version, from `version.txt` or a source checkout's `.git/HEAD`, only
+when it is a `V<major>.<minor>`.
 
 ## Resource bundling (why installs don't crash with "no such file")
 
@@ -137,7 +141,12 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 2. Launch from the shortcut / Applications folder.
 3. Confirm the plant browser and community panels are populated, the Leaflet
    map loads, and no error dialogs appear.
-4. Without a spare machine, `python3 -m unittest discover -s tests -t .` includes a
+4. **Read the title bar** (V3.16): `Site & Pattern V<x.y> — …` names the build.
+   After an in-app update, a title with no number while Help reads the new
+   version means the old program is running beside the new `version.txt`
+   (the program is inside the `.exe`, `version.txt` in `_internal`): an update
+   that half-arrived.
+5. Without a spare machine, `python3 -m unittest discover -s tests -t .` includes a
    frozen-build resource-resolution simulation (`tests/test_resource_path.py`).
 
 ## Troubleshooting build/release failures
