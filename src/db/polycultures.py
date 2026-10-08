@@ -437,7 +437,10 @@ def filter_library(index: dict, *, search: str = "", facets=None,
     ``native_near`` (F220) keeps only communities whose every member is native
     around that place ("edmonton"): one member from the mountains or the dry
     south and the community is hidden, as the owner asked. An empty community
-    has no member to fail and passes.
+    has no member to fail and passes. A parent that fails it is not listed even
+    as the heading of a variation that passes (it would be selectable and
+    placeable there); each passing variation is listed in its own right,
+    as ``{"self": True, "children": []}`` under its own id (V3.13).
 
     Returns ``{top_level_id: {"self": bool, "children": [child_id, …]}}``
     holding only the top-level communities that pass. ``self`` says the parent
@@ -458,10 +461,14 @@ def filter_library(index: dict, *, search: str = "", facets=None,
         if native_near not in local_places():
             raise ValueError(f"no local list for {native_near!r}")
 
+    def _native(entry) -> bool:
+        return not (native_near
+                    and (entry.get("not_around") or {}).get(native_near))
+
     def _passes(entry) -> bool:
         if needle and needle not in entry["search_blob"]:
             return False
-        if native_near and (entry.get("not_around") or {}).get(native_near):
+        if not _native(entry):
             return False
         for name, accepted in active.items():
             val = entry["facets"].get(name)
@@ -478,7 +485,10 @@ def filter_library(index: dict, *, search: str = "", facets=None,
             continue
         self_ok = _passes(entry)
         kids_ok = [k for k in entry["children"] if _passes(index[k])]
-        if self_ok or kids_ok:
+        if not _native(entry):
+            for kid in kids_ok:
+                out[kid] = {"self": True, "children": []}
+        elif self_ok or kids_ok:
             out[cid] = {"self": self_ok, "children": kids_ok}
     return out
 

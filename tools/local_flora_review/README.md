@@ -20,6 +20,9 @@ answer again takes it back. An answer reaches the app and the website as
 "Native, confirmed on review." or "Not native here, on review." followed by the
 evidence, and nothing the owner wrote is ever printed.
 
+**V3.13 folded in the first set:** all 108 answered, 59 yes and 49 no. The page
+stays the record, so change an answer there and fold in again.
+
 ## Bringing the answers back
 
 The page keeps answers in its own database (collection `rulings`, one document

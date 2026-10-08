@@ -1788,9 +1788,9 @@ class PolyculturePanel(QWidget):
             self._result_count.setText(
                 f"{n} communit{'y' if n == 1 else 'ies'}")
         if hasattr(self, "_local_hidden"):
-            hidden = (len(polycultures.filter_library(
-                index, search=search, facets=facet_filters)) - len(passed)
-                if native_near else 0)
+            hidden = (sum(1 for cid in polycultures.filter_library(
+                index, search=search, facets=facet_filters)
+                if cid not in passed) if native_near else 0)
             self._local_hidden.setText(
                 f"{hidden} hidden: each has a plant not native around Edmonton"
                 if hidden else "")
@@ -1879,6 +1879,10 @@ class PolyculturePanel(QWidget):
 
         child_ids = (entry["children"] if (not filtering or passinfo["self"])
                      else passinfo["children"])
+        near = self._native_near()
+        if near:   # never a variation with a plant not native here (F220)
+            child_ids = [k for k in child_ids
+                         if not index[k]["not_around"].get(near)]
         for kid in child_ids:
             child_item = QTreeWidgetItem([index[kid]["name"],
                                           community_facts(index[kid])])

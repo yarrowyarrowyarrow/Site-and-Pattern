@@ -374,7 +374,10 @@ class TestTheDataGate(unittest.TestCase):
 
     def test_a_ruling_added_and_not_derived_fails(self):
         from src.data_quality import validate_local_flora
-        self._rule("Prunus pensylvanica", "native")
+        # A documented species no answer covers: the owner's review (V3.13)
+        # answered every borderline one, so ruling one of those again could
+        # match what the list already says.
+        self._rule("Amelanchier alnifolia", "not_native")
         errors, _ = validate_local_flora()
         self.assertTrue(any("not in the derived list" in e for e in errors),
                         errors)

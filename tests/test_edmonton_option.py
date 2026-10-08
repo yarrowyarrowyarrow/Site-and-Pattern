@@ -11,6 +11,8 @@ here: the search, the community library and its page, the generator's pool,
 its communities, its repairs, and the AI path's name resolver.
 """
 
+import contextlib
+import json
 import math
 import os
 import sys
@@ -48,6 +50,25 @@ def _local():
     return nh.native_names("edmonton")
 
 
+@contextlib.contextmanager
+def _unreviewed(*names):
+    """The shipped list with the owner's answers taken off ``names``, so a test
+    of what an unsettled species shows does not hang on how the owner answered
+    it (V3.13 answered every borderline species)."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "data", "local_flora.json"),
+              encoding="utf-8") as fh:
+        doc = json.load(fh)
+    for name in names:
+        for key in ("ruling", "on"):
+            doc["places"]["edmonton"]["species"][name].pop(key, None)
+    nh.set_document(doc)
+    try:
+        yield
+    finally:
+        nh.set_document(None)
+
+
 class TestTheSearch(unittest.TestCase):
 
     def test_native_near_keeps_only_the_list(self):
@@ -83,6 +104,26 @@ class TestTheCommunityLibrary(unittest.TestCase):
             self.assertEqual(index[cid]["not_around"]["edmonton"], [],
                              index[cid]["name"])
         self.assertLess(len(shown), len(P.filter_library(index)))
+
+    def test_a_failing_parent_does_not_head_a_variation_that_passes(self):
+        """Listed as the heading of its passing variation, a parent with an
+        outsider could still be chosen and placed (found by V3.13, when the
+        owner's answers first let a variation pass under a parent that
+        does not). Its passing variations are listed on their own instead."""
+        from src.db import polycultures as P
+
+        def entry(cid, parent, outsiders, kids=()):
+            return {"id": cid, "name": str(cid), "parent_id": parent,
+                    "children": list(kids), "search_blob": str(cid),
+                    "facets": {}, "not_around": {"edmonton": outsiders}}
+        index = {1: entry(1, None, ["Self-heal"], (2, 3)),
+                 2: entry(2, 1, []), 3: entry(3, 1, ["Bur Oak"]),
+                 4: entry(4, None, [], (5,)), 5: entry(5, 4, ["Bur Oak"])}
+        self.assertEqual(P.filter_library(index, native_near="edmonton"),
+                         {2: {"self": True, "children": []},
+                          4: {"self": True, "children": []}})
+        # Without the switch nothing moves: parents head their variations.
+        self.assertEqual(set(P.filter_library(index)), {1, 4})
 
     def test_an_unknown_place_is_refused(self):
         from src.db import polycultures as P
@@ -189,7 +230,8 @@ class TestTheWebsite(unittest.TestCase):
              "slug": "pin-cherry", "name": "Pin Cherry"},
             {"row": {"scientific_name": "Aquilegia flavescens"},
              "slug": "yellow-columbine", "name": "Yellow Columbine"}]}
-        html = _hub_extra(hub, {"value": "edmonton"}, model)
+        with _unreviewed("Prunus pensylvanica"):
+            html = _hub_extra(hub, {"value": "edmonton"}, model)
         self.assertIn("1 species on this list", html)
         self.assertIn("1 species native elsewhere in Alberta have no record",
                       html)
@@ -203,14 +245,16 @@ class TestTheWebsite(unittest.TestCase):
         from src.static_site_species import _around
         from src.db.plants import search_plants
         pin = search_plants(query="Pin Cherry")[0]
-        entry = species_entry(pin["id"])
         model = {"hubs": [{"key": "around", "dir": "plants/native-area",
                            "pages": [{"value": "edmonton",
                                       "slug": "edmonton"}]}]}
-        cell = _around(entry, 2, model)
+        with _unreviewed("Prunus pensylvanica"):
+            entry = species_entry(pin["id"])
+            cell = _around(entry, 2, model)
+            bare = _around(entry, 2, {"hubs": []})
         self.assertTrue(cell.startswith("Not settled."), cell)
         self.assertIn('href="../../plants/native-area/edmonton/"', cell)
-        self.assertNotIn("<a", _around(entry, 2, {"hubs": []}))
+        self.assertNotIn("<a", bare)
 
     def test_the_method_page_states_the_rule_from_the_list(self):
         from src.static_site_method import _around_section

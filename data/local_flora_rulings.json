@@ -2,6 +2,439 @@
   "version": 1,
   "comment": "The owner's answers on which species are native around a place, where the herbarium evidence alone cannot settle it (F220, V3.12). One entry per species, keyed by the catalogue's scientific name: {\"ruling\": \"native\" (yes) or \"not_native\" (no), \"on\": the date}. No reasons: the owner answers yes or no where confident and leaves the rest, and pages say only that a species was confirmed on review. An answer overrides the derived tier in data/local_flora.json and survives every re-derivation; it cannot make a species native that VASCAN does not record native in the province. The answers come from the review page (tools/local_flora_review/README.md): python scripts/derive_local_flora.py --merge <its rows or its export>",
   "places": {
-    "edmonton": {}
+    "edmonton": {
+      "Abies balsamea": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Acer negundo": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Achillea borealis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Alisma triviale": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Allium textile": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Anaphalis margaritacea": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Antennaria rosea": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Anticlea elegans": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Arnica chamissonis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Arnica fulgens": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Asclepias speciosa": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Astragalus canadensis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Astragalus laxmannii": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Avenula hookeri": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Betula occidentalis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Blitum capitatum": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Bolboschoenus fluviatilis": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Bolboschoenus maritimus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Calamovilfa longifolia": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Carex lacustris": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Carex pellita": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Carex raymondii": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Carex rostrata": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Castilleja miniata": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Cerastium arvense": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Comarum palustre": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Coreopsis tinctoria": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Dalea purpurea": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Danthonia spicata": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Dasiphora fruticosa": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Delphinium glaucum": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Distichlis spicata": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Drymocallis arguta": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Elodea canadensis": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Elymus glaucus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Elymus lanceolatus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Equisetum hyemale": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Equisetum variegatum": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Erigeron caespitosus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Erigeron speciosus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Eriocoma hymenoides": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Eutrochium maculatum": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Festuca campestris": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Fragaria vesca": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Gentiana affinis": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Geum rivale": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Geum triflorum": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Glycyrrhiza lepidota": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Hedysarum boreale": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Helianthus maximiliani": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Hesperostipa spartea": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Juniperus communis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Juniperus horizontalis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Juniperus scopulorum": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Linum lewisii": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Mahonia repens": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Maianthemum amplexicaule": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Matteuccia struthiopteris": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Menyanthes trifoliata": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Monarda fistulosa": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Muhlenbergia cuspidata": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Nuphar variegata": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Oenothera biennis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Oenothera cespitosa": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Oenothera nuttallii": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Oenothera suffrutescens": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Opuntia fragilis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Opuntia polyacantha": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Oxytropis campestris": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Oxytropis monticola": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Penstemon confertus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Penstemon gracilis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Penstemon lyallii": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Penstemon nitidus": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Penstemon procerus": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Peritoma serrulata": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Physostegia ledinghamii": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Pinus contorta": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Piptatherum canadense": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Poa alpina": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Poa secunda": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Potentilla gracilis": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Potentilla hippiana": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Potentilla pensylvanica": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Primula pauciflora": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Prunella vulgaris": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Prunus pensylvanica": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Pseudotsuga menziesii": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Ratibida columnifera": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Ribes aureum": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Ribes lacustre": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Rosa arkansana": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Sagittaria latifolia": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Salix interior": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Shepherdia argentea": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Solanum triflorum": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Solidago glutinosa": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Solidago lepida": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Sorbus scopulina": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Spartina gracilis": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Sphaeralcea coccinea": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      },
+      "Spiraea alba": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Thalictrum occidentale": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Thermopsis rhombifolia": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Vaccinium oxycoccos": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Veronica americana": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Viburnum opulus": {
+        "ruling": "native",
+        "on": "2026-10-07"
+      },
+      "Viola pedatifida": {
+        "ruling": "not_native",
+        "on": "2026-10-07"
+      }
+    }
   }
 }
