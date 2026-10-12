@@ -18,6 +18,7 @@ is the map. Roughly in the order a newcomer should meet them.
 | Document | What it is | Read it when |
 |---|---|---|
 | [`BACKLOG.md`](BACKLOG.md) | **Everything not yet built, in one place.** 41 features, 6 data jobs, 4 legacy items — one line each, verified against the codebase. The index; the reasoning lives in the two roadmaps. A row leaves when it ships. | Choosing what to work on. |
+| [`SALE_READINESS_REVIEW.md`](SALE_READINESS_REVIEW.md) | **Ready to sell? (V3.17).** A review from a first-time Edmonton homeowner's side: every button clicked, a scripted first hour, edge cases, the exported PDF read page by page, the data behind each claim, and what selling needs that is not code (licence, signing, service terms). Findings are numbered R1–R40 with file locations, and an order of work. | Deciding what to fix before charging for it, or whether to focus on Edmonton. |
 | [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) | **The live plan.** F63–F119 and what comes after, grouped by theme, each with impact/effort/risk and a "how I'd build it". Also holds the **ID ledger** and the shipped record. | You picked something from the backlog and want the reasoning. |
 | [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) | Features organized by the *principle* they serve, with a Shipped section as the historical record. Long, and meant to be. | Asking "does this belong in this app?" |
 | [`ROADMAP.md`](ROADMAP.md) | The effort/impact ledger — what shipped, tier by tier. **Historical**, not live. | Archaeology. |
