@@ -63,7 +63,7 @@ script that counted them is described in §8.
 | Feature | Size | Coupling | Why it goes | Item |
 |---|---|---|---|---|
 | **Help › Switch to a specific version…** | ~115 lines in `src/controllers/update_flow.py` (`_on_pick_version`, `:158-239`; `_frozen_pick_version`, `:567-598`) and the action (`src/app.py:645`) | None outside the updater; no test names it | A developer's tool in a gardener's Help menu. A person who needs an older release can still download its installer from GitHub Releases, which every release keeps | RM-1 |
-| **File › Import Yard Scan…** and the **Yard photo** layer (phone point clouds, Gaussian splats) | 1,169 lines in 5 modules (`scan_import.py`, `scan_import_dialog.py`, `scan_align.py`, `splat_backdrop.py`, `splat_flow.py`), plus touch points in `scene_contract.py`, `controllers/persistence.py`, `scene3d_window.py`, `app.py:432` and the View row's *Yard photo* toggle (`toolbar.py:401`) | 4 test modules (`test_scan_import`, `test_scan_import_dialog`, `test_splat_backdrop`, `test_splat_flow`) go with it | Needs a phone scanning app, a point-cloud export and control points. No novice will feed it, and the first review found nobody but the owner had. Its shade and 3D benefits are what Features › *Scan this area* (V3.10) now gives without a scan | RM-2 |
+| **File › Import Yard Scan…** and the **Yard photo** layer (phone point clouds, Gaussian splats) | 1,169 lines in 5 modules (`scan_import.py`, `scan_import_dialog.py`, `scan_align.py`, `splat_backdrop.py`, `splat_flow.py`), plus touch points in `scene_contract.py`, `controllers/persistence.py`, `scene3d_window.py`, `app.py:432` and the View row's *Yard photo* toggle (`toolbar.py:401`) | 4 test modules (`test_scan_import`, `test_scan_import_dialog`, `test_splat_backdrop`, `test_splat_flow`) go with it | Needs a phone scanning app, a point-cloud export and control points. No novice will feed it. Its shade and 3D benefits are what Features › *Scan this area* (V3.10) now gives without a scan | RM-2 |
 | **The Learn door on the start screen** and the window behind it (`app_mode.py`, `learn_menu.py`, the studio half of `learn_flow.py`) | 129 + 144 + about 100 lines | `start_screen`, `main.py`'s routing, `test_start_menu.py` | The door is broken today (a NameError, `learn_flow.py:60`), it asks a question a beginner cannot answer yet (V2.42's own objection), and both things it leads to are on the View menu. Covered by [04-start-screen.md](04-start-screen.md) **ST-10**; listed here so the ranking is complete | ST-10 |
 | **`src/db/recipes.py`** | 298 lines | Called once, from `db/plants.py:2333-2338`, to migrate QSettings recipes into a table **nothing reads** | Dead since the plant-mix builder stopped using recipes. Delete the module and the call; **leave the table** (dropping it needs a schema bump and gains nothing) | RM-6 |
 
@@ -118,7 +118,7 @@ turns its upkeep from open-ended into almost nothing.
 
 | Surface | Today | Simpler | Where specified |
 |---|---|---|---|
-| **Start screen** | Five near-identical rows, a dead door | One way to start, then your designs by name | [04](04-start-screen.md) |
+| **Start screen** | Up to four rows, three of which look alike (Continue, Design, Open a design), and a dead Learn door | One way to start, then your designs by name | [04](04-start-screen.md) |
 | **Site › Site Info** | Zone, climate, rainfall, soil, glossary, nurseries, in a column that scrolls sideways once a pin is set (R8) | Four plain lines (where, how cold, how wet, what soil) with Details below | [09](09-words.md) |
 | **Site › Sun & Shade** | Sun path, cast shade, planting zones, shadow arrows | "Which parts of my yard are sunny", and *Scan this area* | [07](07-plan-my-yard.md) |
 | **Site › Field Notes** | Ten site-walk prompts, a journal, a site photo | Unchanged; already plain and printable | — |
@@ -127,7 +127,7 @@ turns its upkeep from open-ended into almost nothing.
 | **Placement › Structures** | 15 structures in one list | Grouped: *For wildlife* (pond, brush pile, bee hotel, bee log, snag, rock pile), *For water* (rain garden, rain barrel, bioswale), *Around the yard* (raised bed, compost, shed, fence or wall, fire pit, native lawn patch) | RM-9 |
 | **Generate Design…** | Goals, a brief, an AI, a budget, density, site matching, an offline switch | **Plan My Yard…**: a few plain choices and a result you can try again | [07](07-plan-my-yard.md) |
 | **Design tab** | Six pages | **Overview** and **Planted** | [06](06-yard-overview.md) |
-| **Share tab** | Present and Export (eight buttons) | Export: the PDF, the planting plan, the order file; Where to buy | [02](02-two-ways-to-use-it.md) |
+| **Share tab** | Two pages: Present, and Export with six buttons in two groups (three documents, three pictures) and Where to buy | Export: the PDF, the planting plan, the order file; Where to buy | [02](02-two-ways-to-use-it.md) |
 | **The plant page** | Every field the catalogue has | What it needs, why it matters, how big, where to buy; the rest under *More about this plant* | [05](05-plants-that-lead.md) §7 |
 | **Help menu** | Eight items including a developer tool | Start Screen, the example, shortcuts, feedback, sources, About, updates, *Support this app* | [02](02-two-ways-to-use-it.md) §3.2; [10](10-finishing.md) |
 
@@ -146,7 +146,7 @@ not Delete.
 | 5 | Site › Slope, Wind and most of Features | Advanced (MD-1) | Three pages of terrain, wind and imports | S |
 | 6 | Placement's builders and patterns | Advanced (MD-1) | A second toolbox inside the plant list | S |
 | 7 | The View menu's windows and Split view | Advanced (MD-1) | Five windows, each with its own toolbar | S |
-| 8 | Share's presentation outputs | Advanced (MD-1) | Five buttons before Export PDF | S |
+| 8 | Share's presentation outputs | Advanced (MD-1) | The Present page and three picture buttons beside the documents | S |
 | 9 | Help › Switch to a specific version | Delete (RM-1) | A developer's tool | S |
 | 10 | Import Yard Scan and the Yard photo layer | Delete (RM-2) | A menu item and a layer switch that need a phone scan | M |
 
@@ -171,7 +171,8 @@ not Delete.
   first review's list.
 - **G2.** The Learn tab (Field Study and Lessons): keep it behind Advanced
   (recommended, and consistent with the V3.05 *Keep*), or retire it? Retiring
-  saves about 1,000 lines and 11 test modules but undoes a recent choice.
+  saves about 1,200 lines (`learn_panel`, `lesson_track`, `field_study` and
+  their widgets) and 7 test modules, but undoes a recent choice.
 - **G3.** Split view: keep it behind Advanced (recommended), or delete it,
   since the 3D preview window now follows the design (V3.08) and split view is
   a second way to see the same thing?
