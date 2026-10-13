@@ -87,7 +87,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-1 | Delete the version picker | S | [03](03-what-goes.md) |
 | FN-7 | A stable channel | S | [10](10-finishing.md) |
 
-*Decide first:* D1 (it decides whether this release may go public), G1, Y4. *Done when:* the Lessons door opens Lessons; a printed PDF is readable in black and white; the example has no plant off the Edmonton list; planning twice leaves one plan; a 1 m path no longer empties half the yard; a damaged file says so in a sentence; pushes publish prereleases.
+*Decide first:* D1 (it decides whether this release may go public), D5, G1, Y4. *Done when:* the Lessons door opens Lessons; a printed PDF is readable in black and white; the example has no plant off the Edmonton list; planning twice leaves one plan; a 1 m path no longer empties half the yard; a damaged file says so in a sentence; pushes publish prereleases.
 
 ### Increment 2 · V3.19 · What a stranger trips on (must; about 16 developer-days; F233, F241)
 
@@ -139,7 +139,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-9 | Structures grouped | S | [03](03-what-goes.md) |
 | WD-1 | The glossary as a test | S | [09](09-words.md) |
 
-*Decide first:* M1, M3, G6, W1. *Done when:* a cold start shows only 02's simple surfaces; View → Advanced tools shows everything that exists today; the smoke suite passes in both modes; the vocabulary test is in place.
+*Decide first:* M1, M3, G4, G6, W1. *Done when:* a cold start shows only 02's simple surfaces; View → Advanced tools shows everything that exists today; the smoke suite passes in both modes; the vocabulary test is in place.
 
 ### Increment 5 · V3.22 · What goes (must; about 10 developer-days; F235)
 
@@ -152,7 +152,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-7 | Trim the installer | S | [03](03-what-goes.md) |
 | ST-10 | Retire the Learn door and its menu | M | [04](04-start-screen.md) |
 
-*Decide first:* G1, G2, G3, Y1. *Done when:* no Import Yard Scan, no AI wording, no Learn door; an old design holding a scan still opens; the installer is about 33 MB smaller.
+*Decide first:* G1, G2, G3, M4, S1–S5, Y1. *Done when:* no Import Yard Scan, no AI wording, no Learn door; an old design holding a scan still opens; the installer is about 33 MB smaller.
 
 ### Increment 6 · V3.23 · The front door (must; about 8 developer-days; F236)
 
@@ -165,7 +165,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | ST-8 | Unsaved work is kept when Recover is passed over | S | [04](04-start-screen.md) |
 | ST-9 | The example opens as a copy | S | [04](04-start-screen.md) |
 
-*Decide first:* S1, S6–S9, S12, S13 (listed in 12). *Done when:* 04's three mockups match the running app; a new design is named from its address; the example opens as a copy; unsaved work survives a passed-over Recover.
+*Decide first:* S6–S9, S12, S13 (listed in 12). *Done when:* 04's three mockups match the running app; a new design is named from its address; the example opens as a copy; unsaved work survives a passed-over Recover.
 
 ### Increment 7 · V3.24 · The region pack (must; about 14 developer-days; F237)
 
@@ -207,7 +207,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | WD-3 | The plant list and page | S | [09](09-words.md) |
 | WD-8 | The ID line and the not-known lines | S | [09](09-words.md) |
 
-*Decide first:* L1–L7, L9, L10 (listed in 12). *Done when:* Placement › Plants opens on the Edmonton list, best picks first, each row with a band and a reason; the plant page has two modes; the generator's pool follows the same ranking.
+*Decide first:* L1–L10 (listed in 12), W3, W4. *Done when:* Placement › Plants opens on the Edmonton list, best picks first, each row with a band and a reason; the plant page has two modes; the generator's pool follows the same ranking.
 
 ### Increment 10 · V3.27 · How your yard is doing (must; about 16 developer-days; F239, F234, F241)
 
@@ -222,7 +222,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | MD-4 | "More detail ▸" from the overview | S | [02](02-two-ways-to-use-it.md) |
 | WD-7 | Animals by English name | S | [09](09-words.md) |
 
-*Decide first:* O1, O3, O4, O5, O7. *Done when:* the Design tab opens on six items in under 300 words with the numbers of 06 §6; each More detail link lands on its advanced page; the PDF's first page is the overview.
+*Decide first:* O1, O3, O4, O5, O7, M2. *Done when:* the Design tab opens on six items in under 300 words with the numbers of 06 §6; each More detail link lands on its advanced page; the PDF's first page is the overview.
 
 ### Increment 11 · V3.28 · Plan My Yard (must; about 12 developer-days; F240)
 
@@ -235,7 +235,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | PY-10 | The getting-started strip | S | [07](07-plan-my-yard.md) |
 | PY-11 | Keep the probe honest | S | [07](07-plan-my-yard.md) |
 
-*Decide first:* Y3, Y6. *Done when:* plan_my_yard_probe.py --assert passes: plants go in the drawn bed, not on the lawn or the path, and cover rises with the fullness chosen.
+*Decide first:* Y3, Y6, W2. *Done when:* plan_my_yard_probe.py --assert passes: plants go in the drawn bed, not on the lawn or the path, and cover rises with the fullness chosen.
 
 ### Increment 12 · V3.29 · Try another, front or back, about this plan (should; about 9 developer-days; F240)
 
@@ -255,7 +255,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | WD-5 | The printed plan and order file | S | [09](09-words.md) |
 | ED-14 | The Edmonton rules content | S, plus the owner's reading | [08](08-edmonton-edition.md) |
 
-*Decide first:* W5, E6, O5. *Done when:* Site Info is four lines at 1366 × 768; the printout says Where to buy around Edmonton; every rule carries a source and a checked date.
+*Decide first:* W5, E6. *Done when:* Site Info is four lines at 1366 × 768; the printout says Where to buy around Edmonton; every rule carries a source and a checked date.
 
 ### Increment 14 · V3.31 · Ready for strangers (must; about 14 developer-days; F242)
 
@@ -272,7 +272,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | FN-11 | The one-page guide | S | [10](10-finishing.md) |
 | FN-12 | Pin the build | S | [10](10-finishing.md) |
 
-*Decide first:* D2, D3, D4, D6. *Done when:* a fresh download installs without a SmartScreen block (or with the documented steps); every service is credited; Send Feedback needs no account; the guide page is live.
+*Decide first:* D2, D3, D4, D6, G5, S10, S11. *Done when:* a fresh download installs without a SmartScreen block (or with the documented steps); every service is credited; Send Feedback needs no account; the guide page is live.
 
 ### Increment 15 · V3.32 · Watch five people use it, then hand it over (must; about 5 developer-days; F243, F242)
 
@@ -282,7 +282,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | FN-13 | `docs/MAINTENANCE.md` | S | [10](10-finishing.md) |
 | FN-14 | A second maintainer | S | [10](10-finishing.md) |
 
-*Decide first:* D5, D7. *Done when:* four of five homeowners complete 01 §6's tasks 1, 2, 6 and 7 unaided; the fixes they forced are in; the friend has cut a release; the release is promoted as the finished one.
+*Decide first:* D7. *Done when:* four of five homeowners complete 01 §6's tasks 1, 2, 6 and 7 unaided; the fixes they forced are in; the friend has cut a release; the release is promoted as the finished one.
 Items not scheduled: **PR-5** is superseded by OV-11 (the score tips are retired); **OV-14** is optional, after Sun & Shade's zones are classified; **ED-15** and **ED-16** come after finishing (F244, F245); **PR-7** and **PR-8** are data jobs (§6).
 
 ## 4. The quick fixes (QF-1 to QF-19)
