@@ -6,6 +6,15 @@ the owner, with the recommended answer and the increment that needs it
 
 ## How to answer
 
+**The answers are recorded on a page made from this file:**
+<https://claude.ai/artifact/FE63BscPKbgrMHpciwVHSp> (private to the owner). Each
+choice saves as it is made. A session reads them with the `ArtifactData` tool,
+`list` on the collection `decisions`: one document per decision, its id the
+decision's ID in lower case (`d1`, `s12`), holding `choice` (the option's letter,
+or `other`), `label` (the option's words), `recommended`, `note` and `at`. **Read
+them before starting an increment**, and copy the ones it needs into its plan
+file. This table stays the reasoning; the page holds the answers.
+
 - **Fill in the Answer column** in this file (a word is enough: *yes*, *rec*,
   *b*, *no*), or answer in batches in a session; whoever picks up the work
   copies the answer here and into the increment's plan file.

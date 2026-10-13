@@ -72,7 +72,7 @@ maker a coffee, finished well enough that the owner can **move on**.
 ## How to read it
 
 - **The owner:** this page, then [12](12-decisions.md) §1 (the ten that matter
-  most), then [11](11-work-plan.md) §3 (the increments). The parts are there
+  most; answer them on [the decisions page](https://claude.ai/artifact/FE63BscPKbgrMHpciwVHSp)), then [11](11-work-plan.md) §3 (the increments). The parts are there
   when a decision needs its reasoning.
 - **The friend, before the first increment:** this page, [01](01-personas.md)
   (who it is for), [11](11-work-plan.md) §1 (how to work through it), and the
