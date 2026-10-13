@@ -11,6 +11,15 @@ picked up as its own increment.*
 Findings carry **R-numbers** (review items). They are not feature IDs: when one
 is scheduled, take its F-number from the ledger in `ROADMAP_NEXT.md`.
 
+> **Read this first (second pass, 13 October 2026).** "Sell" was the owner's
+> metaphor: the app will not be sold. At most it will be published free with a
+> donate link, and the aim is a finished app the owner can step away from.
+> Read section 8 with that in mind: the licence and the public installers stop
+> being blockers, while signing, the services' terms, support and the release
+> cadence still matter. The second pass, which turns these findings into a plan
+> for the homeowner's path, is [`homeowner/`](homeowner/README.md); every R-number
+> here is either scheduled there or named as left alone.
+
 ---
 
 ## The short answer
