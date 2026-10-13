@@ -416,6 +416,32 @@ class TestTheLearnScreens(_TempDataDir):
         self.assertIsNotNone(win.panel)
         win.close()
 
+    def test_the_lessons_door_opens_its_window(self):
+        """V3.17 shipped this door dead: a NameError (``_sandbox_plants``)
+        swallowed by ``_safely``, then main.py's safety net showed the design
+        window instead. Nothing opened the door in a test until V3.18."""
+        from types import SimpleNamespace
+        from src import learn_flow
+        from src.learn_menu import LearnStudioWindow
+        main = SimpleNamespace()
+        with self.assertNoLogs("sitepattern", level="ERROR"):
+            learn_flow.open_studio(main)
+        win = getattr(main, "_learn_studio", None)
+        self.assertIsInstance(win, LearnStudioWindow,
+                              "the Lessons door opened nothing")
+        self.assertTrue(win.isVisible())
+        win.close()
+
+    def test_a_door_that_fails_is_logged_not_swallowed(self):
+        """V3.18 (ST-3): ``_safely`` names what failed in the app's log."""
+        from src import learn_flow, onboarding_flow
+        for flow in (learn_flow, onboarding_flow):
+            with self.assertLogs("sitepattern", level="ERROR") as logs:
+                flow._safely(lambda: 1 / 0, "The thing")
+            self.assertTrue(any("The thing could not open" in line
+                                and "ZeroDivisionError" in line
+                                for line in logs.output), logs.output)
+
 
 # ── The viewer contract ──────────────────────────────────────────────────────
 

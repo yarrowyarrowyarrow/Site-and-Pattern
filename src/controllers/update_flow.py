@@ -12,8 +12,10 @@ identical; the methods are now reachable as
 ``self._update_flow.<name>`` on MainWindow and via the historical
 ``self._<name>`` shims that delegate to this controller.
 
-The controller still talks to Qt (QMessageBox, QInputDialog, status
-bar) via the MainWindow it's bound to. Making it Qt-free is a follow-up
+The controller still talks to Qt (QMessageBox, status bar) via the
+MainWindow it's bound to. Help › Switch to a specific version… left in
+V3.18 (RM-1, docs/homeowner/03-what-goes.md): a developer's tool in a
+gardener's Help menu, and an older installer stays on GitHub Releases. Making it Qt-free is a follow-up
 audit in Chunk 6 (E1 — "domain logic does not import Qt"); once the
 dialog calls are abstracted, an MCP server or scripting agent will be
 able to drive the same flow without a QApplication.
@@ -30,16 +32,14 @@ import time
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox,
-                             QProgressDialog)
+from PyQt6.QtWidgets import QApplication, QMessageBox, QProgressDialog
 
 from src.app_version import build_version
-from src.branding import APP_NAME
+from src.branding import APP_NAME, LICENCE_NAME
 from src.version_branch import (
     abort_conflicted_state,
     fast_forward_upstream,
     is_newer_version,
-    list_remote_version_branches,
     newest_remote_version_branch,
     normalize_branch_ref,
     parse_version_branch,
@@ -68,11 +68,22 @@ def _human_size(num_bytes) -> str:
     return f"{size:.1f} GB"
 
 
+def about_licence_line() -> str:
+    """The About box's licence line (V3.18, FN-1), naming what ``LICENSE``
+    holds. The file is installed with the program (the PyInstaller spec
+    bundles it) and the source is on GitHub, which the GPL asks for."""
+    return (f"Free software under the {LICENCE_NAME}: you may use, share and "
+            "change it, and a copy you pass on carries the same freedoms. "
+            "The full text is in the LICENSE file installed with the app; "
+            "the source code is at github.com/yarrowyarrowyarrow/"
+            "Site-and-Pattern.")
+
+
 class UpdateFlowController:
-    """Owns the Help → About / Switch version / Check for Updates flow.
+    """Owns the Help → About / Check for Updates flow.
 
     Holds a reference to MainWindow (``self._main``) so it can parent
-    QMessageBox / QInputDialog and write to ``statusBar()``. Every other
+    QMessageBox and write to ``statusBar()``. Every other
     method call is intra-controller (``self.<method>``).
     """
 
@@ -141,8 +152,8 @@ class UpdateFlowController:
         is_release = parse_version_branch(branch) is not None
         kind_note = "" if is_release else (
             "\n\nYou're on a development branch — the V*.* branch "
-            "convention isn't being followed. Use Help → Switch to a "
-            "specific version to move to a release branch."
+            "convention isn't being followed. Help → Check for Updates "
+            "moves it to the newest release branch."
         )
         QMessageBox.information(
             self._main, f"About {APP_NAME}",
@@ -151,71 +162,10 @@ class UpdateFlowController:
             f"Commit: {commit}<br>"
             f"Schema version: v{schema_v}<br><br>"
             f"Native-plant landscape designer for Alberta and the "
-            f"Canadian prairies."
+            f"Canadian prairies.<br><br>"
+            f"{about_licence_line()}"
             + kind_note
         )
-
-    def _on_pick_version(self):
-        """Version picker. Frozen installs download a published installer
-        from GitHub Releases; source checkouts pick a published V-branch and
-        the app switches to it in place (one-click, restored in V2.25 —
-        same safe path as Check for Updates: stash-aware, no reset-hard)."""
-        if getattr(sys, "frozen", False):
-            self._frozen_pick_version()
-            return
-        repo = self._repo_path()
-        if not repo:
-            QMessageBox.information(
-                self._main, "Switch version",
-                "This install isn't a git checkout — there's nothing to "
-                "switch. Visit the releases page to download a specific "
-                "installer."
-            )
-            self._open_releases_page()
-            return
-
-        def _git(*args, timeout=30):
-            return subprocess.run(
-                ["git", "-C", repo, *args],
-                capture_output=True, timeout=timeout, check=False, **_GIT_TEXT,
-            )
-
-        self._main.statusBar().showMessage("Fetching version list…", 2000)
-        fetch = _git("fetch", "--prune", "--quiet")
-        if fetch.returncode != 0:
-            QMessageBox.warning(
-                self._main, "Switch version",
-                "Couldn't reach the git remote (check your network), or git "
-                "isn't on your PATH.\n\n"
-                f"{fetch.stderr.strip() or fetch.stdout.strip()}"
-            )
-            return
-        branches = list_remote_version_branches(_git)
-        if not branches:
-            QMessageBox.information(
-                self._main, "Switch version",
-                "No published V<major>.<minor> versions found on the remote."
-            )
-            return
-        current = self._current_branch_name() or "?"
-        labels = [f"{b}  (current)" if b == current else b for b in branches]
-        preselect = branches.index(current) if current in branches else 0
-        choice, ok = QInputDialog.getItem(
-            self._main, "Switch to a specific version",
-            "Pick a published version. The app switches its checkout to it "
-            "(local source edits are set aside safely first) and offers a "
-            "restart.",
-            labels, current=preselect, editable=False,
-        )
-        if not ok or not choice:
-            return
-        target = branches[labels.index(choice)]
-        if target == current:
-            QMessageBox.information(
-                self._main, "Switch version",
-                f"You're already on {target}.")
-            return
-        self._perform_source_update(_git, target)
 
     # ── Help → Check for Updates ──────────────────────────────────────────────
     #
@@ -563,38 +513,6 @@ class UpdateFlowController:
             )
             return
         self._offer_frozen_download(latest, current)
-
-    def _frozen_pick_version(self):
-        releases = self._frozen_fetch_releases()
-        if releases is None:
-            return
-        current = build_version()
-        labels = [
-            f"{r.tag}  (current)" if current and r.tag == current else r.tag
-            for r in releases
-        ]
-        preselect = 0
-        if current:
-            for i, r in enumerate(releases):
-                if r.tag == current:
-                    preselect = i
-                    break
-        choice, ok = QInputDialog.getItem(
-            self._main, "Switch to a specific version",
-            "Pick a published version to download and install. The current "
-            "version stays until you install the one you pick.",
-            labels, current=preselect, editable=False,
-        )
-        if not ok or not choice:
-            return
-        chosen = releases[labels.index(choice)]
-        if current and chosen.tag == current:
-            QMessageBox.information(
-                self._main, "Switch version",
-                f"You're already on {chosen.tag}."
-            )
-            return
-        self._offer_frozen_download(chosen, current)
 
     def _offer_frozen_download(self, release, current):
         """Confirm, then download + open the installer asset for this

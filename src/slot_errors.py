@@ -78,6 +78,52 @@ def message_text(summary: str, log_path: str) -> str:
             "Help → Send Feedback… tells the author.")
 
 
+def report_text(what: str, summary: str, log_path: str) -> str:
+    """The words for a door that could not open (V3.18, ST-3): what failed,
+    that the app carried on, what went wrong, and where the record is."""
+    return (f"{what} could not open. The rest of the app carried on.\n\n"
+            f"What went wrong: {summary}\n\n"
+            f"A full record is in the log:\n{log_path}\n\n"
+            "Help → Send Feedback… tells the author.")
+
+
+def report(what: str) -> None:
+    """Report the exception being handled, from inside an ``except`` block,
+    for an action that was caught rather than left to escape (V3.18, ST-3).
+
+    Until then the start screen's and the Learn door's ``_safely`` swallowed
+    every exception with ``pass``: the Lessons door raised a NameError on every
+    press for a release, nothing was logged, and ``main.py``'s safety net put
+    the design window up instead. Now the fault is **logged** with its
+    traceback, always, and **shown** once per fault only when the app's own
+    hook is installed (``sys.excepthook is _hook``, which ``main.py`` does and
+    tests never do), so a test that exercises a failing door opens no box.
+    """
+    etype, value, tb = sys.exc_info()
+    if etype is None:
+        return
+    summary, details = describe(etype, value, tb)
+    try:
+        log.error("%s could not open: %s\n%s", what, summary, details)
+    except Exception:                                      # noqa: BLE001
+        pass
+    if sys.excepthook is not _hook:
+        return
+    try:
+        if should_show(fault_key(etype, tb)):
+            _show(summary, details, text=report_text(
+                what, summary, _log_path_words()))
+    except Exception:                                      # noqa: BLE001
+        pass            # reporting a fault must never become a second one
+
+
+def _log_path_words() -> str:
+    try:
+        return log_file_path()
+    except Exception:                                      # noqa: BLE001
+        return "(the app's data folder, logs/app.log)"
+
+
 def should_show(key: tuple, now: float | None = None) -> bool:
     """True the first time a fault is seen this session, and only while fewer
     than :data:`MAX_PER_MINUTE` messages have been shown in the last minute."""
@@ -116,21 +162,17 @@ def _hook(etype, value, tb) -> None:
         pass            # reporting a fault must never become a second one
 
 
-def _show(summary: str, details: str) -> None:
+def _show(summary: str, details: str, text: str = "") -> None:
     from PyQt6.QtCore import QThread, Qt
     from PyQt6.QtWidgets import QApplication, QMessageBox
 
     app = QApplication.instance()
     if app is None or QThread.currentThread() is not app.thread():
         return          # logged above; a box from a worker thread is unsafe
-    try:
-        path = log_file_path()
-    except Exception:                                      # noqa: BLE001
-        path = "(the app's data folder, logs/app.log)"
     box = QMessageBox(app.activeWindow())
     box.setIcon(QMessageBox.Icon.Warning)
     box.setWindowTitle("Something went wrong")
-    box.setText(message_text(summary, path))
+    box.setText(text or message_text(summary, _log_path_words()))
     box.setDetailedText(details)
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
     box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)

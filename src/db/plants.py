@@ -509,7 +509,13 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # "currant": Alpine Aster read garden-centre stock): garden centre 66 -> 35,
 # big box 15 -> 9, rare 6 -> 84, each rare species' note saying why. And five
 # seeded "Easy" communities built from plants people can buy.
-_SCHEMA_VERSION = 94
+# v95 (V3.18): no DDL. "Green Milkweed" renamed Oval-leaf Milkweed: the row is
+# *Asclepias ovalifolia* and Green Milkweed is *A. viridiflora* (F171). Its
+# flower colour had come from the wrong name and is white now, and its note
+# no longer calls it critical to the Monarch. The common name is the edges'
+# key, so the three edges moved with it; user communities re-point by
+# scientific name and are unaffected.
+_SCHEMA_VERSION = 95
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

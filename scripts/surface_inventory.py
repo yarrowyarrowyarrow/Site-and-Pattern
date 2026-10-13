@@ -78,7 +78,7 @@ _FONTS_CONF = """<?xml version="1.0"?>
 # Buttons and actions the click pass leaves alone, by their words. Each would
 # leave the sandbox: quit the process, or reach for git or the network.
 _NEVER_CLICK = (
-    "exit", "quit", "check for updates", "switch to a specific version",
+    "exit", "quit", "check for updates",
 )
 
 

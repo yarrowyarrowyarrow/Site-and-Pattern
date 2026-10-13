@@ -164,7 +164,21 @@ class TestRenderText(unittest.TestCase):
         self.assertIn("ESTIMATED TOTAL:", text)
         self.assertIn("WHEN TO PLANT", text)
         self.assertIn(pp.PHASE_STRUCTURE, text)
-        self.assertIn("alclanativeplants.com", text)
+        # No pin, no suppliers: the list is "near you" (V3.18, EDF-1).
+        self.assertIn(pp.NO_PIN_SOURCES, text)
+
+    def test_suppliers_are_the_ones_passed_in_and_no_others(self):
+        """Until V3.18 every plan printed four Calgary-area suppliers, two in
+        no directory, whatever the yard (EDF-1)."""
+        plan = pp.build_planting_plan(_placed(), get_plant=_fake_get_plant)
+        text = pp.render_plan_text(plan, sources=[
+            ("Arnica Wildflowers", "Edmonton · 3 km", ""),
+            ("TreeTime.ca", "Edmonton · 6 km", "https://www.treetime.ca")])
+        self.assertIn("Arnica Wildflowers — Edmonton · 3 km", text)
+        self.assertIn("https://www.treetime.ca", text)
+        for gone in ("ALCLA", "Bow Valley", "Bedrock", "sources:"):
+            self.assertNotIn(gone, text)
+        self.assertNotIn(pp.NO_PIN_SOURCES, text)
 
 
 class TestPlantingWindow(unittest.TestCase):
@@ -195,6 +209,26 @@ class TestRealDBIntegration(unittest.TestCase):
     def setUpClass(cls):
         from src.db.plants import init_db
         init_db()
+
+    def test_the_plan_and_the_order_file_name_the_same_suppliers(self):
+        """One directory, one list (V3.18, EDF-1): every supplier the order
+        file names for the native channels is in the plan's list, and the
+        plan names nothing the directory does not hold."""
+        from src.db.nurseries import all_nurseries
+        from src.order_file import suppliers_for
+        sc = {"latitude": 53.5461, "longitude": -113.4938}
+        names = [nm for nm, _w, _u in pp.sources_near(sc)]
+        self.assertTrue(names, "no suppliers near Edmonton")
+        directory = {n["name"] for n in all_nurseries()}
+        self.assertTrue(set(names) <= directory, set(names) - directory)
+        for channel in ("native_specialist", "seed_or_plug"):
+            for entry in suppliers_for(channel, sc["latitude"],
+                                       sc["longitude"]):
+                self.assertIn(entry.split(" (")[0], names, (channel, entry))
+
+    def test_no_pin_no_suppliers(self):
+        self.assertEqual(pp.sources_near({}), [])
+        self.assertEqual(pp.sources_near(None), [])
 
     def test_builds_from_seeded_get_plant(self):
         from src.db.plants import get_connection

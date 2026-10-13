@@ -401,10 +401,13 @@ runs in 0.7 s and fails today with:
 hook is installed (`sys.excepthook is _hook`, so never in tests), shows once per
 fault a non-blocking box titled `Something went wrong`:
 
-> The Lessons could not open, and the app carried on without them.
+> The Lessons could not open. The rest of the app carried on.
 > What went wrong: NameError: name '_sandbox_plants' is not defined
 > A full record is in the log: *path*
 > Help → Send Feedback… tells the author.
+
+*(As shipped in V3.18, `slot_errors.report_text`; the first line was planned as
+"…and the app carried on without them".)*
 
 The `what` strings: `The Lessons`, `The Plant Directory`, `Walk a Wild
 Landscape`, `The update check`, `The address search`. `main.py:119-123` keeps

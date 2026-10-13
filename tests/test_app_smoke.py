@@ -867,6 +867,18 @@ class TestMainWindowSmoke(unittest.TestCase):
             win._on_new()
         self.assertEqual(win.windowTitle(), "Site & Pattern V9.99 — Test yard")
 
+    def test_the_version_picker_is_gone_and_updates_stay(self):
+        """V3.18 (RM-1): Help › Switch to a specific version… was a
+        developer's tool in a gardener's menu; an older installer stays on
+        the releases page."""
+        words = [a.text().replace("&", "")
+                 for menu in self._win.menuBar().actions()
+                 if menu.menu() is not None
+                 for a in menu.menu().actions()]
+        self.assertNotIn("Switch to a specific version…", words)
+        self.assertIn("Check for Updates…", words)
+        self.assertFalse(hasattr(self._win, "_on_pick_version"))
+
     def test_the_help_menu_and_the_title_name_the_same_version(self):
         from src.app_version import running_version
         about = [a.text() for menu in self._win.menuBar().actions()

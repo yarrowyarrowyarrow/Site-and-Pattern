@@ -139,9 +139,10 @@ today.
 and **Showy Milkweed** (ruled *not native here* in the owner's Edmonton review).
 Proposed replacements, both on the Edmonton list as *documented*: **Stiff
 Goldenrod** (*Solidago rigida*, 14 collections, nearest 49 km, a clump-former)
-and **Green Milkweed** (*Asclepias ovalifolia*, 10 collections, nearest
-28 km). The example's notes, which tell the reader to experiment with the
-milkweed, are reworded to name Green Milkweed. Every other species in the
+and **Oval-leaf Milkweed** (*Asclepias ovalifolia*, 10 collections, nearest
+28 km; the catalogue called it "Green Milkweed", which is *A. viridiflora*,
+until V3.18 renamed it on L9's check). The example's notes, which tell the
+reader to experiment with the milkweed, are reworded to name it. Every other species in the
 example is on the list. This fix does not wait for the pack: it is quick fix
 **QF-4** in [11-work-plan.md](11-work-plan.md), and ED-1's pack test then
 keeps it fixed.

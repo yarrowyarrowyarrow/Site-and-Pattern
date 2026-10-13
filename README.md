@@ -224,23 +224,22 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
 - [`docs/3D_ASSETS.md`](docs/3D_ASSETS.md) — Blender-generated GLB assets for the 3D viewer: the `scripts/blender/assetlib` generator package (headless + Blender-MCP workflows), the generator↔viewer contract, and regeneration
 - [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
-- [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
+- [`LICENSE`](LICENSE) — GNU General Public License, version 3
 
 ---
 
 ## License
 
-Site & Pattern is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
+Site & Pattern is free software, licensed under the **[GNU General Public License, version 3](LICENSE)** (GPL-3.0-only).
 
 In plain English, this means:
 
-- **Free for personal use** — install it, use it for your own garden, share it with friends
-- **Free for non-profit use** — community gardens, educational settings, non-profit ecological work
-- **Free to modify and redistribute** for non-commercial purposes
-- **Free for research and academic use**
-- **Not free for commercial use** — you may not sell Site & Pattern or services built on Site & Pattern, or use it as part of a commercial product or service, without separate permission
+- **Free to use** — for your own garden, a community garden, a classroom, or anything else
+- **Free to share** — give copies to anyone
+- **Free to change** — and to share your changed version
+- **What it asks in return** — a copy you pass on, changed or not, goes with its source code and these same freedoms, under this same licence
 
-If you'd like to use Site & Pattern commercially, please open an issue to discuss a separate licensing arrangement.
+Until V3.18 the app was under the PolyForm Noncommercial License 1.0.0. The app is built on PyQt6, which is licensed under the GPL v3, and a program built on it cannot be distributed under a licence that forbids commercial use, so it was relicensed (decision D1 in [`docs/homeowner/12-decisions.md`](docs/homeowner/12-decisions.md)). The data and photographs the app ships keep their own licences, listed in [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
 
 ---
 

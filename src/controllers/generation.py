@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import QDialog, QMessageBox
 
 import src.project as project_io
 from src.controllers.undo_support import undoable
-from src.project_store import store_for
+from src.project_store import last_plan, store_for, without_plan
 
 
 class GenerationController:
@@ -31,6 +31,8 @@ class GenerationController:
         self._main = main_window
         self._thread: Optional[QThread] = None
         self._worker = None
+        # The plan this run replaces (V3.18, PY-5): its ``plan_run``, or "".
+        self._replacing = ""
 
     # ── Entry point (shim target on MainWindow) ──────────────────────────────
 
@@ -52,12 +54,16 @@ class GenerationController:
         from src.onboarding import FIRST_RUN_GOALS
         preselected = site_config.get("priorities") or list(FIRST_RUN_GOALS)
 
+        # A second run replaced nothing until V3.18: the generator is
+        # deterministic, so every plant landed on its own twin (R2).
+        last_run, last_plants = last_plan(main._project.get("features"))
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
-            preselected=preselected,
+            preselected=preselected, last_plan=last_plants,
             fauna_options=self._fauna_options(), parent=main)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
+        self._replacing = last_run if dlg.replace_last() else ""
 
         goals = dlg.selected_goals()
         # Persist the chosen goals into the project's site_config priorities —
@@ -68,8 +74,10 @@ class GenerationController:
 
         # F5: hand the generator the existing drawn layer (existing trees/
         # buildings, existing-remnant + hardscape zones, restoration fill zones)
-        # so it plants into the right areas and avoids the rest.
-        existing_features = list(main._project.get("features", []) or [])
+        # so it plants into the right areas and avoids the rest. Not the plan
+        # being replaced: its pond would keep the new plan out of the water.
+        existing_features = without_plan(
+            main._project.get("features", []) or [], self._replacing)
         self._start(prompt=dlg.brief(), site_config=site_config or None,
                     boundary=boundary, goals=goals, offline=dlg.offline(),
                     budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
@@ -129,8 +137,8 @@ class GenerationController:
 
     def _on_failed(self, message: str):
         self._finish_ui()
-        QMessageBox.warning(self._main, "Generate Design",
-                            f"Couldn't generate a design:\n\n{message}")
+        from src import plain_messages
+        plain_messages.tell_plan_failed(self._main, message)
 
     def _finish_ui(self):
         main = self._main
@@ -142,6 +150,7 @@ class GenerationController:
             pass
         self._thread = None
         self._worker = None
+        self._replacing = ""
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -182,6 +191,13 @@ class GenerationController:
                 "or draw a boundary / drop a property pin first.")
             return
 
+        # Replace, not stack (V3.18, PY-5): the last plan goes in the same
+        # checkpoint the new one arrives in, so one Ctrl+Z brings it back.
+        replaced = bool(self._replacing) and bool(
+            store_for(main).remove_plan(self._replacing))
+        if replaced and getattr(main, "_persistence", None) is not None:
+            main._persistence.redraw()
+
         group_id = project_io.new_placement_group_id()
         batch: list[tuple[int, str]] = []
         for props, lat, lng in plants:
@@ -200,7 +216,8 @@ class GenerationController:
             store_for(main).add_plant(
                 pid, name, lat, lng, placement_group_id=group_id,
                 polyculture_name=poly_name, pattern_kind="generated",
-                quantity=qty, why_here=props.get("why_here"))
+                quantity=qty, why_here=props.get("why_here"),
+                plan_run=group_id)
             batch.append((pid, name))
 
         # The structures come too (V2.95, F185). The generator places a pond,
@@ -212,7 +229,7 @@ class GenerationController:
         placed_structures = 0
         for struct_def, lat, lng in _iter_generated_structures(project):
             main._project["features"].append(
-                _structure_feature(struct_def, lat, lng))
+                _structure_feature(struct_def, lat, lng, plan_run=group_id))
             main.map_widget.load_structure(struct_def, lat, lng)
             placed_structures += 1
 
@@ -220,7 +237,8 @@ class GenerationController:
         main._mark_modified()
         main._sync_planning_panel()
         main.statusBar().showMessage(
-            f"Generated design — placed {len(batch)} plants"
+            ("Replaced your last plan" if replaced else "Generated design")
+            + f" — placed {len(batch)} plants"
             + (f" and {placed_structures} structure"
                + ("s" if placed_structures != 1 else "")
                if placed_structures else "")
@@ -249,19 +267,24 @@ def _iter_generated_structures(project):
         yield sd, coords[1], coords[0]
 
 
-def _structure_feature(struct_def: dict, lat: float, lng: float) -> dict:
+def _structure_feature(struct_def: dict, lat: float, lng: float,
+                       plan_run: str = "") -> dict:
     """A structure feature in the shape the map's structure tool writes
-    (``map_events._on_structure_placed``)."""
+    (``map_events._on_structure_placed``), stamped with the plan that placed
+    it so a replace takes it away with its plants."""
+    props = {
+        "element_type": "structure",
+        "struct_id": struct_def["id"],
+        "name": struct_def.get("name") or struct_def["id"],
+        "size_m": struct_def["size_m"],
+        "struct_def": struct_def,
+    }
+    if plan_run:
+        props["plan_run"] = plan_run
     return {
         "type": "Feature",
         "geometry": {"type": "Point", "coordinates": [lng, lat]},
-        "properties": {
-            "element_type": "structure",
-            "struct_id": struct_def["id"],
-            "name": struct_def.get("name") or struct_def["id"],
-            "size_m": struct_def["size_m"],
-            "struct_def": struct_def,
-        },
+        "properties": props,
     }
 
 

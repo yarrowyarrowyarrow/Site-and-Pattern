@@ -1394,7 +1394,7 @@ _PATTERN_TEXT = {
                   "plants that fill this region's late-summer gap are its own "
                   "blazingstars, hyssops, goldenrods and asters.",
         "solution": "Therefore: plant a June grass matrix with something in bloom "
-                    "every month: crocus, then golden alexanders, green milkweed "
+                    "every month: crocus, then golden alexanders, oval-leaf milkweed "
                     "(a recorded monarch host), giant hyssop, meadow blazingstar "
                     "and stiff goldenrod, and smooth aster to finish.",
     },
@@ -1839,7 +1839,7 @@ EXAMPLE_POLYCULTURES = [
             ("Pussy Willow",               "shrub_layer",     0,     0),
             ("Sandbar Willow",             "shrub_layer",     2.5,   1.5),
             ("Showy Milkweed",             "herbaceous",     -2.0,   1.0),
-            ("Green Milkweed",             "herbaceous",      1.5,  -1.5),
+            ("Oval-leaf Milkweed",         "herbaceous",      1.5,  -1.5),
             ("Smooth Aster",               "herbaceous",     -1.5,  -1.0),
             ("Eastern Red Columbine",      "herbaceous",      1.0,   1.8),
             ("Early Blue Violet",          "groundcover",    -1.0,  -2.0),
@@ -2851,7 +2851,7 @@ EXAMPLE_POLYCULTURES = [
         "description": "A lawn-conversion meadow that flowers from prairie crocus "
                        "in early spring to smooth aster at the first frost: "
                        "meadow blazingstar, giant hyssop, stiff goldenrod, golden "
-                       "alexanders and green milkweed, with June grass as the "
+                       "alexanders and oval-leaf milkweed, with June grass as the "
                        "matrix. Full sun, little water once established. Every "
                        "member is native around Edmonton.",
         "members": [
@@ -2862,7 +2862,7 @@ EXAMPLE_POLYCULTURES = [
             ("Prairie Crocus", "pollinator", -0.6, -0.9),
             ("Heart-leaved Alexanders (Golden Alexanders)", "herbaceous",
              1.3, -0.5),
-            ("Green Milkweed", "pollinator", -1.4, -0.2),
+            ("Oval-leaf Milkweed", "pollinator", -1.4, -0.2),
             ("June Grass", "herbaceous", 0.2, 1.3),
         ],
     },

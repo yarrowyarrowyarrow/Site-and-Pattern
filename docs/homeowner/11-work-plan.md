@@ -94,6 +94,12 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | WD-4 | Errors and confirmations | S | [09](09-words.md) |
 | RM-1 | Delete the version picker | S | [03](03-what-goes.md) |
 | FN-7 | A stable channel | S | [10](10-finishing.md) |
+| FN-1 | Settle the licence: GPL-3.0 (D1) | S | [10](10-finishing.md) |
+
+*Shipped in V3.18* ([plan](../plans/V3.18-trust-fixes.md)). **FN-1 was pulled
+forward from increment 14**: the owner answered D1 with GPL-3.0, this release
+publishes installers that bundle PyQt6, and an installer under the PolyForm
+licence is exactly the conflict D1 names, so the release could not wait for it.
 
 *Decisions (answered, see 12):* D1 (it decides whether this release may go public), G1, Y4. *Done when:* the Lessons door opens Lessons; a printed PDF is readable in black and white; the example has no plant off the Edmonton list; planning twice leaves one plan; a 1 m path no longer empties half the yard; a damaged file says so in a sentence; pushes publish prereleases.
 
@@ -269,7 +275,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
-| FN-1 | Settle the licence | S (a) / L (b) | [10](10-finishing.md) |
+| ~~FN-1~~ | Settle the licence: **moved to increment 1, shipped in V3.18** | S (a) / L (b) | [10](10-finishing.md) |
 | FN-2 | Third-party notices | S | [10](10-finishing.md) |
 | FN-3 | Sign the Windows installer | M | [10](10-finishing.md) |
 | FN-4 | macOS | M / S | [10](10-finishing.md) |
@@ -303,7 +309,7 @@ defects worth fixing before the region pack exists. Each is S.
 | **QF-1** | The PDF's body text in dark ink: replace the dark-theme greens (`#a5d6a7`, `#c8e6c9`) used for the Design Summary, the Planting Plan tables and Phased Conversion with the print palette (R1) | `src/pdf_export.py` (the summary and table styles, about `:300-585`) | Render the example's PDF; every text colour has 4.5:1 contrast against white |
 | **QF-2** | Setting the pin zooms the map to about yard scale (zoom 19) (R7) | The pin-drop and address-pick handlers (`src/controllers/map_events.py`, `src/site_panel.py`) | After a pin, the map's zoom is ≥ 18 |
 | **QF-3** | Offline address search says *Address search needs an internet connection…* (R6); `geocode_address` returns `None` for a failure and `[]` for no match | `src/property_data.py` `geocode_address`; `src/site_panel.py:2353` | The two cases give their two messages |
-| **QF-4** | The worked example: Canada Goldenrod → Stiff Goldenrod, Showy Milkweed → Green Milkweed, and the notes reworded (R14; 08 §3) | `src/onboarding.py:160-210` | Every example species is on the Edmonton list (the test ED-1's pack test later inherits) |
+| **QF-4** | The worked example: Canada Goldenrod → Stiff Goldenrod, Showy Milkweed → Oval-leaf Milkweed (*A. ovalifolia*, catalogued as "Green Milkweed" until V3.18; L9), and the notes reworded (R14; 08 §3) | `src/onboarding.py:160-210` | Every example species is on the Edmonton list (the test ED-1's pack test later inherits) |
 | **QF-5** | Site Info fits 1366 px with a pin set (R8), and the guard checks the pinned page, not only the empty one | `src/site_panel.py`; `tests/test_app_smoke.py:693` | The smoke test sets a pin, then checks for sideways scroll |
 | **QF-6** | Offline, the map shows *The map needs an internet connection to load. Your design is safe.* instead of a blank grey area (R9) | `html/map/01-core.js` (the tile layer's error event) | A node test of the message function; manual check offline |
 | **QF-7** | Food page: sources by name through `citations.format_sources(…, short=True)`, and the flight-season months spaced (R17) | `src/food_page.py:376-380` | No `_` in the footnote for the example |
@@ -535,7 +541,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | WD-6 | Retire pioneer | 2 |
 | WD-7 | Animals by English name | 10 |
 | WD-8 | The ID line and the not-known lines | 9 |
-| FN-1 | Settle the licence | 14 |
+| FN-1 | Settle the licence | 1 (moved from 14) |
 | FN-2 | Third-party notices | 14 |
 | FN-3 | Sign the Windows installer | 14 |
 | FN-4 | macOS | 14 |

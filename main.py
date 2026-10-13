@@ -120,6 +120,10 @@ def main():
     # moment this function returns, with nothing on screen and no error. A
     # working app on the wrong screen beats a silent exit.
     if not any(w.isVisible() for w in app.topLevelWidgets()):
+        from src.log import get_logger
+        get_logger("main").warning(
+            "Start choice %r left no window on screen; showing the main "
+            "window", choice)
         window.show()
 
     sys.exit(app.exec())

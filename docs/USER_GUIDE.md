@@ -344,7 +344,7 @@ relationship between it and a plant you actually placed.
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
 - **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
-- **Help → Check for Updates…** — one click to the newest version. On source installs (git checkout) the app switches itself to the newest published `V*.*` branch (any local source edits are set aside safely first) and offers to restart; on packaged `.dmg`/`.exe` installs it downloads and opens the newest installer from GitHub Releases. **Help → Switch to a specific version…** does the same for any published version, forward or back.
+- **Help → Check for Updates…** — one click to the newest version. On source installs (git checkout) the app switches itself to the newest published `V*.*` branch (any local source edits are set aside safely first) and offers to restart; on packaged `.dmg`/`.exe` installs it downloads and opens the newest installer from GitHub Releases. It offers a version once its maker has released it to everyone; a newer build can sit on the GitHub releases page as a *pre-release* for a while first. To go back to an older version, download its installer from the releases page (Help → Switch to a specific version… was removed in V3.18).
 
 ---
 

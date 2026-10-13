@@ -21,7 +21,8 @@ honoured either way.
 **This run is what replaced that sentence with a fact** (V2.76 ran it; V2.77
 corrected the row): 224 datasets, **61 CC0, 82 CC-BY, 81 CC-BY-NC**. All three
 permit redistribution with attribution; only the last restricts commercial use,
-which this repository's PolyForm Noncommercial licence already does.
+a condition that travels with those records whatever the code's licence (GPL
+v3 since V3.18; PolyForm Noncommercial when this was written).
 
 **Why per dataset and not per record.** The obvious move is to re-fetch every
 occurrence with its ``license`` field, which is ~555,000 records and a couple of

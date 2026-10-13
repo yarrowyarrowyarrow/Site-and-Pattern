@@ -52,6 +52,40 @@ class TestTheWords(unittest.TestCase):
             summary, _ = slot_errors.describe(*sys.exc_info())
         self.assertLessEqual(len(summary), 160)
 
+    def test_a_door_that_failed_says_which_and_that_the_app_carried_on(self):
+        """V3.18 (ST-3): the start screen's doors report, never swallow."""
+        text = slot_errors.report_text(
+            "The Lessons",
+            "NameError: name '_sandbox_plants' is not defined",
+            "/data/logs/app.log")
+        self.assertTrue(text.startswith("The Lessons could not open."), text)
+        self.assertIn("carried on", text)
+        self.assertIn("NameError", text)
+        self.assertIn("/data/logs/app.log", text)
+        self.assertIn("Send Feedback", text)
+
+    def test_report_logs_and_opens_no_box_without_the_apps_hook(self):
+        """Tests never install the hook, so a failing door logs and shows
+        nothing: no box can block a test run."""
+        shown = []
+        original = slot_errors._show
+        slot_errors._show = lambda *a, **k: shown.append(a)
+        try:
+            self.assertIsNot(sys.excepthook, slot_errors._hook)
+            with self.assertLogs("sitepattern", level="ERROR") as logs:
+                try:
+                    _raise_here()
+                except ValueError:
+                    slot_errors.report("The Plant Directory")
+        finally:
+            slot_errors._show = original
+        self.assertEqual(shown, [])
+        self.assertTrue(any("The Plant Directory could not open" in line
+                            for line in logs.output), logs.output)
+
+    def test_report_outside_an_except_block_does_nothing(self):
+        slot_errors.report("Nothing")          # must not raise or log
+
     def test_the_message_says_what_to_do_and_where_the_record_is(self):
         text = slot_errors.message_text("ValueError: boom", "/data/logs/app.log")
         self.assertIn("still open", text)

@@ -20,7 +20,7 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V3.14`,
-`_SCHEMA_VERSION = 94` (in `src/db/plants.py`; V3.14 re-ranked availability and added five "Easy" communities; V3.12 added the seven Edmonton
+`_SCHEMA_VERSION = 95` (in `src/db/plants.py`; V3.18 renamed Green Milkweed Oval-leaf Milkweed, the row being *Asclepias ovalifolia*; V3.14 re-ranked availability and added five "Easy" communities; V3.12 added the seven Edmonton
 communities and corrected five notes that contradicted VASCAN, F221/F222, with
 no DDL).
 

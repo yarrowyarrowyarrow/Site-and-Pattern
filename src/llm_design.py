@@ -1101,7 +1101,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # existing features) and placement. project_for_ctx carries any marked
     # existing trees/buildings the user/site already has.
     project_ctx = Project.create(name, site_config=site_config, boundary=boundary)
-    from src.exclusion import keepout_circles, fill_regions
+    from src.exclusion import keepout_areas, fill_regions
     elev, zones, pzone, szone, cell_env_map = _zone_context(
         boundary, site_config, project_ctx.as_dict() if match_site else None)
     # F5: fold the user's existing drawn layer (existing trees/buildings,
@@ -1109,7 +1109,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # context so it both informs the prompt and steers placement.
     _ctx_dict = {"features": (project_ctx.as_dict().get("features") or [])
                  + (existing_features or [])}
-    keepout = keepout_circles(_ctx_dict)
+    keepout = keepout_areas(_ctx_dict)
     fills = fill_regions(_ctx_dict)
 
     structures = list_structures()
@@ -2170,6 +2170,41 @@ def _place_within_boundary(project, plant_items, community_groups,
             out.append((la, ln))
         return out
 
+    def _laid_out_clear(layout_name, anchor, qty, spacing, seed):
+        """The pattern's positions inside the boundary and clear of keep-out.
+
+        A member keep-out would have taken (a drawn path, a patio, a building)
+        moves to the same pattern's next free place beside it, nearest the
+        anchor first, rather than being lost (V3.18, PY-3): a 1 m path through
+        a drift had cost it a third of its plants. One the boundary cuts off
+        is dropped as before, so a design with nothing drawn is unchanged."""
+        laid = _layout.positions_for_layout(
+            layout_name, anchor[0], anchor[1], qty, spacing, seed=seed)
+        kept = _clip_keepout(laid, half_canopy_m=spacing / 2.0)
+        if not keepout:
+            return kept
+        inside = [p for p in laid
+                  if not boundary or _inside_boundary(boundary, p[0], p[1])]
+        lost = len(inside) - len(kept)
+        if lost <= 0:
+            return kept
+        cos_a = math.cos(math.radians(anchor[0])) or 1e-9
+
+        def _m(p, q):
+            return math.hypot((p[1] - q[1]) * 111320.0 * cos_a,
+                              (p[0] - q[0]) * 111320.0)
+
+        wider = _clip_keepout(_layout.positions_for_layout(
+            layout_name, anchor[0], anchor[1], qty * 3 + lost, spacing,
+            seed=seed), half_canopy_m=spacing / 2.0)
+        for p in sorted(wider, key=lambda q: _m(q, anchor)):
+            if lost <= 0:
+                break
+            if all(_m(p, q) >= spacing * 0.5 for q in kept):
+                kept.append(p)
+                lost -= 1
+        return kept
+
     # V2.90 (F181): each tree and shrub placed below becomes a host, and each
     # vine is seated at the foot of one (src/vine_seating.py).
     from src.vine_habit import holds_vines
@@ -2236,9 +2271,8 @@ def _place_within_boundary(project, plant_items, community_groups,
         spacing = _plant_spacing_m(plant_id)
         # Per-group seed: repeated drifts of one species get different
         # jitter/bearings instead of identical stamps (still deterministic).
-        positions = _layout.positions_for_layout(
-            group_layout, anchor[0], anchor[1], qty, spacing, seed=group_i)
-        positions = _clip_keepout(positions, half_canopy_m=spacing / 2.0)
+        positions = _laid_out_clear(group_layout, anchor, qty, spacing,
+                                    seed=group_i)
         if not positions:
             # The pattern fell outside / onto keep-out — fall back to the anchor.
             positions = [anchor]
@@ -2296,10 +2330,9 @@ def _place_within_boundary(project, plant_items, community_groups,
             break
         positioner.note_anchor(anchor, first_row)
         layout_name = mix.get("layout") or _layout.DRIFT
-        positions = _layout.positions_for_layout(
-            layout_name, anchor[0], anchor[1], int(mix.get("quantity") or 1),
-            spacing, seed=1000 + mix_i)
-        positions = _clip_keepout(positions, half_canopy_m=spacing / 2.0)
+        positions = _laid_out_clear(layout_name, anchor,
+                                    int(mix.get("quantity") or 1), spacing,
+                                    seed=1000 + mix_i)
         if not positions:
             positions = [anchor]
         # The stand's ground was scored for its first member (F19): its own
@@ -3040,9 +3073,9 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # F5: the user's existing drawn layer steers placement — keep out of
     # existing-remnant zones / hardscape / existing trees & buildings, and fill
     # into drawn restoration / lawn-conversion zones.
-    from src.exclusion import keepout_circles, fill_regions
+    from src.exclusion import keepout_areas, fill_regions
     _ctx = {"features": existing_features or []}
-    keepout = keepout_circles(project.as_dict()) + keepout_circles(_ctx)
+    keepout = keepout_areas(project.as_dict()) + keepout_areas(_ctx)
     fills = fill_regions(_ctx)
 
     # V2.23: the offline path speaks the full placement vocabulary too.

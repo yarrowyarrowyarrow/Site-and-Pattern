@@ -77,7 +77,9 @@ HEX = {
 #:
 #: ``source`` is ``name`` when the accepted common name states the colour and
 #: ``epithet`` when the Latin does. Where both agree, ``epithet`` wins: it is
-#: the more stable of the two.
+#: the more stable of the two. ``checked`` (V3.18) means compared against
+#: published descriptions that the reason names, which is weaker than ``flora``
+#: and says so.
 CORRECTIONS: dict = {
     # ── Latin says it outright ──────────────────────────────────────────────
     "Aquilegia flavescens":   ("yellow", "epithet", "flavescens = yellowish"),
@@ -120,9 +122,6 @@ CORRECTIONS: dict = {
     "Symphyotrichum ericoides": ("white", "name",
                                  "Tufted White Prairie Aster; white rays, not "
                                  "the genus purple"),
-    "Asclepias ovalifolia":   ("green",  "name",
-                               "Green Milkweed; greenish-white umbels, not the "
-                               "pink of A. speciosa"),
     "Geranium viscosissimum": ("purple", "name", "Sticky Purple Geranium"),
     "Echinacea angustifolia": ("purple", "name", "Purple Coneflower"),
     "Geum rivale":            ("purple", "name", "Purple Avens / Water Avens"),
@@ -133,6 +132,17 @@ CORRECTIONS: dict = {
                                 "Scarlet Butterfly Plant; white aging to pink "
                                 "and red, nearer pink than the genus yellow"),
     "Ribes triste":           ("red",    "name", "Wild Red Currant"),
+
+    # ── Checked against published descriptions, named in the reason ─────────
+    # V3.18. This row was coloured green from the name "Green Milkweed", which
+    # belongs to A. viridiflora (F171); the row is A. ovalifolia, renamed
+    # Oval-leaf Milkweed. White is the nearest single answer.
+    "Asclepias ovalifolia":   ("white",  "checked",
+                               "hoods white to cream, corolla greenish white "
+                               "or pale mauve: USDA Forest Service, Plant of "
+                               "the Week, Asclepias ovalifolia; Mission "
+                               "Monarch milkweed identification sheet (2023), "
+                               "which covers Alberta. Not a flora read"),
 }
 
 #: ``scientific_name -> why the obvious 'correction' is wrong``. These all trip

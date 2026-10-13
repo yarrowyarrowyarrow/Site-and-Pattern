@@ -182,6 +182,24 @@ class TestExampleResolution(unittest.TestCase):
             missing, [],
             f"example species not in the shipped catalogue: {missing}")
 
+    def test_every_species_it_can_place_is_native_around_edmonton(self):
+        """V3.18 (QF-4): the example lands in Edmonton and planted two species
+        the Edmonton list leaves off, Canada Goldenrod and Showy Milkweed.
+        Every name it can resolve to is checked, fallbacks included, so a
+        fallback cannot bring one back."""
+        import json
+        import pathlib
+        from src import native_here
+        path = (pathlib.Path(__file__).resolve().parent.parent
+                / "data" / "plants_master.json")
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        sci = {r["common_name"]: r["scientific_name"] for r in rows}
+        native = native_here.native_names()
+        off = sorted({n for names, _ in onboarding.EXAMPLE_PLANTING
+                      for n in names if sci.get(n) not in native})
+        self.assertEqual(off, [], "not native around Edmonton, or not a "
+                                  "catalogue native at all")
+
 
 class TestExampleProject(unittest.TestCase):
 

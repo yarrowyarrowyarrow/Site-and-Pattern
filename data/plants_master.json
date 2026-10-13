@@ -8072,7 +8072,7 @@
     "native_provinces_source": "flora"
   },
   {
-    "common_name": "Green Milkweed",
+    "common_name": "Oval-leaf Milkweed",
     "scientific_name": "Asclepias ovalifolia",
     "plant_type": "wildflower",
     "hardiness_zone_min": "3",
@@ -8090,7 +8090,7 @@
     "soil_ph_min": "6.0",
     "soil_ph_max": "7.5",
     "perennial_annual": "perennial",
-    "notes": "Green Milkweed is one of the drier-adapted milkweed species native to Alberta's grassland and parkland transition zones, tolerating well-drained upland soils where other milkweeds struggle. It is a critical host plant for Monarch butterflies and supports a broad range of specialist pollinators; its deep taproot makes it drought-resilient but also slow to establish after transplanting.",
+    "notes": "Oval-leaf Milkweed is one of the drier-adapted milkweed species native to Alberta's grassland and parkland transition zones, tolerating well-drained upland soils where other milkweeds struggle. It is a host plant for Monarch caterpillars and its white to cream flowers feed pollinators; its deep taproot makes it drought-resilient but also slow to establish after transplanting.",
     "cal_jan": "dormant",
     "cal_feb": "dormant",
     "cal_mar": "dormant",
@@ -8118,7 +8118,7 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/9721289/medium.jpg",
     "image_attribution": "(c) Mary Krieger, some rights reserved (CC BY), uploaded by Mary Krieger",
     "image_license": "cc-by",
-    "flower_color": "#8aa05a",
+    "flower_color": "#f2f2ea",
     "flower_form": "globe",
     "native_provinces": "AB,SK",
     "leaf_shape": "elliptic",
@@ -8139,8 +8139,11 @@
     "flowering_stems": 8,
     "flower_data_source": "estimated",
     "flower_data_citation": "",
-    "flower_colour_source": "name",
-    "native_provinces_source": "flora"
+    "flower_colour_source": "checked",
+    "native_provinces_source": "flora",
+    "common_renamed_from": "Green Milkweed",
+    "common_renamed_on": "2026-10-13",
+    "common_renamed_why": "Green Milkweed is Asclepias viridiflora; this row is A. ovalifolia, the oval-leaf milkweed of the parkland (F171; docs/CANDIDATE_SPECIES.md correction 1)"
   },
   {
     "common_name": "Green Needle Grass",

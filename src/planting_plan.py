@@ -47,21 +47,42 @@ _FORM_BY_TYPE = {
 }
 _FORM_FALLBACK = "plug or seed"
 
-# Alberta native plant / seed sources (display name + buy link).
-NURSERIES = [
-    ("ALCLA Native Plants", "https://alclanativeplants.com/"),
-    ("Bow Valley Habitat Development", "https://bowvalleyhabitat.com/"),
-    ("Wild About Flowers", "https://wildaboutflowers.ca/"),
-    ("Bedrock Seed Bank", "https://bedrockseedbank.ca/"),
+# Nursery-source buckets, in display order, with their section headings.
+#
+# Until V3.18 the headings named suppliers ("sources: ALCLA, Bow Valley
+# Habitat") and a hard-coded NURSERIES list printed four Calgary-area names
+# under every plan, two of them in no directory, while the order file, built
+# from the directory, named Edmonton's growers: two different lists in one
+# export (EDF-1). The suppliers now come from :func:`sources_near`, the same
+# directory the Site panel and the order file read.
+SOURCE_SECTIONS = [
+    ("native_woody", "NATIVE TREES & SHRUBS"),
+    ("native_herb",  "NATIVE HERBACEOUS & GROUNDCOVER"),
+    ("cultivated",   "CULTIVATED / NON-NATIVE  (local garden centres)"),
 ]
 
-# Nursery-source buckets, in display order, with their section headings.
-SOURCE_SECTIONS = [
-    ("native_woody", "NATIVE TREES & SHRUBS  (sources: ALCLA, Bow Valley Habitat)"),
-    ("native_herb",  "NATIVE HERBACEOUS & GROUNDCOVER  "
-                     "(sources: ALCLA, Wild About Flowers, Bedrock Seed Bank)"),
-    ("cultivated",   "CULTIVATED / NON-NATIVE  (sources: local garden centres)"),
-]
+#: Said where a list of suppliers would be when the design has no pin: the
+#: list is "near you", and without a place there is no honest one to give.
+NO_PIN_SOURCES = ("Set your yard's pin to list the native plant nurseries "
+                  "and seed sources near you.")
+
+
+def sources_near(site_config, limit: int = 6) -> list:
+    """``[(name, how to reach it, web address), ...]`` for the native-plant
+    suppliers nearest the design's pin, from the nursery directory
+    (:func:`src.db.nurseries.native_sources_near`), nearest first; ``[]`` with
+    no pin or no directory. One list for every output that names suppliers."""
+    sc = site_config or {}
+    lat, lng = sc.get("latitude"), sc.get("longitude")
+    if lat is None or lng is None:
+        return []
+    try:
+        from src.db.nurseries import native_sources_near
+        rows = native_sources_near(float(lat), float(lng), limit=limit)
+    except Exception:                                      # noqa: BLE001
+        return []
+    return [(n.get("name") or "", n.get("access") or "",
+             n.get("url") or "") for n in rows if n.get("name")]
 
 # Phases: the order a conversion actually goes into the ground — woody structure
 # first, then the herbaceous matrix, then the gap-filling self-spreaders. (P8/P4)
@@ -331,9 +352,11 @@ def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0
     )
 
 
-def render_plan_text(plan: PlantingPlan) -> str:
-    """Render a :class:`PlantingPlan` as the plain-text export (nursery list +
-    phased planting schedule)."""
+def render_plan_text(plan: PlantingPlan, sources=None) -> str:
+    """Render a :class:`PlantingPlan` as the plain-text export (buy list +
+    phased planting schedule + where to buy). ``sources`` is
+    :func:`sources_near` for the design's pin; ``None`` or ``[]`` says to set
+    a pin instead of naming suppliers from somewhere else."""
     fc = sourcing.format_cost
     lines = [
         f"{APP_NAME} — Planting Plan",
@@ -399,8 +422,18 @@ def render_plan_text(plan: PlantingPlan) -> str:
             lines.append(f"  {it.common_name} ×{it.qty} — {it.planting_window}")
         lines.append("")
 
-    lines.append("Alberta native plant nurseries / seed sources:")
-    for nm, url in NURSERIES:
-        lines.append(f"  • {nm:<32} {url}")
+    if sources:
+        lines.append("Native plant nurseries and seed sources near your yard:")
+        for nm, where, url in sources:
+            line = f"  • {nm}"
+            if where:
+                line += f" — {where}"
+            if url:
+                line += f"  {url}"
+            lines.append(line)
+        lines.append("  Stock is seasonal and often grown to order: "
+                     "check before you go.")
+    else:
+        lines.append(NO_PIN_SOURCES)
 
     return "\n".join(lines)

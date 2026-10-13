@@ -30,8 +30,11 @@ push to a V<major>.<minor> branch
                builds the NSIS EXE → publishes to the SAME GitHub Release
       │
       ▼
-GitHub Release  (tag e.g. V2.19, assets: SiteAndPattern-V2.19.dmg + ...-Setup.exe)
-      │
+GitHub PRERELEASE  (tag release-V3.18, assets: SiteAndPattern-V3.18.dmg + ...-Setup.exe)
+      │   since V3.18 (FN-7): the updater skips prereleases, so nobody is offered it yet
+      ▼
+Actions → "Promote a release" (promote-release.yml, run by hand with the version)
+      │   checks both installers are attached, then makes it a full release, marked Latest
       ▼
 in-app updater  src/github_releases.py  (list_releases / latest_release by tag)
                 + src/controllers/update_flow.py  →  Help → Check for Updates downloads it
@@ -47,14 +50,18 @@ Key facts (from `.github/workflows/release-macos.yml`):
   ONE DMG runs on both Intel and Apple Silicon (Big Sur 11+).
 - `APP_BUILD_VERSION: ${{ github.ref_name }}` is baked into `version.txt`;
   `PYI_TARGET_ARCH: x86_64` drives the spec's `EXE(target_arch=…)`.
-- Publishes with `softprops/action-gh-release@v2`, `tag_name = ref_name`,
-  `fail_on_unmatched_files: true`. The macOS and Windows workflows publish to
+- Publishes with `softprops/action-gh-release@v2`, `tag_name =
+  release-<ref_name>`, `prerelease: true` (V3.18), `fail_on_unmatched_files:
+  true`. A later push to a promoted version makes it a prerelease again until
+  it is promoted again. The macOS and Windows workflows publish to
   the **same release** with an identical body, so whichever finishes last
   sets correct combined notes.
 
-So: **pushing your V-branch is the release action.** There's no separate tag
-step. Merge/label conventions aside, the branch push is what the workflows key
-on. Only push when the branch is release-ready.
+So: **pushing your V-branch builds and publishes a prerelease; promoting it is
+the release action** (V3.18, FN-7, the owner's decision D5). Before V3.18 every
+push was a full release offered to every installed copy, five in one day on 8
+October 2026. Only the owner promotes: never run `promote-release.yml` from a
+session unless they ask for that version by name.
 
 ## Local builds (not run here — this container can't build installers)
 
@@ -162,15 +169,16 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | Installed app: "Missing module" | Add to `hiddenimports` in the spec. |
 | "NSIS makensis not found" (Windows) | Falls back to ZIP; install NSIS and rebuild for the 1-click installer. |
 | Network features dead in the frozen app | Certs — `src/ssl_bootstrap.py` / `certifi`; see `debugging` §6. |
-| Updater doesn't see a new version | Branch/tag not `V<major>.<minor>`, or no Release published — check the workflow run. |
+| Updater doesn't see a new version | Not promoted yet: it is a prerelease until "Promote a release" runs (V3.18). Otherwise the branch/tag is not `V<major>.<minor>`, or no Release was published — check the workflow run. |
 | Windows: *Error opening file for writing: …SiteAndPattern.exe* | The app was still running; Windows will not let a running program's files be written. Copies before V3.15 started the installer and stayed open. From V3.15 the app closes and the installer waits for it (`/UPDATE`); if something else holds a file, close it and Retry. There is no Ignore any more: it left the old program carrying the new `version.txt`, which the updater then read as up to date. |
 
 ## Pitfalls
 
 - **Pushing a V-branch triggers a real public release build.** Don't push a
   half-finished branch expecting it to be private — the workflows fire on the
-  push. Confirm the branch is release-ready (see `start-work` definition of
-  done).
+  push, and the prerelease is downloadable from the releases page even though
+  the updater does not offer it. Confirm the branch is release-ready (see
+  `start-work` definition of done).
 - **Never add a heavy native dep to `requirements.txt` casually** — see the
   optional-deps lesson.
 - **Keep the two release-workflow bodies identical** — they publish to the
@@ -188,6 +196,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | `INSTALL.md` | End-user install instructions. |
 | `.github/workflows/release-macos.yml` | Cloud-Mac x86_64 DMG build + Release publish. |
 | `.github/workflows/release-windows.yml` | Windows NSIS EXE build + Release publish. |
+| `.github/workflows/promote-release.yml` | Makes one prerelease a full release (V3.18); run by hand. |
 | `scripts/packaging/permadesign.spec` | PyInstaller spec (`datas`, `hiddenimports`). |
 | `scripts/packaging/build_installer.sh` | macOS/Linux build script. |
 | `scripts/packaging/build_installer.bat` | Windows build script. |

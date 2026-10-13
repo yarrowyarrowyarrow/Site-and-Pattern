@@ -167,6 +167,9 @@ EXAMPLE_DEFAULT_LATLNG = (53.5461, -113.4938)
 #: ``(preferred name, fallback names…)`` → the builder takes the first that the
 #: live catalogue actually has. Fallbacks exist because seed data changes;
 #: a species that resolves to nothing is reported, never silently skipped.
+#: Every species it can resolve to is native around Edmonton, where the
+#: example lands (V3.18; ``tests/test_onboarding.py`` holds it there): it had
+#: Canada Goldenrod and Showy Milkweed, which the Edmonton list leaves off.
 EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
     # Backbone — two shrubs at the back, offset so the bed never reads as a row.
     (("Saskatoon Berry",), (2.6, 6.2)),
@@ -176,9 +179,9 @@ EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
     (("Golden Bean", "Purple Prairie Clover"), (1.4, 4.4)),
     (("Wild Bergamot",), (3.5, 4.7)),
     (("Wild Bergamot",), (4.4, 3.9)),
-    (("Showy Milkweed",), (6.4, 4.5)),
-    (("Showy Milkweed",), (7.2, 5.1)),
-    (("Canada Goldenrod",), (9.3, 4.8)),
+    (("Oval-leaf Milkweed",), (6.4, 4.5)),
+    (("Oval-leaf Milkweed",), (7.2, 5.1)),
+    (("Stiff Goldenrod",), (9.3, 4.8)),
     (("Blanketflower", "Prairie Coneflower"), (8.5, 3.6)),
     (("Purple Prairie Clover", "Wild Blue Flax"), (2.2, 3.1)),
     (("Wild Blue Flax", "Harebell"), (6.0, 3.2)),
@@ -197,8 +200,9 @@ EXAMPLE_NOTES = (
     "It converts about 88 m² of front lawn into one bed: three "
     "fruiting/host shrubs for structure, a nectar relay that carries from "
     "spring (Golden Bean, Prairie Crocus) through midsummer (Wild Bergamot, "
-    "Showy Milkweed) into fall (Canada Goldenrod), and a short grass matrix "
-    "along the street edge so it still reads as tended.\n\n"
+    "Oval-leaf Milkweed) into fall (Stiff Goldenrod), and a short grass "
+    "matrix along the street edge so it still reads as tended. Every plant "
+    "in it is native around Edmonton.\n\n"
     "Things worth doing to it:\n"
     "  • Design → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"

@@ -13,7 +13,7 @@
   "notes": "Sole larval food source for Monarch caterpillars (Asclepias only)."
  },
  {
-  "plant": "Green Milkweed",
+  "plant": "Oval-leaf Milkweed",
   "fauna": "Danaus plexippus",
   "relationship": "larval_host",
   "specificity": "specialist",
@@ -6389,14 +6389,14 @@
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Green Milkweed",
+  "plant": "Oval-leaf Milkweed",
   "fauna": "Danaus plexippus",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",
   "notes": "GloBI flowersVisitedBy"
  },
  {
-  "plant": "Green Milkweed",
+  "plant": "Oval-leaf Milkweed",
   "fauna": "Hemaris thysbe",
   "relationship": "nectar",
   "source": "globi_inaturalist_org",

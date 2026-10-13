@@ -55,19 +55,20 @@ class OpenGround:
     """The open ground in a design, asked for one plant at a time.
 
     ``project`` is read on every call, so each addition sees the ones before
-    it. ``keepout`` and ``fills`` are the main pass's (``src.exclusion``
-    circles and rings), ``cell_env_map`` its scored anchor cells, and
+    it. ``keepout`` and ``fills`` are the main pass's (an ``src.exclusion``
+    ``KeepOut`` or circles, and rings), ``cell_env_map`` its scored anchor
+    cells, and
     ``spacing_of(plant_id)`` its centre-to-centre spacing.
     """
 
     def __init__(self, project, boundary=None, center=None, *,
                  keepout=None, fills=None, cell_env_map=None,
                  spacing_of: Optional[Callable[[int], float]] = None):
-        from src.exclusion import keepout_circles
+        from src.exclusion import as_keepout, keepout_areas
         self._project = project
         self._poly = _polygon(boundary)
-        self._keepout = (list(keepout or [])
-                         + keepout_circles(project.as_dict()))
+        self._keepout = (as_keepout(keepout)
+                         + keepout_areas(project.as_dict()))
         self._fills = [r for r in (fills or []) if r and len(r) >= 3]
         self._env = dict(cell_env_map or {})
         self._spacing_of = spacing_of or _generator_spacing

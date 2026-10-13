@@ -203,9 +203,12 @@ class PersistenceController:
             # The design is now durably on disk — a crash-recovery copy from
             # before this save would only offer to roll the user back.
             self.clear_autosave()
-        except Exception as exc:
-            _log.exception("save failed: %s", path)
-            QMessageBox.critical(self._main, "Save failed", str(exc))
+        except Exception:
+            from src import plain_messages
+            plain_messages.tell_save_failed(
+                self._main,
+                self._main._project.get("properties", {})
+                .get("project_name") or os.path.basename(path))
 
     # ── Autosave + crash recovery ─────────────────────────────────────────────
     # The timer writes a recovery copy (with the design's real path stamped
@@ -527,6 +530,14 @@ class PersistenceController:
         # Feature-derived panel readouts (incl. the Site › Notes map-note
         # list) track the restored features.
         m._sync_planning_panel()
+
+    def redraw(self):
+        """Redraw the map from the project with the overlays on screen kept
+        (shade, wind shadow, sun path): for a change made in Python that the
+        map did not make itself, such as a replaced plan (V3.18)."""
+        view = self._capture_view_state()
+        self.render_project_to_map(fit_view=False)
+        self._apply_view_state(view)
 
     def _apply_view_state(self, target: dict):
         """Re-apply the transient overlays to ``target``. Called right after

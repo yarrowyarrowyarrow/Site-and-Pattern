@@ -737,10 +737,16 @@ class MapEventRouter:
             pass
         # Persist coordinates immediately; site data fills in when fetcher returns.
         sc = self._main._project["properties"].setdefault("site_config", {})
+        moved = (sc.get("latitude"), sc.get("longitude")) != (lat, lng)
         sc["latitude"]  = lat
         sc["longitude"] = lng
         if label:
             sc["pin_label"] = label
+        elif moved:
+            # A pin dropped by hand has no address until the reverse lookup
+            # answers (never, offline); keeping the last pin's label named the
+            # wrong place on the printed plan (V3.18).
+            sc.pop("pin_label", None)
         self._main._mark_modified()
         self._main._set_mode_label("Property pin set — fetching site data")
 

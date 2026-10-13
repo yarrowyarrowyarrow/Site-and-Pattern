@@ -258,9 +258,9 @@ def _open_last_design(main) -> None:
         return
     try:
         main._load_from_path(path)
-    except Exception as exc:                               # noqa: BLE001
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.critical(main, "Open failed", str(exc))
+    except Exception:                                      # noqa: BLE001
+        from src import plain_messages
+        plain_messages.tell_open_failed(main, path)
 
 
 def _autosave_pending() -> bool:
@@ -322,22 +322,26 @@ def _dispatch(main, choice: str) -> None:
         from src import learn_flow
         learn_flow.open_studio(main)
     elif choice == UPDATE:
-        _safely(lambda: main._on_check_for_updates())
+        _safely(lambda: main._on_check_for_updates(), "The update check")
     elif choice == DESIGN:
         # Nothing to build — just point at step one and put the cursor where
         # the user has to act.
-        _safely(lambda: main.site_panel.focus_address_search())
+        _safely(lambda: main.site_panel.focus_address_search(),
+                "The address search")
     refresh(main)
 
 
-def _safely(fn) -> None:
+def _safely(fn, what: str) -> None:
     """Run a dispatch action without letting it take the launch with it. A row
     that fails should leave the user on a working blank map, not on a
-    traceback."""
+    traceback, and it says so (V3.18, ST-3: a bare ``pass`` here and in
+    ``learn_flow`` hid a dead door for a release). ``what`` names the thing
+    in the message's own words ("The address search")."""
     try:
         fn()
     except Exception:                                      # noqa: BLE001
-        pass
+        from src import slot_errors
+        slot_errors.report(what)
 
 
 def _open_directory(main, *, bloom: bool = False) -> None:
@@ -349,12 +353,12 @@ def _open_directory(main, *, bloom: bool = False) -> None:
     if bloom:
         import datetime
         criteria = {"bloom_months": [str(datetime.date.today().month)]}
-    _safely(lambda: open_plant_directory(main, criteria))
+    _safely(lambda: open_plant_directory(main, criteria), "The Plant Directory")
 
 
 def _open_reference(main) -> None:
     from src.reference_ecosystem_window import open_reference_ecosystem
-    _safely(lambda: open_reference_ecosystem(main))
+    _safely(lambda: open_reference_ecosystem(main), "Walk a Wild Landscape")
 
 
 def _species_count() -> int:

@@ -352,9 +352,6 @@ class MainWindow(QMainWindow):
     def _on_about(self):
         return self._update_flow._on_about()
 
-    def _on_pick_version(self):
-        return self._update_flow._on_pick_version()
-
     def _on_check_for_updates(self):
         return self._update_flow._on_check_for_updates()
 
@@ -641,14 +638,6 @@ class MainWindow(QMainWindow):
                                 "the newest release on packaged (.dmg/.exe) "
                                 "installs")
         act_update.triggered.connect(self._on_check_for_updates)
-
-        act_pick = help_menu.addAction("&Switch to a specific version…")
-        act_pick.setStatusTip(
-            "Pick any published V<major>.<minor> version. Source installs "
-            "check out that branch; packaged installs download and install "
-            "that version's installer."
-        )
-        act_pick.triggered.connect(self._on_pick_version)
 
     # ── Signal wiring ─────────────────────────────────────────────────────────
 
@@ -1837,12 +1826,10 @@ class MainWindow(QMainWindow):
 
     def _on_new(self):
         if self._modified:
-            r = QMessageBox.question(
-                self, "New Design",
-                "Current design has unsaved changes. Discard and start new?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-            )
-            if r != QMessageBox.StandardButton.Yes:
+            from src import plain_messages
+            if not plain_messages.ask_discard_for_new(
+                    self, self._project.get("properties", {})
+                    .get("project_name", "")):
                 return
 
         name, ok = QInputDialog.getText(
@@ -1908,8 +1895,9 @@ class MainWindow(QMainWindow):
             return
         try:
             self._load_from_path(path)
-        except Exception as exc:
-            QMessageBox.critical(self, "Open failed", str(exc))
+        except Exception:
+            from src import plain_messages
+            plain_messages.tell_open_failed(self, path)
 
     def _ask_for_design_file(self) -> str:
         """The OS file dialog, for a design that lives outside the saves
@@ -2317,13 +2305,16 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self._modified:
-            r = QMessageBox.question(
-                self, "Exit",
-                "You have unsaved changes. Exit anyway?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-            )
-            if r != QMessageBox.StandardButton.Yes:
-                event.ignore()
+            # V3.18 (WD-4): Save · Don't save · Cancel. It offered only
+            # "Exit anyway?", so saving meant cancelling and finding Save.
+            from src import plain_messages
+            choice = plain_messages.ask_save_before_closing(
+                self, self._project.get("properties", {})
+                .get("project_name", ""))
+            if choice == "save":
+                self._on_save()
+            if choice == "cancel" or (choice == "save" and self._modified):
+                event.ignore()        # cancelled, or the save did not happen
                 return
         # Clean exit (saved, or the user explicitly discarded unsaved work):
         # the crash-recovery autosave would only nag next launch. A crash

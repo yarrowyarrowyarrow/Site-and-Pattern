@@ -23,6 +23,10 @@ _datas = [
     (os.path.join(_ROOT, 'src', 'db', 'schema.sql'), 'src/db'),
     # The window icon at every size (src/app_icon.py).
     (os.path.join(_ROOT, 'assets', 'icon', 'app_*.png'), 'assets/icon'),
+    # The licence's text (V3.18, FN-1): the GPL v3 asks that everyone who
+    # receives the program receives the licence with it, and Help › About
+    # points to this file.
+    (os.path.join(_ROOT, 'LICENSE'), '.'),
 ]
 
 # The app's icon (F232, V3.17), made by scripts/packaging/make_app_icon.py.

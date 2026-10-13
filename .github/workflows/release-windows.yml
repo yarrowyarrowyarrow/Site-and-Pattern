@@ -92,6 +92,15 @@ jobs:
           # only holds half the time. See the long note in that file.
           target_commitish: ${{ github.sha }}
           name: ${{ github.ref_name }}
+          # PRERELEASE BY DEFAULT (V3.18, FN-7, decision D5). The in-app updater
+          # skips prereleases (github_releases.list_releases), so a push builds
+          # and publishes installers without offering them to every installed
+          # copy; five releases reached users in one day before this. The
+          # owner offers one with the "Promote a release" workflow
+          # (promote-release.yml). A later push to a promoted version makes it
+          # a prerelease again until it is promoted again: the new build is
+          # the one nobody has looked at. Keep in step with the other file.
+          prerelease: true
           body: |
             **Site & Pattern** — a native-plant landscape designer for Alberta and the Canadian prairies.
 

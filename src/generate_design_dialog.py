@@ -26,8 +26,10 @@ class GenerateDesignDialog(QDialog):
     def __init__(self, *, has_boundary: bool, has_pin: bool,
                  preselected: list | None = None,
                  fauna_options: list | None = None,
+                 last_plan: int = 0,
                  parent: QWidget | None = None):
         super().__init__(parent)
+        self._add_check: QCheckBox | None = None
         self.setWindowTitle("Generate Design")
         self.setMinimumWidth(460)
         preselected = set(preselected or [])
@@ -193,6 +195,30 @@ class GenerateDesignDialog(QDialog):
         )
         ok_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
         ok_button.setText("Generate")
+        # V3.18 (PY-5): a second run replaces the last plan, and says so
+        # before it does. Plants placed by hand are never part of a plan.
+        replace_h = 0
+        if last_plan:
+            replace = QLabel(
+                f"Your last plan ({last_plan} plant"
+                f"{'s' if last_plan != 1 else ''}) will be replaced. "
+                "Plants you placed yourself stay.")
+            replace.setWordWrap(True)
+            self._add_check = QCheckBox("Add to it instead")
+            self._add_check.setToolTip(
+                "Keep the last plan and put this one beside it.")
+
+            def _name_button(adding: bool) -> None:
+                replace.setVisible(not adding)
+                ok_button.setText("Add to my plan" if adding
+                                  else "Replace my plan")
+
+            self._add_check.toggled.connect(_name_button)
+            _name_button(False)
+            outer.addWidget(replace)
+            outer.addWidget(self._add_check)
+            replace_h = (replace.sizeHint().height()
+                         + self._add_check.sizeHint().height())
         # Placed geometry needs an anchor — disable OK without one.
         ok_button.setEnabled(has_boundary or has_pin)
         buttons.accepted.connect(self.accept)
@@ -200,7 +226,12 @@ class GenerateDesignDialog(QDialog):
         outer.addWidget(buttons)
         self.resize(self.width(), fitted_height(
             body.sizeHint().height() + placement.sizeHint().height()
-            + buttons.sizeHint().height() + 48, self))
+            + replace_h + buttons.sizeHint().height() + 48, self))
+
+    def replace_last(self) -> bool:
+        """Whether this run replaces the design's last plan: yes when it has
+        one, unless *Add to it instead* is ticked."""
+        return self._add_check is not None and not self._add_check.isChecked()
 
     def _filter_fauna(self, text: str) -> None:
         needle = text.strip().lower()

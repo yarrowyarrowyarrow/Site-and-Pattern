@@ -42,6 +42,8 @@ from typing import Callable, List, Optional, Sequence, Tuple
 DEFAULT_REPO = "yarrowyarrowyarrow/Site-and-Pattern"
 
 _API_BASE = "https://api.github.com"
+#: Pages of 100 releases :func:`list_releases` reads at most.
+_MAX_PAGES = 5
 _USER_AGENT = "SiteAndPattern-Updater"
 
 #: A release tag, in both spellings this repo has used.
@@ -164,11 +166,23 @@ def list_releases(
     """Published releases whose tag parses as a version, newest first.
 
     Drafts are always skipped; prereleases are skipped unless
-    ``include_prereleases``. ``fetch_json`` is injectable for tests."""
-    url = f"{_API_BASE}/repos/{repo}/releases?per_page=100"
-    data = fetch_json(url)
-    if not isinstance(data, list):
-        return []
+    ``include_prereleases``. ``fetch_json`` is injectable for tests.
+
+    Reads up to ``_MAX_PAGES`` pages (V3.18). Every push publishes a
+    prerelease since FN-7, so the last release the owner promoted can sit
+    more than a page back; reading one page would then find no full release
+    at all and tell the person nothing was published."""
+    data: list = []
+    for page in range(1, _MAX_PAGES + 1):
+        url = f"{_API_BASE}/repos/{repo}/releases?per_page=100&page={page}"
+        chunk = fetch_json(url)
+        if not isinstance(chunk, list):
+            if page == 1:
+                return []
+            break
+        data.extend(chunk)
+        if len(chunk) < 100:
+            break
     releases: List[Release] = []
     for item in data:
         if not isinstance(item, dict) or item.get("draft"):

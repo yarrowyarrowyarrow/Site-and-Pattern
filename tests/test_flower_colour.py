@@ -118,9 +118,12 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: V2.89: straw -2. Common Scouring-rush and Variegated Horsetail are filed
     #: as rushes and carried the graminoid straw with a plume; a horsetail has
     #: no flower at all, so both now record none, like the other two.
+    #: V3.18: green -1, white +1. *Asclepias ovalifolia* was coloured from the
+    #: name "Green Milkweed", which belongs to *A. viridiflora* (F171); renamed
+    #: Oval-leaf Milkweed, its hoods are white to cream.
     EXPECTED = {
-        "straw": 78, "yellow": 79, "white": 79, "purple": 45, "pink": 34,
-        "blue": 28, "cream": 14, "red": 6, "green": 5, "orange": 3, "brown": 2,
+        "straw": 78, "yellow": 79, "white": 80, "purple": 45, "pink": 34,
+        "blue": 28, "cream": 14, "red": 6, "green": 4, "orange": 3, "brown": 2,
     }
 
     def test_every_seeded_species_lands_where_it_did(self):

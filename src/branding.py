@@ -29,6 +29,14 @@ APP_NAME = "Site & Pattern"
 APP_TAGLINE = "Native Habitat Designer"
 APP_TITLE = f"{APP_NAME} — {APP_TAGLINE}"
 
+#: The licence the program is under (V3.18, FN-1; the owner's decision D1).
+#: It was the PolyForm Noncommercial License, which the GPL v3 that PyQt6 is
+#: licensed under does not allow a program built on it to be distributed
+#: under. ``LICENSE`` holds the text; Help › About and the README name it, and
+#: ``tests/test_licence.py`` keeps the three saying the same thing.
+LICENCE_NAME = "GNU General Public License, version 3"
+LICENCE_SPDX = "GPL-3.0-only"
+
 
 def window_title(document: str | None = None, *, version: str | None) -> str:
     """The main window's title (F231, V3.16): the name, the release it is
