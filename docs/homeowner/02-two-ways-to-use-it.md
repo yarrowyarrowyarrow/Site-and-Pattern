@@ -36,9 +36,10 @@ That objection is right, and the switch proposed here is built to avoid it:
    menu item for whoever goes looking, plus "More detail ▸" links on the
    overview (MD-4) for whoever wants to dig into one thing.
 2. **It hides tools, never the person's work.** Anything already in the design
-   (contours, measurements, structures, shapes, hedgerows, notes, an imported
-   scan, a yard photo) still draws on the map, can be selected, moved, deleted
-   and undone, and is printed, with the switch off.
+   (contours, measurements, structures, shapes, hedgerows, notes, a site
+   photo) still draws on the map, can be selected, moved, deleted and undone,
+   and is printed, with the switch off. (A yard scan from before RM-2 stays in
+   the file untouched but is no longer drawn: [03](03-what-goes.md) §3.)
 3. **A design that uses advanced tools says so.** Opening one in simple mode
    shows one line above the map: `This design uses advanced tools.` with a link
    `Show them` that turns the switch on (MD-3).
@@ -74,9 +75,9 @@ than for the advanced side; where they disagree, 03 wins.
 | Where | Simple | Advanced adds |
 |---|---|---|
 | Draw row | Boundary, Shape (beds and paths), Select, Undo, Redo, Cancel | Measure, Note on the map |
-| View row | Satellite, Plants | Boundary and Measurement layer switches, Grid, Canopy, Structures layer, Yard photo |
+| View row | Satellite, Plants | Boundary and Measurement layer switches, Grid, Canopy, Structures layer (the Yard photo switch is deleted with the scan import, RM-2) |
 | Edit (new, QF-15) | Undo, Redo, Delete, Select all | — |
-| File | New, Open…, Save, Save As…, Rename Design… (ST-7), Plan My Yard… ([07](07-plan-my-yard.md)), Export PDF…, Export Planting Plan…, Export order file…, Exit | Import Yard Scan… |
+| File | New, Open…, Save, Save As…, Rename Design… (ST-7), Plan My Yard… ([07](07-plan-my-yard.md)), Export PDF…, Export Planting Plan…, Export order file…, Exit | — (*Import Yard Scan…* is deleted, RM-2) |
 | View | Show Side Panel, Getting-started strip, North Arrow, Scale Bar, **Advanced tools** (the switch) | Split view, 3D Preview…, Plant Directory…, Walk a Wild Landscape…, Growth Snapshots…, Scale Units, Map Settings… |
 | Help | Start Screen…, Open the Example Yard, Keyboard Shortcuts…, Send Feedback…, Where This Data Came From…, About / Version, Check for Updates…, Support this app… ([10-finishing.md](10-finishing.md)) | — (*Switch to a specific version…* is removed from the product, not moved: [03](03-what-goes.md)) |
 
@@ -136,7 +137,7 @@ Two modes of the same page and the same rows: [05-plants-that-lead.md](05-plants
 |---|---|---|---|
 | **MD-1** | **The switch and its registry.** `src/advanced_tools.py` and `src/advanced_tools_flow.py` (§4.1); View → Advanced tools; `apply(main)` after `side_panel_layout.arrange` (`src/side_panel_layout.py:144`) and on toggle; the registry filled from §3 as amended by [03](03-what-goes.md). Tests: a new `tests/test_advanced_tools.py`: with the switch off, every registered page's tab is not visible and every registered action is hidden; on, all are visible; toggling twice leaves `main._project` byte-identical and the undo stack unchanged; the setting survives a restart (QSettings in a temp dir); a strip with no visible page is hidden. *Accept:* cold start shows only the simple surfaces of §3; View → Advanced tools shows everything that exists today; turning it off again hides them without changing the design | M | M1 |
 | **MD-2** | **Every existing guard runs in both modes.** `tests/test_app_smoke.py`'s walks (every tab, the pointer check, the keyboard chain, the visual floors) iterate over both settings; `scripts/surface_inventory.py` gains `--mode simple|advanced` and the surface audit's numbers are re-measured for simple mode. *Accept:* the smoke suite passes in both modes; the inventory reports the simple app's page and control counts (target: fewer than half of today's 156 controls) | S | MD-1 |
-| **MD-3** | **"This design uses advanced tools."** A Qt-free `uses_advanced(project) -> list[str]` (contours, measurements, map notes, hedgerows, custom shapes other than beds and paths, imported scans, a yard or site photo, wind overlays); in simple mode, a one-line bar above the map (the pattern of `src/landing_check.py`'s bar) reading `This design uses advanced tools.` with `Show them`, which turns the switch on. Tests: the detector on fixture projects; the bar appears only in simple mode and only when the list is non-empty. *Accept:* open a design with contours in simple mode: the contours draw, the bar shows, and "Show them" turns on advanced tools and opens the Slope page | S | MD-1 |
+| **MD-3** | **"This design uses advanced tools."** A Qt-free `uses_advanced(project) -> list[str]` (contours, measurements, map notes, hedgerows, custom shapes other than beds and paths, a site photo, wind overlays); in simple mode, a one-line bar above the map (the pattern of `src/landing_check.py`'s bar) reading `This design uses advanced tools.` with `Show them`, which turns the switch on. Tests: the detector on fixture projects; the bar appears only in simple mode and only when the list is non-empty. *Accept:* open a design with contours in simple mode: the contours draw, the bar shows, and "Show them" turns on advanced tools and opens the Slope page | S | MD-1 |
 | **MD-4** | **"More detail ▸" from the overview.** Each overview item ([06](06-yard-overview.md)) may carry a link to the advanced page that explains it (the habitat score to Habitat, wildlife to Food, hours to Over time); following it turns the switch on and shows that page by widget (`keyboard_help.show_panel`), with a status line `Advanced tools are on. View → Advanced tools turns them off.` *Accept:* each link lands on the right page with the switch on; the status line appears once per session | S | MD-1, OV-1 |
 | **MD-5** | **Pointers and help text follow the mode.** Every "A → B" pointer in the source that names an advanced page is rewritten or marked "(advanced)"; the getting-started strip's steps and Help → Keyboard Shortcuts name only what the current mode offers. *Accept:* the pointer test passes in both modes; no simple-mode text points at a hidden page | S | MD-1 |
 

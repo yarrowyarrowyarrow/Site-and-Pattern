@@ -223,7 +223,7 @@ pattern, never into the message.
 | **WD-4** | **Errors and confirmations** (§3.7), through `slot_errors`' logging. **Tests:** the damaged-file case shows the new text and no parser message; the exit prompt has three buttons. | S | — |
 | **WD-5** | **The printed plan and order file** (§3.8). | S | ED-4, ED-5 |
 | **WD-6** | **Retire *pioneer*** in the three places on screen and the PDF (§3.8), as `review.md` already requires. | S | — |
-| **WD-7** | **Animals by English name** (§3.6): `what_it_feeds.eaters_line` and the overview name only animals with English names and count the rest. | S | OV-4 |
+| **WD-7** | **Animals by English name** (§3.6): `what_it_feeds.eaters_line` and the overview name only animals with English names and count the rest. | S | OV-5 |
 | **WD-8** | **The ID line and the not-known lines** (§4). | S | PR-4 |
 
 ## 6. Decisions for the owner

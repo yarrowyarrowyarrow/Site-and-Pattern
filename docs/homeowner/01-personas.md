@@ -135,7 +135,7 @@ What Sam does, and where the plan meets each step.
 | When | What Sam does | The moment that decides it | Plan item |
 |---|---|---|---|
 | Evening 1, 10 minutes | Installs, opens the app, sees the start screen | The first screen looks finished, and one button says what to do | ST-4 |
-| | Types their address, sees their yard | The map zooms to the yard (R7) and names the design after the address | ST-5, QF (R7) |
+| | Types their address, sees their yard | The map zooms to the yard (R7) and names the design after the address | ST-5, QF-2 |
 | | Outlines the front lawn, or a bed | Drawing a bed is enough, and is understood | PY-2, PY-10 |
 | | *Plan my yard*: front yard, fill it now | A plan appears in the drawn bed, not on the lawn or the path | PY-2, PY-3, PY-7 |
 | | Looks at the overview | Six plain answers, one of which says how full it will be | OV-1 |
@@ -144,7 +144,7 @@ What Sam does, and where the plan meets each step.
 | | Prints the plan | One nursery list, legible text, the right place name | EDF-1, EDF-2, R1 |
 | A Saturday in May | Walks the yard with the site-walk sheet; buys plants | The order file matches the nursery's stock list closely enough | ED-4, availability (F226) |
 | Planting day | Follows the planting map | Numbers on the map match the legend and the plants in the box | F218 (shipped) |
-| July | Opens the app again: "is this a weed?" | The app says plainly it is not an ID guide and points to iNaturalist; the care calendar says what to pull this month | WD (the ID line), OV-5 |
+| July | Opens the app again: "is this a weed?" | The app says plainly it is not an ID guide and points to iNaturalist; the care calendar says what to pull this month | WD-8 (the ID line), OV-8 |
 | Next spring | Sees gaps | The overview says gaps fill in years 2–4; mulch or plant more | 06 §5.1 |
 
 ## 6. Testing the plan on real people (FN-9)
