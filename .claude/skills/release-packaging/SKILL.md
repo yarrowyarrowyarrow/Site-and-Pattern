@@ -169,6 +169,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | Installed app: empty panels / "no such table" | A data file missing from `datas` or not read via `resource_path` (see `debugging` §1). |
 | Installed app: "Missing module" | Add to `hiddenimports` in the spec. |
 | "NSIS makensis not found" (Windows) | Falls back to ZIP; install NSIS and rebuild for the 1-click installer. |
+| CI, Windows job: *SiteAndPattern-Installer.exe was not produced*, after "NSIS not found" in the build step | `choco install nsis` failed on the runner (a 504 from community.chocolatey.org, V3.18) and the script fell back to a zip. Not the code: re-run the failed job once. |
 | Network features dead in the frozen app | Certs — `src/ssl_bootstrap.py` / `certifi`; see `debugging` §6. |
 | Updater doesn't see a new version | Not promoted yet: it is a prerelease until promoted on the release page or by "Promote a release" (V3.18). Otherwise the branch/tag is not `V<major>.<minor>`, or no Release was published — check the workflow run. |
 | Windows: *Error opening file for writing: …SiteAndPattern.exe* | The app was still running; Windows will not let a running program's files be written. Copies before V3.15 started the installer and stayed open. From V3.15 the app closes and the installer waits for it (`/UPDATE`); if something else holds a file, close it and Retry. There is no Ignore any more: it left the old program carrying the new `version.txt`, which the updater then read as up to date. |
