@@ -96,8 +96,9 @@ jobs:
           # skips prereleases (github_releases.list_releases), so a push builds
           # and publishes installers without offering them to every installed
           # copy; five releases reached users in one day before this. The
-          # owner offers one with the "Promote a release" workflow
-          # (promote-release.yml). A later push to a promoted version makes it
+          # owner offers one by promoting it: on the release page (Edit, untick
+          # "Set as a pre-release"), or with promote-release.yml once that file
+          # is on the default branch. A later push to a promoted version makes it
           # a prerelease again until it is promoted again: the new build is
           # the one nobody has looked at. Keep in step with the other file.
           prerelease: true

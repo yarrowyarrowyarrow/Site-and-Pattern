@@ -342,9 +342,11 @@ This is what powers **in-app updates**:
     installs with **no Gatekeeper warning**.
 
 So the publish loop is: push `V3.18` → Actions builds both installers and
-publishes them as a **prerelease** → the owner runs **Actions → Promote a
-release** with `V3.18` → every installed copy offers V3.18 under Help → Check
-for Updates. Until V3.18 every push was a full release, offered at once
+publishes them as a **prerelease** → the owner promotes it (the release page:
+**Edit**, untick *Set as a pre-release*, tick *Set as the latest release*; or
+**Actions → Promote a release**, once `promote-release.yml` is on the default
+branch, since GitHub runs a hand-started workflow only from there) → every
+installed copy offers V3.18 under Help → Check for Updates. Until V3.18 every push was a full release, offered at once
 (FN-7; the owner's decision D5).
 
 > **Windows** isn't auto-published here (the user builds the `.exe` and

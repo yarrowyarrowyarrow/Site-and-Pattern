@@ -12,6 +12,14 @@ name: Promote a release
 # How: GitHub > Actions > "Promote a release" > Run workflow, and type the
 # version, for example V3.18. It refuses a version whose release is missing
 # either installer, because a copy would be offered an update it cannot find.
+#
+# GITHUB LISTS THIS ONLY ONCE THIS FILE IS ON THE DEFAULT BRANCH. A workflow
+# that runs by hand must exist on the repository's default branch (GitHub's
+# "Manually running a workflow"), which here is `main`, unmoved since V2.20.
+# Until the owner puts this one file there, promote on the release page
+# instead: Releases > the version > Edit > untick "Set as a pre-release",
+# tick "Set as the latest release" > Update release. Same effect; check the
+# .exe and the .dmg are both attached first.
 
 on:
   workflow_dispatch:

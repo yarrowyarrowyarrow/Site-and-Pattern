@@ -33,8 +33,9 @@ push to a V<major>.<minor> branch
 GitHub PRERELEASE  (tag release-V3.18, assets: SiteAndPattern-V3.18.dmg + ...-Setup.exe)
       │   since V3.18 (FN-7): the updater skips prereleases, so nobody is offered it yet
       ▼
-Actions → "Promote a release" (promote-release.yml, run by hand with the version)
-      │   checks both installers are attached, then makes it a full release, marked Latest
+the owner PROMOTES it: release page → Edit → untick "Set as a pre-release"
+      │   (or Actions → "Promote a release", promote-release.yml, which checks both
+      │   installers first; runnable only once that file is on the default branch, main)
       ▼
 in-app updater  src/github_releases.py  (list_releases / latest_release by tag)
                 + src/controllers/update_flow.py  →  Help → Check for Updates downloads it
@@ -169,7 +170,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | Installed app: "Missing module" | Add to `hiddenimports` in the spec. |
 | "NSIS makensis not found" (Windows) | Falls back to ZIP; install NSIS and rebuild for the 1-click installer. |
 | Network features dead in the frozen app | Certs — `src/ssl_bootstrap.py` / `certifi`; see `debugging` §6. |
-| Updater doesn't see a new version | Not promoted yet: it is a prerelease until "Promote a release" runs (V3.18). Otherwise the branch/tag is not `V<major>.<minor>`, or no Release was published — check the workflow run. |
+| Updater doesn't see a new version | Not promoted yet: it is a prerelease until promoted on the release page or by "Promote a release" (V3.18). Otherwise the branch/tag is not `V<major>.<minor>`, or no Release was published — check the workflow run. |
 | Windows: *Error opening file for writing: …SiteAndPattern.exe* | The app was still running; Windows will not let a running program's files be written. Copies before V3.15 started the installer and stayed open. From V3.15 the app closes and the installer waits for it (`/UPDATE`); if something else holds a file, close it and Retry. There is no Ignore any more: it left the old program carrying the new `version.txt`, which the updater then read as up to date. |
 
 ## Pitfalls
@@ -196,7 +197,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | `INSTALL.md` | End-user install instructions. |
 | `.github/workflows/release-macos.yml` | Cloud-Mac x86_64 DMG build + Release publish. |
 | `.github/workflows/release-windows.yml` | Windows NSIS EXE build + Release publish. |
-| `.github/workflows/promote-release.yml` | Makes one prerelease a full release (V3.18); run by hand. |
+| `.github/workflows/promote-release.yml` | Makes one prerelease a full release (V3.18); run by hand, and only once the file is on the default branch. |
 | `scripts/packaging/permadesign.spec` | PyInstaller spec (`datas`, `hiddenimports`). |
 | `scripts/packaging/build_installer.sh` | macOS/Linux build script. |
 | `scripts/packaging/build_installer.bat` | Windows build script. |
