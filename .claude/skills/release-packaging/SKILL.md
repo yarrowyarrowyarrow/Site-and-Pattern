@@ -181,6 +181,10 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
   the publish step fails with *403 Resource not accessible by integration*
   even though the token has `Contents: write`, after both installers have
   built. Follow a workflow change with any other commit in the same push.
+- **A commit message that spells out the skip marker skips the run, whatever
+  the sentence around it says** (V3.18). GitHub looks for the bracketed
+  `skip ci` text anywhere in the message: "this commit carries no [skip ci]"
+  skipped every workflow. Never write the marker in a message that must run.
 
 - **Pushing a V-branch triggers a real public release build.** Don't push a
   half-finished branch expecting it to be private — the workflows fire on the
