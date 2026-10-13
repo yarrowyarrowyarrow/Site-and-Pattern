@@ -29,6 +29,11 @@ feature, skim where it sits in that philosophy. The sources of truth:
 
 - [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the thirteen principles, each with a
   "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
+- [`docs/homeowner/`](docs/homeowner/README.md) — **the plan to finish the app (V3.17)**: the
+  homeowner's path made the strongest part, simple by default with advanced tools behind one
+  switch, Edmonton as a region pack Calgary can copy, and what finishing means for a free app.
+  Fifteen increments from V3.18 (part 11) and every owner decision with a recommendation (part
+  12). **Before starting an increment, read its part and check its decisions are answered.**
 - [`docs/BACKLOG.md`](docs/BACKLOG.md) — **everything not yet built, in one place** (V2.52). Read
   this before re-deriving the backlog from the two roadmaps; it is the index, and it carries the
   verified status of every open ID.
