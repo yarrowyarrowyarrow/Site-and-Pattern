@@ -164,7 +164,7 @@ Owned by [07-plan-my-yard.md](07-plan-my-yard.md) §4.3 and §4.5. The words to
 retire, with their sources: *A local AI picks fitting native plants…*
 (`src/generate_design_dialog.py:48-50`); *Build without AI (offline)*
 (`:163-165`); *(local AI, with an offline fallback)* (`src/app.py:428`); the
-fallback note quoting the error (`src/generate_worker.py:78-82`); *Generated
+fallback note quoting the error (`src/generate_worker.py:79-83`); *Generated
 design — placed N plants. Fine-tune by dragging or deleting.*
 (`src/controllers/generation.py:223-226`), which becomes the bar of 07 §4.4.
 
@@ -191,7 +191,7 @@ pattern, never into the message.
 | `src/app.py:2322` | *You have unsaved changes. Exit anyway?* | *Save changes to "Back yard" before closing?* · Save · Don't save · Cancel |
 | `src/app.py:1842` | *Current design has unsaved changes. Discard and start new?* | ST-6's wording: *Discard unsaved changes to "Back yard" and start a new yard?* |
 | `src/controllers/persistence.py:289-293` | *Restore autosaved design?* / *Site & Pattern closed without saving last time. An autosaved copy of "…" was recovered (last saved to: …). Restore it now?* | ST-8: *Site & Pattern closed without saving last time. Open the copy it kept of "Back yard"?* · Open it · Not now (kept) |
-| Raw citation keys (R17), `src/food_page.py:378` | *globi_…* | `citations.short()` ("Acorn & Sheldon 2006"), as the website does |
+| Raw citation keys (R17), `src/food_page.py:376-380` | *globi_…* | `citations.format_sources(source, short=True)` ("Acorn & Sheldon 2006"), as the website does |
 
 ### 3.8 The printed plan and the order file
 
@@ -201,7 +201,7 @@ pattern, never into the message.
 | `src/pdf_export.py:458, 588`; `src/planting_plan.py:402` | *Alberta native plant / seed sources* | *Where to buy around Edmonton* (ED-4) |
 | `src/on_this_design_panel.py:597` | *AB retail/install …* | *About $X–$Y at Edmonton native nurseries* |
 | The PDF's pale text (R1) | `#a5d6a7`/`#c8e6c9` on white | the print palette's dark text (R1's fix) |
-| *pioneer* in the PDF's phased plan (`src/conversion_plan.py:163`), `src/planning_panel.py:814`, `src/snapshot_window.py:171` | *pioneer forbs fill in first* | *the first wildflowers fill in, then give way* |
+| *pioneer* on screen and in the PDF: `src/conversion_plan.py:163`, `src/planning_panel.py:814`, `src/snapshot_window.py:171` | *Plant pioneer species to hold the soil*; *pioneer forbs fill in first*; *faint plants are pioneers fading* | *Plant quick starters to hold the soil*; *the first wildflowers fill in, then give way*; *faint plants are the early ones giving way* |
 
 ## 4. Two lines that must appear
 
