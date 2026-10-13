@@ -175,6 +175,13 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 
 ## Pitfalls
 
+- **Never end a push on a commit that changes `.github/workflows/`** (V3.18).
+  The release is tagged on the push's last commit, and GitHub refuses a
+  workflow token creating a tag on a commit that changes a workflow file:
+  the publish step fails with *403 Resource not accessible by integration*
+  even though the token has `Contents: write`, after both installers have
+  built. Follow a workflow change with any other commit in the same push.
+
 - **Pushing a V-branch triggers a real public release build.** Don't push a
   half-finished branch expecting it to be private — the workflows fire on the
   push, and the prerelease is downloadable from the releases page even though
