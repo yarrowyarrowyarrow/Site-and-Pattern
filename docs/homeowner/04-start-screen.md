@@ -5,6 +5,14 @@ owner decisions **S1 to S13** (all decisions are collected in
 [12-decisions.md](12-decisions.md)). Checked against V3.17's code; where a
 claim comes from reading code rather than running it, it says so.*
 
+> **The owner's answers (13 October 2026):** Option B, "Your designs" (S12),
+> **with the Learn door kept** (S1). ST-1 fixes the door and ST-10 is cancelled,
+> so the rebuilt screen keeps one quiet *Learn* row below the yard rows; the
+> mockups' omission of it is superseded. The Learn window loses its *Plant
+> Directory* row (S4, RM-10 in [03](03-what-goes.md)) and keeps Walk a Wild
+> Landscape and Lessons & Field Study (S2, S3). Every other S answer took the
+> recommendation.
+
 ![Today's start screen, V3.17](img/start-screen-today.png)
 
 The owner, with a screenshot of this screen on Windows: *"This feels

@@ -5,6 +5,13 @@ owner decisions **G1 to G6** ([12-decisions.md](12-decisions.md)). The switch
 that hides advanced tools is MD-1 ([02-two-ways-to-use-it.md](02-two-ways-to-use-it.md));
 where this part and 02 disagree, this part wins.*
 
+> **The owner's answers (13 October 2026)** change this part in three places. The
+> Learn door **stays** (S1), so ST-10 is cancelled and G1's "accept all" covers
+> the other deletions only (the version picker, Import Yard Scan, `recipes.py`,
+> the AI); Field Study stays within Learn (S2). The **Plant Directory window is
+> retired** (S4): new item RM-10. The website gets **no work for now** (G5). Every
+> answer is in [12](12-decisions.md).
+
 The owner: *"perhaps it needs to be refined… ranking which features or aspects
 to remove or simplify"*, and *"I do agree about those 'not for a paying
 customer at all' features that can be slated for removal."* And the goal behind
@@ -162,6 +169,7 @@ not Delete.
 | **RM-6** | **Delete `src/db/recipes.py`** and its migration call; leave the table. *Accept:* the suite passes; an old database still opens | S | — |
 | **RM-7** | **Trim the installer.** Exclude `data/fetched/` (with ED-13), `html/*_probe.html`, `html/tune_*.html`, `html/sprite_gallery*` and `html/inspect_probe_data.json` from `scripts/packaging/permadesign.spec`'s `datas`. **Tests:** a test reads the spec and asserts the exclusions; `test_app_smoke` still finds every page the app opens. *Accept:* the installer is about 33 MB smaller uncompressed | S | — |
 | **RM-8** | **The community page in simple mode**: name, what it is for, its members as photographs, Place. The Alexander pattern card (`src/pattern_language.py`) shows with Advanced on. *Accept:* in simple mode the page has no pattern card | S | MD-1 |
+| **RM-10** | **Retire the Plant Directory window** (owner's answer S4). Delete `src/plant_directory_window.py` (196 lines), View › *Plant Directory…* (`src/app.py`), the start screen's route to it (`src/onboarding_flow.py:347`) and the Learn window's *Plant Directory* row (`src/app_mode.py:79`); keep `src/plant_directory.py`, whose `species_entry` the plant page and the website read. `src/scene_dossier.py` only mentions it in a comment. **Tests:** `tests/test_plant_directory_window.py` goes; `tests/test_plant_directory.py`'s `species_entry` tests stay; the smoke walk finds no Directory action. *Accept:* every plant page the window showed is reachable from Placement › Plants | S | — |
 | **RM-9** | **Structures grouped** under three headings (§6), in the simple app; Existing tree and Existing building stay with Features. *Accept:* the list shows three headings and the same 15 structures | S | — |
 
 ## 9. Decisions for the owner

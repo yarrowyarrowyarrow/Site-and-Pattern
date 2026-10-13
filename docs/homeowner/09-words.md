@@ -6,6 +6,12 @@ rules this builds on are [`../UI_PRINCIPLES.md`](../UI_PRINCIPLES.md) (Krug) and
 the vocabulary rules in [`../review.md`](../review.md); this part does not
 repeat them, it applies them to the simple app.*
 
+> **The owner's answers (13 October 2026):** the glossary is accepted (W1) and the
+> other W answers took the recommendation. One rule changes: for **spreading**, a
+> plant not yet checked shows nothing (L5), an exception to rule 5 below; the
+> must-have that filters on it reads *Leave out plants known to spread*. No
+> donation copy is needed for now (G5, D6).
+
 The persona reads every word the app shows and believes it (01 §3). Today the
 simple surfaces still speak the code's language in places: *boundary*,
 *polyculture*, *forb*, *keystone*, *pioneer*, *Restoring toward*, *AB retail
@@ -137,7 +143,7 @@ app does not have.
 | same | *Edmonton native* | *Native around Edmonton* |
 | same | *Feeds a specialist* | *Food for a fussy eater* — or advanced only (W4) |
 | same | *Pet safe* / *Child safe* | *Not known to be poisonous to pets* / *…to people* (R10) |
-| same | *Well behaved* | *Stays where you put it* (and blank counts as *not reviewed*, PR-7) |
+| same | *Well behaved* | *Leaves out known spreaders* (owner's answer L5: a plant not yet checked shows nothing about spreading; the label claims only what the data knows) |
 | same | *Easy to find* | *Easy to buy* |
 | `src/plant_filters.py:117` facet | *Restoring toward* | (advanced only; simple has the region) |
 | `src/plant_filters.py:112` facet | *Role* | *What it does* |

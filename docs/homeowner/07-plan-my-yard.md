@@ -7,6 +7,13 @@ PR-1 and PR-6 ([05-plants-that-lead.md](05-plants-that-lead.md)); the coverage
 measure is OV-1 ([06-yard-overview.md](06-yard-overview.md) §5.1); the AI
 leaving the app is RM-3 ([03-what-goes.md](03-what-goes.md)).*
 
+> **The owner's answers (13 October 2026):** every Y answer took the
+> recommendation. Two others reach this part. The yard is **measured, front and
+> back** (L3): new item PY-12. And a plant whose spreading is not yet checked
+> shows nothing about it (L5), so the must-have reads *Leave out plants known to
+> spread*, which the data can honour, rather than *Plants that stay where you put
+> them*.
+
 The persona has a yard and a wish, not a plant list. *Generate Design* is the
 one place the app can turn that wish into a first planting. It has to work
 first time, on whatever the person drew, and be easy to try again.
@@ -143,7 +150,7 @@ How full?
   ( ) Over two or three summers: about 50 plants now, mulch between
 
 Anything it must do?
-  [x] Plants that stay where you put them
+  [x] Leave out plants known to spread
   [x] Easy to buy around Edmonton
   [ ] Leave out plants known to be poisonous to pets
   [ ] Leave out plants known to be poisonous to people
@@ -284,6 +291,7 @@ Effort: S = up to a day, M = two to four days, L = a week or more.
 | **PY-8** | **About this plan** (PYF-7). Warning codes in `generation_warnings` (keeping the English for the advanced notes); `src/plan_notes.py` (Qt-free) turns codes into §4.5's lines; the panel; filter caveats moved into the dialog. **Tests:** the example plan's summary has no banned word (§4.5) and at most eight lines; every warning code has simple-mode words or is marked advanced-only. *Accept:* no modal box after a plan in simple mode | M | PY-1 |
 | **PY-9** | **The dialog's preconditions** (§4.2), wired to the existing tools (`shape_tool.set_type`, the address search, ED-8). **Tests:** each state's buttons arm the right tool. | S | PY-1 |
 | **PY-10** | **The getting-started strip** reworded: *Find your yard · Outline where to plant · Plan it, or pick plants yourself*, with **Plan my yard** as its button (`src/onboarding.py:51-90`, `src/first_step_bar.py`). The boundary step is done by a boundary **or** a bed. *Accept:* drawing only a bed completes step 2 | S | PY-1 |
+| **PY-12** | **Front and back yards measured automatically** (owner's answer L3). `yard_overview.yard_parts(project)`: the planting area (OV-1's rule: the outline less buildings, paths, patios and lawn) split at the house's footprint into the street side and the back, the street side from `frontage` (PY-7's remembered side first). It feeds 05's *fits* words (instead of an assumed 100 m² bed and 180 m² yard; no outline, no size words), the *Where* line and the front-or-back default. **Tests:** a fixture lot with a house gives front and back areas that sum to the planting area within 1 m²; no building gives one yard; no outline gives `None`. *Accept:* a drawn lot with its house reads "front yard about 60 m², back yard about 140 m²" | M | OV-1, PY-3 |
 | **PY-11** | **Keep the probe honest.** Move the probe into `scripts/probe_plan_my_yard.py` with an `--assert` mode that fails on the PY-2 to PY-4 thresholds, and run that mode from a test module that skips without shapely. *Accept:* the test fails on today's code and passes after PY-4 | S | — |
 
 ## 6. Decisions for the owner

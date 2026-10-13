@@ -7,6 +7,13 @@ feature IDs **F233 to F249** in the ledger. Decisions are in
 [12-decisions.md](12-decisions.md); the scale bar's is **K1**, the only one this
 part adds.*
 
+> **The owner answered every decision on 13 October 2026** (12 §0). The
+> increments below already include what changed: the Learn door stays (ST-10
+> cancelled), the Plant Directory window goes (RM-10), the score counts the
+> Edmonton list (ED-17), front and back yards are measured (PY-12), and there is
+> no rules block, website work or donate link for now (ED-14, ED-12, FN-10). Every
+> *Decisions* line below is answered; read the answers in 12 before starting.
+
 ## In one paragraph
 
 Fifteen increments, one release branch each, from **V3.18** to **V3.32**. Eleven
@@ -19,7 +26,7 @@ stacks on itself, a door that opens the wrong window), then the **simple app**
 the three new things the homeowner sees (**plants that lead**, **how your yard
 is doing**, **Plan My Yard**), then the words, then **finishing** and the
 **usability sessions** that decide whether it worked. By the plan's own S/M/L
-sizes that is about 166 developer-days, 134 of them *must*; the project's recent
+sizes that is about 167 developer-days, 133 of them *must*; the project's recent
 pace with Claude Code has been far faster than those sizes assume, so the
 calendar will be set by the owner's decisions and reviews more than by coding
 (§7).
@@ -29,8 +36,9 @@ calendar will be set by the owner's decisions and reviews more than by coding
 ## 1. How to work through it (for whoever picks up an increment)
 
 1. **Read the part** the increment's items come from, and its decisions. If a
-   decision listed under *Decide first* is still open, ask the owner before
-   starting; the recommended answer is in [12](12-decisions.md).
+   decision listed under *Decisions* is unclear, read its answer in
+   [12](12-decisions.md) (and on the decisions page) before starting; ask the
+   owner only if the answer itself is ambiguous.
 2. **Make the branch** the repository's way (CLAUDE.md, *Branch naming
    convention*): the next `V<major>.<minor>`, never a `claude/*` name, never
    `git pull` on a V-branch. The session hook proposes the number.
@@ -87,7 +95,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-1 | Delete the version picker | S | [03](03-what-goes.md) |
 | FN-7 | A stable channel | S | [10](10-finishing.md) |
 
-*Decide first:* D1 (it decides whether this release may go public), D5, G1, Y4. *Done when:* the Lessons door opens Lessons; a printed PDF is readable in black and white; the example has no plant off the Edmonton list; planning twice leaves one plan; a 1 m path no longer empties half the yard; a damaged file says so in a sentence; pushes publish prereleases.
+*Decisions (answered, see 12):* D1 (it decides whether this release may go public), G1, Y4. *Done when:* the Lessons door opens Lessons; a printed PDF is readable in black and white; the example has no plant off the Edmonton list; planning twice leaves one plan; a 1 m path no longer empties half the yard; a damaged file says so in a sentence; pushes publish prereleases.
 
 ### Increment 2 · V3.19 · What a stranger trips on (must; about 16 developer-days; F233, F241)
 
@@ -106,11 +114,11 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | QF-13 | Growth Snapshots' years said the same everywhere (R28) | S | [11](11-work-plan.md) |
 | QF-14 | A self-crossing outline is refused, with a reason (R29) | S | [11](11-work-plan.md) |
 | QF-15 | An Edit menu: Undo, Redo, Delete, Select all (R33) | S | [11](11-work-plan.md) |
-| QF-18 | The scale bar in metres at yard scale (R18; owner's call K1) | S | [11](11-work-plan.md) |
+| QF-18 | The scale bar picks its units by itself, and can still be switched (R18, K1) | S | [11](11-work-plan.md) |
 | QF-19 | An overlay switch with nothing to draw says so (R27, advanced pages) | S | [11](11-work-plan.md) |
 | WD-6 | Retire pioneer | S | [09](09-words.md) |
 
-*Decide first:* K1 (the scale bar). *Done when:* each QF row's own test passes, and the first review's walkthrough (pin, outline, plant, export) shows none of R6–R9, R17–R21, R24, R26, R28, R29, R33.
+*Decisions (answered, see 12):* K1 (the scale bar). *Done when:* each QF row's own test passes, and the first review's walkthrough (pin, outline, plant, export) shows none of R6–R9, R17–R21, R24, R26, R28, R29, R33.
 
 ### Increment 3 · V3.20 · One answer for each question (should; about 8 developer-days; F239)
 
@@ -124,7 +132,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | OV-8 | "This month" stops contradicting the care calendar (OVF-5) | S | [06](06-yard-overview.md) |
 | OV-11 | Habitat page tidy for advanced | S | [06](06-yard-overview.md) |
 
-*Decide first:* O2, O6. *Done when:* the Report card, Habitat and the PDF show one score, one wildlife count and one set of hours for the same design; the Water page counts every plant.
+*Decisions (answered, see 12):* O2, O6. *Done when:* the Report card, Habitat and the PDF show one score, one wildlife count and one set of hours for the same design; the Water page counts every plant.
 
 ### Increment 4 · V3.21 · Simple by default (must; about 10 developer-days; F234, F241)
 
@@ -139,9 +147,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-9 | Structures grouped | S | [03](03-what-goes.md) |
 | WD-1 | The glossary as a test | S | [09](09-words.md) |
 
-*Decide first:* M1, M3, G4, G6, W1. *Done when:* a cold start shows only 02's simple surfaces; View → Advanced tools shows everything that exists today; the smoke suite passes in both modes; the vocabulary test is in place.
+*Decisions (answered, see 12):* M1, M3, G6, W1. *Done when:* a cold start shows only 02's simple surfaces; View → Advanced tools shows everything that exists today; the smoke suite passes in both modes; the vocabulary test is in place.
 
-### Increment 5 · V3.22 · What goes (must; about 10 developer-days; F235)
+### Increment 5 · V3.22 · What goes (must; about 8 developer-days; F235)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
@@ -150,9 +158,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | RM-5 | Record the reversals | S | [03](03-what-goes.md) |
 | RM-6 | Delete `src/db/recipes.py` | S | [03](03-what-goes.md) |
 | RM-7 | Trim the installer | S | [03](03-what-goes.md) |
-| ST-10 | Retire the Learn door and its menu | M | [04](04-start-screen.md) |
+| RM-10 | Retire the Plant Directory window | S | [03](03-what-goes.md) |
 
-*Decide first:* G1, G2, G3, M4, S1–S5, Y1. *Done when:* no Import Yard Scan, no AI wording, no Learn door; an old design holding a scan still opens; the installer is about 33 MB smaller.
+*Decisions (answered, see 12):* G1, G2, G3, Y1. *Done when:* no Import Yard Scan, no AI wording, no Plant Directory window; the Learn door still opens Walk a Wild Landscape and Lessons & Field Study; an old design holding a scan still opens; the installer is about 33 MB smaller.
 
 ### Increment 6 · V3.23 · The front door (must; about 8 developer-days; F236)
 
@@ -165,9 +173,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | ST-8 | Unsaved work is kept when Recover is passed over | S | [04](04-start-screen.md) |
 | ST-9 | The example opens as a copy | S | [04](04-start-screen.md) |
 
-*Decide first:* S6–S9, S12, S13 (listed in 12). *Done when:* 04's three mockups match the running app; a new design is named from its address; the example opens as a copy; unsaved work survives a passed-over Recover.
+*Decisions (answered, see 12):* S6–S9, S12, S13 (listed in 12). *Done when:* 04's three mockups match the running app; a new design is named from its address; the example opens as a copy; unsaved work survives a passed-over Recover.
 
-### Increment 7 · V3.24 · The region pack (must; about 14 developer-days; F237)
+### Increment 7 · V3.24 · The region pack (must; about 13 developer-days; F237)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
@@ -177,12 +185,11 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | ED-4 | One nursery list | S | [08](08-edmonton-edition.md) |
 | ED-5 | The place line on exports | S | [08](08-edmonton-edition.md) |
 | ED-11 | Guard tests | S | [08](08-edmonton-edition.md) |
-| ED-12 | The website reads every pack | S | [08](08-edmonton-edition.md) |
 | ED-13 | The edition file and the installer's contents | S | [08](08-edmonton-edition.md) |
 
-*Decide first:* E1, E4, E9. *Done when:* the region guard passes; the Edmonton list is byte-identical after the move; one nursery list in every output; a Calgary test pack relabels the goal, the quality and the switch with no code change.
+*Decisions (answered, see 12):* E1, E4, E9. *Done when:* the region guard passes; the Edmonton list is byte-identical after the move; one nursery list in every output; a Calgary test pack relabels the goal, the quality and the switch with no code change.
 
-### Increment 8 · V3.25 · Climate and coverage from the region (should; about 10 developer-days; F237)
+### Increment 8 · V3.25 · Climate and coverage from the region (should; about 13 developer-days; F237)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
@@ -190,8 +197,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | ED-7 | Map view and address search from the region | S | [08](08-edmonton-edition.md) |
 | ED-8 | Coverage messages and out-of-area behaviour | M | [08](08-edmonton-edition.md) |
 | ED-9 | Nativity by the pin's province | M | [08](08-edmonton-edition.md) |
+| ED-17 | Native counts by the Edmonton list in the score | M | [08](08-edmonton-edition.md) |
 
-*Decide first:* E2, E3, E5, E7. *Done when:* a Toronto pin gets the outside-the-area sentence and no borrowed climate; frost dates agree everywhere; a Regina design scores a Saskatchewan native as native.
+*Decisions (answered, see 12):* E2, E3, E5, E7. *Done when:* a Toronto pin gets the outside-the-area sentence and no borrowed climate; frost dates agree everywhere; a Regina design scores a Saskatchewan native as native; an Edmonton design scores natives by the Edmonton list.
 
 ### Increment 9 · V3.26 · Plants that lead (must; about 17 developer-days; F238, F237, F241)
 
@@ -207,9 +215,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | WD-3 | The plant list and page | S | [09](09-words.md) |
 | WD-8 | The ID line and the not-known lines | S | [09](09-words.md) |
 
-*Decide first:* L1–L10 (listed in 12), W3, W4. *Done when:* Placement › Plants opens on the Edmonton list, best picks first, each row with a band and a reason; the plant page has two modes; the generator's pool follows the same ranking.
+*Decisions (answered, see 12):* L1–L7, L9, L10 (listed in 12). *Done when:* Placement › Plants opens on the Edmonton list, best picks first, each row with a band and a reason; the plant page has two modes; the generator's pool follows the same ranking.
 
-### Increment 10 · V3.27 · How your yard is doing (must; about 16 developer-days; F239, F234, F241)
+### Increment 10 · V3.27 · How your yard is doing (must; about 19 developer-days; F239, F234, F241)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
@@ -221,8 +229,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | OV-13 | Regional sentences as data | S (plus owner reading the bylaw) | [06](06-yard-overview.md) |
 | MD-4 | "More detail ▸" from the overview | S | [02](02-two-ways-to-use-it.md) |
 | WD-7 | Animals by English name | S | [09](09-words.md) |
+| PY-12 | Front and back yards measured automatically | M | [07](07-plan-my-yard.md) |
 
-*Decide first:* O1, O3, O4, O5, O7, M2. *Done when:* the Design tab opens on six items in under 300 words with the numbers of 06 §6; each More detail link lands on its advanced page; the PDF's first page is the overview.
+*Decisions (answered, see 12):* O1, O3, O4, O5, O7. *Done when:* the Design tab opens on six items in under 300 words with the numbers of 06 §6; each More detail link lands on its advanced page; the PDF's first page is the overview; a drawn lot with its house reads front and back yard areas.
 
 ### Increment 11 · V3.28 · Plan My Yard (must; about 12 developer-days; F240)
 
@@ -235,7 +244,7 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | PY-10 | The getting-started strip | S | [07](07-plan-my-yard.md) |
 | PY-11 | Keep the probe honest | S | [07](07-plan-my-yard.md) |
 
-*Decide first:* Y3, Y6, W2. *Done when:* plan_my_yard_probe.py --assert passes: plants go in the drawn bed, not on the lawn or the path, and cover rises with the fullness chosen.
+*Decisions (answered, see 12):* Y3, Y6. *Done when:* plan_my_yard_probe.py --assert passes: plants go in the drawn bed, not on the lawn or the path, and cover rises with the fullness chosen.
 
 ### Increment 12 · V3.29 · Try another, front or back, about this plan (should; about 9 developer-days; F240)
 
@@ -245,19 +254,18 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | PY-7 | Front or back yard | M | [07](07-plan-my-yard.md) |
 | PY-8 | About this plan | M | [07](07-plan-my-yard.md) |
 
-*Decide first:* Y2, Y5. *Done when:* Try another three times gives three plans, each one undo step; a front-yard plan keeps the street band low; no modal notes box in the simple app.
+*Decisions (answered, see 12):* Y2, Y5. *Done when:* Try another three times gives three plans, each one undo step; a front-yard plan keeps the street band low; no modal notes box in the simple app.
 
-### Increment 13 · V3.30 · Site Info, the printout, the rules (should; about 5 developer-days; F241, F237)
+### Increment 13 · V3.30 · Site Info and the printout (should; about 4 developer-days; F241)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
 | WD-2 | The strip and Site Info | M | [09](09-words.md) |
 | WD-5 | The printed plan and order file | S | [09](09-words.md) |
-| ED-14 | The Edmonton rules content | S, plus the owner's reading | [08](08-edmonton-edition.md) |
 
-*Decide first:* W5, E6. *Done when:* Site Info is four lines at 1366 × 768; the printout says Where to buy around Edmonton; every rule carries a source and a checked date.
+*Decisions (answered, see 12):* W5, E6, O5. *Done when:* Site Info is four lines at 1366 × 768; the printout says Where to buy around Edmonton.
 
-### Increment 14 · V3.31 · Ready for strangers (must; about 14 developer-days; F242)
+### Increment 14 · V3.31 · Ready for strangers (must; about 13 developer-days; F242)
 
 | ID | Item | Effort | Part |
 |---|---|---|---|
@@ -268,11 +276,10 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | FN-5 | Credit every source and say what leaves the computer | S | [10](10-finishing.md) |
 | FN-6 | Identify the app | S | [10](10-finishing.md) |
 | FN-8 | Feedback without an account | S | [10](10-finishing.md) |
-| FN-10 | Support this app | S | [10](10-finishing.md) |
 | FN-11 | The one-page guide | S | [10](10-finishing.md) |
 | FN-12 | Pin the build | S | [10](10-finishing.md) |
 
-*Decide first:* D2, D3, D4, D6, G5, S10, S11. *Done when:* a fresh download installs without a SmartScreen block (or with the documented steps); every service is credited; Send Feedback needs no account; the guide page is live.
+*Decisions (answered, see 12):* D2, D3, D4, D6. *Done when:* the README and release notes show the SmartScreen and Mac steps; every service is credited; Send Feedback needs no account; the guide is in the README.
 
 ### Increment 15 · V3.32 · Watch five people use it, then hand it over (must; about 5 developer-days; F243, F242)
 
@@ -282,8 +289,9 @@ files; data jobs (§6) run alongside everything, mostly for the owner.
 | FN-13 | `docs/MAINTENANCE.md` | S | [10](10-finishing.md) |
 | FN-14 | A second maintainer | S | [10](10-finishing.md) |
 
-*Decide first:* D7. *Done when:* four of five homeowners complete 01 §6's tasks 1, 2, 6 and 7 unaided; the fixes they forced are in; the friend has cut a release; the release is promoted as the finished one.
-Items not scheduled: **PR-5** is superseded by OV-11 (the score tips are retired); **OV-14** is optional, after Sun & Shade's zones are classified; **ED-15** and **ED-16** come after finishing (F244, F245); **PR-7** and **PR-8** are data jobs (§6).
+*Decisions (answered, see 12):* D5, D7. *Done when:* four of five homeowners complete 01 §6's tasks 1, 2, 6 and 7 unaided; the fixes they forced are in; the friend has cut a release; the release is promoted as the finished one.
+
+Items not scheduled: **ST-10** is cancelled (the Learn door stays, S1); **ED-12** is deferred (no website work for now, G5); **ED-14** is cancelled (no rules block, E6); **FN-10** is cancelled (no donations for now, G5, D6); **PR-5** is superseded by OV-11 (the score tips are retired); **OV-14** is optional, after Sun & Shade's zones are classified; **ED-15** and **ED-16** come after finishing (F244, F245); **PR-7** and **PR-8** are data jobs (§6).
 
 ## 4. The quick fixes (QF-1 to QF-19)
 
@@ -309,7 +317,7 @@ defects worth fixing before the region pack exists. Each is S.
 | **QF-15** | An Edit menu: Undo, Redo, Delete, Select all, wired through a flow module (MainWindow is at its method ceiling) (R33); 02 §3.2's menu table gains it | `src/app.py` menu bar; a new `src/edit_menu_flow.py` | The menu exists; each action matches its toolbar twin |
 | **QF-16** | One nursery list now: the PDF and the planting plan read `nurseries.native_sources_near` as the order file does; delete `planting_plan.NURSERIES` (EDF-1). ED-4 later narrows it to the pack's list | `src/planting_plan.py:51-63`; `src/pdf_export.py` | One export of the example names the same suppliers in all three outputs |
 | **QF-17** | The PDF's place line from the design's own pin (its geocoded place, else the coordinates); nothing without a pin (EDF-2). ED-5 later uses the region's name | `src/pdf_export.py:313` | A Regina pin's PDF does not say Edmonton |
-| **QF-18** | The scale bar in metres below 1 km (R18). **Decision K1**: V3.06 made kilometres the default on the owner's choice; this changes it to automatic | `html/map/11-map-furniture.js` (`scaleBarFor`), `src/map_furniture_flow.py` | The node test of `scaleBarFor` at yard scale gives metres |
+| **QF-18** | The scale bar picks its units by itself (metres below 1 km) and can still be switched (R18). **Owner's answer K1**: "Automatic but able to change between the 2", so View › Scale Units becomes *Automatic* (the new default), *Kilometres*, *Metres*; V3.06's kilometres default is reversed | `html/map/11-map-furniture.js` (`scaleBarFor`), `src/map_furniture_flow.py` | The node test of `scaleBarFor` at yard scale gives metres |
 | **QF-19** | An overlay switch with nothing to draw is disabled with a tooltip saying what it needs (R27); advanced pages only | The Slope, Wind and Habitat pages' overlay checkboxes | Each switch is disabled until its overlay exists |
 
 ## 5. The first review's findings, R1 to R40
@@ -377,8 +385,8 @@ has a reserved ID.
 ## 7. Effort, honestly
 
 The S/M/L sizes in every part are a person's days: S up to a day, M two to four,
-L a week or more. Summed, the fifteen increments are **about 166
-developer-days, 134 of them *must***, plus the data jobs and the sessions'
+L a week or more. Summed, the fifteen increments are **about 167
+developer-days, 133 of them *must***, plus the data jobs and the sessions'
 people time. Two cautions about that number:
 
 - **It is probably high for this project.** Five releases (V3.13 to V3.17) were
@@ -403,14 +411,14 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 |---|---|---|---|
 | **F233** | The first review's quick fixes | QF-1 to QF-19 | code |
 | **F234** | Simple by default, advanced on request | MD-1 to MD-5, RM-4, RM-8, RM-9 | code |
-| **F235** | What goes: the deletions | RM-1 to RM-3, RM-5 to RM-7, ST-10 | code |
+| **F235** | What goes: the deletions | RM-1 to RM-3, RM-5 to RM-7, RM-10 (ST-10 cancelled: the Learn door stays) | code |
 | **F236** | The front door: "Your designs" | ST-1 to ST-9 | code |
-| **F237** | The region pack: Edmonton as a template | ED-1 to ED-14 | code |
+| **F237** | The region pack: Edmonton as a template | ED-1 to ED-11, ED-13, ED-17 (ED-12 deferred, ED-14 cancelled) | code |
 | **F238** | Plants that lead | PR-1 to PR-6, PR-9 | code |
 | **F239** | How your yard is doing: the overview | OV-1 to OV-14 | code |
-| **F240** | Plan My Yard | PY-1 to PY-11 | code |
+| **F240** | Plan My Yard | PY-1 to PY-12 | code |
 | **F241** | The words | WD-1 to WD-8 | code |
-| **F242** | Finishing: licence, signing, services, releases, runbook | FN-1 to FN-8, FN-10 to FN-14 | code and accounts |
+| **F242** | Finishing: licence, signing, services, releases, runbook | FN-1 to FN-8, FN-11 to FN-14 (FN-10 cancelled) | code and accounts |
 | **F243** | Usability sessions with homeowners | FN-9 | people |
 | **F244** | The Calgary edition | ED-15 | code and data; after finishing |
 | **F245** | The Regina edition | ED-16 | waits for herbarium data |
@@ -440,7 +448,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | QF-15 | An Edit menu: Undo, Redo, Delete, Select all (R33) | 2 |
 | QF-16 | One nursery list now: the PDF and plan read the directory, as the order file does (EDF-1) | 1 |
 | QF-17 | The PDF's place line from the design's own pin (EDF-2) | 1 |
-| QF-18 | The scale bar in metres at yard scale (R18; owner's call K1) | 2 |
+| QF-18 | The scale bar picks its units by itself, and can still be switched (R18, K1) | 2 |
 | QF-19 | An overlay switch with nothing to draw says so (R27, advanced pages) | 2 |
 | ST-1 | Fix the dead Lessons door | 1 |
 | ST-2 | Guard: no undefined names | 1 |
@@ -451,7 +459,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | ST-7 | Rename a design | 6 |
 | ST-8 | Unsaved work is kept when Recover is passed over | 6 |
 | ST-9 | The example opens as a copy | 6 |
-| ST-10 | Retire the Learn door and its menu | 5 |
+| ST-10 | Retire the Learn door and its menu | cancelled: the Learn door stays (S1) |
 | MD-1 | The switch and its registry | 4 |
 | MD-2 | Every existing guard runs in both modes | 4 |
 | MD-3 | "This design uses advanced tools." | 4 |
@@ -466,6 +474,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | RM-7 | Trim the installer | 5 |
 | RM-8 | The community page in simple mode | 4 |
 | RM-9 | Structures grouped | 4 |
+| RM-10 | Retire the Plant Directory window | 5 |
 | PR-1 | `src/plant_priority.py`: the Impact and Feasibility ranking | 9 |
 | PR-2 | "Best picks first" is the default order | 9 |
 | PR-3 | Simple-mode plant row: band chip and one reason; layers interleaved on the first screen | 9 |
@@ -500,6 +509,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | PY-9 | The dialog's preconditions | 11 |
 | PY-10 | The getting-started strip | 11 |
 | PY-11 | Keep the probe honest | 11 |
+| PY-12 | Front and back yards measured automatically | 10 |
 | ED-1 | The region layer and the Edmonton pack | 7 |
 | ED-2 | The local flora read from packs | 7 |
 | ED-3 | Labels and goals from the region | 7 |
@@ -511,11 +521,12 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | ED-9 | Nativity by the pin's province | 8 |
 | ED-10 | The region's defaults on | 9 |
 | ED-11 | Guard tests | 7 |
-| ED-12 | The website reads every pack | 7 |
+| ED-12 | The website reads every pack | deferred: no website work for now (G5) |
 | ED-13 | The edition file and the installer's contents | 7 |
-| ED-14 | The Edmonton rules content | 13 |
+| ED-14 | The Edmonton rules content | cancelled: no rules block (E6) |
 | ED-15 | The Calgary pack | after finishing: F244, needs a Calgary reviewer |
 | ED-16 | The Regina pack | after finishing: F245, waits for herbarium data |
+| ED-17 | Native counts by the Edmonton list in the score | 8 |
 | WD-1 | The glossary as a test | 4 |
 | WD-2 | The strip and Site Info | 13 |
 | WD-3 | The plant list and page | 9 |
@@ -533,7 +544,7 @@ in the same commit as this plan. **Next free ID after this plan: F250.**
 | FN-7 | A stable channel | 1 |
 | FN-8 | Feedback without an account | 14 |
 | FN-9 | Usability sessions | 15 |
-| FN-10 | Support this app | 14 |
+| FN-10 | Support this app | cancelled: no donations for now (G5, D6) |
 | FN-11 | The one-page guide | 14 |
 | FN-12 | Pin the build | 14 |
 | FN-13 | `docs/MAINTENANCE.md` | 15 |

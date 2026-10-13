@@ -449,14 +449,14 @@ the owner is [its part 12](homeowner/12-decisions.md).*
 |----|---------|--------|------|---|
 | **F233** | **The first review's quick fixes** (QF-1 to QF-19): the PDF readable in print, zoom to the yard, honest offline messages, the example's two off-list plants, one nursery list, the scale bar's units (decision K1). | M (19 × S) | Low | P9 |
 | **F234** | **Simple by default, advanced on request** (MD-1 to MD-5): one remembered switch that hides tools, never work. | M | Med (every guard runs in both modes) | P13 |
-| **F235** | **What goes** (RM-1 to RM-3, RM-5 to RM-7, ST-10): the version picker, Import Yard Scan, the Learn door, `recipes.py`; the AI out of the app. | M | Low | — |
+| **F235** | **What goes** (RM-1 to RM-3, RM-5 to RM-7, RM-10): the version picker, Import Yard Scan, `recipes.py`, the Plant Directory window; the AI out of the app. The Learn door stays (owner's answer S1). | M | Low | — |
 | **F236** | **The front door: "Your designs"** (ST-1 to ST-9). | M | Low | P13 |
-| **F237** | **The region pack** (ED-1 to ED-14): Edmonton as data, Calgary as a second folder. | L | Med (touches twelve modules' nativity) | P9, P12 |
+| **F237** | **The region pack** (ED-1 to ED-11, ED-13, ED-17): Edmonton as data, Calgary as a second folder; the score counts the Edmonton list (E5). | L | Med (touches twelve modules' nativity) | P9, P12 |
 | **F238** | **Plants that lead** (PR-1 to PR-6, PR-9): ranked by impact and feasibility, best picks first. | L | Med (a ranking people will question) | P6, P13 |
 | **F239** | **How your yard is doing** (OV-1 to OV-14): one overview, and the advanced pages made to agree. | L | Med | P5, P6, P9 |
-| **F240** | **Plan My Yard** (PY-1 to PY-11): plants where the person drew, to a cover target, replace and try again. | L | Med (the generator's tests) | P1, P13 |
+| **F240** | **Plan My Yard** (PY-1 to PY-12): plants where the person drew, to a cover target, replace and try again. | L | Med (the generator's tests) | P1, P13 |
 | **F241** | **The words** (WD-1 to WD-8): one name for each thing, held by a test. | M | Low | P5 |
-| **F242** | **Finishing** (FN-1 to FN-8, FN-10 to FN-14): licence, signing, services, a stable channel, feedback, donations, the runbook. | L | High (outside parties: Riverbank, signing, Esri) | — |
+| **F242** | **Finishing** (FN-1 to FN-8, FN-11 to FN-14): licence, install instructions, services, a stable channel, feedback, the runbook (no signing, website or donations for now, on the owner's answers). | L | High (outside parties: Riverbank, signing, Esri) | — |
 | **F244** | **The Calgary edition** (ED-15): after finishing. | L | Med (needs a reviewer) | P9 |
 | **F245** | **The Regina edition** (ED-16): waits for herbarium data. | L | High (data that does not exist yet) | P9 |
 

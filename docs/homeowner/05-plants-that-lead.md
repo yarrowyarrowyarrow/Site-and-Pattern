@@ -4,6 +4,19 @@
 owner decisions **L1 to L10** ([12-decisions.md](12-decisions.md)). Measured on
 V3.17 against the shipped catalogue (424 plants, 250 on the Edmonton list).*
 
+> **The owner's answers (13 October 2026) revise PR-1.** The ranking is **Impact
+> only, with feasibility as words** (L1): the order is Impact (0–11, §4.1), the
+> bands are cut on Impact (thresholds set when PR-1 is built so the top band
+> holds about the top 40), and §4.2's feasibility points become the reasons and
+> cautions on the row and page (where to buy, dry ground, fits, behaviour), not a
+> score. A yard's size is **measured, not assumed** (L3): the *fits* words use
+> the front and back yards measured from the outline less the house (PY-12 in
+> [07](07-plan-my-yard.md)); with no outline there are no size words. A plant
+> whose spreading is **not yet checked shows nothing** about spreading (L5) until
+> the spread review (F246) records it. The other L answers took the
+> recommendation, including Chokecherry leading (L4) and free-text notes never
+> shown on the desktop (L8, P12).
+
 The owner: the app *"is not intended to be a flora reference (certainly not an
 ID reference) but the information provided should rather be useful for finding
 the appropriate plants for the conditions at hand and in order to place them

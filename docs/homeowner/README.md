@@ -67,7 +67,7 @@ maker a coffee, finished well enough that the owner can **move on**.
 | [09 · The words](09-words.md) | One name for each thing; a glossary a test can hold; the rewrite list | WD-1 to WD-8 | W1–W5 |
 | [10 · Finishing](10-finishing.md) | Licence, signing, outside services, a stable release channel, donations, feedback, the runbook | FN-1 to FN-14 | D1–D7 |
 | [11 · The work plan](11-work-plan.md) | Fifteen increments (V3.18 to V3.32), the quick fixes, R1–R40 mapped, feature IDs F233–F249 | QF-1 to QF-19 | K1 |
-| [12 · The decisions](12-decisions.md) | All 68 owner decisions with a recommendation and when each is needed | — | all |
+| [12 · The decisions](12-decisions.md) | All 68 owner decisions with a recommendation and when each is needed; **answered 13 October 2026**, the 13 that differ from the recommendations in its §0 | — | all |
 
 ## How to read it
 

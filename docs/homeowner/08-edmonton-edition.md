@@ -6,6 +6,12 @@ defects found here **EDF-1 to EDF-7**; owner decisions **E1 to E9**
 MD-1 ([02-two-ways-to-use-it.md](02-two-ways-to-use-it.md)); the overview's
 regional sentences are OV-13 ([06-yard-overview.md](06-yard-overview.md)).*
 
+> **The owner's answers (13 October 2026):** **no rules block** (E6): ED-14 is
+> cancelled and the manifest carries no `rules` field and no 24-month check.
+> **"Native" in the score counts the Edmonton list** in the Edmonton region (E5):
+> new item ED-17, a deliberate headline change. **No website work for now** (G5):
+> ED-12 is deferred. The other E answers took the recommendation.
+
 The owner asked *"what it would mean for this app to be local to just Edmonton
 [which could be used as a template to build out the Calgary or Regina apps]"*.
 
@@ -185,8 +191,8 @@ needs no schema bump.
 | `nursery_note` | str | yes | "Native-plant growers and societies for the Edmonton region. Stock is seasonal and often grown to order: check before you go." | Site Info |
 | `communities.hint` | str | no | "Edmonton" | the generator's community preference |
 | `example` | `{centre, name, planting: [[[names…], [east_m, north_m]], …]}` | yes | from `src/onboarding.py:160-193`, after R14's fix | onboarding |
-| `rules[]` | `{title, text, applies_to, source, url, checked}` | yes, may be empty | §4.6 | Site tab, the PDF's site-prep page |
-| `overview.street_rule`, `overview.street_rule_source`, `overview.price_note` | str | no | the sentences in [06](06-yard-overview.md) §5.3, pending decision O5 | the yard overview (OV-13) |
+| ~~`rules[]`~~ | dropped by the owner's answer E6 | — | — | — |
+| `overview.price_note` | str | no | "at Edmonton native nurseries" (the street-rule keys are dropped: O5) | the yard overview (OV-13) |
 | `defaults.local_natives_only` | bool | yes | true | picker, Directory, Communities, Generate |
 | `defaults.first_run_goals` | goal keys | yes | `local_native`, `pollinator`, `well_behaved`, `low_cost` | onboarding |
 | `elevation.municipal_contours` | str or null | no | `edmonton_open_data` | the slope tools (Advanced) |
@@ -368,7 +374,6 @@ chooses. A separate Calgary installer would be `edition.json` with
 - every example species resolves and `native_around(name, key)` is true (this
   would have caught R14);
 - `monthly_precip_mm` has 12 values; the frost dates parse;
-- every rule has a `url` and a `checked` date under 24 months old;
 - no ruling carries a `reason`.
 
 ---
@@ -442,6 +447,7 @@ Effort: S = up to a day, M = two to four days, L = a week or more.
 | **ED-12** | **The website reads every pack.** The "Native area" facet and hub pages from `places()`. *Accept:* a test pack adds a hub page with no website code | S | ED-2 |
 | **ED-13** | **The edition file and the installer's contents.** `edition.json`; drop `data/fetched/` from the spec's `datas`. **Tests:** a spec-reading test asserts `fetched` is excluded. *Accept:* the Windows installer shrinks by about 32 MB uncompressed | S | ED-1 |
 | **ED-14** | **The Edmonton rules content** (§4.6). Owner reads each source and approves each line (decision E6); shown under Site › Before you dig and on the PDF. *Accept:* each rule carries a URL and a `checked` date | S, plus the owner's reading | ED-1, E6 |
+| **ED-17** | **Native counts by the Edmonton list in the score** (owner's answer E5). In the Edmonton region the habitat score's native term (`src/habitat_score.py`, 20 points, `native_species / n_species`) counts plants on the Edmonton list; elsewhere, natives of the pin's province (ED-9). **A deliberate headline change** (the generate-design skill's stability rule): `tests/test_habitat_score.py` is updated on purpose, the increment's plan records how far the worked example and three generated designs move, and the critic's adopt-if-better comparison is re-checked. The nudge text (`habitat_score.py:331`, "aren't Alberta-native") follows the region's words. *Accept:* a design in Edmonton with Canada Goldenrod loses that plant's native credit; the worked example after QF-4 keeps full credit | M | ED-3, ED-9 |
 | **ED-15** | **The Calgary pack** (§5.2). | L | ED-1 to ED-14; a reviewer (E8) |
 | **ED-16** | **The Regina pack** (§5.1). | L | ED-15; the herbarium data |
 

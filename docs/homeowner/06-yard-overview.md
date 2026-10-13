@@ -6,6 +6,13 @@ that hides the in-depth pages is [02-two-ways-to-use-it.md](02-two-ways-to-use-i
 (MD-1 to MD-5). The plant ranking used by some of the actions here is
 [05-plants-that-lead.md](05-plants-that-lead.md) (PR-1).*
 
+> **The owner's answers (13 October 2026):** **no bylaw sentence** (O5): item 5
+> says what helps a bed read as a garden and names no rule, and OV-13 keeps only
+> the place's name and the price note. The score's native term counts the
+> Edmonton list in the Edmonton region (E5; ED-17 in [08](08-edmonton-edition.md));
+> the overview still shows no number (O1). The other O answers took the
+> recommendation.
+
 The owner values the ecosystem analysis **as an overview**, and finds that its
 in-depth form hides what it is useful for. The persona is an Edmonton homeowner
 who knows little about native plants. They want answers to a few plain

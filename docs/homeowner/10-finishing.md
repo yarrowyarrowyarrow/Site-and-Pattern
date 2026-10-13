@@ -3,6 +3,16 @@
 *Part of the [homeowner-path plan](README.md). Work items **FN-1 to FN-14**;
 owner decisions **D1 to D7** ([12-decisions.md](12-decisions.md)).*
 
+> **The owner's answers (13 October 2026):** GPL-3.0 (D1). **Windows unsigned,
+> with instructions** (D2): FN-3 becomes the SmartScreen steps in the README and
+> the release notes; free signing through SignPath stays possible later because
+> the licence allows it. Mac unsigned with instructions (D3). **No website and no
+> donations for now** (G5, D6): FN-10 is cancelled, FN-11's guide lives in the
+> README and the release notes, the privacy paragraph goes in About only, and
+> *Send Feedback* (FN-8) cannot use the website's form, so §7 now recommends a
+> copyable address plus the GitHub link. The definition of finished (D7) stands
+> without its donation and website lines (§1, items 7 and 8).
+
 The owner: *"I would at most publish it in a free way with a link for people to
 donate a coffee or $5… [I] would simply like it to reach a place that I can move
 on to other projects rather than ceaselessly working at this."*
@@ -47,9 +57,10 @@ The app is finished when all of these are true:
    (D1), with third-party notices shipped (FN-2).
 5. **Every outside service is used within its terms and credited** (FN-5, FN-6).
 6. **Users get only releases the owner chose** (FN-7).
-7. **A stranger can say something without an account** (FN-8), and can
-   support the app if they want to (FN-10).
-8. **A one-page guide** exists on the website (FN-11).
+7. **A stranger can say something without an account** (FN-8). *(Supporting
+   the app, FN-10, was dropped by the owner's answers G5 and D6.)*
+8. **A one-page guide** exists in the README and the release notes (FN-11; no
+   website for now, G5).
 9. **The runbook exists, and someone besides the owner can cut a release**
    (FN-13, FN-14).
 10. **The freezes are in force**: the 3D preview (G4) and the website (G5) take
@@ -188,6 +199,11 @@ three or four times a year.
   whether they are income is a question for an accountant, not checked here.
 
 ## 7. Feedback without an account (FN-8)
+
+*Revised after G5 (no website for now):* the dialog shows an address the person
+can copy (a dedicated mailbox, not the owner's own) and keeps *Report it on
+GitHub* as the second way. A `mailto:` link is a convenience only; the address
+is the thing. Which address is the owner's to choose. The original text follows.
 
 *Help › Send Feedback…* builds a GitHub *new issue* link (`src/feedback.py:98-119`),
 which needs a GitHub account the persona does not have. The website already has
