@@ -32,6 +32,13 @@ from src.climate import get_zone, zone_label
 from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
+# The zoom a pin a person sets is shown at (V3.19, QF-2, R7): about 160 m
+# across a laptop's map at Edmonton's latitude, a yard and its neighbours, so
+# the next step, drawing the outline, starts at the yard; and the deepest zoom
+# the street map has its own tiles for. Only a Pin Drop click and a chosen
+# address ask for it; an open, an undo or a dragged pin never moves the map.
+PIN_ZOOM = 19
+
 
 def _when_from_config(config: dict):
     """Naive local-solar datetime for a shade request, or None for the
@@ -1574,8 +1581,9 @@ class MapEventRouter:
         and pan/zoom.
         """
         self._main.map_widget.place_site_pin(lat, lng, label or "")
-        # Centre on the new pin at a reasonable property-scale zoom.
-        self._main.map_widget.set_view(lat, lng, 17)
+        # To the yard, not zoom 17 whatever the view: that zoomed a person
+        # already closer back out (V3.19, QF-2).
+        self._main.map_widget.zoom_to_site_pin(lat, lng, PIN_ZOOM)
 
     def _on_site_pin_click(self, lat: float, lng: float):
         if not getattr(self._main, "_site_pin_mode", False):
@@ -1592,6 +1600,9 @@ class MapEventRouter:
         # instant feedback, then resolve the actual address in the
         # background and refresh the pin label once we have it.
         self._main.map_widget.place_site_pin(lat, lng, "")
+        # The map stayed at city scale, seven zoom levels from the yard the
+        # next step draws round (V3.19, QF-2, R7).
+        self._main.map_widget.zoom_to_site_pin(lat, lng, PIN_ZOOM)
         self._main._start_pin_reverse_geocode(lat, lng)
 
     def _on_pin_reverse_geocode_done(self, lat: float, lng: float,

@@ -625,12 +625,16 @@ _SEARCH_ISO = {"CA-AB", "CA-SK"}
 
 def geocode_address(query: str, limit: int = 6,
                     *, near: "tuple[float, float] | None" = None,
-                    radius_km: float = 50.0) -> list[dict]:
+                    radius_km: float = 50.0) -> "list[dict] | None":
     """Forward-geocode an address or place name across the prairie provinces
     (Alberta + Saskatchewan).
 
-    Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
-    failure / no match. Uses OSM Nominatim.
+    Returns a list of ``{"label", "lat", "lng"}`` dicts, ``[]`` when nothing
+    matches, and ``None`` when the search could not be made: no connection,
+    an HTTP error, a timeout, or a reply that is not a list of places. Uses
+    OSM Nominatim. The two used to be one ``[]``, so the Site panel told a
+    person with no connection that their correct address had "No Alberta
+    results" (V3.19, QF-3, R6).
 
     Results are re-ranked client-side so that hits whose street-number
     starts with a numeric token in the query (e.g. typing "4916" should
@@ -702,7 +706,7 @@ def geocode_address(query: str, limit: int = 6,
     url = "https://nominatim.openstreetmap.org/search?" + params
     data = _http_get_json(url)
     if not isinstance(data, list):
-        return []
+        return None             # not reached, or not an answer (QF-3)
 
     numeric_tokens = re.findall(r"\d+", q)
     word_tokens = [w.lower() for w in re.findall(r"[A-Za-z]{2,}", q)]

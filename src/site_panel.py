@@ -70,6 +70,22 @@ def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
         w.setStyleSheet((w.styleSheet() or "") + _TOOLTIP_CSS)
 
 
+def _wrap_form_values(page: QWidget) -> None:
+    """Every value a form on ``page`` shows wraps (V3.19, QF-5, R8).
+
+    The values arrive with the pin, after the guard against sideways scroll
+    had measured the empty page: "Aspen Parkland (central AB / SK)  (auto)"
+    beside "Growing-degree days:" needed 425 px of 402 in DejaVu Sans, the
+    font CI draws in. A value set at build time and one added later both
+    wrap, so the next row cannot bring it back."""
+    for form in page.findChildren(QFormLayout):
+        for row in range(form.rowCount()):
+            item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            value = item.widget() if item is not None else None
+            if isinstance(value, QLabel):
+                value.setWordWrap(True)
+
+
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
 # the rich-text span; handlers later call setText() with plain strings, which
 # restores the normal value colour.
@@ -227,8 +243,8 @@ class _SiteFetchWorker(QObject):
 class _GeocodeWorker(QObject):
     """Runs a single forward-geocode request off the UI thread."""
 
-    results = pyqtSignal(list)        # list[{label, lat, lng}]
-    failed  = pyqtSignal(str)         # error message
+    results = pyqtSignal(list)        # list[{label, lat, lng}]; [] = no match
+    failed  = pyqtSignal(str)         # the search could not be made
 
     def __init__(self, query: str,
                  near: "tuple[float, float] | None" = None):
@@ -238,12 +254,20 @@ class _GeocodeWorker(QObject):
 
     @pyqtSlot()
     def run(self):
+        """``geocode_address`` answers ``None`` when it could not ask, and
+        that is a failure here, not an empty list (V3.19, QF-3, R6). What
+        went wrong goes to the log; the panel's words say what to do."""
         try:
             from src.property_data import geocode_address
-            hits = geocode_address(self._query, near=self._near) or []
-            self.results.emit(hits)
-        except Exception as exc:
-            self.failed.emit(str(exc))
+            hits = geocode_address(self._query, near=self._near)
+        except Exception as exc:  # noqa: BLE001 — a search never takes the panel down
+            from src.log import get_logger
+            get_logger(__name__).warning("address search failed: %s", exc)
+            hits = None
+        if hits is None:
+            self.failed.emit("unreachable")
+        else:
+            self.results.emit(list(hits))
 
 
 class _QuestionWords(QLabel):
@@ -627,7 +651,11 @@ class SitePanel(QWidget):
         hl.addRow("Growing-degree days:", self._lbl_gdd)
         hl.addRow("Frost window:",        self._lbl_frost)
         hl.addRow("Ecoregion:",           self._lbl_ecoregion)
-        hl.addRow("",                     self._btn_browse_comms)
+        # The whole width, not the value column: a button's words cannot wrap,
+        # and beside "Growing-degree days:" this one made Site Info 458 px wide
+        # of 402 under Arial metrics once a pin found communities (V3.19, QF-5,
+        # R8). It first showed in V3.14; the guard had measured the empty page.
+        hl.addRow(self._btn_browse_comms)
         # After addRow, always: labelForField only resolves once the row exists.
         # The zone gets its base explanation here and a refreshed one naming the
         # measured zone in _on_hardiness — set once at build time it would go
@@ -792,6 +820,7 @@ class SitePanel(QWidget):
         layout.addWidget(self._nursery_box)
 
         layout.addStretch()
+        _wrap_form_values(layout.parentWidget())
 
     def _on_download_soil_clicked(self):
         self._soil_dl_btn.setEnabled(False)
@@ -2323,16 +2352,7 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.results.connect(self._on_geocode_results)
-        # F45: a dead end is where a beginner gives up, so the failure names
-        # the way through instead of only the problem. Address search is the
-        # app's only networked *entry* point — offline, pin-drop is not a
-        # workaround, it is the supported path.
-        worker.failed.connect(
-            lambda msg: self._lbl_status.setText(
-                f"Search failed ({msg}). Address lookup needs the internet — "
-                f"use “Use Pin Drop…” below and click your yard "
-                f"on the map instead.")
-        )
+        worker.failed.connect(self._on_geocode_failed)
         # Auto-teardown chain — see _start_fetch for why we don't delete
         # threads synchronously.
         worker.results.connect(thread.quit)
@@ -2344,15 +2364,30 @@ class SitePanel(QWidget):
         self._geo_worker = worker
         thread.start()
 
+    # What the address search says when it cannot help (V3.19, QF-3, R6).
+    # F45: a dead end is where a beginner gives up, so each names the way
+    # through. Offline, Pin Drop is not a workaround but the supported path.
+    # The search covers Saskatchewan too since V2.14, so "No Alberta results"
+    # was wrong twice over: it blamed the address when the connection failed.
+    NO_MATCH_TEXT = (
+        "No address found in Alberta or Saskatchewan. Try a nearby "
+        "intersection or town name, or click “Use Pin Drop…” and then "
+        "your yard on the map.")
+    OFFLINE_TEXT = (
+        "Address search needs an internet connection. Check your connection "
+        "and try again, or click “Use Pin Drop…” and then your yard on "
+        "the map.")
+
+    def _on_geocode_failed(self, _reason: str = ""):
+        self._addr_results.clear()
+        self._addr_results.setVisible(False)
+        self._lbl_status.setText(self.OFFLINE_TEXT)
+
     def _on_geocode_results(self, hits: list):
         self._addr_results.clear()
         if not hits:
             self._addr_results.setVisible(False)
-            # F45: say what to try next, not just that nothing was found.
-            self._lbl_status.setText(
-                "No Alberta results. Try a nearby intersection or town name — "
-                "or click “Use Pin Drop…” and click your yard on "
-                "the map.")
+            self._lbl_status.setText(self.NO_MATCH_TEXT)
             return
         for h in hits:
             item = QListWidgetItem(h["label"])

@@ -710,6 +710,59 @@ class TestMainWindowSmoke(unittest.TestCase):
                         wide.append(f"{tab}: needs {need}, has {area.viewport().width()}")
         self.assertEqual(wide, [])
 
+    def test_site_info_does_not_scroll_sideways_with_a_pin(self):
+        """R8 (V3.19, QF-5): with a pin, Site Info needed 458 px of 402 under
+        Arial metrics and 510 in DejaVu Sans, and the test above only ever saw
+        the empty page. The pin brings a long address, the region's name and,
+        since V3.14, the link to its communities, a button whose words cannot
+        wrap. A pin set as a person sets one, the page filled from the offline
+        fallbacks and then with the widest a site near a boundary gives."""
+        from unittest import mock
+        from PyQt6.QtWidgets import QScrollArea, QTabWidget
+        from src.keyboard_help import show_panel
+        from src.site_panel import _SiteFetchWorker
+        win, sp = self._win, self._win.site_panel
+        sc = (win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self._leave_the_window_as_found()
+        self.addCleanup(sp.clear_pin)
+        self.addCleanup(sp._on_ecoregion, None)     # the picker's region too
+        for tabs in [win._side_tabs] + win._side_tabs.findChildren(QTabWidget):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        win.resize(1366, 768)
+        win.show()
+        lat, lng = 53.5232, -113.4935
+        address = ("10423 Saskatchewan Drive Northwest, Strathcona, Edmonton, "
+                   "Alberta, T6E 4R7, Canada")
+        with mock.patch.object(sp, "_start_fetch"):   # run below, in this thread
+            win._map_events._on_site_pin_placed(lat, lng, address)
+        worker = _SiteFetchWorker(lat, lng)
+        for name, slot in (("hardiness", sp._on_hardiness),
+                           ("elevation", sp._on_elevation),
+                           ("rainfall", sp._on_rainfall), ("soil", sp._on_soil),
+                           ("climate", sp._on_climate), ("winter", sp._on_winter),
+                           ("ecoregion", sp._on_ecoregion), ("wind", sp.show_wind)):
+            getattr(worker, name).connect(slot)
+        worker.run()
+        show_panel(sp.info_page)
+        self._app.processEvents()
+        area = sp.info_page
+        self.assertIsInstance(area, QScrollArea)
+        self.assertEqual(sp._lbl_label.text(), address)
+        self.assertTrue(sp._btn_browse_comms.isVisibleTo(area))
+        widths = [("filled", area.widget().minimumSizeHint().width())]
+        sp._on_ecoregion({"keys": ["aspen_parkland", "boreal_transition"],
+                          "label": "Aspen Parkland (central AB / SK) + "
+                                   "Boreal Transition (north of the parkland)"})
+        sp.show_wind({"annual": {"prevailing_label": "WNW", "mean_speed": 17.0},
+                      "approximate": True})
+        self._app.processEvents()
+        widths.append(("widest", area.widget().minimumSizeHint().width()))
+        has = area.viewport().width()
+        self.assertEqual([w for w in widths if w[1] > has], [], f"has {has}")
+
     def test_community_members_are_coloured_as_a_reload_draws_them(self):
         """By layer until the design was reopened, when the loader drew them by
         type (persistence.py). Placing now passes what the loader passes."""

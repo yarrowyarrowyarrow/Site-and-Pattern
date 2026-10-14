@@ -1280,6 +1280,26 @@
       }
     }
 
+    // A pin a person just set brings the yard into view (V3.19, QF-2, R7):
+    // after Pin Drop the map stayed at city scale, seven zoom levels from the
+    // yard the next step draws round. Python asks for this only after a Pin
+    // Drop click or a chosen address; placeSitePin never moves the map, so an
+    // open or an undo does not. It never zooms out: closer than `wanted`, the
+    // view stays, and only pans when the pin is off screen. The page decides,
+    // because only the page knows the zoom it is at now.
+    function sitePinView(current, wanted, pinInView) {
+      if (!(current >= wanted)) return {move: 'zoom', zoom: wanted};
+      return {move: pinInView ? 'stay' : 'pan', zoom: current};
+    }
+
+    function zoomToSitePin(lat, lng, wanted) {
+      var inView = false;
+      try { inView = map.getBounds().contains([lat, lng]); } catch (e) {}
+      var v = sitePinView(map.getZoom(), wanted, inView);
+      if (v.move === 'zoom') map.setView([lat, lng], v.zoom);
+      else if (v.move === 'pan') map.panTo([lat, lng]);
+    }
+
     function setSitePinVisible(visible) {
       if (!sitePinMarker) return;
       if (visible) sitePinMarker.addTo(map);

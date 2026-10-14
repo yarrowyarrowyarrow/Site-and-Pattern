@@ -372,6 +372,12 @@ def clear_site_pin() -> str:
     return "clearSitePin(false);"
 
 
+def zoom_to_site_pin(lat: float, lng: float, zoom: int) -> str:
+    """Bring a pin a person just set into view at ``zoom``, never zooming
+    out (V3.19, QF-2)."""
+    return f"zoomToSitePin({float(lat)}, {float(lng)}, {int(zoom)});"
+
+
 def set_site_pin_drop_mode(active: bool) -> str:
     return f"setSitePinDropMode({_jsbool(active)});"
 

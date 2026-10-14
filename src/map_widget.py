@@ -771,6 +771,12 @@ class MapWidget(QWebEngineView):
     def clear_site_pin(self):
         self.run_js(map_js.clear_site_pin())
 
+    def zoom_to_site_pin(self, lat: float, lng: float, zoom: int):
+        """Bring the pin a person just set into view at about yard scale; the
+        page never zooms out (V3.19, QF-2). Not part of ``place_site_pin``,
+        which an open or an undo also calls."""
+        self.run_js(map_js.zoom_to_site_pin(lat, lng, zoom))
+
     def set_site_pin_drop_mode(self, active: bool):
         """Toggle the crosshair cursor while the user is arming a pin drop."""
         self.run_js(map_js.set_site_pin_drop_mode(active))
