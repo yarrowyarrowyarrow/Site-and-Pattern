@@ -18,6 +18,7 @@ return ``None`` from the fetcher and the corresponding row shows
 
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QObject, QSettings, QThread, QTimer, pyqtSignal, pyqtSlot
@@ -77,8 +78,17 @@ def _wrap_form_values(page: QWidget) -> None:
     had measured the empty page: "Aspen Parkland (central AB / SK)  (auto)"
     beside "Growing-degree days:" needed 425 px of 402 in DejaVu Sans, the
     font CI draws in. A value set at build time and one added later both
-    wrap, so the next row cannot bring it back."""
+    wrap, so the next row cannot bring it back.
+
+    And each value gets the column's whole width, on every platform. macOS's
+    style holds a form's fields to their size hint, and a wrapped label hints
+    at a quarter of 80 characters, so there "May 12 → Sep 18  (128 days)" was
+    laid out 127 px wide in a row one line tall, and drew as two lines cut
+    through the middle (V3.19, QF-5 review). Fusion and Windows already grow
+    the fields; this says so for the Mac too."""
     for form in page.findChildren(QFormLayout):
+        form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         for row in range(form.rowCount()):
             item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
             value = item.widget() if item is not None else None
@@ -246,11 +256,20 @@ class _GeocodeWorker(QObject):
     results = pyqtSignal(list)        # list[{label, lat, lng}]; [] = no match
     failed  = pyqtSignal(str)         # the search could not be made
 
+    #: Nominatim's usage policy allows one request a second, so the second
+    #: search, across both provinces, waits out the rest of that second.
+    WIDEN_AFTER_S = 1.0
+
     def __init__(self, query: str,
                  near: "tuple[float, float] | None" = None):
         super().__init__()
         self._query = query
         self._near  = near
+        self._cancelled = False
+
+    def cancel(self):
+        """A newer search replaced this one: ask nothing more."""
+        self._cancelled = True
 
     @pyqtSlot()
     def run(self):
@@ -259,7 +278,10 @@ class _GeocodeWorker(QObject):
         went wrong goes to the log; the panel's words say what to do."""
         try:
             from src.property_data import geocode_address
+            started = time.monotonic()
             hits = geocode_address(self._query, near=self._near)
+            if hits == [] and self._near is not None:
+                hits = self._across_both_provinces(geocode_address, started)
         except Exception as exc:  # noqa: BLE001 — a search never takes the panel down
             from src.log import get_logger
             get_logger(__name__).warning("address search failed: %s", exc)
@@ -268,6 +290,18 @@ class _GeocodeWorker(QObject):
             self.failed.emit("unreachable")
         else:
             self.results.emit(list(hits))
+
+    def _across_both_provinces(self, geocode, started: float):
+        """Nothing near the map's view: ask once more across Alberta and
+        Saskatchewan (V3.19, QF-3 review). The view only biases the search,
+        and the map opens on Edmonton, so "Calgary" or a Saskatoon address
+        found nothing within 50 km and was then told no such address exists
+        in either province. One more request, only on a miss, and none for a
+        search the next keystroke has already replaced."""
+        time.sleep(max(0.0, self.WIDEN_AFTER_S - (time.monotonic() - started)))
+        if self._cancelled:
+            return []
+        return geocode(self._query)
 
 
 class _QuestionWords(QLabel):
@@ -2372,19 +2406,25 @@ class SitePanel(QWidget):
     # through. Offline, Pin Drop is not a workaround but the supported path.
     # The search covers Saskatchewan too since V2.14, so "No Alberta results"
     # was wrong twice over: it blamed the address when the connection failed.
+    # A miss is a miss across both provinces: a search near the map's view
+    # that finds nothing asks again across both (_GeocodeWorker).
     NO_MATCH_TEXT = (
         "No address found in Alberta or Saskatchewan. Try a nearby "
         "intersection or town name, or click “Use Pin Drop…” and then "
         "your yard on the map.")
-    OFFLINE_TEXT = (
-        "Address search needs an internet connection. Check your connection "
-        "and try again, or click “Use Pin Drop…” and then your yard on "
-        "the map.")
+    # Not "needs an internet connection": the same answer comes back when
+    # the search service is busy or refuses (an HTTP 429, 403 or 503), and
+    # then a connected person is sent to check a connection that works
+    # (V3.19, QF-3 review). Which one it was goes to the log.
+    COULD_NOT_SEARCH_TEXT = (
+        "Couldn't search for addresses just now. Check your internet "
+        "connection and try again, or click “Use Pin Drop…” and then your "
+        "yard on the map.")
 
     def _on_geocode_failed(self, _reason: str = ""):
         self._addr_results.clear()
         self._addr_results.setVisible(False)
-        self._lbl_status.setText(self.OFFLINE_TEXT)
+        self._lbl_status.setText(self.COULD_NOT_SEARCH_TEXT)
 
     def _on_geocode_results(self, hits: list):
         self._addr_results.clear()
@@ -2418,6 +2458,7 @@ class SitePanel(QWidget):
         self._geo_worker = None
         self._geo_thread = None
         if worker is not None:
+            worker.cancel()     # no wider search for a replaced query (QF-3)
             for sig_name in ("results", "failed"):
                 try:
                     getattr(worker, sig_name).disconnect()
