@@ -54,7 +54,7 @@ def _scales(cases):
 @unittest.skipIf(_node() is None, "no node binary")
 class TestTheScale(unittest.TestCase):
 
-    def test_kilometres_unless_asked_for_metres(self):
+    def test_kilometres_or_metres_when_asked_for(self):
         km, m = _scales([[1.0, "km"], [1.0, "m"]])
         self.assertEqual((km["label"], km["px"]), ("0.1 km", 100))
         self.assertEqual((m["label"], m["px"]), ("100 m", 100))
@@ -66,9 +66,25 @@ class TestTheScale(unittest.TestCase):
         self.assertEqual(yard_m["label"], "5 m")
         self.assertEqual((farm["label"], farm["px"]), ("2 km", 50))
 
+    def test_automatic_is_metres_across_a_yard_and_kilometres_from_one(self):
+        """V3.19 (QF-18, R18; the owner's K1): the review read "0.005 km"
+        across a yard. Automatic gives metres below 1 km and kilometres from
+        1 km, where Kilometres and Metres still force theirs."""
+        yard, street, under, one, farm = _scales(
+            [[0.05, "auto"], [1.0, "auto"], [8.0, "auto"], [9.0, "auto"],
+             [40.0, "auto"]])
+        self.assertEqual((yard["label"], yard["unit"]), ("5 m", "m"))
+        self.assertEqual(street["label"], "100 m")
+        self.assertEqual(under["label"], "500 m")         # 960 m would fit
+        self.assertEqual((one["label"], one["px"], one["unit"]),
+                         ("1 km", 111, "km"))             # 1000 m fits: km
+        self.assertEqual((farm["label"], farm["px"]), ("2 km", 50))
+        # Anything unknown reads as Automatic, as the page reads it.
+        self.assertEqual(_scales([[0.05, "furlongs"]])[0]["label"], "5 m")
+
     def test_a_round_length_that_fits_in_the_bar(self):
         mpps = [0.013, 0.07, 0.4, 2.5, 9.0, 33.0, 150.0, 777.0]
-        for unit in ("km", "m"):
+        for unit in ("auto", "km", "m"):
             out = _scales([[mpp, unit] for mpp in mpps])
             for mpp, s in zip(mpps, out):
                 self.assertLessEqual(s["px"], 120, (mpp, unit, s))
@@ -78,8 +94,9 @@ class TestTheScale(unittest.TestCase):
                 self.assertTrue(set(digits[1:]) <= {"0"}, s)
 
     def test_nothing_to_measure_draws_nothing(self):
-        self.assertEqual(_scales([[0, "km"], [float("nan"), "m"]]),
-                         [None, None])
+        self.assertEqual(_scales([[0, "km"], [float("nan"), "m"],
+                                  [0, "auto"]]),
+                         [None, None, None])
 
 
 class TestTheBuilders(unittest.TestCase):
@@ -88,8 +105,11 @@ class TestTheBuilders(unittest.TestCase):
         self.assertEqual(map_js.set_north_arrow(True), "setNorthArrow(true);")
         self.assertEqual(map_js.set_scale_bar(False, "m"),
                          'setScaleBar(false, "m");')
-        self.assertEqual(map_js.set_scale_bar(True, "miles"),
+        self.assertEqual(map_js.set_scale_bar(True, "km"),
                          'setScaleBar(true, "km");')
+        self.assertEqual(map_js.set_scale_bar(True, "miles"),
+                         'setScaleBar(true, "auto");')
+        self.assertEqual(map_js.set_scale_bar(True), 'setScaleBar(true, "auto");')
 
 
 class _Settings:
@@ -145,15 +165,27 @@ class TestTheSwitches(unittest.TestCase):
     def _labels(self):
         return [a.text().replace("&", "") for a in self.menu.actions()]
 
-    def test_both_on_in_kilometres_until_changed(self):
+    def test_both_on_and_automatic_until_changed(self):
         self.assertEqual(self._labels(), ["North Arrow", "Scale Bar",
                                           "Scale Units"])
+        units = self.menu.actions()[2].menu()
+        self.assertEqual([a.text().replace("&", "") for a in units.actions()],
+                         ["Automatic", "Kilometres", "Metres"])
         self.assertTrue(self.main._act_north_arrow.isChecked())
         self.assertTrue(self.main._act_scale_bar.isChecked())
-        self.assertTrue(self.main._act_scale_km.isChecked())
+        self.assertTrue(self.main._act_scale_auto.isChecked())
+        self.assertNotIn(self.flow.KEY_UNIT, _Settings.store)  # nothing chosen
         self.assertEqual(self.calls, [])                  # the map is not up
         self.main.map_widget.bridge.map_ready.emit()
-        self.assertEqual(self.calls, [("arrow", True), ("scale", True, "km")])
+        self.assertEqual(self.calls, [("arrow", True), ("scale", True, "auto")])
+
+    def test_a_unit_chosen_before_v3_19_is_kept(self):
+        """V3.06 wrote the unit only when a person picked one, so a stored
+        "km" is a choice, not the old default, and stays (QF-18)."""
+        _Settings.store = {self.flow.KEY_UNIT: "km"}
+        self.assertEqual(self.flow.state()["unit"], "km")
+        _Settings.store = {}
+        self.assertEqual(self.flow.state()["unit"], "auto")
 
     def test_switching_each_off_is_remembered(self):
         self.main.map_widget.is_ready = True
@@ -161,9 +193,9 @@ class TestTheSwitches(unittest.TestCase):
         self.assertIs(_Settings.store[self.flow.KEY_ARROW], False)
         self.assertIn(("arrow", False), self.calls)
         self.main._act_scale_bar.setChecked(False)
-        self.assertEqual(self.calls[-1], ("scale", False, "km"))
+        self.assertEqual(self.calls[-1], ("scale", False, "auto"))
         self.assertEqual(self.flow.state(), {"north_arrow": False,
-                                             "scale_bar": False, "unit": "km"})
+                                             "scale_bar": False, "unit": "auto"})
 
     def test_metres_from_the_menu_or_the_bar(self):
         self.main.map_widget.is_ready = True
@@ -174,19 +206,33 @@ class TestTheSwitches(unittest.TestCase):
         self.main.map_widget.bridge.scale_unit_changed.emit("km")
         self.assertTrue(self.main._act_scale_km.isChecked())
         self.assertEqual(self.calls[-1], ("scale", True, "km"))
+        # The menu is the way back to Automatic.
+        self.main._act_scale_auto.trigger()
+        self.assertEqual(_Settings.store[self.flow.KEY_UNIT], "auto")
+        self.assertTrue(self.main._act_scale_auto.isChecked())
+        self.assertEqual(self.calls[-1], ("scale", True, "auto"))
+
+    def test_a_click_on_the_bar_in_automatic_fixes_the_other_unit(self):
+        """The bar sends the unit it switched to; from Automatic showing
+        metres that is kilometres, and the menu ticks it."""
+        self.main.map_widget.is_ready = True
+        self.main.map_widget.bridge.scale_unit_changed.emit("km")
+        self.assertTrue(self.main._act_scale_km.isChecked())
+        self.assertFalse(self.main._act_scale_auto.isChecked())
+        self.assertEqual(_Settings.store[self.flow.KEY_UNIT], "km")
 
     def test_a_switch_before_the_map_has_loaded_waits_for_it(self):
         self.main._act_north_arrow.setChecked(False)
         self.assertIs(_Settings.store[self.flow.KEY_ARROW], False)
         self.assertEqual(self.calls, [])                  # not sent yet
         self.main.map_widget.bridge.map_ready.emit()
-        self.assertEqual(self.calls, [("arrow", False), ("scale", True, "km")])
+        self.assertEqual(self.calls, [("arrow", False), ("scale", True, "auto")])
 
     def test_a_setting_saved_as_text_still_reads(self):
         _Settings.store = {self.flow.KEY_ARROW: "false",
                            self.flow.KEY_UNIT: "furlongs"}
         self.assertEqual(self.flow.state(), {"north_arrow": False,
-                                             "scale_bar": True, "unit": "km"})
+                                             "scale_bar": True, "unit": "auto"})
 
 
 if __name__ == "__main__":

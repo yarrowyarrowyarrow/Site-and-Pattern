@@ -1,0 +1,105 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">waiting for the map…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// The map page with no internet (dev page + the harness behind
+// tests/test_offline_map.py, V3.19). The run is offline: every host but the
+// local server is unresolvable, so every tile fails, as it does for a person
+// with no connection. Reads what the page then says (QF-6), and what it draws
+// that the review found wrong at yard scale: a "0.0 m" side on an outline read
+// back from a file (QF-8), the scale bar in kilometres (QF-18), and an edited
+// outline put back by Python (QF-14). Clicks go to whatever is under each point
+// (document.elementFromPoint), as boundary_probe.html sends them.
+//
+// Results go into document.title as JSON, read by a headless `--dump-dom` run.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;
+const YARD = [[LAT - D, LNG - D * 1.5], [LAT - D, LNG + D * 1.5],
+              [LAT + D, LNG + D * 1.5], [LAT + D, LNG - D * 1.5]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function fire(type, p) {
+  const el = w.document.elementFromPoint(p.x, p.y);
+  el.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w,
+    clientX: p.x, clientY: p.y, button: 0, buttons: type === 'mousedown' ? 1 : 0 }));
+  return el;
+}
+function click(p) { fire('mousedown', p); fire('mouseup', p); return fire('click', p); }
+function notice() {
+  const el = w.document.getElementById('sp-offline');
+  if (!el || el.style.display === 'none') return null;
+  const r = el.getBoundingClientRect();
+  return { el: el, centre: { x: r.left + r.width / 2, y: r.top + r.height / 2 } };
+}
+function scaleLabel() { return w.document.querySelector('#sp-scale .sp-scale-label').textContent; }
+
+async function run() {
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+
+  // QF-6: the line over the map, once the last base map has failed a screenful.
+  for (let i = 0; i < 200 && !notice(); i++) await wait(50);
+  const n = notice();
+  out.notice = n && { text: n.el.textContent, role: n.el.getAttribute('role'),
+    pointer: w.getComputedStyle(n.el).pointerEvents,
+    under: (w.document.elementFromPoint(n.centre.x, n.centre.y) || {}).id || 'map' };
+  out.basemap = w.osmLayer && w.osmLayer._url;
+  if (n) {
+    // A click on the line is a click on the map: a corner, while drawing.
+    w.setMode('boundary');
+    click(n.centre);
+    out.corners_after_click = w.polygonPoints.length;
+    w.setMode('none');
+    w.osmLayer.fire('tileload');                    // a tile draws
+    out.after_a_tile = !!notice();
+  }
+
+  // QF-8: an outline read back from a file repeats its first corner.
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD.concat([YARD[0]]) }), false);
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [90, 90] });
+  await wait(200);
+  const sides = Array.from(w.boundaries[0].labelsLayer.getLayers()).map(
+    m => m.getElement() ? m.getElement().textContent : '');
+  out.side_labels = sides;
+
+  // QF-14: Python puts an edited outline back, handles and all.
+  w.enterBoundaryEditMode('b1');
+  w.boundaries[0].points[0] = [LAT + D * 2, LNG + D * 3];
+  w.restoreBoundary('b1', YARD);
+  out.restored = { points: w.boundaries[0].points, editing: w.boundaryEditId,
+                   handles: w.boundaryEditHandles.length };
+  w.exitBoundaryEditMode();
+
+  // QF-18: Automatic across a yard and across a county; a click fixes the other.
+  w.setScaleBar(true, 'auto');
+  w.map.setView([LAT, LNG], 21, { animate: false });
+  await wait(100);
+  out.scale_yard = scaleLabel();
+  w.map.setView([LAT, LNG], 9, { animate: false });
+  await wait(100);
+  out.scale_county = scaleLabel();
+  w.map.setView([LAT, LNG], 21, { animate: false });
+  await wait(100);
+  calls = [];
+  const bar = w.document.getElementById('sp-scale').getBoundingClientRect();
+  click({ x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 });
+  out.scale_click = { label: scaleLabel(),
+                      told: calls.filter(c => c[0] === 'onScaleUnitChanged') };
+}
+
+function report(obj) {
+  document.title = 'MEASURED ' + JSON.stringify(obj);
+  document.getElementById('out').textContent = JSON.stringify(obj, null, 1);
+}
+
+run().then(() => report(out)).catch(e => report(Object.assign(out, { error: String(e && e.stack || e) })));
+</script>
+</body></html>

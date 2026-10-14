@@ -382,16 +382,25 @@
     }
 
     // ── Boundary label factories (use fresh layer groups each time) ───────────
+    // A side's length label, or '' for a side under 5 cm (V3.19, QF-8, R19).
+    // A design opened from a file repeats its first corner at the end (the
+    // saved ring is closed), and that closing "side" was labelled "0.0 m".
+    // Pure, so node runs it.
+    function boundarySideLabel(metres) {
+      if (!(metres >= 0.05)) return '';
+      return metres >= 10 ? Math.round(metres) + ' m' : metres.toFixed(1) + ' m';
+    }
+
     function _makeBoundaryLengthLabels(points, strokeColor) {
       var lg = L.layerGroup().addTo(map);
       var n = points.length;
       for (var i = 0; i < n; i++) {
         var a = points[i];
         var b = points[(i + 1) % n];
+        var label = boundarySideLabel(haversineMeters(a, b));
+        if (!label) continue;
         var midLat = (a[0] + b[0]) / 2;
         var midLng = (a[1] + b[1]) / 2;
-        var dist = haversineMeters(a, b);
-        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
         L.marker([midLat, midLng], {
           icon: L.divIcon({
             className: '',
@@ -613,6 +622,20 @@
       }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+    }
+
+    // Python → JS: put a boundary's corners back as the design holds them
+    // (V3.19, QF-14): a corner dragged across another side would make the
+    // outline cross itself, and Python refuses the edit. Its handles follow.
+    function restoreBoundary(id, points) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var editing = boundaryEditId === id;
+      if (editing) exitBoundaryEditMode();
+      b.points = points.map(function(p) { return [p[0], p[1]]; });
+      b.layer.setLatLngs(b.points);
+      _refreshBoundaryLabels(id);
+      if (editing) enterBoundaryEditMode(id);
     }
 
     function exitBoundaryEditMode() {

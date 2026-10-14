@@ -8,9 +8,16 @@ The map had neither, so a picture of a design (a screenshot, or the map page
 of Export PDF, which is a grab of the map as shown) could not be read for
 direction or distance, and a person standing in the yard with it could not
 line it up or pace it out. View → North Arrow and View → Scale Bar switch each
-on and off; View → Scale Units picks kilometres (the default, the owner's
-choice) or metres, and so does a click on the bar itself. All three are
+on and off; View → Scale Units picks Automatic, Kilometres or Metres, and a
+click on the bar fixes the other unit from the one it shows. All three are
 remembered between sessions.
+
+Automatic is the default since V3.19 (QF-18, R18; the owner's answer K1,
+"Automatic but able to change between the 2"): metres below 1 km and kilometres
+from 1 km, where V3.06's kilometres default read "0.005 km" across a yard. No
+install is moved: the unit is written only when a person picks one (the menu or
+a click on the bar), so a stored unit is a choice and is kept, and an install
+that never chose has nothing stored and reads Automatic.
 
 The drawing is the map page's (``html/map/11-map-furniture.js``); this module
 only keeps the settings and tells the page, now if it has loaded and again on
@@ -25,7 +32,9 @@ from PyQt6.QtGui import QActionGroup
 KEY_ARROW = "map/north_arrow"
 KEY_SCALE = "map/scale_bar"
 KEY_UNIT = "map/scale_units"
-UNITS = ("km", "m")
+UNITS = ("auto", "km", "m")
+_ACTIONS = {"auto": "_act_scale_auto", "km": "_act_scale_km",
+            "m": "_act_scale_m"}
 
 
 def _flag(value, default: bool) -> bool:
@@ -38,12 +47,12 @@ def _flag(value, default: bool) -> bool:
 
 
 def state() -> dict:
-    """What the switches say: both on and kilometres until changed."""
+    """What the switches say: both on and Automatic until changed."""
     s = QSettings()
-    unit = str(s.value(KEY_UNIT, "km") or "km")
+    unit = str(s.value(KEY_UNIT, "auto") or "auto")
     return {"north_arrow": _flag(s.value(KEY_ARROW), True),
             "scale_bar": _flag(s.value(KEY_SCALE), True),
-            "unit": unit if unit in UNITS else "km"}
+            "unit": unit if unit in UNITS else "auto"}
 
 
 def apply(main, *, force: bool = False) -> None:
@@ -64,10 +73,11 @@ def set_flag(main, key: str, on: bool) -> None:
 
 
 def set_unit(main, unit: str) -> None:
-    """Kilometres or metres, from the menu or a click on the bar."""
-    unit = unit if unit in UNITS else "km"
+    """Automatic, kilometres or metres, from the menu or a click on the bar
+    (which sends only kilometres or metres)."""
+    unit = unit if unit in UNITS else "auto"
     QSettings().setValue(KEY_UNIT, unit)
-    act = getattr(main, "_act_scale_m" if unit == "m" else "_act_scale_km", None)
+    act = getattr(main, _ACTIONS[unit], None)
     if act is not None and not act.isChecked():
         act.setChecked(True)
     apply(main)
@@ -90,17 +100,20 @@ def install(main, menu) -> None:
     units = menu.addMenu("Scale &Units")
     group = QActionGroup(units)
     group.setExclusive(True)
+    auto = units.addAction("&Automatic")
+    auto.setStatusTip("Metres below 1 km, kilometres from 1 km")
     km = units.addAction("&Kilometres")
     metres = units.addAction("&Metres")
-    for act in (km, metres):
+    for act in (auto, km, metres):
         act.setCheckable(True)
         group.addAction(act)
-    (metres if st["unit"] == "m" else km).setChecked(True)
+    {"auto": auto, "km": km, "m": metres}[st["unit"]].setChecked(True)
     main._act_north_arrow, main._act_scale_bar = arrow, scale
-    main._act_scale_km, main._act_scale_m = km, metres
+    main._act_scale_auto, main._act_scale_km, main._act_scale_m = auto, km, metres
 
     arrow.toggled.connect(lambda on: set_flag(main, KEY_ARROW, on))
     scale.toggled.connect(lambda on: set_flag(main, KEY_SCALE, on))
+    auto.triggered.connect(lambda: set_unit(main, "auto"))
     km.triggered.connect(lambda: set_unit(main, "km"))
     metres.triggered.connect(lambda: set_unit(main, "m"))
     bridge = main.map_widget.bridge

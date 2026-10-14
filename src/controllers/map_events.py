@@ -28,6 +28,7 @@ Why one-domain-at-a-time:
 
 from __future__ import annotations
 
+from src import outline_check
 from src.climate import get_zone, zone_label
 from src.controllers.undo_support import undoable
 from src.project_store import store_for
@@ -86,9 +87,28 @@ class MapEventRouter:
 
     # ── Boundary handlers ────────────────────────────────────────────────────
 
+    def _refuse_crossing_outline(self, bid: str, kept=None):
+        """An outline that crosses itself is not kept (V3.19, QF-14, R29). A
+        drawn one comes off the map, which must not show a yard the design
+        does not hold; an edited one goes back to ``kept``, the feature the
+        design still holds. Then a box says why."""
+        m = self._main
+        if kept is None:
+            m.map_widget.undo_boundary(bid)
+            m.toolbar.reset_draw_buttons()
+            m._set_mode_label("Outline not kept: it crosses itself")
+        else:
+            ring = (kept.get("geometry") or {}).get("coordinates") or [[]]
+            m.map_widget.restore_boundary(
+                bid, outline_check.corners([[p[1], p[0]] for p in ring[0]]))
+        outline_check.tell_refused(m, edited=kept is not None)
+
     def _on_boundary_complete(self, bid: str, coords: list, color: str):
         """Multi-boundary: add a new boundary to the project."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
+        if outline_check.crosses_itself(coords):
+            self._refuse_crossing_outline(bid)
+            return
+        ring = outline_check.closed_ring(coords)
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -120,12 +140,21 @@ class MapEventRouter:
 
     @undoable("edit boundary")
     def _on_boundary_geom_changed(self, bid: str, coords: list):
-        """Update geometry of an existing boundary after vertex/move/scale drag."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
+        """Update geometry of an existing boundary after vertex/move/scale drag.
+        A corner dragged across another side is refused and put back
+        (V3.19, QF-14): nothing changes, so no undo step is recorded. An
+        outline saved crossing itself before V3.19 can still be reshaped,
+        so it can be mended."""
         for f in self._main._project.get("features", []):
             if (f.get("properties", {}).get("element_type") == "property_boundary"
                     and f["properties"].get("boundary_id") == bid):
-                f["geometry"]["coordinates"] = [ring]
+                ring = (f.get("geometry") or {}).get("coordinates") or [[]]
+                if (outline_check.crosses_itself(coords)
+                        and not outline_check.crosses_itself(
+                            [[p[1], p[0]] for p in ring[0]])):
+                    self._refuse_crossing_outline(bid, kept=f)
+                    return
+                f["geometry"]["coordinates"] = [outline_check.closed_ring(coords)]
                 break
         self._main._mark_modified()
 

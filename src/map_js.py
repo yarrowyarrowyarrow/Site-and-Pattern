@@ -239,6 +239,14 @@ def undo_boundary(boundary_id: str) -> str:
     )
 
 
+def restore_boundary(boundary_id: str, points: list) -> str:
+    """Put a boundary's corners (``[[lat, lng], ...]``) back as the design
+    holds them, after an edit that would make it cross itself is refused
+    (V3.19, QF-14)."""
+    return (f"restoreBoundary({_jsstr(boundary_id)}, "
+            f"{_jsobj([[float(p[0]), float(p[1])] for p in points])});")
+
+
 # ── Plant markers ───────────────────────────────────────────────────────────
 
 def load_plant_marker(
@@ -695,17 +703,18 @@ def clear_auto_terrain() -> str:
 
 # ── North arrow and scale bar (F205, V3.06) ─────────────────────────────────
 
-#: The scale bar's units: kilometres by default (the owner's choice), metres
-#: on request. Anything else is read as kilometres, in the page too.
-SCALE_UNITS = ("km", "m")
+#: The scale bar's units: automatic by default (metres below 1 km, kilometres
+#: from 1 km; V3.19, QF-18, the owner's K1), or kilometres or metres fixed.
+#: Anything else is read as automatic, in the page too.
+SCALE_UNITS = ("auto", "km", "m")
 
 
 def set_north_arrow(visible: bool) -> str:
     return f"setNorthArrow({_jsbool(visible)});"
 
 
-def set_scale_bar(visible: bool, unit: str = "km") -> str:
-    unit = unit if unit in SCALE_UNITS else "km"
+def set_scale_bar(visible: bool, unit: str = "auto") -> str:
+    unit = unit if unit in SCALE_UNITS else "auto"
     return f"setScaleBar({_jsbool(visible)}, {_jsstr(unit)});"
 
 

@@ -1008,7 +1008,7 @@ class MapWidget(QWebEngineView):
     def set_north_arrow(self, visible: bool):
         self.run_js(map_js.set_north_arrow(visible))
 
-    def set_scale_bar(self, visible: bool, unit: str = "km"):
+    def set_scale_bar(self, visible: bool, unit: str = "auto"):
         self.run_js(map_js.set_scale_bar(visible, unit))
 
     # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
@@ -1084,6 +1084,11 @@ class MapWidget(QWebEngineView):
         self.run_js(map_js.revert_plant_position(
             plant_id, from_lat, from_lng, to_lat, to_lng,
         ))
+
+    def restore_boundary(self, boundary_id: str, points: list):
+        """A boundary's corners as the design holds them, after an edit that
+        would make it cross itself is refused (V3.19, QF-14)."""
+        self.run_js(map_js.restore_boundary(boundary_id, points))
 
     def set_boundary_names(self, boundary_ids: list, name: str):
         """The name the legend shows for these boundaries (V3.11)."""

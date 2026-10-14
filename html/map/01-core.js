@@ -546,6 +546,11 @@
             _useBasemap(i + 1);
           }
         });
+        // A screenful with no tile drawn: the next base map, or the line that
+        // says the map needs a connection (11-map-furniture.js; V3.19, QF-6).
+        watchBaseTiles(osmLayer, i + 1 < BASEMAPS.length ? function () {
+          if (_baseIndex === i) _useBasemap(i + 1);
+        } : null);
       }
       _useBasemap(0);
 
@@ -586,6 +591,7 @@
         { attribution: '© Esri', maxZoom: 24, maxNativeZoom: 19,
           pane: 'satellitePane' }
       );
+      watchBaseTiles(satelliteLayer, null);
 
       drawnItems = new L.FeatureGroup().addTo(map);
       plantLayerGroup = L.layerGroup().addTo(map);
