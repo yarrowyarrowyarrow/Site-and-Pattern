@@ -1741,9 +1741,9 @@ class MapEventRouter:
                 f"({pct_mature}%)."
             )
             if summary_fading:
-                summary += (
-                    f"\n{summary_fading} pioneer "
-                    f"species fading as the canopy fills in."
+                summary += (    # not "pioneer" (V3.19, WD-6)
+                    f"\n{summary_fading} early "
+                    f"plants giving way as the canopy fills in."
                 )
             if summary_emerging:
                 summary += (

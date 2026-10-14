@@ -12,7 +12,7 @@ the app already knows:
   * the drawn conversion zones (``lawn_zones.conversion_summary`` → how much lawn
     is being converted, and how much is already underway);
   * the restoration-stage timeline (``succession.restoration_stage`` → what each
-    year looks like ecologically: pioneer forbs → matrix → shrubs → climax);
+    year looks like ecologically: first wildflowers → matrix → shrubs → climax);
   * the design's own plants, grouped by successional role (woody structure /
     pioneers / matrix / self-spreaders / climax),
 
@@ -31,7 +31,7 @@ from src import succession
 _SPREADERS = ("self_seeding", "slow_spreader", "aggressive_rhizomatous")
 
 # Milestone years the schedule is anchored on — one per restoration_stage band
-# (see succession.restoration_stage thresholds): planting, pioneer forbs,
+# (see succession.restoration_stage thresholds): planting, first wildflowers,
 # forb–grass matrix, shrubs establishing, climax/canopy.
 _MILESTONES = [
     (0, "Year 0"),
@@ -159,22 +159,24 @@ def build_conversion_schedule(placed_plants, summary=None,
         )
     if woody:
         y0.append(f"Plant the woody structure first: {_names(woody)}.")
+    # The role is "pioneer" inside; a person reads "quick starters" (V3.19,
+    # WD-6).
     if pioneer:
-        y0.append(f"Plant pioneer species to hold the soil: {_names(pioneer)}.")
+        y0.append(f"Plant quick starters to hold the soil: {_names(pioneer)}.")
     if total_plants and not woody and not pioneer:
         y0.append("Plant the design, working outward from the largest plants.")
     y0.append("Mulch the new beds and water everything in.")
     stages.append(ConversionStage(_MILESTONES[0][1], stage_for(0), y0))
 
-    # ── Years 1–2 — pioneer forbs ─────────────────────────────────────────
+    # ── Years 1–2 — first wildflowers ─────────────────────────────────────
     y1 = [
         "Water through the first season or two to establish roots.",
         "Spot-weed as the planting knits together.",
     ]
     if pioneer:
         y1.append(
-            f"Pioneers ({_names(pioneer)}) peak now, then ease off as the "
-            f"later layers close in."
+            f"The quick starters ({_names(pioneer)}) fill in first, then give "
+            f"way as the later layers close in."
         )
     stages.append(ConversionStage(_MILESTONES[1][1], stage_for(1), y1))
 

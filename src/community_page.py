@@ -285,16 +285,20 @@ class CommunityPage(QWidget):
                 pass
 
 
-def two_lines(name: str, metrics, width: int) -> str:
+def two_lines(name: str, metrics, width: int, sep: str = " ") -> str:
     """A tile's name on up to two lines of ``width`` px, cut only when it will
-    not fit in two ("Northern Bedstraw" read "Northern Bed…" on one, V3.09)."""
-    words, first = name.split(), ""
+    not fit in two ("Northern Bedstraw" read "Northern Bed…" on one, V3.09).
+    ``sep`` breaks somewhere other than between words: the community list's
+    facts break between " · " parts, never inside "Partial Shade" (V3.19,
+    QF-10)."""
+    words = name.split() if sep == " " else name.split(sep)
+    first = ""
     while words and metrics.horizontalAdvance(
-            (first + " " + words[0]).strip()) <= width:
-        first = (first + " " + words.pop(0)).strip()
+            (first + sep + words[0]) if first else words[0]) <= width:
+        first = (first + sep + words.pop(0)) if first else words.pop(0)
     if not first:                    # one word longer than the tile
         return metrics.elidedText(name, Qt.TextElideMode.ElideRight, width)
-    rest = " ".join(words)
+    rest = sep.join(words)
     if not rest:
         return first
     return first + "\n" + metrics.elidedText(rest, Qt.TextElideMode.ElideRight,

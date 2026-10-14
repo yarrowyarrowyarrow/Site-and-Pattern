@@ -60,12 +60,30 @@ def build_snapshots(project: dict, *, get_plant: Optional[Callable] = None,
     render, honoured for parity with the 3D view).
     """
     from src.scene_contract import build_scene
-    years = snapshot_years(placed_records(project), get_plant=get_plant)
+    years = project_years(project, get_plant=get_plant)
     return [
         {"year": y,
          "scene": build_scene(project, year=y, get_plant=get_plant, when=when)}
         for y in years
     ]
+
+
+def project_years(project: dict,
+                  get_plant: Optional[Callable] = None) -> list[int]:
+    """The years the window shows for ``project``: :func:`snapshot_years` over
+    its placed plants, the years :func:`build_snapshots` renders. Share's line
+    about the window reads them here too, so the two cannot disagree (V3.19,
+    QF-13, R28: it said 30 while the example's window showed 20)."""
+    return snapshot_years(placed_records(project), get_plant=get_plant)
+
+
+def listed_years(years) -> str:
+    """``[1, 5, 15, 20]`` → ``"years 1, 5, 15 and 20"`` (one: ``"year 20"``)."""
+    ys = [int(y) for y in years or []]
+    if not ys:
+        return ""
+    names = ", ".join(str(y) for y in ys[:-1])
+    return f"years {names} and {ys[-1]}" if names else f"year {ys[-1]}"
 
 
 def years_line(years) -> str:
@@ -76,10 +94,7 @@ def years_line(years) -> str:
     ys = [int(y) for y in years or []]
     if not ys:
         return "Watch your design mature, year by year."
-    names = ", ".join(str(y) for y in ys[:-1])
-    listed = (f"years {names} and {ys[-1]}" if names
-              else f"year {ys[-1]}")
-    line = f"Watch your design mature: the same plan at {listed}."
+    line = f"Watch your design mature: the same plan at {listed_years(ys)}."
     if ys[-1] < max(SNAPSHOT_YEARS):
         line += (f" It stops at year {ys[-1]}, when the slowest species "
                  "here is full grown.")

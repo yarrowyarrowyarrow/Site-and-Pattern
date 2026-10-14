@@ -45,7 +45,10 @@ def restoration_stage(year: int) -> str:
     if year <= 0:
         return "Planting"
     if year <= 2:
-        return "Pioneer forbs"
+        # Not "Pioneer forbs": a person reads this on the slider, in the plan
+        # and in the PDF, and "pioneer" is a word the app does not use
+        # (V3.19, WD-6; docs/homeowner/09-words.md).
+        return "First wildflowers"
     if year <= 4:
         return "Forb–grass matrix"
     if year <= 9:

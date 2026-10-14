@@ -112,7 +112,9 @@ _ROLES = {
     "pollinator": "Pollinator support", "bird_food": "Bird food",
     "nesting_material": "Nesting material", "wildlife_habitat": "Wildlife habitat",
     "nitrogen_fixer": "Nitrogen fixer", "soil_builder": "Soil builder",
-    "early_successional": "Pioneer", "canopy_layer": "Canopy layer",
+    # "Quick starter", not "Pioneer" (V3.19, WD-6). Only the label: the URL
+    # slugs the stored value (static_site.hub_slug), so no link moves.
+    "early_successional": "Quick starter", "canopy_layer": "Canopy layer",
     "windbreak": "Windbreak", "hedge": "Hedge", "groundcover": "Groundcover",
     "erosion_control": "Erosion control",
     "aquatic": "Aquatic", "riparian_filter": "Riparian filter",

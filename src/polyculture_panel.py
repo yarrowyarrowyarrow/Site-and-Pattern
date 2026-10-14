@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QHeaderView,
     QFrame,
     QGroupBox,
     QHBoxLayout,
@@ -1223,10 +1222,12 @@ class PolyculturePanel(QWidget):
         # compared by eye: until now size, sun and moisture came only after a
         # click, one community at a time.
         self.polyculture_tree.setColumnCount(2)
-        _hdr = self.polyculture_tree.header()
-        _hdr.setStretchLastSection(False)
-        _hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        _hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        # V3.19 (QF-10, R21): the facts took the width they needed first and
+        # cut every name to about twelve characters at 1366 px. Names and
+        # facts now share the row and fold onto a second line before either
+        # is cut (src/two_line_rows.py).
+        from src.two_line_rows import TwoLineRows
+        self._rows = TwoLineRows(self.polyculture_tree)
         self.polyculture_tree.setIndentation(16)
         self.polyculture_tree.setMouseTracking(True)
         # Drag a community out of the library onto the "Plant Communities Mix"

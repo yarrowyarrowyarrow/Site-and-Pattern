@@ -34,6 +34,11 @@ WINDOWS = (("_scene3d_window", "follow_design"),
 
 def request_sync(main) -> None:
     """The design changed: rebuild every open window once the edits pause."""
+    # Share › Export names the years Growth Snapshots will draw, which follow
+    # the design too (V3.19, QF-13).
+    share = getattr(main, "share_panel", None)
+    if share is not None and hasattr(share, "design_changed"):
+        share.design_changed()
     for attr, method in WINDOWS:
         win = getattr(main, attr, None)
         if win is None:

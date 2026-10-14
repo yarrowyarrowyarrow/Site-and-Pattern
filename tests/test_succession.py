@@ -23,7 +23,7 @@ from src.succession import (  # noqa: E402
 class TestStages(unittest.TestCase):
     def test_stage_progression(self):
         self.assertEqual(restoration_stage(0), "Planting")
-        self.assertEqual(restoration_stage(1), "Pioneer forbs")
+        self.assertEqual(restoration_stage(1), "First wildflowers")  # V3.19, WD-6
         self.assertEqual(restoration_stage(3), "Forb–grass matrix")
         self.assertEqual(restoration_stage(5), "Shrubs establishing")
         self.assertEqual(restoration_stage(10), "Climax / canopy")

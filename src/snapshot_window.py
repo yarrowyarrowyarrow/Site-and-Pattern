@@ -168,8 +168,8 @@ class SnapshotWindow(QWidget):
         bounds = content_bounds(scenes) or _union_bounds(scenes)
         self._intro.setText(
             years_line([s["year"] for s in snaps]) + " Plants grow and "
-            "self-seeders spread; faint plants are pioneers fading as the "
-            "community matures.")
+            "self-seeders spread; faint plants are the early ones giving way "
+            "as the community matures.")
         for i, canvas in enumerate(self._canvases):
             if i < len(snaps):
                 canvas.set_panel(snaps[i]["scene"], snaps[i]["year"], bounds)

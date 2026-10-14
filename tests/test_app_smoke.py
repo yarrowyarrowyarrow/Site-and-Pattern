@@ -1072,6 +1072,25 @@ class TestMainWindowSmoke(unittest.TestCase):
         win.polyculture_panel.armedChanged.emit({"armed": True})
         self.assertTrue(fly.isHidden())
 
+    def test_no_community_name_is_cut_at_a_laptops_width(self):
+        """V3.19 (QF-10, R21): at 1366 px Placement › Communities cut every
+        name to about twelve characters ("Boreal Conifer…", "Boreal
+        Peavin…"); names and facts now fold onto a second line instead."""
+        from src.keyboard_help import show_panel
+        from tests._cell_fit import cut_cells
+        win = self._win
+        self.addCleanup(win._side_tabs.setCurrentIndex,
+                        win._side_tabs.currentIndex())
+        win.resize(1366, 768)
+        win.show()
+        show_panel(win.polyculture_panel)
+        for _ in range(6):
+            self._app.processEvents()
+        tree = win.polyculture_panel.polyculture_tree
+        self.assertTrue(tree.isVisible())
+        self.assertGreater(tree.topLevelItemCount(), 20)
+        self.assertEqual(cut_cells(tree, columns=(0, 1)), [])
+
     def test_the_cost_link_opens_where_the_buy_list_is(self):
         from PyQt6.QtCore import QUrl
         win = self._win

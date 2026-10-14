@@ -53,6 +53,14 @@ _GROUP_ROWS = (
     ("people", "For people: what you can harvest", "#80deea"),
 )
 
+
+def _month_cell(abbr: str, style: str) -> str:
+    """One month of a strip. A label's rich text drops a span's padding and
+    margin, so the strips read "MarAprMayJunJulAugSepOct" (V3.19, QF-7, R17):
+    the room is spaces, inside the colour and between the months."""
+    return f"<span style='{style}'>&nbsp;{abbr}&nbsp;</span>"
+
+
 _BODY_STYLE = ("color: #c8e6c9; font-size: 12px; padding: 8px; "
                "background: #1a2a1a; border: 1px solid #2e4a2e; "
                "border-radius: 4px;")
@@ -371,12 +379,12 @@ class FoodPage(QScrollArea):
         self._plants_box.setText(self._bee_floral(plan))
         self._needs_box.setText(self._bee_nesting(plan))
         self._when_box.setText(self._bee_forage(plan))
-        src = (plan.attrs or {}).get("source") or ""
         conf = {"documented": "well-documented", "partial": "partly documented",
                 "thin": "sparse"}.get(plan.data_confidence, plan.data_confidence)
         self._footnote.setText(
             f"Data confidence: {conf}. Floral matches shown as documented "
-            f"(plant↔bee records) or inferred (genus-level hosts). {src}")
+            f"(plant↔bee records) or inferred (genus-level hosts)."
+            + self._sources((plan.attrs or {}).get("source")))
 
     def _show_other(self, fid: int):
         try:
@@ -405,6 +413,19 @@ class FoodPage(QScrollArea):
             "When is read off the plants: flowers for nectar and pollen, fruit "
             "for fruit and seed, leaves (May to September) for larvae that eat "
             "the plant.")
+
+    @staticmethod
+    def _sources(source) -> str:
+        """The works a bee's facts come from, by name as the website gives
+        them (``citations.format_sources``, short form): the footnote printed
+        the database keys, "anbc_alberta_native_bees,sheffield_et_al_2014_…"
+        (V3.19, QF-7, R17). A placeholder names no work and is left out, as
+        the 3D window's dossier leaves it out."""
+        from src.citations import format_sources, is_placeholder
+        keys = [k.strip() for k in (source or "").split(",") if k.strip()]
+        named = format_sources(
+            ",".join(k for k in keys if not is_placeholder(k)), short=True)
+        return f" Sources: {named}." if named else ""
 
     @staticmethod
     def _kinds(kinds, taxon: str = "") -> str:
@@ -451,7 +472,7 @@ class FoodPage(QScrollArea):
             abbr = feeds.MONTH_ABBR[m - 1]
             style = ("background:#1b5e20; color:#c8e6c9; border-radius:3px;"
                      if m in here else "color:#5f7a6a;")
-            cells.append(f"<span style='{style} padding:2px 4px;'>{abbr}</span>")
+            cells.append(_month_cell(abbr, style))
         if not plan["here"]:
             note = "Nothing in your design feeds it yet."
         elif plan["gaps"]:
@@ -459,7 +480,7 @@ class FoodPage(QScrollArea):
                     f"{feeds.span(plan['gaps'])}.")
         else:
             note = "Something for it all through the growing season."
-        return "".join(cells) + f"<div style='padding-top:4px;'>{note}</div>"
+        return " ".join(cells) + f"<div style='padding-top:4px;'>{note}</div>"
 
     # ── A bee (the Bees page's renderers, moved in V3.08) ────────────────────
 
@@ -546,8 +567,7 @@ class FoodPage(QScrollArea):
                 style = "background:#1b5e20; color:#c8e6c9; border-radius:3px;"
             else:
                 style = "background:#5d3a1a; color:#ffcc80; border-radius:3px;"
-            cells.append(f"<span style='{style} padding:2px 5px; margin:0 1px;'>"
-                         f"{abbr}</span>")
+            cells.append(_month_cell(abbr, style))
         legend = ("<div style='color:#90a4ae; font-size:12px; padding-top:4px;'>"
                   "green = a plant in bloom for it · orange = flying but no "
                   "bloom (a gap to fill)</div>")
@@ -556,7 +576,7 @@ class FoodPage(QScrollArea):
             names = ", ".join(s.common_name for s in f.suggestions[:6])
             sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
                    f"Fill the gap with: {names}</div>")
-        return ("".join(cells) + f"<div style='padding-top:4px;'>{f.note}</div>"
+        return (" ".join(cells) + f"<div style='padding-top:4px;'>{f.note}</div>"
                 + legend + sug)
 
     # ── The photograph ───────────────────────────────────────────────────────

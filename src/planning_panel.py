@@ -811,8 +811,8 @@ class PlanningPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Drag from planting day to maturity: pioneer forbs fill in first, "
-            "then fade as shrubs and trees take over."
+            "Drag from planting day to maturity: the first wildflowers fill "
+            "in, then give way as shrubs and trees take over."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")

@@ -189,7 +189,7 @@ class MaintenanceCalendar:
 def _stage_span(year_from: int, year_to) -> str:
     """The restoration stage(s) a band covers.
 
-    A band can straddle two stages (years 2–4 spans pioneer forbs and the
+    A band can straddle two stages (years 2–4 spans the first wildflowers and the
     forb–grass matrix); naming only the first would quietly disagree with the
     3D year slider halfway through the band.
     """

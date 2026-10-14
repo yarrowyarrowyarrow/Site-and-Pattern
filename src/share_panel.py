@@ -21,6 +21,7 @@ for while its scene loads.
 
 from __future__ import annotations
 
+from PyQt6.QtCore import QEvent, QTimer
 from PyQt6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout,
     QWidget,
@@ -50,8 +51,26 @@ def _open_snapshots(main):
     open_snapshot_view(main)
 
 
+def snapshots_gives(project) -> str:
+    """What Growth Snapshots gives for ``project``: the years its window draws,
+    read from ``snapshot_timeline.project_years``, the window's own rule
+    (V3.19, QF-13, R28). The line said "1, 5, 15 and 30 years" while the
+    window, which stops when the slowest plant is full grown, drew 1, 5, 15
+    and 20 for the worked example."""
+    from src.snapshot_timeline import listed_years, project_years
+    try:
+        years = project_years(project or {})
+    except Exception:                                      # noqa: BLE001
+        years = []
+    if not years:
+        return "the design as it grows, year by year"
+    return f"the design at {listed_years(years)}"
+
+
 #: ``(section, [(button, what it gives, action(main))])``, in the order a
-#: person needs them: the documents to take outside, then the pictures.
+#: person needs them: the documents to take outside, then the pictures. What
+#: it gives is a sentence, or a function of the design for a line that
+#: depends on it.
 EXPORTS = (
     ("Take it outside", (
         ("Export PDF…", "the whole plan: prep, buy list, planting map, care",
@@ -62,8 +81,7 @@ EXPORTS = (
          lambda main: main._on_export_order_file()),
     )),
     ("Pictures", (
-        ("Growth Snapshots…", "the design at 1, 5, 15 and 30 years",
-         _open_snapshots),
+        ("Growth Snapshots…", snapshots_gives, _open_snapshots),
         ("Presentation still…", "a 3D render at print size, for a proposal",
          _open_still),
         ("Before / after…", "the yard now beside the design grown",
@@ -91,6 +109,13 @@ class SharePanel(QWidget):
         layout.addWidget(self._tabs)
         self.export_page = self._build_export()
         self._tabs.addTab(self.export_page, "Export")
+        # A line that depends on the design is read again when the page comes
+        # on screen and after edits while it is there (V3.19, QF-13).
+        self._follow = QTimer(self)
+        self._follow.setSingleShot(True)
+        self._follow.setInterval(150)
+        self._follow.timeout.connect(self.refresh_lines)
+        self.export_page.installEventFilter(self)
 
     def _build_export(self) -> QScrollArea:
         page = QScrollArea()
@@ -102,6 +127,8 @@ class SharePanel(QWidget):
         lay.setContentsMargins(6, 6, 6, 6)
         lay.setSpacing(6)
         self.buttons: dict = {}
+        self.notes: dict = {}
+        self._live: list = []      # (button, note, gives(project))
         for section, rows in EXPORTS:
             head = QLabel(section)
             head.setStyleSheet(_HEAD_STYLE)
@@ -113,13 +140,18 @@ class SharePanel(QWidget):
                 btn.setMinimumWidth(150)
                 btn.clicked.connect(lambda _c=False, a=action: a(self._main))
                 row.addWidget(btn)
-                note = QLabel(gives)
+                note = QLabel("")
                 note.setWordWrap(True)
                 note.setStyleSheet(_NOTE_STYLE)
-                btn.setToolTip(gives[0].upper() + gives[1:])
+                if callable(gives):
+                    self._live.append((btn, note, gives))
+                else:
+                    _say(btn, note, gives)
                 row.addWidget(note, 1)
                 lay.addLayout(row)
                 self.buttons[words] = btn
+                self.notes[words] = note
+        self.refresh_lines()
         # Where to buy arrives here from Site Info (src/side_panel_layout.py).
         self._export_layout = lay
         lay.addStretch()
@@ -129,3 +161,25 @@ class SharePanel(QWidget):
         """Put ``widget`` at the end of the Export page, above its stretch."""
         lay = self._export_layout
         lay.insertWidget(lay.count() - 1, widget)
+
+    def refresh_lines(self) -> None:
+        """Say again what the lines that depend on the design say."""
+        project = getattr(self._main, "_project", None)
+        for btn, note, gives in self._live:
+            _say(btn, note, gives(project))
+
+    def design_changed(self) -> None:
+        """The design changed (``follow_design.request_sync``): read the lines
+        again once the edits pause, if the page is on screen."""
+        if self.export_page.isVisible():
+            self._follow.start()
+
+    def eventFilter(self, obj, event) -> bool:                 # noqa: N802
+        if obj is self.export_page and event.type() == QEvent.Type.Show:
+            self.refresh_lines()
+        return False
+
+
+def _say(btn: QPushButton, note: QLabel, gives: str) -> None:
+    note.setText(gives)
+    btn.setToolTip(gives[:1].upper() + gives[1:])
