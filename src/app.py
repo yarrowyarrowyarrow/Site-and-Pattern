@@ -51,7 +51,8 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
 from src import indicator_style, target_size
-from src import onboarding_flow
+from src import month_tasks, onboarding_flow
+from src.elided_label import ElidedLabel
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.ui_style import APP_STYLE as _APP_STYLE
@@ -284,9 +285,12 @@ class MainWindow(QMainWindow):
         self._sb_coords.setMinimumWidth(220)
         self._sb_zone.setMinimumWidth(100)
 
-        self._sb_tasks = QLabel("")
+        # This month's jobs for the design's own plants, or nothing (V3.19,
+        # QF-12): src/month_tasks.py, refreshed wherever the plants change.
+        # Cut to fit rather than widening the window (src/elided_label.py).
+        self._sb_tasks = ElidedLabel("")
         self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 12px;")
-        self._load_seasonal_tasks()
+        month_tasks.refresh(self)
 
         sb = QStatusBar(self)
         sb.addWidget(self._sb_coords)
@@ -371,12 +375,12 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         mb = self.menuBar()
 
-        # Undo/redo live on the Draw toolbar (the visible buttons); the menu
-        # bar stays File / View / Help (V2.25 — the Edit menu duplicated the
-        # toolbar and was dropped). The QActions still exist, parented to the
-        # window, so the keyboard shortcuts keep working and
-        # PersistenceController._sync_undo_actions can grey them out in step
-        # with the toolbar buttons.
+        # Undo/redo are on the Draw toolbar and, since V3.19, in Edit (QF-15,
+        # src/edit_menu_flow.py; V2.25 had dropped an Edit menu that only
+        # repeated the toolbar). These two QActions, parented to the window,
+        # carry the keys: Edit shows these same objects, so a key is bound
+        # once, and PersistenceController._sync_undo_actions greys them out in
+        # step with the toolbar buttons.
         self._act_undo = QAction("Undo", self)
         self._act_undo.setShortcut(QKeySequence.StandardKey.Undo)
         self._act_undo.setEnabled(False)
@@ -470,6 +474,11 @@ class MainWindow(QMainWindow):
         act_exit = file_menu.addAction("E&xit")
         act_exit.setShortcut("Alt+F4")
         act_exit.triggered.connect(self.close)
+
+        # Edit: Undo, Redo, Delete, Select All (V3.19, QF-15), between File
+        # and View.
+        from src import edit_menu_flow
+        edit_menu_flow.install(self)
 
         # View menu — recovery hatch for users who accidentally collapse the
         # sidebar (the chevron strip on the right edge can be easy to miss).
@@ -868,6 +877,11 @@ class MainWindow(QMainWindow):
 
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+        # The sun path's, the wind overlay's and the relationship web's
+        # switches are offered only while their overlay is drawn (V3.19,
+        # QF-19; MainWindow is at its method ceiling).
+        from src import overlay_switches
+        overlay_switches.install(self)
         # Straight to the controller (MainWindow is at its method ceiling).
         self.analysis_panel.wind_data_requested.connect(
             self._map_events._on_fetch_wind_requested)
@@ -1056,32 +1070,6 @@ class MainWindow(QMainWindow):
     def _mark_modified(self):
         # Shim → PersistenceController; see src/controllers/persistence.py.
         return self._persistence._mark_modified()
-
-    # ── Seasonal tasks ────────────────────────────────────────────────────────
-
-    def _load_seasonal_tasks(self):
-        """Show current month's planting tasks in the status bar."""
-        try:
-            from src.db.plants import get_current_month_tasks
-            from datetime import datetime
-            month_name = datetime.now().strftime("%B")
-            tasks = get_current_month_tasks()
-            if tasks:
-                # Group by status
-                by_status = {}
-                for t in tasks[:8]:  # Limit to avoid overflow
-                    s = t["status"].replace("_", " ").title()
-                    by_status.setdefault(s, []).append(t["common_name"])
-                parts = []
-                for status, names in by_status.items():
-                    parts.append(f"{status}: {', '.join(names[:3])}")
-                    if len(names) > 3:
-                        parts[-1] += f" +{len(names)-3}"
-                self._sb_tasks.setText(f"{month_name}: {' | '.join(parts)}")
-            else:
-                self._sb_tasks.setText(f"{month_name}: No active tasks")
-        except Exception:
-            pass
 
     # ── Drawing modes ─────────────────────────────────────────────────────────
 
@@ -1871,8 +1859,9 @@ class MainWindow(QMainWindow):
         site_photo_flow.restore_site_photo(self)
         self.setWindowTitle(window_title(name, version=running_version()))
         self._set_mode_label("Ready")
-        # Back to an empty project — step 1 again (F44).
+        # Back to an empty project — step 1 again (F44), and no jobs (QF-12).
         onboarding_flow.refresh(self)
+        month_tasks.refresh(self)
 
     def _on_open(self):
         """Open a design — from the in-app list first (F87, V2.39).
@@ -2242,6 +2231,8 @@ class MainWindow(QMainWindow):
         # Snapshots here; an edit, through _mark_modified (V3.08, F89).
         from src import follow_design
         follow_design.request_sync(self)
+        # And the status bar's jobs for this month (V3.19, QF-12).
+        month_tasks.refresh(self)
 
     def _push_undo(self, entry: dict):
         # Shim → PersistenceController; see src/controllers/persistence.py.

@@ -97,6 +97,9 @@ class MapBridge(QObject):
     # step (V3.11): {plants, boundaries, structures, shapes, measurements,
     # sunpath}
     selection_deleted = pyqtSignal(str)
+    # How many things are selected now, so Edit › Delete is offered only when
+    # there is something to delete (V3.19, QF-15)
+    selection_count_changed = pyqtSignal(int)
 
     # The legend's switches (plants 'type'|'species', boundaries
     # 'simple'|'named'), to be remembered (V3.11, F217)
@@ -274,6 +277,10 @@ class MapBridge(QObject):
     @pyqtSlot(str)
     def onSelectionDeleted(self, payload_json: str):
         self.selection_deleted.emit(payload_json or "{}")
+
+    @pyqtSlot(int)
+    def onSelectionCount(self, count: int):
+        self.selection_count_changed.emit(max(0, int(count)))
 
     @pyqtSlot(str, str)
     def onLegendDetailChanged(self, plants: str, boundaries: str):
@@ -494,8 +501,15 @@ class MapWidget(QWebEngineView):
     callers never have to format JS strings themselves.
     """
 
+    #: An analysis overlay was drawn or cleared (V3.19, QF-19): the switches
+    #: that change one are offered only while it is on the map
+    #: (src/overlay_switches.py). Every draw and clear passes through here,
+    #: whoever asked for it (a button, undo, an open, the map's own menu).
+    overlays_changed = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._shown_overlays: set = set()
         # What a screen reader calls it (V3.02). The page names its own parts
         # (html/map/09-keyboard.js); see childEvent for the widget that takes
         # focus.
@@ -556,6 +570,21 @@ class MapWidget(QWebEngineView):
 
     def _on_load_started(self):
         self.is_ready = False
+        self._note_overlay("sun_path", False)       # a new page draws none
+        self._note_overlay("wind", False)
+
+    def overlay_shown(self, name: str) -> bool:
+        """Whether the overlay ``"sun_path"`` or ``"wind"`` is drawn now."""
+        return name in self._shown_overlays
+
+    def _note_overlay(self, name: str, shown: bool) -> None:
+        before = set(self._shown_overlays)
+        if shown:
+            self._shown_overlays.add(name)
+        else:
+            self._shown_overlays.discard(name)
+        if self._shown_overlays != before:
+            self.overlays_changed.emit()
 
     def _on_map_ready(self):
         self.is_ready = True
@@ -650,6 +679,9 @@ class MapWidget(QWebEngineView):
 
     def clear_all(self):
         self.run_js(map_js.clear_all())
+        # clearAll takes the sun path and the wind overlay with it (V3.19).
+        self._note_overlay("sun_path", False)
+        self._note_overlay("wind", False)
 
     def set_satellite_visible(self, visible: bool):
         self.run_js(map_js.set_satellite_visible(visible))
@@ -855,9 +887,11 @@ class MapWidget(QWebEngineView):
             self.run_js(map_js.draw_sun_path(data, lat, lng))
         else:
             self.run_js(map_js.draw_sun_path(data))
+        self._note_overlay("sun_path", True)
 
     def clear_sun_path(self):
         self.run_js(map_js.clear_sun_path())
+        self._note_overlay("sun_path", False)
 
     def set_sun_path_time(self, minutes):
         """Move the sun marker along the drawn arc (scrub-rate; JS-only)."""
@@ -999,9 +1033,11 @@ class MapWidget(QWebEngineView):
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
         self.run_js(map_js.draw_wind_overlay(data))
+        self._note_overlay("wind", True)
 
     def clear_wind_overlay(self):
         self.run_js(map_js.clear_wind_overlay())
+        self._note_overlay("wind", False)
 
     # ── North arrow and scale bar (F205, V3.06) ──────────────────────────────
 
@@ -1058,6 +1094,10 @@ class MapWidget(QWebEngineView):
     def delete_selected(self):
         """Delete every currently-selected map item."""
         self.run_js(map_js.delete_selected())
+
+    def select_all(self):
+        """Select everything shown on the map (Edit › Select all, V3.19)."""
+        self.run_js(map_js.select_all())
 
     def load_measurement(self, measure_id: str, points: list):
         """Draw a measurement from the design, telling nobody (V3.11)."""

@@ -76,8 +76,8 @@ than for the advanced side; where they disagree, 03 wins.
 |---|---|---|
 | Draw row | Boundary, Shape (beds and paths), Select, Undo, Redo, Cancel | Measure, Note on the map |
 | View row | Satellite, Plants | Boundary and Measurement layer switches, Grid, Canopy, Structures layer (the Yard photo switch is deleted with the scan import, RM-2) |
-| Edit (new, QF-15) | Undo, Redo, Delete, Select all | — |
 | File | New, Open…, Save, Save As…, Rename Design… (ST-7), Plan My Yard… ([07](07-plan-my-yard.md)), Export PDF…, Export Planting Plan…, Export order file…, Exit | — (*Import Yard Scan…* is deleted, RM-2) |
+| Edit (since V3.19, QF-15) | Undo, Redo (what the Draw row's buttons do, with the keys Ctrl+Z and Ctrl+Shift+Z or Ctrl+Y), Delete (what is selected on the map, as the Delete key there; offered only while something is), Select All (Ctrl+A: everything shown on the map) | — |
 | View | Show Side Panel, Getting-started strip, North Arrow, Scale Bar, **Advanced tools** (the switch) | Split view, 3D Preview…, Plant Directory…, Walk a Wild Landscape…, Growth Snapshots…, Scale Units, Map Settings… |
 | Help | Start Screen…, Open the Example Yard, Keyboard Shortcuts…, Send Feedback…, Where This Data Came From…, About / Version, Check for Updates…, Support this app… ([10-finishing.md](10-finishing.md)) | — (*Switch to a specific version…* is removed from the product, not moved: [03](03-what-goes.md)) |
 

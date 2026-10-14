@@ -1138,6 +1138,7 @@
       clearShadeZones();
       clearSitePin(false);
       drawnItems.clearLayers();
+      clearSelection();   // its badge and Edit › Delete go too (V3.19, QF-15)
     }
 
     function loadBoundary(dataJson, fit) {

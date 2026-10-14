@@ -91,6 +91,16 @@ QMenu {
 QMenu::item:selected {
     background-color: #2e4a2e;
 }
+/* An item or a switch that cannot be used now looks it (V3.19, QF-15 and
+   QF-19): QWidget's colour above holds in every state, so a greyed Undo read
+   exactly like an offered one. Disabled controls are exempt from 4.5:1 and
+   meant to recede; this is about 4:1 on the panels. */
+QMenu::item:disabled {
+    color: #6b8a72;
+}
+QCheckBox:disabled {
+    color: #6b8a72;
+}
 
 QToolBar {
     background-color: #1b2b1b;

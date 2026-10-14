@@ -163,6 +163,12 @@ def delete_selected() -> str:
     return "deleteSelected();"
 
 
+def select_all() -> str:
+    """Edit › Select all (V3.19, QF-15): everything shown on the map that the
+    selection box can catch (``selectAll``, 04-tools.js)."""
+    return "selectAll();"
+
+
 def toggle_legend() -> str:
     return "toggleLegend();"
 

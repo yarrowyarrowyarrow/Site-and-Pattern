@@ -434,15 +434,6 @@ class SitePanel(QWidget):
         self._build_ui()
         self._set_empty_state()
 
-    def set_first_step(self, text: str):
-        """Show the current getting-started step at the top of the Site tab
-        (F45). Empty text hides the line."""
-        lbl = getattr(self, "_first_step", None)
-        if lbl is None:
-            return
-        lbl.setText(text or "")
-        lbl.setVisible(bool(text))
-
     def focus_address_search(self):
         """Put the cursor in the address box (F44 — 'Start from my yard' and
         the step-1 chip both land here), with Site Info in front: a cursor in
@@ -518,25 +509,10 @@ class SitePanel(QWidget):
 
     def _build_info_page(self, layout):
         """Site Information sub-tab: property pin/address + climate + soil."""
-        # F45: the current step, stated before anything else on the panel the
-        # user lands on first. Text comes from src/onboarding.first_step_line,
-        # so this and the getting-started strip always say the same thing.
-        self._first_step = QLabel("")
-        self._first_step.setWordWrap(True)
-        self._first_step.setVisible(False)
-        self._first_step.setStyleSheet(
-            "color: #dcedc8; font-size: 12px; font-weight: bold; "
-            "padding: 6px 8px; background: #1e3320; "
-            "border: 1px solid #3e5c3e; border-radius: 4px;")
-        layout.addWidget(self._first_step)
-
-        info = QLabel(
-            "Search an Alberta address, or drop the pin on the map, and the "
-            "site's climate and soil fill in. Drag the pin to adjust it."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
-        layout.addWidget(info)
+        # The page opens on the pin. Until V3.19 a green box (the strip's
+        # current step again, F45) and a paragraph above it said how to drop
+        # the pin, under the getting-started strip saying it too: the same
+        # instruction three times on one screen (R26). The strip says it.
 
         # ── Property pin (with address search) ───────────────────────
         pin_box = QGroupBox("Property pin")
@@ -1173,12 +1149,22 @@ class SitePanel(QWidget):
         )
         slope_form.addRow("Slope grid:", self._auto_resolution)
 
+        # These four are what Generate draws, not switches on a drawn map:
+        # a click changes nothing until Generate is pressed, so each says so
+        # (V3.19, QF-19, R27). Disabled until a map existed, Water flow, off
+        # by default, could never be asked for the first time.
+        _on_generate = ("\nApplies when you press Generate; to change a map "
+                        "already drawn, press Generate again.")
         self._auto_want_contours = QCheckBox("Show contour lines")
         self._auto_want_contours.setChecked(True)
+        self._auto_want_contours.setToolTip(
+            "Draw lines joining ground of the same height." + _on_generate)
         slope_form.addRow(self._auto_want_contours)
 
         self._auto_want_slope = QCheckBox("Show slope colour ramp")
         self._auto_want_slope.setChecked(True)
+        self._auto_want_slope.setToolTip(
+            "Colour the ground by how steep it is." + _on_generate)
         slope_form.addRow(self._auto_want_slope)
 
         # Water flow & accumulation overlay (V2.13): D8 routing over the same
@@ -1192,11 +1178,13 @@ class SitePanel(QWidget):
             "teal where it ponds, arrows showing direction.\n"
             "Honesty note: Edmonton's 0.5 m LiDAR resolves yard-scale flow; "
             "elsewhere the 30 m DEM shows broad drainage patterns only — "
-            "don't site a swale off a single 30 m cell.")
+            "don't site a swale off a single 30 m cell." + _on_generate)
         slope_form.addRow(self._auto_want_water)
 
         self._auto_show_labels = QCheckBox("Label every 5th contour")
         self._auto_show_labels.setChecked(True)
+        self._auto_show_labels.setToolTip(
+            "Write the height on every fifth contour line." + _on_generate)
         slope_form.addRow(self._auto_show_labels)
 
         # Contour colour

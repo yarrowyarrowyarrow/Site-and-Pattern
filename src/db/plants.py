@@ -3202,24 +3202,31 @@ def get_calendar(plant_id: int) -> list[dict]:
             for m in range(1, 13)]
 
 
-def get_current_month_tasks() -> list[dict]:
+def get_month_tasks(plant_ids, month: int) -> list[dict]:
     """
-    Return plants with active tasks for the current month.
-    Each dict: {plant_id, common_name, plant_type, status, notes}.
-    Excludes dormant and growing (those aren't actionable).
+    The planting-calendar rows of ``month`` for these plants only, as
+    ``{plant_id, common_name, status, edible_parts}``, dormant and growing
+    left out (they are not jobs). No ids, no rows.
+
+    Until V3.19 this was ``get_current_month_tasks()``, which took no plants
+    and so answered for the whole catalogue: the status bar named "the first
+    eight tasks in the whole catalogue, not the user's design" (QF-12, R26).
     """
-    from datetime import datetime
-    month = datetime.now().month
+    ids = sorted({int(i) for i in plant_ids or () if i is not None})
+    if not ids:
+        return []
+    marks = ",".join("?" * len(ids))
     conn = get_connection()
     try:
         rows = conn.execute(
-            """SELECT p.id AS plant_id, p.common_name, p.plant_type,
-                      c.status, c.notes
-               FROM planting_calendar c
-               JOIN plants p ON p.id = c.plant_id
-               WHERE c.month = ? AND c.status NOT IN ('dormant', 'growing')
-               ORDER BY c.status, p.common_name""",
-            (month,)
+            f"""SELECT p.id AS plant_id, p.common_name, p.edible_parts,
+                       c.status
+                FROM planting_calendar c
+                JOIN plants p ON p.id = c.plant_id
+                WHERE c.month = ? AND c.plant_id IN ({marks})
+                  AND c.status NOT IN ('dormant', 'growing')
+                ORDER BY c.status, p.common_name""",
+            (int(month), *ids)
         ).fetchall()
         return [dict(r) for r in rows]
     finally:

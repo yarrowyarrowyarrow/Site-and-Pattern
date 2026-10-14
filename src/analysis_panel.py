@@ -771,7 +771,8 @@ class AnalysisPanel(QWidget):
         btn_show = QPushButton("Show Wind Overlay")
         btn_show.setToolTip(
             "Draw the arrows and windbreak shelter zones for the direction on "
-            "the dial. (The two checkboxes above draw live, on toggle.)")
+            "the dial. Once it is drawn, the switches above change it at "
+            "once.")
         btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_wind)
         btn_row.addWidget(btn_show)
@@ -1194,8 +1195,12 @@ class AnalysisPanel(QWidget):
         for key, label, on, _kinds in self._WEB_LAYERS:
             box = QCheckBox(label)
             box.setChecked(on)
+            # Offered only while the web is drawn (src/overlay_switches.py,
+            # V3.19, QF-19), and dimmed when not: a widget's own colour holds
+            # in every state unless it names the disabled one.
             box.setStyleSheet(
-                "color: #b0bec5; font-size: 12px; padding-left: 16px;")
+                "QCheckBox { color: #b0bec5; font-size: 12px; "
+                "padding-left: 16px; } QCheckBox:disabled { color: #6b8a72; }")
             box.toggled.connect(self._on_web_layers_changed)
             layout.addWidget(box)
             self._web_layer_boxes[key] = box

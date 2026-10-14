@@ -220,6 +220,8 @@
     // Tiny floating badge in the top-right corner showing N selected items
     // and a "Delete" affordance — keeps the UI obvious for first-time users.
     function _updateSelectionBadge() {
+      // Edit › Delete is offered while something is selected (V3.19, QF-15).
+      if (bridge && bridge.onSelectionCount) bridge.onSelectionCount(selectedItems.length);
       var el = document.getElementById('_pd_sel_badge');
       if (selectedItems.length === 0) {
         if (el && el.parentNode) el.parentNode.removeChild(el);

@@ -508,14 +508,16 @@ def _confirm_discard(main, title: str) -> bool:
 # ── Keeping the guidance live ────────────────────────────────────────────────
 
 def refresh(main) -> None:
-    """Re-read the project and update the step bar + the Site panel line.
+    """Re-read the project and update the step bar.
 
     Called after anything that could complete a step (pin, boundary, plant,
     project load, undo). Never raises — onboarding guidance must not be able
-    to break the app it is trying to explain.
+    to break the app it is trying to explain. Until V3.19 it also wrote the
+    step into a box at the top of Site Info, under the strip saying the same
+    thing (R26, QF-12); the strip is the one place it is said now.
     """
     try:
-        from src.onboarding import first_step, first_step_line, steps_progress
+        from src.onboarding import first_step, steps_progress
         project = main._project
         steps = steps_progress(project)
         current = first_step(project)
@@ -531,11 +533,6 @@ def refresh(main) -> None:
             bar.setVisible(not current["complete"] and not step_bar_hidden())
         except Exception:                                  # noqa: BLE001
             pass
-
-    try:
-        main.site_panel.set_first_step(first_step_line(project))
-    except Exception:                                      # noqa: BLE001
-        pass
 
     act = getattr(main, "_act_step_bar", None)
     if act is not None:

@@ -151,6 +151,10 @@ class PersistenceController:
             onboarding_flow.refresh(self._main)
         except Exception:  # noqa: BLE001 — guidance must never block a save flag
             pass
+        # The status bar's jobs for this month follow the plants, for the same
+        # reason (V3.19, QF-12). Never raises.
+        from src import month_tasks
+        month_tasks.refresh(self._main)
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 

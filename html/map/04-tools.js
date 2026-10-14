@@ -321,6 +321,29 @@
       });
     }
 
+    // Edit › Select all, and Ctrl+A (V3.19, QF-15): what the selection box
+    // would catch drawn round the whole world (_marqueeHitTest, 01-core.js),
+    // less what a View switch has hidden, so a Delete after it never takes
+    // away something nobody can see. Measurements hide themselves above.
+    function selectAll() {
+      var world = L.latLngBounds([-90, -180], [90, 180]);
+      selectedItems = _marqueeHitTest(world).filter(_shownOnMap);
+      _refreshSelectionVisuals();
+    }
+
+    function _shownOnMap(h) {
+      var layer = null;
+      if (h.kind === 'measure') return true;
+      if (h.kind === 'plant') layer = plantLayerGroup;
+      else if (h.kind === 'structure') layer = structureMarkers[h.structureId];
+      else if (h.kind === 'shape') layer = shapeLayers[h.shapeId];
+      else if (h.kind === 'sunpath') layer = sunPathLayer;
+      else if (h.kind === 'boundary') {
+        boundaries.forEach(function (b) { if (b.id === h.boundaryId) layer = b.layer; });
+      }
+      return !!layer && map.hasLayer(layer);
+    }
+
     // Every measurement off the map and nothing said: a redraw is about to
     // load the design's own (render_project_to_map), or a new design starts.
     function clearMeasure() {

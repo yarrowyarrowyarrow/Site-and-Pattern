@@ -388,7 +388,10 @@ class OnTheMap(unittest.TestCase):
     def test_one_delete_is_one_call_with_everything_in_it(self):
         d = self.m["delete"]
         self.assertEqual(d["kinds"], ["boundary", "measure", "plant"])
-        self.assertEqual(d["calls"], ["onSelectionDeleted"])
+        # How many things are selected is a report for Edit › Delete, not a
+        # change to the design (V3.19, QF-15): what changes it is one call.
+        self.assertEqual([c for c in d["calls"] if c != "onSelectionCount"],
+                         ["onSelectionDeleted"])
         self.assertEqual(d["plants"], 1)
         self.assertEqual(d["boundaries"], ["b1"])
         self.assertEqual(d["measurements"], [self.m["measure"]["id"]])
