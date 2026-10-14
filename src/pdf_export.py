@@ -18,6 +18,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtPrintSupport import QPrinter
 
 from src.branding import APP_NAME
+from src.planting_spacing import spacing_words
 
 # ── The print palette (V3.18, first-pass review R1) ─────────────────────────
 #
@@ -637,7 +638,7 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float,
                 it.common_name,
                 it.form,
                 str(it.qty),
-                f"{it.spacing_m:g} m",
+                spacing_words(it.spacing_m),
                 it.planting_window,
                 format_cost(it.ext_low, it.ext_high),
             ]
@@ -1164,7 +1165,9 @@ def _draw_planting_map(painter: QPainter, w: float, h: float, pmap,
         ky = y + row * 11 * s
         text = (f"{entry.number}.  {entry.common_name}  "
                 f"×{entry.qty}"
-                + (f"  ·  {entry.spacing_m:.1f} m apart"
+                # The plant page's spacing in the plant page's words (V3.19,
+                # QF-9): ".1f" printed 0.25 m as "0.2" and 0.45 m as "0.5".
+                + (f"  ·  {spacing_words(entry.spacing_m)} apart"
                    if entry.spacing_m else ""))
         painter.drawText(QRectF(15 * s + col * col_w, ky, col_w - 10 * s,
                                 11 * s),

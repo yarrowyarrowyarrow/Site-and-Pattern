@@ -170,26 +170,14 @@ def _source_bucket(native: bool, ptype: str) -> str:
 
 
 def _spacing_for(plant: dict) -> float:
-    """Centre-to-centre spacing (m): the plant's own ``spacing_m`` when present,
-    else the naturalistic layer/spread-aware estimate.
+    """Centre-to-centre spacing (m), as the plant page tells it (V3.19, QF-9).
 
-    Rounded to 5 cm. ``plant_spacing`` returns an unrounded figure derived from
-    canopy width and spread habit; printing "0.878 m apart" on a sheet somebody
-    plants from claims a precision the estimate does not have, and nobody
-    spaces plants to the millimetre anyway (P9).
+    This read ``spacing_m``, the seed file's name, off a database row whose
+    column is ``spacing_meters``, so for every real plant it printed the
+    layer/spread estimate instead: Wild Bergamot 0.9 m on the buy list and the
+    planting map's key, 0.3 m on its page (R20).
     """
-    explicit = plant.get("spacing_m")
-    if explicit:
-        try:
-            return _round_spacing(float(explicit))
-        except (TypeError, ValueError):
-            pass
-    return _round_spacing(planting_spacing.plant_spacing(plant, base_m=0.45))
-
-
-def _round_spacing(metres: float) -> float:
-    """Spacing to the nearest 5 cm, with a 5 cm floor."""
-    return max(0.05, round(float(metres) * 20.0) / 20.0)
+    return planting_spacing.spacing_to_plant_m(plant)
 
 
 def _phase_for(plant: dict) -> str:
@@ -376,7 +364,8 @@ def render_plan_text(plan: PlantingPlan, sources=None) -> str:
             line = f"  {it.common_name}"
             if it.scientific_name:
                 line += f"  ({it.scientific_name})"
-            line += (f"  ×{it.qty}  [{it.form}]  space ~{it.spacing_m:g} m  "
+            line += (f"  ×{it.qty}  [{it.form}]  "
+                     f"space ~{planting_spacing.spacing_words(it.spacing_m)}  "
                      f"~{fc(it.ext_low, it.ext_high)}")
             lines.append(line)
             sub_lo += it.ext_low

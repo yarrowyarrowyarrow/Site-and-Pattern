@@ -290,7 +290,7 @@ class SpeciesPage(QWidget):
             _metres(entry.get("mature_height_m"), "tall"),
             _metres(entry.get("mature_canopy_m"), "wide"),
             _years(entry.get("years_to_maturity")),
-            _metres(entry.get("spacing_m"), "apart")) if p))
+            _apart(entry.get("spacing_m"))) if p))
         self._season_block(entry)
         if entry.get("morphology"):
             self._section("What it looks like", " · ".join(entry["morphology"]))
@@ -657,6 +657,14 @@ def _metres(value, word: str) -> str:
     except (TypeError, ValueError):
         return ""
     return f"{v:g} m {word}" if v else ""
+
+
+def _apart(value) -> str:
+    """The spacing in the words the buy list and the planting map's key use
+    (V3.19, QF-9): one number, printed one way."""
+    from src.planting_spacing import spacing_words           # noqa: PLC0415
+    words = spacing_words(value)
+    return f"{words} apart" if words else ""
 
 
 def _years(value) -> str:

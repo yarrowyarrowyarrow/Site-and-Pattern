@@ -1215,7 +1215,8 @@ class TestMainWindowSmoke(unittest.TestCase):
         import ast
         import re
         from pathlib import Path
-        from PyQt6.QtWidgets import QTabWidget, QToolBar
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QTabWidget, QToolBar, QToolButton
 
         def norm(text):
             text = (text or "").replace("&&", "\0").replace("&", "")
@@ -1241,6 +1242,12 @@ class TestMainWindowSmoke(unittest.TestCase):
         for bar in win.findChildren(QToolBar):
             places.setdefault(norm(bar.windowTitle()), set()).update(
                 norm(a.text()) for a in bar.actions() if a.text())
+            # A row's own buttons count too: Draw › Shape is a button the row
+            # holds, not an action with text (V3.19, QF-11, the plan's pointer).
+            places[norm(bar.windowTitle())].update(
+                norm(b.text()) for b in bar.findChildren(
+                    QToolButton, options=Qt.FindChildOption.FindDirectChildrenOnly)
+                if b.text())
         places = {k: {c for c in v if len(c) >= 3} for k, v in places.items()
                   if k}
         # Tabs that were and are not (V3.07): a pointer at one leads nowhere.

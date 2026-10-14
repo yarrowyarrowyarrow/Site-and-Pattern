@@ -67,7 +67,7 @@ _TEXTURE_ADVICE = {
 }
 
 _TEXTURE_FALLBACK = (
-    "unknown texture",
+    "",
     "Do the jar test below before deciding anything — texture is the single "
     "fact that changes the prep.",
     (),
@@ -171,10 +171,29 @@ def _soil_basis(site_config: dict) -> str:
 def _texture_of(site_config: dict) -> str:
     sc = site_config or {}
     texture = (sc.get("soil_texture") or "").strip()
-    if texture:
-        return texture
-    summary = ((sc.get("soil") or {}).get("summary") or {})
-    return (summary.get("texture_class") or "").strip()
+    if not texture:
+        summary = ((sc.get("soil") or {}).get("summary") or {})
+        texture = (summary.get("texture_class") or "").strip()
+    return texture_class(texture)
+
+
+def texture_class(raw) -> str:
+    """The texture class a soil source names, spelled as the table above keys
+    it ("Sandy loam"), whatever spelling the source used (V3.19, QF-11).
+
+    The regional atlas writes ``loam`` and ``sandy_loam``; SoilGrids and the
+    soil pack write ``Loam`` and ``Sandy loam``. Only the second matched, so on
+    the regional reading every site's plan said "Soil: loam — unknown texture",
+    calling loam, a texture, unknown (R24). A name the table does not hold
+    comes back tidied rather than dropped, and nothing gives "".
+    """
+    text = " ".join(str(raw or "").replace("_", " ").split())
+    if not text:
+        return ""
+    for name in _TEXTURE_ADVICE:
+        if name.lower() == text.lower():
+            return name
+    return text[:1].upper() + text[1:].lower()
 
 
 def _ph_of(site_config: dict) -> Optional[float]:
@@ -248,8 +267,15 @@ def build_site_prep(site_config: dict, placed_plants: Optional[list] = None, *,
             if lbl == label and adv:
                 advice = adv
                 break
-    prep.soil_line = (f"{texture} — {label}" if texture
-                      else "Soil texture not known for this site yet")
+    # What is known, plainly: "Soil: loam", or "Soil: not known yet" (V3.19,
+    # QF-11). The advice below says what the texture means; this names it.
+    # With a pH and no texture it is the texture that is not known, or the
+    # line would call a soil unknown beside its own pH.
+    if texture:
+        prep.soil_line = texture.lower()
+    else:
+        prep.soil_line = ("texture not known yet" if ph is not None
+                          else "not known yet")
 
     order = 1
 
@@ -272,9 +298,13 @@ def build_site_prep(site_config: dict, placed_plants: Optional[list] = None, *,
         prep.steps.append(PrepStep(
             order=order,
             title="Decide how the existing cover comes off",
-            detail="Draw your conversion zones on the map first (Site → "
-                   "Features) and this sheet will size the job. The three "
-                   "methods are sheet mulch, cutting the sod, and solarising.",
+            # The lawn and its conversion zones are drawn with Draw › Shape
+            # (V3.07); this pointed at Site → Features, which holds buildings
+            # and trees (V3.19, QF-11, R24).
+            detail="Draw the lawn you are replacing on the map first, with "
+                   "Draw › Shape, and this sheet will size the job. The "
+                   "three methods are sheet mulch, cutting the sod, and "
+                   "solarising.",
             basis="general"))
         order += 1
 
@@ -355,8 +385,9 @@ def build_site_prep(site_config: dict, placed_plants: Optional[list] = None, *,
                         + ("…" if len(prep.ph_mismatch) > 6 else "")),
                 basis="regional" if basis != "measured" else "measured"))
             order += 1
-    else:
+    elif texture:
         prep.ph_line = "pH not known for this site yet"
+    # With neither known, "Soil: not known yet" has said it once (V3.19, QF-11).
 
     # ── Honesty about the numbers above ──────────────────────────────────────
     if basis == "regional":

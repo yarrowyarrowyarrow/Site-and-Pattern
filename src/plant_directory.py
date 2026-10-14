@@ -115,6 +115,7 @@ def species_entry(plant_id: int, *,
 
     from src.ecological_role import ecological_role_summary    # noqa: PLC0415
     from src.phenology_bar import parse_period                 # noqa: PLC0415
+    from src.planting_spacing import spacing_to_plant_m        # noqa: PLC0415
     from src.scene_dossier import (_bloom_pair, _fruit_pair,   # noqa: PLC0415
                                    _month_span, _morphology,
                                    _safety_notes, _sourcing)
@@ -144,7 +145,9 @@ def species_entry(plant_id: int, *,
         "water": plant.get("water_needs") or "",
         "soil_ph": _ph_range(plant),
         "zones": _zone_range(plant),
-        "spacing_m": plant.get("spacing_meters"),
+        # The one spacing a person is told (V3.19, QF-9): the buy list and
+        # the planting map's key print this same number.
+        "spacing_m": spacing_to_plant_m(plant),
         "mature_height_m": plant.get("mature_height_meters"),
         "mature_canopy_m": plant.get("mature_canopy_m"),
         "years_to_maturity": plant.get("years_to_maturity"),

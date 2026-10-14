@@ -1758,7 +1758,10 @@ class SitePanel(QWidget):
         s = data.get("summary") or {}
         ph = s.get("ph_top")
         self._lbl_soil_ph.setText(f"{ph:.1f}" if ph is not None else "—")
-        self._lbl_soil_texture.setText(s.get("texture_class") or "—")
+        # "Sandy loam", not the regional atlas's "sandy_loam" (V3.19, QF-11).
+        from src.site_prep import texture_class
+        self._lbl_soil_texture.setText(
+            texture_class(s.get("texture_class")) or "—")
         sand = s.get("sand_pct_top")
         silt = s.get("silt_pct_top")
         clay = s.get("clay_pct_top")
