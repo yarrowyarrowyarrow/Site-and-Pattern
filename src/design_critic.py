@@ -53,8 +53,11 @@ def evaluate_design(project) -> Optional[dict]:
     (the ``HabitatScore.as_dict()`` shape), or ``None`` when nothing is
     placed / the score can't be computed."""
     try:
-        from src.habitat_score import compute_habitat_score
-        hs = compute_habitat_score(project.placed_plants, project.structures)
+        # The page's score, against the pin's ecoregion (V3.20, OV-4).
+        from src.habitat_score import score_for_project, site_pin
+        lat, lng = site_pin(project)
+        hs = score_for_project(project.placed_plants, project.structures,
+                               lat=lat, lng=lng)
     except Exception:  # noqa: BLE001 — evaluation is best-effort
         return None
     return hs.as_dict() if hs is not None else None

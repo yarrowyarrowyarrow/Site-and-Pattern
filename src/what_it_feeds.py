@@ -367,8 +367,9 @@ def together(plant_ids: Iterable[int], *,
 
 
 def eaters_line(food: dict) -> str:
-    """'feeds 12: 5 bees, 4 butterflies and moths, 3 birds · flowers Jul–Aug ·
-    fruit Sep'. A plant with nothing recorded says so ("no animal recorded"),
+    """'food for 12 kinds: 5 bees, 4 butterflies and moths, 3 birds · flowers
+    Jul–Aug · fruit Sep'. Food, as recorded, not "feeds": the records say an
+    animal was seen eating it somewhere in two provinces (V3.20, OV-5). A plant with nothing recorded says so ("no animal recorded"),
     which is a gap in the data more often than a fact about the plant (P9)."""
     counts = food.get("animals") or {}
     total = sum(counts.values())
@@ -376,7 +377,8 @@ def eaters_line(food: dict) -> str:
     if total:
         groups = ", ".join(group_words(t, counts[t])
                            for t, _one, _plural in GROUPS if counts.get(t))
-        parts.append(f"feeds {total}: {groups}")
+        parts.append(f"food for {total} kind{'s' if total != 1 else ''}: "
+                     f"{groups}")
     else:
         parts.append("no animal recorded")
     if food.get("bloom"):
@@ -384,3 +386,34 @@ def eaters_line(food: dict) -> str:
     if food.get("fruit"):
         parts.append(f"fruit {span(food['fruit'])}")
     return " · ".join(parts)
+
+
+# ── One wildlife count (V3.20, OV-5) ────────────────────────────────────────
+# The Report card counted every animal with any record on the design's plants
+# (food or shelter, ``HabitatScore.fauna_by_taxon``) and called them "wildlife
+# species supported"; Food counted food edges. One design read 263 on one and
+# 271 on the other (OVF-4), and "supported" claims more than a record of an
+# animal eating a plant somewhere in Alberta or Saskatchewan can (R15). Every
+# page now counts food edges, here, and says "recorded as food for".
+
+def food_counts(plant_ids: Iterable[int], *,
+                connect: Optional[Callable] = None) -> dict:
+    """``{taxon: n}``: the animals these plants are recorded as food for, each
+    counted once, in :data:`GROUPS` order. Shelter alone does not count."""
+    counts: dict = {}
+    for animal in animals_fed(plant_ids, connect=connect):
+        if animal["food"]:
+            counts[animal["taxon"]] = counts.get(animal["taxon"], 0) + 1
+    order = [t for t, _one, _plural in GROUPS]
+    return dict(sorted(counts.items(),
+                       key=lambda kv: (order.index(kv[0]) if kv[0] in order
+                                       else len(order), kv[0])))
+
+
+def food_words(counts: dict) -> str:
+    """'recorded as food for 559 kinds of wildlife', or ``""`` for none."""
+    total = sum((counts or {}).values())
+    if not total:
+        return ""
+    return f"recorded as food for {total} kind{'s' if total != 1 else ''} " \
+           "of wildlife"

@@ -189,7 +189,8 @@ class TestThePagesFillThemselves(unittest.TestCase):
         panel._tabs.setCurrentWidget(panel._food)
         panel.set_placed_plants(self._plants)
         self.assertTrue(panel._live.fill_now())
-        self.assertIn("Your plants feed", panel._food._summary_line.text())
+        self.assertIn("Your plants are recorded as food for",
+                      panel._food._summary_line.text())
         panel.close()
 
     def test_a_live_page_moved_to_another_strip_is_still_filled(self):
@@ -236,8 +237,34 @@ class TestThePagesFillThemselves(unittest.TestCase):
         text = panel._maint_results.text()
         for row in ("Wildflowers", "Grasses", "Shrubs", "Rushes"):
             self.assertIn(f">{row}<", text)
-        year1 = [float(h) for h in re.findall(r">(\d+(?:\.\d+)?) h<", text)]
+        year1 = re.findall(r">(\d+)–(\d+) h<", text)
         self.assertTrue(year1, text)
+
+    def test_the_hours_are_the_care_calendars(self):
+        """V3.20, OV-6: this page's "Year 3+" used the year-10 multiplier and
+        one figure; the PDF prints the calendar's four bands as ranges. Both
+        now read the calendar, and a week is May to September, not 1/52."""
+        from src.maintenance_calendar import (GROWING_WEEKS,
+                                              build_maintenance_calendar)
+        from src.planning_panel import PlanningPanel
+        plants = [
+            {"plant_id": 1, "plant_type": "wildflower", "native_to_alberta": 1},
+            {"plant_id": 2, "plant_type": "shrub", "native_to_alberta": 1},
+            {"plant_id": 3, "plant_type": "shrub", "native_to_alberta": 0}]
+        panel = PlanningPanel()
+        panel.set_placed_plants(plants)
+        panel._calc_maintenance()
+        text = panel._maint_results.text()
+        cal = build_maintenance_calendar(plants, [])
+        for band in cal.bands:
+            self.assertIn(f">{band.label}<", text)
+            self.assertIn(f">{band.hours_low:.0f}–{band.hours_high:.0f} h<",
+                          text)
+        y1 = cal.bands[0]
+        self.assertIn(f"{y1.hours_low / GROWING_WEEKS:.1f}–"
+                      f"{y1.hours_high / GROWING_WEEKS:.1f} h", text)
+        self.assertNotIn("Year&nbsp;3+", text)
+        self.assertNotIn("Year 3+", text)
 
     def test_water_starts_from_the_design(self):
         from src.planning_panel import PlanningPanel

@@ -1317,11 +1317,6 @@ class MapEventRouter:
         counts = shade_zones.tag_counts(pk)
         self._main.analysis_panel.set_shade_zone_status(
             shade_zones.format_classification_status(len(rows), counts, mismatches))
-        # Mirror the mix into the Analysis tab's read-only breakdown.
-        try:
-            self._main.analysis_panel.set_shade_breakdown(counts)
-        except Exception:  # noqa: BLE001
-            pass
         # Draw the classified zones on the map as a coloured grid so the user can
         # see where the sun/partial/shade planting spots are.
         try:
@@ -1658,6 +1653,8 @@ class MapEventRouter:
         from src import soil_flow
         soil_flow.apply_soil_site_fields(self._main, result.get("soil"))
         sc["data_fetched_at"] = _utc_now_iso()
+        # The Water page's rainfall is the site's own once fetched (OV-7).
+        self._main.planning_panel.set_site_config(sc)
 
         # Mirror the auto-filled hardiness zone into the existing
         # top-level project field so the rest of the app picks it up.

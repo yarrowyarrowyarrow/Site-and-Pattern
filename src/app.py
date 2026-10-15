@@ -52,6 +52,7 @@ from src.project_store import ProjectStore
 from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
 from src import indicator_style, target_size
 from src import month_tasks, onboarding_flow
+from src.yard_overview import bed_area_m2
 from src.elided_label import ElidedLabel
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
@@ -1999,11 +2000,7 @@ class MainWindow(QMainWindow):
             if f.get("properties", {}).get("element_type") == "structure"
             and f.get("properties", {}).get("struct_def")
         ]
-        bed_area = sum(
-            float(f.get("properties", {}).get("area_m2") or 0.0)
-            for f in self._project.get("features", [])
-            if f.get("properties", {}).get("element_type") == "custom_shape"
-        )
+        bed_area = bed_area_m2(self._project)
         plan = build_planting_plan(self._placed_plants, structures=structs,
                                    bed_area_m2=bed_area)
 
@@ -2143,6 +2140,8 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_structures(structs)
         from src.design_inputs import boundary_area_m2
         self.planning_panel.set_site_area(boundary_area_m2(self._project))
+        self.planning_panel.set_site_config(
+            self._project.get("properties", {}).get("site_config") or {})
 
         # Map notes (Draw → 📝 Note) mirrored into Site › Notes so the
         # journal and the on-map observations read as one record (V2.25).
@@ -2166,14 +2165,6 @@ class MainWindow(QMainWindow):
         self.learn_panel.set_placed_plants(enriched)
         self.learn_panel.set_structures(structs)
 
-        # Read-only shade-mix breakdown from the cached tags (if classified).
-        try:
-            from src.db import shade_zones
-            pk = shade_zones.project_key_for(getattr(self, "_project_path", None))
-            self.analysis_panel.set_shade_breakdown(shade_zones.tag_counts(pk))
-        except Exception:  # noqa: BLE001
-            pass
-
         # "On This Design" sibling inner tab. Push both: Communities + Stats
         # sub-tabs read from the enriched list; the Plants sub-tab reads
         # from `_placed_counts` (this catches load-project / new-project
@@ -2184,11 +2175,7 @@ class MainWindow(QMainWindow):
             # Whole-design cost (C1): plants + structure install + bed mulch,
             # with the plant total broken down by type (F2).
             from src.sourcing import design_cost, cost_by_type
-            bed_area = sum(
-                float(f.get("properties", {}).get("area_m2") or 0.0)
-                for f in self._project.get("features", [])
-                if f.get("properties", {}).get("element_type") == "custom_shape"
-            )
+            bed_area = bed_area_m2(self._project)
             _cost = design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
             _cost["type_costs"] = cost_by_type(enriched)
             self.on_this_design.set_cost_breakdown(_cost)
@@ -2221,9 +2208,11 @@ class MainWindow(QMainWindow):
             # Habitat value on the Stats tab (F11) — what the design is worth,
             # shown beside the cost. Computed here so it stays live with edits.
             try:
-                from src.habitat_score import compute_habitat_score
+                # Against the pin's ecoregion, as Habitat scores it (OV-4).
+                from src.habitat_score import score_for_project, site_pin
+                lat, lng = site_pin(self._project)
                 self.on_this_design.set_habitat_value(
-                    compute_habitat_score(enriched, structs)
+                    score_for_project(enriched, structs, lat=lat, lng=lng)
                 )
             except Exception:  # noqa: BLE001 — value is a nicety, never break sync
                 self.on_this_design.set_habitat_value(None)

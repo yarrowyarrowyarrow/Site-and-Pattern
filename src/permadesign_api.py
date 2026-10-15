@@ -41,7 +41,7 @@ from src.project import load_project, save_project, project_to_map_data
 from src.db.plants import get_plant, search_plants
 from src.db.polycultures import get_polyculture_by_id, get_all_polycultures
 from src.db.structures import get_structure, get_all_structures
-from src.habitat_score import compute_habitat_score, HabitatScoreError
+from src.habitat_score import HabitatScoreError, score_for_project, site_pin
 from src.errors import (
     ProjectError,
     PlantNotFoundError,
@@ -294,7 +294,9 @@ def run_analysis(project: Project) -> dict:
     """
     _ensure_db()
     try:
-        score = compute_habitat_score(project.placed_plants, project.structures)
+        lat, lng = site_pin(project)
+        score = score_for_project(project.placed_plants, project.structures,
+                                  lat=lat, lng=lng)
     except HabitatScoreError as exc:
         raise AnalysisError(f"Habitat score unavailable: {exc}") from exc
     return {

@@ -424,11 +424,9 @@ class OnThisDesignPanel(QWidget):
         ns, n = getattr(sc, "native_species", 0), getattr(sc, "n_species", 0)
         if n:
             bits.append(f"{ns} of {n} species native")
-        fbt = getattr(sc, "fauna_by_taxon", None)
-        if fbt:
-            n_wild = sum(fbt.values())
-            if n_wild:
-                bits.append(f"{n_wild} wildlife species supported")
+        fed = self._food_words()
+        if fed:
+            bits.append(fed)
         host = getattr(sc, "host_species", None) or []
         if host:
             bits.append(f"{len(host)} caterpillar host plants")
@@ -467,31 +465,21 @@ class OnThisDesignPanel(QWidget):
                 "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:12px;'>"
                 f"{items}</ul></p>")
 
-    def _value_framing_html(self) -> str:
-        """One line that reads cost and habitat value together (F11, P6): the
-        spend isn't a cost, it's what buys the wildlife value above. Shown only
-        when both a cost total and a habitat score are present."""
-        bd = self._cost_breakdown
-        sc = self._habitat_value
-        if not bd or not sc or not bd.get("total"):
-            return ""
-        creates = []
-        fbt = getattr(sc, "fauna_by_taxon", None)
-        if fbt:
-            n_wild = sum(fbt.values())
-            if n_wild:
-                creates.append(f"{n_wild} wildlife species supported")
-        ns = getattr(sc, "native_species", 0)
-        if ns:
-            creates.append(f"{ns} native species")
-        n_struct = len(getattr(sc, "habitat_struct_types", []) or [])
-        if n_struct:
-            creates.append(f"{n_struct} habitat structure"
-                           f"{'s' if n_struct != 1 else ''}")
-        if not creates:
-            return ""
-        return ("<p style='color:#90a4ae;font-size:12px;margin-top:2px;'>"
-                "What your spend creates: " + ", ".join(creates) + ".</p>")
+    def _food_words(self) -> str:
+        """'recorded as food for N kinds of wildlife', counted as Design ›
+        Food counts it (V3.20, OV-5): food edges only, from the design's
+        plants. Asked of the database only when the plants change."""
+        ids = frozenset(p.get("plant_id")
+                        for p in getattr(self, "_latest_enriched", []) or []
+                        if p.get("plant_id") is not None)
+        if getattr(self, "_food_key", None) != ids:
+            try:
+                from src.what_it_feeds import food_counts, food_words
+                self._food_line = food_words(food_counts(ids)) if ids else ""
+            except Exception:                              # noqa: BLE001
+                self._food_line = ""
+            self._food_key = ids
+        return self._food_line
 
     def _cues_block_html(self) -> str:
         """Will the neighbours read it as cared for? (F75, P13.)
@@ -606,13 +594,12 @@ class OnThisDesignPanel(QWidget):
         # the same question — will this design work, and will it be allowed to.
         cues_html = self._cues_block_html()
         cost_html = self._cost_block_html()
-        framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#90a4ae;'>Nothing placed yet.</i>"
             self._stats_text.setHtml(
                 body + lawn_html + value_html + nudges_html + cues_html
-                + cost_html + framing_html)
+                + cost_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -687,5 +674,4 @@ class OnThisDesignPanel(QWidget):
         rows.append(nudges_html)
         rows.append(cues_html)
         rows.append(cost_html)
-        rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))

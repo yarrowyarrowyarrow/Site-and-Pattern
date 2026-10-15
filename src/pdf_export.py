@@ -19,6 +19,7 @@ from PyQt6.QtPrintSupport import QPrinter
 
 from src.branding import APP_NAME
 from src.planting_spacing import spacing_words
+from src.yard_overview import bed_area_m2
 
 # ── The print palette (V3.18, first-pass review R1) ─────────────────────────
 #
@@ -156,17 +157,15 @@ def export_pdf(
 
         # Habitat Value Score + whole-design cost for the summary block.
         try:
-            from src.habitat_score import compute_habitat_score
-            score = compute_habitat_score(placed_plants, structures)
+            from src.habitat_score import score_for_project, site_pin
+            lat, lng = site_pin(project)
+            score = score_for_project(placed_plants, structures,
+                                      lat=lat, lng=lng)
         except Exception:
             score = None
         try:
             from src.sourcing import design_cost
-            bed_area = sum(
-                float(f.get("properties", {}).get("area_m2") or 0.0)
-                for f in project.get("features", [])
-                if f.get("properties", {}).get("element_type") == "custom_shape"
-            )
+            bed_area = bed_area_m2(project)
             cost = design_cost(placed_plants, structures=structures,
                                mulch_area_m2=bed_area)
         except Exception:
@@ -216,11 +215,7 @@ def export_pdf(
         try:
             from src.lawn_zones import conversion_summary
             from src.site_prep import build_site_prep
-            prep_bed_area = sum(
-                float(f.get("properties", {}).get("area_m2") or 0.0)
-                for f in project.get("features", [])
-                if f.get("properties", {}).get("element_type") == "custom_shape"
-            )
+            prep_bed_area = bed_area_m2(project)
             prep = build_site_prep(
                 project.get("properties", {}).get("site_config") or {},
                 placed_plants, bed_area_m2=prep_bed_area,
@@ -244,11 +239,7 @@ def export_pdf(
                 if f.get("properties", {}).get("element_type") == "structure"
                 and f.get("properties", {}).get("struct_def")
             ]
-            plan_bed_area = sum(
-                float(f.get("properties", {}).get("area_m2") or 0.0)
-                for f in project.get("features", [])
-                if f.get("properties", {}).get("element_type") == "custom_shape"
-            )
+            plan_bed_area = bed_area_m2(project)
             plan = build_planting_plan(placed_plants, structures=structs,
                                        bed_area_m2=plan_bed_area)
         except Exception:

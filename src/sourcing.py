@@ -187,7 +187,6 @@ def format_cost(low: float, high: float) -> str:
 # Bulk landscape mulch, delivered (CAD per cubic metre). Coarse Alberta estimate;
 # arborist chips can be free, bagged retail is dearer — this brackets the middle.
 MULCH_PRICE_PER_M3: tuple[float, float] = (35.0, 75.0)
-DEFAULT_MULCH_DEPTH_CM: float = 7.5  # a typical establishment mulch depth
 
 
 def structure_cost(structures, get_structure=None) -> tuple[float, float]:
@@ -213,14 +212,20 @@ def structure_cost(structures, get_structure=None) -> tuple[float, float]:
     return (round(lo, 2), round(hi, 2))
 
 
-def mulch_cost(area_m2, depth_cm: float = DEFAULT_MULCH_DEPTH_CM,
+def mulch_cost(area_m2, depth_cm=None,
                price_per_m3: tuple[float, float] = MULCH_PRICE_PER_M3
                ) -> tuple[float, float]:
-    """Estimated ``(low, high)`` CAD to mulch ``area_m2`` at ``depth_cm`` deep."""
+    """Estimated ``(low, high)`` CAD to mulch ``area_m2``. ``depth_cm`` is a
+    ``(low, high)`` range or one depth; by default the site-prep sheet's
+    5–8 cm (``site_prep.MULCH_DEPTH_CM``), so the cost and the sheet's cubic
+    metres are one depth, not 7.5 cm here and 5–8 cm there (V3.20, OV-3)."""
+    if depth_cm is None:
+        from src.site_prep import MULCH_DEPTH_CM as depth_cm
+    shallow, deep = (depth_cm if isinstance(depth_cm, (tuple, list))
+                     else (depth_cm, depth_cm))
     area = max(0.0, float(area_m2 or 0.0))
-    volume_m3 = area * (max(0.0, float(depth_cm)) / 100.0)
-    return (round(volume_m3 * price_per_m3[0], 2),
-            round(volume_m3 * price_per_m3[1], 2))
+    return (round(area * max(0.0, float(shallow)) / 100.0 * price_per_m3[0], 2),
+            round(area * max(0.0, float(deep)) / 100.0 * price_per_m3[1], 2))
 
 
 def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,

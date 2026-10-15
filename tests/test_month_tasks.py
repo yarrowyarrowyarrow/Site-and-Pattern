@@ -71,13 +71,20 @@ class TheLineIsWritten(unittest.TestCase):
         fetch = _rows((1, "Saskatoon", "pruning", "fruit"),
                       (2, "Wild Bergamot", "transplant", ""),
                       (3, "Meadow Sedge", "direct_sow", None))
-        jobs = month_tasks.jobs_for([1, 2, 3], 10, fetch=fetch)
+        jobs = month_tasks.jobs_for([1, 2, 3], 3, fetch=fetch)
         self.assertEqual([w for w, _n in jobs],
                          ["sow outdoors", "plant out", "prune"])
         self.assertEqual(
-            month_tasks.status_line(jobs, 10),
-            "To do in October: sow outdoors Meadow Sedge · plant out Wild "
+            month_tasks.status_line(jobs, 3),
+            "To do in March: sow outdoors Meadow Sedge · plant out Wild "
             "Bergamot · prune Saskatoon")
+
+    def test_never_prune_in_the_autumn(self):
+        """V3.20, OV-8: the care calendar says cut back in spring."""
+        fetch = _rows((1, "Saskatoon", "pruning", "fruit"))
+        self.assertEqual(month_tasks.jobs_for([1], 10, fetch=fetch), [])
+        self.assertEqual(month_tasks.jobs_for([1], 4, fetch=fetch),
+                         [("prune", ["Saskatoon"])])
 
     def test_harvest_only_of_what_can_be_eaten(self):
         """The review's "harvest Broad-leaved Arrowhead": the fruiting season
@@ -107,6 +114,15 @@ class TheLineIsWritten(unittest.TestCase):
         page["harvest"] = "Harvest"            # said of edible plants only
         self.assertEqual({s: w.capitalize() for s, w in month_tasks.JOBS},
                          page)
+
+    def test_the_plant_page_never_says_prune_in_the_autumn(self):
+        try:
+            from src.species_page import _calendar_tasks
+        except ImportError as exc:                     # no PyQt6 here
+            self.skipTest(f"species_page needs Qt: {exc}")
+        cal = [{"month": m, "status": "pruning"} for m in (3, 4, 10)]
+        self.assertEqual(_calendar_tasks(cal, edible=False),
+                         "Prune in March and April")
 
 
 class TheLineFollowsTheDesign(unittest.TestCase):

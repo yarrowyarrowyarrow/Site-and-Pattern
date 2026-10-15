@@ -147,6 +147,9 @@ class PhenologyWidget(QWidget):
         if now["tasks"]:
             tasks = "; ".join(f"{t['verb']} {t['name']}" for t in now["tasks"][:8])
             parts.append(f"<b style='color:#ffcc80'>To do:</b> {tasks}")
+        if now.get("first_year"):
+            parts.append("<b style='color:#a5d6a7'>If you planted this year:"
+                         f"</b> {now['first_year']}")
         if not parts:
             return "<i style='color:#90a4ae'>Nothing predicted to change this month.</i>"
         return "<br>".join(parts)

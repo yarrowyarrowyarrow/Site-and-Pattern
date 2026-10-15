@@ -13,8 +13,9 @@ none of them has a job this month.
 
 The jobs are the plant page's (``species_page._TASKS``; a test keeps the words
 equal): start indoors, sow outdoors, plant out, prune, and harvest only of a
-plant with edible parts, where it is a job rather than the fruiting season
-said again.
+plant with edible parts, where it is a job rather than the fruiting season said
+again. Prune only in spring (V3.20, OV-8): the care calendar says cut back in
+spring, never in the autumn tidy-up (``maintenance_calendar.says_prune``).
 
 Qt-free: :func:`refresh` only sets the status bar label's text. The window
 calls it wherever the design's plants can change: every edit and undo
@@ -27,6 +28,7 @@ from datetime import date
 from typing import Callable, Iterable, Optional
 
 from src.log import get_logger
+from src.maintenance_calendar import says_prune
 
 _log = get_logger(__name__)
 
@@ -59,6 +61,8 @@ def jobs_for(plant_ids: Iterable[int], month: int, *,
     for row in fetch(ids, int(month)) or []:
         status = row.get("status")
         if status == "harvest" and not (row.get("edible_parts") or "").strip():
+            continue
+        if status == "pruning" and not says_prune(month):
             continue
         name = (row.get("common_name") or "").strip()
         names = by_status.setdefault(status, [])

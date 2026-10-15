@@ -251,7 +251,9 @@ class FoodPage(QScrollArea):
             counts[a["taxon"]] = counts.get(a["taxon"], 0) + 1
         groups = ", ".join(feeds.group_words(t, counts[t])
                            for t, _o, _p in feeds.GROUPS if counts.get(t))
-        return f"<b>Your plants feed {len(food)} animals</b>: {groups}."
+        # The Report card's and Habitat's count, in their words (V3.20, OV-5).
+        return (f"<b>Your plants are {feeds.food_words(counts)}</b>: "
+                f"{groups}.")
 
     # ── The animal list ──────────────────────────────────────────────────────
 

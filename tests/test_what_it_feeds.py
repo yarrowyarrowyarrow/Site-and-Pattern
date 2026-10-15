@@ -41,7 +41,7 @@ class TestTheWords(unittest.TestCase):
         line = feeds.eaters_line({"animals": {"bird": 1, "bee": 2},
                                   "bloom": [7, 8], "fruit": [9]})
         # Groups in the page's order (bees first), whatever order they came.
-        self.assertEqual(line, "feeds 3: 2 bees, 1 bird · flowers Jul–Aug · "
+        self.assertEqual(line, "food for 3 kinds: 2 bees, 1 bird · flowers Jul–Aug · "
                                "fruit Sep")
 
     def test_nothing_recorded_says_so_rather_than_nothing(self):
@@ -162,7 +162,7 @@ class TestAgainstTheCatalogue(unittest.TestCase):
     def test_the_planted_line_for_a_real_plant(self):
         pid = self.rows["Chokecherry"]["id"]
         line = feeds.eaters_line(feeds.plant_food([pid])[pid])
-        self.assertRegex(line, r"^feeds \d+: \d+ bees?, ")
+        self.assertRegex(line, r"^food for \d+ kinds?: \d+ bees?, ")
         self.assertIn("· flowers ", line)
         self.assertIn("· fruit ", line)
 

@@ -36,6 +36,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from src.maintenance_calendar import says_prune
+
 _HEAD = "color: #e8f5e9; font-size: 18px; font-weight: bold;"
 _SCI = "color: #8fb98f; font-size: 13px; font-style: italic;"
 _LABEL = "color: #7f9c82; font-size: 12px; font-weight: bold;"
@@ -590,6 +592,8 @@ def _calendar_tasks(calendar: list, *, edible: bool) -> str:
             month = int(row.get("month") or 0)
         except (TypeError, ValueError):
             continue
+        if status == "pruning" and not says_prune(month):
+            continue                     # never the autumn tidy-up (OV-8)
         if 1 <= month <= 12:
             by_status.setdefault(status, set()).add(month)
     tasks = list(_TASKS) + ([("harvest", "Harvest")] if edible else [])

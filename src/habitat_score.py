@@ -215,6 +215,9 @@ class HabitatScore:
     # plants support (schema v20 fauna expansion). Like n_lepidoptera_supported
     # this is reported alongside the score but NOT summed into the headline, so
     # existing designs' scores stay stable as the fauna dataset grows.
+    # Linked by ANY record, food or shelter: kept for the API and the critic.
+    # No page shows it since V3.20 (OV-5): they count food edges, through
+    # ``what_it_feeds.food_counts``, as "recorded as food for N kinds".
     fauna_by_taxon: dict = field(default_factory=dict)
 
     # Food-web completeness (F3) — does the design close the Tallamy chain
@@ -734,3 +737,49 @@ def compute_habitat_score(
         layer_basis=layer_basis,
         layer_detail=layer_detail,
     )
+
+
+# ── One score per design (V3.20, OV-4) ──────────────────────────────────────
+# The Habitat page scored a design against its pin's ecoregion (the layer
+# component rebased on the reference community, V2.65) and the Report card,
+# the PDF, the design critic and the API without one, so one design read 78 on
+# Habitat and 83 on the Report card (OVF-1). The owner chose the rebased score
+# for all of them (decision O2). Every caller now goes through here.
+
+def site_pin(project) -> tuple:
+    """``(lat, lng)`` of a project's site pin, or ``(None, None)``. Takes a
+    project dict, or an object carrying one (``DesignGenerator.project``,
+    ``permadesign_api.Project.as_dict()``)."""
+    data = project if isinstance(project, dict) else None
+    if data is None:
+        data = getattr(project, "project", None)
+    if data is None and hasattr(project, "as_dict"):
+        data = project.as_dict()
+    sc = ((data or {}).get("properties") or {}).get("site_config") or {}
+    lat, lng = sc.get("latitude"), sc.get("longitude")
+    try:
+        return (float(lat), float(lng)) if lat is not None and lng is not None \
+            else (None, None)
+    except (TypeError, ValueError):
+        return (None, None)
+
+
+def ecoregion_at(lat, lng) -> Optional[str]:
+    """The ecoregion key at the pin, as the Habitat page resolves it; ``None``
+    with no pin or outside the mapped ecoregions."""
+    if lat is None or lng is None:
+        return None
+    try:
+        from src.ecoregion import lookup_ecoregion
+        return lookup_ecoregion(lat, lng)
+    except Exception:                                      # noqa: BLE001
+        return None
+
+
+def score_for_project(placed_plants, structures, *, lat=None, lng=None,
+                      connection=None) -> Optional[HabitatScore]:
+    """:func:`compute_habitat_score` against the ecoregion at ``lat``,
+    ``lng``: the one score every page shows for a design (OV-4)."""
+    return compute_habitat_score(placed_plants, structures,
+                                 connection=connection,
+                                 ecoregion=ecoregion_at(lat, lng))

@@ -104,7 +104,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # already past the size plant_panel.py was split at (Chunk 4).
         (_SRC / "polyculture_panel.py", 2900),         # 2569 now (V3.05)
         (_SRC / "site_panel.py", 2700),                # 2371 now (V3.05)
-        (_SRC / "analysis_panel.py", 2450),            # 2428 now — 22 LEFT
+        (_SRC / "analysis_panel.py", 1900),            # 1810 now (V3.20 retired Tips)
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
         # ceilings rather than living in the panel that shows them.
         (_SRC / "confidence.py", 400),                 # 298 now
@@ -701,16 +701,6 @@ class TestAnalysisPanelTabsRegistered(unittest.TestCase):
                     f"won't appear. Did an addTab slip past a return into "
                     f"another method?",
                 )
-
-    def test_set_shade_breakdown_has_no_dead_code_after_return(self):
-        fn = self._func("AnalysisPanel", "set_shade_breakdown")
-        # No addTab should live in the setter (that was the misplaced line),
-        # and the setter must not register tabs.
-        self.assertFalse(
-            self._calls_addtab(fn),
-            "set_shade_breakdown should not call addTab — the Habitat tab "
-            "registration belongs at the end of _build_habitat_tab.",
-        )
 
 
 class TestAgentApiContract(unittest.TestCase):

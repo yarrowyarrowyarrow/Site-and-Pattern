@@ -139,6 +139,28 @@ _FIRST_YEAR_MONTHS = (
     (11, "LEAVE THE STEMS STANDING. Do not tidy. See the overwintering note."),
 )
 
+#: The months a prune agrees with this calendar: late winter and spring,
+#: before growth. The planting calendar's pruning rows are mostly March and
+#: April shrubs (17 of 21); the four in September and October are the autumn
+#: tidy-up the overwintering note argues against, so no page says them
+#: (V3.20, OV-8).
+PRUNING_MONTHS = (1, 2, 3, 4, 5)
+
+
+def says_prune(month) -> bool:
+    """Whether a planting-calendar pruning row for ``month`` is said at all."""
+    try:
+        return int(month) in PRUNING_MONTHS
+    except (TypeError, ValueError):
+        return False
+
+
+def first_year_task(month: int) -> str:
+    """The first-year job for ``month`` (1–12), or ``""`` for a month the
+    first year asks nothing of (V3.20, OV-8)."""
+    return dict(_FIRST_YEAR_MONTHS).get(int(month), "")
+
+
 OVERWINTERING_NOTE = (
     "Cut back in spring, not fall. Hollow and pithy stems are where stem-nesting "
     "native bees spend the winter; lepidoptera overwinter as eggs and pupae on "
@@ -264,6 +286,48 @@ def overwintering_species(placed_plants, get_plant=None,
     return sorted(out)
 
 
+def _plant_hours(placed_plants, get_plant):
+    """``(plant type, steady-state hours, native)`` for each placed plant."""
+    for p in placed_plants or []:
+        pid = p.get("plant_id")
+        plant = (get_plant(pid) or {}) if pid is not None else {}
+        ptype = (p.get("plant_type") or plant.get("plant_type")
+                 or "herb").strip().lower()
+        native = p.get("native_to_alberta")
+        if native is None:
+            native = plant.get("native_to_alberta")
+        yield ptype, PLANT_MAINTENANCE_HOURS.get(ptype, _HOURS_FALLBACK), \
+            bool(native)
+
+
+def year1_by_type(placed_plants, *, get_plant: Optional[Callable] = None
+                  ) -> dict:
+    """``{plant type: {"count", "native", "low", "high"}}``: each type's share
+    of the Year 1 band, by the band's own arithmetic and spread, so the rows
+    of Design › Over time's hours add up to the band the PDF prints (V3.20,
+    OV-6). Structures are not in it: their hours are the same every year."""
+    if get_plant is None:
+        from src.db.plants import get_plant as _gp                # noqa: PLC0415
+        get_plant = _gp
+    out: dict = {}
+    for ptype, base, native in _plant_hours(placed_plants, get_plant):
+        mult = (_BAND_MULT_NATIVE if native else _BAND_MULT_CULTIVATED)
+        slot = out.setdefault(ptype, {"count": 0, "native": 0, "hours": 0.0})
+        slot["count"] += 1
+        slot["native"] += 1 if native else 0
+        slot["hours"] += base * mult["establish"]
+    for slot in out.values():
+        slot["low"], slot["high"] = _hours_range(slot["hours"], slot["hours"])
+        del slot["hours"]
+    return out
+
+
+#: The weeks a year's garden work falls in: May to September (V3.20, OV-6).
+#: "Per week" had divided a year's hours by 52, as if weeding went on in
+#: January.
+GROWING_WEEKS = 22
+
+
 def build_maintenance_calendar(placed_plants, structures=None, *,
                                get_plant: Optional[Callable] = None,
                                get_structure: Optional[Callable] = None,
@@ -277,15 +341,7 @@ def build_maintenance_calendar(placed_plants, structures=None, *,
     # Steady-state hours, split native / cultivated so the ramp-down is honest
     # about which plants actually ramp down.
     native_base = cultivated_base = 0.0
-    for p in placed_plants or []:
-        pid = p.get("plant_id")
-        plant = (get_plant(pid) or {}) if pid is not None else {}
-        ptype = (p.get("plant_type") or plant.get("plant_type")
-                 or "herb").strip().lower()
-        base = PLANT_MAINTENANCE_HOURS.get(ptype, _HOURS_FALLBACK)
-        native = p.get("native_to_alberta")
-        if native is None:
-            native = plant.get("native_to_alberta")
+    for _ptype, base, native in _plant_hours(placed_plants, get_plant):
         if native:
             native_base += base
         else:

@@ -23,14 +23,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QFont
 
-from src.plant_conditions import condition_tokens
 
 
 # ── Maintenance hours estimates for plant types ──────────────────────────────
 # The numbers now live in the Qt-free src/maintenance_calendar.py (F42), which
 # needs them too; imported here under the historical name so the Effort tab and
 # the year-by-year calendar can never quote different hours for the same design.
-from src.maintenance_calendar import PLANT_MAINTENANCE_HOURS as _PLANT_MAINTENANCE_HOURS
 
 #: A plant type, as the effort table's rows name it.
 _TYPE_PLURAL = {
@@ -39,29 +37,6 @@ _TYPE_PLURAL = {
     "sedge": "Sedges", "rush": "Rushes", "vine": "Vines", "fern": "Ferns",
     "aquatic": "Water plants", "root": "Roots and bulbs",
 }
-
-# Edmonton climate data (approximate)
-_EDMONTON_MONTHLY_RAINFALL_MM = [
-    15, 10, 15, 25, 45, 75, 90, 65, 40, 20, 15, 12
-]
-_EDMONTON_ANNUAL_RAINFALL_MM = sum(_EDMONTON_MONTHLY_RAINFALL_MM)
-
-# Water needs per plant type (litres/week during growing season)
-_PLANT_WATER_NEEDS_L_WEEK: dict[str, float] = {
-    "tree":        40.0,
-    "shrub":       15.0,
-    "herb":        8.0,
-    "groundcover": 3.0,
-    "vine":        12.0,
-    "root":        6.0,
-}
-
-_WATER_MULTIPLIER: dict[str, float] = {
-    "low":    0.5,
-    "medium": 1.0,
-    "high":   1.5,
-}
-
 
 class PlanningPanel(QWidget):
     """The pages that were the Planning tab, until V3.08 moved each where its
@@ -182,162 +157,98 @@ class PlanningPanel(QWidget):
         self._maint_page = tab
         self._tabs.addTab(tab, "Effort")
 
-    # Year-1 establishment + Year-3+ stewardship multipliers, applied to the
-    # per-plant-type base hours. Native plantings ramp down dramatically once
-    # established (deep roots, locally-adapted, weather-resilient); cultivated
-    # / non-native plants stay closer to a steady annual cost.
-    _Y1_MULT_NATIVE      = 2.0
-    _Y1_MULT_CULTIVATED  = 1.5
-    _Y3_MULT_NATIVE      = 0.3
-    _Y3_MULT_CULTIVATED  = 1.0
-
     def _calc_maintenance(self):
+        """The care calendar's hours, as the PDF prints them (V3.20, OV-6).
+        This page had its own arithmetic: "Year 3+" used the year-10
+        multiplier and a single figure, where the calendar gives Years 2–4 a
+        band of its own and every band a ±35% range, so the example read 9 h
+        here and 18–38 h in the PDF for the same years (OVF-2)."""
         if not self._placed_plants and not self._structures:
             self._maint_results.setText("No plants or structures placed yet.")
             return
-
-        # Per-type per-establishment-phase totals
-        type_totals: dict[str, dict[str, float]] = {}
-        for p in self._placed_plants:
-            ptype  = p.get("plant_type", "herb")
-            native = bool(p.get("native_to_alberta"))
-            base   = _PLANT_MAINTENANCE_HOURS.get(ptype, 1.5)
-            y1_mult = self._Y1_MULT_NATIVE if native else self._Y1_MULT_CULTIVATED
-            y3_mult = self._Y3_MULT_NATIVE if native else self._Y3_MULT_CULTIVATED
-            slot = type_totals.setdefault(
-                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
-            )
-            slot["count"]   += 1
-            slot["native"]  += 1 if native else 0
-            slot["y1"]      += base * y1_mult
-            slot["y3"]      += base * y3_mult
-
-        plant_y1 = sum(s["y1"] for s in type_totals.values())
-        plant_y3 = sum(s["y3"] for s in type_totals.values())
-
-        # Structures: existing maintenance_hours_year is steady-state, applies to
-        # both Y1 and Y3+. (Initial install cost varies wildly and is one-time —
-        # explicitly excluded from the recurring estimate.)
-        total_struct = 0.0
-        struct_lines = []
-        for s in self._structures:
-            hrs = s.get("maintenance_hours_year", 0)
-            if hrs:
-                total_struct += hrs
-                struct_lines.append(f"  {s.get('name', '?')}: {hrs} hrs")
-
-        total_y1 = plant_y1 + total_struct
-        total_y3 = plant_y3 + total_struct
-        avail    = self._avail_hours.value() * 52
-
-        # ── Build the HTML output ───────────────────────────────────────
-        rows: list[str] = []
-        # A row for every type in the design, in the catalogue's order. Until
-        # V3.08 a fixed six were listed, so wildflowers (198 of the 424 plants)
-        # and grasses, sedges and rushes went into the subtotal with no row.
+        from src.maintenance_calendar import (
+            GROWING_WEEKS, build_maintenance_calendar, year1_by_type,
+        )
         from src.member_colors import TYPE_COLORS
-        order = ([t for t in TYPE_COLORS if t in type_totals]
-                 + sorted(t for t in type_totals if t not in TYPE_COLORS))
+        cal = build_maintenance_calendar(self._placed_plants, self._structures)
+        by_type = year1_by_type(self._placed_plants)
+
+        def hours(lo, hi):
+            return f"{lo:.0f}–{hi:.0f} h"
+
+        def weekly(lo, hi):
+            return f"{lo / GROWING_WEEKS:.1f}–{hi / GROWING_WEEKS:.1f} h"
+
+        # Year 1, by type: a row for every type in the design (V3.08), in
+        # the catalogue's order.
+        rows: list[str] = []
+        order = ([t for t in TYPE_COLORS if t in by_type]
+                 + sorted(t for t in by_type if t not in TYPE_COLORS))
         for ptype in order:
-            slot = type_totals[ptype]
+            slot = by_type[ptype]
             label = _TYPE_PLURAL.get(ptype) or str(ptype).replace("_", " ").title()
             native_tag = (
                 f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
-                if slot["native"] else ""
-            )
-            rows.append(self._row(
-                f"{label}",
-                f"{slot['count']}{native_tag}",
-                f"{slot['y1']:.0f} h",
-                f"{slot['y3']:.0f} h",
-            ))
-        if type_totals:
-            rows.append(self._row(
-                "Plants subtotal", "",
-                f"{plant_y1:.0f} h", f"{plant_y3:.0f} h",
-                subtotal=True,
-            ))
+                if slot["native"] else "")
+            rows.append(self._row(label, f"{slot['count']}{native_tag}",
+                                  hours(slot["low"], slot["high"]), ""))
+        for item in cal.structure_detail:
+            qty = f" × {item['qty']}" if item["qty"] > 1 else ""
+            rows.append(self._row(f"{item['name']}{qty}", "",
+                                  f"{item['hours_total']:.0f} h", ""))
 
-        if struct_lines:
-            for s in self._structures:
-                hrs = s.get("maintenance_hours_year", 0)
-                if hrs:
-                    rows.append(self._row(
-                        s.get("name", "?"), "",
-                        f"{hrs} h", f"{hrs} h",
-                    ))
-            rows.append(self._row(
-                "Structures subtotal", "",
-                f"{total_struct:.0f} h", f"{total_struct:.0f} h",
-                subtotal=True,
-            ))
-
-        # Final TOTAL row
-        rows.append(self._row(
-            "TOTAL", "",
-            f"{total_y1:.0f} h", f"{total_y3:.0f} h",
-            total=True,
-        ))
-        rows.append(self._row(
-            "per week", "",
-            f"{total_y1/52:.1f} h", f"{total_y3/52:.1f} h",
-            footnote=True,
-        ))
-
+        # The calendar's four bands, as ranges, and a week of the season.
+        band_rows = [self._row(band.label, "",
+                               hours(band.hours_low, band.hours_high),
+                               weekly(band.hours_low, band.hours_high),
+                               total=band.key == "establish")
+                     for band in cal.bands]
+        # One table, two header rows, so the columns line up.
+        head = "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
         table_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%;'>"
-            "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left'>Type</th>"
-            "<th align='right'>Plants</th>"
-            "<th align='right'>Year&nbsp;1</th>"
-            "<th align='right'>Year&nbsp;3+</th>"
-            "</tr>"
-            + "".join(rows) + "</table>"
-        )
+            + head + "<th align='left'>Year 1, by type</th>"
+            "<th align='right'>Plants</th><th align='right'>A year</th>"
+            "<th></th></tr>" + "".join(rows)
+            + head + "<th align='left'>When</th><th></th>"
+            "<th align='right'>A year</th>"
+            "<th align='right'>A week, May–Sep</th></tr>"
+            + "".join(band_rows) + "</table>")
 
-        # Footer note
+        avail = self._avail_hours.value()
         cap_text = (
             f"<p style='color:#90a4ae; font-size:12px; margin:6px 0 4px 0;'>"
-            f"Your capacity: <b>{self._avail_hours.value():.0f}&nbsp;h/week</b> "
-            f"({avail:.0f}&nbsp;h/year). Structures show steady-state recurring "
-            f"hours; one-time install labour is not included."
-            f"</p>"
-        )
+            f"Your time: <b>{avail:.0f}&nbsp;h a week</b> through the season. "
+            f"Structures show their yearly upkeep; building them is not "
+            f"included. Ranges, because the weather, the weeds and the "
+            f"gardener move them more than the plant list does.</p>")
 
-        # Callouts
         callouts: list[str] = []
-        if total_y1 <= avail:
-            pct = (total_y1 / avail * 100) if avail > 0 else 0
-            callouts.append(self._callout(
-                "good",
-                f"Year&nbsp;1 within capacity "
-                f"(<b>{pct:.0f}%</b> utilized).",
-            ))
-        else:
-            over = total_y1 - avail
-            callouts.append(self._callout(
-                "warn",
-                f"Year&nbsp;1 over capacity by <b>{over:.0f}&nbsp;h</b>. "
-                f"Stagger planting across seasons or reduce by "
-                f"{over/52:.1f}&nbsp;h/week.",
-            ))
-        if plant_y1 > 0 and plant_y3 < plant_y1:
-            drop = (1 - plant_y3 / plant_y1) * 100
-            callouts.append(self._callout(
-                "good",
-                f"Stewardship effort drops <b>{drop:.0f}%</b> "
-                f"from Y1 → Y3+ as natives establish.",
-            ))
+        first = cal.bands[0] if cal.bands else None
+        if first is not None and first.hours_high:
+            top_week = first.hours_high / GROWING_WEEKS
+            if top_week <= avail:
+                callouts.append(self._callout(
+                    "good", f"Year&nbsp;1 fits your time: at most "
+                            f"<b>{top_week:.1f}&nbsp;h</b> a week."))
+            else:
+                callouts.append(self._callout(
+                    "warn", f"Year&nbsp;1 may need up to "
+                            f"<b>{top_week:.1f}&nbsp;h</b> a week, more than "
+                            f"you have. Plant in stages over two seasons, or "
+                            f"start smaller."))
+            last = cal.bands[-1]
+            if last.hours_high < first.hours_high:
+                drop = (1 - last.hours_high / first.hours_high) * 100
+                callouts.append(self._callout(
+                    "good", f"The work falls by about <b>{drop:.0f}%</b> "
+                            f"from Year&nbsp;1 to {last.label} as the "
+                            f"natives establish."))
 
-        html = (
-            "<div style='font-size:12px;'>"
-            + table_html
-            + cap_text
-            + "".join(callouts)
-            + "</div>"
-        )
-        self._maint_results.setText(html)
+        self._maint_results.setText(
+            "<div style='font-size:12px;'>" + table_html
+            + cap_text + "".join(callouts) + "</div>")
 
     # ── HTML helpers shared by Effort + Water result tables ──────────────────
     @staticmethod
@@ -397,9 +308,10 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Water in year 1, when everything is watered in, and from year 3, "
-            "when natives need a fifth as much, against the season's rain and "
-            "what you catch."
+            "What the plants drink in their first summer, when everything is "
+            "watered in, and from year 3, when natives need a fifth as much. "
+            "A new bed is lost in a dry week, not a dry season, so the rule "
+            "below is weekly."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -457,206 +369,81 @@ class PlanningPanel(QWidget):
         self._water_page = tab
         self._tabs.addTab(tab, "Water")
 
-    # Year-1 establishment / Year-3+ stewardship water multipliers, applied
-    # to the per-plant base × needs-level demand. Native plantings drop hard
-    # once established (deep roots, locally-adapted); cultivars stay near
-    # their full demand.
-    _WATER_Y1_MULT             = 1.5   # establishment irrigation for everything
-    _WATER_Y3_MULT_NATIVE      = 0.2   # established natives are nearly rain-fed
-    _WATER_Y3_MULT_CULTIVATED  = 1.0   # cultivars need ongoing water
-
     def _calc_water(self):
+        """The design's water, by ``src/water_budget.py`` (V3.20, OV-7): a row
+        for every type, the site's own rainfall when fetched, and the weekly
+        rule where a seasonal "surplus" was (R4, R38)."""
         if not self._placed_plants:
             self._water_results.setText("No plants placed yet.")
             return
+        from src import water_budget as wb
 
-        # Growing season = May-Sep (5 months, ~22 weeks)
-        growing_weeks = 22
-
-        # Per-type Y1 / Y3+ demand (seasonal litres). All needed fields
-        # (plant_type, water_needs, native_to_alberta) are pre-populated by
-        # _sync_planning_panel in app.py, so we don't need DB lookups here.
-        type_demands: dict[str, dict[str, float]] = {}
-        total_y1_L = 0.0
-        total_y3_L = 0.0
-        for p in self._placed_plants:
-            ptype       = p.get("plant_type", "herb")
-            native      = bool(p.get("native_to_alberta"))
-            # water_needs may list several tolerances (V1.84); the first/primary
-            # value drives the irrigation estimate.
-            water_tokens = condition_tokens(p.get("water_needs"))
-            water_needs = water_tokens[0] if water_tokens else "medium"
-            base = _PLANT_WATER_NEEDS_L_WEEK.get(ptype, 8.0)
-            mult = _WATER_MULTIPLIER.get(water_needs, 1.0)
-            weekly = base * mult
-            seasonal_baseline = weekly * growing_weeks
-
-            y1 = seasonal_baseline * self._WATER_Y1_MULT
-            y3 = seasonal_baseline * (
-                self._WATER_Y3_MULT_NATIVE if native
-                else self._WATER_Y3_MULT_CULTIVATED
-            )
-
-            slot = type_demands.setdefault(
-                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
-            )
-            slot["count"]  += 1
-            slot["native"] += 1 if native else 0
-            slot["y1"]     += y1
-            slot["y3"]     += y3
-            total_y1_L     += y1
-            total_y3_L     += y3
-
-        # Rainfall on garden area (growing season May–Sep)
-        garden_m2 = self._garden_area.value()
-        growing_rain_mm = sum(_EDMONTON_MONTHLY_RAINFALL_MM[4:9])
-        rainfall_L = growing_rain_mm * garden_m2
-
-        # Catchment
-        roof_m2 = self._roof_area.value()
-        roof_catchment_L = growing_rain_mm * roof_m2 * 0.8
-        barrel_capacity_L = self._rain_barrels.value() * 200
-        captured_L = min(roof_catchment_L, barrel_capacity_L)
-        swale_L = self._has_swale.value() * 2000
-        pond_L  = self._has_pond.value()  * 5000
-        total_supply = rainfall_L + captured_L + swale_L + pond_L
-
-        bal_y1 = total_supply - total_y1_L
-        bal_y3 = total_supply - total_y3_L
-
-        # ── Build the HTML output ───────────────────────────────────────
-        # Demand rows (plants by type, then total)
         rows: list[str] = []
-        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            if ptype not in type_demands:
-                continue
-            slot = type_demands[ptype]
-            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+        demand = wb.demand_by_type(self._placed_plants)
+        for ptype, slot in demand.items():
+            label = _TYPE_PLURAL.get(ptype) or str(ptype).replace("_", " ").title()
             native_tag = (
                 f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
-                if slot["native"] else ""
-            )
-            rows.append(self._row(
-                f"{label}",
-                f"{slot['count']}{native_tag}",
-                f"{slot['y1']:.0f} L",
-                f"{slot['y3']:.0f} L",
-            ))
+                if slot["native"] else "")
+            rows.append(self._row(label, f"{slot['count']}{native_tag}",
+                                  f"{slot['y1']:,.0f} L", f"{slot['y3']:,.0f} L"))
+        total_y1 = sum(s["y1"] for s in demand.values())
+        total_y3 = sum(s["y3"] for s in demand.values())
+        rows.append(self._row("A season", "", f"{total_y1:,.0f} L",
+                              f"{total_y3:,.0f} L", total=True))
         rows.append(self._row(
-            "Demand total", "",
-            f"{total_y1_L:.0f} L", f"{total_y3_L:.0f} L",
-            total=True,
-        ))
-        rows.append(self._row(
-            "(m³)", "",
-            f"{total_y1_L/1000:.1f}", f"{total_y3_L/1000:.1f}",
-            footnote=True,
-        ))
-
+            "A week, May–Sep", "", f"{total_y1 / wb.GROWING_WEEKS:,.0f} L",
+            f"{total_y3 / wb.GROWING_WEEKS:,.0f} L", footnote=True))
         demand_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
             "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left'>Type</th>"
-            "<th align='right'>Plants</th>"
-            "<th align='right'>Year&nbsp;1</th>"
-            "<th align='right'>Year&nbsp;3+</th>"
-            "</tr>"
-            + "".join(rows) + "</table>"
-        )
+            "<th align='left'>Type</th><th align='right'>Plants</th>"
+            "<th align='right'>First summer</th>"
+            "<th align='right'>From year&nbsp;3</th></tr>"
+            + "".join(rows) + "</table>")
 
-        # Supply rows
-        supply_rows: list[str] = []
-
-        def _supply_row(label: str, val_L: float) -> str:
-            return (
-                "<tr>"
-                f"<td style='color:#c8e6c9; padding:3px 6px;'>{label}</td>"
-                f"<td align='right' style='color:#c8e6c9; padding:3px 6px;'>"
-                f"{val_L:.0f} L</td>"
-                "</tr>"
-            )
-
-        supply_rows.append(_supply_row(
-            f"Rainfall on garden ({garden_m2:.0f} m²)", rainfall_L
-        ))
-        if captured_L > 0:
-            supply_rows.append(_supply_row(
-                f"Rain barrels ({self._rain_barrels.value()} × 200 L, roof-fed)",
-                captured_L,
-            ))
-        if swale_L > 0:
-            supply_rows.append(_supply_row(
-                f"Bioswales ({self._has_swale.value()})", swale_L,
-            ))
-        if pond_L > 0:
-            supply_rows.append(_supply_row(
-                f"Ponds ({self._has_pond.value()})", pond_L,
-            ))
-        supply_rows.append(
-            "<tr style='background:#1e3a1e; color:#e8f5e9;'>"
-            "<td style='padding:3px 6px; font-weight:bold;'>Total supply</td>"
-            f"<td align='right' style='padding:3px 6px; font-weight:bold;'>"
-            f"{total_supply:.0f} L</td>"
-            "</tr>"
-        )
-
+        # What falls and what is caught: information, not a balance. A season
+        # can total more rain than the plants use and still hold the two dry
+        # weeks that kill a new planting (R38).
+        months, source = wb.rainfall(getattr(self, "_site_config", None))
+        season_mm = sum(months[4:9])
+        garden_m2 = self._garden_area.value()
+        captured = min(season_mm * self._roof_area.value() * 0.8,
+                       self._rain_barrels.value() * 200)
+        supply = [(f"Rain on the garden ({garden_m2:.0f} m², "
+                   f"{season_mm:.0f} mm May–Sep, {source})",
+                   season_mm * garden_m2)]
+        if captured > 0:
+            supply.append((f"Rain barrels ({self._rain_barrels.value()} × "
+                           f"200 L, roof-fed)", captured))
+        if self._has_swale.value():
+            supply.append((f"Swales ({self._has_swale.value()})",
+                           self._has_swale.value() * 2000))
+        if self._has_pond.value():
+            supply.append((f"Ponds ({self._has_pond.value()})",
+                           self._has_pond.value() * 5000))
         supply_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
             "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left' colspan='2'>Supply (seasonal)</th>"
-            "</tr>"
-            + "".join(supply_rows) + "</table>"
-        )
+            "<th align='left' colspan='2'>What falls and what you catch, "
+            "May–Sep</th></tr>"
+            + "".join(
+                f"<tr><td style='color:#c8e6c9; padding:3px 6px;'>{label}</td>"
+                f"<td align='right' style='color:#c8e6c9; padding:3px 6px;'>"
+                f"{litres:,.0f} L</td></tr>" for label, litres in supply)
+            + "</table>")
 
-        # Balance callouts (one per phase)
-        def _balance_callout(label: str, bal: float) -> str:
-            if bal >= 0:
-                return self._callout(
-                    "good",
-                    f"<b>{label}</b>: surplus <b>{bal:.0f} L</b> "
-                    f"({bal/1000:.1f} m³).",
-                )
-            v = -bal
-            return self._callout(
-                "bad",
-                f"<b>{label}</b>: deficit <b>{v:.0f} L</b> "
-                f"({v/1000:.1f} m³).",
-            )
+        self._water_results.setText(
+            "<div style='font-size:12px;'>" + demand_html + supply_html
+            + self._callout("good", wb.weekly_rule(self._placed_plants))
+            + "</div>")
 
-        callouts: list[str] = []
-        callouts.append(_balance_callout("Year 1",   bal_y1))
-        callouts.append(_balance_callout("Year 3+",  bal_y3))
-
-        # Year-1 deficit hint (the hard year)
-        if bal_y1 < 0:
-            deficit = -bal_y1
-            extra_barrels = int(deficit / 200) + 1
-            callouts.append(self._callout(
-                "warn",
-                f"Year&nbsp;1 needs ≈ <b>{extra_barrels} more rain "
-                f"barrels</b>, or <b>{deficit/growing_weeks:.0f} L/week</b> "
-                f"of supplemental hand-watering during establishment.",
-            ))
-
-        # Highlight the native-rooted payoff
-        if total_y1_L > 0 and total_y3_L < total_y1_L:
-            drop = (1 - total_y3_L / total_y1_L) * 100
-            callouts.append(self._callout(
-                "good",
-                f"Demand drops <b>{drop:.0f}%</b> from Y1 → Y3+ as "
-                f"natives root in.",
-            ))
-
-        html = (
-            "<div style='font-size:12px;'>"
-            + demand_html
-            + supply_html
-            + "".join(callouts)
-            + "</div>"
-        )
-        self._water_results.setText(html)
+    def set_site_config(self, site_config: dict) -> None:
+        """The site's fetched data, for the Water page's rainfall (V3.20)."""
+        self._site_config = dict(site_config or {})
+        self._poke()
 
     # ═════════════════════════════════════════════════════════════════════════
     #  V4 — Design Notes / Journal

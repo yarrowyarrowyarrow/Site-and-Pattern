@@ -68,7 +68,7 @@ class TestFoodPage(unittest.TestCase):
         top = animals_fed(self.ids)[0]
         self.assertEqual(page._animal.currentData()["fid"], top["fauna_id"])
         self.assertIn("Fed by your design", page._animal.itemText(0))
-        self.assertIn("Your plants feed", page._summary_line.text())
+        self.assertIn("Your plants are recorded as food for", page._summary_line.text())
 
     def test_any_animal_not_only_bees(self):
         page = self._page()
@@ -174,7 +174,7 @@ class TestPlantedSaysWhatEatsIt(unittest.TestCase):
         panel.set_plants_counts({cherry: 3})
         name, line = panel._plants_list.item(0).text().split("\n")
         self.assertEqual(name, "Chokecherry  ×3")
-        self.assertRegex(line, r"^feeds \d+: .* · flowers .* · fruit ")
+        self.assertRegex(line, r"^food for \d+ kinds?: .* · flowers .* · fruit ")
 
     def test_the_rows_wrap_inside_the_list(self):
         """Qt measured the wrap without the item padding, and the first build
@@ -213,7 +213,7 @@ class TestPlantedSaysWhatEatsIt(unittest.TestCase):
         first, line = text.split("\n")
         self.assertTrue(first.startswith("Edge  — 1 instance, 2 members"))
         n = sum(1 for a in animals_fed(ids) if a["food"])
-        self.assertTrue(line.startswith(f"feeds {n}: "), line)
+        self.assertTrue(line.startswith(f"food for {n} kind"), line)
 
 
 if __name__ == "__main__":

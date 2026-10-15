@@ -117,10 +117,13 @@ class TestWholeDesignCost(unittest.TestCase):
             (0.0, 0.0))
 
     def test_mulch_cost_volume_math(self):
-        # 100 m² × 0.075 m = 7.5 m³, costed against the per-m³ range.
+        # 100 m² at the site-prep sheet's 5–8 cm (V3.20, OV-3): 5 m³ at the
+        # low price to 8 m³ at the high one.
         lo, hi = mulch_cost(100.0)
-        self.assertAlmostEqual(lo, 7.5 * 35.0, places=2)
-        self.assertAlmostEqual(hi, 7.5 * 75.0, places=2)
+        self.assertAlmostEqual(lo, 5.0 * 35.0, places=2)
+        self.assertAlmostEqual(hi, 8.0 * 75.0, places=2)
+        self.assertEqual(mulch_cost(100.0, 7.5),
+                         (round(7.5 * 35.0, 2), round(7.5 * 75.0, 2)))
 
     def test_mulch_cost_zero_or_none_area(self):
         self.assertEqual(mulch_cost(0), (0.0, 0.0))
