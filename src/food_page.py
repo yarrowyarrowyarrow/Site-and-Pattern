@@ -61,6 +61,14 @@ def _month_cell(abbr: str, style: str) -> str:
     return f"<span style='{style}'>&nbsp;{abbr}&nbsp;</span>"
 
 
+def _month_strip(cells: list) -> str:
+    """The months on one line where they fit, and otherwise folded in half,
+    never with one month alone on a line ("Dec" was, on a narrow panel: the
+    V3.19 review of QF-7). Only the middle gap may break."""
+    half = len(cells) // 2
+    return "&nbsp;".join(cells[:half]) + " " + "&nbsp;".join(cells[half:])
+
+
 _BODY_STYLE = ("color: #c8e6c9; font-size: 12px; padding: 8px; "
                "background: #1a2a1a; border: 1px solid #2e4a2e; "
                "border-radius: 4px;")
@@ -480,7 +488,7 @@ class FoodPage(QScrollArea):
                     f"{feeds.span(plan['gaps'])}.")
         else:
             note = "Something for it all through the growing season."
-        return " ".join(cells) + f"<div style='padding-top:4px;'>{note}</div>"
+        return _month_strip(cells) + f"<div style='padding-top:4px;'>{note}</div>"
 
     # ── A bee (the Bees page's renderers, moved in V3.08) ────────────────────
 
@@ -576,7 +584,7 @@ class FoodPage(QScrollArea):
             names = ", ".join(s.common_name for s in f.suggestions[:6])
             sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
                    f"Fill the gap with: {names}</div>")
-        return (" ".join(cells) + f"<div style='padding-top:4px;'>{f.note}</div>"
+        return (_month_strip(cells) + f"<div style='padding-top:4px;'>{f.note}</div>"
                 + legend + sug)
 
     # ── The photograph ───────────────────────────────────────────────────────

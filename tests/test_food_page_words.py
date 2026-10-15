@@ -114,6 +114,24 @@ class TestTheFoodPageReadsAsWords(unittest.TestCase):
             if source:
                 self.assertTrue(line.startswith(" Sources: "), line)
 
+    def test_no_month_is_left_alone_on_a_line(self):
+        """The V3.19 review saw "Dec" wrap alone at the default width."""
+        from src.food_page import _month_cell, _month_strip
+        cells = [_month_cell(m, "") for m in _MONTHS.split("|")]
+        for width in range(240, 520, 10):    # half a strip is ~200 px
+            doc = QTextDocument()
+            doc.setHtml(_month_strip(cells))
+            doc.setTextWidth(width)
+            doc.documentLayout().documentSize()
+            block, sizes = doc.begin(), []
+            layout = block.layout()
+            for i in range(layout.lineCount()):
+                line = layout.lineAt(i)
+                text = block.text()[line.textStart():
+                                    line.textStart() + line.textLength()]
+                sizes.append(len(text.replace("\xa0", " ").split()))
+            self.assertIn(sizes, ([12], [6, 6]), width)
+
     def test_any_animals_months_read_as_months(self):
         page = self._page()
         for _animal in self._each(page, "lepidoptera"):

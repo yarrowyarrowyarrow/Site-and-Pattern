@@ -143,6 +143,24 @@ class TestNoNameIsCut(unittest.TestCase):
         self.assertEqual(two_lines(facts, _Metrics(), 200, " · "),
                          "8 plants · Partial Shade\nDry · 2 hard to find")
 
+    def test_no_line_ends_on_an_ampersand(self):
+        """The V3.19 review saw "Wet Meadow Aster & / Monkeyflower"."""
+        from src.community_page import fold_parts, two_lines
+
+        class _Metrics:                     # 8 px a character
+            def horizontalAdvance(self, text):
+                return 8 * len(text)
+
+            def elidedText(self, text, _mode, width):
+                return text
+
+        name = "Wet Meadow Aster & Monkeyflower"
+        self.assertEqual(fold_parts(name),
+                         ["Wet", "Meadow", "Aster", "& Monkeyflower"])
+        for width in range(80, 8 * len(name)):
+            first = two_lines(name, _Metrics(), width).split("\n")[0]
+            self.assertFalse(first.endswith("&"), (width, first))
+
 
 if __name__ == "__main__":
     unittest.main()

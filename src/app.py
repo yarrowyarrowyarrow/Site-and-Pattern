@@ -554,8 +554,8 @@ class MainWindow(QMainWindow):
 
         act_snapshots = view_menu.addAction("&Growth Snapshots…")
         act_snapshots.setStatusTip(
-            "See this design side by side from year 1 to full grown — watch "
-            "the plants grow and fill in over time"
+            "See this design side by side as it grows, from year 1 on — "
+            "watch the plants grow and fill in over time"
         )
         # Lambda for the same reason as 3D Preview: the window lives in
         # src/snapshot_window.py, off MainWindow's method ledger.

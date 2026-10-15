@@ -28,7 +28,8 @@ from PyQt6.QtWidgets import (
 )
 
 #: The most of the row the facts take when one line would need more. At
-#: 1366 px that leaves every community's name on one line (measured, V3.19).
+#: 1366 px that leaves every community's name whole: most on one line, the
+#: longest (8 of 73 under Arial metrics, 17 under DejaVu) on two (V3.19).
 FACTS_SHARE = 0.45
 
 #: Where each column may break: names between words, facts between parts.
@@ -139,7 +140,8 @@ class TwoLineRows(QStyledItemDelegate):
 def _folded_width(text: str, metrics, sep: str) -> int:
     """The narrowest ``text`` gets on two lines broken at ``sep``: the widest
     line of its best break."""
-    parts = text.split(sep)
+    from src.community_page import fold_parts
+    parts = fold_parts(text, sep)
     if len(parts) < 2:
         return metrics.horizontalAdvance(text)
     return min(max(metrics.horizontalAdvance(sep.join(parts[:k])),

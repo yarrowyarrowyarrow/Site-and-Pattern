@@ -97,6 +97,26 @@ class TestTheSoilLine(unittest.TestCase):
         self.assertIn("Sandy ground — choose, don't amend",
                       [s.title for s in prep.steps])
 
+    def test_no_texture_prints_none_as_its_advice(self):
+        # The V3.19 review: the montane (sandy_loam) and Peace River
+        # (silt_loam) atlas rows printed "None  The instinct to dig in...".
+        import json
+        from pathlib import Path
+        atlas = json.loads((Path(__file__).resolve().parent.parent / "data"
+                            / "soil_fallback_prairie.json").read_text(
+                                encoding="utf-8"))
+        rows = atlas if isinstance(atlas, list) else atlas.get("regions", [])
+        spellings = set(site_prep._TEXTURE_ADVICE)
+        spellings |= {r["texture_class"] for r in rows if "texture_class" in r}
+        self.assertIn("silt_loam", spellings)
+        for raw in sorted(spellings):
+            prep = site_prep.build_site_prep(
+                {"soil_texture": raw}, [], bed_area_m2=20,
+                get_plant=lambda _p: {})
+            for step in prep.steps:
+                self.assertNotIn("None", step.detail, raw)
+                self.assertFalse(step.detail.startswith(" "), raw)
+
     def test_a_class_the_table_lacks_is_named_not_called_unknown(self):
         prep = site_prep.build_site_prep({"soil_texture": "peat"}, [],
                                          get_plant=lambda _p: {})

@@ -133,7 +133,7 @@ app does not have.
 | `src/site_panel.py:754-757` | *⬇ Download soil data (offline)* / *One-time download of Canadian gridded soil data…* | (advanced only) |
 | `src/site_panel.py:773` | *Where to buy — native plant sources* | (moved to Share, V3.08; the heading there: *Where to buy*) |
 | `src/site_panel.py:786` | *From the Native Plant Society of Saskatchewan's list (npss.sk.ca)…* | The pack's `nursery_note` (ED-4, EDF-5) |
-| `src/site_panel.py:2353` (offline search) | *No Alberta results. Try a nearby intersection or town name —* | *Address search needs an internet connection. You can click your yard on the map instead.* (ED-7; R6) |
+| `src/site_panel.py:2353` (offline search) | *No Alberta results. Try a nearby intersection or town name —* | *Couldn't search for addresses just now. Check your internet connection and try again, or click “Use Pin Drop…” and then your yard on the map.* (ED-7; R6; shipped V3.19, reworded on review: a busy or refusing service gives the same answer as no connection, so the words cannot blame the connection alone) |
 
 ### 3.3 The plant list and the plant page
 

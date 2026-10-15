@@ -103,10 +103,12 @@ def plant_spacing(rec, base_m: float) -> float:
 # never found the catalogue's number and always printed the estimate below.
 # The catalogue's spacing is the one the map draws (every placed plant's circle
 # is that wide, generated or not, and the landing check reads it) and every
-# hand-placed pattern lays out at, so it is the one told. The generator lays
-# its drifts out wider (``llm_design._plant_spacing_m``: the mature canopy, at
-# least 0.5 m, so 0.5 m for Wild Bergamot), which is room left to grow into,
-# not a second number to print.
+# hand-placed pattern lays out at, so it is the one told. A generated design
+# lays out EVERY species wider than this (``llm_design._plant_spacing_m``: the
+# mature canopy, which ``get_plant`` fills in as 1.5 times this spacing, and at
+# least 0.5 m: 0.5 m for Wild Bergamot), so on a generated plan the scale
+# drawing is always looser than the key. Whether to print one number there is
+# the owner's open question (V3.19 plan, "Decisions the owner should hear").
 
 #: The estimate's ground unit, for a row the catalogue gives no spacing.
 _ESTIMATE_BASE_M = 0.45

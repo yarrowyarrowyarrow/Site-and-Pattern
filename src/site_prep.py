@@ -57,13 +57,26 @@ _TEXTURE_ADVICE = {
              "The easy case. Loosen only where it's compacted; no amendment "
              "needed for natives.", ()),
     "Silt loam": ("silt loam", None, ()),
-    "Silt": ("silt", None, ("crust",)),
+    "Silt": ("silt",
+             "Packs down and crusts on top after rain. Loosen only where it's "
+             "compacted, and keep the surface mulched so it never bakes hard.",
+             ("crust",)),
     "Sandy loam": ("sandy loam", None, ("drought",)),
     "Loamy sand": ("sandy",
                    "Drains fast and dries out fast. Do NOT dig in compost to "
                    "'improve' it — choose drought-tolerant natives instead and "
                    "mulch the surface to slow evaporation.", ("drought",)),
     "Sand": ("sand", None, ("drought",)),
+}
+
+#: Whose advice a class with none of its own reads. Six classes had no text and
+#: no neighbour sharing their label, so the plan printed "None" as the advice
+#: (V3.19 review of QF-11: the montane and Peace River atlas rows).
+_BORROWS_ADVICE = {
+    "Silty clay": "Clay", "Sandy clay": "Clay",
+    "Silty clay loam": "Clay loam", "Sandy clay loam": "Clay loam",
+    "Silt loam": "Loam",
+    "Sandy loam": "Loamy sand", "Sand": "Loamy sand",
 }
 
 _TEXTURE_FALLBACK = (
@@ -262,11 +275,11 @@ def build_site_prep(site_config: dict, placed_plants: Optional[list] = None, *,
         label, advice, flags = _TEXTURE_FALLBACK
     if advice is None:
         # A class that shares its advice with a neighbour (e.g. Silty clay →
-        # heavy clay): reuse the sibling's text rather than duplicating it.
-        for _cls, (lbl, adv, _f) in _TEXTURE_ADVICE.items():
-            if lbl == label and adv:
-                advice = adv
-                break
+        # Clay): reuse the neighbour's text rather than duplicating it, and
+        # the jar test if even that is missing, so no step says "None".
+        advice = (_TEXTURE_ADVICE.get(_BORROWS_ADVICE.get(texture, ""),
+                                      (None, None, None))[1]
+                  or _TEXTURE_FALLBACK[1])
     # What is known, plainly: "Soil: loam", or "Soil: not known yet" (V3.19,
     # QF-11). The advice below says what the texture means; this names it.
     # With a pH and no texture it is the texture that is not known, or the

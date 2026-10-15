@@ -285,13 +285,26 @@ class CommunityPage(QWidget):
                 pass
 
 
+def fold_parts(text: str, sep: str = " ") -> list:
+    """Where ``text`` may break: between words, but never after "&", so a
+    name folds as "Wet Meadow / Aster & Monkeyflower", not "Aster & /
+    Monkeyflower" (V3.19 review of QF-10)."""
+    if sep != " ":
+        return text.split(sep)
+    words = text.split()
+    for i in range(len(words) - 2, -1, -1):
+        if words[i] == "&":
+            words[i:i + 2] = [f"& {words[i + 1]}"]
+    return words
+
+
 def two_lines(name: str, metrics, width: int, sep: str = " ") -> str:
     """A tile's name on up to two lines of ``width`` px, cut only when it will
     not fit in two ("Northern Bedstraw" read "Northern Bed…" on one, V3.09).
     ``sep`` breaks somewhere other than between words: the community list's
     facts break between " · " parts, never inside "Partial Shade" (V3.19,
     QF-10)."""
-    words = name.split() if sep == " " else name.split(sep)
+    words = fold_parts(name, sep)
     first = ""
     while words and metrics.horizontalAdvance(
             (first + sep + words[0]) if first else words[0]) <= width:
