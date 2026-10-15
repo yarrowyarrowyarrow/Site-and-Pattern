@@ -337,11 +337,12 @@ class TestMaintenanceCalendar(unittest.TestCase):
         self.assertEqual(with_struct.structure_hours, 8.0)
 
     def test_effort_constants_are_shared_with_the_planning_panel(self):
-        # One set of numbers, two surfaces — the panel imports them from here.
+        # One calculation, two surfaces: since V3.20 (OV-6) the Effort page
+        # renders this calendar rather than sharing its constants.
         panel_src = _read("src/planning_panel.py")
-        self.assertIn("from src.maintenance_calendar import "
-                      "PLANT_MAINTENANCE_HOURS", panel_src)
+        self.assertIn("build_maintenance_calendar(", panel_src)
         self.assertNotIn('"tree":        3.0,   # pruning', panel_src)
+        self.assertNotIn("_Y3_MULT", panel_src)
 
 
 def _read(rel):

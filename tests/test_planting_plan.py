@@ -143,13 +143,14 @@ class TestTotalsWithStructuresAndMulch(unittest.TestCase):
 
     def test_structure_and_mulch_costs(self):
         self.assertEqual((self.plan.struct_low, self.plan.struct_high), (40.0, 80.0))
-        # 10 m² × 0.075 m = 0.75 m³ × ($35–$75)
-        self.assertEqual((self.plan.mulch_low, self.plan.mulch_high), (26.25, 56.25))
+        # 10 m² at the site-prep sheet's 5–8 cm (V3.20, OV-3): 0.5 m³ × $35
+        # to 0.8 m³ × $75.
+        self.assertEqual((self.plan.mulch_low, self.plan.mulch_high), (17.5, 60.0))
         self.assertEqual(len(self.plan.structures_detail), 1)
 
     def test_grand_total_is_plants_plus_structures_plus_mulch(self):
-        self.assertEqual(self.plan.grand_low, 208.0 + 40.0 + 26.25)
-        self.assertEqual(self.plan.grand_high, 446.0 + 80.0 + 56.25)
+        self.assertEqual(self.plan.grand_low, 208.0 + 40.0 + 17.5)
+        self.assertEqual(self.plan.grand_high, 446.0 + 80.0 + 60.0)
 
 
 class TestRenderText(unittest.TestCase):

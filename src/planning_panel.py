@@ -25,10 +25,8 @@ from PyQt6.QtGui import QColor, QFont
 
 
 
-# ── Maintenance hours estimates for plant types ──────────────────────────────
-# The numbers now live in the Qt-free src/maintenance_calendar.py (F42), which
-# needs them too; imported here under the historical name so the Effort tab and
-# the year-by-year calendar can never quote different hours for the same design.
+# The Effort and Water pages' numbers live in the Qt-free
+# src/maintenance_calendar.py and src/water_budget.py (V3.20, OV-6 and OV-7).
 
 #: A plant type, as the effort table's rows name it.
 _TYPE_PLURAL = {

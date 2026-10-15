@@ -236,6 +236,12 @@ class TheMenuInTheWindow(unittest.TestCase):
             time.sleep(0.025)
         if not win.map_widget.is_ready:
             self.skipTest("the map page never loaded in this environment")
+        # Offscreen, the window shown last is the active one, and earlier
+        # tests in a full run leave windows of their own to be shown while
+        # the page loads (V3.20): a key pressed then reaches neither the box
+        # nor the window's shortcuts. Take the keys back first.
+        win.activateWindow()
+        QTest.qWaitForWindowActive(win, 2000)
         ran = []
         box = win.site_panel._addr_input
         self.addCleanup(box.clear)
