@@ -1047,6 +1047,9 @@ class MapWidget(QWebEngineView):
     def set_scale_bar(self, visible: bool, unit: str = "auto"):
         self.run_js(map_js.set_scale_bar(visible, unit))
 
+    def hold_offline_notice(self, held: bool):
+        self.run_js(map_js.hold_offline_notice(held))
+
     # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
     # call sites in src/app.py. Each is a one-line wrapper around the
     # matching builder in src.map_js. Keep this section in alphabetical

@@ -9,18 +9,27 @@
 // through the shared global scope. The Python↔JS contract over these
 // globals is pinned by tests/test_map_js.py + tests/test_bridge_contract.py.
     // ── Boundary drawing (manual polygon) ────────────────────────────────────
+    // A click this close to the last corner adds none (V3.19, QF-14): both
+    // presses of the double-click that closes an outline reach here, and the
+    // second, a pixel or two off the first, left a sliver of a side that runs
+    // back across the one before it, so a square clicked in order was refused
+    // as crossing itself. In pixels, because a fixed distance in metres is a
+    // different gesture at every zoom.
+    var _SAME_CORNER_PX = 5;
+
+    function _pxApart(a, b) {
+      return map.latLngToContainerPoint(L.latLng(a))
+        .distanceTo(map.latLngToContainerPoint(L.latLng(b)));
+    }
+
     function handleBoundaryClick(lat, lng) {
       // If clicking near the first point, close the polygon
-      if (polygonPoints.length >= 3) {
-        var first = polygonPoints[0];
-        var firstPx = map.latLngToContainerPoint(L.latLng(first));
-        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
-        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
-        if (dist < 12) {
-          finishBoundaryPolygon();
-          return;
-        }
+      if (polygonPoints.length >= 3 && _pxApart(polygonPoints[0], [lat, lng]) < 12) {
+        finishBoundaryPolygon();
+        return;
       }
+      var last = polygonPoints[polygonPoints.length - 1];
+      if (last && _pxApart(last, [lat, lng]) < _SAME_CORNER_PX) return;
 
       polygonPoints.push([lat, lng]);
       drawingPolygon = true;
@@ -159,10 +168,29 @@
       });
     }
 
+    // An outline's corners as the map keeps them (V3.19, QF-14): a corner
+    // repeated straight after itself, and the first repeated at the end, are
+    // dropped, as src/outline_check.corners drops them. A saved ring is
+    // closed, so an outline opened from a file or redrawn by undo repeated its
+    // first corner: two handles on one spot, the top one dragging a spur out
+    // of the outline that Python refused as a crossing, and a "0.0 m" side
+    // (QF-8). Pure, so node runs it.
+    function boundaryCorners(pts) {
+      var out = [];
+      (pts || []).forEach(function(p) {
+        var q = out[out.length - 1];
+        if (!q || q[0] !== p[0] || q[1] !== p[1]) out.push([p[0], p[1]]);
+      });
+      var a = out[0], z = out[out.length - 1];
+      if (out.length > 1 && a[0] === z[0] && a[1] === z[1]) out.pop();
+      return out;
+    }
+
     // showHandles (V3.11, F216): whether a press shows the corner handles;
     // name (F217): what the legend calls it when its boundaries are Named.
     function _addBoundaryToMap(id, pts, colorName, showLengths, showArea,
                                showHandles, name) {
+      pts = boundaryCorners(pts);
       var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
       var layer = L.polygon(pts, {
         color: c.stroke, weight: 2,
@@ -383,9 +411,10 @@
 
     // ── Boundary label factories (use fresh layer groups each time) ───────────
     // A side's length label, or '' for a side under 5 cm (V3.19, QF-8, R19).
-    // A design opened from a file repeats its first corner at the end (the
+    // A design opened from a file repeated its first corner at the end (the
     // saved ring is closed), and that closing "side" was labelled "0.0 m".
-    // Pure, so node runs it.
+    // boundaryCorners now drops that corner; this keeps any side too short to
+    // read unlabelled. Pure, so node runs it.
     function boundarySideLabel(metres) {
       if (!(metres >= 0.05)) return '';
       return metres >= 10 ? Math.round(metres) + ' m' : metres.toFixed(1) + ' m';

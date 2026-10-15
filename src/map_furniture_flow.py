@@ -21,10 +21,14 @@ that never chose has nothing stored and reads Automatic.
 
 The drawing is the map page's (``html/map/11-map-furniture.js``); this module
 only keeps the settings and tells the page, now if it has loaded and again on
-every load, since a reloaded page starts bare.
+every load, since a reloaded page starts bare. The same page draws the line that
+says the map needs an internet connection (V3.19, QF-6), which Export PDF keeps
+off its map picture through :func:`offline_notice_held`.
 """
 
 from __future__ import annotations
+
+from contextlib import contextmanager
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QActionGroup
@@ -65,6 +69,24 @@ def apply(main, *, force: bool = False) -> None:
     st = state()
     mw.set_north_arrow(st["north_arrow"])
     mw.set_scale_bar(st["scale_bar"], st["unit"])
+
+
+@contextmanager
+def offline_notice_held(main):
+    """Keep the line that says the map needs a connection off the map while
+    Export PDF asks where to save and grabs the map (V3.19, QF-6, from the
+    review): it is the screen's, and on a printed plan it read as part of the
+    plan. The save box gives the page time to draw itself without it before
+    the grab; afterwards it comes back if it still applies."""
+    mw = main.map_widget
+    ready = bool(getattr(mw, "is_ready", False))
+    if ready:
+        mw.hold_offline_notice(True)
+    try:
+        yield
+    finally:
+        if ready:
+            mw.hold_offline_notice(False)
 
 
 def set_flag(main, key: str, on: bool) -> None:

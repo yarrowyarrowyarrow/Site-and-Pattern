@@ -535,23 +535,20 @@
       // missing tile at the edge of coverage is normal and must not throw the
       // whole basemap away. A dead or key-gated host fails every tile, so the
       // count climbs immediately and the swap happens within a screenful.
-      var _baseIndex = 0, _baseErrors = 0;
+      // Since V3.19 (QF-6) the count and the swap are watchBaseTiles's
+      // (11-map-furniture.js), and only a host that never drew a tile is
+      // swapped: one that drew is kept when the connection drops, since it
+      // is the one that comes back. The last host says the map needs one.
+      var _baseIndex = 0;
       function _useBasemap(i) {
         if (i >= BASEMAPS.length) { return; }
-        _baseIndex = i; _baseErrors = 0;
+        _baseIndex = i;
         if (osmLayer) { map.removeLayer(osmLayer); }
         osmLayer = L.tileLayer(BASEMAPS[i].url, BASEMAPS[i].opts).addTo(map);
-        osmLayer.on('tileerror', function () {
-          _baseErrors += 1;
-          if (_baseErrors >= 8 && _baseIndex === i) {
-            console.warn('[map] basemap ' + i + ' failing; falling back');
-            _useBasemap(i + 1);
-          }
-        });
-        // A screenful with no tile drawn: the next base map, or the line that
-        // says the map needs a connection (11-map-furniture.js; V3.19, QF-6).
         watchBaseTiles(osmLayer, i + 1 < BASEMAPS.length ? function () {
-          if (_baseIndex === i) _useBasemap(i + 1);
+          if (_baseIndex !== i) return;
+          console.warn('[map] basemap ' + i + ' failing; falling back');
+          _useBasemap(i + 1);
         } : null);
       }
       _useBasemap(0);

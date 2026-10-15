@@ -125,6 +125,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "clearSitePhoto",
         "drawSnowCatch", "setSnowCatchVisible", "clearSnowCatch",
         "setNorthArrow", "setScaleBar",
+        "holdOfflineNotice",                 # V3.19, QF-6: Export PDF's grab
         "_removeBoundaryEntry",
         # V3.11: measurements in the design, names, the legend's detail.
         "loadMeasurement", "setBoundaryNames", "setLegendDetail",
@@ -711,14 +712,19 @@ class TestLayerStackAndClickDispatch(unittest.TestCase):
 
     def test_the_basemap_falls_back_rather_than_failing_blank(self):
         """One dead host must not leave the designer with no ground at all, so
-        the candidates are a list and sustained tile errors advance it."""
+        the candidates are a list and sustained tile errors advance it. Since
+        V3.19 (QF-6) the count is watchBaseTiles's, in 11-map-furniture.js,
+        which the core hands each base map with the step to the next; the
+        behaviour is tests/test_offline_map.py's."""
         core = self.src["01-core.js"]
         self.assertIn("BASEMAPS", core)
         urls = re.findall(r"url:\s*'([^']+)'", core)
         self.assertGreaterEqual(len(urls), 2,
                                 "one basemap is a single point of failure")
-        self.assertIn("tileerror", core,
+        self.assertIn("watchBaseTiles(osmLayer, i + 1 < BASEMAPS.length", core,
                       "nothing advances the fallback without this")
+        self.assertIn("'tileerror'", self.src["11-map-furniture.js"],
+                      "nothing counts the errors that advance it")
 
     def test_boundary_is_drawn_in_its_own_low_pane(self):
         core = self.src["01-core.js"]

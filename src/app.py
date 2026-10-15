@@ -2039,10 +2039,15 @@ class MainWindow(QMainWindow):
         return order_file_flow.on_export_order_file(self)
 
     def _on_export_pdf(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Export PDF", "design.pdf",
-            "PDF Files (*.pdf);;All Files (*)"
-        )
+        from src import map_furniture_flow
+        # The map picture leaves out the line that says the map needs a
+        # connection; the save box gives the page time to redraw (V3.19, QF-6).
+        with map_furniture_flow.offline_notice_held(self):
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Export PDF", "design.pdf",
+                "PDF Files (*.pdf);;All Files (*)"
+            )
+            pixmap = self.map_widget.grab() if path else None
         if not path:
             return
         if not path.endswith(".pdf"):
@@ -2063,9 +2068,6 @@ class MainWindow(QMainWindow):
                 except Exception:
                     pass
                 enriched.append(entry)
-
-            # Capture map screenshot
-            pixmap = self.map_widget.grab()
 
             # Gather structures from project
             structs = [

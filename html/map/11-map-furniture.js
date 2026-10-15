@@ -2,15 +2,12 @@
      * 11-map-furniture.js — the north arrow, the scale bar (F205, V3.06), and
      * the line that says when the map's ground cannot load (V3.19, QF-6).
      *
-     * The map had neither, so a screenshot of a design or the map page of
-     * Export PDF (a grab of this page) could not be read for direction or
-     * distance. Both are drawn on the page itself, so whatever is on screen
-     * is what an export carries.
-     *
-     * The map is Web Mercator and never rotates, so north is always up and
-     * the arrow never turns. The scale is measured across the middle of the
-     * map, as Leaflet's own scale control measures it, and redrawn as the
-     * map moves: Mercator's metres per pixel change with latitude.
+     * Without them a screenshot of a design, or Export PDF's map page (a grab
+     * of this page), could not be read for direction or distance; drawn on the
+     * page, they are in whatever an export carries. The map is Web Mercator
+     * and never rotates, so the arrow never turns. The scale is measured
+     * across the middle of the map, as Leaflet's scale control measures it,
+     * and redrawn as the map moves (Mercator's scale changes with latitude).
      *
      * Automatic by default since V3.19 (QF-18, R18; the owner's K1): metres
      * below 1 km, kilometres from 1 km, where V3.06's kilometres read
@@ -20,10 +17,9 @@
      *
      * Placement: the arrow under the zoom buttons, where nothing else sits
      * (the placement bar takes the top edge, the plant page and the selection
-     * badge the top right); the bar bottom centre, clear of the legend and
-     * its button at the bottom left and the relationship web's key at the
-     * bottom right. The bar is a <button> outside the map's container, so a
-     * click or Enter on it never reaches the map as a click to place.
+     * badge the top right); the bar bottom centre, clear of the legend at the
+     * bottom left and the relationship web's key at the bottom right. It is a
+     * <button> outside the map's container: a click on it never places.
      */
     var _northArrowControl = null;
     var _scaleBarEl = null;
@@ -147,13 +143,14 @@
     // ── When the map's ground cannot load (V3.19, QF-6, R9) ─────────────────
     // Offline every base-map tile fails, and the map was a blank grey area
     // that said nothing. 01-core.js hands each base map and the satellite photo
-    // to watchBaseTiles. When a screenful has answered with no tile drawn, a
-    // base map that never drew one hands over to the next (a dead host, caught
-    // sooner than 01-core.js's eight errors on a small map), and the last says
-    // so mid-map until a tile draws. It takes no clicks (pointer-events: none).
+    // to watchBaseTiles. A base map that never drew a tile hands over to the
+    // next after eight errors or a screenful with none drawn; one that drew is
+    // kept when the connection drops, since it is what comes back. The last
+    // says so above the scale bar, off the yard, until a tile draws. No clicks,
+    // and Export PDF holds it off its map picture: the screen's, not the plan's.
     var OFFLINE_TEXT = 'The map needs an internet connection to load. ' +
                        'Your design is safe.';
-    var _offlineEl = null;
+    var _offlineEl = null, _offlineOn = false, _offlineHeld = false;
 
     // 'ok' while any tile is drawn, 'next' to try another base map when this
     // one has never drawn one, else 'offline'. Pure, so node can run it.
@@ -163,31 +160,41 @@
     }
 
     function _showOffline(on) {
+      _offlineOn = on;
       if (!_offlineEl && on) {
         _offlineEl = document.createElement('div');
         _offlineEl.id = 'sp-offline';
         _offlineEl.setAttribute('role', 'status');          // read out when shown
-        _offlineEl.style.cssText = 'position:absolute;left:50%;top:50%;z-index:1000;' +
-          'transform:translate(-50%,-50%);pointer-events:none;width:340px;' +
-          'max-width:calc(100% - 32px);box-sizing:border-box;padding:10px 14px;' +
+        _offlineEl.style.cssText = 'position:absolute;left:50%;bottom:50px;z-index:1000;' +
+          'transform:translateX(-50%);pointer-events:none;width:max-content;' +
+          'max-width:min(460px,calc(100% - 32px));box-sizing:border-box;padding:4px 12px;' +
           'background:rgba(255,255,255,0.95);border:1px solid rgba(27,42,27,0.55);' +
           'border-radius:6px;color:#1b2a1b;text-align:center;line-height:1.4;' +
-          'font:14px system-ui,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.3);';
+          'font:13px system-ui,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.3);';
         document.body.appendChild(_offlineEl);
       }
       if (!_offlineEl) return;
       _offlineEl.textContent = on ? OFFLINE_TEXT : '';
-      _offlineEl.style.display = on ? '' : 'none';
+      _offlineEl.style.display = on && !_offlineHeld ? '' : 'none';
     }
 
+    // Python → JS: keep the line off while Export PDF takes its picture.
+    function holdOfflineNotice(held) { _offlineHeld = !!held; _showOffline(_offlineOn); }
+
     // Watch one base tile layer; `next` tries the next base map, or is null.
+    // A hand-over (it removes the layer) waits for Leaflet's 'load' dispatch
+    // to end, as Leaflet reads the layer's map straight after. Back online,
+    // the tiles are asked for again: Leaflet never asks again for a failed one.
     function watchBaseTiles(layer, next) {
-      var everDrawn = false;
+      var everDrawn = false, errors = 0;
+      function handOver() { setTimeout(next, 0); }
       layer.on('tileload', function () { everDrawn = true; _showOffline(false); });
+      layer.on('tileerror', function () { if (++errors === 8 && next && !everDrawn) handOver(); });
       layer.on('load', function () {
         var box = layer.getContainer();
         var drawn = box ? box.querySelectorAll('.leaflet-tile-loaded').length : 0;
         var verdict = basemapVerdict(drawn, everDrawn, !!next);
-        if (verdict === 'next') next(); else _showOffline(verdict === 'offline');
+        if (verdict === 'next') handOver(); else _showOffline(verdict === 'offline');
       });
+      window.addEventListener('online', function () { layer.redraw(); });
     }

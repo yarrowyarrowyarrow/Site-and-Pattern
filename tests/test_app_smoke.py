@@ -827,6 +827,48 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(seen["still_pixmap"].width(), 64)
         self.assertEqual(seen.get("still_caption"), "Year 5, June")
 
+    def test_export_pdf_grabs_the_map_without_the_offline_line(self):
+        """V3.19 (QF-6, the review): offline, the map page's line "The map
+        needs an internet connection to load. Your design is safe." was
+        printed on the plan, since Export PDF's map page is a grab of the
+        map. The page holds it off from before the save box (which gives it
+        time to redraw) until after the grab; a cancelled export lets go too."""
+        import tempfile
+        from unittest import mock
+        from PyQt6.QtGui import QPixmap
+        win = self._win
+        mw = win.map_widget
+        self.addCleanup(setattr, mw, "is_ready", mw.is_ready)
+        mw.is_ready = True                 # a page not loaded is told nothing
+        out = os.path.join(tempfile.mkdtemp(), "design.pdf")
+        for answer in (out, ""):
+            steps = []
+            run_js = mw.run_js
+
+            def record(js, run_js=run_js, steps=steps):
+                if "holdOfflineNotice" not in js:
+                    return run_js(js)
+                steps.append(js)
+
+            def ask(*a, steps=steps, answer=answer, **k):
+                steps.append("save box")
+                return answer, ""
+
+            def grab(steps=steps):
+                steps.append("grab")
+                return QPixmap(8, 8)
+
+            with mock.patch.object(mw, "run_js", side_effect=record), \
+                    mock.patch.object(mw, "grab", side_effect=grab), \
+                    mock.patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+                               side_effect=ask), \
+                    mock.patch("src.pdf_export.export_pdf"):
+                win._on_export_pdf()
+            middle = ["save box", "grab"] if answer else ["save box"]
+            with self.subTest(saved=bool(answer)):
+                self.assertEqual(steps, ["holdOfflineNotice(true);", *middle,
+                                         "holdOfflineNotice(false);"])
+
     def test_the_bar_says_where_a_placement_landed(self):
         """F198 (V3.05): a row of shrubs came down half outside the yard and on
         top of other plants, and nothing said so. The bar now says, with Undo;

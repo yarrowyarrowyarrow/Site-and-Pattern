@@ -724,6 +724,12 @@ def set_scale_bar(visible: bool, unit: str = "auto") -> str:
     return f"setScaleBar({_jsbool(visible)}, {_jsstr(unit)});"
 
 
+def hold_offline_notice(held: bool) -> str:
+    """Keep the line that says the map needs a connection off the map while
+    Export PDF takes its picture (V3.19, QF-6), and put it back after."""
+    return f"holdOfflineNotice({_jsbool(held)});"
+
+
 # ── Resize / invalidate (load-bearing — see map_widget.py block comment) ────
 
 def invalidate_size() -> str:
