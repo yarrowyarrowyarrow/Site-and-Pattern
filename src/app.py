@@ -166,6 +166,10 @@ class MainWindow(QMainWindow):
         accessible_names.name_containers(self)
         self._panes = keyboard_help.PaneSwitch(self, self.map_widget,
                                                self._side_tabs)
+        # Simple by default (V3.21, MD-1): hide what the Advanced tools
+        # switch holds, now that everything it names is built.
+        from src import advanced_tools_flow
+        advanced_tools_flow.apply(self)
 
         # Cold start (F44): paint the three-step strip for the empty project.
         # The start menu is NOT opened here any more — main.py runs it before
@@ -265,6 +269,9 @@ class MainWindow(QMainWindow):
         from src.first_step_bar import FirstStepBar
         self.first_step_bar = FirstStepBar(self)
         left_layout.addWidget(self.first_step_bar)
+        # "This design uses advanced tools." (V3.21, MD-3), simple mode only.
+        from src import advanced_tools_flow
+        left_layout.addWidget(advanced_tools_flow.make_bar(self))
         left_layout.addWidget(self.map_widget, 1)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -432,6 +439,7 @@ class MainWindow(QMainWindow):
         self._act_generate = act_generate
 
         act_scan = file_menu.addAction("Import &Yard Scan…")
+        act_scan.setObjectName("file_import_yard_scan")
         act_scan.setStatusTip(
             "Import a phone scan (Polycam/Scaniverse PLY, XYZ, LAS) — "
             "match 2+ points to the map and the scanned structures cast "
@@ -515,6 +523,7 @@ class MainWindow(QMainWindow):
         # meant losing sight of the other. Lambda → controller shim, so this
         # costs MainWindow no methods (src/controllers/split_view.py).
         self._act_split = view_menu.addAction("S&plit view (map + 3D)")
+        self._act_split.setObjectName("view_split")
         self._act_split.setCheckable(True)
         self._act_split.setShortcut("Ctrl+Shift+3")
         self._act_split.setStatusTip(
@@ -524,6 +533,8 @@ class MainWindow(QMainWindow):
             lambda checked: _split_view.toggle(self, checked))
 
         act_3d = view_menu.addAction("&3D Preview…")
+
+        act_3d.setObjectName("view_3d_preview")
         act_3d.setStatusTip(
             "Open the 3D view of this design — growth timeline, sun "
             "shadows, terrain"
@@ -534,6 +545,8 @@ class MainWindow(QMainWindow):
         act_3d.triggered.connect(lambda: _open_3d_view(self))
 
         act_directory = view_menu.addAction("&Plant Directory…")
+
+        act_directory.setObjectName("view_plant_directory")
         act_directory.setStatusTip(
             "Every species in the catalogue — what it looks like, where it "
             "grows, and which animals depend on it (F90)"
@@ -544,6 +557,8 @@ class MainWindow(QMainWindow):
         act_directory.triggered.connect(lambda: _open_plant_directory(self))
 
         act_reference = view_menu.addAction("Walk a &Wild Landscape…")
+
+        act_reference.setObjectName("view_wild_landscape")
         act_reference.setStatusTip(
             "Walk the natural community your ecoregion is reaching toward — "
             "the reference target for this design (F50)"
@@ -554,6 +569,8 @@ class MainWindow(QMainWindow):
             lambda: _open_reference_ecosystem(self))
 
         act_snapshots = view_menu.addAction("&Growth Snapshots…")
+
+        act_snapshots.setObjectName("view_growth_snapshots")
         act_snapshots.setStatusTip(
             "See this design side by side as it grows, from year 1 on — "
             "watch the plants grow and fill in over time"
@@ -571,11 +588,17 @@ class MainWindow(QMainWindow):
         from src import map_furniture_flow
         map_furniture_flow.install(self, view_menu)
         act_map_settings = view_menu.addAction("&Map Settings…")
+        act_map_settings.setObjectName("view_map_settings")
         act_map_settings.setStatusTip(
             "How far the mouse wheel zooms, and an optional Mapbox token "
             "for high-resolution satellite imagery"
         )
         act_map_settings.triggered.connect(self._on_map_settings)
+        # The switch (V3.21, MD-1): simple by default, the tools above and
+        # the advanced pages one remembered click away.
+        view_menu.addSeparator()
+        from src import advanced_tools_flow
+        advanced_tools_flow.install(self, view_menu)
 
         # Help menu
         help_menu = mb.addMenu("&Help")
@@ -1860,9 +1883,12 @@ class MainWindow(QMainWindow):
         site_photo_flow.restore_site_photo(self)
         self.setWindowTitle(window_title(name, version=running_version()))
         self._set_mode_label("Ready")
-        # Back to an empty project — step 1 again (F44), and no jobs (QF-12).
+        # Back to an empty project — step 1 again (F44), no jobs (QF-12) and
+        # no advanced work to mention (MD-3).
         onboarding_flow.refresh(self)
         month_tasks.refresh(self)
+        from src import advanced_tools_flow
+        advanced_tools_flow.refresh_bar(self)
 
     def _on_open(self):
         """Open a design — from the in-app list first (F87, V2.39).
@@ -2222,8 +2248,11 @@ class MainWindow(QMainWindow):
         # Snapshots here; an edit, through _mark_modified (V3.08, F89).
         from src import follow_design
         follow_design.request_sync(self)
-        # And the status bar's jobs for this month (V3.19, QF-12).
+        # And the status bar's jobs for this month (V3.19, QF-12), and
+        # whether the design holds advanced work (V3.21, MD-3).
         month_tasks.refresh(self)
+        from src import advanced_tools_flow
+        advanced_tools_flow.refresh_bar(self)
 
     def _push_undo(self, entry: dict):
         # Shim → PersistenceController; see src/controllers/persistence.py.

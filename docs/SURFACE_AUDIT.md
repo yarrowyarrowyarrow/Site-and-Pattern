@@ -65,6 +65,16 @@ The same probe, run on V3.04's code before anything here changed, and on V3.05's
 | Pages that scroll at 1366 × 768 | **6**: Analysis › Habitat (2.3 screens), Site › Site Info (1.9), Site › Field Notes (1.9), Slope, Features and Wind (1.1 each). 24 controls start below the fold | the same 6; Habitat is 2.8 screens now that it is filled |
 | Buttons clicked | **106**: 1 crashed the app, 0 were dead, 28 showed no change, each explained below | **102**: **0 crashed**, 0 dead, 28 no change (the same 28) |
 
+## The simple app, re-measured (V3.21)
+
+View → Advanced tools (V3.21, `src/advanced_tools.py`) is off on a first run.
+Measured the same way, with the worked example at 1366 × 768 (`--mode simple` and
+`--mode advanced`; no click pass): **75 controls on the side panel's pages in the
+simple app, 155 with Advanced tools on.** The simple app has 12 pages (Site Info,
+Sun & Shade, Features with only *Scan this area*, Notes; Plants, Communities,
+Structures; Report card, Planted and its two sub-pages; Export); Notes alone holds
+30 of the 75, the site walk's questions.
+
 ## What the click pass found
 
 **One button killed the app.** Site › Slope › *Download Edmonton Data* raised

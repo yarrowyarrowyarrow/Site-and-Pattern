@@ -199,6 +199,12 @@ class SpeciesPage(QWidget):
         self._col.addWidget(hint)
         self._col.addStretch()
 
+    def set_advanced_tools(self, on: bool) -> None:
+        """Add to mix only with Advanced tools on (V3.21): the mix it fills
+        is one of the builders the switch holds."""
+        if self._mix_btn is not None:
+            self._mix_btn.setVisible(bool(on))
+
     def show_plant(self, row: dict, *, placed: int = 0, in_mix: bool = False,
                    why: Optional[list] = None):
         """Fill the page for ``row`` (a catalogue row; only its id is read

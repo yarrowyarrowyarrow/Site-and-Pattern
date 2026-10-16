@@ -60,6 +60,9 @@ class TestMainWindowSmoke(unittest.TestCase):
     _app = None
     _win = None
     _construct_error: Exception | None = None
+    #: Which way round the window is: the subclass below runs everything
+    #: again with Advanced tools on (V3.21, MD-2).
+    advanced = False
 
     @classmethod
     def setUpClass(cls):
@@ -1246,6 +1249,21 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertIn("Walk a Wild Landscape…", words)
 
     def test_every_pointer_in_the_words_leads_somewhere(self):
+        """With Advanced tools on, every pointer must lead somewhere."""
+        broken, seen = self._broken_pointers(simple=False)
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places that are not there")
+
+    def test_in_the_simple_app_a_pointer_says_when_it_needs_advanced(self):
+        """V3.21, MD-5: in the simple app a pointer at a hidden page must say
+        so ("with Advanced tools on", or "(advanced)") rather than send a
+        person looking for a tab that is not there."""
+        broken, seen = self._broken_pointers(simple=True)
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places hidden in the "
+                                     "simple app that do not say so")
+
+    def _broken_pointers(self, *, simple: bool):
         """V3.05: the app tells people where to go in its own words, "Analysis
         → Habitat", and two of those directions had rotted. The worked
         example's notes sent a new user to "Planning → Planting Plan", which
@@ -1265,25 +1283,40 @@ class TestMainWindowSmoke(unittest.TestCase):
             text = re.sub(r"[^\w\0' ]+", " ", text.replace("\0", "&&"))
             return re.sub(r"\s+", " ", text.replace("&&", "&")).strip().lower()
 
+        from src import advanced_tools_flow
         win = self._win
+        advanced_tools_flow.apply(win, not simple)
+        self.addCleanup(lambda: advanced_tools_flow.apply(win, self.advanced))
+
+        def shown_tab(strip, i):
+            return not simple or strip.isTabVisible(i)
+
+        def shown_act(act):
+            return not simple or act.isVisible()
+
         places: dict = {}
         tabs = win._side_tabs
         for i in range(tabs.count()):
             kids = places.setdefault(norm(tabs.tabText(i)), set())
+            if not shown_tab(tabs, i):
+                continue
             page = tabs.widget(i)
             # A tab whose page is itself a strip (Placement, V3.07) holds
             # its pages in that strip, which findChildren does not return.
             inners = ([page] if isinstance(page, QTabWidget) else []) \
                 + page.findChildren(QTabWidget)
             for inner in inners:
-                kids.update(norm(inner.tabText(j)) for j in range(inner.count()))
+                kids.update(norm(inner.tabText(j)) for j in range(inner.count())
+                            if shown_tab(inner, j))
         for a in win.menuBar().actions():
             if a.menu() is not None:
                 places.setdefault(norm(a.text()), set()).update(
-                    norm(b.text()) for b in a.menu().actions() if b.text())
+                    norm(b.text()) for b in a.menu().actions()
+                    if b.text() and shown_act(b))
         for bar in win.findChildren(QToolBar):
             places.setdefault(norm(bar.windowTitle()), set()).update(
-                norm(a.text()) for a in bar.actions() if a.text())
+                norm(a.text()) for a in bar.actions()
+                if a.text() and shown_act(a))
             # A row's own buttons count too: Draw › Shape is a button the row
             # holds, not an action with text (V3.19, QF-11, the plan's pointer).
             places[norm(bar.windowTitle())].update(
@@ -1306,7 +1339,13 @@ class TestMainWindowSmoke(unittest.TestCase):
 
         root = Path(__file__).resolve().parent.parent / "src"
         broken, seen = [], 0
+        # Modules a person reaches only with Advanced tools on: their words
+        # are read in advanced mode, never in the simple app (V3.21).
+        advanced_only = {"scan_import_dialog.py", "scene3d_window.py",
+                         "snow_microsite_flow.py"}
         for path in sorted(root.rglob("*.py")):
+            if simple and path.name in advanced_only:
+                continue
             tree = ast.parse(path.read_text(encoding="utf-8"))
             docs = set()
             for node in ast.walk(tree):
@@ -1320,16 +1359,45 @@ class TestMainWindowSmoke(unittest.TestCase):
                 if not (isinstance(node, ast.Constant)
                         and isinstance(node.value, str)) or id(node) in docs:
                     continue
+                said = ("advanced tools" in node.value.lower()
+                        or "(advanced)" in node.value.lower())
                 for m in pointer.finditer(node.value):
                     seen += 1
+                    if simple and said:
+                        continue
                     head, rest = norm(m.group(1)), norm(m.group(2))
                     if not any(rest.startswith(c) or (len(rest) >= 3
                                                       and c.startswith(rest))
                                for c in places[head]):
                         broken.append(f"{path.relative_to(root.parent)}:"
                                       f"{node.lineno}: {m.group(0).strip()!r}")
-        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
-        self.assertEqual(broken, [], "pointers to places that are not there")
+        return broken, seen
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestMainWindowSmokeAdvanced(TestMainWindowSmoke):
+    """V3.21, MD-2: every test above again with View → Advanced tools on, so
+    the walks (every tab, the names, the keyboard, the visual floors) cover
+    the advanced pages as well as the simple app the class above sees."""
+
+    advanced = True
+
+    @classmethod
+    def setUpClass(cls):
+        # The remembered switch reads on too, for what asks it rather than
+        # the window (the map's letters, the right-click menus), without
+        # writing a setting the tests after this one would inherit.
+        from unittest import mock
+        from src import advanced_tools
+        cls._switch = mock.patch.object(advanced_tools, "is_on",
+                                        return_value=True)
+        cls._switch.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls._switch.stop()
 
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")

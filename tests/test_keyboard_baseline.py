@@ -180,10 +180,20 @@ class TestTheShortcutTable(unittest.TestCase):
             code = getattr(Qt.Key, f"Key_{key}")
             ev = QKeyEvent(QEvent.Type.KeyPress, code,
                            Qt.KeyboardModifier.NoModifier)
-            self.assertEqual(kh.letter_action(ev), action, key)
+            self.assertEqual(kh.letter_action(ev, advanced=True), action, key)
             ev = QKeyEvent(QEvent.Type.KeyPress, code,
                            Qt.KeyboardModifier.ControlModifier)
-            self.assertEqual(kh.letter_action(ev), "", key)
+            self.assertEqual(kh.letter_action(ev, advanced=True), "", key)
+
+    def test_in_the_simple_app_m_and_n_arm_nothing(self):
+        """V3.21, MD-5: Measure and Note are behind Advanced tools; their
+        letters do nothing rather than arm a tool nobody can see."""
+        from src import keyboard_help as kh
+        for key, action, _words in kh.MAP_LETTERS:
+            ev = QKeyEvent(QEvent.Type.KeyPress, getattr(Qt.Key, f"Key_{key}"),
+                           Qt.KeyboardModifier.NoModifier)
+            want = "" if action in kh.ADVANCED_LETTERS else action
+            self.assertEqual(kh.letter_action(ev, advanced=False), want, key)
 
     def test_the_letters_are_distinct(self):
         from src import keyboard_help as kh
@@ -191,11 +201,19 @@ class TestTheShortcutTable(unittest.TestCase):
         self.assertEqual(len(keys), len(set(keys)))
 
     def test_the_help_page_lists_every_key(self):
+        from unittest import mock
+        from src import advanced_tools
         from src import keyboard_help as kh
-        page = kh.help_html()
+        with mock.patch.object(advanced_tools, "is_on", return_value=True):
+            page = kh.help_html()
         for key, _action, words in kh.MAP_LETTERS:
             self.assertIn(f"<b>{key}</b>", page)
             self.assertIn(words.split(":")[0], page)
+        with mock.patch.object(advanced_tools, "is_on", return_value=False):
+            simple = kh.help_html()
+        for key, action, words in kh.MAP_LETTERS:
+            self.assertEqual(words in simple,
+                             action not in kh.ADVANCED_LETTERS, key)
         for key, _words in kh.MAP_KEYS + kh.LIST_KEYS:
             self.assertIn(key.replace("&", "&amp;").replace("<", "&lt;")
                           .split(",")[0], page)

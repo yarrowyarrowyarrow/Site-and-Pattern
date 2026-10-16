@@ -167,7 +167,7 @@
         _offlineEl.setAttribute('role', 'status');          // read out when shown
         _offlineEl.style.cssText = 'position:absolute;left:50%;bottom:50px;z-index:1000;' +
           'transform:translateX(-50%);pointer-events:none;width:max-content;' +
-          'max-width:min(460px,calc(100% - 32px));box-sizing:border-box;padding:4px 12px;' +
+          'max-width:min(600px,calc(100% - 32px));box-sizing:border-box;padding:4px 12px;' +
           'background:rgba(255,255,255,0.95);border:1px solid rgba(27,42,27,0.55);' +
           'border-radius:6px;color:#1b2a1b;text-align:center;line-height:1.4;' +
           'font:13px system-ui,"Segoe UI",Arial,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.3);';

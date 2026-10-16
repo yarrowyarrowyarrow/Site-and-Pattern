@@ -41,6 +41,21 @@ MAP_LETTERS: tuple = (
     # V3.08; Share has no letter of its own.
 )
 
+#: The letters for tools behind View → Advanced tools (V3.21, MD-5): in the
+#: simple app they do nothing, rather than arm a tool nobody can see.
+ADVANCED_LETTERS = ("measure", "note")
+
+
+def letters(advanced=None) -> tuple:
+    """:data:`MAP_LETTERS` the current mode offers (``advanced`` defaults to
+    the remembered switch)."""
+    if advanced is None:
+        from src import advanced_tools
+        advanced = advanced_tools.is_on()
+    return tuple(row for row in MAP_LETTERS
+                 if advanced or row[1] not in ADVANCED_LETTERS)
+
+
 #: The map's own keys (html/map/09-keyboard.js, Leaflet), and the two the
 #: window answers only while the map has focus.
 MAP_KEYS: tuple = (
@@ -67,12 +82,13 @@ LIST_KEYS: tuple = (
 )
 
 
-def letter_action(event) -> str:
-    """The :data:`MAP_LETTERS` action for an unmodified key press, or ``""``."""
+def letter_action(event, advanced=None) -> str:
+    """The action of an unmodified key press among the letters the current
+    mode offers (:func:`letters`), or ``""``."""
     if event.modifiers() not in (Qt.KeyboardModifier.NoModifier,
                                  Qt.KeyboardModifier.KeypadModifier):
         return ""
-    for key, action, _words in MAP_LETTERS:
+    for key, action, _words in letters(advanced):
         if event.key() == getattr(Qt.Key, f"Key_{key}"):
             return action
     return ""
@@ -166,6 +182,8 @@ def menu_shortcuts(window: QWidget) -> list:
     from PyQt6.QtGui import QAction, QKeySequence
     out, seen = [], set()
     for action in window.findChildren(QAction):
+        if not action.isVisible():      # behind Advanced tools (V3.21)
+            continue
         keys = [s.toString(QKeySequence.SequenceFormat.NativeText)
                 for s in distinct_keys(action.shortcuts())]
         words = action.text().replace("&", "").rstrip("…").strip()
@@ -194,7 +212,7 @@ def help_html(window: Optional[QWidget] = None) -> str:
     parts = [
         _table("On the map, while it has focus",
                [(k, w) for k, w in MAP_KEYS]
-               + [(k, w) for k, _a, w in MAP_LETTERS]),
+               + [(k, w) for k, _a, w in letters()]),
         _table("In lists and pages", LIST_KEYS),
     ]
     if window is not None:

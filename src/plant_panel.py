@@ -1201,6 +1201,11 @@ class PlantPanel(QWidget):
             act_about.triggered.connect(
                 lambda: self._show_page(plant, focus=True))
 
+        # The plant mix is behind View → Advanced tools (V3.21).
+        from src import advanced_tools
+        if not advanced_tools.is_on():
+            menu.exec(self._results_list.viewport().mapToGlobal(pos))
+            return
         menu.addSeparator()
 
         # Polyculture mix — only meaningful for plants with a real id.

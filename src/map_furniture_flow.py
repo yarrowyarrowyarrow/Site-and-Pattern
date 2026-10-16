@@ -120,6 +120,8 @@ def install(main, menu) -> None:
     scale.setStatusTip("Show a scale bar at the bottom of the map, and in the "
                        "map picture Export PDF takes")
     units = menu.addMenu("Scale &Units")
+    # Behind View → Advanced tools (V3.21): its menu action, by name.
+    units.menuAction().setObjectName("view_scale_units")
     group = QActionGroup(units)
     group.setExclusive(True)
     auto = units.addAction("&Automatic")

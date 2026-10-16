@@ -136,7 +136,7 @@ def first_step(project: dict) -> dict:
                     "detail": step["detail"]}
     return {"index": len(progress), "total": len(progress), "complete": True,
             "key": "done", "title": "Your design is under way",
-            "detail": "Design → Habitat scores what it provides; "
+            "detail": "Design → Planted says what each plant feeds; "
                       "File → Export Planting Plan… says what to buy "
                       "and when to plant it."}
 
@@ -203,7 +203,7 @@ EXAMPLE_NOTES = (
     "Oval-leaf Milkweed) into fall (Stiff Goldenrod), and a short grass "
     "matrix along the street edge so it still reads as tended. Every plant "
     "in it is native around Edmonton.\n\n"
-    "Things worth doing to it:\n"
+    "Things worth doing to it, with View → Advanced tools on:\n"
     "  • Design → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"
     "  • Design → Habitat → Pull-a-plant: remove the "

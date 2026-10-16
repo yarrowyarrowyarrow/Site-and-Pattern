@@ -196,6 +196,25 @@ class ShapeTool(QWidget):
             self._type.setCurrentIndex(i)
         return i >= 0
 
+    def set_advanced_tools(self, on: bool) -> None:
+        """Lines (hedge, fence, living fence, windbreak) and a Custom area
+        only with Advanced tools on (V3.21). Beds, paths, patios, lawn, water
+        and the conversion zones stay: they are what the planting area is
+        measured from (``yard_overview``)."""
+        view = self._type.view()
+        first_shown = None
+        for i in range(self._type.count()):
+            kind = self._type.itemData(i)
+            advanced = bool(kind) and (kind[0] == "line"
+                                       or kind == ("area", "Custom"))
+            view.setRowHidden(i, advanced and not on)
+            if first_shown is None and kind and not (advanced and not on):
+                first_shown = i
+        current = self._type.currentData()
+        if (not on and current and (current[0] == "line"
+                                    or current == ("area", "Custom"))):
+            self._type.setCurrentIndex(first_shown or 0)
+
     def _on_type_changed(self, *_):
         what, name = self.kind()
         line = what == "line"

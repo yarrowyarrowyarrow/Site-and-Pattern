@@ -135,12 +135,17 @@ def indicator(image, window, w):
 
 
 def every_tab(window, outer: QTabWidget):
-    """Show each side tab and each of its sub-tabs in turn; yield a name."""
+    """Show each side tab and each of its sub-tabs in turn; yield a name.
+    A tab the Advanced tools switch hides is not walked (V3.21): in the
+    simple app nobody can reach it, and the advanced run walks it."""
     from PyQt6.QtWidgets import QApplication
     for i in range(outer.count()):
+        if not outer.isTabVisible(i):
+            continue
         outer.setCurrentIndex(i)
         inner = outer.widget(i).findChildren(QTabWidget)
-        pages = range(inner[0].count()) if inner else [None]
+        pages = ([j for j in range(inner[0].count())
+                  if inner[0].isTabVisible(j)] if inner else [None])
         for j in pages:
             if j is not None:
                 inner[0].setCurrentIndex(j)

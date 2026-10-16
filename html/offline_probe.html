@@ -126,7 +126,7 @@ async function run() {
 
   // QF-8: an outline read back from a file repeats its first corner.
   w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD.concat([YARD[0]]) }), false);
-  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [90, 90] });
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [90, 90], animate: false });
   await wait(200);
   const sides = Array.from(w.boundaries[0].labelsLayer.getLayers()).map(
     m => m.getElement() ? m.getElement().textContent : '');
@@ -146,27 +146,30 @@ async function run() {
   // corner's, and the drag pulled a spur out of the outline.
   w.loadBoundary(JSON.stringify({ id: 'b2', color: 'blue', points: QUAD.concat([QUAD[0]]) }), false);
   const b2 = w.boundaries[w.boundaries.length - 1];
-  w.map.fitBounds(b2.layer.getBounds(), { padding: [140, 140] });
+  w.map.fitBounds(b2.layer.getBounds(), { padding: [140, 140], animate: false });
   await wait(200);
   w.enterBoundaryEditMode('b2');
   calls = [];
   const c0 = at(QUAD[0][0], QUAD[0][1]);
+  const target = w.document.elementFromPoint(c0.x, c0.y);
   drag(c0, { x: c0.x + 60, y: c0.y + 40 });
   const moved = sent('onBoundaryGeomChanged');
   out.reopened_drag = { handles: w.boundaryEditHandles.length,
+                        target: target ? String(target.tagName) + '.' +
+                                         String(target.getAttribute('class')) : null,
                         sent: moved.length ? JSON.parse(moved[moved.length - 1][2]) : null };
   w.exitBoundaryEditMode();
 
   // QF-18: Automatic across a yard and across a county; a click fixes the other.
   w.setScaleBar(true, 'auto');
   w.map.setView([LAT, LNG], 21, { animate: false });
-  await wait(100);
+  await wait(300);
   out.scale_yard = scaleLabel();
   w.map.setView([LAT, LNG], 9, { animate: false });
-  await wait(100);
+  await wait(300);
   out.scale_county = scaleLabel();
   w.map.setView([LAT, LNG], 21, { animate: false });
-  await wait(100);
+  await wait(300);
   calls = [];
   const bar = w.document.getElementById('sp-scale').getBoundingClientRect();
   click({ x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 });

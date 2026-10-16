@@ -17,9 +17,22 @@ from PyQt6.QtWidgets import (
     QComboBox, QDoubleSpinBox,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QColor
 
 from src.db.structures import (
     STRUCTURES, STRUCTURE_CATEGORIES, get_structure, get_all_structures,
+)
+
+
+#: The structures under three headings, by what a person wants one for
+#: (V3.21, RM-9; docs/homeowner/03-what-goes.md §6). Every structure in the
+#: catalogue is in exactly one group, which a test holds.
+STRUCTURE_GROUPS = (
+    ("For wildlife", ("pond", "brush_pile", "bee_hotel", "native_bee_log",
+                      "snag", "rock_xeriscape")),
+    ("For water", ("rain_garden", "rain_barrel", "swale")),
+    ("Around the yard", ("raised_bed", "compost_bin", "shed", "fence",
+                         "fire_pit", "native_lawn_patch")),
 )
 
 
@@ -138,29 +151,43 @@ class StructurePanel(QWidget):
         self._populate_structures()
 
     def _populate_structures(self):
-        self._struct_list.clear()
-        for s in STRUCTURES:
-            item = QListWidgetItem(f"{s['icon']}  {s['name']}")
-            item.setData(Qt.ItemDataRole.UserRole, s["id"])
-            item.setToolTip(s["description"])
-            self._struct_list.addItem(item)
+        self._fill(STRUCTURES)
 
     def _filter_structures(self):
         text = self._search.text().lower()
         cat = self._cat_combo.currentText()
+        self._fill([
+            s for s in STRUCTURES
+            if (cat == "All Categories" or s["category"] == cat)
+            and (not text or text in s["name"].lower()
+                 or text in s["description"].lower())])
+
+    def _fill(self, structures) -> None:
+        """The list under the three headings (V3.21, RM-9), each heading
+        shown only when something under it is: a heading cannot be chosen,
+        and the arrow keys pass over it."""
         self._struct_list.clear()
-        for s in STRUCTURES:
-            if cat != "All Categories" and s["category"] != cat:
+        by_id = {s["id"]: s for s in structures}
+        for heading, ids in STRUCTURE_GROUPS:
+            members = [by_id[i] for i in ids if i in by_id]
+            if not members:
                 continue
-            if text and text not in s["name"].lower() and text not in s["description"].lower():
-                continue
-            item = QListWidgetItem(f"{s['icon']}  {s['name']}")
-            item.setData(Qt.ItemDataRole.UserRole, s["id"])
-            item.setToolTip(s["description"])
-            self._struct_list.addItem(item)
+            head = QListWidgetItem(heading)
+            head.setFlags(Qt.ItemFlag.NoItemFlags)
+            font = head.font()
+            font.setBold(True)
+            head.setFont(font)
+            head.setForeground(QColor("#a5d6a7"))
+            self._struct_list.addItem(head)
+            for s in members:
+                item = QListWidgetItem(f"{s['icon']}  {s['name']}")
+                item.setData(Qt.ItemDataRole.UserRole, s["id"])
+                item.setToolTip(s["description"])
+                self._struct_list.addItem(item)
 
     def _on_selection_changed(self, current, _prev):
-        if not current:
+        if not current or current.data(Qt.ItemDataRole.UserRole) is None:
+            # Nothing, or a heading (RM-9): nothing to describe or place.
             self._btn_place.setEnabled(False)
             self._detail_name.setText("")
             self._detail_desc.setText("")

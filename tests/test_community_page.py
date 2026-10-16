@@ -57,6 +57,23 @@ class TestCommunityPage(unittest.TestCase):
             self.assertFalse(tile.icon().isNull(), pid)
             self.assertTrue(tile.accessibleName())
 
+    def test_the_pattern_card_waits_for_advanced_tools(self):
+        """V3.21, RM-8: in the simple app the page is the name, what it is
+        for, its plants and Place; the pattern card comes with Advanced on."""
+        import html
+        from src.community_page import CommunityPage, _description_html
+        page = CommunityPage()
+        self.addCleanup(page.close)
+        page.show_community(self.community)
+        plain = html.escape(self.community.get("description") or "")
+        self.assertEqual(page._about.text(), plain.replace("\n", "<br>"))
+        page.set_advanced_tools(True)
+        card = page._about.text()
+        self.assertEqual(card, _description_html(self.community, card=True))
+        self.assertNotEqual(card, plain)
+        page.set_advanced_tools(False)
+        self.assertEqual(page._about.text(), plain.replace("\n", "<br>"))
+
     def test_a_member_opens_its_page_and_esc_closes(self):
         from PyQt6.QtCore import Qt
         from PyQt6.QtTest import QTest

@@ -337,6 +337,8 @@ class AnalysisPanel(QWidget):
         v.addLayout(btn_row)
 
         layout.addWidget(box)
+        # Behind View → Advanced tools (V3.21, src/advanced_tools.py).
+        self._sun_arc_box = box
 
     def _build_shade_group(self, layout):
         """The shade the site's trees and buildings actually cast, at that hour."""

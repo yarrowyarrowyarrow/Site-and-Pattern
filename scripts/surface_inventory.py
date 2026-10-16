@@ -500,6 +500,8 @@ def walk_tabs(root_tabs, root_path=()) -> list:
 
     def visit(tw, path, chain, parent_page):
         for i in range(tw.count()):
+            if not tw.isTabVisible(i):      # hidden by --mode simple
+                continue
             page_w = tw.widget(i)
             label = _label_of_tab(tw.tabText(i)) or f"tab {i + 1}"
             c = chain + [(tw, i)]
@@ -593,7 +595,7 @@ def _slug(parts) -> str:
 def menu_tree(menu, path=()) -> list:
     out = []
     for a in menu.actions():
-        if a.isSeparator():
+        if a.isSeparator() or not a.isVisible():    # hidden by the mode
             continue
         label = _plain(a.text()).replace("&", "")
         item = {"path": list(path) + [label], "shortcut":
@@ -796,7 +798,11 @@ def main_run(args) -> dict:
     _install_interceptors()
 
     from src.app import MainWindow
-    from src import onboarding_flow
+    from src import advanced_tools, onboarding_flow
+
+    # Which app to count (V3.21, MD-2): the switch is stored for real, in
+    # the sandbox's own settings, before the window reads it.
+    advanced_tools.set_on(args.mode == "advanced")
 
     t0 = time.monotonic()
     say("building the window")
@@ -811,7 +817,8 @@ def main_run(args) -> dict:
     _intercept_map_js(main)
     meta = {"size": [w, h], "font": QtGui.QFontInfo(APP.font()).family(),
             "font_px": QtGui.QFontInfo(APP.font()).pixelSize(),
-            "map_ready": ready, "boot_s": round(time.monotonic() - t0, 1)}
+            "map_ready": ready, "boot_s": round(time.monotonic() - t0, 1),
+            "mode": args.mode}
 
     example = ""
     if args.example:
@@ -1106,6 +1113,10 @@ def parse_args(argv=None):
     ap.add_argument("--dialogs", action="store_true",
                     help="show, photograph and inventory each dialog reached "
                          "(by the click pass and the File/Help menus)")
+    ap.add_argument("--mode", choices=("simple", "advanced"),
+                    default="simple",
+                    help="the simple app (the default, as a first run sees "
+                         "it) or with View → Advanced tools on (V3.21)")
     ap.add_argument("--settle", type=int, default=350,
                     help="ms to let a click's effects land (default 350)")
     ap.add_argument("--window-settle", type=int, default=4000,

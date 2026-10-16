@@ -129,10 +129,19 @@ class SharePanel(QWidget):
         self.buttons: dict = {}
         self.notes: dict = {}
         self._live: list = []      # (button, note, gives(project))
+        self.sections: dict = {}
         for section, rows in EXPORTS:
+            # Each section in its own container, so the pictures can wait
+            # behind View → Advanced tools (V3.21, src/advanced_tools.py).
+            holder = QWidget()
+            holder_lay = QVBoxLayout(holder)
+            holder_lay.setContentsMargins(0, 0, 0, 0)
+            holder_lay.setSpacing(6)
+            lay.addWidget(holder)
+            self.sections[section] = holder
             head = QLabel(section)
             head.setStyleSheet(_HEAD_STYLE)
-            lay.addWidget(head)
+            holder_lay.addWidget(head)
             for words, gives, action in rows:
                 row = QHBoxLayout()
                 btn = QPushButton(words)
@@ -148,9 +157,10 @@ class SharePanel(QWidget):
                 else:
                     _say(btn, note, gives)
                 row.addWidget(note, 1)
-                lay.addLayout(row)
+                holder_lay.addLayout(row)
                 self.buttons[words] = btn
                 self.notes[words] = note
+        self.pictures = self.sections["Pictures"]
         self.refresh_lines()
         # Where to buy arrives here from Site Info (src/side_panel_layout.py).
         self._export_layout = lay

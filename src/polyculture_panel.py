@@ -1316,13 +1316,19 @@ class PolyculturePanel(QWidget):
         # community, Delete last. Five in one row no longer fitted the panel
         # once its text was 12 px; the second row had held Edit, Export and
         # Import. Place on Map lives in the placement bar.
+        # Building communities is behind View → Advanced tools (V3.21,
+        # src/advanced_tools.py): the simple app places ready ones.
+        self._builder_rows = QWidget()
+        rows = QVBoxLayout(self._builder_rows)
+        rows.setContentsMargins(0, 0, 0, 0)
         for row_buttons in ((self.new_btn, self.creature_btn, self.import_btn),
                             (self.edit_btn, self.dup_btn, self.variation_btn,
                              self.export_btn, self.delete_btn)):
             row = QHBoxLayout()
             for button in row_buttons:
                 row.addWidget(button)
-            layout.addLayout(row)
+            rows.addLayout(row)
+        layout.addWidget(self._builder_rows)
 
         # ── Selected community: name + "Anchored on X · N plants" header ──
         # Shown above the members so the list sits directly under the title
@@ -1512,6 +1518,11 @@ class PolyculturePanel(QWidget):
         act_place = menu.addAction(f"Place {item.text(0).strip()} on Map")
         act_place.triggered.connect(
             lambda: self._place_community(int(polyculture_id)))
+        # The community mix is behind View → Advanced tools (V3.21).
+        from src import advanced_tools
+        if not advanced_tools.is_on():
+            menu.exec(self.polyculture_tree.viewport().mapToGlobal(pos))
+            return
         menu.addSeparator()
         in_mix = any(c["id"] == polyculture_id for c in self._mix_communities)
         if in_mix:

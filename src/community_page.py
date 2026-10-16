@@ -22,6 +22,8 @@ and the panel stops repeating the page (``set_details_in_page``).
 
 from __future__ import annotations
 
+import html
+
 from typing import Callable, Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
@@ -174,8 +176,18 @@ class CommunityPage(QWidget):
         self._render_tiles()
         self._local.setText(around_line(self.members()))
         self._local.setVisible(bool(self._local.text()))
-        self._about.setText(_description_html(self._community))
+        self._about.setText(_description_html(
+            self._community, card=getattr(self, "_advanced", False)))
         self._scroll.verticalScrollBar().setValue(0)
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """The pattern card only with Advanced tools on (V3.21, RM-8); in the
+        simple app the page is the name, what it is for, its plants and
+        Place."""
+        self._advanced = bool(on)
+        if self._community:
+            self._about.setText(_description_html(self._community,
+                                                  card=self._advanced))
 
     def refresh_photo(self, plant_id: int) -> None:
         """A photograph finished downloading: draw it if it is a member's."""
@@ -348,8 +360,12 @@ def _facts_for(polyculture: dict) -> str:
     return community_facts(entry)
 
 
-def _description_html(polyculture: dict) -> str:
-    """The pattern card the panel writes (F4), or the bare description."""
+def _description_html(polyculture: dict, *, card: bool = True) -> str:
+    """The pattern card the panel writes (F4) when ``card``, else (or when it
+    cannot be built) the community's own description."""
+    if not card:
+        return html.escape(polyculture.get("description") or "").replace(
+            "\n", "<br>")
     try:
         from src import pattern_language
         from src.db import polycultures

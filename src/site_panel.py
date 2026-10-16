@@ -1313,6 +1313,7 @@ class SitePanel(QWidget):
         vb.addWidget(reset)
 
         layout.addWidget(box)
+        self._sat_align_box = box       # advanced (V3.21)
 
     def _emit_sat_offset(self):
         self.satellite_offset_changed.emit(
@@ -1986,6 +1987,7 @@ class SitePanel(QWidget):
         vb.addLayout(btns)
 
         layout.addWidget(box)
+        self._existing_box = box        # advanced (V3.21)
 
     def _on_mark_existing(self, feature_id: str):
         """Emit a placement request for an existing tree/building, reusing the
@@ -2033,8 +2035,7 @@ class SitePanel(QWidget):
         box.setToolTip("Start here: pull what's already on and around the "
                        "site from OpenStreetMap so the shade map (Site → "
                        "Sun & Shade) has real casters to work with. Anything "
-                       "missing can be drawn or marked by hand in the next "
-                       "section.")
+                       "missing can be marked by hand with Advanced tools on.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
         hint = QLabel("Imports what is already there, inside your boundary "
@@ -2043,9 +2044,8 @@ class SitePanel(QWidget):
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
-        slow_note = QLabel("A first import in a new area can take 10–30 s; "
-                           "later ones nearby are quicker. Buildings can also "
-                           "be downloaded for use offline, below.")
+        slow_note = QLabel("A first scan in a new area can take 10–30 s; "
+                           "later ones nearby are quicker.")
         slow_note.setWordWrap(True)
         slow_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(slow_note)
@@ -2060,6 +2060,13 @@ class SitePanel(QWidget):
         scan.clicked.connect(self.features_scan_requested.emit)
         v.addWidget(scan)
 
+        # Everything below Scan this area is behind View → Advanced tools
+        # (V3.21, src/advanced_tools.py): the two imports it runs together,
+        # their settings, the offline pack and the survey import.
+        self._features_more = QWidget()
+        mv = QVBoxLayout(self._features_more)
+        mv.setContentsMargins(0, 0, 0, 0)
+
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
         btn = QPushButton("Import Building Outlines")
         btn.setStyleSheet(_BTN_SECONDARY)
@@ -2073,7 +2080,7 @@ class SitePanel(QWidget):
             "trees need the online import).\n"
             "Imported features cast shade and keep plants off them.")
         btn.clicked.connect(self.osm_import_requested.emit)
-        v.addWidget(btn)
+        mv.addWidget(btn)
 
         # Trees from the imagery itself (V2.26): OSM's tree coverage is near
         # zero outside city cores, so treed acreages got nothing from the
@@ -2093,7 +2100,7 @@ class SitePanel(QWidget):
             "to reading the satellite photo (less reliable) when height data "
             "can't be reached.")
         btn_trees.clicked.connect(self.tree_detect_requested.emit)
-        v.addWidget(btn_trees)
+        mv.addWidget(btn_trees)
 
         # Detection sensitivity: the shortest crown to call a tree. Lower =
         # more (and smaller) trees — the canopy-height map underestimates
@@ -2119,7 +2126,7 @@ class SitePanel(QWidget):
             lambda v_: QSettings().setValue("site/tree_min_height", v_))
         mh_row.addWidget(self._tree_min_height)
         mh_row.addStretch(1)
-        v.addLayout(mh_row)
+        mv.addLayout(mh_row)
 
         # Neighbour margin (V2.13): how far past the boundary to keep
         # buildings — a tall neighbour still shades the site. 0 = strictly
@@ -2145,7 +2152,7 @@ class SitePanel(QWidget):
             lambda v_: QSettings().setValue("site/osm_neighbour_margin", v_))
         marg_row.addWidget(self._osm_margin)
         marg_row.addStretch(1)
-        v.addLayout(marg_row)
+        mv.addLayout(marg_row)
 
         # One-time bulk download of nearby building footprints into a local
         # cache (buildings.db), so future designs in this area import buildings
@@ -2163,7 +2170,7 @@ class SitePanel(QWidget):
         self._bldg_cancel_btn.setStyleSheet(_BTN_SECONDARY)
         self._bldg_cancel_btn.setVisible(False)
         bld_row.addWidget(self._bldg_cancel_btn)
-        v.addLayout(bld_row)
+        mv.addLayout(bld_row)
 
         # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
         # the whiteboxtools-style path. Only shown when a backend is available
@@ -2181,7 +2188,9 @@ class SitePanel(QWidget):
                 "Not needed for the normal path — the OSM import above "
                 "covers most yards.")
             btn_tiff.clicked.connect(self._on_pick_footprint_tiff)
-            v.addWidget(btn_tiff)
+            mv.addWidget(btn_tiff)
+
+        v.addWidget(self._features_more)
 
         self._osm_status = QLabel("")
         self._osm_status.setWordWrap(True)

@@ -315,6 +315,20 @@ class PlacementControlsWidget(QWidget):
                 self._on_kind_changed(btn)
                 return
 
+    #: The patterns behind View → Advanced tools (V3.21, src/advanced_tools.py):
+    #: the simple app places one at a time or fills an area.
+    ADVANCED_KINDS = ("row", "grid", "circle")
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """Offer Row, Grid and Circle only with Advanced tools on. A pattern
+        the switch hides is not left chosen: the controls go back to Single,
+        as a person would have to."""
+        for btn in self._btn_group.buttons():
+            if btn.property("pattern_kind") in self.ADVANCED_KINDS:
+                btn.setVisible(bool(on))
+        if not on and self._kind in self.ADVANCED_KINDS:
+            self.set_kind("single")
+
     def add_extra(self, widget: QWidget, kinds=None) -> None:
         """Put a tab-owned control on the same wrapping line, shown only for
         the patterns in ``kinds`` (every pattern when ``None``)."""
