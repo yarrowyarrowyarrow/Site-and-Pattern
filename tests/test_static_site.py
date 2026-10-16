@@ -452,8 +452,8 @@ class TestTheRenderedSite(unittest.TestCase):
                                "availability": "garden centre",
                                "notes": "Estimate (herb default)"})
         self.assertEqual(text,
-                         "About $8-$16 per plant (estimate), usually stocked "
-                         "by garden centres.")
+                         "About $8-$16 per plant (estimate), often sold by "
+                         "native-plant nurseries.")
         self.assertEqual(note, "Estimate (herb default)")
 
     def test_the_availability_class_is_not_dropped_into_a_frame(self):
@@ -466,7 +466,7 @@ class TestTheRenderedSite(unittest.TestCase):
         self.assertEqual(describe({"availability": "seed_or_plug"})[0],
                          "Usually sold as seed or plugs.")
         self.assertEqual(describe({"availability": "big box"})[0],
-                         "Sometimes in big-box garden sections.")
+                         "One of the most widely sold natives.")
         self.assertEqual(describe({"availability": "mail_order_only"})[0],
                          "Mail order only.")
 

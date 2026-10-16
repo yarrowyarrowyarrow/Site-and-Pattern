@@ -95,9 +95,12 @@ ROLE_LABELS: dict = {
     "riparian_filter": "Riparian Filter", "ornamental": "Ornamental",
     "aquatic": "Aquatic", "medicinal": "Medicinal",
 }
+#: The owner (V3.24): few native plants are sold at garden centres or big-box
+#: stores; a handful of native-plant retailers sell almost all of them. The
+#: two top tiers say how widely a plant is sold, not where.
 AVAILABILITY_LABELS: dict = {
-    "big_box": "Big-box store", "garden_centre": "Garden centre",
-    "native_specialist": "Native nursery",
+    "big_box": "Widely sold", "garden_centre": "Often sold",
+    "native_specialist": "Native-plant nurseries",
     "seed_or_plug": "Seed / plug only", "rare": "Rare / hard to find",
 }
 
@@ -163,8 +166,8 @@ QUALITIES: tuple = (
     # Said "Stocked somewhere other than a specialist grower" until V3.14, while
     # the search kept the native nurseries' plants, as it still does.
     Quality("common_only", "Easy to find", "common_only",
-            "Sold as plants by a garden centre or a native-plant nursery: not "
-            "seed or plugs only, and not rare in the trade."),
+            "Sold as plants, usually by a native-plant nursery: not seed or "
+            "plugs only, and not rare in the trade."),
     Quality("has_image_only", "Has a photo", "has_image_only",
             "Only species this catalogue can show you."),
 )

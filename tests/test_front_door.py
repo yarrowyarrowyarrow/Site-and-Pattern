@@ -263,7 +263,8 @@ class WhatIsInFlower(unittest.TestCase):
             return rows
         return search
 
-    def test_showy_buyable_plants_are_named_first(self):
+    def test_the_most_recorded_showy_plants_are_named_first(self):
+        """V3.24, the owner: common natives, not Sneezeweed."""
         rows = [
             {"common_name": "Purple Oat Grass", "plant_type": "grass"},
             {"common_name": "Cattail", "plant_type": "aquatic"},
@@ -274,19 +275,28 @@ class WhatIsInFlower(unittest.TestCase):
             {"common_name": "Harebell", "plant_type": "wildflower",
              "availability_class": "native_specialist"},
         ]
-        summary = flowering_around(month=7, search_fn=self._fake(rows))
+        seen = {"Wild Bergamot": 40, "Harebell": 300, "Zigadene": 2}
+        summary = flowering_around(
+            month=7, search_fn=self._fake(rows),
+            seen_fn=lambda r: seen.get(r["common_name"], 0))
         self.assertEqual(summary["names"],
-                         ["Wild Bergamot", "Harebell", "Zigadene"])
+                         ["Harebell", "Wild Bergamot", "Zigadene"])
         self.assertEqual(flowering_line(summary),
-                         "In flower around Edmonton in July: Wild Bergamot, "
-                         "Harebell and Zigadene.")
+                         "In flower around Edmonton in July: Harebell, "
+                         "Wild Bergamot and 1 more.")
 
     def test_a_long_list_is_two_names_and_a_count(self):
         line = flowering_line({"month_name": "May", "place": "Edmonton",
                                "names": list("ABCDEFG")})
         self.assertEqual(line, "In flower around Edmonton in May: A, B and 5 more.")
 
-    def test_one_name_and_none(self):
+    def test_two_names_and_one_and_none(self):
+        self.assertEqual(flowering_line({"month_name": "October",
+                                         "place": "Edmonton",
+                                         "names": ["Smooth Aster",
+                                                   "Willow Aster"]}),
+                         "In flower around Edmonton in October: Smooth Aster "
+                         "and Willow Aster.")
         self.assertEqual(flowering_line({"month_name": "October",
                                          "place": "Edmonton",
                                          "names": ["Smooth Aster"]}),

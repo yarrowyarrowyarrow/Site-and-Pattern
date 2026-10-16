@@ -247,7 +247,7 @@ _EASE = {"big_box": 2, "garden_centre": 2, "native_specialist": 1,
 
 
 def ease(row) -> int:
-    """2 sold by garden centres, 1 by native nurseries or as seed, 0 rarely
+    """2 widely or often sold, 1 by native nurseries or as seed, 0 rarely
     sold at all. Unrecorded counts as 1: absent is not rare (P9)."""
     return _EASE.get(((row or {}).get("availability_class") or "").strip(), 1)
 
@@ -266,8 +266,10 @@ def hard_to_find(row) -> bool:
 #: with its underscores opened out, which is what the desktop has always shown.
 _AVAILABILITY_CLAUSE = {
     "native specialist": "usually from a native-plant nursery",
-    "garden centre": "usually stocked by garden centres",
-    "big box": "sometimes in big-box garden sections",
+    # Neither names a shop since V3.24 (the owner: few natives are sold at
+    # garden centres or big-box stores at all).
+    "garden centre": "often sold by native-plant nurseries",
+    "big box": "one of the most widely sold natives",
     "seed or plug": "usually sold as seed or plugs",
     "rare": "hard to find in the trade",
 }

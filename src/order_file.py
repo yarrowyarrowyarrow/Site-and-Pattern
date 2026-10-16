@@ -65,8 +65,8 @@ COLUMNS = (
 CHANNEL_LABELS = {
     "native_specialist": "Native plant nursery",
     "seed_or_plug": "Seed house / plug grower",
-    "garden_centre": "Garden centre",
-    "big_box": "Big-box garden department",
+    "garden_centre": "Often sold (native-plant nurseries)",
+    "big_box": "Widely sold (native-plant nurseries)",
     "rare": "Rare — specialist or collector",
     "": "Sourcing channel not recorded",
 }
