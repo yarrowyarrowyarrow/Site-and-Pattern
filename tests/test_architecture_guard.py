@@ -319,6 +319,9 @@ class TestStructuralCeilings(unittest.TestCase):
         # V3.26 (PR-1): the ranking, one table of weights and its words.
         (_SRC / "plant_priority.py", 380),             # 340 now
         (_SRC / "plant_page_sections.py", 250),        # 209 now
+        # V3.27 (OV-1): what the overview measures, and its six items.
+        (_SRC / "yard_overview.py", 400),              # 341 now
+        (_SRC / "yard_overview_items.py", 480),        # 430 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in
@@ -715,6 +718,7 @@ class TestAgentApiContract(unittest.TestCase):
         "list_polycultures": ["top_level_only"],
         "list_structures": [],
         "run_analysis": ["project"],
+        "yard_overview": ["project"],                   # OV-1 (V3.27)
         "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
         "chickadee_provision": ["project"],             # F47 (V2.13)
         "relationship_web": ["project", "kinds"],       # F5  (V2.31)

@@ -56,6 +56,7 @@ __all__ = [
     "list_polycultures",
     "list_structures",
     "run_analysis",
+    "yard_overview",
     "pull_plant_impact",
     "chickadee_provision",
     "relationship_web",
@@ -302,6 +303,24 @@ def run_analysis(project: Project) -> dict:
     return {
         "habitat_score": score.as_dict() if score is not None else None,
         "warnings": project.validate(),
+    }
+
+
+def yard_overview(project: Project) -> dict:
+    """How the yard is doing, as Design › Overview and the PDF's first page
+    say it (V3.27, OV-1): ``{"heading", "items": [{key, title, status,
+    status_word, lines, action, target}], "text"}``."""
+    _ensure_db()
+    from src import yard_overview_items as yi
+    data = project.as_dict()
+    items = yi.overview(data)
+    return {
+        "heading": yi.heading(data),
+        "items": [{"key": it.key, "title": it.title, "status": it.status,
+                   "status_word": it.status_word, "lines": list(it.lines),
+                   "action": it.action, "target": it.target}
+                  for it in items],
+        "text": yi.as_text(items),
     }
 
 

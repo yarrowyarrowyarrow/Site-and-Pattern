@@ -332,7 +332,8 @@ class TestTheFirstPageIsTheOverview(unittest.TestCase):
         out = os.path.join(self._tmp, "overview.pdf")
         export_pdf(out, project, placed, [], notes="")
         text = subprocess.run(["pdftotext", "-layout", out, "-"],
-                              capture_output=True, text=True).stdout
+                              capture_output=True, text=True,
+                              encoding="utf-8").stdout
         flat = " ".join(text.split())
         for item in yi.overview(project):
             self.assertIn(item.title, flat)
