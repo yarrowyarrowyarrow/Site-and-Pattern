@@ -145,7 +145,10 @@ def _cmd_generate(args) -> int:
         print("Building design offline (no LLM) …")
         project = generate_design_offline(site_config=site_config, goals=goals,
                                           budget=budget, fauna_ids=fauna_ids,
-                                          match_site=match_site, density=density)
+                                          match_site=match_site, density=density,
+                                          variant=args.variant,
+                                          setting=args.setting or "",
+                                          street_side=args.street_side or "")
     else:
         client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
         print(f"Generating design via {client.model} at {client.endpoint} …")
@@ -339,6 +342,17 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--density", choices=("sparse", "balanced", "full"),
                     default="balanced",
                     help="how much of the boundary to fill (default: balanced)")
+    ge.add_argument("--variant", type=int, default=0,
+                    help="with --no-llm: another plan of the same quality from "
+                         "the same answers (Try another); 0 is the usual plan")
+    ge.add_argument("--setting", choices=("front", "back"), default=None,
+                    help="with --no-llm: a front yard keeps short plants along "
+                         "the street; a back yard may add a brush pile and a "
+                         "bee hotel")
+    ge.add_argument("--street-side", default=None, dest="street_side",
+                    choices=("north", "north-east", "east", "south-east",
+                             "south", "south-west", "west", "north-west"),
+                    help="with --setting front: which side the street is on")
     ge.add_argument("--lat", type=float, default=None, help="site latitude")
     ge.add_argument("--lng", type=float, default=None, help="site longitude")
     ge.add_argument("--budget", type=float, default=None,

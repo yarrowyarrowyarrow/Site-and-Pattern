@@ -13,9 +13,10 @@ overview measures it (``yard_overview.cover``), reaches the target the person
 chose: **70%** for *Fill it now*, **40%** for *Over two or three summers* (O3,
 Y3); the advanced densities aim for 25%, 45% and 70%.
 
-What it adds: the design's own low and middle plants, most numerous first
-(the matrix of the plan, so a fill reads as more of the same rather than as new
-kinds), else the best-ranked dry plants of its pool; each at the open spot
+What it adds: the design's own low and middle plants and the best-ranked dry
+plants of its pool, the widest first (since V3.29; most numerous first before,
+which filled with 22 cm violets), so a fill reads as more of the same; each at
+the open spot
 ``OpenGround`` finds for it. It stops at the target, at the plant ceiling, or
 when the next plants find no open ground, and says which.
 
@@ -29,11 +30,20 @@ from typing import Callable, Optional
 #: The cover a plan aims for, by the answer given (O3, Y3; §4.7).
 COVER_TARGETS = {"now": 0.70, "summers": 0.40,
                  "sparse": 0.25, "balanced": 0.45, "full": 0.70}
-#: What the fill adds: not trees (too big to fill a gap), not vines (they need
-#: a host), and nothing that needs standing water.
-_NOT_FILLERS = ("tree", "vine", "aquatic")
+#: What the fill adds: the herbaceous layers only (V3.29: widest first, a fill
+#: that could take shrubs filled a yard with 4.5 m chokecherries), and nothing
+#: that needs standing water.
+FILLER_TYPES = ("wildflower", "herb", "grass", "sedge", "rush", "fern",
+                "groundcover")
 #: How many kinds take turns in the fill.
 FILLER_KINDS = 4
+#: A plant spreading less than this once grown fills too little ground to
+#: fill with while bigger ones are on offer (V3.29: 64 violets, 22 cm each,
+#: added 2 m² to a 150 m² yard and sent a plan to the plant ceiling).
+MIN_SPREAD_M = 0.4
+#: How far down the ranked pool the fill looks for a filler, so it fills
+#: with good plants and not with the widest anywhere in the catalogue.
+POOL_FILLERS = 12
 #: A spot that adds less new cover than this share of the plant's own spread
 #: is not open ground: three in a row and the fill stops.
 MIN_GAIN = 0.10
@@ -62,7 +72,7 @@ def estimate(area_m2: float, target: float) -> dict:
 
     Plants overlap as they grow, so cover rises as ``1 - exp(-n a / A)``, not
     in proportion to the count: ``n = -ln(1 - target) A / a``. On the probe
-    yard it says about 260 and 110 where the plans placed 267 and 95; in one
+    yard it says about 260 and 110 where the plans placed 248 and 92; in one
     18 m² bed about 30 and 13 where they placed 20 to 74 and 11 to 34, by
     the plants they chose. Rounded (P9)."""
     import math
@@ -97,7 +107,7 @@ def fillers(project, pool: list, get_plant: Callable) -> list:
 
     def take(row):
         if (not row or row.get("id") in seen
-                or (row.get("plant_type") or "") in _NOT_FILLERS
+                or (row.get("plant_type") or "") not in FILLER_TYPES
                 or needs_standing_water(row)):
             return
         seen.add(row["id"])
@@ -105,17 +115,25 @@ def fillers(project, pool: list, get_plant: Callable) -> list:
 
     for pid, _n in sorted(counts.items(), key=lambda kv: -kv[1]):
         take(get_plant(pid))
-    for row in pool:
+    for row in pool[:POOL_FILLERS]:
         take(row)
-    return out[:FILLER_KINDS]
+    # The widest first (V3.29): the same cover in fewer plants, and a
+    # variant's fill no longer runs into the plant ceiling on small ones.
+    from src.yard_overview import canopy_m
+    wide = sorted((r for r in out if canopy_m(r) >= MIN_SPREAD_M),
+                  key=lambda r: -canopy_m(r))
+    return (wide if len(wide) >= 2 else out)[:FILLER_KINDS]
 
 
 def fill_to_cover(project, existing_features, ground, pool: list, target: float,
-                  *, limit: int, get_plant: Optional[Callable] = None) -> dict:
+                  *, limit: int, get_plant: Optional[Callable] = None,
+                  refuse: Optional[Callable] = None) -> dict:
     """Add plants to ``project`` until its cover reaches ``target``.
 
     ``ground`` is the design's ``OpenGround``; ``pool`` the ranked catalogue
-    rows the plan chose from. Returns ``{"added", "cover", "stopped"}``."""
+    rows the plan chose from; ``refuse(lat, lng, row)`` turns a spot down (a
+    front yard's street band, for a plant too tall for it). Returns
+    ``{"added", "cover", "stopped"}``."""
     from shapely.geometry import Point
     from src import yard_overview
     if get_plant is None:
@@ -150,7 +168,7 @@ def fill_to_cover(project, existing_features, ground, pool: list, target: float,
         new = disc.intersection(area)
         gain = (new.difference(covered).area if covered is not None
                 else new.area)
-        if gain < MIN_GAIN * disc.area:
+        if gain < MIN_GAIN * disc.area or (refuse and refuse(lat, lng, row)):
             misses += 1
             if misses >= _MISSES * len(rows):
                 break

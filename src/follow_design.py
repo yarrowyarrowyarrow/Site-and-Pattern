@@ -39,6 +39,10 @@ def request_sync(main) -> None:
     share = getattr(main, "share_panel", None)
     if share is not None and hasattr(share, "design_changed"):
         share.design_changed()
+    # The line about the last plan goes with the plan (V3.29, PY-6).
+    bar = getattr(main, "plan_bar", None)
+    if bar is not None:
+        bar.follow(getattr(main, "_project", None))
     # Design › Overview, while it is on screen (V3.27, OV-2).
     live = getattr(main, "_overview_live", None)
     if live is not None:

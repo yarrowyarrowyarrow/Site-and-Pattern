@@ -335,10 +335,11 @@ class TestTheEstimate(unittest.TestCase):
         self.assertEqual(estimate(0, 0.7)["plants"], 0)
 
     def test_it_is_near_what_the_probe_yard_placed(self):
-        """267 and 95 plants were placed on the probe's 150 m² (V3.28)."""
+        """248 and 92 plants were placed on the probe's 150 m² (V3.29;
+        267 and 95 in V3.28, before the fill took the widest plants)."""
         from src.plan_cover import estimate
-        self.assertLess(abs(estimate(150, 0.70)["plants"] - 267), 267 * 0.25)
-        self.assertLess(abs(estimate(150, 0.40)["plants"] - 95), 95 * 0.25)
+        self.assertLess(abs(estimate(150, 0.70)["plants"] - 248), 248 * 0.25)
+        self.assertLess(abs(estimate(150, 0.40)["plants"] - 92), 92 * 0.25)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ class GenerateWorker(QObject):
                  match_site: bool = True,
                  density: str = "balanced",
                  cover: Optional[float] = None,
+                 setting: str = "", street_side: str = "", variant: int = 0,
                  existing_features: Optional[list] = None):
         super().__init__()
         self._site_config = site_config
@@ -40,6 +41,8 @@ class GenerateWorker(QObject):
         self._match_site = match_site
         self._density = density
         self._cover = cover
+        self._setting, self._street_side = setting, street_side
+        self._variant = variant
         self._existing_features = existing_features or []
 
     @pyqtSlot()
@@ -53,6 +56,8 @@ class GenerateWorker(QObject):
                 goals=self._goals, budget=self._budget,
                 fauna_ids=self._fauna_ids, match_site=self._match_site,
                 density=self._density, cover=self._cover,
+                setting=self._setting, street_side=self._street_side,
+                variant=self._variant,
                 existing_features=self._existing_features)
             self.finished.emit(project)
         except PermaDesignError as exc:

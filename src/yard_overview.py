@@ -293,7 +293,7 @@ def yard_parts(project: dict) -> Optional[dict]:
                       (cx + px + ux * reach, cy + py + uy * reach)])
     front = area.intersection(street).area
     return {"front": float(front), "back": float(area.area - front),
-            "assumed": not side.measured}
+            "assumed": not side.known}
 
 
 def about_m2(m2: float) -> str:

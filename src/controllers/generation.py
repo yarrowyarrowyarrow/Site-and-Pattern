@@ -34,6 +34,10 @@ class GenerationController:
         self._worker = None
         # The plan this run replaces (V3.18, PY-5): its ``plan_run``, or "".
         self._replacing = ""
+        # The last plan's answers, for Try another (V3.29, PY-6), and its
+        # notes and where it went, for About this plan (PY-8).
+        self._answers: Optional[dict] = None
+        self._about = None
 
     # ── Entry point (shim target on MainWindow) ──────────────────────────────
 
@@ -73,7 +77,10 @@ class GenerationController:
         pack = (region.at(site_config["latitude"], site_config["longitude"])
                 if has_pin else None)
         advanced = advanced_tools.is_on()
+        from src import street_band
         dlg = GenerateDesignDialog(
+            setting=site_config.get("yard_setting") or "front",
+            street_side=street_band.side_for(site_config, main._project),
             has_boundary=bool(boundary), has_pin=has_pin,
             preselected=preselected, last_plan=last_plants,
             goals=design_goals.goals_for_site(site_config),
@@ -96,27 +103,74 @@ class GenerationController:
 
         goals = dlg.selected_goals()
         # Persist the chosen goals into the project's site_config priorities —
-        # the field's intended home (and what pre-checks the dialog next time).
-        main._project.setdefault("properties", {}).setdefault(
-            "site_config", {})["priorities"] = goals
+        # the field's intended home (and what pre-checks the dialog next time),
+        # and the front-or-back answers (V3.29, PY-7): the street side the
+        # person confirmed is the one the Overview's street item reads too.
+        stored = main._project.setdefault("properties", {}).setdefault(
+            "site_config", {})
+        stored["priorities"] = goals
+        stored["yard_setting"] = dlg.setting()
+        if dlg.setting() == "front":
+            stored["street_side"] = dlg.street_side()
+        site_config = dict(stored)
         main._mark_modified()
 
         # F5: hand the generator the existing drawn layer (existing trees/
         # buildings, existing-remnant + hardscape zones, restoration fill zones)
         # so it plants into the right areas and avoids the rest. Not the plan
         # being replaced: its pond would keep the new plan out of the water.
+        self._answers = dict(
+            site_config=site_config or None, boundary=boundary, goals=goals,
+            budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
+            match_site=dlg.match_site(), density=dlg.density(),
+            cover=dlg.cover(), setting=dlg.setting(),
+            street_side=dlg.street_side() if dlg.setting() == "front" else "",
+            variant=0, where=dlg.where())
+        self._run(self._answers)
+
+    def _run(self, answers: dict) -> None:
+        """Plan from ``answers``, on the ground the last plan is not on."""
+        main = self._main
         existing_features = without_plan(
             main._project.get("features", []) or [], self._replacing)
-        if dlg.where() == "yard":
+        if answers.get("where") == "yard":
             # Anywhere in the outline: the beds stop being the only ground.
             existing_features = [f for f in existing_features
                                  if not _is_bed(f)]
-        self._start(site_config=site_config or None,
-                    boundary=boundary, goals=goals,
-                    budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
-                    match_site=dlg.match_site(), density=dlg.density(),
-                    cover=dlg.cover(),
-                    existing_features=existing_features)
+        kw = {k: v for k, v in answers.items() if k != "where"}
+        self._start(existing_features=existing_features, **kw)
+
+    def try_another(self) -> None:
+        """PY-6: the same answers, the next variant, replacing the plan just
+        made. One undo step, like any plan."""
+        if self._answers is None or self._thread is not None:
+            return
+        self._answers = dict(self._answers,
+                             variant=self._answers.get("variant", 0) + 1)
+        self._replacing, _n = last_plan(self._main._project.get("features"))
+        bar = getattr(self._main, "plan_bar", None)
+        if bar is not None:
+            bar.set_busy(True)
+        self._run(self._answers)
+
+    def show_about(self) -> None:
+        """PY-8: About this plan, beside the map; never modal."""
+        from src import advanced_tools, plan_notes
+        from src.plan_about import AboutPlan
+        main = self._main
+        props = main._project.get("properties") or {}
+        run, _n = last_plan(main._project.get("features"))
+        answers = self._answers or {}
+        summary = plan_notes.summary(
+            main._project, props.get("generation_notes") or [],
+            where=answers.get("where", ""),
+            setting=answers.get("setting", ""), plan_run=run)
+        notes = (props.get("generation_warnings") or []
+                 if advanced_tools.is_on() else [])
+        if self._about is not None:
+            self._about.close()
+        self._about = AboutPlan(summary, notes, parent=main)
+        self._about.show()
 
     @staticmethod
     def _exec(dlg) -> int:
@@ -127,7 +181,8 @@ class GenerationController:
 
     def _start(self, *, site_config, boundary, goals,
                budget=None, fauna_ids=None, match_site=True,
-               density="balanced", cover=None, existing_features=None):
+               density="balanced", cover=None, existing_features=None,
+               setting="", street_side="", variant=0):
         from src.generate_worker import GenerateWorker
         main = self._main
         if hasattr(main, "_act_generate"):
@@ -145,7 +200,8 @@ class GenerationController:
                                 boundary=boundary, goals=goals,
                                 budget=budget, fauna_ids=fauna_ids,
                                 match_site=match_site, density=density,
-                                cover=cover,
+                                cover=cover, setting=setting,
+                                street_side=street_side, variant=variant,
                                 existing_features=existing_features)
         worker.moveToThread(thread)
 
@@ -177,6 +233,9 @@ class GenerationController:
 
     def _on_failed(self, message: str):
         self._finish_ui()
+        bar = getattr(self._main, "plan_bar", None)
+        if bar is not None and bar.isVisible():
+            bar.set_busy(False)
         from src import plain_messages
         plain_messages.tell_plan_failed(self._main, message)
 
@@ -224,6 +283,9 @@ class GenerationController:
         same as MainWindow's manual placement gestures."""
         main = self._main
         plants = list(_iter_generated_plants(project))
+        bar = getattr(main, "plan_bar", None)
+        if bar is not None and not plants:
+            bar.set_busy(False)
         if not plants:
             QMessageBox.information(
                 main, "Plan my yard",
@@ -284,10 +346,16 @@ class GenerationController:
                if placed_structures else "")
             + ". Drag, delete or add to it as you like.", 5000)
 
-        warnings = (project.as_dict().get("properties", {})
-                    .get("generation_warnings", []))
-        if warnings:
-            QMessageBox.information(main, "Design notes", "\n\n".join(warnings))
+        # The notes stay with the design and wait behind About this plan
+        # (V3.29, PY-8): a modal box after every plan stood between the
+        # person and the map they had just asked for.
+        props = project.as_dict().get("properties", {})
+        stored = main._project.setdefault("properties", {})
+        for key in ("generation_warnings", "generation_notes"):
+            stored[key] = list(props.get(key) or [])
+        if bar is not None:
+            bar.show_plan(len(batch), len({pid for pid, _n in batch}),
+                          group_id)
 
 
 def _is_bed(feature) -> bool:

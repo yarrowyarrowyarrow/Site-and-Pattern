@@ -323,8 +323,12 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "yard_overview.py", 400),              # 372 now (V3.28)
         # Plan My Yard (V3.28): the fill to cover, and the dialog, which grew
         # by its four states and its advanced half.
-        (_SRC / "plan_cover.py", 250),                 # 162 now
-        (_SRC / "generate_design_dialog.py", 600),     # 497 now
+        (_SRC / "plan_cover.py", 250),                 # 180 now (V3.29)
+        (_SRC / "generate_design_dialog.py", 650),     # 556 now (V3.29)
+        # Try another, front or back, about this plan (V3.29).
+        (_SRC / "plan_notes.py", 250),                 # 173 now
+        (_SRC / "street_band.py", 300),                # 236 now
+        (_SRC / "plan_bar.py", 150),                   # 105 now
         (_SRC / "yard_overview_items.py", 480),        # 430 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet

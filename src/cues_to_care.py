@@ -152,7 +152,7 @@ def frontage_for(project: dict):
 
 def frontage_is_assumed(project: Optional[dict] = None) -> bool:
     """Whether the frontage is still a guess rather than a measurement."""
-    return not frontage_for(project or {}).measured
+    return not frontage_for(project or {}).known
 
 
 # ── The six cues ─────────────────────────────────────────────────────────────

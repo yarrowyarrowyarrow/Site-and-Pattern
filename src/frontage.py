@@ -40,6 +40,7 @@ MAX_ROAD_DISTANCE_M = 60.0
 #: Compass names for the eight sectors, used when reporting which edge it is.
 _COMPASS = ("north", "north-east", "east", "south-east",
             "south", "south-west", "west", "north-west")
+_BEARINGS = {name: 45.0 * i for i, name in enumerate(_COMPASS)}
 
 
 class Frontage(NamedTuple):
@@ -54,10 +55,19 @@ class Frontage(NamedTuple):
     measured: bool
     road_name: str = ""
     distance_m: Optional[float] = None
+    #: The person said which side the street is on (V3.29, PY-7).
+    told: bool = False
+
+    @property
+    def known(self) -> bool:
+        """Measured from roads or said by the person: not a guess."""
+        return self.measured or self.told
 
     @property
     def note(self) -> str:
         """The phrase the caller puts in the sentence it affects."""
+        if self.told:
+            return f"the {self.side} side, as you said"
         if not self.measured:
             return ("assuming the street is on the south side, as the "
                     "sidewalk view does")
@@ -177,6 +187,13 @@ def frontage_for_project(project: dict, roads: Optional[list] = None
     fetched once and kept with the design, exactly like the building footprints
     and the site's climate readings.
     """
+    told = (((project or {}).get("properties") or {}).get("site_config")
+            or {}).get("street_side") or ""
+    if told in _BEARINGS:
+        # The person's answer wins over the measured and the assumed
+        # (V3.29, PY-7): they know where their street is.
+        return Frontage(bearing=_BEARINGS[told], side=told, measured=False,
+                        told=True)
     ring = _boundary_ring(project)
     if roads is None:
         roads = roads_in_project(project)

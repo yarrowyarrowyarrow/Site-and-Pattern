@@ -269,6 +269,9 @@ class MainWindow(QMainWindow):
         # "This design uses advanced tools." (V3.21, MD-3), simple mode only.
         from src import advanced_tools_flow
         left_layout.addWidget(advanced_tools_flow.make_bar(self))
+        # After a plan lands: Try another, About this plan, Undo (V3.29).
+        from src import plan_bar
+        left_layout.addWidget(plan_bar.make(self))
         left_layout.addWidget(self.map_widget, 1)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)

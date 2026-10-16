@@ -7,7 +7,7 @@ with a button that does it: no pin, nothing outlined, or a pin outside the two
 provinces (:func:`state_for`). Ready, it asks four plain questions: where the
 plants go (the beds, when there are any, or the yard outline), how full (by
 cover once grown: *Fill it now*, 70%, or *Over two or three summers*, 40%;
-:mod:`src.plan_cover`), what it must do (the must-haves, worded as the data
+:mod:`src.plan_cover`), front or back yard (V3.29, PY-7), what it must do (the must-haves, worded as the data
 supports them) and an optional budget. The goals a beginner should not have to
 pick (native here, food for pollinators) are applied without a box. With the
 Advanced tools on it adds the rest: the densities as cover targets, the other
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QApplication, QButtonGroup, QCheckBox, QDialog, QDialogButtonBox, QFrame,
+    QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
     QPushButton, QRadioButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
@@ -82,6 +82,18 @@ FULLNESS = (("now", "balanced"), ("summers", "balanced"))
 ADVANCED_FULLNESS = (("sparse", "sparse"), ("balanced", "balanced"))
 
 
+#: Front or back (§4.3, Y2): ``(key, label, what it means)``.
+YARDS = (
+    ("front", "Front yard",
+     "Seen from the street: a neat edge, and shorter plants along it."),
+    ("back", "Back yard",
+     "Room for a wilder look, a brush pile and a bee hotel."),
+)
+#: The street sides, in the compass order ``frontage`` uses.
+STREET_SIDES = ("north", "north-east", "east", "south-east", "south",
+                "south-west", "west", "north-west")
+
+
 def state_for(*, has_pin: bool, has_area: bool, outside: bool) -> str:
     """Which of §4.2's states the design is in."""
     if not has_pin:
@@ -136,6 +148,7 @@ class GenerateDesignDialog(QDialog):
                  coverage_warns: bool = False,
                  areas: dict | None = None, place: str = "",
                  advanced: bool = False,
+                 setting: str = "front", street_side: str = "south",
                  parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle(TITLE)
@@ -152,6 +165,8 @@ class GenerateDesignDialog(QDialog):
         self._where: dict = {}
         self._full: dict = {}
         self._musts: dict = {}
+        self._yard: dict = {}
+        self._street: QComboBox | None = None
         self._more: dict = {}
         self.next_step = ""
         self.state = state_for(
@@ -180,6 +195,7 @@ class GenerateDesignDialog(QDialog):
                 where.setStyleSheet("color: #ffcc80;")
             layout.addWidget(where)
         self._build_where(layout, has_boundary)
+        self._build_yard(layout, setting, street_side)
         self._build_fullness(layout)
         self._build_musts(layout, place)
         self._build_budget(layout)
@@ -286,6 +302,39 @@ class GenerateDesignDialog(QDialog):
             only = next(iter(self._where.values()))
             only.setEnabled(False)
             only.setToolTip("Draw a bed to plant only part of your yard.")
+        layout.addWidget(box)
+
+    def _build_yard(self, layout, setting: str, street_side: str) -> None:
+        """Front or back (PY-7, Y2): what a beginner can answer, where a
+        named style asks for a vocabulary they do not have yet."""
+        box = QGroupBox("Is this a front yard or a back yard?")
+        col = QVBoxLayout(box)
+        group = QButtonGroup(self)
+        for key, label, words in YARDS:
+            r = QRadioButton(label)
+            group.addButton(r)
+            col.addWidget(r)
+            note = QLabel(words)
+            note.setWordWrap(True)
+            note.setIndent(24)
+            col.addWidget(note)
+            self._yard[key] = r
+            if key == "front":
+                row = QHBoxLayout()
+                row.setContentsMargins(24, 0, 0, 0)
+                row.addWidget(QLabel("The street is to the"))
+                self._street = QComboBox()
+                self._street.setAccessibleName("Which side the street is on")
+                for side in STREET_SIDES:
+                    self._street.addItem(side[0].upper() + side[1:], side)
+                i = self._street.findData(street_side)
+                self._street.setCurrentIndex(max(0, i))
+                row.addWidget(self._street)
+                row.addStretch(1)
+                col.addLayout(row)
+                r.toggled.connect(self._street.setEnabled)
+        self._yard.get(setting, self._yard["front"]).setChecked(True)
+        self._street.setEnabled(self._yard["front"].isChecked())
         layout.addWidget(box)
 
     def _build_fullness(self, layout) -> None:
@@ -429,6 +478,16 @@ class GenerateDesignDialog(QDialog):
             if r.isChecked():
                 return key
         return "yard"
+
+    def setting(self) -> str:
+        """``"front"`` or ``"back"``."""
+        return "back" if self._yard.get("back") and \
+            self._yard["back"].isChecked() else "front"
+
+    def street_side(self) -> str:
+        """The street side the person confirmed: one of :data:`STREET_SIDES`."""
+        return (self._street.currentData() if self._street is not None
+                else "south") or "south"
 
     def area_m2(self) -> float:
         return float(self._areas.get(

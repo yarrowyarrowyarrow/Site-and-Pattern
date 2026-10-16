@@ -39,7 +39,9 @@ _M_PER_DEG = 111320.0
 # Design-placed structures that should exclude planting on top (the water-
 # management group; mirrors zoning.WET_STRUCTURE_IDS but kept local so exclusion
 # has no import cycle and can diverge if needed).
-EXCLUDING_STRUCTURE_IDS = frozenset({"pond", "swale", "rain_garden", "rain_barrel"})
+# A brush pile too since V3.29: a back-yard plan seats one and plants around it.
+EXCLUDING_STRUCTURE_IDS = frozenset({"pond", "swale", "rain_garden", "rain_barrel",
+                                     "brush_pile"})
 
 
 def _struct_id_of(props: dict) -> str:

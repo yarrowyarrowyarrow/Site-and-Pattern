@@ -319,7 +319,7 @@ def item_street(d: Design) -> Item:
     text = f"Most useful next: {step}"
     if nxt.key == "mown_edge":
         side = cues_to_care.frontage_for(d.project)
-        if not side.measured:
+        if not side.known:
             text += f" (taken to be the {side.side} side)"
     lines.append(text + ".")
     if rule:
