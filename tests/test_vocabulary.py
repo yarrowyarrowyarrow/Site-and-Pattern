@@ -71,7 +71,6 @@ KNOWN = {
     ('occurrence_points.py', 'project'): 2,
     ('onboarding.py', 'boundary'): 4,
     ('onboarding.py', 'forb'): 1,
-    ('pattern_language.py', 'Alberta native'): 1,
     ('plant_filters.py', 'canopy'): 1,
     ('plant_filters.py', 'early successional'): 1,
     ('plant_filters.py', 'keystone'): 1,
