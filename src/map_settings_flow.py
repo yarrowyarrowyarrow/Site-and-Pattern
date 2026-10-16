@@ -55,10 +55,18 @@ def open_on_region(main) -> bool:
     sc = (project.get("properties") or {}).get("site_config") or {}
     if project.get("features") or sc.get("latitude") is not None:
         return False
-    from src import region                                   # noqa: PLC0415
-    view = region.default().map
-    lat, lng = view["centre"]
-    main.map_widget.set_view(lat, lng, view.get("zoom", 12))
+    set_view = getattr(main.map_widget, "set_view", None)
+    if set_view is None:
+        return False
+    # Called from the page's ready signal, where an exception ends the
+    # process (PyQt6): the view is a nicety, never worth that.
+    try:
+        from src import region                               # noqa: PLC0415
+        view = region.default().map
+        lat, lng = view["centre"]
+        set_view(lat, lng, view.get("zoom", 12))
+    except Exception:                                      # noqa: BLE001
+        return False
     return True
 
 
