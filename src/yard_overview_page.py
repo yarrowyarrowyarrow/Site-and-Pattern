@@ -121,6 +121,12 @@ class OverviewPage(QScrollArea):
             strip.setAccessibleName("Kinds in flower each month: " + ", ".join(
                 f"{m} {n}" for m, n in item.strip))
             col.addWidget(strip)
+        # The link and the button each get a line of their own: side by
+        # side, the longest pair was wider than the panel in CI's font.
+        if item.more:
+            more_row = QHBoxLayout()
+            more_row.addStretch()
+            col.addLayout(more_row)
         row = QHBoxLayout()
         row.addStretch()
         if item.more:
@@ -132,7 +138,7 @@ class OverviewPage(QScrollArea):
             link.setAccessibleName(f"{words}: more detail")
             link.clicked.connect(lambda _c=False, t=target:
                                  self.action_requested.emit(t))
-            row.addWidget(link)
+            more_row.addWidget(link)
         if item.action:
             button = QPushButton(item.action)
             button.setObjectName("overviewAction")
@@ -142,6 +148,6 @@ class OverviewPage(QScrollArea):
                                    self.action_requested.emit(t))
             row.addWidget(button)
             self.buttons[item.key] = button
-        if item.more or item.action:
+        if item.action:
             col.addLayout(row)
         return card

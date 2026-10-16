@@ -99,6 +99,10 @@ class TheOverviewPage(unittest.TestCase):
         self.assertEqual(sorted(page.cards), sorted(
             ["food", "flowers", "native", "cover", "street", "cost"]))
         self.assertEqual(page.horizontalScrollBar().maximum(), 0)
+        # Fonts differ by machine (CI's DejaVu is wider): no card may need
+        # more than the panel's narrowest width, 320 px less the margins.
+        for key, card in page.cards.items():
+            self.assertLessEqual(card.minimumSizeHint().width(), 300, key)
         for card in page.cards.values():
             self.assertIn(", ", card.accessibleName())
 
