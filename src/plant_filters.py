@@ -138,6 +138,11 @@ FACETS: tuple = (
           "what you see is a seed head, not a bloom."),
 )
 
+def _home():
+    from src import region                                   # noqa: PLC0415
+    return region.default()
+
+
 QUALITIES: tuple = (
     # Read from the province list VASCAN supplies (V2.80), not from the
     # native_to_alberta flag: five species still carry the seed's "1?" there
@@ -147,9 +152,11 @@ QUALITIES: tuple = (
     Quality("native_only", "Native", "native_province",
             "Native to Alberta, as VASCAN records it.", "AB"),
     # F220 (V3.12), the owner's "Edmonton specific native plants": collected
-    # near the city, not only recorded somewhere in the province.
-    Quality("edmonton_native", "Edmonton native", "native_near",
-            _around_tip(), "edmonton"),
+    # near the city, not only recorded somewhere in the province. Named and
+    # keyed by the default region pack since V3.24 (ED-3): "Calgary native"
+    # in a Calgary edition, with no code.
+    Quality("local_native", f"{_home().short} native", "native_near",
+            _around_tip(_home().key), _home().key),
     Quality("perennial_only", "Perennial", "perennial_only",
             "Comes back every year."),
     Quality("supports_specialist", "Feeds a specialist", "supports_specialist",
@@ -219,7 +226,10 @@ def criteria_to_kwargs(criteria: Optional[dict], province: str = "") -> dict:
     Saskatchewan's. Empty (no pin, or a pin outside the catalogue's provinces)
     keeps Alberta, as before.
     """
-    criteria = criteria or {}
+    criteria = dict(criteria or {})
+    # Criteria said "edmonton_native" until V3.24 (ED-3).
+    if criteria.pop("edmonton_native", None):
+        criteria["local_native"] = True
     kwargs: dict = {}
     query = (criteria.get("query") or "").strip()
     if query:

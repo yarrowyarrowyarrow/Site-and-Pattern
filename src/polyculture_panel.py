@@ -1195,17 +1195,23 @@ class PolyculturePanel(QWidget):
 
         # F220 (V3.12), the owner's ask: communities "containing non native (to
         # Edmonton) plants not showing up". Remembered, like the sort.
+        # Named by the region pack since V3.24 (ED-3). The setting stores
+        # "1" or "", and reads a V3.12 "edmonton" as on.
+        from src import region
         from src.native_here import around_tip
+        self._home = region.default()
         local_row = QHBoxLayout()
         local_row.setSpacing(6)
-        self._edmonton_only = QCheckBox("Edmonton natives only")
-        self._edmonton_only.setChecked(QSettings().value(
-            "plant_communities/native_near", "", type=str) == "edmonton")
+        label = f"{self._home.short} natives only"
+        self._edmonton_only = QCheckBox(label)
+        self._edmonton_only.setChecked(bool(QSettings().value(
+            "plant_communities/native_near", "", type=str)))
         self._edmonton_only.setToolTip(
-            "Only communities whose every plant is native around Edmonton. One "
-            "plant from elsewhere and the community is hidden; its page says "
-            "which.\n\n" + around_tip())
-        self._edmonton_only.setAccessibleName("Edmonton natives only")
+            f"Only communities whose every plant is native around "
+            f"{self._home.short}. One plant from elsewhere and the community "
+            "is hidden; its page says which.\n\n"
+            + around_tip(self._home.key))
+        self._edmonton_only.setAccessibleName(label)
         self._edmonton_only.toggled.connect(self._on_edmonton_only)
         local_row.addWidget(self._edmonton_only)
         self._local_hidden = QLabel("")
@@ -1831,7 +1837,8 @@ class PolyculturePanel(QWidget):
                 index, search=search, facets=facet_filters, regions=regions)
                 if cid not in passed) if native_near else 0)
             self._local_hidden.setText(
-                f"{hidden} hidden: each has a plant not native around Edmonton"
+                f"{hidden} hidden: each has a plant not native around "
+                f"{self._home.short}"
                 if hidden else "")
 
         filtering = bool(search or facet_filters or native_near or regions)
@@ -1877,13 +1884,16 @@ class PolyculturePanel(QWidget):
             group_node.setExpanded(True)
 
     def _native_near(self) -> str:
-        """``"edmonton"`` while "Edmonton natives only" is ticked, else ``""``."""
+        """The region's key while its "natives only" switch is ticked, else
+        ``""``."""
         box = getattr(self, "_edmonton_only", None)
-        return "edmonton" if box is not None and box.isChecked() else ""
+        home = getattr(self, "_home", None)
+        return home.key if (box is not None and box.isChecked()
+                            and home is not None) else ""
 
     def _on_edmonton_only(self, checked: bool):
         QSettings().setValue("plant_communities/native_near",
-                             "edmonton" if checked else "")
+                             "1" if checked else "")
         self._refresh_polyculture_list()
 
     def _active_facet_filters(self) -> dict:

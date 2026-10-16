@@ -330,11 +330,14 @@ def two_lines(name: str, metrics, width: int, sep: str = " ") -> str:
                                              width)
 
 
-def around_line(members: list, place: str = "edmonton") -> str:
+def around_line(members: list, place: str = "") -> str:
     """Whether a community's plants are native around ``place`` (F220): one
     sentence, naming each species that is not, once. ``""`` with no members or
     no list for the place."""
     from src.native_here import native_names, places
+    if not place:
+        from src import region
+        place = region.default().key
     if not members or place not in places():
         return ""
     local, short = native_names(place), places()[place]["short"]

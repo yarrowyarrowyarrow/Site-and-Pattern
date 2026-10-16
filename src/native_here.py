@@ -32,8 +32,15 @@ from src.local_flora import MIN_COLLECTIONS, is_native, parse_document
 #: The provinces a pin can be in, by the code VASCAN's lists use (F200).
 PROVINCE_NAMES: dict = {"AB": "Alberta", "SK": "Saskatchewan"}
 
-#: The only place with a list so far, and the one every caller means by default.
-EDMONTON = "edmonton"
+def _default_place() -> str:
+    from src import region                                   # noqa: PLC0415
+    return region.default().key
+
+
+#: The default region pack's place (``data/edition.json``), which every caller
+#: means by default. Named for the one place with a list so far; read from the
+#: pack since V3.24 (ED-2).
+EDMONTON = _default_place()
 
 
 def native_in(plant: dict, province: str = "AB") -> bool:

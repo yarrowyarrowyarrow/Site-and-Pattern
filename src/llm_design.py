@@ -302,9 +302,11 @@ def _site_filters(site_config: Optional[dict]) -> dict:
     return out
 
 
-def _with_local(site_filters: dict, goals) -> dict:
-    """``site_filters`` plus the Edmonton list when its goal is ticked (F220,
-    V3.12).
+def _with_local(site_filters: dict, goals, site_config=None) -> dict:
+    """``site_filters`` plus the local list when its goal is ticked (F220,
+    V3.12): the pin's pack's list since V3.24 (ED-3, EDF-3), and none for a
+    pin outside every pack, where Edmonton's list had applied wherever the
+    pin was.
 
     Folded in once, here, because ``site_filters`` already reaches every step
     that chooses a plant: the pool, the AI's palette, the communities and the
@@ -313,7 +315,7 @@ def _with_local(site_filters: dict, goals) -> dict:
     April bloom by repair.
     """
     from src.design_goals import filters_for_goals
-    near = (filters_for_goals(goals) or {}).get("native_near")
+    near = (filters_for_goals(goals, site_config) or {}).get("native_near")
     return {**(site_filters or {}), "native_near": near} if near else (
         site_filters or {})
 
@@ -1113,7 +1115,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     fills = fill_regions(_ctx_dict)
 
     structures = list_structures()
-    site_filters = _with_local(_site_filters(site_config), goals)
+    site_filters = _with_local(_site_filters(site_config), goals, site_config)
     area_m2 = _boundary_area_m2(boundary)
     communities = _communities_for_site(list_polycultures(), site_filters,
                                         area_m2)
@@ -1134,9 +1136,10 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     from src.design_goals import filters_for_goals, hints_for_goals
     # Bind plant selection to the measured site (zone/ecoregion/soil pH) on top
     # of the goal filters, so even a vague LLM query stays site-appropriate.
-    goal_filters = {**site_filters, **(filters_for_goals(goals) or {})}
+    goal_filters = {**site_filters,
+                    **(filters_for_goals(goals, site_config) or {})}
 
-    hints = hints_for_goals(goals)
+    hints = hints_for_goals(goals, site_config)
     if budget and budget > 0:
         hints = hints + [
             f"The total plant budget is about ${budget:.0f} CAD — favour "
@@ -1268,6 +1271,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, scoped, center, boundary,
+                         site_config=site_config,
                          spot=ground.spot_for, pond=ponds)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
                           spot=ground.spot_for, pond=ponds)
@@ -2640,7 +2644,7 @@ def _select_offline_communities(communities: list[dict], goals, site_config,
     if not communities:
         return []
     from src.design_goals import community_name_hints
-    hints = [h.lower() for h in (community_name_hints(goals) or []) if h]
+    hints = [h.lower() for h in (community_name_hints(goals, site_config) or []) if h]
     eco_words = _ecoregion_words((site_config or {}).get("ecoregion_key"))
     try:
         from src.db.polycultures import hard_to_find_share
@@ -2877,7 +2881,7 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
 
 def _apply_goal_feedback(project, goals, query_plants,
                          center: tuple[float, float], boundary=None, *,
-                         spot=None, pond=None) -> None:
+                         spot=None, pond=None, site_config=None) -> None:
     """Record goal-related warnings on the project and, if a *backed* goal ends
     up with no representation among the placed plants, drop in one satisfying
     plant (at ``spot(row)``, open ground by default, and never one that needs
@@ -2895,17 +2899,18 @@ def _apply_goal_feedback(project, goals, query_plants,
     from src.zoning import needs_standing_water
 
     warnings: list = []
-    unbacked = unbacked_goals(goals)
+    unbacked = unbacked_goals(goals, site_config)
     if unbacked:
-        labels = [g.label for g in (get_goal(k) for k in unbacked) if g]
+        labels = [g.label for g in (get_goal(k, site_config) for k in unbacked)
+                  if g]
         warnings.append(
             "Applied as guidance to the AI only (no plant data backs these "
             "yet, so they can't be guaranteed): " + ", ".join(labels) + "."
         )
     # Advisories for goals honoured by a denylist (e.g. the safety goals).
-    warnings.extend(caveats_for_goals(goals))
+    warnings.extend(caveats_for_goals(goals, site_config))
 
-    goal_filters = filters_for_goals(goals)
+    goal_filters = filters_for_goals(goals, site_config)
     if goal_filters:
         try:
             satisfying = query_plants(**goal_filters)
@@ -2999,14 +3004,14 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
 
     # Bind selection to the measured site (zone/ecoregion/soil pH) on top of the
     # goal filters so the offline design is site-appropriate too (V1.48).
-    site_filters = _with_local(_site_filters(site_config), goals)
+    site_filters = _with_local(_site_filters(site_config), goals, site_config)
     # The native requirement no longer depends on whether a goal was ticked
     # (V2.85, F154): `filters_for_goals(goals) or {"native_only": True}` meant
     # any goal with a filter of its own -- pollinators, pet-safe -- dropped it.
     # It is the yard's province now, or the Alberta flag with no province.
     goal_filters = _without_superseded_native(
         {**_native_default(site_filters), **site_filters,
-         **(filters_for_goals(goals) or {})})
+         **(filters_for_goals(goals, site_config) or {})})
     try:
         plants = query_plants(**goal_filters)
     except Exception:  # noqa: BLE001
@@ -3137,6 +3142,7 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, scoped, center, boundary,
+                         site_config=site_config,
                          spot=ground.spot_for, pond=ponds)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
                           spot=ground.spot_for, pond=ponds)

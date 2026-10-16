@@ -28,6 +28,7 @@ class GenerateDesignDialog(QDialog):
                  preselected: list | None = None,
                  fauna_options: list | None = None,
                  last_plan: int = 0,
+                 goals: list | None = None,
                  parent: QWidget | None = None):
         super().__init__(parent)
         self._add_check: QCheckBox | None = None
@@ -62,7 +63,9 @@ class GenerateDesignDialog(QDialog):
         # V3.05 surface audit): it read "(guidance only — needs data)" and
         # could not be kept. The generator still understands one, so a
         # caller that names it keeps working.
-        for g in (g for g in GOALS if g.backed):
+        # The design's goals (V3.24): the local one is its pin's region's,
+        # and is not offered outside every region (design_goals.goals_for_site).
+        for g in (g for g in (goals or GOALS) if g.backed):
             cb = QCheckBox(g.label)
             cb.setChecked(g.key in preselected)
             if g.caveat:

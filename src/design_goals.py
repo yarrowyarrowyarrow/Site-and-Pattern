@@ -61,24 +61,8 @@ GOALS: list[Goal] = [
         filters={"native_only": True},
         prompt_hint="Use only species native to Alberta.",
     ),
-    # F220 (V3.12): the owner's "Edmonton specific native plants". Narrower
-    # than the province, backed by data/local_flora.json; the generator applies
-    # it to the plant pool, the communities and the critic's repairs alike.
-    Goal(
-        key="edmonton_native",
-        label="Edmonton natives only",
-        filters={"native_near": "edmonton"},
-        prompt_hint=("Use only species native around Edmonton, which leaves "
-                     "out the mountain and dry-prairie plants native elsewhere "
-                     "in Alberta."),
-        # The seeded Edmonton communities (F221) lead the offline pick.
-        community_hints=("Edmonton",),
-        caveat=("Edmonton natives only keeps plants collected at least three "
-                "times within 50 km of downtown, or confirmed on review. A "
-                "species the herbarium record is too thin to settle is left "
-                "out until it is reviewed, not because it is known to be "
-                "foreign here."),
-    ),
+    # The region's own list (F220; from the pack since V3.24, ED-3): placed
+    # here by _with_local_goal below, so the dialog keeps its order.
     Goal(
         key="pollinator",
         label="Pollinator habitat",
@@ -171,7 +155,88 @@ GOALS: list[Goal] = [
     ),
 ]
 
+#: The goal that keeps plants native around the region's place (F220). Its
+#: key was ``edmonton_native`` until V3.24 (ED-3): a saved design's priorities
+#: still say that, and are read as this.
+LOCAL_KEY = "local_native"
+_OLD_KEYS = {"edmonton_native": LOCAL_KEY}
+
+
+def local_goal(r) -> Goal:
+    """The local goal for a region pack: "Edmonton natives only" for the
+    Edmonton pack, "Calgary natives only" for a Calgary one, with no code."""
+    from src.native_here import PROVINCE_NAMES               # noqa: PLC0415
+    prov = PROVINCE_NAMES.get(r.province, r.province)
+    km = f"{r.radius_km:g}"
+    return Goal(
+        key=LOCAL_KEY,
+        label=f"{r.short} natives only",
+        filters={"native_near": r.key},
+        prompt_hint=(f"Use only species native around {r.short}, which leaves "
+                     f"out the plants native elsewhere in {prov} but not "
+                     "here."),
+        # The pack's seeded communities lead the offline pick.
+        community_hints=tuple(h for h in [(r.communities or {}).get("hint")]
+                              if h),
+        caveat=(f"{r.short} natives only keeps plants collected at least "
+                f"{r.min_collections} times within {km} km of "
+                f"{r.short}, or confirmed on review. A species the herbarium "
+                "record is too thin to settle is left out until it is "
+                "reviewed, not because it is known to be foreign here."),
+    )
+
+
+def _region_for(site_config):
+    """The pack a design's goals are read against: the pin's, the default
+    with no pin, ``None`` for a pin outside every pack (the local goal is
+    then not offered)."""
+    from src import region                                   # noqa: PLC0415
+    sc = site_config or {}
+    if sc.get("latitude") is None or sc.get("longitude") is None:
+        return region.default()
+    return region.at(sc["latitude"], sc["longitude"])
+
+
+def _with_local_goal(goals: list, r) -> list:
+    """``goals`` with the local goal second, after "Native only"."""
+    out = [g for g in goals if g.key != LOCAL_KEY]
+    if r is not None:
+        out.insert(1, local_goal(r))
+    return out
+
+
+def _default_region():
+    from src import region                                   # noqa: PLC0415
+    return region.default()
+
+
+GOALS[:] = _with_local_goal(GOALS, _default_region())
+
 _BY_KEY: dict[str, Goal] = {g.key: g for g in GOALS}
+
+
+def normalize(keys) -> list:
+    """Stored goal keys read as today's: ``edmonton_native`` is the local goal."""
+    out = []
+    for k in keys or ():
+        k = _OLD_KEYS.get(k, k)
+        if k not in out:
+            out.append(k)
+    return out
+
+
+def goals_for_site(site_config=None) -> list:
+    """The goals a design can choose from: the local goal is its pin's pack's,
+    and is left out for a pin outside every pack (§4.4)."""
+    return _with_local_goal(GOALS, _region_for(site_config))
+
+
+def _lookup(key, site_config=None):
+    key = _OLD_KEYS.get(key, key)
+    if key == LOCAL_KEY:
+        r = _region_for(site_config)
+        return local_goal(r) if r is not None else None
+    return _BY_KEY.get(key)
 
 
 def goal_keys() -> list[str]:
@@ -179,12 +244,12 @@ def goal_keys() -> list[str]:
     return [g.key for g in GOALS]
 
 
-def get_goal(key: str) -> Goal | None:
+def get_goal(key: str, site_config=None) -> Goal | None:
     """Return the :class:`Goal` for ``key``, or ``None`` if unknown."""
-    return _BY_KEY.get(key)
+    return _lookup(key, site_config)
 
 
-def filters_for_goals(keys) -> dict:
+def filters_for_goals(keys, site_config=None) -> dict:
     """Merge the hard ``search_plants`` filters for ``keys``.
 
     Filters are additive (they narrow the query with AND), so on the rare key
@@ -193,7 +258,7 @@ def filters_for_goals(keys) -> dict:
     """
     merged: dict = {}
     for key in keys or ():
-        goal = _BY_KEY.get(key)
+        goal = _lookup(key, site_config)
         if goal is None:
             continue
         for fk, fv in goal.filters.items():
@@ -202,14 +267,14 @@ def filters_for_goals(keys) -> dict:
     return merged
 
 
-def hints_for_goals(keys) -> list[str]:
+def hints_for_goals(keys, site_config=None) -> list[str]:
     """Ordered, de-duplicated ``prompt_hint`` strings for ``keys`` (both backed
     and hint-only goals contribute — hints help the model even when a hard
     filter also applies). Unknown keys are skipped."""
     out: list[str] = []
     seen: set[str] = set()
     for key in keys or ():
-        goal = _BY_KEY.get(key)
+        goal = _lookup(key, site_config)
         if goal is None or not goal.prompt_hint:
             continue
         if goal.prompt_hint not in seen:
@@ -218,13 +283,13 @@ def hints_for_goals(keys) -> list[str]:
     return out
 
 
-def community_name_hints(keys) -> list[str]:
+def community_name_hints(keys, site_config=None) -> list[str]:
     """Ordered, de-duplicated community-name substrings to match against seeded
     plant communities for ``keys``. Unknown keys are skipped."""
     out: list[str] = []
     seen: set[str] = set()
     for key in keys or ():
-        goal = _BY_KEY.get(key)
+        goal = _lookup(key, site_config)
         if goal is None:
             continue
         for hint in goal.community_hints:
@@ -234,14 +299,14 @@ def community_name_hints(keys) -> list[str]:
     return out
 
 
-def caveats_for_goals(keys) -> list[str]:
+def caveats_for_goals(keys, site_config=None) -> list[str]:
     """Ordered, de-duplicated caveat strings for ``keys`` — advisories for
     goals honoured by a denylist (e.g. the safety goals) rather than a positive
     guarantee. Unknown keys are skipped."""
     out: list[str] = []
     seen: set[str] = set()
     for key in keys or ():
-        goal = _BY_KEY.get(key)
+        goal = _lookup(key, site_config)
         if goal is None or not goal.caveat:
             continue
         if goal.caveat not in seen:
@@ -250,11 +315,11 @@ def caveats_for_goals(keys) -> list[str]:
     return out
 
 
-def unbacked_goals(keys) -> list[str]:
+def unbacked_goals(keys, site_config=None) -> list[str]:
     """Goal keys among ``keys`` that have no hard filter this release (so the
     generator can warn that they were applied as guidance only). Unknown keys
     are skipped."""
     return [
         key for key in (keys or ())
-        if (g := _BY_KEY.get(key)) is not None and not g.backed
+        if (g := _lookup(key, site_config)) is not None and not g.backed
     ]

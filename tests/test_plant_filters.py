@@ -46,10 +46,10 @@ class TestTheVocabulary(unittest.TestCase):
         """F220: the quality reaches search_plants as native_near, alongside
         the pin's province rather than instead of it."""
         kwargs = pf.criteria_to_kwargs(
-            {"edmonton_native": True, "native_only": True}, "AB")
+            {"local_native": True, "native_only": True}, "AB")
         self.assertEqual(kwargs, {"native_province": "AB",
                                   "native_near": "edmonton"})
-        self.assertIn("Edmonton native", pf.summary({"edmonton_native": True}))
+        self.assertIn("Edmonton native", pf.summary({"local_native": True}))
 
     def test_each_facet_says_how_its_values_combine(self):
         """Role is all-of in the query (one EXISTS per tag); everything else

@@ -33,7 +33,7 @@ from src.plant_list_view import _colour_icon, _type_icon
 
 #: Shown before "More filters", by facet or quality key (``plant_filters``).
 EVERYDAY = ("type", "sun", "water", "availability",
-            "native_only", "edmonton_native", "common_only", "pet_safe_only")
+            "native_only", "local_native", "common_only", "pet_safe_only")
 
 
 class FilterArea(QWidget):

@@ -52,7 +52,9 @@ class GenerationController:
         # only when the project has none of its own, so a user who
         # deliberately cleared every goal keeps that choice.
         from src.onboarding import FIRST_RUN_GOALS
-        preselected = site_config.get("priorities") or list(FIRST_RUN_GOALS)
+        from src import design_goals
+        preselected = design_goals.normalize(
+            site_config.get("priorities") or list(FIRST_RUN_GOALS))
 
         # A second run replaced nothing until V3.18: the generator is
         # deterministic, so every plant landed on its own twin (R2).
@@ -60,6 +62,7 @@ class GenerationController:
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
             preselected=preselected, last_plan=last_plants,
+            goals=design_goals.goals_for_site(site_config),
             fauna_options=self._fauna_options(), parent=main)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
