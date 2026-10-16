@@ -221,8 +221,14 @@ class TestSeededSourcingData(unittest.TestCase):
         common = {r["common_name"] for r in search_plants(common_only=True)}
         rare = {r["common_name"] for r in search_plants()
                 if r.get("availability_class") in ("rare", "seed_or_plug")}
-        if rare:
-            self.assertTrue(common.isdisjoint(rare))
+        # V3.26: a nursery's plant list outranks the catalogue's tier, so a
+        # plant ranked rare passes only when a local list carries it.
+        from src import local_stock
+        by_name = {r["common_name"]: r for r in search_plants()}
+        for name in common & rare:
+            self.assertEqual(
+                local_stock.tier(by_name[name]["scientific_name"]),
+                "available", name)
         # native specialists still count as "common enough"
         self.assertTrue(common)
 
