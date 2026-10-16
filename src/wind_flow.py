@@ -43,6 +43,11 @@ def _fallback_rose(lat: float, lng: float):
         return None
     best = min(entries, key=lambda e: _dist2((lat, lng),
                                              tuple(e.get("centroid") or (0, 0))))
+    # Only within reach of the pin (V3.25, ED-6): a Toronto pin had been
+    # given a prairie wind.
+    from src.property_data import fallback_within
+    if not fallback_within(lat, lng, best.get("centroid") or (0, 0)):
+        return None
     deg = float(best.get("prevailing_deg", 270))
     spd = float(best.get("mean_speed_kmh", 14))
     # 10 hours/month at the regional prevailing dir/speed → a real rose shape.

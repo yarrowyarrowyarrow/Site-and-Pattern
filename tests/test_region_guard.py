@@ -57,8 +57,7 @@ KNOWN = {
     ('coordinates', 'solar.py'): 1,       # frost-date presets: ED-6
     ('place', 'climate.py'): 1,           # the normals' station: ED-6
     ('place', 'native_here.py'): 6,       # the EDMONTON constant's name
-    ('place', 'site_panel.py'): 6,        # address search and climate: ED-6/7
-    ('place', 'water_budget.py'): 1,      # "Edmonton normal" rainfall: ED-6
+    ('place', 'site_panel.py'): 2,        # the City's LiDAR dataset, named
 }
 
 

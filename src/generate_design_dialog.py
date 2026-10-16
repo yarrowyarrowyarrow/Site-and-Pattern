@@ -29,6 +29,8 @@ class GenerateDesignDialog(QDialog):
                  fauna_options: list | None = None,
                  last_plan: int = 0,
                  goals: list | None = None,
+                 coverage: str = "", outside: bool = False,
+                 coverage_warns: bool = False,
                  parent: QWidget | None = None):
         super().__init__(parent)
         self._add_check: QCheckBox | None = None
@@ -55,6 +57,15 @@ class GenerateDesignDialog(QDialog):
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
+        # Where the pin is (V3.25, ED-8): the region's name, or how far
+        # outside it and what that changes (src/region.message).
+        if coverage:
+            where = QLabel(coverage)
+            where.setWordWrap(True)
+            where.setObjectName("plan_coverage")
+            if coverage_warns:
+                where.setStyleSheet("color: #ffcc80;")
+            layout.addWidget(where)
 
         goals_box = QGroupBox("Design goals")
         goals_layout = QVBoxLayout(goals_box)
@@ -208,7 +219,11 @@ class GenerateDesignDialog(QDialog):
             replace_h = (replace.sizeHint().height()
                          + self._add_check.sizeHint().height())
         # Placed geometry needs an anchor — disable OK without one.
-        ok_button.setEnabled(has_boundary or has_pin)
+        ok_button.setEnabled((has_boundary or has_pin) and not outside)
+        if outside:
+            # Decision E3: no plan from plants that do not grow there.
+            ok_button.setToolTip(
+                "Plan My Yard needs a pin in Alberta or Saskatchewan.")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)

@@ -141,10 +141,11 @@ def shadow_length_factor(sun_alt: float) -> float:
 # ── Central-prairie presets ──────────────────────────────────────────────────
 #
 # The EDMONTON_* coordinates are a convenience anchor (and the fixture the solar
-# tests exercise). The frost dates below are central-prairie approximations for
-# the sun-path preset; the *accurate* per-site frost window comes from the
-# Open-Meteo climate model (climate.get_climate_summary), which is what the
-# Analysis panel actually reports for a Regina/Saskatoon/Battleford site.
+# tests exercise). The frost dates are the region pack's station normals since
+# V3.25 (ED-6), the same pair Site Info shows before a site's own are fetched;
+# they were "~May 7" and "~Sep 23" here while the pack said May 15 and Sep 16.
+# The *accurate* per-site frost window comes from the Open-Meteo climate model
+# (climate.get_climate_summary).
 
 EDMONTON_LAT = 53.5461
 EDMONTON_LNG = -113.4938
@@ -155,6 +156,19 @@ KEY_DATES = {
     "Winter Solstice": date(2025, 12, 21),
     "Spring Equinox": date(2025, 3, 20),
     "Fall Equinox": date(2025, 9, 22),
-    "Last Frost (~May 7)": date(2025, 5, 7),
-    "First Frost (~Sep 23)": date(2025, 9, 23),
 }
+
+
+def _frost_presets() -> dict:
+    try:
+        from src import region_climate                       # noqa: PLC0415
+        f = region_climate.frost_dates()
+        last, first = f["last"], f["first"]
+    except Exception:                                      # noqa: BLE001
+        last, first = (5, 15), (9, 16)
+    from src.region_climate import date_words              # noqa: PLC0415
+    return {f"Last Frost (~{date_words(last)})": date(2025, *last),
+            f"First Frost (~{date_words(first)})": date(2025, *first)}
+
+
+KEY_DATES.update(_frost_presets())

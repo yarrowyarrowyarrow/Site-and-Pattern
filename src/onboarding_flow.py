@@ -401,6 +401,11 @@ def open_example(main) -> None:
             lat, lng = coords
     except Exception:                                      # noqa: BLE001
         pass
+    # The example's plants are the pack's: at a pin outside every pack it
+    # opens at the pack's own centre, not planted in Toronto (V3.25, ED-8).
+    from src import region
+    if region.at(lat, lng) is None:
+        lat = lng = None
 
     from src import saves
     previous = saves.last_design()

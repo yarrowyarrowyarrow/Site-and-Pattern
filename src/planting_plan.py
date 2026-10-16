@@ -238,7 +238,12 @@ def planting_window(plant: dict) -> str:
         return "Spring after soil thaws (≈May), or early fall"
     if ptype == "root":
         return "Spring (≈May), or fall dormancy"
-    return "Late spring, after the last frost (late May–Jun)"
+    # The region's last frost (V3.25, ED-6), so the plan, Site Info and the
+    # sun path name one date.
+    from src import region_climate
+    f = region_climate.frost_dates()
+    after = region_climate.date_words(f["last"]) if f else "late May"
+    return f"Late spring, after the last frost (about {after}) to June"
 
 
 def _structures_detail(structures, get_structure) -> list:

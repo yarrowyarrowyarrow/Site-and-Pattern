@@ -59,10 +59,17 @@ class GenerationController:
         # A second run replaced nothing until V3.18: the generator is
         # deterministic, so every plant landed on its own twin (R2).
         last_run, last_plants = last_plan(main._project.get("features"))
+        # The first line says where the pin is; outside the two provinces
+        # there is no plan (V3.25, ED-8; decision E3).
+        from src import region
+        cov = region.coverage(site_config.get("latitude"),
+                              site_config.get("longitude"))
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
             preselected=preselected, last_plan=last_plants,
             goals=design_goals.goals_for_site(site_config),
+            coverage=region.message(cov), outside=cov.kind == region.OUTSIDE,
+            coverage_warns=cov.kind in (region.PROVINCE, region.OUTSIDE),
             fauna_options=self._fauna_options(), parent=main)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return

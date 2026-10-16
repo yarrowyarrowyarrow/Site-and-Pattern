@@ -523,7 +523,11 @@ class SitePanel(QWidget):
         # Address search row.
         search_row = QHBoxLayout()
         self._addr_input = QLineEdit()
-        self._addr_input.setPlaceholderText("Search Alberta address or place name…")
+        # The pack's words (V3.25, ED-7).
+        from src import region
+        self._addr_input.setPlaceholderText(
+            region.default().address_search.get("placeholder")
+            or "Search an address…")
         self._addr_input.setAccessibleName("Search for an address or place")
         self._addr_input.setClearButtonEnabled(True)
         self._addr_input.setStyleSheet(
@@ -600,6 +604,15 @@ class SitePanel(QWidget):
         pin_layout.addLayout(btn_row)
 
         layout.addWidget(pin_box)
+
+        # Where the pin is, as far as the app's knowledge goes (V3.25, ED-8):
+        # "Edmonton region.", or how far outside it is and what that means.
+        self._lbl_coverage = QLabel("")
+        self._lbl_coverage.setWordWrap(True)
+        self._lbl_coverage.setStyleSheet(
+            "color: #c8e6c9; font-size: 13px; padding: 2px 4px;")
+        self._lbl_coverage.setVisible(False)
+        layout.addWidget(self._lbl_coverage)
 
         self._lbl_status = QLabel("")
         self._lbl_status.setWordWrap(True)
@@ -1337,6 +1350,7 @@ class SitePanel(QWidget):
         """
         self._lat, self._lng, self._label = lat, lng, label or self._label
         self._lbl_coords.setText(f"{lat:.5f}, {lng:.5f}")
+        self._show_coverage()
         # Nurseries are local (no network) — fill immediately on pin.
         self._update_nurseries(lat, lng)
         if self._label:
@@ -1410,7 +1424,30 @@ class SitePanel(QWidget):
         self._reset_data_rows()
         self._start_fetch()
 
+    def _show_coverage(self):
+        from src import region
+        cov = region.coverage(self._lat, self._lng)
+        self._outside = cov.kind == region.OUTSIDE
+        text = region.message(cov)
+        self._lbl_coverage.setText(text)
+        self._lbl_coverage.setVisible(bool(text))
+        self._lbl_coverage.setStyleSheet(
+            f"color: {'#ffcc80' if cov.kind != region.REGION else '#c8e6c9'};"
+            " font-size: 13px; padding: 2px 4px;")
+
+    def _set_status(self, text: str):
+        """The fetch's progress line. "Site data ready." is not said for a pin
+        outside the provinces, where most of it cannot be (V3.25, ED-8)."""
+        if getattr(self, "_outside", False) and text.startswith("Site data ready"):
+            text = ("Done. What no source covers for this pin is left "
+                    "blank.")
+        self._lbl_status.setText(text)
+
     def _set_empty_state(self):
+        self._outside = False
+        if hasattr(self, "_lbl_coverage"):
+            self._lbl_coverage.setText("")
+            self._lbl_coverage.setVisible(False)
         self._lbl_label.setText(_DASH)
         self._lbl_coords.setText(_DASH)
         self._lbl_status.setText("Drop a pin to auto-fill site data.")
@@ -1462,7 +1499,7 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run)
-        worker.progress.connect(self._lbl_status.setText)
+        worker.progress.connect(self._set_status)
         worker.hardiness.connect(self._on_hardiness)
         worker.elevation.connect(self._on_elevation)
         worker.rainfall.connect(self._on_rainfall)
@@ -1644,7 +1681,7 @@ class SitePanel(QWidget):
         fetch failure."""
         if not data:
             self._lbl_gdd.setText("Unavailable (offline?)")
-            self._lbl_frost.setText(_DASH)
+            self._lbl_frost.setText(self._pack_frost())
             return
         from src.climate import doy_to_date_label
         gdd = data.get("gdd5_mean")
@@ -1665,7 +1702,16 @@ class SitePanel(QWidget):
                 + (f"  ({free} days)" if free is not None else "")
             )
         else:
-            self._lbl_frost.setText(_DASH)
+            self._lbl_frost.setText(self._pack_frost())
+
+    def _pack_frost(self) -> str:
+        """The region's station normals while the site's own frost window is
+        missing (V3.25, ED-6): the same pair the sun path and the plan use.
+        A dash for a pin outside the provinces."""
+        from src import region_climate
+        f = region_climate.frost_dates({"latitude": self._lat,
+                                        "longitude": self._lng})
+        return f"{f['words']}  ({f['label']})" if f else _DASH
 
     def _on_winter(self, data):
         """Render snow-cover + survival metrics (the insulation half of snow).
@@ -1803,7 +1849,7 @@ class SitePanel(QWidget):
         to ready immediately, even though the slower climate call is
         still running in the worker. The climate row will update from
         '—' when its signal arrives."""
-        self._lbl_status.setText("Site data ready.")
+        self._set_status("Site data ready.")
 
     def _on_finished(self, result: dict):
         """The worker has finished every step including the slower
@@ -2259,12 +2305,18 @@ class SitePanel(QWidget):
     def _build_terrain_data_section(self, layout):
         box = QGroupBox("Terrain Data (offline)")
         box.setStyleSheet(_GROUP_STYLE)
+        # Only a pack that names a city's contours offers them (V3.25, ED-7).
+        from src import region
+        home = region.default()
+        self._contour_place = home.short
+        box.setVisible(bool(home.elevation.get("municipal_contours")))
         vl = QVBoxLayout(box)
         vl.setSpacing(6)
 
         note = QLabel(
-            "Edmonton's 0.5 m LiDAR contours for use offline: one download, "
-            "about 1 GB. Elsewhere the elevation is kept as you use it."
+            f"{home.short}'s 0.5 m LiDAR contours for use offline: one "
+            "download, about 1 GB. Elsewhere the elevation is kept as you "
+            "use it."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #90a4ae; font-size: 12px;")
@@ -2290,7 +2342,7 @@ class SitePanel(QWidget):
         vl.addWidget(self._terrain_progress)
 
         btn_row = QHBoxLayout()
-        self._terrain_dl_btn = QPushButton("⬇ Download Edmonton Data")
+        self._terrain_dl_btn = QPushButton(f"⬇ Download {home.short} Data")
         self._terrain_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._terrain_dl_btn.clicked.connect(self._on_download_clicked)
         btn_row.addWidget(self._terrain_dl_btn)
@@ -2328,13 +2380,15 @@ class SitePanel(QWidget):
             if store.has_edmonton_data():
                 count = store.get_edmonton_feature_count()
                 self._terrain_status_lbl.setText(
-                    f"Edmonton: {count:,} features — offline ready"
+                    f"{self._contour_place}: {count:,} features — offline ready"
                 )
             else:
-                self._terrain_status_lbl.setText("No offline Edmonton data.")
+                self._terrain_status_lbl.setText(
+                    f"No offline {self._contour_place} data.")
             self._terrain_storage_lbl.setText(self._storage_text())
         except Exception:
-            self._terrain_status_lbl.setText("No offline Edmonton data.")
+            self._terrain_status_lbl.setText(
+                f"No offline {self._contour_place} data.")
             self._terrain_storage_lbl.setText("")
 
     def _storage_text(self) -> str:

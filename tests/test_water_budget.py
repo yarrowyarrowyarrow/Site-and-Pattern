@@ -52,16 +52,28 @@ class TheBudget(unittest.TestCase):
         self.assertEqual(wb.weekly_rule([]), "")
 
     def test_rainfall_is_the_sites_when_fetched(self):
+        """Else the region pack's station normals (V3.25, ED-6)."""
+        from src import region
+        pack = region.default()
         months, source = wb.rainfall({})
-        self.assertEqual(months, wb.EDMONTON_MONTHLY_RAINFALL_MM)
-        self.assertEqual(source, "Edmonton normal")
+        normal = source
+        self.assertEqual(months, tuple(pack.climate["monthly_precip_mm"]))
+        self.assertEqual(source, f"{pack.climate['station']} normal, "
+                                 f"{pack.climate['period']}")
+        self.assertAlmostEqual(sum(months[4:9]), 340.5)
         site = {"rainfall": {"monthly_mm": [20.0] * 12,
                              "source": "ERA5-Land 1991–2020"}}
         months, source = wb.rainfall(site)
         self.assertEqual(months, (20.0,) * 12)
         self.assertIn("ERA5-Land", source)
         self.assertEqual(wb.rainfall({"rainfall": {"monthly_mm": [1, 2]}})[1],
-                         "Edmonton normal")
+                         normal)
+
+    def test_a_pin_outside_the_provinces_borrows_no_rain(self):
+        """R32: a Toronto pin had been given Edmonton's rainfall."""
+        months, source = wb.rainfall({"latitude": 43.65, "longitude": -79.38})
+        self.assertEqual(sum(months), 0)
+        self.assertEqual(source, "no rainfall known for this pin")
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
@@ -94,11 +106,11 @@ class ThePage(unittest.TestCase):
 
     def test_the_sites_rainfall_changes_the_rain_line(self):
         edmonton = self._page()
-        self.assertIn("Edmonton normal", edmonton)
+        self.assertIn("340 mm May–Sep, Edmonton City Centre A normal", edmonton)
         site = self._page({"rainfall": {"monthly_mm": [10.0] * 12,
                                         "source": "ERA5-Land"}})
         self.assertIn("50 mm May–Sep, this site's normals (ERA5-Land)", site)
-        self.assertNotIn("Edmonton normal", site)
+        self.assertNotIn("City Centre A normal", site)
 
 
 if __name__ == "__main__":

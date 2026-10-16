@@ -15,9 +15,10 @@ first review found:
     a two-week dry spell whatever the season's total, so the page now gives the
     care calendar's rule as a weekly quantity: a deep soak in any week without
     a good rain.
-  * **Edmonton's rainfall, wherever the pin.** Rainfall now comes from the
+  * **One city's rainfall, wherever the pin.** Rainfall now comes from the
     site's own normals when they have been fetched, labelled with their source,
-    and only otherwise from Edmonton's, labelled so.
+    and only otherwise from the region pack's station normals, labelled so
+    (V3.25); a pin outside the provinces gets none.
 
 The numbers are estimates per plant type and water need, the same constants
 the page always used; the supply side stays as information.
@@ -29,9 +30,6 @@ from typing import Optional
 
 from src.plant_conditions import condition_tokens
 
-#: Edmonton's approximate monthly rainfall, mm: the fallback when the site's
-#: own normals have not been fetched.
-EDMONTON_MONTHLY_RAINFALL_MM = (15, 10, 15, 25, 45, 75, 90, 65, 40, 20, 15, 12)
 
 #: Litres a week through the growing season, by plant type, before the
 #: water-need multiplier. A type not listed uses :data:`DEFAULT_L_WEEK`.
@@ -96,7 +94,10 @@ def first_summer_weekly_litres(plants) -> float:
 
 def rainfall(site_config: Optional[dict]) -> tuple:
     """``(monthly mm × 12, where it is from)``: the site's own normals when
-    fetched (``site_config["rainfall"]["monthly_mm"]``), else Edmonton's."""
+    fetched (``site_config["rainfall"]["monthly_mm"]``), else the region
+    pack's normals (V3.25, ED-6: a hand-rounded copy of Edmonton's had been
+    the fallback for every pin), else none at all for a pin outside the
+    provinces, which reads as twelve zeros and says so."""
     rain = ((site_config or {}).get("rainfall") or {})
     months = rain.get("monthly_mm") or []
     if len(months) == 12:
@@ -108,7 +109,9 @@ def rainfall(site_config: Optional[dict]) -> tuple:
             source = (rain.get("source") or "").strip()
             return values, (f"this site's normals ({source})" if source
                             else "this site's normals")
-    return EDMONTON_MONTHLY_RAINFALL_MM, "Edmonton normal"
+    from src import region_climate                           # noqa: PLC0415
+    months, label = region_climate.rainfall(site_config)
+    return (months or (0.0,) * 12), label
 
 
 def weekly_rule(plants) -> str:

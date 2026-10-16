@@ -1667,7 +1667,12 @@ class MapEventRouter:
             self._main._set_zone_display(zone)
 
         self._main._mark_modified()
-        self._main._set_mode_label("Site data ready")
+        # Not "ready" for a pin outside the provinces (V3.25, ED-8).
+        from src import region
+        outside = region.coverage(sc.get("latitude"), sc.get(
+            "longitude")).kind == region.OUTSIDE
+        self._main._set_mode_label("Site data: what this pin allows"
+                                   if outside else "Site data ready")
 
     # ── Growth timeline ──────────────────────────────────────────────────────
 

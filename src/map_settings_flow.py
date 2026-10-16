@@ -47,10 +47,26 @@ def set_zoom_level(main, level: str) -> None:
     apply(main)
 
 
+def open_on_region(main) -> bool:
+    """Show the region pack's view when the page loads with nothing to show
+    (V3.25, ED-7): the page's own opening view is only for the moment before
+    Python speaks. A design with features or a pin keeps its own view."""
+    project = getattr(main, "_project", None) or {}
+    sc = (project.get("properties") or {}).get("site_config") or {}
+    if project.get("features") or sc.get("latitude") is not None:
+        return False
+    from src import region                                   # noqa: PLC0415
+    view = region.default().map
+    lat, lng = view["centre"]
+    main.map_widget.set_view(lat, lng, view.get("zoom", 12))
+    return True
+
+
 def install(main) -> None:
     """Send the saved step on every load of the map's page, and now if it has
     already loaded."""
     main.map_widget.bridge.map_ready.connect(lambda: apply(main, force=True))
+    main.map_widget.bridge.map_ready.connect(lambda: open_on_region(main))
     if getattr(main.map_widget, "is_ready", False):
         apply(main)
 
