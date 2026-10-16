@@ -483,6 +483,25 @@ class TestWhatARowSays(unittest.TestCase):
         self.assertIn("Native to Alberta", text)
         self.assertIn("1 in this design", text)
 
+    def test_the_simple_row_says_its_band(self):
+        """PR-3 (V3.26): the band's chip where the badges were, its reasons
+        in the tooltip and in what a screen reader is given."""
+        from unittest import mock
+        import src.plant_list_view as plv
+        self.assertIsNotNone(self.delegate._layout(self._PLANT, self.rect, 0)
+                             ["zone"], "the advanced row keeps its badges")
+        with mock.patch.dict(plv._BANDS, {(7, "edmonton"): (
+                "Top pick", ["Berries or seed for 5 kinds of bird"])}):
+            self.delegate.place = "edmonton"
+            self.assertIsNone(self.delegate._layout(self._PLANT, self.rect, 0)
+                              ["zone"])
+            self.assertEqual(self._at("native"), "Top pick. Berries or seed "
+                             "for 5 kinds of bird.")
+            text = plv.row_description(self._PLANT, 0, "AB", "edmonton")
+            self.assertTrue(text.startswith(
+                "Saskatoon Berry, Amelanchier alnifolia. Top pick. Berries "
+                "or seed for 5 kinds of bird. Shrub."), text)
+
     def test_the_card_is_gone(self):
         """No ▶, no expansion, no painted detail block: the page is beside
         the list now (src/species_page.py)."""

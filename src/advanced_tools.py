@@ -85,6 +85,7 @@ ADVANCED_CONTROLS: tuple = (
 #: ``set_advanced_tools(on)``.
 ADVANCED_HOOKS: tuple = (
     "plant_panel._placement",
+    "plant_panel.picker",             # the rows' band chip (PR-3)
     "polyculture_panel.placement_widget",
     "species_flyout.page",            # the plant page's Add to mix
     "species_flyout.community",       # the community page's pattern card

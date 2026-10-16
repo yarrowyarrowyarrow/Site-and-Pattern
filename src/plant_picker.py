@@ -372,10 +372,19 @@ class PlantPicker(QWidget):
         from src.site_fit import province_at
         return province_at(*self._site[:2]) if self._site else ""
 
+    def set_advanced_tools(self, on: bool) -> None:
+        """The simple app's rows show the band's chip (PR-3, V3.26)."""
+        self._simple = not on
+        self._follow_province(self.province())
+        self._reorder()                 # the first screen's mix (PR-3)
+        self.view.scheduleDelayedItemsLayout()      # the chip's width
+
     def _follow_province(self, before: str) -> None:
         """Native and the row badge name the pin's province (F200, V3.05)."""
         shown = self.province() or "AB"
         self.delegate.province = self.model.province = shown
+        place = self.place() if getattr(self, "_simple", False) else None
+        self.delegate.place = self.model.place = place
         self.filter_area.describe("native_only", pf.native_tip(shown))
         if self.province() != before and self._criteria.get("native_only"):
             self.refresh()
@@ -418,10 +427,14 @@ class PlantPicker(QWidget):
     def _ordered(self, rows) -> list:
         if self._order == "wildlife" and self._animals is None:
             self._animals = pf.animals_per_plant()
-        return pf.order_plants(rows, self._order, site=self._site,
+        rows = pf.order_plants(rows, self._order, site=self._site,
                                zone=self._zone, wildlife_counts=self._animals,
                                hint=self._hint, area_m2=self._area,
                                place=self.place())
+        if getattr(self, "_simple", False) and self._order == "priority":
+            from src.plant_priority import interleave       # PR-3, §5
+            rows = interleave(rows, place=self.place())
+        return rows
 
     def _reorder(self):
         if not self._rows:

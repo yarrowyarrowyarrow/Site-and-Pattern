@@ -301,6 +301,36 @@ def rank(rows: Iterable[Mapping], *, records: Optional[dict] = None,
     return [r for _k, _i, r in keyed]
 
 
+#: The simple list's first screen (PR-3, §5): per ten rows four flowers,
+#: three shrubs or trees, two grasses or sedges and one groundcover or vine,
+#: each layer in rank order, so the first rows look like a garden.
+_PATTERN = "FWFGWFCWFG"
+_LAYER = {"wildflower": "F", "herb": "F", "fern": "F", "shrub": "W",
+          "tree": "W", "grass": "G", "sedge": "G", "rush": "G",
+          "groundcover": "C", "vine": "C"}
+
+
+def interleave(ranked: Iterable[Mapping], *, rows: int = 20,
+               place: str = "") -> list:
+    """``ranked`` with its first ``rows`` drawn layer by layer; never drops
+    or repeats one. A pond plant or one off the local list is never pulled
+    forward, and a layer that runs out leaves its slot to the next."""
+    ranked, records = list(ranked), _shared_records()
+    pattern = (_PATTERN * (rows // len(_PATTERN) + 1))[:rows]
+    want = {k: pattern.count(k) for k in "FWGC"}
+    queues: dict = {k: [] for k in "FWGC"}
+    for r in ranked:
+        if all(len(queues[k]) >= want[k] for k in want):
+            break
+        layer = _LAYER.get(r.get("plant_type") or "")
+        if (layer and len(queues[layer]) < want[layer]
+                and assess(r, records, place=place).band not in (POND, AWAY)):
+            queues[layer].append(r)
+    first = [queues[k].pop(0) for k in pattern if queues[k]]
+    taken = {id(r) for r in first}
+    return first + [r for r in ranked if id(r) not in taken]
+
+
 @functools.lru_cache(maxsize=1)
 def impact_by_id() -> dict:
     """``{plant_id: Impact}`` for the whole catalogue, for sorts that rank a

@@ -25,6 +25,8 @@ they are imported by name from the panels.
 
 from __future__ import annotations
 
+from typing import Optional
+
 from PyQt6.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QRect, QSize, QEvent,
     QRunnable, QThreadPool, pyqtSignal, QMimeData, QByteArray,
@@ -166,17 +168,39 @@ def placed_words(placed: int) -> str:
     return f"{placed} in this design" if placed else ""
 
 
-def row_description(plant: dict, placed: int = 0, province: str = "AB") -> str:
+def row_description(plant: dict, placed: int = 0, province: str = "AB",
+                    place: Optional[str] = None) -> str:
     """What a screen reader is given for a row: "Saskatoon Berry, Amelanchier
     alnifolia. Shrub. Native to Alberta. Hardy in zones 2 to 7. 2 in this
-    design." Until V3.00 it was given the common name alone."""
+    design." Until V3.00 it was given the common name alone. With ``place``
+    (the simple app, PR-3) the band and the first reason follow the names:
+    "Top pick. Caterpillar food for 15 kinds of moth and butterfly"."""
     head = plant.get("common_name") or ""
     if plant.get("scientific_name"):
         head += f", {plant['scientific_name']}"
-    parts = [head, type_words(plant), native_words(plant, province),
+    band = []
+    if place is not None:
+        name, reasons = band_of(plant, place)
+        band = [name, reasons[0] if reasons else ""]
+    parts = [head, *band, type_words(plant), native_words(plant, province),
              zone_words(plant),
              placed_words(placed)]
     return ". ".join(p for p in parts if p) + "."
+
+
+#: A plant's band and reasons by (id, region): the ranking reads only the
+#: catalogue and the records, neither of which changes while the app runs.
+_BANDS: dict = {}
+
+
+def band_of(plant: dict, place: str) -> tuple:
+    """``(band, reasons)`` from ``plant_priority`` (PR-3, V3.26)."""
+    key = (plant.get("id"), place)
+    if key not in _BANDS:
+        from src import plant_priority                        # noqa: PLC0415
+        a = plant_priority.assess(plant, place=place)
+        _BANDS[key] = (a.band, list(a.reasons))
+    return _BANDS[key]
 
 
 def _zone_badge_text(plant: dict) -> str:
@@ -227,7 +251,8 @@ class PlantListModel(QAbstractListModel):
         if role == Qt.ItemDataRole.AccessibleTextRole:
             return row_description(
                 plant, self._placed_counts.get(plant.get("id"), 0),
-                getattr(self, "province", "AB"))
+                getattr(self, "province", "AB"),
+                getattr(self, "place", None))
         if role == Qt.ItemDataRole.ToolTipRole:
             return f"{plant.get('common_name','')} ({plant.get('scientific_name','—')})"
         return None
@@ -343,6 +368,13 @@ _ROW_H_COMPACT  = 26
 _ROW_H_WRAPPED  = 44    # two-line variant for very long common names
 _ZONE_BADGE_W   = 56
 _NATIVE_BADGE_W = 22    # the AB badge, wide enough for 12 px text
+_BAND_W         = 70    # the simple app's "Good pick", 12 px (PR-3, V3.26)
+#: The simple app's chip per band, as (background, text); a band not here
+#: draws no chip. Every pair clears 4.5:1.
+_BAND_CHIP = {"Top pick": ("#1b5e20", "#e8f5e9"),
+              "Good pick": ("#37474f", "#e8f5e9"),
+              "For a pond": ("#0d47a1", "#e3f2fd")}
+_BAND_TEXT = {"For a pond": "Pond"}
 
 
 class PlantRowDelegate(QStyledItemDelegate):
@@ -353,8 +385,13 @@ class PlantRowDelegate(QStyledItemDelegate):
       · zone badge (Z3–5), dropped when the name needs the room
       · native-AB chip ("AB" when native, "–" otherwise)
 
-    Every part has its own tooltip (:meth:`helpEvent`).
+    Every part has its own tooltip (:meth:`helpEvent`). In the simple app
+    (``place`` set, PR-3, V3.26) the zone and native badges give way to the
+    band's chip ("Top pick"), whose tooltip lists the reasons.
     """
+
+    #: The region whose band the chip shows, or None for the advanced row.
+    place: Optional[str] = None
 
     DOT_W = 14
     LEFT_PAD = 6
@@ -397,8 +434,11 @@ class PlantRowDelegate(QStyledItemDelegate):
             fm_b.boundingRect(common).width(),
         ) + 32
         lean_budget = max(40, panel_w - self.LEFT_PAD - self.DOT_W
-                          - (_NATIVE_BADGE_W + self.RIGHT_PAD + 8))
+                          - (self._right_w() + self.RIGHT_PAD + 8))
         return _ROW_H_COMPACT if common_render <= lean_budget else _ROW_H_WRAPPED
+
+    def _right_w(self) -> int:
+        return _NATIVE_BADGE_W if self.place is None else _BAND_W
 
     def _layout(self, plant: dict, rect: QRect, placed: int) -> dict:
         """Where each part of the row goes. Painting and the tooltips both read
@@ -414,9 +454,9 @@ class PlantRowDelegate(QStyledItemDelegate):
         dot = QRect(dot_x, dot_centre_y - 5, 10, 10)
         x = dot_x + self.DOT_W
 
-        native = QRect(compact.right() - self.RIGHT_PAD - _NATIVE_BADGE_W,
+        native = QRect(compact.right() - self.RIGHT_PAD - self._right_w(),
                        compact.bottom() - line_h + (line_h - 16) // 2,
-                       _NATIVE_BADGE_W, 16)
+                       self._right_w(), 16)
         zone_rect = QRect(native.left() - 4 - _ZONE_BADGE_W,
                           compact.bottom() - line_h + (line_h - 16) // 2,
                           _ZONE_BADGE_W, 16)
@@ -455,8 +495,8 @@ class PlantRowDelegate(QStyledItemDelegate):
             "compact": compact, "wrapped": wrapped, "line_h": line_h,
             "dot": dot, "name": name, "name_text": common_text,
             "elide": common_render > name.width(), "sci": sci,
-            "zone": zone_rect if (show_zone and _zone_badge_text(plant))
-            else None,
+            "zone": zone_rect if (show_zone and _zone_badge_text(plant)
+                                  and self.place is None) else None,
             "native": native,
         }
 
@@ -520,6 +560,10 @@ class PlantRowDelegate(QStyledItemDelegate):
             painter.drawText(lay["zone"], int(Qt.AlignmentFlag.AlignCenter),
                              _zone_badge_text(plant))
 
+        if self.place is not None:
+            self._paint_band(painter, plant, lay["native"])
+            painter.restore()
+            return
         # Native badge: the pin's province ("AB" or "SK", F200) if native
         # there, an en dash otherwise, so it reads without the colour.
         from src.plant_filters import native_in
@@ -534,6 +578,19 @@ class PlantRowDelegate(QStyledItemDelegate):
                          province if is_native else "–")
         painter.restore()
 
+    def _paint_band(self, painter: QPainter, plant: dict, rect: QRect):
+        band = band_of(plant, self.place)[0]
+        if band not in _BAND_CHIP:
+            return
+        bg, fg = _BAND_CHIP[band]
+        painter.setBrush(QColor(bg))
+        painter.setPen(QPen(QColor("#0d160d"), 0.5))
+        painter.drawRoundedRect(rect, 3, 3)
+        painter.setPen(QColor(fg))
+        painter.setFont(self._small_font)
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter),
+                         _BAND_TEXT.get(band, band))
+
     # Tooltips -----------------------------------------------------------
 
     def tooltip_at(self, plant: dict, rect: QRect, placed: int, pos) -> str:
@@ -543,6 +600,9 @@ class PlantRowDelegate(QStyledItemDelegate):
             return type_words(plant)
         if lay["zone"] is not None and lay["zone"].contains(pos):
             return zone_words(plant)
+        if lay["native"].contains(pos) and self.place is not None:
+            band, reasons = band_of(plant, self.place)
+            return ". ".join([band, *reasons]) + "."
         if lay["native"].contains(pos):
             return native_words(plant, getattr(self, "province", "AB"))
         text = (f"{plant.get('common_name', '')} "

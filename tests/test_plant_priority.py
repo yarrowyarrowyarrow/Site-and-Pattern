@@ -151,6 +151,22 @@ class OnTheShippedCatalogue(unittest.TestCase):
                                        place="edmonton").band == pp.AWAY)
         self.assertEqual(first_away, len(self.edmonton))
 
+    def test_the_first_screen_looks_like_a_garden(self):
+        """PR-3, §5: per ten rows four flowers, three shrubs or trees, two
+        grasses or sedges, one groundcover or vine; nothing lost."""
+        mixed = pp.interleave(self.ranked, place="edmonton")
+        self.assertEqual(sorted(r["id"] for r in mixed),
+                         sorted(r["id"] for r in self.ranked))
+        layers = "".join(pp._LAYER.get(r["plant_type"], "?")
+                         for r in mixed[:20])
+        self.assertEqual(layers, pp._PATTERN * 2)
+        self.assertEqual(mixed[0]["common_name"], "Joe-Pye Weed")
+        for r in mixed[:20]:
+            self.assertNotIn(pp.assess(r, self.records, place="edmonton").band,
+                             (pp.POND, pp.AWAY), r["common_name"])
+        shrubs = [r for r in mixed[:20] if r["plant_type"] == "shrub"]
+        self.assertEqual(shrubs[0]["common_name"], "Chokecherry")
+
     def test_fast(self):
         import time
         t = time.perf_counter()
