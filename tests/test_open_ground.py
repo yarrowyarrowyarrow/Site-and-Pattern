@@ -299,7 +299,11 @@ class TestTheFollowUpSteps(_Base):
                 mock.patch.object(llm, "_select_offline_communities",
                                   lambda *a, **k: []), \
                 mock.patch.object(llm, "_offline_plant_mix",
+                                  lambda *a, **k: None), \
+                mock.patch.object(llm, "_fill_to_cover",
                                   lambda *a, **k: None):
+            # Without the fill to cover (V3.28), which adds more of the same
+            # kinds and would be counted here as the review's additions.
             proj = llm.generate_design_offline(
                 boundary=_box(12, 18), site_config=_EDM, match_site=False)
         notes = proj.as_dict()["properties"].get("generation_warnings", [])

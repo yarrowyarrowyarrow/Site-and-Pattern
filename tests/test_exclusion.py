@@ -163,13 +163,17 @@ class TestZoneSteering(unittest.TestCase):
         )
         self.assertEqual(len(X.keepout_circles(proj)), 3)
 
-    def test_plantable_shapes_are_not_keepout(self):
-        # Garden bed / lawn / mulch shapes stay plantable (not avoided).
-        proj = _project(
-            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Garden Bed"),
-            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Lawn Area"),
-        )
-        self.assertEqual(X.keepout_circles(proj), [])
+    def test_a_bed_is_planted_and_a_lawn_is_kept_out(self):
+        # V3.28 (PY-2): a Garden Bed is a fill target, a Lawn Area is not
+        # planted, as the overview's planting area has them.
+        bed = _project(_poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                                     shape_type="Garden Bed"))
+        self.assertEqual(X.keepout_circles(bed), [])
+        self.assertEqual(len(X.fill_regions(bed)), 1)
+        lawn = _project(_poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                                      shape_type="Lawn Area"))
+        self.assertEqual(len(X.keepout_circles(lawn)), 1)
+        self.assertEqual(X.fill_regions(lawn), [])
 
     def test_fill_regions_returns_only_restoration_zones(self):
         proj = _project(

@@ -36,6 +36,8 @@ REVIEW = "Added when the design was reviewed: {why}"
 #: Added so a chosen animal has a plant, or a chosen goal is met.
 FOR_ANIMAL = "Added so the design has a plant for the {name}"
 FOR_GOAL = "Added so the design meets the goals you chose"
+#: Plan My Yard's fill to cover (PY-4, V3.28).
+FILL = "Added so the planting fills the ground you outlined"
 #: A plant that needs standing water, seated in a pond (F185).
 POND = "In the pond: it grows in standing water"
 BARE_POND = "Planted so the pond was not left bare"

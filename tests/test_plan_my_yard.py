@@ -81,7 +81,10 @@ class TestAPathCostsOnlyItsOwnGround(unittest.TestCase):
     def test_a_one_metre_path_keeps_the_plan(self):
         open_yard = self._plants([])
         with_path = self._plants([_drawn("Pathway", 7, 0, 8, 10)])
-        self.assertGreaterEqual(len(with_path), 0.9 * len(open_yard),
+        # Per m2 of ground left (V3.28): a plan fills to a cover now, so
+        # 10 m2 of path is 10 m2 fewer to fill, not half the yard.
+        self.assertGreaterEqual(len(with_path),
+                                0.9 * len(open_yard) * (140 / 150),
                                 f"{len(with_path)} with the path, "
                                 f"{len(open_yard)} without")
         on_path = [p for p in with_path if 7 <= p[0] <= 8]

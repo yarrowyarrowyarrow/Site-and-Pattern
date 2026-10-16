@@ -1809,14 +1809,27 @@ def _density_ceiling(frac: float) -> int:
     return int(_MAX_GENERATED_PLANTS * min(1.0, frac / full))
 
 
-def _anchor_spacing_m(boundary) -> float:
+#: The finest anchor grid, used when a plan is steered into drawn beds
+#: (V3.28, PY-2): on the 2.5 m yard grid a 15 x 6 m zone held about 14 anchors,
+#: a tree and two shrubs reserved all of them, and the strawberries, violets
+#: and a 31-plant mixed stand had nowhere to go.
+_MIN_BED_ANCHOR_SPACING_M = 1.25
+
+
+def _anchor_spacing_m(boundary, fill_regions=None) -> float:
     """Anchor-grid spacing for this boundary: `_SPACING_M` on anything the size
-    of a large lot or bigger, tighter on a yard. See the block above."""
+    of a large lot or bigger, tighter on a yard, and tighter again when the
+    plan is steered into drawn beds, sized to the beds. See the block above."""
     area = _boundary_area_m2(boundary)
     if area <= 0:
         return _SPACING_M
-    return max(_MIN_ANCHOR_SPACING_M,
-               min(_SPACING_M, math.sqrt(area / _SMALL_LOT_ANCHORS)))
+    floor = _MIN_ANCHOR_SPACING_M
+    if fill_regions:
+        beds = sum(_boundary_area_m2([(p[1], p[0]) for p in r])
+                   for r in fill_regions if r and len(r) >= 3)
+        if 0 < beds < area:
+            area, floor = beds, _MIN_BED_ANCHOR_SPACING_M
+    return max(floor, min(_SPACING_M, math.sqrt(area / _SMALL_LOT_ANCHORS)))
 
 
 def _too_big_for(plant: dict, area_m2: float) -> bool:
@@ -1838,6 +1851,27 @@ def _too_big_for(plant: dict, area_m2: float) -> bool:
         height = 0.0
     return (spacing * spacing > _MAX_FOOTPRINT_SHARE * area_m2
             or height > _MAX_HEIGHT_PER_SIDE * math.sqrt(area_m2))
+
+
+def _plantable_m2(boundary, existing_features=None) -> float:
+    """The ground a plan may plant, in m^2: the drawn beds when there are any,
+    else the outline less lawn, paths, patios, water and buildings, as the
+    Overview measures it (V3.28, PY-2). Sizing a plant against the whole
+    outline put a 4.5 m Pin Cherry in a 6 x 3 m bed. The outline's own area
+    without shapely or a measurable area."""
+    whole = _boundary_area_m2(boundary)
+    if not existing_features or whole <= 0:
+        return whole
+    try:
+        from src.yard_overview import bed_area_m2
+        ring = [[float(p[1]), float(p[0])] for p in boundary]
+        bound = {"type": "Feature",
+                 "geometry": {"type": "Polygon", "coordinates": [ring]},
+                 "properties": {"element_type": "property_boundary"}}
+        area = bed_area_m2({"features": [bound] + list(existing_features)})
+    except Exception:                                      # noqa: BLE001
+        return whole
+    return area if area > 0 else whole
 
 
 def _fits_the_area(plants: list, area_m2: float) -> list:
@@ -1977,7 +2011,7 @@ def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
 
 
 def _apply_density(plant_items, boundary, density: str, keepout=None,
-                   already: int = 0):
+                   already: int = 0, area_m2: Optional[float] = None):
     """Scale per-group quantities up so the design fills ``density`` × capacity,
     instead of placing one plant per group on a near-empty lot. Returns the
     (possibly expanded) plant_items. No-op without a boundary or for an unknown
@@ -2019,7 +2053,9 @@ def _apply_density(plant_items, boundary, density: str, keepout=None,
     # wildflowers, and those drifts then claimed every anchor so the meadow and
     # all three communities were dropped. Each woody plant costs its mature
     # footprint (spacing squared); the herbaceous layer takes the rest.
-    area = _boundary_area_m2(boundary)
+    # Of the ground the plan may plant (V3.28, PY-2): measured against the
+    # whole outline, a lawn kept over 60% of a yard gave its 40% four willows.
+    area = area_m2 or _boundary_area_m2(boundary)
     budget = _WOODY_SHARE * area if area else None
     foot = [(_plant_spacing_m(it[0]) ** 2) if w else 0.0
             for it, w in zip(items, woody)]
@@ -2142,10 +2178,22 @@ def _place_within_boundary(project, plant_items, community_groups,
             zpos = zoning.zone_positions(elev, zones, boundary)
         except Exception:  # noqa: BLE001
             zpos = None
-    flat = positions_in_boundary(boundary, 10_000, center,   # full cell pool
-                                 _anchor_spacing_m(boundary))
+    spacing = _anchor_spacing_m(boundary, fill_regions)
+    grid = positions_in_boundary(boundary, 10_000, center, spacing)
+    flat = ([p for p in grid if is_clear(p[0], p[1], keepout)]
+            if keepout else grid)
+    # Keep-out over much of the yard (a patio, a lawn kept as lawn) left as
+    # few anchors as a small bed, and the first shrubs reserved them all
+    # (V3.28, PY-4): the grid is laid again, as fine as the ground left needs.
+    if grid and len(flat) < 0.75 * len(grid) and not fill_regions:
+        left = _boundary_area_m2(boundary) * len(flat) / len(grid)
+        finer = max(_MIN_BED_ANCHOR_SPACING_M,
+                    math.sqrt(max(left, 1.0) / _SMALL_LOT_ANCHORS))
+        if finer < spacing:
+            flat = [p for p in positions_in_boundary(boundary, 10_000,
+                                                     center, finer)
+                    if is_clear(p[0], p[1], keepout)]
     if keepout:
-        flat = [p for p in flat if is_clear(p[0], p[1], keepout)]
         if zpos:
             zpos = {z: [p for p in pts if is_clear(p[0], p[1], keepout)]
                     for z, pts in zpos.items()}
@@ -2153,6 +2201,7 @@ def _place_within_boundary(project, plant_items, community_groups,
     # present (F5): restrict the anchor pool to cells inside those rings. Guarded
     # so a tiny/empty zone set never starves placement — fall back to the whole
     # boundary if the restriction leaves nothing.
+    inside_fill = None
     if fill_regions:
         from src.geometry import point_in_ring
 
@@ -2162,6 +2211,9 @@ def _place_within_boundary(project, plant_items, community_groups,
         ff = [p for p in flat if _in_fill(p[0], p[1])]
         if ff:
             flat = ff
+            # And every member, not only the anchor (V3.28, PY-2): a drift
+            # around an anchor near the bed's edge spilled onto the lawn.
+            inside_fill = _in_fill
             if zpos:
                 zpos = {z: [p for p in pts if _in_fill(p[0], p[1])]
                         for z, pts in zpos.items()}
@@ -2169,10 +2221,13 @@ def _place_within_boundary(project, plant_items, community_groups,
     positioner = ScoredPositioner(cell_env_map, zpos, flat, elev=elev)
 
     def _clip_keepout(positions, half_canopy_m=0.0):
-        """Keep only positions inside the boundary AND clear of keep-out."""
+        """Keep only positions inside the boundary (and the drawn beds, when
+        the plan is steered into them) AND clear of keep-out."""
         out = []
         for la, ln in positions:
             if boundary and not _inside_boundary(boundary, la, ln):
+                continue
+            if inside_fill is not None and not inside_fill(la, ln):
                 continue
             if not is_clear(la, ln, keepout, half_canopy_m):
                 continue
@@ -2776,6 +2831,36 @@ def _fauna_names(fauna_ids) -> list:
     return out
 
 
+def _fill_to_cover(project, existing_features, ground, pool, density, cover,
+                   budget) -> None:
+    """PY-4 (V3.28): plants until the planted area's mature cover reaches the
+    target (:mod:`src.plan_cover`). Not with a budget, which the trim has
+    already spent; not without shapely, which the overview needs too."""
+    if budget:
+        return
+    try:
+        from src import plan_cover
+    except ImportError:
+        return
+    target = plan_cover.target_for(density, cover)
+    try:
+        done = plan_cover.fill_to_cover(
+            project, existing_features, ground, pool, target,
+            limit=_MAX_GENERATED_PLANTS)
+    except ImportError:
+        return
+    if done["added"]:
+        from src import why_here
+        why_here.stamp(project, done["added"], [why_here.FILL])
+    if done["stopped"] != plan_cover.STOP_TARGET and done["cover"] < target:
+        reason = ("the most plants a plan holds"
+                  if done["stopped"] == plan_cover.STOP_LIMIT
+                  else "no open ground left for the plants it uses")
+        _add_warning(project, f"The plan stops at about "
+                              f"{round(done['cover'] * 100)}% cover, short of "
+                              f"{round(target * 100)}%: {reason}.")
+
+
 def _open_ground(project, boundary, center: tuple[float, float],
                  keepout=None, fills=None, cell_env_map=None):
     """Where the follow-up steps plant what they add (F183, V2.91): open
@@ -3005,8 +3090,13 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                             fauna_ids: Optional[list] = None,
                             match_site: bool = True,
                             density: str = "balanced",
-                            existing_features: Optional[list] = None):
+                            existing_features: Optional[list] = None,
+                            cover: Optional[float] = None):
     """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
+
+    ``cover`` is the share of the planting area the plants should cover once
+    grown (Plan My Yard's *How full*, V3.28); without it the density's
+    (:data:`src.plan_cover.COVER_TARGETS`).
 
     Selects plants by the hard filters for ``goals`` (defaulting to Alberta
     natives) and pulls in seeded plant communities whose names match the goals,
@@ -3059,7 +3149,7 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     # first N rows in catalogue (alphabetical) order, which led generic yards
     # with "B..." wetland specialists (Bog Cranberry, Buckbean, ...).
     # Too big for the site, then nearest-recorded first (V2.85).
-    area_m2 = _boundary_area_m2(boundary)
+    area_m2 = _plantable_m2(boundary, existing_features)
     plants = _rank_offline_plants(_fits_the_area(plants, area_m2), site=center)
 
     # If the user picked target wildlife, lead with plants that support it
@@ -3146,7 +3236,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         plant_items, p_mixes, c_groups, c_mixes)
     plant_items = _apply_density(
         plant_items, boundary, density, keepout,
-        already=_planned_elsewhere(p_mixes, c_groups, c_mixes))
+        already=_planned_elsewhere(p_mixes, c_groups, c_mixes),
+        area_m2=area_m2)
     _place_within_boundary(project, plant_items, c_groups, [],
                            boundary, center, elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
@@ -3172,6 +3263,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                          spot=ground.spot_for, pond=ponds)
     _apply_fauna_feedback(project, fauna_ids, scoped, center, boundary,
                           spot=ground.spot_for, pond=ponds)
+    _fill_to_cover(project, existing_features, ground, plants, density, cover,
+                   budget)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     _note_vines_without_support(project, existing_features)
     _note_hard_to_find(project)

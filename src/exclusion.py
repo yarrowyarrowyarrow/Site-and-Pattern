@@ -50,27 +50,24 @@ def _struct_id_of(props: dict) -> str:
             or "")
 
 
-# Drawn custom_shape shape_types the generator should plant AROUND, not on:
-# the "existing remnant" conversion zone (don't disturb it) plus hardscape
-# (walkways/patios/water features). Garden-bed / lawn / mulch shapes stay
-# plantable. (Zone labels come from src.lawn_zones so the two never drift.)
+# Drawn custom_shape shape_types the generator plants AROUND, not on, and the
+# ones it plants INTO: one list with the overview's planting area since V3.28
+# (PY-2, ``yard_overview.NOT_PLANTED`` and ``BED_SHAPES``), so a plan goes where
+# the overview measures. Until then a Lawn Area was planted (32 of 42 plants on
+# a lawn over 60% of a yard) and a Garden Bed was ignored (1 of 42 in it).
 def _avoid_shape_types() -> set:
-    from src.lawn_zones import ZONE_TYPES
-    return {ZONE_TYPES["existing_remnant"]["label"],
-            "Pathway", "Patio / Deck", "Water Feature"}
+    from src.yard_overview import NOT_PLANTED
+    return set(NOT_PLANTED)
 
 
-# Conversion zones the generator should plant INTO (fill targets).
 def _fill_zone_shape_types() -> set:
-    from src.lawn_zones import ZONE_TYPES
-    return {ZONE_TYPES[k]["label"] for k in
-            ("lawn_remaining", "restoration_year_1",
-             "restoration_year_3", "established_native")}
+    from src.yard_overview import BED_SHAPES
+    return set(BED_SHAPES)
 
 
 def fill_regions(project_dict: dict) -> list:
-    """Rings ``[[lng, lat], …]`` of drawn restoration / lawn-conversion zones —
-    the areas the generator should steer planting INTO. Empty when none drawn."""
+    """Rings ``[[lng, lat], …]`` of the drawn beds and conversion zones: the
+    areas the generator plants INTO. Empty when none is drawn."""
     want = _fill_zone_shape_types()
     out: list = []
     for f in (project_dict or {}).get("features", []) or []:

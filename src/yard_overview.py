@@ -18,11 +18,10 @@ the plants cover once grown (:func:`cover`), the ground they leave bare
 The planting area, as part 06 §5.1 defines it:
 
   * the union of the bed-like shapes, when any is drawn (Garden Bed, Mulch
-    Area, and the planted conversion zones: Restoration — Year 1 and Year 3,
-    Established native);
-  * otherwise the property boundary, less lawn (Lawn Area and the conversion
-    zone *Lawn — to convert*), Pathway, Patio / Deck, Water Feature and
-    building footprints;
+    Area, and the conversion zones: Lawn — to convert, Restoration — Year 1
+    and Year 3, Established native);
+  * otherwise the property boundary, less Lawn Area, Pathway, Patio / Deck,
+    Water Feature, an existing remnant and building footprints;
   * nothing, with neither.
 
 Qt-free. Geometry through shapely (a hard requirement) in local metres from
@@ -35,12 +34,17 @@ from __future__ import annotations
 from typing import Optional
 
 #: Shapes a person plants in: their union is the planting area when any exists.
-BED_SHAPES = ("Garden Bed", "Mulch Area", "Restoration — Year 1",
-              "Restoration — Year 3", "Established native")
+#: Plan My Yard plants exactly here (V3.28, PY-2; ``exclusion`` reads these).
+#: *Lawn — to convert* is one since V3.28: a person who draws it and asks for a
+#: plan means "turn this into garden" (part 07 §2); V3.20 had counted it as lawn.
+BED_SHAPES = ("Garden Bed", "Mulch Area", "Lawn — to convert",
+              "Restoration — Year 1", "Restoration — Year 3",
+              "Established native")
 
-#: Shapes nobody plants in, taken off the boundary when no bed is drawn.
-NOT_PLANTED = ("Lawn Area", "Lawn — to convert", "Pathway", "Patio / Deck",
-               "Water Feature")
+#: Shapes nobody plants in, taken off the boundary when no bed is drawn, and
+#: kept out of a plan (the remnant is left undisturbed).
+NOT_PLANTED = ("Lawn Area", "Pathway", "Patio / Deck", "Water Feature",
+               "Existing remnant")
 
 
 def _ring(feature) -> Optional[list]:
