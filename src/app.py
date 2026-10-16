@@ -2152,6 +2152,7 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_structures(structs)
         from src.design_inputs import boundary_area_m2
         self.planning_panel.set_site_area(boundary_area_m2(self._project))
+        self.plant_panel.set_site_area(boundary_area_m2(self._project))
         self.planning_panel.set_site_config(
             self._project.get("properties", {}).get("site_config") or {})
 

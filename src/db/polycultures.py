@@ -409,6 +409,7 @@ def get_library_index() -> dict:
             "modified":      c["modified"] or "",
             "children":      [],
             "member_count":  len(ms),
+            "member_ids":    [m.get("plant_id") for m in ms],
             "native_pct":    native_pct,
             "fauna_count":   fauna_by_cid.get(cid, 0),
             "members_brief": [(m.get("common_name") or "",
@@ -529,8 +530,11 @@ def hard_to_find_share() -> dict:
     return {r["cid"]: (r["rare"] or 0) / r["n"] for r in rows if r["n"]}
 
 
-def sort_community_ids(index: dict, ids, key: str = "name") -> list:
-    """Order ``ids`` by a library sort key: ``name`` (A–Z, default) ·
+def sort_community_ids(index: dict, ids, key: str = "name",
+                       place: str = "") -> list:
+    """Order ``ids`` by a library sort key: ``best`` (Best picks first, PR-9:
+    the members' mean Impact from ``src.plant_priority``, a community with a
+    member off ``place``'s local list after every one without) · ``name`` ·
     ``members`` (most members first) · ``wildlife`` (most distinct fauna
     supported) · ``native`` (highest native %) · ``modified`` (most recent) ·
     ``easiest`` (smallest share of members rarely sold, V3.14).
@@ -538,6 +542,17 @@ def sort_community_ids(index: dict, ids, key: str = "name") -> list:
     def _name(i):
         return index[i]["name"].lower()
 
+    if key == "best":
+        from src.plant_priority import impact_by_id          # noqa: PLC0415
+        impact = impact_by_id()
+
+        def mean(i):
+            vals = [impact.get(int(p), 0) for p in
+                    index[i].get("member_ids") or () if p is not None]
+            return sum(vals) / len(vals) if vals else 0.0
+        return sorted(ids, key=lambda i: (
+            bool(place and (index[i].get("not_around") or {}).get(place)),
+            -mean(i), _name(i)))
     if key == "easiest":
         return sorted(ids, key=lambda i: (
             len(index[i].get("hard_to_find") or ())

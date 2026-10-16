@@ -316,6 +316,8 @@ class TestStructuralCeilings(unittest.TestCase):
         # and the one read side every surface asks. Opted in on arrival.
         (_SRC / "local_flora.py", 360),                # 296 now
         (_SRC / "native_here.py", 280),                # 227 now
+        # V3.26 (PR-1): the ranking, one table of weights and its words.
+        (_SRC / "plant_priority.py", 380),             # 340 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in

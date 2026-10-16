@@ -88,6 +88,19 @@ class TestPlantPanelSmoke(unittest.TestCase):
             self._panel._selected_plant = None
             self._panel._current_zone = None
             self._panel._placed_counts = {}
+            # These test the filters' mechanics from an unfiltered list; the
+            # local list on by default (ED-10) is tested on its own below.
+            self._panel.picker.set_criteria({})
+
+    def test_the_local_list_is_on_from_a_cold_start(self):
+        """ED-10 (V3.26): the simple app lists the region's natives."""
+        from src import native_here
+        from src.plant_panel import PlantPanel
+        panel = PlantPanel()
+        self.addCleanup(panel.deleteLater)
+        self.assertTrue(panel.picker.criteria().get("local_native"))
+        self.assertEqual(len(panel.picker.rows()),
+                         len(native_here.native_names("edmonton")))
 
     # ── Basic class shape ────────────────────────────────────────────────────
 

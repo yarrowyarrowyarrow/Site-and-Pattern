@@ -121,14 +121,27 @@ class TestThePicker(unittest.TestCase):
         self.assertFalse(self.picker.chips["edible_only"].isChecked())
         self.assertEqual({r["plant_type"] for r in self.picker.rows()}, {"tree"})
 
-    def test_no_site_means_name_order_and_no_suits_choice(self):
-        self.assertEqual(self.picker.order(), "name")
+    def test_best_picks_first_is_the_default_and_no_site_no_suits(self):
+        """PR-2 (V3.26): the default order is the ranking, first in the
+        list, and equals plant_priority.rank."""
+        from src import plant_filters as pf, plant_priority
+        self.assertEqual(self.picker.order(), "priority")
+        self.assertEqual(pf.ORDERS[0][0], "priority")
+        self.assertEqual(self.picker.order_combo.currentText(),
+                         "Best picks first")
+        rows = self.picker.rows()
+        self.assertEqual([r["id"] for r in rows],
+                         [r["id"] for r in plant_priority.rank(
+                             rows, place=self.picker.place())])
         combo = self.picker.order_combo
         suits = combo.findData("suits")
         self.assertFalse(combo.model().item(suits).isEnabled())
 
-    def test_a_site_makes_suits_the_order_until_the_reader_picks(self):
+    def test_recorded_near_this_site_still_works_with_a_site(self):
+        """Offered once there is a pin, and no longer chosen for the reader."""
         self.picker.set_site((53.55, -113.49), zone=3)
+        self.assertEqual(self.picker.order(), "priority")
+        self.picker.set_order("suits")
         self.assertEqual(self.picker.order(), "suits")
         names = [r["common_name"] for r in self.picker.rows()]
         from src.zoning import needs_standing_water
@@ -142,8 +155,17 @@ class TestThePicker(unittest.TestCase):
 
     def test_losing_the_site_leaves_suits(self):
         self.picker.set_site((53.55, -113.49))
+        self.picker.set_order("suits")
         self.picker.set_site(None)
-        self.assertEqual(self.picker.order(), "name")
+        self.assertEqual(self.picker.order(), "priority")
+
+    def test_an_edmonton_pin_leads_with_the_edmonton_list(self):
+        """PR-2's acceptance: the first 20 hold no plant off the list."""
+        from src import native_here
+        self.picker.set_site((53.55, -113.49), zone=3)
+        names = native_here.native_names("edmonton")
+        first = self.picker.rows()[:20]
+        self.assertTrue(all(r["scientific_name"] in names for r in first))
 
     def test_the_selection_survives_a_reorder(self):
         self.picker.view.setCurrentIndex(self.picker.model.index(5, 0))

@@ -164,6 +164,7 @@ _GROUP_COMBO_STYLE = (
 # polycultures.sort_community_ids; label prefix keeps the closed combo legible
 # next to the facet dropdowns.
 _SORT_BY_OPTIONS = [
+    ("best",     "Sort: Best picks first"),     # PR-9 (V3.26), the default
     ("name",     "Sort: A–Z"),
     ("members",  "Sort: Most members"),
     ("wildlife", "Sort: Most wildlife"),
@@ -1096,7 +1097,7 @@ class PolyculturePanel(QWidget):
         self._group_by = settings.value(
             "plant_communities/group_by", "none", type=str)
         self._sort_by = settings.value(
-            "plant_communities/sort_by", "name", type=str)
+            "plant_communities/sort_by", "best", type=str)
         self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
         self._search_timer.setInterval(200)
@@ -1204,8 +1205,10 @@ class PolyculturePanel(QWidget):
         local_row.setSpacing(6)
         label = f"{self._home.short} natives only"
         self._edmonton_only = QCheckBox(label)
+        # On by default where the pack says so (ED-10, V3.26).
+        on = "1" if self._home.defaults.get("local_natives_only") else ""
         self._edmonton_only.setChecked(bool(QSettings().value(
-            "plant_communities/native_near", "", type=str)))
+            "plant_communities/native_near", on, type=str)))
         self._edmonton_only.setToolTip(
             f"Only communities whose every plant is native around "
             f"{self._home.short}. One plant from elsewhere and the community "
@@ -1826,7 +1829,8 @@ class PolyculturePanel(QWidget):
             index, search=search, facets=facet_filters,
             native_near=native_near, regions=regions)
         ordered = polycultures.sort_community_ids(
-            index, list(passed), getattr(self, "_sort_by", "name"))
+            index, list(passed), getattr(self, "_sort_by", "best"),
+            place=self._home.key)
 
         if hasattr(self, "_result_count"):
             n = len(ordered)
@@ -1971,7 +1975,7 @@ class PolyculturePanel(QWidget):
 
     def _on_sort_changed(self, _idx=0):
         """Re-order the library by the chosen sort key and persist it."""
-        self._sort_by = self._sort_combo.currentData() or "name"
+        self._sort_by = self._sort_combo.currentData() or "best"
         QSettings().setValue("plant_communities/sort_by", self._sort_by)
         self._refresh_polyculture_list()
 

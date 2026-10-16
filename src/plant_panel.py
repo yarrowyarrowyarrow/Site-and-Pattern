@@ -220,7 +220,15 @@ class PlantPanel(QWidget):
         # over one vocabulary. Its filters start folded to the line that says
         # which are on; eighteen do not fit above a list in this column.
         from src.plant_picker import PlantPicker
-        self.picker = PlantPicker(self, draggable=True)
+        # The region's list on from the start in the simple app (ED-10,
+        # V3.26): a cold start lists its 250 natives, not the 424. A chip
+        # says so, and one click takes it off.
+        from src import advanced_tools, region
+        local = (region.default().defaults.get("local_natives_only")
+                 and not advanced_tools.is_on())
+        self.picker = PlantPicker(self, draggable=True,
+                                  criteria={"local_native": True} if local
+                                  else None)
         self.picker.results_changed.connect(self._on_results)
         self._results_list = self.picker.view
         self._results_model = self.picker.model
@@ -319,6 +327,11 @@ class PlantPanel(QWidget):
             except Exception:                                   # noqa: BLE001
                 coords = None
         self.picker.set_site(coords, self._current_zone)
+
+    def set_site_area(self, area_m2):
+        """The yard's measured area (the outline's), for the order's size
+        words; ``None`` or 0 before one is drawn."""
+        self.picker.set_area(area_m2 or None)
 
     def _run_search(self):
         self.picker.refresh()

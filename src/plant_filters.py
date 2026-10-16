@@ -176,6 +176,11 @@ QUALITIES: tuple = (
 
 #: ``(key, label, tooltip)``. "suits" is offered only where there is a site.
 ORDERS: tuple = (
+    # The default (PR-2, V3.26): Impact first, words for the rest (L1).
+    ("priority", "Best picks first",
+     "Plants that feed the most local wildlife come first, plants on a "
+     "local seller's list first among equals. Nothing is hidden: the rest "
+     "follow in the same list."),
     # Named for what it knows. The review asked for "suits this site", but
     # nothing here knows the yard's sun or soil: it knows where a species has
     # been recorded and the zone, and a salt-flat grass recorded near
@@ -433,7 +438,8 @@ def _ecoregion_name(key: str) -> str:
 def order_plants(rows, key: str = "name", *, site=None,
                  zone: Optional[float] = None,
                  wildlife_counts: Optional[dict] = None,
-                 hint: Optional[Callable] = None) -> list:
+                 hint: Optional[Callable] = None,
+                 area_m2: Optional[float] = None, place: str = "") -> list:
     """Order a result set.
 
     ``site`` is ``(lat, lng)`` or ``None``; ``zone`` the site's hardiness zone.
@@ -447,6 +453,12 @@ def order_plants(rows, key: str = "name", *, site=None,
     def name(r):
         return (r.get("common_name") or "").lower()
 
+    if key == "priority":
+        from src.plant_priority import rank                      # noqa: PLC0415
+        ranked = rank(rows, area_m2=area_m2, place=place)
+        if hint is None:
+            return ranked
+        return sorted(ranked, key=lambda r: not hint(r))
     if key == "suits":
         from src.site_fit import locality_rank                   # noqa: PLC0415
         from src.zoning import needs_standing_water              # noqa: PLC0415
@@ -500,19 +512,5 @@ def _number(value, default=0.0):
 
 
 def animals_per_plant() -> dict:
-    """``{plant_id: distinct animals documented}``, for the "Animals supported"
-    order. Distinct animals, not relationship rows: Boreal Yarrow has 334 rows
-    and 296 animals, because one bee can take nectar and pollen."""
-    try:
-        from src.db.plants import get_connection                 # noqa: PLC0415
-        conn = get_connection()
-    except Exception:                                           # noqa: BLE001
-        return {}
-    try:
-        return {int(pid): int(n) for pid, n in conn.execute(
-            "SELECT plant_id, COUNT(DISTINCT fauna_id) FROM plant_fauna "
-            "GROUP BY plant_id")}
-    except Exception:                                           # noqa: BLE001
-        return {}
-    finally:
-        conn.close()
+    from src.plant_priority import animals_per_plant as count  # noqa: PLC0415
+    return count()

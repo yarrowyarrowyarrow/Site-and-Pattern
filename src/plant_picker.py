@@ -70,7 +70,7 @@ class PlantPicker(QWidget):
 
     def __init__(self, parent=None, *, wide: bool = False,
                  filters_open: Optional[bool] = None,
-                 criteria: Optional[dict] = None, order: str = "name",
+                 criteria: Optional[dict] = None, order: str = "priority",
                  draggable: bool = False, list_apart: bool = False,
                  search_fn: Optional[Callable] = None):
         super().__init__(parent)
@@ -85,7 +85,8 @@ class PlantPicker(QWidget):
         self._soil_hidden = 0
         self._catalogue: Optional[int] = None
         # "suits" needs a site; set_site makes it the order once there is one.
-        self._order = order if order != "suits" else "name"
+        self._order = order if order != "suits" else "priority"
+        self._area: Optional[float] = None
         self._user_ordered = False
         self._site = None
         self._zone = None
@@ -344,11 +345,27 @@ class PlantPicker(QWidget):
         before = self.province()
         self._site, self._zone = coords, zone
         self._follow_province(before)
-        if not self._user_ordered or (self._order == "suits" and not coords):
-            self._order = "suits" if coords else (
-                "name" if self._order == "suits" else self._order)
+        # Best picks first stays the order with a pin (PR-2, V3.26); a pin
+        # taken away leaves "Recorded near this site" for it.
+        if self._order == "suits" and not coords:
+            self._order = "priority"
         self._sync_order_combo()
         self._reorder()
+
+    def set_area(self, area_m2):
+        """The yard's measured area, for the "too big for this yard" words
+        (L3); ``None`` before an outline."""
+        area_m2 = float(area_m2) if area_m2 else None
+        if area_m2 != self._area:
+            self._area = area_m2
+            self._reorder()
+
+    def place(self) -> str:
+        """The region whose list leads the order: the pin's, else the
+        edition's."""
+        from src import region
+        r = region.at(*self._site[:2]) if self._site else region.default()
+        return r.key if r else ""
 
     def province(self) -> str:
         """``"AB"`` or ``"SK"`` for the pin, ``""`` without one (F200)."""
@@ -403,7 +420,8 @@ class PlantPicker(QWidget):
             self._animals = pf.animals_per_plant()
         return pf.order_plants(rows, self._order, site=self._site,
                                zone=self._zone, wildlife_counts=self._animals,
-                               hint=self._hint)
+                               hint=self._hint, area_m2=self._area,
+                               place=self.place())
 
     def _reorder(self):
         if not self._rows:

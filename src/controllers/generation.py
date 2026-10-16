@@ -52,9 +52,13 @@ class GenerationController:
         # only when the project has none of its own, so a user who
         # deliberately cleared every goal keeps that choice.
         from src.onboarding import FIRST_RUN_GOALS
-        from src import design_goals
+        from src import design_goals, region
+        # The pin's pack's first-run goals (ED-10, V3.26), else the beginner
+        # defaults.
+        first_run = (region.for_site(site_config).defaults.get(
+            "first_run_goals") or list(FIRST_RUN_GOALS))
         preselected = design_goals.normalize(
-            site_config.get("priorities") or list(FIRST_RUN_GOALS))
+            site_config.get("priorities") or list(first_run))
 
         # A second run replaced nothing until V3.18: the generator is
         # deterministic, so every plant landed on its own twin (R2).
