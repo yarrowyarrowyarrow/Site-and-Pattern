@@ -339,11 +339,11 @@ class TestStartScreen(unittest.TestCase):
         self.assertEqual([d[0] for d in _DOORS], [LEARN, DESIGN, OPEN])
 
     def test_choice_is_empty_until_picked(self):
-        from src.start_screen import DIRECTORY, StartScreen
+        from src.start_screen import REFERENCE, StartScreen
         screen = StartScreen()
         self.assertEqual(screen.choice(), "")
-        screen._pick(DIRECTORY)
-        self.assertEqual(screen.choice(), DIRECTORY)
+        screen._pick(REFERENCE)
+        self.assertEqual(screen.choice(), REFERENCE)
 
 
 class TestWiringContract(unittest.TestCase):

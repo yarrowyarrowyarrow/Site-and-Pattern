@@ -154,8 +154,8 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         fn = next(n for n in ast.walk(ast.parse(src))
                   if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         handled = ast.dump(fn)
-        for name in ("RECOVER", "CONTINUE", "OPEN", "DESIGN", "DIRECTORY",
-                     "EXAMPLE", "REFERENCE", "BLOOM", "UPDATE"):
+        for name in ("RECOVER", "CONTINUE", "OPEN", "DESIGN",
+                     "EXAMPLE", "REFERENCE", "UPDATE"):
             self.assertTrue(hasattr(wd, name), name)
             self.assertIn(name, handled, f"{name} is offered but never acted on")
 

@@ -60,8 +60,6 @@ from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
     open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
-from src.plant_directory_window import (
-    open_plant_directory as _open_plant_directory)
 from src.app_version import running_version
 from src.branding import window_title
 from src.log import get_logger
@@ -531,18 +529,6 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
-
-        act_directory = view_menu.addAction("&Plant Directory…")
-
-        act_directory.setObjectName("view_plant_directory")
-        act_directory.setStatusTip(
-            "Every species in the catalogue — what it looks like, where it "
-            "grows, and which animals depend on it (F90)"
-        )
-        # Lambda for the same reason as the others: the window manages itself
-        # in src/plant_directory_window.py and takes `main` optionally, because
-        # the start screen opens it before any MainWindow exists.
-        act_directory.triggered.connect(lambda: _open_plant_directory(self))
 
         act_reference = view_menu.addAction("Walk a &Wild Landscape…")
 

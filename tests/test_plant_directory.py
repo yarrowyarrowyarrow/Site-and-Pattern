@@ -52,8 +52,7 @@ class TestTheFacetsDriveTheRealQuery(unittest.TestCase):
         for tag in ("keystone_species", "host_plant", "bird_food",
                     "pollinator", "nitrogen_fixer"):
             self.assertIn(tag, roles)
-        for name in ("plant_panel.py", "plant_directory_window.py",
-                     "polyculture_panel.py"):
+        for name in ("plant_panel.py", "polyculture_panel.py"):
             src = (_ROOT / "src" / name).read_text(encoding="utf-8")
             self.assertIn("PlantPicker(", src, name)
             self.assertNotIn("CheckableComboBox(", src, name)
@@ -346,8 +345,7 @@ class TestP12(unittest.TestCase):
     def test_no_indigenous_knowledge_vocabulary_reaches_the_screen(self):
         # The page moved out of the window in V3.00 and is shown beside the
         # Browse list too: the guard follows it.
-        for name in ("plant_directory.py", "plant_directory_window.py",
-                     "start_screen.py", "species_page.py", "species_flyout.py",
+        for name in ("plant_directory.py", "start_screen.py", "species_page.py", "species_flyout.py",
                      "plant_picker.py", "plant_filters.py"):
             for text in self._user_facing(_ROOT / "src" / name):
                 for word in self._FORBIDDEN:

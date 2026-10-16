@@ -50,9 +50,11 @@ already takes ``placed_plants`` as a plain argument: ``lesson_track``,
 ``plant_impact``, ``habitat_score``, ``docent``, ``field_study``,
 ``chickadee_scenario``, ``scene_wildlife``.
 
-That is also why the Learn doors mostly return the choice keys the start screen
-already used (``REFERENCE``, ``DIRECTORY``): they open surfaces that existed,
-and ``onboarding_flow._dispatch`` needed no new branch for them.
+That is also why the walk returns the choice key the start screen already used
+(``REFERENCE``): it opens a surface that existed, and
+``onboarding_flow._dispatch`` needed no new branch for it. The Plant Directory
+row (``DIRECTORY``) went in V3.22 (RM-10, the owner's S4): the same plant pages
+are in Placement › Plants.
 """
 
 from __future__ import annotations
@@ -61,11 +63,10 @@ from __future__ import annotations
 LEARN = "learn"
 DESIGN = "design"
 
-#: Rows on the Learn menu. ``WALK`` and ``GUIDE`` are deliberately the *same*
-#: keys the start screen used for these surfaces before they moved in here, so
-#: the dispatch table did not have to grow a second way to say the same thing.
+#: Rows on the Learn menu. ``WALK`` is deliberately the *same* key the start
+#: screen used for this surface before it moved in here, so the dispatch table
+#: did not have to grow a second way to say the same thing.
 WALK = "reference"        # the walkable, editable reference landscape
-GUIDE = "directory"       # the catalogue as a reference work (F90)
 STUDIO = "studio"         # lessons + field study, over the sandbox
 BACK = "back"             # return to the start screen
 
@@ -76,7 +77,6 @@ BACK = "back"             # return to the start screen
 #: start-screen lesson, applied to its second screen.
 LEARN_DOORS = (
     (WALK, "🌲", "Walk a wild landscape"),
-    (GUIDE, "🔎", "Plant Directory"),
     (STUDIO, "📚", "Lessons & Field Study"),
 )
 
@@ -84,7 +84,7 @@ LEARN_DOORS = (
 #: MainWindow. This set is the whole mechanical content of the mode split: the
 #: simplification the feedback asked for is precisely "the beginner does not
 #: meet the map".
-_LEARN_ONLY = frozenset({WALK, GUIDE, STUDIO})
+_LEARN_ONLY = frozenset({WALK, STUDIO})
 
 
 def is_learn_choice(choice: str) -> bool:
@@ -102,8 +102,7 @@ def opens_main_window(choice: str) -> bool:
     return not is_learn_choice(choice)
 
 
-def learn_notes(plant_line: str = "", communities: int = 0,
-                sandbox: str = "") -> dict:
+def learn_notes(communities: int = 0, sandbox: str = "") -> dict:
     """The note column for each Learn door — one short fact per row.
 
     Kept here rather than in the widget so the wording is testable without a
@@ -111,10 +110,6 @@ def learn_notes(plant_line: str = "", communities: int = 0,
     checkable in one place. Every string must survive its inputs being empty:
     this runs before any project exists.
 
-    The directory's row counts plants (``plant_line``). Until V3.07 it carried
-    the discovery count, plants and animals together ("1568 species to find"),
-    beside a window that lists the 424 plants (the V3.05 surface audit); that
-    count is still the start screen's, on its Learn door.
     """
     if communities:
         walk = f"{communities} communities"
@@ -124,6 +119,5 @@ def learn_notes(plant_line: str = "", communities: int = 0,
         walk = f"continue in {sandbox}"
     return {
         WALK: walk,
-        GUIDE: plant_line or "look up any native plant",
         STUDIO: "about the landscape you're in",
     }

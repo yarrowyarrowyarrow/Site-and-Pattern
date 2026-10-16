@@ -11,7 +11,7 @@ user to start a new design, load a previous design or explore the plant
 directory."* Then, on seeing it: *"the UI of this start menu is pretty bad."*
 
 Three doors, in the order a person needs them: a new design, one they already
-have, or the plant directory. Above them, only when they mean something, the
+have, or Learn (the plant directory until V3.22). Above them, only when they mean something, the
 two rows about work already in progress. Below, quietly, two places worth
 knowing about.
 
@@ -69,14 +69,12 @@ RECOVER = "recover"
 CONTINUE = "continue"
 #: The quiet second tier.
 EXAMPLE = "example"
-#: Still real choices, still dispatched — but offered from the Learn menu now
-#: rather than from here. A reference work and a walkable wild community are
-#: things you go to in order to *learn*; putting them behind the Learn door is
-#: what makes that door worth opening.
-DIRECTORY = "directory"
+#: Still a real choice, still dispatched — but offered from the Learn menu
+#: now rather than from here: a walkable wild community is somewhere you go
+#: to *learn*. The plant directory beside it, and the footer's in-bloom link
+#: that opened it, went in V3.22 (RM-10, the owner's S4).
 REFERENCE = "reference"
 #: The footer.
-BLOOM = "bloom"
 UPDATE = "update"
 
 #: The three doors: ``(key, icon, title)``. The note beside each is computed,
@@ -161,7 +159,7 @@ class StartScreen(QDialog):
     def __init__(self, parent: QWidget | None = None, *,
                  last_design: str = "", recover: str = "",
                  saves_count: int = 0, species_count: int = 0,
-                 bloom_line: str = "", version: str = "",
+                 version: str = "",
                  discovery_line: str = "", hidden: bool = False):
         super().__init__(parent)
         self.setWindowTitle(APP_NAME)
@@ -233,9 +231,6 @@ class StartScreen(QDialog):
 
         # ── Footer ──────────────────────────────────────────────────────────
         foot = QHBoxLayout()
-        if bloom_line:
-            foot.addWidget(self._link(BLOOM, bloom_line,
-                                      "Open these in the plant directory."))
         foot.addStretch()
         if version:
             stamp = QLabel(version)

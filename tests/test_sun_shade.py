@@ -535,14 +535,14 @@ class TestTheDeferredStartChoiceSurvivesADeletedWindow(unittest.TestCase):
         self.assertLess(guard, acted)
 
     def test_the_synchronous_rows_never_wait_on_the_map(self):
-        """The other half of that split. Opening the plant directory touches no
+        """The other half of that split. Walking a wild landscape touches no
         map; making it sit through a Leaflet load would be a delay bought for
         nothing."""
         from src import onboarding_flow
-        from src.start_screen import DIRECTORY, EXAMPLE, OPEN, REFERENCE
+        from src.start_screen import EXAMPLE, OPEN, REFERENCE, UPDATE
         for key in (OPEN, EXAMPLE):
             self.assertIn(key, onboarding_flow._NEEDS_MAP, key)
-        for key in (DIRECTORY, REFERENCE):
+        for key in (REFERENCE, UPDATE):
             self.assertNotIn(key, onboarding_flow._NEEDS_MAP, key)
 
     def test_nothing_schedules_a_bare_call_into_the_window(self):

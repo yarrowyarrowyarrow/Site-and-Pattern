@@ -153,7 +153,7 @@ class TestTheDoorSplit(unittest.TestCase):
 
     def test_learn_choices_do_not_open_the_design_app(self):
         from src import app_mode
-        for key in (app_mode.WALK, app_mode.GUIDE, app_mode.STUDIO):
+        for key in (app_mode.WALK, app_mode.STUDIO):
             self.assertFalse(app_mode.opens_main_window(key), key)
 
     def test_a_dismissed_start_screen_still_opens_the_app(self):
@@ -172,13 +172,20 @@ class TestTheDoorSplit(unittest.TestCase):
         self.assertIn("window.show()", src)
 
     def test_the_learn_doors_reuse_the_existing_choice_keys(self):
-        """WALK and GUIDE are the keys the start screen already used for these
-        surfaces, so ``onboarding_flow._dispatch`` needed no second way to say
-        the same thing."""
+        """WALK is the key the start screen already used for this surface, so
+        ``onboarding_flow._dispatch`` needed no second way to say the same
+        thing."""
         from src import app_mode
         from src import start_screen
         self.assertEqual(app_mode.WALK, start_screen.REFERENCE)
-        self.assertEqual(app_mode.GUIDE, start_screen.DIRECTORY)
+
+    def test_the_plant_directory_row_is_gone(self):
+        """V3.22 (RM-10, the owner's S4): Walk a Wild Landscape and Lessons &
+        Field Study stay; the Plant Directory's pages are Placement › Plants'."""
+        from src import app_mode
+        self.assertEqual([t for _k, _i, t in app_mode.LEARN_DOORS],
+                         ["Walk a wild landscape", "Lessons & Field Study"])
+        self.assertFalse(hasattr(app_mode, "GUIDE"))
 
     def test_every_learn_door_is_acted_on(self):
         """A row whose key nothing dispatches is a button that does nothing."""
@@ -191,7 +198,7 @@ class TestTheDoorSplit(unittest.TestCase):
                   if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         handled = ast.dump(fn)
         for key, _icon, _title in app_mode.LEARN_DOORS:
-            const = {app_mode.WALK: "REFERENCE", app_mode.GUIDE: "DIRECTORY",
+            const = {app_mode.WALK: "REFERENCE",
                      app_mode.STUDIO: "STUDIO"}[key]
             self.assertIn(const, handled, f"{key} is offered but never acted on")
 
@@ -211,8 +218,7 @@ class TestTheDoorSplit(unittest.TestCase):
         """Every one of these runs before any project exists."""
         from src import app_mode
         notes = app_mode.learn_notes()
-        self.assertEqual(set(notes), {app_mode.WALK, app_mode.GUIDE,
-                                      app_mode.STUDIO})
+        self.assertEqual(set(notes), {app_mode.WALK, app_mode.STUDIO})
         for text in notes.values():
             self.assertTrue(text)
             # Same five-word ceiling the start screen's rows are held to.

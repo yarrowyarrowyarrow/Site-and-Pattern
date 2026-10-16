@@ -140,7 +140,7 @@ def _open_menu(parent) -> str:
     dlg = StartScreen(parent, last_design=last_name, recover=recover_name,
                       saves_count=len(saves.list_saves()),
                       species_count=_species_count(),
-                      bloom_line=_bloom_line(), version=_version_line(),
+                      version=_version_line(),
                       discovery_line=learn_flow.discovery_line(),
                       hidden=not should_show_welcome())
     result = dlg.exec()
@@ -155,7 +155,7 @@ def _open_menu(parent) -> str:
 
 
 #: Rows that put a project on the map, so they must wait until it can render.
-#: Everything else — the directory, a reference ecosystem, the update check —
+#: Everything else — a reference ecosystem, the update check —
 #: runs the moment the window exists. Kept as a set rather than an ``if`` chain
 #: so a new row's author has to decide which it is.
 _NEEDS_MAP = frozenset({"recover", "continue", "open", "example"})
@@ -301,8 +301,8 @@ def _dispatch(main, choice: str) -> None:
     if not choice:
         return
     from src.app_mode import STUDIO
-    from src.start_screen import (BLOOM, CONTINUE, DESIGN, DIRECTORY, EXAMPLE,
-                                  OPEN, RECOVER, REFERENCE, UPDATE)
+    from src.start_screen import (CONTINUE, DESIGN, EXAMPLE, OPEN, RECOVER,
+                                  REFERENCE, UPDATE)
     if choice == RECOVER:
         # Tell the controller this is the screen asking, so its "the screen
         # will handle it" guard stands aside.
@@ -314,8 +314,6 @@ def _dispatch(main, choice: str) -> None:
         main._on_open()
     elif choice == EXAMPLE:
         open_example(main)
-    elif choice in (DIRECTORY, BLOOM):
-        _open_directory(main, bloom=(choice == BLOOM))
     elif choice == REFERENCE:
         _open_reference(main)
     elif choice == STUDIO:
@@ -344,64 +342,19 @@ def _safely(fn, what: str) -> None:
         slot_errors.report(what)
 
 
-def _open_directory(main, *, bloom: bool = False) -> None:
-    """Open the plant directory (F90), optionally already filtered to what is
-    flowering this month — which is what the start screen's in-bloom line is a
-    link to."""
-    from src.plant_directory_window import open_plant_directory
-    criteria = None
-    if bloom:
-        import datetime
-        criteria = {"bloom_months": [str(datetime.date.today().month)]}
-    _safely(lambda: open_plant_directory(main, criteria), "The Plant Directory")
-
-
 def _open_reference(main) -> None:
     from src.reference_ecosystem_window import open_reference_ecosystem
     _safely(lambda: open_reference_ecosystem(main), "Walk a Wild Landscape")
 
 
 def _species_count() -> int:
-    """How big the catalogue is, for the directory row. Silent on failure: the
-    row then reads "look up any native species", which is true either way."""
+    """How big the catalogue is, for the Learn door's note. Silent on failure:
+    the note then reads "start here", which is true either way."""
     try:
         from src.plant_directory import catalogue_size
         return catalogue_size()
     except Exception:                                      # noqa: BLE001
         return 0
-
-
-def _bloom_line() -> str:
-    """The footer's living number. Never raises and returns ``""`` when it has
-    nothing to say — a start screen must not fail to open because a count
-    could not be computed."""
-    try:
-        from src.plant_directory import bloom_line, in_bloom_now
-        return bloom_line(in_bloom_now(ecoregion=_last_ecoregion()))
-    except Exception:                                      # noqa: BLE001
-        return ""
-
-
-def _last_ecoregion() -> str:
-    """The ecoregion of the design you were last in, if any.
-
-    The start screen runs before any project is open, so this is the only
-    location it can honestly claim. With nothing here the bloom line says
-    "across the catalogue" rather than implying a regional count (P9).
-    """
-    try:
-        from src import saves
-        from src.project import load_project
-        path = saves.last_design()
-        if not path:
-            return ""
-        props = (load_project(path).get("properties") or {})
-        regions = (props.get("site_config") or {}).get("ecoregion") or ""
-        if isinstance(regions, (list, tuple)):
-            return regions[0] if regions else ""
-        return str(regions).split(",")[0].strip()
-    except Exception:                                      # noqa: BLE001
-        return ""
 
 
 def _version_line() -> str:

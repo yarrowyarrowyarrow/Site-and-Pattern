@@ -298,6 +298,9 @@ CREATE TABLE IF NOT EXISTS polyculture_members (
 -- Unlike polycultures, recipes carry per-member weights instead of x/y offsets;
 -- they drive ratio assignment for row/grid/circle placements and can be
 -- "populated" into a polyculture's circle via the builder.
+-- Nothing has read these since the plant-mix builder stopped using recipes;
+-- src/db/recipes.py went in V3.22 (RM-6). The tables stay so an old database,
+-- and any rows a user made, open unchanged.
 CREATE TABLE IF NOT EXISTS polyculture_recipes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,

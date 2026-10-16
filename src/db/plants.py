@@ -2336,15 +2336,6 @@ def init_db() -> None:
         # seed used to ship silently, so leave the evidence in the log.
         _log.exception("seeding example polycultures failed")
 
-    # One-time import of any pre-existing recipes that lived in
-    # ~/.permadesign_config.json. Subsequent runs are no-ops thanks to
-    # the `polyculture_recipes_migrated` flag.
-    try:
-        from src.db.recipes import migrate_qsettings_recipes
-        migrate_qsettings_recipes()
-    except Exception:
-        _log.exception("legacy recipe migration failed")  # user can recreate them
-
     # Any init may have reseeded/migrated the catalogue — drop the cache.
     invalidate_plant_cache()
 

@@ -49,7 +49,6 @@ ADVANCED_PAGES: tuple = (
 ADVANCED_ACTIONS: tuple = (
     "view_split",                     # rank 6: the View menu's windows
     "view_3d_preview",
-    "view_plant_directory",
     "view_wild_landscape",
     "view_growth_snapshots",
     "view_scale_units",               # rank 9: map settings and units

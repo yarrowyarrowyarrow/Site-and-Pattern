@@ -2,10 +2,9 @@
 tests/test_settings.py
 
 Persistence round-trip for src/settings.py: load_config and save_config
-are the public surface and are consumed by collapsible_panel.py and
-db/recipes.py. Locking down their behaviour means we can't accidentally
-break the sidebar-collapse memory or the polyculture-recipe migration
-path in later refactors.
+are the public surface and are consumed by collapsible_panel.py (and by
+db/recipes.py until V3.22). Locking down their behaviour means we can't
+accidentally break the sidebar-collapse memory in later refactors.
 
 The module reads/writes ``~/.permadesign_config.json``. Each test patches
 ``_CONFIG_PATH`` to a temp file so the real user config is never touched

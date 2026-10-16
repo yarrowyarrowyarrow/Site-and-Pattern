@@ -114,7 +114,6 @@ class TestStructuralCeilings(unittest.TestCase):
         # when they first hurt: a ceiling added late is a ceiling set around
         # whatever shape the file drifted into.
         (_SRC / "plant_directory.py", 600),            # 452 now
-        (_SRC / "plant_directory_window.py", 640),     # 196 now
         # V3.00 (F192) — one picker and one species page, opted in on arrival.
         # The page is the Directory's, moved out of its window so the Browse
         # tab can show it too; the vocabulary is Qt-free so a test can check

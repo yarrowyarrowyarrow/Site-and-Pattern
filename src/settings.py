@@ -2,7 +2,8 @@
 settings.py — Persistent configuration storage.
 
 Lightweight JSON-backed config in ``~/.permadesign_config.json``. Used by
-the collapsible-sidebar state and the polyculture-recipes migration shim.
+the collapsible-sidebar state. The polyculture-recipes migration that also
+read it went with ``src/db/recipes.py`` in V3.22 (RM-6); its table stays.
 A legacy plant-API key UI lived here historically; it was removed once
 that integration itself was retired.
 """
