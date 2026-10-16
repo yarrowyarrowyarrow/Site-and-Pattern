@@ -5,7 +5,7 @@ The availability levels (``src/local_stock.py``) come from what the region's
 native-plant nurseries actually stock. This session could not reach a single
 nursery's site, so the evidence comes from the owner: on this page they paste
 a nursery's published list (its website, its availability PDF) and mark the
-plants they know, Common, Sometimes, Seed only or Hard to find. The page
+plants they know: Available, Seed only or Hard to find (V3.26). The page
 previews each plant's level as the app will rank it, keeps everything in its
 own database, and ``scripts/merge_stock.py --merge`` brings it back.
 
@@ -47,6 +47,7 @@ def page_data(key: str = "") -> dict:
     by_name = {p["scientific_name"]: p for p in rows}
     natives = native_here.native_names(r.key)
     stock = _load(local_stock.path(r.key))
+    table = stock_lists.name_table(rows)
     species = []
     for name in sorted(natives, key=lambda n: by_name[n]["common_name"]):
         p = by_name[name]
@@ -59,13 +60,13 @@ def page_data(key: str = "") -> dict:
     return {
         "region": {"key": r.key, "name": r.name, "short": r.short,
                    "nurseries": list(r.nurseries)},
-        "rules": {"absent": local_stock.LISTS_TO_SAY_ABSENT,
-                  "share": local_stock.REGULAR_SHARE},
         "labels": local_stock.LABELS, "tips": local_stock.TIPS,
         "species": species,
         "lists": stock.get("lists") or [],
         "rulings": stock.get("rulings") or {},
-        "names": stock_lists.name_table(rows),
+        "names": {k: v for k, v in table.items()
+                  if k != stock_lists.BINOMIALS},
+        "binomials": sorted(table[stock_lists.BINOMIALS]),
     }
 
 

@@ -1,41 +1,31 @@
 """
-local_stock.py — how easy a native plant is to buy around a region, from the
-region's own nurseries' stock (V3.25).
+local_stock.py — whether a native plant can be bought around a region, from
+the region's own nurseries' stock (V3.25; levels redrawn V3.26).
 
 Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
 
 The owner, V3.25: the levels must be "based on actual stock that is available
-at these local retailers". Yarrow, prairie crocus, wild bergamot and giant
-hyssop are common; harebell and prairie sage are sold, but only now and then;
-and "plants that are edge restoration cases and whom one would have trouble
-finding seed let alone grown plants should not be included in the most common
-tier." Until V3.25 the tiers were ``availability_class``, the author's V3.14
-judgment of what Alberta garden centres carried, made without any catalogue.
+at these local retailers", and a restoration plant one would have trouble
+finding even as seed is never in the top level. Then V3.26, with three of
+Arnica Wildflowers' 2026 market lists in hand: "There are so few native plant
+retailers in Edmonton … These ones at Arnica should be listed as 'available'
+rather than common." With one or two retailers, "common" claimed more than any
+list can say, so the levels say only what the lists say:
 
-The evidence lives in the pack, ``data/regions/<key>/stock.json``:
+* ``available``: on a region nursery's plant list (or the owner says so);
+* ``seed``: on a list only as seed;
+* ``hard``: a restoration plant no list carries (the catalogue's ``rare``,
+  each with its reason in ``sourcing_notes``), or the owner says so;
+* ``unlisted``: on none of the lists on file. **Not the same as hard to find**
+  (P9): a nursery may grow it to order, and the lists are one nursery's.
 
-* ``lists``: what a supplier listed, when, and in what form (``plants`` or
-  ``seed``), by scientific name. One supplier may have many lists (a spring
-  and an autumn list, this year and last), which is what tells *always* from
-  *once in a while*.
-* ``rulings``: the owner's answer for a species, which wins.
-
-Every species gets one tier, easiest first:
-
-* ``common``: listed as plants by at least two of the region's suppliers, in
-  at least half of their lists, or the owner says so;
-* ``sometimes``: listed as plants by one supplier, or only some of the time;
-* ``seed``: listed only as seed;
-* ``hard``: on no list while lists from :data:`LISTS_TO_SAY_ABSENT` suppliers
-  are on file, or a restoration plant (below);
-* ``unchecked``: no list and no answer covers it yet.
-
-**A restoration plant is never** ``common`` (the owner's rule): a species the
-catalogue already ranks ``rare``, each for a reason written into its
-``sourcing_notes`` (orchids, hemiparasites, bog plants, mountain or far-north
-ranges, few records). **Unchecked is not hard to find** (P9): with no list on
-file the app says it has not checked, and ranks the plant by its old tier but
-never as high as a plant the stock shows is common.
+The evidence lives in the pack, ``data/regions/<key>/stock.json``: ``lists``
+(what a supplier listed, when, and as plants or seed, by scientific name; the
+transcriptions behind them are in ``tools/stock_review/lists/``) and
+``rulings`` (the owner's answer for a species, which wins). Until V3.25 the
+tiers were ``availability_class``, the author's V3.14 guess at what Alberta
+garden centres carried; a plant no list covers keeps that guess for the
+generator's ranking only, and never as high as a plant a list shows.
 
 Only the region's own natives are ranked: a Calgary nursery's list counts for
 Edmonton, but only for the plants on Edmonton's list (the owner: not
@@ -52,29 +42,24 @@ import json
 import os
 from typing import Mapping, Optional
 
-TIERS = ("common", "sometimes", "seed", "hard", "unchecked")
+TIERS = ("available", "seed", "hard", "unlisted")
 LABELS = {
-    "common": "Common",
-    "sometimes": "Sometimes available",
+    "available": "Available",
     "seed": "Seed only",
     "hard": "Hard to find",
-    "unchecked": "Not checked yet",
+    "unlisted": "Not on a local list",
 }
 TIPS = {
-    "common": "Carried as plants by most of the region's native-plant "
-              "nurseries, most years.",
-    "sometimes": "Carried by one nursery, or only some years.",
+    "available": "On a list of plants a native-plant nursery near you sells.",
     "seed": "Sold as seed, not as grown plants.",
-    "hard": "On none of the nursery lists checked, or a restoration plant few "
-            "grow.",
-    "unchecked": "No nursery list or answer covers it yet.",
+    "hard": "A restoration plant few nurseries grow.",
+    "unlisted": "On none of the nursery lists on file. It may still be sold "
+                "or grown to order: ask.",
 }
+#: What an answer written before V3.26 means now.
+_OLD_TIERS = {"common": "available", "sometimes": "available",
+              "unchecked": "unlisted"}
 FORMS = ("plants", "seed")
-#: How many suppliers' lists must be on file before a plant missing from all
-#: of them is called hard to find rather than unchecked.
-LISTS_TO_SAY_ABSENT = 3
-#: The share of a supplier's lists a plant must be on to count as regular.
-REGULAR_SHARE = 0.5
 SCHEMA = 1
 
 _document: Optional[dict] = None
@@ -128,7 +113,8 @@ def validate(doc: Mapping, suppliers=(), catalogue=None) -> list:
             if catalogue is not None and name not in catalogue:
                 errs.append(f"list {i}: {name!r} is not in the catalogue")
     for name, r in (doc.get("rulings") or {}).items():
-        if (r or {}).get("tier") not in TIERS[:-1]:
+        if _OLD_TIERS.get((r or {}).get("tier"), (r or {}).get("tier")) \
+                not in TIERS[:-1]:
             errs.append(f"ruling {name!r}: tier {(r or {}).get('tier')!r}")
         if set(r or {}) - {"tier", "on"}:
             errs.append(f"ruling {name!r}: only a tier and a date are kept")
@@ -145,48 +131,30 @@ def restoration_plant(row: Mapping) -> bool:
 
 def derive(doc: Mapping, natives, restoration=frozenset()) -> dict:
     """``{scientific name: tier}`` for every name in ``natives`` (the region's
-    list), from a stock document. ``restoration`` names the plants that may
-    never be ``common``."""
-    lists = [l for l in (doc.get("lists") or [])]
-    by_supplier: dict = {}
-    for l in lists:
-        by_supplier.setdefault(l.get("supplier") or "", []).append(l)
+    list), from a stock document. ``restoration`` names the plants that are
+    hard to find when no list carries them."""
+    lists = list(doc.get("lists") or [])
+    on_plants = {n for l in lists if l.get("form", "plants") == "plants"
+                 for n in (l.get("species") or ())}
+    on_seed = {n for l in lists if l.get("form") == "seed"
+               for n in (l.get("species") or ())}
     rulings = doc.get("rulings") or {}
     out = {}
     for name in natives:
-        tier = _from_lists(name, by_supplier)
+        if name in on_plants:
+            tier = "available"
+        elif name in on_seed:
+            tier = "seed"
+        elif name in restoration:
+            tier = "hard"
+        else:
+            tier = "unlisted"
         ruled = (rulings.get(name) or {}).get("tier")
+        ruled = _OLD_TIERS.get(ruled, ruled)
         if ruled in TIERS:
             tier = ruled
-        elif tier == "unchecked" and name in restoration:
-            tier = "hard"
-        if tier == "common" and name in restoration:
-            tier = "sometimes"
         out[name] = tier
     return out
-
-
-def _from_lists(name: str, by_supplier: Mapping) -> str:
-    plants_regular = plants_any = seed_any = 0
-    for supplier, lists in by_supplier.items():
-        plants = [l for l in lists if l.get("form", "plants") == "plants"]
-        named = [l for l in plants if name in (l.get("species") or ())]
-        if named:
-            plants_any += 1
-            if len(named) / len(plants) >= REGULAR_SHARE:
-                plants_regular += 1
-        if any(name in (l.get("species") or ()) for l in lists
-               if l.get("form") == "seed"):
-            seed_any += 1
-    if plants_regular >= 2:
-        return "common"
-    if plants_any:
-        return "sometimes"
-    if seed_any:
-        return "seed"
-    if len([s for s in by_supplier if s]) >= LISTS_TO_SAY_ABSENT:
-        return "hard"
-    return "unchecked"
 
 
 @functools.lru_cache(maxsize=8)
@@ -220,33 +188,38 @@ def tier(plant, key: str = "") -> str:
     return tiers(key).get(name.strip(), "")
 
 
-def suppliers(plant, key: str = "") -> list:
-    """The suppliers whose lists carry the plant, newest list first, as
-    ``(supplier, seen, form)``."""
+def listings(plant, key: str = "") -> dict:
+    """``{supplier: [(seen, form), …]}``, oldest list first: every list that
+    carries the plant."""
     from src import region                                   # noqa: PLC0415
-    name = plant if isinstance(plant, str) else (
-        (plant or {}).get("scientific_name") or "")
+    name = plant_name(plant)
     lists = _load(key or region.default().key).get("lists") or []
-    seen: dict = {}
-    for l in sorted(lists, key=lambda l: str(l.get("seen") or ""),
-                    reverse=True):
-        if name.strip() in (l.get("species") or ()):
-            seen.setdefault(l.get("supplier") or "",
-                            (l.get("supplier") or "", str(l.get("seen") or ""),
-                             l.get("form", "plants")))
-    return [v for k, v in seen.items() if k]
+    out: dict = {}
+    for l in sorted(lists, key=lambda l: str(l.get("seen") or "")):
+        if name in (l.get("species") or ()) and l.get("supplier"):
+            out.setdefault(l["supplier"], []).append(
+                (str(l.get("seen") or ""), l.get("form", "plants")))
+    return out
 
 
-#: The old tier's ease (``sourcing.ease``) for a plant the stock does not
-#: cover, capped: only stock shows a plant is common.
+def suppliers(plant, key: str = "") -> list:
+    """``(supplier, newest seen, form)`` for each supplier whose lists carry
+    the plant, newest first."""
+    rows = [(s, seen[-1][0], seen[-1][1])
+            for s, seen in listings(plant, key).items()]
+    return sorted(rows, key=lambda r: r[1], reverse=True)
+
+
+#: The old tier's ease (``sourcing.ease``) for a plant no list covers, capped:
+#: only a list shows a plant can be bought.
 _OLD_EASE = {"big_box": 2, "garden_centre": 2, "native_specialist": 1,
              "seed_or_plug": 1, "rare": 0}
-_EASE = {"common": 2, "sometimes": 1, "seed": 1, "hard": 0}
+_EASE = {"available": 2, "seed": 1, "hard": 0}
 
 
 def ease(row: Mapping, key: str = "") -> int:
-    """2 common, 1 sold now and then or as seed, 0 hard to find. A plant the
-    stock does not cover keeps its old tier's ease, at most 1."""
+    """2 on a nursery's list, 1 sold as seed, 0 hard to find. A plant no list
+    covers keeps its old tier's ease, at most 1."""
     t = tier(row, key)
     if t in _EASE:
         return _EASE[t]
@@ -255,11 +228,10 @@ def ease(row: Mapping, key: str = "") -> int:
 
 
 def easy_to_find(row: Mapping, key: str = "") -> bool:
-    """What *Easy to find* and the budget goal keep: sold as plants (common or
-    sometimes), or, where the stock is silent, not known to be seed-only or
-    rare."""
+    """What *Easy to find* and the budget goal keep: on a nursery's plant
+    list, or, where no list covers it, not known to be seed-only or rare."""
     t = tier(row, key)
-    if t in ("common", "sometimes"):
+    if t == "available":
         return True
     if t in ("seed", "hard"):
         return False
@@ -267,31 +239,53 @@ def easy_to_find(row: Mapping, key: str = "") -> bool:
         "seed_or_plug", "rare")
 
 
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December")
+
+
+def _when(seen: list) -> str:
+    """"its May, June and August 2026 lists" from the dates seen."""
+    months, years = [], []
+    for date, _form in seen:
+        parts = date.split("-")
+        if len(parts) >= 2 and parts[1].isdigit():
+            m = _MONTHS[int(parts[1]) - 1]
+            if m not in months:
+                months.append(m)
+        if parts and parts[0] not in years:
+            years.append(parts[0])
+    if not months:
+        return ""
+    word = "list" if len(seen) == 1 else "lists"
+    return f"its {_join(months)} {_join(years)} {word}"
+
+
 def clause(plant, key: str = "") -> str:
     """What a plant page says about buying it around the region, ``""`` when
-    the stock does not cover it."""
+    the plant is not one of the region's natives."""
     from src import region                                   # noqa: PLC0415
     r = region.regions().get(key) if key else region.default()
     r = r or region.default()
     t = tier(plant, r.key)
-    who = suppliers(plant, r.key)
-    names = [s for s, _seen, form in who if form == "plants"]
-    if t == "common":
-        return (f"Common at {r.short} native-plant nurseries"
-                + (f" ({_join(names)})" if names else "") + ".")
-    if t == "sometimes":
-        return ("Sold now and then" + (f", by {_join(names)}" if names else
-                                       f" by {r.short} native-plant nurseries")
-                + ": check before you go.")
+    lists = listings(plant, r.key)
+    plants = {s: [x for x in v if x[1] == "plants"] for s, v in lists.items()}
+    plants = {s: v for s, v in plants.items() if v}
+    if t == "available":
+        if not plants:
+            return f"Available from {r.short} native-plant nurseries."
+        return "Available: " + "; ".join(
+            f"{s} (on {_when(v)})" if _when(v) else s
+            for s, v in plants.items()) + "."
     if t == "seed":
-        seeds = [s for s, _seen, form in who if form == "seed"]
+        seeds = [s for s, v in lists.items() if any(f == "seed" for _d, f in v)]
         return "Sold as seed" + (f" ({_join(seeds)})" if seeds else "") + "."
     if t == "hard":
-        if not who and plant_name(plant) in _restoration_names():
+        if not lists and plant_name(plant) in _restoration_names():
             return "Hard to find: a restoration plant few nurseries grow."
         return f"Hard to find at {r.short} native-plant nurseries."
-    if t == "unchecked":
-        return (f"Not yet checked against {r.short} nurseries' stock.")
+    if t == "unlisted":
+        return (f"Not on any {r.short} native-plant nursery list on file. It "
+                "may still be sold or grown to order: ask.")
     return ""
 
 

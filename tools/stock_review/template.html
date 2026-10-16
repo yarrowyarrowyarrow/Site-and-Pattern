@@ -185,8 +185,7 @@ input[type="month"], input[type="text"] {
 .sci { color: var(--muted); margin: 0; font-size: 0.9rem; }
 .level { font-size: 0.85rem; color: var(--muted); margin: 2px 0 0; }
 .chip { display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
-.chip[data-t="common"] { background: var(--native-soft); color: var(--native); }
-.chip[data-t="sometimes"] { background: var(--some-soft); color: var(--some); }
+.chip[data-t="available"] { background: var(--native-soft); color: var(--native); }
 .chip[data-t="seed"] { background: var(--some-soft); color: var(--some); }
 .chip[data-t="hard"] { background: var(--not-soft); color: var(--not); }
 .answer { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
@@ -202,8 +201,7 @@ button {
 button:disabled { cursor: not-allowed; opacity: 0.55; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .answer button { font-size: 0.9rem; }
-.answer button[aria-pressed="true"][data-v="common"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); font-weight: 600; }
-.answer button[aria-pressed="true"][data-v="sometimes"],
+.answer button[aria-pressed="true"][data-v="available"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); font-weight: 600; }
 .answer button[aria-pressed="true"][data-v="seed"] { background: var(--some); border-color: var(--some); color: var(--accent-ink); font-weight: 600; }
 .answer button[aria-pressed="true"][data-v="hard"] { background: var(--not); border-color: var(--not); color: var(--accent-ink); font-weight: 600; }
 .msg { font-size: 0.88rem; color: var(--muted); }
@@ -293,10 +291,12 @@ code { font-size: 0.9em; }
   const SPECIES = DATA.species;
   const BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
   const BY_SCI = new Map(SPECIES.map((s) => [s.s, s]));
-  const TIERS = ["common", "sometimes", "seed", "hard", "unchecked"];
-  const ANSWERS = ["common", "sometimes", "seed", "hard"];
-  const SHORT = { common: "Common", sometimes: "Sometimes", seed: "Seed only", hard: "Hard to find" };
+  const TIERS = ["available", "seed", "hard", "unlisted"];
+  const ANSWERS = ["available", "seed", "hard"];
+  const OLD = { common: "available", sometimes: "available" };
+  const SHORT = { available: "Available", seed: "Seed only", hard: "Hard to find" };
   const NAMES = Object.keys(DATA.names).sort((a, b) => b.length - a.length);
+  const BINOMIALS = new Set(DATA.binomials);
 
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => (
@@ -308,19 +308,17 @@ code { font-size: 0.9em; }
   function match(text) {
     const found = [], unread = [];
     String(text || "").split(/\r?\n/).forEach((line) => {
+      if (line.trim().startsWith("#")) return;
       let ln = " " + norm(line) + " ";
       if (!ln.trim()) return;
-      let hit = false;
+      let hits = [];
       NAMES.forEach((n) => {
         const needle = " " + n + " ";
-        if (ln.includes(needle)) {
-          const sci = DATA.names[n];
-          if (!found.includes(sci)) found.push(sci);
-          hit = true;
-          ln = ln.split(needle).join(" | ");
-        }
+        if (ln.includes(needle)) { hits.push(n); ln = ln.split(needle).join(" | "); }
       });
-      if (!hit) unread.push(line.trim());
+      if (hits.some((n) => BINOMIALS.has(n))) hits = hits.filter((n) => BINOMIALS.has(n));
+      hits.forEach((n) => { const sci = DATA.names[n]; if (!found.includes(sci)) found.push(sci); });
+      if (!hits.length) unread.push(line.trim());
     });
     return { found, unread };
   }
@@ -343,37 +341,27 @@ code { font-size: 0.9em; }
   }
   function answerOf(s) {
     const p = pageRulings.get(s.id);
-    if (p) return ANSWERS.includes(p.tier) ? p.tier : "";
+    const norm = (t) => OLD[t] || t;
+    if (p) return ANSWERS.includes(norm(p.tier)) ? norm(p.tier) : "";
     const r = DATA.rulings[s.s];
-    return r && ANSWERS.includes(r.tier) ? r.tier : "";
+    return r && ANSWERS.includes(norm(r.tier)) ? norm(r.tier) : "";
   }
 
-  // ---- the same rules as src/local_stock.derive -------------------------------
+  // ---- the same rules as src/local_stock.derive (V3.26) -------------------
   function levels() {
-    const bySupplier = new Map();
-    allLists().forEach((l) => {
-      if (!bySupplier.has(l.supplier)) bySupplier.set(l.supplier, []);
-      bySupplier.get(l.supplier).push(l);
-    });
     const out = new Map();
+    const lists = allLists();
     SPECIES.forEach((s) => {
-      let regular = 0, any = 0, seed = 0;
       const who = [];
-      bySupplier.forEach((lists, supplier) => {
-        const plants = lists.filter((l) => (l.form || "plants") === "plants");
-        const named = plants.filter((l) => (l.species || []).includes(s.s));
-        if (named.length) {
-          any += 1; who.push(supplier);
-          if (named.length / plants.length >= DATA.rules.share) regular += 1;
-        }
-        if (lists.some((l) => l.form === "seed" && (l.species || []).includes(s.s))) seed += 1;
+      let plants = false, seed = false;
+      lists.forEach((l) => {
+        if (!(l.species || []).includes(s.s)) return;
+        if ((l.form || "plants") === "plants") { plants = true; if (!who.includes(l.supplier)) who.push(l.supplier); }
+        else seed = true;
       });
-      let t = regular >= 2 ? "common" : any ? "sometimes" : seed ? "seed"
-        : (bySupplier.size >= DATA.rules.absent ? "hard" : "unchecked");
+      let t = plants ? "available" : seed ? "seed" : s.r ? "hard" : "unlisted";
       const a = answerOf(s);
       if (a) t = a;
-      else if (t === "unchecked" && s.r) t = "hard";
-      if (t === "common" && s.r) t = "sometimes";
       out.set(s.id, { t, who });
     });
     return out;
@@ -383,19 +371,18 @@ code { font-size: 0.9em; }
   $("#title").textContent = R.short + " nursery stock: your review";
   $("#key").textContent = R.key;
   $("#lede").textContent =
-    "How easy a plant is to buy should come from what " + R.short + "'s native-plant nurseries actually stock, not from a guess. " +
+    "Whether a plant can be bought should come from what " + R.short + "'s native-plant sellers actually list, not from a guess. " +
     "These are the " + SPECIES.length + " plants on the " + R.short + " list. Paste a nursery's published list, mark the plants you know, or both.";
   $("#meaning").textContent =
-    "Your answer wins over the lists. Leave a plant you are not sure of: with no list and no answer it stays Not checked yet, " +
-    "and the app ranks it below every plant the stock shows is common. A restoration plant (hard to find even as seed) is never Common. " +
+    "A plant on any nursery's plant list is Available. One that is not stays Not on a local list, which is not the same as hard to find: " +
+    "a nursery may grow it to order. Hard to find is for a restoration plant no list carries, or your answer. Your answer wins over the lists. " +
     "A tap saves; tap your answer again to take it back.";
   $("#explain").innerHTML = [
-    ["Common", "Listed as plants by at least two of the region's nurseries, on at least half of each one's lists; or your answer. " + DATA.tips.common],
-    ["Sometimes available", "Listed by one nursery, or only on some of their lists: harebell and prairie sage, in your words. " + DATA.tips.sometimes],
+    ["Available", "On a plant list from one of the region's native-plant nurseries or societies. " + DATA.tips.available],
     ["Seed only", DATA.tips.seed],
-    ["Hard to find", "On none of the lists once lists from " + DATA.rules.absent + " nurseries are on file, or a restoration plant the catalogue already ranks rare."],
-    ["Not checked yet", DATA.tips.unchecked + " Not the same as hard to find."],
-    ["Which nurseries", R.nurseries.join(", ") + ". A Calgary-area nursery's list counts only for plants on the " + R.short + " list."],
+    ["Hard to find", "A restoration plant the catalogue already ranks rare, unless a list carries it; or your answer."],
+    ["Not on a local list", DATA.tips.unlisted],
+    ["Which sellers", R.nurseries.join(", ") + ". A Calgary-area nursery's list counts only for plants on the " + R.short + " list."],
   ].map(([t, d]) => "<dt>" + esc(t) + "</dt><dd>" + esc(d) + "</dd>").join("");
   $("#mark-intro").textContent = "Each plant shows its level as the app would rank it right now, from the lists and answers so far, and which nurseries' lists name it.";
 

@@ -515,7 +515,10 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # no longer calls it critical to the Monarch. The common name is the edges'
 # key, so the three edges moved with it; user communities re-point by
 # scientific name and are unaffected.
-_SCHEMA_VERSION = 95
+# v96 (V3.26): no DDL. The nursery directory's "Edmonton Native Plant Group"
+# is the Edmonton Native Plant Society, renamed so the plant pages and the
+# order file name it as people know it; one plant note follows.
+_SCHEMA_VERSION = 96
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

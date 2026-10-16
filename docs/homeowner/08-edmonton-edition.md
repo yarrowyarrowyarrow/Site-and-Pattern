@@ -98,7 +98,7 @@ today.
 | 12 | `src/pdf_export.py:313`, "Edmonton, Alberta" | b | Every PDF is in Edmonton | Wrong place printed | From coverage (ED-5) |
 | 13 | `src/planting_plan.py:51-63`; `src/pdf_export.py` nursery block | a | Four Calgary-area suppliers, two of them not in the directory | Same list everywhere | One list from the pack (ED-4) |
 | 14 | `src/site_panel.py:786-788`, "From the Native Plant Society of Saskatchewan's list" | a | A Saskatchewan source under Edmonton suppliers | — | The pack's note (ED-4) |
-| 15 | `data/nurseries_master.json` (13: 8 SK, 5 AB) via `src/db/nurseries.py` | a | Shared directory sorted by distance | Toronto: Saskatchewan suppliers "ship to you"; Calgary: the Edmonton Native Plant Group as its society | The pack names its suppliers (ED-4) |
+| 15 | `data/nurseries_master.json` (13: 8 SK, 5 AB) via `src/db/nurseries.py` | a | Shared directory sorted by distance | Toronto: Saskatchewan suppliers "ship to you"; Calgary: the Edmonton Native Plant Society as its society | The pack names its suppliers (ED-4) |
 | 16 | `src/planning_panel.py:44-47, 512` | a | Fixed Edmonton rainfall (427 mm) | Every pin gets Edmonton's rain (R4) | Site's rainfall, else the pack's normals (ED-6) |
 | 17 | `src/solar.py:143-160` | a | `EDMONTON_LAT/LNG`; last frost "~May 7", first "~Sep 23" | — | Pack frost dates; keep the test fixture (ED-6) |
 | 18 | `src/db/calendar_data.py:1-8` | a | "Edmonton Zone 3b", last frost ~May 20 | Month-level; probably fine across the three cities | Shared calendar; frost text from the pack (ED-6) |
@@ -126,11 +126,11 @@ today.
 
 | ID | Severity | What happens | Where | Evidence |
 |---|---|---|---|---|
-| **EDF-1** | High | **Two nursery lists in one export.** The PDF and planting plan print ALCLA, Bow Valley Habitat Development, Wild About Flowers and Bedrock Seed Bank (Calgary area; the last two are not in the directory). The order file, built from the directory, prints Arnica Wildflowers, the Edmonton Native Plant Group and TreeTime.ca. The plan's section headings name the Calgary set too | `src/planting_plan.py:51-63`; `src/pdf_export.py` nursery block | A full export of one design: the PDF's text, `planting-plan.txt` and `order.csv` |
+| **EDF-1** | High | **Two nursery lists in one export.** The PDF and planting plan print ALCLA, Bow Valley Habitat Development, Wild About Flowers and Bedrock Seed Bank (Calgary area; the last two are not in the directory). The order file, built from the directory, prints Arnica Wildflowers, the Edmonton Native Plant Society and TreeTime.ca. The plan's section headings name the Calgary set too | `src/planting_plan.py:51-63`; `src/pdf_export.py` nursery block | A full export of one design: the PDF's text, `planting-plan.txt` and `order.csv` |
 | **EDF-2** | Medium | Every PDF is subtitled "Edmonton, Alberta", whatever the pin | `src/pdf_export.py:313` | Code |
 | **EDF-3** | Medium | "Edmonton natives only" restricts a Regina or Calgary design to the Edmonton list (0 off-list species in both runs) | `src/design_goals.py:64-81`; `src/llm_design.py` | Offline generator runs at Regina and Calgary |
 | **EDF-4** | Medium | Edmonton's climate is stated three ways: last frost May 7 (`src/solar.py:158`), ~May 20 (`src/db/calendar_data.py:5`), and an ECCC-normals-based source gives May 15. Rainfall 427 mm (`src/planning_panel.py:44-47`) against the shipped normal's 455.7 mm | As cited | Code; data file |
-| **EDF-5** | Low | Site Info credits the Native Plant Society of Saskatchewan's list under Edmonton suppliers; a Calgary pin's "province-wide society" is the Edmonton Native Plant Group | `src/site_panel.py:786-788`; `src/db/nurseries.py` | `native_sources_near` for Calgary |
+| **EDF-5** | Low | Site Info credits the Native Plant Society of Saskatchewan's list under Edmonton suppliers; a Calgary pin's "province-wide society" is the Edmonton Native Plant Society | `src/site_panel.py:786-788`; `src/db/nurseries.py` | `native_sources_near` for Calgary |
 | **EDF-6** | Medium | Nativity scoring and wording use the Alberta flag in 12 modules, whatever the pin | Row 29 above | grep |
 | **EDF-7** | Medium | Offline fallbacks (rain, soil, wind) answer from any distance; a Toronto pin reads *"Site data ready."* (extends R32) | `src/property_data.py`; `src/wind_flow.py` | A Toronto pin, offline |
 
@@ -188,7 +188,7 @@ needs no schema bump.
 | `climate.monthly_precip_mm` | 12 numbers | yes | 22.5, 13.8, 16.1, 26.5, 49.3, 87.1, 91.7, 69.0, 43.4, 21.0, 16.8, 14.5 (455.7 mm, the shipped normal) | Water page, offline Site Info |
 | `climate.last_spring_frost` / `first_fall_frost` | `MM-DD` | yes | `05-15` / `09-16` (to verify, §8) | Site Info offline, the plan, the solar presets |
 | `climate.hardiness_zone`, `zone_source` | str | yes | "3" from the app's own table, or NRCan's current value once checked | Site Info, PDF |
-| `nurseries` | names in `nurseries_master.json` | yes | Arnica Wildflowers, TreeTime.ca, Edmonton Native Plant Group, ALCLA Native Plants, Wild About Flowers | Site Info, order file, plan, PDF |
+| `nurseries` | names in `nurseries_master.json` | yes | Arnica Wildflowers, TreeTime.ca, Edmonton Native Plant Society, ALCLA Native Plants, Wild About Flowers | Site Info, order file, plan, PDF |
 | `nursery_note` | str | yes | "Native-plant growers and societies for the Edmonton region. Stock is seasonal and often grown to order: check before you go." | Site Info |
 | `communities.hint` | str | no | "Edmonton" | the generator's community preference |
 | `example` | `{centre, name, planting: [[[names…], [east_m, north_m]], …]}` | yes | from `src/onboarding.py:160-193`, after R14's fix | onboarding |

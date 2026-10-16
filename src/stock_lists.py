@@ -33,6 +33,27 @@ ALIASES = {
     "potentilla fruticosa": "Dasiphora fruticosa",
     "bee balm": "Monarda fistulosa",
     "white sage": "Artemisia ludoviciana",
+    # Arnica Wildflowers' 2026 lists (V3.26). The rhombic-leaved sunflower is
+    # H. pauciflorus subsp. subrhomboideus; Alberta's alpine hedysarum is
+    # H. alpinum var. americanum, the catalogue's H. americanum.
+    "helianthus subrhomboideus": "Helianthus pauciflorus",
+    "hedysarum alpinum": "Hedysarum americanum",
+    # Local names on the Edmonton Native Plant Society's 2026 sale lists, which
+    # give no binomials. Arnica's lists pair the first five with theirs.
+    "common tall sunflower": "Helianthus nuttallii",
+    "low goldenrod": "Solidago missouriensis",
+    "purple stemmed aster": "Symphyotrichum puniceum",
+    "richardson s alumroot": "Heuchera richardsonii",
+    "veiny meadowrue": "Thalictrum venulosum",
+    "heart leaved alexander": "Zizia aptera",
+    "large northern aster": "Canadanthus modestus",
+    "great northern aster": "Canadanthus modestus",
+    "long headed anemone": "Anemone cylindrica",
+    "low milkweed": "Asclepias ovalifolia",
+    "pasture sage": "Artemisia frigida",
+    # The catalogue's one violet of that name; Alberta's Canada violet is
+    # V. canadensis var. rugulosa.
+    "canada violet": "Viola rugulosa",
 }
 
 
@@ -45,20 +66,39 @@ def norm(text: str) -> str:
 def name_table(rows: Iterable[Mapping]) -> dict:
     """``{normalised name: scientific name}`` for every catalogue row: its
     binomial, its common name, the names it was renamed from, and
-    :data:`ALIASES`."""
+    :data:`ALIASES`. A binomial (or old binomial) is marked by
+    :data:`BINOMIALS` so a line naming one is read by it alone."""
     table: dict = {}
+    sci_names: set = set()
     for r in rows:
         sci = (r.get("scientific_name") or "").strip()
         if not sci:
             continue
-        for name in (sci, " ".join(sci.split()[:2]), r.get("common_name"),
-                     r.get("renamed_from"), r.get("common_renamed_from")):
+        # "Stiff Sunflower (Rhombic-leaved Sunflower)" is known by either.
+        commons = [c for c in re.split(r"[(),]", r.get("common_name") or "")
+                   if c.strip()]
+        for name, is_sci in ((sci, True), (" ".join(sci.split()[:2]), True),
+                             (r.get("common_name"), False),
+                             *((c, False) for c in commons),
+                             (r.get("renamed_from"), True),
+                             (r.get("common_renamed_from"), False)):
             n = norm(name or "")
-            if n and len(n.split()) >= 1 and n not in table:
+            if n and n not in table:
                 table[n] = sci
+                if is_sci:
+                    sci_names.add(n)
+    genera = {n.split()[0] for n in sci_names}
     for alias, sci in ALIASES.items():
-        table.setdefault(norm(alias), sci)
+        n = norm(alias)
+        table.setdefault(n, sci)
+        if n.split()[0] in genera:          # an old binomial, not a common name
+            sci_names.add(n)
+    table[BINOMIALS] = frozenset(sci_names)
     return table
+
+
+#: The key under which :func:`name_table` keeps which names are binomials.
+BINOMIALS = "\x00binomials"
 
 
 def match(text: str, table: Mapping) -> tuple:
@@ -68,22 +108,30 @@ def match(text: str, table: Mapping) -> tuple:
     A longer name wins over a shorter one inside it, so "Wild Blue Flax" is
     not also read as some "Flax", and a bare common name of one word
     ("Yarrow") counts only when nothing longer on its line matched."""
-    names = sorted(table, key=lambda n: -len(n))
+    binomials = table.get(BINOMIALS) or frozenset()
+    names = sorted((n for n in table if n != BINOMIALS), key=lambda n: -len(n))
     found: list = []
     unread: list = []
     for line in (text or "").splitlines():
+        if line.lstrip().startswith("#"):
+            continue                       # a note, not a plant
         line_n = f" {norm(line)} "
         if not line_n.strip():
             continue
-        hit = False
+        hits = []
         for n in names:
             needle = f" {n} "
             if needle in line_n:
-                sci = table[n]
-                if sci not in found:
-                    found.append(sci)
-                hit = True
+                hits.append(n)
                 line_n = line_n.replace(needle, " | ")
-        if not hit:
+        # A line naming a binomial is read by it: "Artemisia ludoviciana -
+        # Prairie Sagewort" is A. ludoviciana, though the catalogue's Prairie
+        # Sagewort is A. frigida (V3.26, Arnica's lists).
+        if any(n in binomials for n in hits):
+            hits = [n for n in hits if n in binomials]
+        for n in hits:
+            if table[n] not in found:
+                found.append(table[n])
+        if not hits:
             unread.append(line.strip())
     return found, unread
