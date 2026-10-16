@@ -78,13 +78,18 @@ class NoPageScoresWithoutThePin(unittest.TestCase):
 
     def test_the_report_card_pdf_critic_and_api_ask_score_for_project(self):
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        for name in ("app.py", "pdf_export.py", "design_critic.py",
-                     "permadesign_api.py"):
+        # The PDF dropped its score in V3.27: its first page is the overview,
+        # which shows none (O1). It must still never score without the pin.
+        for name in ("app.py", "design_critic.py", "permadesign_api.py"):
             with open(os.path.join(root, "src", name), encoding="utf-8") as fh:
                 text = fh.read()
             self.assertIsNone(re.search(r"\bcompute_habitat_score\(", text),
                               name)
             self.assertIn("score_for_project(", text, name)
+        with open(os.path.join(root, "src", "pdf_export.py"),
+                  encoding="utf-8") as fh:
+            self.assertIsNone(re.search(r"\bcompute_habitat_score\(",
+                                        fh.read()))
 
 
 if __name__ == "__main__":

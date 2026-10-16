@@ -77,7 +77,10 @@ class TheOverviewPage(unittest.TestCase):
         from src.keyboard_help import show_panel
         show_panel(self.win.overview_page)
         self._app.processEvents()
-        self.win._overview_live.fill_now()
+        # Filled directly: in a full run the window may not count as on
+        # screen, and LiveRefresh fills only a page that is.
+        from src import yard_overview_flow
+        yard_overview_flow.fill(self.win)
         self._app.processEvents()
 
     def _press(self, key):

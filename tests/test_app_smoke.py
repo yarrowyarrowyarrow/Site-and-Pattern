@@ -1012,8 +1012,10 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertIs(win.site_panel._tabs.widget(2),
                       win.analysis_panel._sun_page)
         self.assertIs(win.analysis_panel._tabs.widget(0),
+                      win.overview_page)                       # V3.27, OV-2
+        self.assertIs(win.analysis_panel._tabs.widget(1),
                       win.on_this_design._stats_page)
-        self.assertIs(win.analysis_panel._tabs.widget(5),
+        self.assertIs(win.analysis_panel._tabs.widget(6),
                       win.planning_panel._water_page)
         self.assertIs(win.share_panel._tabs.widget(0),
                       win.learn_panel._present_page)
