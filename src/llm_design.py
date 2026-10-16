@@ -390,10 +390,14 @@ def _plant_palette(query_plants, site_filters: dict,
     # the recommendation (V2.85): nothing too big for the site, and plants
     # recorded near it first. Catalogue order was alphabetical.
     rows = _fits_the_area(rows, area_m2)
+    priority = _priority(site)
     if site:
         from src.site_fit import locality_rank
-        rows = sorted(rows, key=lambda r: locality_rank(
-            r.get("scientific_name") or "", site[0], site[1]), reverse=True)
+        rows = sorted(rows, key=lambda r: (priority(r)[0], -locality_rank(
+            r.get("scientific_name") or "", site[0], site[1]))
+            + priority(r)[1:])
+    else:
+        rows = sorted(rows, key=priority)
     groups: dict[str, list[str]] = {}
     for r in rows:
         nm = r.get("common_name")
@@ -1965,9 +1969,10 @@ def _site_scoped_query(query_plants, site_filters: dict, area_m2: float = 0.0,
         # A plant rarely sold at all comes last (V3.14), then nearby first.
         from src.site_fit import locality_rank
         from src.sourcing import hard_to_find
-        return sorted(rows, key=lambda r: (not hard_to_find(r), locality_rank(
-            r.get("scientific_name") or "", site[0], site[1]) if site else 0),
-            reverse=True)
+        priority = _priority(site)
+        return sorted(rows, key=lambda r: (hard_to_find(r), priority(r)[0], -(
+            locality_rank(r.get("scientific_name") or "", site[0], site[1])
+            if site else 0)) + priority(r)[1:])
     return scoped
 
 
@@ -2491,6 +2496,21 @@ _OFFLINE_BUCKETS: tuple = (
 )
 
 
+def _priority(site=None):
+    """``row -> (band, -Impact, -stock)``, smaller first: the plant list's
+    Best picks first (``src.plant_priority``, PR-6, V3.26), with the pin's
+    region's list leading when the pin is in one."""
+    from src import plant_priority as pp, region
+    r = region.at(*site[:2]) if site else None
+    place = r.key if r else ""
+    records = pp._shared_records()
+
+    def key(row: dict) -> tuple:
+        a = pp.assess(row, records, place=place)
+        return (pp.BANDS.index(a.band) if place else 0, -a.impact, -a.tie)
+    return key
+
+
 def _rank_offline_plants(plants: list, site=None) -> list:
     """Order offline candidates by ecological value for a site whose moisture
     is unknown: keystone / larval-host / pollinator / bird-food species first,
@@ -2509,9 +2529,15 @@ def _rank_offline_plants(plants: list, site=None) -> list:
     Since V3.14 a plant rarely sold at all waits with the wetland specialists,
     and the easier to buy ranks higher among equals (``sourcing.ease``): the
     owner asked for "less focus on including all plants and more focus on
-    getting the most useful and available plants into the designs"."""
+    getting the most useful and available plants into the designs".
+
+    Since V3.26 (PR-6) the order inside each bucket is the plant list's own,
+    ``src.plant_priority``: the pin's region's list first, then Impact, then
+    a plant on a local seller's list. Moist and hard-to-find plants still wait
+    for the second round."""
     from src.site_fit import locality_rank
-    from src.sourcing import ease, hard_to_find
+    from src.sourcing import hard_to_find
+    priority = _priority(site)
 
     def near(p: dict) -> int:
         if not site:
@@ -2550,13 +2576,13 @@ def _rank_offline_plants(plants: list, site=None) -> list:
     good_pools: list = []
     bad_pools: list = []
     for b in _OFFLINE_BUCKETS:
-        pool = sorted(buckets[b], key=lambda p: (near(p), value(p) + ease(p)),
-                      reverse=True)                          # stable sort
+        pool = sorted(buckets[b], key=lambda p: (
+            priority(p)[0], -near(p)) + priority(p)[1:])     # stable sort
         good_pools.append([p for p in pool
                            if value(p) >= 0 and not hard_to_find(p)])
         bad_pools.append([p for p in pool
                           if value(p) < 0 or hard_to_find(p)])
-    other.sort(key=lambda p: (near(p), value(p) + ease(p)), reverse=True)
+    other.sort(key=lambda p: (priority(p)[0], -near(p)) + priority(p)[1:])
 
     ordered: list = []
 

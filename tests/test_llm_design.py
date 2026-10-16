@@ -262,8 +262,27 @@ class TestGoalsAndOffline(unittest.TestCase):
                         "expected a Monarch-supporting plant in the design")
 
     def test_fauna_feedback_adds_supporter_when_missing(self):
-        # A fake spec naming only an unrelated plant; fauna feedback should add
-        # a Monarch supporter so the chosen wildlife is actually served.
+        # A design holding only an unrelated plant; the wildlife step should
+        # add a Monarch supporter so the chosen animal is actually served.
+        # Called on its own (V3.26): in a whole run the design review's
+        # keystone and bloom-gap additions now lead with Chokecherry and
+        # Joe-Pye Weed, both Monarch food, and leave this step nothing to do.
+        from src.db.fauna import list_fauna
+        from src.permadesign_api import Project, query_plants
+        mon = next(f for f in list_fauna() if f["common_name"] == "Monarch")
+        spruce = query_plants(query="white spruce")[0]
+        lat, lng = _EDM["latitude"], _EDM["longitude"]
+        project = Project.create("x", site_config=_EDM)
+        project.place_plant(spruce["id"], lat, lng, quantity=1)
+        llm._apply_fauna_feedback(project, [mon["id"]], query_plants,
+                                  (lat, lng), spot=lambda _row: (lat, lng))
+        placed = {p.get("plant_id") for p in project.placed_plants}
+        supporters = {p["id"] for p in query_plants(supports_fauna_id=mon["id"])}
+        self.assertTrue(placed & supporters)
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertTrue(any("wildlife" in w.lower() for w in warnings))
+
+    def test_a_whole_run_serves_the_monarch(self):
         from src.db.fauna import list_fauna
         from src.permadesign_api import query_plants
         mon = next(f for f in list_fauna() if f["common_name"] == "Monarch")
@@ -273,8 +292,6 @@ class TestGoalsAndOffline(unittest.TestCase):
         placed = {p.get("plant_id") for p in project.placed_plants}
         supporters = {p["id"] for p in query_plants(supports_fauna_id=mon["id"])}
         self.assertTrue(placed & supporters)
-        warnings = project.as_dict()["properties"].get("generation_warnings", [])
-        self.assertTrue(any("wildlife" in w.lower() for w in warnings))
 
     def test_fauna_hint_reaches_brief(self):
         from src.db.fauna import list_fauna

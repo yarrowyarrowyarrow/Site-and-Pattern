@@ -283,15 +283,17 @@ class TheGenerator(unittest.TestCase):
 
     def test_the_dry_design_is_not_moved_by_its_water_plants(self):
         """Water plants are taken out of the spec before anything is placed, so
-        the rest of the design is laid out exactly as it would be without them."""
+        the spec's dry plants are laid out exactly as they would be without
+        them. (What the design review adds afterwards may differ, and should:
+        a pond's plants flower too, and fill part of a bloom gap. V3.26.)"""
         with_water = _generate({"plants": _DRY + _WET, "structures": _POND})
         without = _generate({"plants": _DRY, "structures": _POND})
+        spec = {d["query"] for d in _DRY}
 
         def dry(p):
             return sorted((q["common_name"], round(q["lat"], 7), round(q["lng"], 7))
                           for q in p.placed_plants
-                          if not needs_standing_water(
-                              self.get_plant(q["plant_id"]) or {}))
+                          if q["common_name"] in spec)
         self.assertEqual(dry(with_water), dry(without))
 
     def test_a_bare_pond_is_planted(self):

@@ -193,5 +193,23 @@ class TheRegionsDefaults(unittest.TestCase):
         self.assertIn("local_native", d["first_run_goals"])
 
 
+class TheGeneratorFollows(unittest.TestCase):
+    """PR-6: the offline pool is ranked as the plant list is."""
+
+    def test_an_edmonton_pin_picks_from_the_edmonton_list_first(self):
+        _plants_mod._DATA_DIR = _TMP_DIR
+        _plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
+        _plants_mod.init_db()
+        from src import native_here, zoning
+        from src.llm_design import _rank_offline_plants
+        pool = _plants_mod.search_plants(native_province="AB")
+        ranked = _rank_offline_plants(pool, site=(53.5461, -113.4938))
+        names = native_here.native_names("edmonton")
+        first = ranked[:14]
+        self.assertTrue(all(r["scientific_name"] in names for r in first),
+                        [r["common_name"] for r in first])
+        self.assertFalse(any(zoning.needs_standing_water(r) for r in first))
+
+
 if __name__ == "__main__":
     unittest.main()
