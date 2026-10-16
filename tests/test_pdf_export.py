@@ -205,6 +205,15 @@ class TestThePlaceLine(unittest.TestCase):
                                      "longitude": -104.6189}),
                          "50.4452, -104.6189")
 
+    def test_a_pin_with_no_address_in_the_region_names_the_region(self):
+        """V3.24 (ED-5): the region pack's name, never a borrowed one; a
+        Regina pin's line (above) does not say Edmonton."""
+        from src.pdf_export import place_line
+        self.assertEqual(place_line({"latitude": 53.54, "longitude": -113.49}),
+                         "Edmonton region, Alberta")
+        self.assertNotIn("Edmonton", place_line({"latitude": 50.4452,
+                                                 "longitude": -104.6189}))
+
     def test_no_pin_claims_no_place(self):
         from src.pdf_export import place_line
         self.assertEqual(place_line({}), "")

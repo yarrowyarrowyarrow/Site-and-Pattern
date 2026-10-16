@@ -129,5 +129,40 @@ class TestNativeSourcesFraming(unittest.TestCase):
         self.assertEqual(len(N.all_nurseries()), before)
 
 
+
+class OneListForTheRegion(unittest.TestCase):
+    """V3.24 (ED-4; EDF-1, EDF-5): Site Info, the plan, the PDF and the order
+    file name the same suppliers, the ones the pin's region pack names, and an
+    Edmonton pin is not shown Saskatchewan's society."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_an_edmonton_pin_gets_the_packs_suppliers_everywhere(self):
+        from src import region
+        from src.db.nurseries import region_nurseries
+        from src.order_file import suppliers_for
+        from src.planting_plan import sources_near
+        pack = set(region.default().nurseries)
+        lat, lng = 53.55, -113.5
+        listed = {n["name"] for n in region_nurseries(lat, lng)}
+        self.assertTrue(listed)
+        self.assertLessEqual(listed, pack)
+        self.assertNotIn("Native Plant Society of Saskatchewan (NPSS)", listed)
+        plan = sources_near({"latitude": lat, "longitude": lng})
+        for line in plan:
+            self.assertTrue(any(name in str(line) for name in pack), line)
+        for channel in ("native_specialist", "seed_or_plug", "garden_centre"):
+            for line in suppliers_for(channel, lat, lng):
+                self.assertTrue(any(line.startswith(name) for name in pack),
+                                (channel, line))
+
+    def test_a_pin_outside_every_pack_gets_its_nearest(self):
+        from src.db.nurseries import region_nurseries
+        names = [n["name"] for n in region_nurseries(50.45, -104.6)]
+        self.assertIn("Native Plant Society of Saskatchewan (NPSS)", names)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -162,9 +162,13 @@ def suppliers_for(channel: str, lat: Optional[float], lng: Optional[float], *,
     if lat is None or lng is None:
         return []
     try:
-        from src.db.nurseries import access_label, nurseries_for_availability
-        rows = nurseries_for_availability(channel, float(lat), float(lng),
-                                          limit=limit)
+        from src.db.nurseries import (access_label, in_region,
+                                      nurseries_for_availability)
+        # The pin's region pack names its suppliers (V3.24, ED-4), so the
+        # order file lists the same ones as the plan and the PDF.
+        rows = in_region(nurseries_for_availability(
+            channel, float(lat), float(lng), limit=10_000),
+            float(lat), float(lng))[:limit]
     except Exception:                                      # noqa: BLE001
         return []
     out = []

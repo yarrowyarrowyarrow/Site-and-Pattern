@@ -70,15 +70,16 @@ NO_PIN_SOURCES = ("Set your yard's pin to list the native plant nurseries "
 def sources_near(site_config, limit: int = 6) -> list:
     """``[(name, how to reach it, web address), ...]`` for the native-plant
     suppliers nearest the design's pin, from the nursery directory
-    (:func:`src.db.nurseries.native_sources_near`), nearest first; ``[]`` with
+    (:func:`src.db.nurseries.region_nurseries`: the pin's region pack's,
+    V3.24), nearest first; ``[]`` with
     no pin or no directory. One list for every output that names suppliers."""
     sc = site_config or {}
     lat, lng = sc.get("latitude"), sc.get("longitude")
     if lat is None or lng is None:
         return []
     try:
-        from src.db.nurseries import native_sources_near
-        rows = native_sources_near(float(lat), float(lng), limit=limit)
+        from src.db.nurseries import region_nurseries
+        rows = region_nurseries(float(lat), float(lng), limit=limit)
     except Exception:                                      # noqa: BLE001
         return []
     return [(n.get("name") or "", n.get("access") or "",

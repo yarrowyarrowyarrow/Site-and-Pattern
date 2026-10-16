@@ -1381,8 +1381,9 @@ class SitePanel(QWidget):
         if not hasattr(self, "_lbl_nurseries"):
             return
         try:
-            from src.db.nurseries import native_sources_near
-            rows = native_sources_near(lat, lng, limit=5)
+            # The one list (V3.24, ED-4): the pin's region pack's suppliers.
+            from src.db.nurseries import region_nurseries
+            rows = region_nurseries(lat, lng, limit=5)
         except Exception:  # noqa: BLE001 — directory is a nicety, never fatal
             rows = []
         if not rows:

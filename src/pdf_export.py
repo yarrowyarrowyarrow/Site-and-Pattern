@@ -328,11 +328,11 @@ def place_line(site_config) -> str:
         if len(line) > 80:                 # keep the most local parts
             line = ", ".join(parts[:3])
         return line
-    lat, lng = sc.get("latitude"), sc.get("longitude")
-    if lat is None or lng is None:
-        return ""
+    # No address: the region the pin is in, else its coordinates (V3.24,
+    # ED-5: src/region.py says which).
+    from src import region
     try:
-        return f"{float(lat):.4f}, {float(lng):.4f}"
+        return region.place_line(sc.get("latitude"), sc.get("longitude"))
     except (TypeError, ValueError):
         return ""
 
