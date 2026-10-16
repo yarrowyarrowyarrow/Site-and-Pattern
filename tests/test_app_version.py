@@ -35,7 +35,7 @@ class WindowTitleTest(unittest.TestCase):
 
     def test_the_version_follows_the_name(self):
         self.assertEqual(window_title(version="V3.16"),
-                         "Site & Pattern V3.16 — Native Habitat Designer")
+                         "Site & Pattern V3.16 — Native plant yards for Edmonton")
         self.assertEqual(window_title("My Yard", version="V3.16"),
                          "Site & Pattern V3.16 — My Yard")
 

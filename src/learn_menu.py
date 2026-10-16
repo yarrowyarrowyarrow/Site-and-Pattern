@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 
 from src import app_mode
 from src.branding import APP_NAME
-from src.start_screen import _LINK, _Row
+from src.start_screen import _LINK, _PLAIN, _PRIMARY, _Row
 from src.ui_style import BASE_SURFACE
 
 #: Re-exported so callers do not need to import two modules to read a choice.
@@ -70,8 +70,10 @@ class LearnMenu(QDialog):
 
         notes = app_mode.learn_notes(communities=communities,
                                      sandbox=sandbox)
-        for i, (key, icon, title) in enumerate(app_mode.LEARN_DOORS):
-            row = _Row(icon, title, notes.get(key, ""), primary=(i == 0), parent=self)
+        # The icons went with the start screen's in V3.23: no emoji.
+        for i, (key, _icon, title) in enumerate(app_mode.LEARN_DOORS):
+            row = _Row(title, notes.get(key, ""),
+                       _PRIMARY if i == 0 else _PLAIN, self)
             row.clicked.connect(lambda _c=False, k=key: self._pick(k))
             layout.addWidget(row)
 

@@ -34,7 +34,7 @@ choices (``start_screen``, ``learn_menu``) stay presentation-only, the way
     answer yet.
 
 That objection is about a **mid-session toggle**, and it is still right. This
-is a door at boot, re-openable at any time from Help → Welcome, and the
+is a door at boot, re-openable at any time from Help → Start Screen, and the
 question it asks is *"do you want to learn about this, or design your yard?"* —
 which somebody on day one can answer. The distinction is worth keeping in mind
 if a later increment is ever tempted to add a mode switch to the toolbar: that

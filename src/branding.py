@@ -26,7 +26,7 @@ from __future__ import annotations
 
 # What the user sees.
 APP_NAME = "Site & Pattern"
-APP_TAGLINE = "Native Habitat Designer"
+APP_TAGLINE = "Native plant yards for Edmonton"   # S6, V3.23
 APP_TITLE = f"{APP_NAME} — {APP_TAGLINE}"
 
 #: The licence the program is under (V3.18, FN-1; the owner's decision D1).

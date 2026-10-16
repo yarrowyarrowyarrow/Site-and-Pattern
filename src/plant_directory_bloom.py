@@ -71,6 +71,58 @@ def bloom_line(summary: dict) -> str:
     return f"{count} species flowering now, {scope}"
 
 
+#: Not what "in flower" calls to mind: wind-pollinated grasses and their kin,
+#: whose bloom is the absence of a showy flower (src/flower_colour.py), and
+#: pond plants, which most yards have nowhere to grow.
+_NOT_SHOWY = frozenset({"grass", "sedge", "rush", "aquatic"})
+
+
+def flowering_around(*, month: Optional[int] = None, place: str = "edmonton",
+                     search_fn: Optional[Callable] = None) -> dict:
+    """The plants native around ``place`` (the reviewed Edmonton list, F220)
+    in flower this month, for the start screen's last line (the owner, V3.23).
+
+    ``{"month_name": str, "place": str, "names": [common names]}``: showy
+    plants only (``_NOT_SHOWY``, ``zoning.needs_standing_water``), the ones
+    garden centres sell first (``sourcing.ease``), then by name, so the two
+    named are ones a person could see in a yard and buy. Never raises: a front
+    door must not fail to open over a line."""
+    month = int(month or datetime.date.today().month)
+    out = {"month_name": _MONTH_NAMES[month - 1],
+           "place": place.replace("_", " ").title(), "names": []}
+    try:
+        if search_fn is None:
+            from src.db.plants import search_plants as search_fn  # noqa: PLC0415
+        from src.sourcing import ease                               # noqa: PLC0415
+        from src.zoning import needs_standing_water                 # noqa: PLC0415
+        rows = search_fn(bloom_months=[str(month)], native_near=place)
+        rows = [r for r in rows
+                if (r.get("plant_type") or "").lower() not in _NOT_SHOWY
+                and not needs_standing_water(r) and r.get("common_name")]
+        rows.sort(key=lambda r: (-ease(r), r["common_name"]))
+        out["names"] = [r["common_name"] for r in rows]
+    except Exception:                                        # noqa: BLE001
+        pass
+    return out
+
+
+def flowering_line(summary: dict, shown: int = 2) -> str:
+    """"In flower around Edmonton in July: Wild Bergamot, Harebell and 40
+    more." ``""`` when nothing is: a month with no flowers says nothing rather
+    than "0 plants" (P9: it does not claim to have looked at a yard)."""
+    names = list(summary.get("names") or [])
+    if not names:
+        return ""
+    head = (f"In flower around {summary.get('place') or 'Edmonton'} in "
+            f"{summary.get('month_name', '')}: ")
+    if len(names) <= shown + 1:
+        said = (names[0] if len(names) == 1
+                else ", ".join(names[:-1]) + " and " + names[-1])
+    else:
+        said = f"{', '.join(names[:shown])} and {len(names) - shown} more"
+    return head + said + "."
+
+
 def catalogue_size(count_fn: Optional[Callable] = None) -> int:
     """How many species the catalogue holds, for the start screen's directory
     row. Never raises: a front door must not fail to open over a count."""

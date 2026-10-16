@@ -137,3 +137,19 @@ def ask_discard_for_new(parent, name: str) -> bool:
     box.setStandardButtons(B.Discard | B.Cancel)
     box.setDefaultButton(B.Cancel)
     return _run(box) == B.Discard
+
+
+def ask_design_name(parent, *, title: str = "Save design",
+                    label: str = "Name this design:",
+                    suggested: str = "My yard") -> str:
+    """A name for a design, or ``""`` if the person cancelled or gave none
+    (V3.23: asked at the first save only when the address has not named the
+    design, ST-5, and by File › Rename Design…, ST-7)."""
+    from PyQt6.QtWidgets import QInputDialog
+    box = QInputDialog(parent)
+    box.setWindowTitle(title)
+    box.setLabelText(label)
+    box.setTextValue(suggested)
+    if not _run(box):
+        return ""
+    return " ".join((box.textValue() or "").split())

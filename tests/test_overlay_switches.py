@@ -117,9 +117,7 @@ class OverlaySwitches(unittest.TestCase):
         win._render_sun_path(a._sun_config(), 53.5461, -113.4938)
         self.assertTrue(a._sun_shadows.isEnabled())
         win._modified = False
-        with mock.patch("src.app.QInputDialog.getText",
-                        return_value=("Test yard", True)):
-            win._on_new()
+        win._on_new()
         self._held((a._sun_shadows, a._sun_shadow_length), self.S.SUN_FIRST)
 
     # ── Wind ─────────────────────────────────────────────────────────────────

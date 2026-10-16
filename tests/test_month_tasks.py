@@ -311,10 +311,8 @@ class TheWindowsStatusBar(unittest.TestCase):
                 for name in listed:
                     self.assertIn(name, names)
 
-            with mock.patch("src.app.QInputDialog.getText",
-                            return_value=("Test yard", True)):
-                win._modified = False
-                win._on_new()
+            win._modified = False
+            win._on_new()
             self.assertEqual(win._sb_tasks.text(), "")
 
 

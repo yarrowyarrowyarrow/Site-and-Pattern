@@ -34,140 +34,155 @@ except Exception:                                          # noqa: BLE001
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
 class TestWhatTheMenuOffers(unittest.TestCase):
+    """V3.23 (ST-4, docs/homeowner/04-start-screen.md §5, Option B): one way
+    to start a yard, then the person's own designs, newest first."""
+
     @classmethod
     def setUpClass(cls):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
-    def _rows(self, **kwargs):
-        """The row *titles*."""
-        return [labels[1].text() for labels in self._row_labels(**kwargs)]
-
-    def _details(self, **kwargs):
-        """The second line under each row title."""
-        return [labels[2].text() for labels in self._row_labels(**kwargs)
-                if len(labels) > 2]
-
-    def _row_labels(self, **kwargs):
+    def _screen(self, **kwargs):
         from src.start_screen import StartScreen
         dlg = StartScreen(**kwargs)
-        return [b.findChildren(QLabel)
-                for b in dlg.findChildren(QPushButton) if b.findChildren(QLabel)]
+        self.addCleanup(dlg.deleteLater)
+        return dlg
 
-    def test_a_first_time_user_sees_only_the_three_doors(self):
-        """Nothing saved, nothing to continue, nothing to recover — so the
-        three doors and nothing about resuming."""
-        rows = self._rows()
-        self.assertEqual(len(rows), 3)
-        for word in ("Recover", "Continue"):
-            self.assertFalse(any(word in r for r in rows), word)
+    def _rows(self, dlg):
+        """``[(title, note)]`` of the rows, top to bottom."""
+        out = []
+        for b in dlg.findChildren(QPushButton):
+            labels = b.findChildren(QLabel)
+            if len(labels) == 2:
+                out.append((labels[0].text(), labels[1].text()))
+        return out
 
-    def test_the_three_doors_do_not_rearrange_between_launches(self):
-        """V2.41: the Load row used to be hidden until you had a save. A screen
-        whose structure changes between your first and second launch is harder
-        to learn than one honest empty room — and the row says so."""
-        self.assertEqual(self._rows(), self._rows(saves_count=3))
-        empty = self._details()
-        stocked = self._details(saves_count=3)
-        self.assertTrue(any("nothing saved yet" in d for d in empty), empty)
-        self.assertFalse(any("nothing saved yet" in d for d in stocked))
+    def _links(self, dlg):
+        return [b.text() for b in dlg.findChildren(QPushButton)
+                if not b.findChildren(QLabel)]
 
-    def test_having_saves_does_not_add_a_continue_row(self):
-        """Saved designs and *the one you were last in* are different facts."""
-        rows = self._rows(saves_count=3)
-        self.assertFalse(any("Continue" in r for r in rows))
+    @staticmethod
+    def _designs(n):
+        return [{"path": f"/tmp/d{i}.perma.geojson", "name": f"Design {i}",
+                 "when": f"{i + 1} days ago", "summary": "3 plants",
+                 "error": ""} for i in range(n)]
 
-    def test_a_last_design_adds_continue_and_names_it(self):
-        """The name sits in the note column beside "Continue", not inside the
-        title. Same shape as every other row, so the eye finds the changing
-        part in the same place each time."""
-        pairs = list(zip(self._rows(last_design="Back Yard", saves_count=3),
-                         self._details(last_design="Back Yard", saves_count=3)))
-        self.assertIn(("Continue", "Back Yard"), pairs)
+    def test_a_first_run_offers_one_way_to_start(self):
+        dlg = self._screen()
+        self.assertEqual(self._rows(dlg),
+                         [("Plan a new yard", "start from your address")])
+        self.assertEqual(dlg.primary_row().accessibleName(), "Plan a new yard")
+        texts = [l.text() for l in dlg.findChildren(QLabel)]
+        self.assertIn("Designs you save will be listed here.", texts)
+        self.assertIn("Look at an example yard", self._links(dlg))
+        self.assertIn("Open a file…", self._links(dlg))
 
-    def test_unsaved_work_is_the_top_row(self):
-        """The only row with a deadline on it goes where the eye lands."""
-        rows = self._rows(last_design="Back Yard", recover="Back Yard",
-                          saves_count=3)
-        self.assertIn("Recover", rows[0])
+    def test_the_learn_door_stays_as_one_quiet_link(self):
+        """S1: the Learn door is kept, below the yard rows, not as a row."""
+        dlg = self._screen()
+        self.assertIn("Learn about native plants", self._links(dlg))
+        self.assertNotIn("Learn", [t for t, _n in self._rows(dlg)])
 
-    def test_the_recovery_row_names_the_design(self):
-        from src.start_screen import StartScreen
-        dlg = StartScreen(recover="Back Yard")
-        detail = " ".join(l.text() for l in dlg.findChildren(QLabel))
-        self.assertIn("Back Yard", detail)
+    def test_returning_lists_the_newest_three_and_leads_with_the_newest(self):
+        dlg = self._screen(designs=self._designs(3), total=5)
+        rows = self._rows(dlg)
+        self.assertEqual([t for t, _n in rows],
+                         ["Plan a new yard", "Design 0", "Design 1", "Design 2"])
+        self.assertEqual(rows[1][1], "1 days ago")
+        self.assertEqual(dlg.primary_row().accessibleName(), "Design 0")
+        self.assertIn("All 5 designs…", self._links(dlg))
 
-    def test_it_says_what_it_is_and_then_stops_talking(self):
-        """Krug: happy talk must die, and so must instructions.
+    def test_no_all_designs_link_when_every_design_is_listed(self):
+        dlg = self._screen(designs=self._designs(2), total=2)
+        self.assertFalse(any(l.startswith("All ") for l in self._links(dlg)))
 
-        The first cut opened with a sentence of mission statement above the
-        controls and closed with the three-step path below them. Neither is
-        read twice, and both push the choice further down the screen. The name
-        and the tagline answer "what is this"; the rows answer "what can I do";
-        nothing else is prose.
-        """
-        from src.start_screen import StartScreen
+    def test_unsaved_work_leads_and_names_its_design(self):
+        dlg = self._screen(recover="A very long design name that goes on and on",
+                           designs=self._designs(1), total=1)
+        title, note = self._rows(dlg)[0]
+        self.assertEqual(title, "Restore unsaved changes")
+        self.assertLessEqual(len(note), 32)
+        self.assertTrue(note.endswith("…"))
+        self.assertEqual(dlg.primary_row().accessibleName(),
+                         "Restore unsaved changes")
+
+    def test_exactly_one_row_is_primary_and_it_is_the_default(self):
+        """Two primary buttons is none; Enter activates the one there is."""
+        from src.start_screen import _Row
+        for kwargs in ({}, {"designs": self._designs(3), "total": 3},
+                       {"recover": "X", "designs": self._designs(2), "total": 2}):
+            dlg = self._screen(**kwargs)
+            primary = [r for r in dlg.findChildren(_Row) if r.primary]
+            self.assertEqual(len(primary), 1, kwargs)
+            self.assertTrue(primary[0].isDefault(), kwargs)
+
+    def test_a_design_row_returns_its_path(self):
+        from src.start_screen import OPEN_PATH
+        dlg = self._screen(designs=self._designs(2), total=2)
+        row = next(b for b in dlg.findChildren(QPushButton)
+                   if b.accessibleName() == "Design 1")
+        row.click()
+        self.assertEqual(dlg.choice(), OPEN_PATH)
+        self.assertEqual(dlg.chosen_path(), "/tmp/d1.perma.geojson")
+
+    def test_an_unreadable_design_says_so(self):
+        designs = self._designs(1)
+        designs[0]["error"] = "not a project file"
+        rows = self._rows(self._screen(designs=designs, total=1))
+        self.assertEqual(rows[1][1], "can't be opened")
+
+    def test_long_names_are_cut(self):
+        designs = self._designs(1)
+        designs[0]["name"] = "x" * 70
+        title = self._rows(self._screen(designs=designs, total=1))[1][0]
+        self.assertEqual(len(title), 40)
+        self.assertTrue(title.endswith("…"))
+
+    def test_it_says_what_it_is_and_has_no_emoji(self):
         from src.branding import APP_NAME, APP_TAGLINE
-        dlg = StartScreen()
-        loose = [l.text() for l in dlg.findChildren(QLabel)
-                 if not isinstance(l.parent(), QPushButton)]
-        self.assertIn(APP_NAME, loose)
-        self.assertIn(APP_TAGLINE, loose)
-        for text in loose:
-            self.assertLessEqual(
-                len(text.split()), 8,
-                f"prose on the start screen: {text!r}")
+        dlg = self._screen(designs=self._designs(1), total=1, recover="X")
+        texts = [l.text() for l in dlg.findChildren(QLabel)]
+        self.assertIn(APP_NAME, texts)
+        self.assertEqual(APP_TAGLINE, "Native plant yards for Edmonton")
+        self.assertIn(APP_TAGLINE, texts)
+        for text in texts + self._links(dlg):
+            self.assertFalse(any(ord(c) > 0x2FFF for c in text), text)
 
-    def test_a_row_says_a_fact_about_you_not_a_description_of_itself(self):
-        """Krug: get rid of half the words, then half of what is left. The
-        second line used to restate the title ("Load a design / Your saved
-        designs, newest first, with what is in each one"). It now carries the
-        one thing the title cannot: how many you have."""
-        details = self._details(saves_count=3, species_count=434)
-        self.assertIn("3 saved", details)
-        # V2.43: the catalogue size moved behind the Learn door with the plant
-        # directory itself, and the Learn row says the fact the *learner* owns
-        # instead — how much of it they have found.
-        self.assertIn("434 species to find", details)
-        self.assertIn("37 of 581 species discovered",
-                      self._details(discovery_line="37 of 581 species discovered"))
-        for d in details:
-            self.assertLessEqual(len(d.split()), 5, d)
+    def test_the_title_names_the_version(self):
+        self.assertEqual(self._screen(version="V3.23").windowTitle(),
+                         "Site & Pattern V3.23")
+        self.assertEqual(self._screen().windowTitle(), "Site & Pattern")
 
-    def test_exactly_one_row_is_the_obvious_one(self):
-        """Two primary buttons is none."""
-        from src.start_screen import StartScreen
-        for kwargs in ({}, {"saves_count": 3},
-                       {"last_design": "X", "saves_count": 3},
-                       {"last_design": "X", "recover": "X", "saves_count": 3}):
-            dlg = StartScreen(**kwargs)
-            primary = [b for b in dlg.findChildren(QPushButton)
-                       if "#66bb6a" in (b.styleSheet() or "")]
-            self.assertLessEqual(len(primary), 1, kwargs)
+    def test_the_flowering_line_shows_only_when_there_is_one(self):
+        line = "In flower around Edmonton in July: Harebell and 4 more."
+        with_line = [l.text() for l in self._screen(
+            flowering=line).findChildren(QLabel)]
+        self.assertIn(line, with_line)
+        without = [l.text() for l in self._screen().findChildren(QLabel)]
+        self.assertFalse(any(t.startswith("In flower") for t in without))
 
-    def test_every_row_returns_a_choice_the_flow_handles(self):
+    def test_every_choice_is_carried_out(self):
         """A row whose key nothing acts on is a button that does nothing."""
         import ast
         import pathlib
         from src import start_screen as wd
-        src = (pathlib.Path(__file__).resolve().parent.parent
-               / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
-        fn = next(n for n in ast.walk(ast.parse(src))
-                  if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
-        handled = ast.dump(fn)
-        for name in ("RECOVER", "CONTINUE", "OPEN", "DESIGN",
-                     "EXAMPLE", "REFERENCE", "UPDATE"):
+        root = pathlib.Path(__file__).resolve().parent.parent / "src"
+        handled = ""
+        for mod, fn_name in (("onboarding_flow.py", "_dispatch"),
+                             ("start_flow.py", "dispatch")):
+            tree = ast.parse((root / mod).read_text(encoding="utf-8"))
+            handled += ast.dump(next(
+                n for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef) and n.name == fn_name))
+        for name in ("RECOVER", "NEW_YARD", "EXAMPLE", "OPEN_PATH",
+                     "ALL_DESIGNS", "OPEN_FILE", "CONTINUE", "REFERENCE"):
             self.assertTrue(hasattr(wd, name), name)
             self.assertIn(name, handled, f"{name} is offered but never acted on")
 
     def test_generate_is_not_a_row(self):
-        """V2.41, on the author's call: Generate a design was the *primary*
-        button and comes off entirely. It is not ready to lead with, and a
-        start screen that opens with "let the AI do it" teaches the wrong thing
-        about what this app is. It keeps File → Generate Design… and Ctrl+G."""
         from src import start_screen
         self.assertFalse(hasattr(start_screen, "GENERATE"))
-        rows = self._rows()
-        self.assertFalse(any("Generate" in r for r in rows), rows)
+        rows = self._rows(self._screen())
+        self.assertFalse(any("Generate" in t for t, _n in rows), rows)
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
@@ -201,7 +216,11 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         route back was hand-editing PermaDesign.conf. The write must be
         unconditional so unticking is an answer too."""
         import ast
-        fn = self._flow_fn("_open_menu")
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "src" / "start_flow.py").read_text(encoding="utf-8")
+        fn = next(n for n in ast.walk(ast.parse(src))
+                  if isinstance(n, ast.FunctionDef) and n.name == "open_screen")
         setter = next((n for n in ast.walk(fn)
                        if isinstance(n, ast.Call)
                        and isinstance(n.func, ast.Attribute)
@@ -219,7 +238,8 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         from src.start_screen import StartScreen
         from PyQt6.QtWidgets import QCheckBox
         for hidden in (True, False):
-            box = StartScreen(hidden=hidden).findChildren(QCheckBox)[0]
+            box = StartScreen(hidden=hidden, show_skip=True
+                              ).findChildren(QCheckBox)[0]
             self.assertEqual(box.isChecked(), hidden)
 
     def test_the_dead_key_is_not_read_any_more(self):
@@ -257,12 +277,19 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
                              f"_menu_loop")
         self.assertIn("_open_menu", ast.dump(self._flow_fn("_menu_loop")))
 
-    def test_the_checkbox_is_still_there(self):
+    def test_the_checkbox_is_offered_only_with_a_last_design(self):
+        """S8: *Next time, open my last design directly*, which means nothing
+        when there is no last design."""
         from src.start_screen import StartScreen
         from PyQt6.QtWidgets import QCheckBox
-        dlg = StartScreen()
-        boxes = [c.text() for c in dlg.findChildren(QCheckBox)]
-        self.assertTrue(any("Skip this screen" in b for b in boxes), boxes)
+        with_last = StartScreen(show_skip=True).findChildren(QCheckBox)[0]
+        self.assertEqual(with_last.text(),
+                         "Next time, open my last design directly")
+        self.assertFalse(with_last.isHidden())
+        without = StartScreen().findChildren(QCheckBox)[0]
+        self.assertTrue(without.isHidden())
+        without.setChecked(True)
+        self.assertFalse(without.parent().suppressed())
 
 
 class TestItOpensBeforeTheMap(unittest.TestCase):
@@ -409,9 +436,11 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
             if not isinstance(dlg, start_screen.StartScreen):
                 return
             seen["parent"] = dlg.parent()
-            btn = next(b for b in dlg.findChildren(QPushButton)
-                       if any("Open a design" in l.text()
-                              for l in b.findChildren(QLabel)))
+            btn = next((b for b in dlg.findChildren(QPushButton)
+                        if b.text() == "Look at an example yard"), None)
+            if btn is None:
+                dlg.reject()
+                return
             btn.click()
 
         def _watchdog():
@@ -427,14 +456,38 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         self.assertIsInstance(seen.get("dlg"), start_screen.StartScreen,
                               "no start screen window opened")
         self.assertIsNone(seen["parent"], "the screen is parented to something")
-        self.assertEqual(choice, start_screen.OPEN)
+        self.assertEqual(choice, start_screen.EXAMPLE)
 
     @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
-    def test_a_suppressed_menu_opens_nothing_and_answers_nothing(self):
+    def test_closing_the_screen_at_launch_quits(self):
+        """S7: X or Esc on the start screen at launch quits the app."""
+        from PyQt6.QtCore import QTimer
         from src import onboarding_flow
+        self._isolate()
+
+        def _close():
+            dlg = QApplication.activeModalWidget()
+            if dlg is not None:
+                dlg.reject()
+
+        QTimer.singleShot(0, _close)
+        self.assertEqual(onboarding_flow.choose_start_action(),
+                         onboarding_flow.QUIT)
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_a_suppressed_menu_opens_the_last_design_or_nothing(self):
+        """S8: turned off, a launch opens the last design, else the blank
+        map. Nothing is shown either way."""
+        from src import onboarding_flow, saves, start_screen
         fake = self._isolate()
         fake.d[onboarding_flow.START_SCREEN_OFF_KEY] = True
         self.assertEqual(onboarding_flow.choose_start_action(), "")
+        path = os.path.join(saves.saves_dir(), "Yard.perma.geojson")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("{}")
+        saves.remember_last_design(path)
+        self.assertEqual(onboarding_flow.choose_start_action(),
+                         start_screen.CONTINUE)
 
     def _isolate(self):
         """Point the menu's three sources of truth — the suppress flag, the
@@ -468,6 +521,10 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         self.addCleanup(setattr, onboarding_flow, "_autosave_pending",
                         onboarding_flow._autosave_pending)
         onboarding_flow._autosave_pending = lambda: False
+        # The flowering line reads the plant database; this test touches none.
+        from src import start_flow
+        self.addCleanup(setattr, start_flow, "flowering", start_flow.flowering)
+        start_flow.flowering = lambda month=None: ("", "")
         return fake
 
 

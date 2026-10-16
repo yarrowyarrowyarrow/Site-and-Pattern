@@ -539,8 +539,9 @@ class TestTheDeferredStartChoiceSurvivesADeletedWindow(unittest.TestCase):
         map; making it sit through a Leaflet load would be a delay bought for
         nothing."""
         from src import onboarding_flow
-        from src.start_screen import EXAMPLE, OPEN, REFERENCE, UPDATE
-        for key in (OPEN, EXAMPLE):
+        from src.start_screen import (EXAMPLE, NEW_YARD, OPEN_PATH, REFERENCE,
+                                      UPDATE)
+        for key in (OPEN_PATH, EXAMPLE, NEW_YARD):
             self.assertIn(key, onboarding_flow._NEEDS_MAP, key)
         for key in (REFERENCE, UPDATE):
             self.assertNotIn(key, onboarding_flow._NEEDS_MAP, key)

@@ -349,9 +349,7 @@ class TestMainWindowSmoke(unittest.TestCase):
             self.assertEqual(picker.soil_ph(), 8.0, opened)
             self._win._modified = False
             if opened == "new":
-                with mock.patch("src.app.QInputDialog.getText",
-                                return_value=("Soil test", True)):
-                    self._win._on_new()
+                self._win._on_new()
             else:
                 path = os.path.join(tempfile.mkdtemp(), "no-pin.perma.geojson")
                 project_io.save_project(project_io.new_project("No pin"), path)
@@ -945,9 +943,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         win._modified = False
         # The window is the class's: give the next test its title back.
         self.addCleanup(win.setWindowTitle, win.windowTitle())
-        with mock.patch("src.app.QInputDialog.getText",
-                        return_value=("Test yard", True)):
-            win._on_new()
+        win._on_new()
         self.assertEqual(win._presentation_still, (None, ""))
         self.assertEqual(win._before_after, (None, ""))
 
@@ -959,11 +955,11 @@ class TestMainWindowSmoke(unittest.TestCase):
         from unittest import mock
         win._modified = False
         self.addCleanup(win.setWindowTitle, win.windowTitle())
-        with mock.patch("src.app.running_version", return_value="V9.99"), \
-                mock.patch("src.app.QInputDialog.getText",
-                           return_value=("Test yard", True)):
+        with mock.patch("src.app.running_version", return_value="V9.99"):
             win._on_new()
-        self.assertEqual(win.windowTitle(), "Site & Pattern V9.99 — Test yard")
+        # No name is asked for any more (V3.23, ST-6): the address gives one.
+        self.assertEqual(win.windowTitle(),
+                         "Site & Pattern V9.99 — Untitled Design")
 
     def test_the_version_picker_is_gone_and_updates_stay(self):
         """V3.18 (RM-1): Help › Switch to a specific version… was a

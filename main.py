@@ -104,6 +104,15 @@ def main():
     QTimer.singleShot(0, lambda: built.setdefault("window", MainWindow()))
     choice = onboarding_flow.choose_start_action()
 
+    # Closing the start screen at launch quits (V3.23, S7). The window built
+    # behind it is closed inside the event loop, so its web page is let go
+    # before the process ends.
+    if choice == onboarding_flow.QUIT:
+        if built.get("window") is not None:
+            built["window"].close()
+        QTimer.singleShot(0, app.quit)
+        sys.exit(app.exec())
+
     window = built.get("window") or MainWindow()
     # V2.43 — the Learn door does not open the design app. Its surfaces are
     # standalone windows (a walkable landscape, the Field Guide, the lessons),

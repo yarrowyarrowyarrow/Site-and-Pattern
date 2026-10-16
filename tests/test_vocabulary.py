@@ -50,14 +50,13 @@ SIMPLE_MODULES = (
     "structure_panel.py", "share_panel.py", "community_page.py",
     "species_page.py", "plant_filters.py", "filter_area.py",
     "placement_bar.py", "landing_check.py", "plain_messages.py",
-    "month_tasks.py", "advanced_tools_flow.py",
+    "month_tasks.py", "advanced_tools_flow.py", "start_flow.py",
 )
 
 #: Today's uses, ``{(module, word): count}``: WD-2 to WD-6 take these out.
 KNOWN = {
     ('analysis_panel.py', 'AB retail estimate'): 1,
     ('app.py', '.perma.geojson'): 1,
-    ('app.py', 'project'): 1,
     ('controllers/map_events.py', 'polyculture'): 1,
     ('controllers/persistence.py', '.perma.geojson'): 1,
     ('controllers/persistence.py', 'polyculture'): 2,
@@ -88,7 +87,6 @@ KNOWN = {
     ('saves.py', 'project'): 1,
     ('site_panel.py', 'project'): 1,
     ('species_page.py', 'specialist'): 1,
-    ('start_screen.py', 'species'): 1,
     ('species_page.py', 'species'): 5,
 }
 

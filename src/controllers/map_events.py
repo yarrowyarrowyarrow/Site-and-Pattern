@@ -778,6 +778,9 @@ class MapEventRouter:
         sc["longitude"] = lng
         if label:
             sc["pin_label"] = label
+            # A design nobody named takes its address's name (ST-5, V3.23).
+            from src import start_flow
+            start_flow.name_from_pin(self._main, label)
         elif moved:
             # A pin dropped by hand has no address until the reverse lookup
             # answers (never, offline); keeping the last pin's label named the

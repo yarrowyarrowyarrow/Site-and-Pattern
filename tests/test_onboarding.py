@@ -332,11 +332,13 @@ class TestStartScreen(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication(["tests"])
 
-    def test_offers_the_three_doors(self):
-        from src.start_screen import DESIGN, LEARN, OPEN, _DOORS
-        # V2.43: Learn leads, then Design, then the design you already have.
-        # The plant directory moved behind the Learn door.
-        self.assertEqual([d[0] for d in _DOORS], [LEARN, DESIGN, OPEN])
+    def test_the_three_doors_are_gone(self):
+        """V3.23 (ST-4): Learn, Design and Open a design said the same thing
+        three ways (the owner: "very similar"). One way to start a yard, then
+        your designs."""
+        from src import start_screen
+        for name in ("DESIGN", "OPEN", "_DOORS"):
+            self.assertFalse(hasattr(start_screen, name), name)
 
     def test_choice_is_empty_until_picked(self):
         from src.start_screen import REFERENCE, StartScreen

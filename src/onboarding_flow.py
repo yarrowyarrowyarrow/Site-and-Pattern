@@ -17,7 +17,7 @@ import os
 
 try:                                   # keep importable Qt-free (headless API)
     from PyQt6.QtCore import QSettings, QTimer
-    from PyQt6.QtWidgets import QDialog, QMessageBox
+    from PyQt6.QtWidgets import QMessageBox
     _HAVE_QT = True
 except ImportError:                    # pragma: no cover — headless
     _HAVE_QT = False
@@ -73,29 +73,41 @@ def should_show_welcome() -> bool:
 _WELCOME_DELAY_MS = 150
 
 
+#: What closing the start screen at launch means (S7): quit. From Help ›
+#: Start Screen, closing it only closes it.
+QUIT = "quit"
+
+
 def choose_start_action() -> str:
-    """Open the start menu **before the main window exists**, and return the
+    """Open the start screen **before the main window exists**, and return the
     choice (V2.40).
 
-    The menu used to be a modal over an already-painted map: you saw the app,
-    then a dialog on top of it, which is a greeting rather than a start screen.
-    Running it first — with no parent, so it is a window of its own rather than
-    a sheet over something — means the first thing you see is the choice, and
-    the map appears already carrying it.
+    Running it first, with no parent, means the first thing seen is the
+    choice, and the map appears already carrying it. It needs no MainWindow:
+    everything on it is read from disk (the saves folder, the last-design
+    path, a surviving autosave, the catalogue's flowering months). Acting on
+    the answer is :func:`act_on_start_choice`, once there is a window.
 
-    Needs no MainWindow, which is what makes the ordering possible: everything
-    on the menu is read from disk (the saves folder, the last-design path, a
-    surviving autosave). Acting on the answer is :func:`act_on_start_choice`,
-    once there is a window to act on.
-
-    Returns ``""`` when the menu is turned off or dismissed.
+    Since V3.23: closing it returns :data:`QUIT` (S7); a screen turned off
+    opens the last design, or the blank map when there is none (S8); and
+    unsaved work the screen offered to restore is kept as its own design
+    when another row is chosen (ST-8, S13).
     """
-    if not _HAVE_QT or not should_show_welcome():
+    if not _HAVE_QT:
         return ""
-    return _menu_loop(None)
+    from src.start_screen import CONTINUE, RECOVER
+    if not should_show_welcome():
+        from src import saves
+        return CONTINUE if saves.last_design() else ""
+    offered = bool(_pending_recovery_name())
+    choice = _menu_loop(None, at_launch=True)
+    if offered and choice not in (RECOVER, QUIT, ""):
+        from src import start_flow
+        start_flow.keep_passed_autosave()
+    return choice
 
 
-def _menu_loop(parent) -> str:
+def _menu_loop(parent, *, at_launch: bool = False) -> str:
     """The start screen, plus the Learn menu behind its first door (V2.43).
 
     A loop rather than two calls, because **Back has to go somewhere**. The
@@ -110,7 +122,7 @@ def _menu_loop(parent) -> str:
     """
     from src import app_mode, learn_flow
     while True:
-        choice = _open_menu(parent)
+        choice = _open_menu(parent, at_launch=at_launch)
         if choice != app_mode.LEARN:
             return choice
         sub = learn_flow.open_learn_menu(parent)
@@ -119,46 +131,29 @@ def _menu_loop(parent) -> str:
         # Back, or closed. Round again to the start screen.
 
 
-def _open_menu(parent) -> str:
-    """Build the screen against what is on disk, show it, and return the row
-    the user picked (``""`` if they closed it).
+def _open_menu(parent, *, at_launch: bool = False) -> str:
+    """Build the screen against what is on disk, show it, and return the
+    choice: ``""`` when closed from Help, :data:`QUIT` when closed at launch.
 
-    One body for both entry points — the launch sequence and Help → Welcome —
-    because *which rows exist* is the whole feature, and two copies of that
-    decision would be two answers to it within a release or two.
+    One body for both entry points, the launch and Help › Start Screen,
+    because *which rows exist* is the whole feature. Restore is offered only
+    at launch: later in a session the autosave is this session's own.
     """
-    from src.start_screen import StartScreen
-    from src import learn_flow, saves
-
-    last_path = saves.last_design()
-    last_name = ""
-    if last_path:
-        entry = saves.describe(last_path)
-        last_name = "" if entry.get("error") else entry["name"]
-    recover_name = _pending_recovery_name()
-
-    dlg = StartScreen(parent, last_design=last_name, recover=recover_name,
-                      saves_count=len(saves.list_saves()),
-                      species_count=_species_count(),
-                      version=_version_line(),
-                      discovery_line=learn_flow.discovery_line(),
-                      hidden=not should_show_welcome())
-    result = dlg.exec()
-    # Written every time, not only when ticked. A checkbox that can be turned
-    # on and never off is a trapdoor, and this app shipped one: the only way
-    # back was hand-editing PermaDesign.conf. Closing the screen is still not
-    # an answer to it — that means "I'll start from the blank map".
-    _settings().setValue(START_SCREEN_OFF_KEY, dlg.suppressed())
-    if result != QDialog.DialogCode.Accepted:
-        return ""
-    return dlg.choice()
+    from src import start_flow
+    choice = start_flow.open_screen(
+        parent, recover=_pending_recovery_name() if at_launch else "",
+        version=_version_line(), hidden=not should_show_welcome())
+    if not choice and at_launch:
+        return QUIT
+    return choice
 
 
 #: Rows that put a project on the map, so they must wait until it can render.
 #: Everything else — a reference ecosystem, the update check —
 #: runs the moment the window exists. Kept as a set rather than an ``if`` chain
 #: so a new row's author has to decide which it is.
-_NEEDS_MAP = frozenset({"recover", "continue", "open", "example"})
+_NEEDS_MAP = frozenset({"recover", "continue", "example", "new_yard",
+                        "open_path", "all_designs", "open_file"})
 
 
 def act_on_start_choice(main, choice: str) -> None:
@@ -187,9 +182,10 @@ def act_on_start_choice(main, choice: str) -> None:
     reference ecosystem touches no map, and making those sit through a Leaflet
     load would be a delay bought for nothing.
     """
-    if not choice:
+    if not choice or choice == QUIT:
         return
-    if choice not in _NEEDS_MAP:
+    from src.start_flow import split_choice
+    if split_choice(choice)[0] not in _NEEDS_MAP:
         _dispatch(main, choice)
         return
 
@@ -298,20 +294,20 @@ def show_welcome(main, *, mark_seen: bool = False) -> None:
 def _dispatch(main, choice: str) -> None:
     """Act on a start-screen choice. Shared by the Help menu and the launch
     sequence, so the two can never drift about what a row does."""
-    if not choice:
+    if not choice or choice == QUIT:
         return
+    from src import start_flow
     from src.app_mode import STUDIO
-    from src.start_screen import (CONTINUE, DESIGN, EXAMPLE, OPEN, RECOVER,
-                                  REFERENCE, UPDATE)
-    if choice == RECOVER:
+    from src.start_screen import CONTINUE, EXAMPLE, RECOVER, REFERENCE, UPDATE
+    if start_flow.dispatch(main, choice):
+        pass            # NEW_YARD, OPEN_PATH, ALL_DESIGNS, OPEN_FILE (V3.23)
+    elif choice == RECOVER:
         # Tell the controller this is the screen asking, so its "the screen
         # will handle it" guard stands aside.
         main._persistence._recovery_from_menu = True
         main._persistence.maybe_offer_autosave_recovery()
     elif choice == CONTINUE:
         _open_last_design(main)
-    elif choice == OPEN:
-        main._on_open()
     elif choice == EXAMPLE:
         open_example(main)
     elif choice == REFERENCE:
@@ -321,11 +317,6 @@ def _dispatch(main, choice: str) -> None:
         learn_flow.open_studio(main)
     elif choice == UPDATE:
         _safely(lambda: main._on_check_for_updates(), "The update check")
-    elif choice == DESIGN:
-        # Nothing to build — just point at step one and put the cursor where
-        # the user has to act.
-        _safely(lambda: main.site_panel.focus_address_search(),
-                "The address search")
     refresh(main)
 
 
@@ -345,16 +336,6 @@ def _safely(fn, what: str) -> None:
 def _open_reference(main) -> None:
     from src.reference_ecosystem_window import open_reference_ecosystem
     _safely(lambda: open_reference_ecosystem(main), "Walk a Wild Landscape")
-
-
-def _species_count() -> int:
-    """How big the catalogue is, for the Learn door's note. Silent on failure:
-    the note then reads "start here", which is true either way."""
-    try:
-        from src.plant_directory import catalogue_size
-        return catalogue_size()
-    except Exception:                                      # noqa: BLE001
-        return 0
 
 
 def _version_line() -> str:
@@ -421,22 +402,27 @@ def open_example(main) -> None:
     except Exception:                                      # noqa: BLE001
         pass
 
+    from src import saves
+    previous = saves.last_design()
     try:
         project, missing = build_example_project(lat, lng)
         path = example_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         save_project(project, path)
         main._load_from_path(path)
+        # A copy (V3.23, ST-9): Save writes a new design to the saves folder,
+        # and the example is not "your" last design, so it never lists on the
+        # start screen as one and opens pristine every time.
+        main._project_path = None
+        saves.remember_last_design(previous)
     except Exception as exc:                               # noqa: BLE001
         QMessageBox.critical(main, "Example unavailable",
                              f"Could not build the example design:\n{exc}")
         return
 
-    # The project is a fresh artifact, not the user's own work — but it IS
-    # now on disk under its own name, so leave it unmodified and let Save
-    # write back to it.
-    note = ("Opened the example design — a front-yard lawn conversion. "
-            "Everything in it is editable; Site → Notes says what to try.")
+    # Unmodified until changed; a Save then goes to Your designs.
+    note = ("Opened the example yard. Changes you save go to Your designs; "
+            "Site › Notes says what to try.")
     if missing:
         # Never quietly ship a thinner design than the one described (P9).
         note += (f"  ({len(missing)} species in the example aren't in this "

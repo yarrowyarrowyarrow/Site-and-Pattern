@@ -123,14 +123,3 @@ def community_count() -> int:
         return len(community_keys())
     except Exception:                                      # noqa: BLE001
         return 0
-
-
-def discovery_line() -> str:
-    """"37 of 581 species discovered" — the collection loop's one number, on
-    the front door. ``""`` when the ledger cannot be read, which is the right
-    answer for a start screen that must never fail to open over a count."""
-    try:
-        from src.db import progress
-        return progress.coverage_line()
-    except Exception:                                      # noqa: BLE001
-        return ""

@@ -481,14 +481,17 @@ class TestNamesOutsideTheWindow(unittest.TestCase):
     def test_the_start_screens_choices_are_named(self):
         """Each read as "button": the words are child labels."""
         from src.start_screen import StartScreen, _Row
-        screen = StartScreen(None, last_design="My Yard", saves_count=2)
+        designs = [{"path": "/tmp/a", "name": "My Yard", "when": "just now",
+                    "summary": "", "error": ""}]
+        screen = StartScreen(None, recover="Back yard", designs=designs,
+                             total=1)
         self.addCleanup(screen.deleteLater)
         rows = screen.findChildren(_Row)
-        self.assertGreaterEqual(len(rows), 4)
+        self.assertEqual(len(rows), 3)
         for row in rows:
             self.assertTrue(row.accessibleName(), row)
             self.assertTrue(row.accessibleDescription(), row)
-        self.assertIn("Continue", [r.accessibleName() for r in rows])
+        self.assertIn("My Yard", [r.accessibleName() for r in rows])
 
     def test_the_side_panel_strip_takes_focus_and_says_what_it_does(self):
         from src.collapsible_panel import CollapsibleSidebar

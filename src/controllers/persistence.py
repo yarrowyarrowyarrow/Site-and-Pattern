@@ -179,8 +179,18 @@ class PersistenceController:
             # back to asking rather than failing silently.
             self._on_save_as()
             return
-        name = (self._main._project.get("properties", {})
-                .get("project_name") or "Untitled Design")
+        props = self._main._project.setdefault("properties", {})
+        name = props.get("project_name") or ""
+        from src import design_name
+        if design_name.is_placeholder(name):
+            # Asked once, only when the address has not named it (ST-5).
+            from src import plain_messages
+            name = plain_messages.ask_design_name(self._main)
+            if not name:
+                return
+            props["project_name"] = name
+            from src import start_flow
+            start_flow._retitle(self._main, name)
         self._save_to_path(saves.unique_save_path(name, directory))
 
     def _on_save_as(self):

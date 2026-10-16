@@ -69,6 +69,11 @@ class SavesDialog(QDialog):
         self._btn_open.clicked.connect(self._open)
         row.addWidget(self._btn_open)
 
+        self._btn_rename = QPushButton("Rename…")
+        self._btn_rename.setToolTip("Give this design a new name.")
+        self._btn_rename.clicked.connect(self._rename)
+        row.addWidget(self._btn_rename)
+
         self._btn_delete = QPushButton("Delete")
         self._btn_delete.clicked.connect(self._delete)
         row.addWidget(self._btn_delete)
@@ -122,6 +127,7 @@ class SavesDialog(QDialog):
     def _sync_buttons(self, *_args):
         has = self._list.currentItem() is not None
         self._btn_open.setEnabled(has)
+        self._btn_rename.setEnabled(has)
         self._btn_delete.setEnabled(has)
 
     # ── Actions ─────────────────────────────────────────────────────────────
@@ -136,6 +142,33 @@ class SavesDialog(QDialog):
             return
         self._chosen = path
         self.accept()
+
+    def _rename(self):
+        """V3.23 (ST-7): a new name inside the file and on it. The design
+        open in the window follows when it is the one renamed."""
+        from src import plain_messages
+        path = self._current_path()
+        if not path:
+            return
+        current = saves.describe(path).get("name", "")
+        new = plain_messages.ask_design_name(
+            self, title="Rename design", label="New name:", suggested=current)
+        if not new or new == current:
+            return
+        try:
+            target = saves.rename_save(path, new)
+        except Exception:                                  # noqa: BLE001
+            plain_messages.tell_save_failed(self, current)
+            return
+        main = self.parent()
+        if os.path.abspath(getattr(main, "_project_path", "") or "") == \
+                os.path.abspath(path):
+            main._project_path = target
+            main._project.setdefault("properties", {})["project_name"] = new
+            from src import start_flow
+            start_flow._retitle(main, new)
+        saves.clear_cache()
+        self.refresh()
 
     def _delete(self):
         path = self._current_path()

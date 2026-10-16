@@ -24,7 +24,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
-    QInputDialog, QTabWidget, QDialog,
+    QTabWidget, QDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QAction, QKeySequence, QShortcut
@@ -51,7 +51,7 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
 from src import indicator_style, target_size
-from src import month_tasks, onboarding_flow
+from src import month_tasks, onboarding_flow, start_flow
 from src.yard_overview import bed_area_m2
 from src.elided_label import ElidedLabel
 from src.scene3d_window import open_3d_view as _open_3d_view
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         # The start menu is NOT opened here any more — main.py runs it before
         # this window exists (V2.40), so the first thing a user sees is the
         # choice rather than a modal over an already-painted map. Help →
-        # "Welcome / Getting Started" reopens it; see src/onboarding_flow.py.
+        # Help › Start Screen reopens it; see src/onboarding_flow.py.
         onboarding_flow.refresh(self)
 
     # ── UI construction ───────────────────────────────────────────────────────
@@ -409,7 +409,9 @@ class MainWindow(QMainWindow):
 
         act_new  = file_menu.addAction("&New")
         act_new.setShortcut("Ctrl+N")
-        act_new.triggered.connect(self._on_new)
+        act_new.setStatusTip("Plan a new yard: start from its address")
+        # One way to start a yard (V3.23, ST-6), shared with the start screen.
+        act_new.triggered.connect(lambda: start_flow.start_new_yard(self))
 
         act_open = file_menu.addAction("&Open…")
         act_open.setShortcut("Ctrl+O")
@@ -424,6 +426,11 @@ class MainWindow(QMainWindow):
         act_save_as = file_menu.addAction("Save &As…")
         act_save_as.setShortcut("Ctrl+Shift+S")
         act_save_as.triggered.connect(self._on_save_as)
+
+        act_rename = file_menu.addAction("&Rename Design…")
+        act_rename.setObjectName("file_rename_design")
+        act_rename.setStatusTip("Give this design a new name")
+        act_rename.triggered.connect(lambda: start_flow.rename_open_design(self))
 
         file_menu.addSeparator()
 
@@ -586,10 +593,9 @@ class MainWindow(QMainWindow):
         # F44: the welcome shows once, so it needs a way back — both for
         # someone who dismissed it and for anyone looking for the example
         # design later.
-        act_welcome = help_menu.addAction("&Welcome / Getting Started…")
+        act_welcome = help_menu.addAction("&Start Screen…")
         act_welcome.setStatusTip(
-            "Re-open the welcome: generate a design, start from your yard, "
-            "or open the worked example")
+            "Your designs, a new yard, or the example yard")
         # Lambda → flow function; see the 3D Preview note above.
         act_welcome.triggered.connect(
             lambda: onboarding_flow.show_welcome(self))
@@ -1808,20 +1814,21 @@ class MainWindow(QMainWindow):
 
     # ── File operations ───────────────────────────────────────────────────────
 
-    def _on_new(self):
+    def _on_new(self) -> bool:
+        """Start an empty design; ``False`` if the person kept the old one.
+
+        No name is asked for (V3.23, ST-6): the address names the design
+        (ST-5), and saving asks once if nothing has. The start screen's *Plan
+        a new yard* and File › New both go through
+        ``start_flow.start_new_yard``, which also puts the cursor in the
+        address search."""
         if self._modified:
             from src import plain_messages
             if not plain_messages.ask_discard_for_new(
                     self, self._project.get("properties", {})
                     .get("project_name", "")):
-                return
-
-        name, ok = QInputDialog.getText(
-            self, "New Design", "Project name:", text="My yard"
-        )
-        if not ok:
-            return
-        name = name.strip() or "Untitled Design"
+                return False
+        name = project_io.new_project()["properties"]["project_name"]
 
         # Assigning _project routes through ProjectStore.set_project, which
         # also resets the placed-plants index.
@@ -1861,6 +1868,7 @@ class MainWindow(QMainWindow):
         month_tasks.refresh(self)
         from src import advanced_tools_flow
         advanced_tools_flow.refresh_bar(self)
+        return True
 
     def _on_open(self):
         """Open a design — from the in-app list first (F87, V2.39).

@@ -223,6 +223,67 @@ def when(entry: dict, now: Optional[float] = None) -> str:
     return time.strftime("%d %b %Y", time.localtime(stamp))
 
 
+# ── Renaming, and keeping unsaved work (V3.23, ST-7 and ST-8) ───────────────
+
+def rename_save(path: str, new_name: str) -> str:
+    """Give a saved design a new name, inside the file and on it; return its
+    new path.
+
+    Save As was the only way before, and it left the name inside the file
+    unchanged. The new file goes beside the old one under
+    :func:`unique_save_path`, so nothing is overwritten; the old file (and its
+    one-save backup, moved along) is removed only once the new one is written.
+    The last-design memory follows the file. Raises on an unreadable file or a
+    blank name, so the caller can say so."""
+    from src import project as project_io           # noqa: PLC0415
+    new_name = " ".join((new_name or "").split())
+    if not new_name:
+        raise ValueError("a design needs a name")
+    data = project_io.load_project(path)
+    data.setdefault("properties", {})["project_name"] = new_name
+    old = os.path.abspath(path)
+    was_last = os.path.abspath(last_design() or "") == old
+    target = unique_save_path(new_name, os.path.dirname(old))
+    project_io.save_project(data, target)
+    if os.path.exists(old + ".bak"):
+        try:
+            os.replace(old + ".bak", target + ".bak")
+        except OSError:
+            pass
+    os.remove(old)
+    _cache.pop(old, None)
+    _cache.pop(path, None)
+    if was_last:
+        remember_last_design(target)
+    return target
+
+
+def keep_unsaved(autosave: str, now: Optional[float] = None,
+                 directory: Optional[str] = None) -> str:
+    """Move a crash's autosave into the saves folder as its own design,
+    "<name> (unsaved changes from 12 Oct)", and delete the autosave; return the
+    new path, or ``""`` when there was nothing readable to keep.
+
+    The start screen offers Restore; picking anything else used to leave the
+    autosave where the next session's first autosave overwrote it five minutes
+    later (S13: keep it automatically)."""
+    from src import project as project_io           # noqa: PLC0415
+    try:
+        data = project_io.load_project(autosave)
+    except (OSError, ValueError):
+        return ""
+    props = data.setdefault("properties", {})
+    stamp = time.localtime(now if now is not None else os.path.getmtime(autosave))
+    name = props.get("project_name") or "Untitled Design"
+    props["project_name"] = (f"{name} (unsaved changes from "
+                             f"{stamp.tm_mday} {time.strftime('%b', stamp)})")
+    target = unique_save_path(props["project_name"],
+                              directory or ensure_saves_dir())
+    project_io.save_project(data, target)
+    os.remove(autosave)
+    return target
+
+
 # ── Which design you were last in ───────────────────────────────────────────
 #
 # Nothing recorded this before V2.40, so a start menu had nothing to offer as
