@@ -293,7 +293,7 @@ def _plant_hours(placed_plants, get_plant):
         plant = (get_plant(pid) or {}) if pid is not None else {}
         ptype = (p.get("plant_type") or plant.get("plant_type")
                  or "herb").strip().lower()
-        native = p.get("native_to_alberta")
+        native = p.get("native", p.get("native_to_alberta"))
         if native is None:
             native = plant.get("native_to_alberta")
         yield ptype, PLANT_MAINTENANCE_HOURS.get(ptype, _HOURS_FALLBACK), \

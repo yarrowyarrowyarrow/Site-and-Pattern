@@ -128,11 +128,12 @@ def _context_facts(plant_rows: list, footprint_m: float) -> list[str]:
         facts.append(f"to {tall:.0f} m tall" if tall >= 1.5
                      else "stays low (<1.5 m)")
 
-    natives = [r for r in plant_rows if r.get("native_to_alberta")]
+    from src import design_native
+    natives = [r for r in plant_rows if design_native.is_native(r)]
     if plant_rows:
         pct = round(100 * len(natives) / len(plant_rows))
         if pct >= 100:
-            facts.append("all Alberta natives")
+            facts.append(f"all {design_native.words()}")
         elif pct:
             facts.append(f"{pct}% native")
     return facts

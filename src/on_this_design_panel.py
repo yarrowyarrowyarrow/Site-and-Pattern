@@ -621,7 +621,9 @@ class OnThisDesignPanel(QWidget):
                 except Exception:
                     plant = {}
                 plant_cache[pid] = plant
-            if plant.get("native_to_alberta") or p.get("native_to_alberta"):
+            # The design's own stamp (V3.25, ED-9), else the Alberta flag.
+            if p.get("native", plant.get("native_to_alberta")
+                     or p.get("native_to_alberta")):
                 native += 1
             ptype = (plant.get("plant_type") or p.get("plant_type") or "").lower()
             if ptype:

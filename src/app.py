@@ -2007,8 +2007,9 @@ class MainWindow(QMainWindow):
             and f.get("properties", {}).get("struct_def")
         ]
         bed_area = bed_area_m2(self._project)
-        plan = build_planting_plan(self._placed_plants, structures=structs,
-                                   bed_area_m2=bed_area)
+        plan = build_planting_plan(
+            self._placed_plants, structures=structs, bed_area_m2=bed_area,
+            site_config=self._project.get("properties", {}).get("site_config"))
 
         # The document reads in the order the work happens: prep the ground
         # (F43) → buy it (F40) → dig it in the right places (F41) → phase it
@@ -2123,6 +2124,10 @@ class MainWindow(QMainWindow):
         self.analysis_panel.set_site_location(sc.get("latitude"),
                                               sc.get("longitude"))
         enriched = []
+        # "native" for this design (V3.25, ED-9): the region's list inside a
+        # pack, the pin's province elsewhere; every page reads this stamp.
+        from src import design_native
+        counts_native = design_native.rule(sc)
         for p in self._placed_plants:
             entry = dict(p)
             try:
@@ -2132,6 +2137,7 @@ class MainWindow(QMainWindow):
                     entry["plant_type"] = plant_data.get("plant_type", "herb")
                     entry["water_needs"] = plant_data.get("water_needs", "medium")
                     entry["native_to_alberta"] = bool(plant_data.get("native_to_alberta"))
+                    entry["native"] = counts_native(plant_data)
             except Exception:
                 pass
             enriched.append(entry)

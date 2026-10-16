@@ -240,8 +240,10 @@ def export_pdf(
                 and f.get("properties", {}).get("struct_def")
             ]
             plan_bed_area = bed_area_m2(project)
-            plan = build_planting_plan(placed_plants, structures=structs,
-                                       bed_area_m2=plan_bed_area)
+            plan = build_planting_plan(
+                placed_plants, structures=structs, bed_area_m2=plan_bed_area,
+                site_config=(project.get("properties") or {}).get(
+                    "site_config"))
         except Exception:
             plan = None
         if plan is not None:

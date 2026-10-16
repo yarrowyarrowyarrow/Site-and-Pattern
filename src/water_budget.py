@@ -62,7 +62,7 @@ def _plant_litres(plant: dict) -> tuple:
     weekly = (PLANT_WATER_NEEDS_L_WEEK.get(ptype, DEFAULT_L_WEEK)
               * WATER_MULTIPLIER.get(need, 1.0))
     season = weekly * GROWING_WEEKS
-    native = bool(plant.get("native_to_alberta"))
+    native = bool(plant.get("native", plant.get("native_to_alberta")))
     return (season * Y1_MULT,
             season * (Y3_MULT_NATIVE if native else Y3_MULT_CULTIVATED))
 
@@ -77,7 +77,7 @@ def demand_by_type(plants) -> dict:
         slot = rows.setdefault(p.get("plant_type") or "herb",
                                {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0})
         slot["count"] += 1
-        slot["native"] += 1 if p.get("native_to_alberta") else 0
+        slot["native"] += 1 if p.get("native", p.get("native_to_alberta")) else 0
         slot["y1"] += y1
         slot["y3"] += y3
     from src.member_colors import TYPE_COLORS

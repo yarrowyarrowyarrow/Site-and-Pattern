@@ -272,13 +272,18 @@ def _structures_detail(structures, get_structure) -> list:
 
 
 def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0,
-                        get_plant=None, get_structure=None) -> PlantingPlan:
+                        get_plant=None, get_structure=None,
+                        site_config=None) -> PlantingPlan:
     """Aggregate a placed design into a :class:`PlantingPlan`.
 
     ``placed_plants`` are placed-plant dicts (``plant_id`` / ``common_name``);
     ``structures`` are structure-definition dicts (as stored on a placed feature's
     ``struct_def``); ``bed_area_m2`` is the drawn bed area to mulch. ``get_plant``
-    / ``get_structure`` are injectable for tests."""
+    / ``get_structure`` are injectable for tests. ``site_config`` is the
+    design's site: "native" is counted for its pin (``src.design_native``,
+    V3.25)."""
+    from src import design_native
+    counts_native = design_native.rule(site_config)
     if get_plant is None:
         from src.db.plants import get_plant as _gp
         get_plant = _gp
@@ -298,7 +303,7 @@ def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0
     for pid, qty in counts.items():
         plant = get_plant(pid) or {}
         ptype = (plant.get("plant_type") or "other").strip().lower()
-        native = bool(plant.get("native_to_alberta"))
+        native = counts_native(plant)
         lo, hi = sourcing.plant_price_range(plant)
         item = PlantingItem(
             plant_id=pid,

@@ -238,6 +238,9 @@ class HabitatScore:
     #: Per-layer ``{have, want, present}`` when scored against a reference,
     #: so a panel can say *which* of the reference's layers are thin.
     layer_detail: dict = field(default_factory=dict)
+    #: What "native" was counted as (V3.25, ED-17): "native around Edmonton"
+    #: inside a region pack, "native to Saskatchewan" for a pin elsewhere.
+    native_basis: str = ""
 
     def as_dict(self) -> dict:
         """JSON-serialisable view, used by the scripting API."""
@@ -249,6 +252,7 @@ class HabitatScore:
             "components": {
                 "native":     {"ratio": self.native_ratio,
                                "native_species": self.native_species,
+                               "basis": self.native_basis,
                                "score": round(self.score_native, 1), "max": 20},
                 "keystone":   {"species": self.keystone_species,
                                "score": round(self.score_keystone, 1), "max": 15},
@@ -331,7 +335,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
     if n:
         head = 20.0 - (getattr(score, "score_native", 0.0) or 0.0)
         if head > 0.5 and (n - nat) > 0:
-            add(head, f"{n - nat} of {n} species aren't Alberta-native — "
+            basis = getattr(score, "native_basis", "") or "native"
+            add(head, f"{n - nat} of {n} species aren't {basis} — "
                       f"swapping some for natives adds up to +{int(round(head))} "
                       "pts and more wildlife value.")
 
@@ -449,6 +454,7 @@ def compute_habitat_score(
     connection=None,
     ecoregion: Optional[str] = None,
     resolve_reference=None,
+    site_config: Optional[dict] = None,
 ) -> Optional[HabitatScore]:
     """Compute the Habitat Value Score for a design.
 
@@ -468,6 +474,10 @@ def compute_habitat_score(
             universal forest-garden stack (F129). Omitted or unresolvable,
             the universal stack is used exactly as before — so every existing
             caller keeps the score it had.
+        site_config: the design's site (its pin). "Native" is counted by
+            :mod:`src.design_native` for it (V3.25, ED-17, the owner's E5):
+            the region pack's list inside a pack or with no pin, the pin's
+            province elsewhere. Until V3.25 it was the Alberta flag.
         resolve_reference: optional resolver, injected for tests; defaults to
             ``reference_ecosystem.resolve_reference_community``.
 
@@ -499,8 +509,9 @@ def compute_habitat_score(
         plant_ids = list({p["plant_id"] for p in placed_plants})
         for pid in plant_ids:
             row = connection.execute(
-                "SELECT id, common_name, plant_type, mature_height_meters, "
-                "       native_to_alberta, bloom_period "
+                "SELECT id, common_name, scientific_name, plant_type, "
+                "       mature_height_meters, native_to_alberta, "
+                "       native_provinces, bloom_period "
                 "FROM plants WHERE id = ?",
                 (pid,)
             ).fetchone()
@@ -566,9 +577,9 @@ def compute_habitat_score(
         return key in plant_uses_map.get(pid, set())
 
     # ── 1. % natives (20 pts) ─────────────────────────────────────────
-    native_species = sum(
-        1 for r in plant_rows.values() if r.get("native_to_alberta")
-    )
+    from src import design_native
+    counts_native = design_native.rule(site_config)
+    native_species = sum(1 for r in plant_rows.values() if counts_native(r))
     native_ratio = native_species / n_species if n_species else 0.0
     score_native = native_ratio * 20
 
@@ -736,6 +747,7 @@ def compute_habitat_score(
         food_web=food_web,
         layer_basis=layer_basis,
         layer_detail=layer_detail,
+        native_basis=design_native.words(site_config),
     )
 
 
@@ -782,4 +794,6 @@ def score_for_project(placed_plants, structures, *, lat=None, lng=None,
     ``lng``: the one score every page shows for a design (OV-4)."""
     return compute_habitat_score(placed_plants, structures,
                                  connection=connection,
-                                 ecoregion=ecoregion_at(lat, lng))
+                                 ecoregion=ecoregion_at(lat, lng),
+                                 site_config={"latitude": lat,
+                                              "longitude": lng})

@@ -1485,7 +1485,9 @@ class AnalysisPanel(QWidget):
             # marked against a forest-garden stack it was never going to fill.
             result = compute_habitat_score(
                 self._placed_plants, self._structures,
-                ecoregion=self._site_ecoregion())
+                ecoregion=self._site_ecoregion(),
+                site_config={"latitude": getattr(self, "_sun_lat", None),
+                             "longitude": getattr(self, "_sun_lng", None)})
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
@@ -1661,8 +1663,11 @@ class AnalysisPanel(QWidget):
         for nm in priority:
             if nm in recs:
                 _add(recs[nm])
+        from src import design_native
+        native = design_native.rule({"latitude": getattr(self, "_sun_lat", None),
+                                     "longitude": getattr(self, "_sun_lng", None)})
         for r in recs.values():
-            if r.get("native_to_alberta"):
+            if native(r):
                 _add(r)
         return out[:12]
 

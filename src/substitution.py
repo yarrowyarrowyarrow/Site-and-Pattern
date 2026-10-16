@@ -231,6 +231,8 @@ def substitutes(plant_id: int, *, limit: int = DEFAULT_LIMIT,
     origin_bloom = _bloom_start(original)
 
     scored = []
+    from src import design_native
+    counts_native = design_native.rule()
     for cand in all_plants() or []:
         cid = cand.get("id")
         if cid is None or int(cid) == int(plant_id):
@@ -252,7 +254,7 @@ def substitutes(plant_id: int, *, limit: int = DEFAULT_LIMIT,
         scored.append((
             len(kept_ids),
             len(cand_fauna - origin_fauna),
-            1 if cand.get("native_to_alberta") else 0,
+            1 if counts_native(cand) else 0,
             Swap(
                 plant_id=int(cid),
                 common_name=cand.get("common_name") or "",
