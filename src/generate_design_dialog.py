@@ -2,9 +2,10 @@
 generate_design_dialog.py — the "Generate Design" dialog.
 
 Lets the user tick design goals (the checkboxes come straight from
-:data:`src.design_goals.GOALS`), optionally add a free-text brief, and choose
-whether to build offline (no AI). The controller reads the selections back and
-runs generation on a background thread. Structure mirrors
+:data:`src.design_goals.GOALS`) and a few options. The controller reads the
+selections back and runs generation on a background thread. The AI wording,
+the free-text brief only the AI read, and *Build without AI* went in V3.22
+(RM-3); Plan My Yard rebuilds the dialog (PY-1). Structure mirrors
 :mod:`src.preferences_dialog`.
 """
 
@@ -14,14 +15,14 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QPlainTextEdit, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
+    QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from src.design_goals import GOALS
 
 
 class GenerateDesignDialog(QDialog):
-    """Collect goals + brief + offline flag for a one-click design."""
+    """Collect goals and options for a one-click design."""
 
     def __init__(self, *, has_boundary: bool, has_pin: bool,
                  preselected: list | None = None,
@@ -47,10 +48,9 @@ class GenerateDesignDialog(QDialog):
 
         intro = QLabel(
             "<b>Generate a starting design</b><br>"
-            "Pick the goals that matter to you. A local AI picks fitting "
-            "native plants and communities; if no AI is reachable, a "
-            "rule-based fallback runs instead. You can fine-tune everything "
-            "afterwards by dragging or deleting."
+            "Pick the goals that matter to you, and the app picks native "
+            "plants and communities that fit them and your yard. You can "
+            "change everything afterwards by dragging or deleting."
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -111,14 +111,6 @@ class GenerateDesignDialog(QDialog):
             fauna_layout.addWidget(self._fauna_list)
             layout.addWidget(fauna_box)
 
-        layout.addWidget(QLabel("Extra details (optional):"))
-        self._brief = QPlainTextEdit()
-        self._brief.setPlaceholderText(
-            "e.g. a low-water front yard with shade under the spruce"
-        )
-        self._brief.setFixedHeight(70)
-        layout.addWidget(self._brief)
-
         budget_row = QHBoxLayout()
         budget_row.addWidget(QLabel("Budget (optional):"))
         self._budget = QSpinBox()
@@ -161,13 +153,6 @@ class GenerateDesignDialog(QDialog):
             "to whole-property matching if unavailable."
         )
         layout.addWidget(self._match_site_check)
-
-        self._offline_check = QCheckBox("Build without AI (offline)")
-        self._offline_check.setToolTip(
-            "Skip the local AI model and build deterministically from your "
-            "goals and the seeded plant communities."
-        )
-        layout.addWidget(self._offline_check)
 
         if has_boundary:
             note = "Plants will be placed inside your drawn boundary."
@@ -261,12 +246,6 @@ class GenerateDesignDialog(QDialog):
             if item.checkState() == Qt.CheckState.Checked:
                 out.append(item.data(Qt.ItemDataRole.UserRole))
         return out
-
-    def brief(self) -> str:
-        return self._brief.toPlainText().strip()
-
-    def offline(self) -> bool:
-        return self._offline_check.isChecked()
 
     def budget(self) -> float | None:
         """Total plant budget in CAD, or ``None`` for no limit (value 0)."""

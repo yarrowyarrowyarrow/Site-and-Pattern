@@ -78,15 +78,15 @@ class GenerationController:
         # being replaced: its pond would keep the new plan out of the water.
         existing_features = without_plan(
             main._project.get("features", []) or [], self._replacing)
-        self._start(prompt=dlg.brief(), site_config=site_config or None,
-                    boundary=boundary, goals=goals, offline=dlg.offline(),
+        self._start(site_config=site_config or None,
+                    boundary=boundary, goals=goals,
                     budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
                     match_site=dlg.match_site(), density=dlg.density(),
                     existing_features=existing_features)
 
     # ── Worker lifecycle (mirrors src/site_panel.py) ─────────────────────────
 
-    def _start(self, *, prompt, site_config, boundary, goals, offline,
+    def _start(self, *, site_config, boundary, goals,
                budget=None, fauna_ids=None, match_site=True,
                density="balanced", existing_features=None):
         from src.generate_worker import GenerateWorker
@@ -102,8 +102,8 @@ class GenerationController:
         main.statusBar().showMessage("Generating design…")
 
         thread = QThread(main)
-        worker = GenerateWorker(prompt, site_config=site_config,
-                                boundary=boundary, goals=goals, offline=offline,
+        worker = GenerateWorker(site_config=site_config,
+                                boundary=boundary, goals=goals,
                                 budget=budget, fauna_ids=fauna_ids,
                                 match_site=match_site, density=density,
                                 existing_features=existing_features)

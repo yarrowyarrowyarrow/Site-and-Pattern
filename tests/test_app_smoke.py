@@ -1422,7 +1422,8 @@ class TestGenerateDesignDialog(unittest.TestCase):
             self.assertNotIn("flowers_all_season", dlg.selected_goals())
             self.assertTrue(dlg._checks["native_only"].isChecked())
             self.assertIn("native_only", dlg.selected_goals())
-            self.assertFalse(dlg.offline())
+            self.assertFalse(hasattr(dlg, "offline"))   # RM-3
+            self.assertFalse(hasattr(dlg, "brief"))
         finally:
             dlg.deleteLater()
 

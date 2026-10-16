@@ -432,8 +432,7 @@ class MainWindow(QMainWindow):
         act_generate = file_menu.addAction("&Generate Design…")
         act_generate.setShortcut("Ctrl+G")
         act_generate.setStatusTip(
-            "Auto-generate a starting design from your goals "
-            "(local AI, with an offline fallback)")
+            "Make a starting design from your goals")
         act_generate.triggered.connect(self._on_generate_design)
         self._act_generate = act_generate
 
