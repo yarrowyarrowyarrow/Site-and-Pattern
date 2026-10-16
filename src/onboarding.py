@@ -163,6 +163,11 @@ def _example() -> dict:
     return region.default().example
 
 
+def _example_place() -> str:
+    from src import region                                   # noqa: PLC0415
+    return region.default().short
+
+
 EXAMPLE_NAME = _example()["name"]
 EXAMPLE_WIDTH_M = float(_example()["width_m"])
 EXAMPLE_DEPTH_M = float(_example()["depth_m"])
@@ -191,7 +196,7 @@ EXAMPLE_NOTES = (
     "spring (Golden Bean, Prairie Crocus) through midsummer (Wild Bergamot, "
     "Oval-leaf Milkweed) into fall (Stiff Goldenrod), and a short grass "
     "matrix along the street edge so it still reads as tended. Every plant "
-    "in it is native around Edmonton.\n\n"
+    f"in it is native around {_example_place()}.\n\n"
     "Things worth doing to it, with View → Advanced tools on:\n"
     "  • Design → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"

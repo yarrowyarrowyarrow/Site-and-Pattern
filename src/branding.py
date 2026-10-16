@@ -26,7 +26,19 @@ from __future__ import annotations
 
 # What the user sees.
 APP_NAME = "Site & Pattern"
-APP_TAGLINE = "Native plant yards for Edmonton"   # S6, V3.23
+def _home() -> str:
+    """The default region pack's short name, for the tagline (V3.24: the
+    region names itself; ``src/region.py``)."""
+    try:
+        from src import region
+        return region.default().short
+    except Exception:                                      # noqa: BLE001
+        return ""
+
+
+# S6, V3.23: "Native plant yards for Edmonton", the default pack's place.
+APP_TAGLINE = (f"Native plant yards for {_home()}" if _home()
+               else "Native plant yards")
 APP_TITLE = f"{APP_NAME} — {APP_TAGLINE}"
 
 #: The licence the program is under (V3.18, FN-1; the owner's decision D1).

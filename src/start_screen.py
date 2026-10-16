@@ -79,6 +79,11 @@ _LINK = (
 )
 
 
+def _home_short() -> str:
+    from src import region
+    return region.default().short
+
+
 def cut(text: str, chars: int) -> str:
     """``text`` at most ``chars`` long, ending in "…" when it was cut."""
     text = (text or "").strip()
@@ -160,7 +165,7 @@ class StartScreen(QDialog):
         quiet.setSpacing(18)
         quiet.addWidget(self._link(
             EXAMPLE, "Look at an example yard",
-            "A front-yard lawn conversion in central Edmonton. Opens as a "
+            f"A front-yard lawn conversion in central {_home_short()}. Opens as a "
             "copy you can change."))
         quiet.addWidget(self._link(
             LEARN, "Learn about native plants",

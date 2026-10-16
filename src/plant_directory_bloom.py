@@ -77,7 +77,7 @@ def bloom_line(summary: dict) -> str:
 _NOT_SHOWY = frozenset({"grass", "sedge", "rush", "aquatic"})
 
 
-def flowering_around(*, month: Optional[int] = None, place: str = "edmonton",
+def flowering_around(*, month: Optional[int] = None, place: str = "",
                      search_fn: Optional[Callable] = None,
                      seen_fn: Optional[Callable] = None) -> dict:
     """The plants native around ``place`` (the reviewed Edmonton list, F220)
@@ -92,9 +92,13 @@ def flowering_around(*, month: Optional[int] = None, place: str = "edmonton",
     here: Fireweed 588, Sneezeweed 1. Never raises: a front door must not
     fail to open over a line."""
     month = int(month or datetime.date.today().month)
-    out = {"month_name": _MONTH_NAMES[month - 1],
-           "place": place.replace("_", " ").title(), "names": []}
+    out = {"month_name": _MONTH_NAMES[month - 1], "place": "", "names": []}
     try:
+        from src import region                                     # noqa: PLC0415
+        home = region.regions().get(place) if place else region.default()
+        if home is None:
+            return out
+        place, out["place"] = home.key, home.short
         if search_fn is None:
             from src.db.plants import search_plants as search_fn  # noqa: PLC0415
         from src.zoning import needs_standing_water                 # noqa: PLC0415
@@ -122,7 +126,9 @@ def flowering_line(summary: dict, shown: int = 2) -> str:
     names = list(summary.get("names") or [])
     if not names:
         return ""
-    head = (f"In flower around {summary.get('place') or 'Edmonton'} in "
+    if not summary.get("place"):
+        return ""
+    head = (f"In flower around {summary['place']} in "
             f"{summary.get('month_name', '')}: ")
     # Only the most familiar are named, the rest counted (V3.24): October's
     # third plant is Sneezeweed, recorded once around Edmonton.
