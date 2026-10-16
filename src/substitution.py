@@ -210,8 +210,12 @@ def substitutes(plant_id: int, *, limit: int = DEFAULT_LIMIT,
                 get_plant: Optional[Callable] = None,
                 all_plants: Optional[Callable] = None,
                 supported_by: Optional[Callable] = None,
-                get_fauna: Optional[Callable] = None) -> list:
+                get_fauna: Optional[Callable] = None,
+                site_config: Optional[dict] = None,
+                native_only: bool = False) -> list:
     """Ecologically equivalent alternatives to ``plant_id``, best first.
+    ``native_only`` keeps only plants native at ``site_config``'s pin (the
+    region's list inside a pack, the province elsewhere; V3.27, OV-10).
 
     Ranked by how much of the original's supported fauna the candidate keeps,
     then by how many species it adds. Native plants are preferred over
@@ -232,10 +236,12 @@ def substitutes(plant_id: int, *, limit: int = DEFAULT_LIMIT,
 
     scored = []
     from src import design_native
-    counts_native = design_native.rule()
+    counts_native = design_native.rule(site_config)
     for cand in all_plants() or []:
         cid = cand.get("id")
         if cid is None or int(cid) == int(plant_id):
+            continue
+        if native_only and not counts_native(cand):
             continue
         if _layer_of(cand) != layer or not layer:
             continue

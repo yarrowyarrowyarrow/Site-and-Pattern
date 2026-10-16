@@ -39,6 +39,10 @@ def request_sync(main) -> None:
     share = getattr(main, "share_panel", None)
     if share is not None and hasattr(share, "design_changed"):
         share.design_changed()
+    # Design › Overview, while it is on screen (V3.27, OV-2).
+    live = getattr(main, "_overview_live", None)
+    if live is not None:
+        live.poke()
     for attr, method in WINDOWS:
         win = getattr(main, attr, None)
         if win is None:

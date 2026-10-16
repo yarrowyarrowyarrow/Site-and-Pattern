@@ -37,6 +37,7 @@ NAME = "Advanced tools"
 ADVANCED_PAGES: tuple = (
     "site_panel.slope_page",          # §5 rank 2: contours, slope, water flow
     "analysis_panel._wind_page",      # rank 3: wind, shelter, snow catch
+    "on_this_design._stats_page",     # the Report card: Overview instead
     "analysis_panel._habitat_page",   # rank 1: the Design tab in depth
     "analysis_panel._food",
     "analysis_panel._over_time_page",

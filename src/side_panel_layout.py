@@ -170,6 +170,10 @@ def arrange(main) -> list:
     move_page(planning._water_page, design._tabs, design._tabs.count())
     design._over_time_page = over_time
     design._tabs.setCurrentIndex(0)
+    # Overview first, before the Report card it replaces in the simple app
+    # (V3.27, OV-2).
+    from src import yard_overview_flow
+    yard_overview_flow.install(main)
     # Effort and Water fill themselves when on screen (src/live_refresh.py);
     # they are on screen in Design now.
     planning._live.move_to(design, design._tabs, {

@@ -155,25 +155,9 @@ def export_pdf(
             )
             y += 40 * dpi_scale
 
-        # Habitat Value Score + whole-design cost for the summary block.
-        try:
-            from src.habitat_score import score_for_project, site_pin
-            lat, lng = site_pin(project)
-            score = score_for_project(placed_plants, structures,
-                                      lat=lat, lng=lng)
-        except Exception:
-            score = None
-        try:
-            from src.sourcing import design_cost
-            bed_area = bed_area_m2(project)
-            cost = design_cost(placed_plants, structures=structures,
-                               mulch_area_m2=bed_area)
-        except Exception:
-            cost = None
-
-        # Quick summary on page 1
-        y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale,
-                          score, cost)
+        # The first page's summary is the overview (V3.27, OV-12): the same
+        # six items, in the same words, as Design › Overview. No score (O1).
+        y = _draw_overview(painter, printer, w, h, y, dpi_scale, project)
 
         # ── Presentation still (F69) ──────────────────────────────────────
         # The design as a picture, at the year it has become itself. A map
@@ -398,63 +382,54 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
     return 65 * s
 
 
-def _draw_summary(painter: QPainter, w: float, y: float,
-                  plants: list[dict], structures: list[dict], s: float,
-                  score=None, cost=None) -> float:
-    """Draw a quick design summary (counts + habitat score + cost)."""
+def _draw_overview(painter: QPainter, printer, w: float, h: float, y: float,
+                   s: float, project: dict) -> float:
+    """How your yard is doing: the overview's items, each a bold title with
+    its status word, then its lines, wrapped. A block that would run off the
+    page starts the next one."""
+    from src import yard_overview_items as yi
+    try:
+        items = yi.overview(project)
+    except Exception:                                      # noqa: BLE001
+        return y
+    flags = int(Qt.AlignmentFlag.AlignLeft | Qt.TextFlag.TextWordWrap)
+    width = w - 40 * s
+
+    def height(text, font):
+        painter.setFont(font)
+        return painter.boundingRect(QRectF(0, 0, width, 10000), flags,
+                                    text).height()
+
+    head = _font(12 * s, bold=True)
+    title, body = _font(10 * s, bold=True), _font(9 * s)
     painter.setPen(QColor(HEAD))
-    painter.setFont(_font(12 * s, bold=True))
-    painter.drawText(QRectF(15 * s, y, w, 20 * s),
-                     Qt.AlignmentFlag.AlignLeft, "Design Summary")
+    painter.setFont(head)
+    painter.drawText(QRectF(15 * s, y, w, 20 * s), Qt.AlignmentFlag.AlignLeft,
+                     yi.TITLE)
     y += 22 * s
-
-    painter.setFont(_font(9 * s))
-    painter.setPen(QColor(INK))
-
-    # Count by type
-    type_counts: Counter = Counter()
-    species = set()
-    for p in plants:
-        type_counts[p.get("plant_type", "herb")] += 1
-        species.add(p.get("common_name", "?"))
-
-    lines = [
-        f"Total plants: {len(plants)} ({len(species)} species)",
-    ]
-    type_parts = type_breakdown(type_counts)
-    if type_parts:
-        lines.append("  " + type_parts)
-    if structures:
-        lines.append(f"Structures: {len(structures)}")
-    if score is not None:
-        lines.append(
-            f"Habitat Value Score: {score.total}/100  (grade {score.grade})"
-        )
-        lines.append(
-            f"  {int(round(score.native_ratio * 100))}% native · "
-            f"{len(score.keystone_species)} keystone · "
-            f"{len(score.layers_present)} vegetation layers"
-        )
-    if cost is not None:
-        try:
-            from src.sourcing import format_cost
-            lines.append(
-                f"Estimated cost: {format_cost(*cost['total'])}  (AB estimate)"
-            )
-        except Exception:
-            pass
-    if score is not None and cost is not None:
-        # Value vs. price framing (F11, P6): the price doesn't capture the value.
-        lines.append(
-            "Value vs. price: a one-time cost that creates lasting ecological value."
-        )
-
-    for line in lines:
-        painter.drawText(QRectF(20 * s, y, w - 40 * s, 14 * s),
-                         Qt.AlignmentFlag.AlignLeft, line)
-        y += 14 * s
-
-    return y + 5 * s
+    for it in items:
+        top = it.title + (f"  ·  {it.status_word}" if it.key != "empty"
+                          else "")
+        lines = list(it.lines)
+        if it.strip:
+            lines.append("   ".join(f"{m} {n}" for m, n in it.strip))
+        need = height(top, title) + sum(height(t, body) for t in lines)
+        if y + need > h - 10 * s:
+            printer.newPage()
+            y = 20 * s
+        painter.setPen(QColor(HEAD))
+        painter.setFont(title)
+        hh = height(top, title)
+        painter.drawText(QRectF(20 * s, y, width, hh), flags, top)
+        y += hh + 2 * s
+        painter.setPen(QColor(INK))
+        for text in lines:
+            hh = height(text, body)
+            painter.setFont(body)
+            painter.drawText(QRectF(20 * s, y, width, hh), flags, text)
+            y += hh + 1 * s
+        y += 6 * s
+    return y
 
 
 def _draw_plant_list(painter: QPainter, w: float, h: float,

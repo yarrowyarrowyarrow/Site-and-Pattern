@@ -302,3 +302,40 @@ class TestTheNotesWrap(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestTheFirstPageIsTheOverview(unittest.TestCase):
+    """OV-12 (V3.27): the screen and the print say the same things."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="permadesign_pdf_overview_")
+        import src.db.plants as plants_mod
+        plants_mod._DATA_DIR = cls._tmp
+        plants_mod._DB_PATH = os.path.join(cls._tmp, "t.db")
+        plants_mod.init_db()
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def test_the_six_titles_and_the_plant_cost(self):
+        import shutil
+        import subprocess
+        if not shutil.which("pdftotext"):
+            self.skipTest("pdftotext not installed")
+        from src.onboarding import build_example_project
+        from src.pdf_export import export_pdf
+        from src.project_store import ProjectStore
+        from src import yard_overview_items as yi
+        project, _missing = build_example_project()
+        placed = list(ProjectStore(project).placed_plants)
+        out = os.path.join(self._tmp, "overview.pdf")
+        export_pdf(out, project, placed, [], notes="")
+        text = subprocess.run(["pdftotext", "-layout", out, "-"],
+                              capture_output=True, text=True).stdout
+        flat = " ".join(text.split())
+        for item in yi.overview(project):
+            self.assertIn(item.title, flat)
+        cost = next(it for it in yi.overview(project) if it.key == "cost")
+        self.assertIn(cost.lines[0].split(" for ")[0], flat)
+        self.assertNotIn("Habitat Value Score", flat)

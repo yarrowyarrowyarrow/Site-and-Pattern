@@ -196,7 +196,7 @@ class InTheWindow(unittest.TestCase):
         design = self._win.analysis_panel._tabs
         shown = [design.tabText(i) for i in range(design.count())
                  if design.isTabVisible(i)]
-        self.assertEqual(shown, ["Report card", "Planted"])
+        self.assertEqual(shown, ["Overview", "Planted"])
         self.flow.set_and_apply(self._win, True)
         self.assertTrue(tabs.isTabVisible(learn))
 

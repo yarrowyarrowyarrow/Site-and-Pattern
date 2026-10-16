@@ -1000,7 +1000,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertEqual(self._labels(win._placement_tabs),
                          ["Plants", "Communities", "Structures"])
         self.assertEqual(self._labels(win.analysis_panel._tabs),
-                         ["Report card", "Planted", "Habitat", "Food",
+                         ["Overview", "Report card", "Planted", "Habitat", "Food",
                           "Over time", "Water"])
         self.assertEqual(self._labels(win.on_this_design._tabs),
                          ["Species", "Communities"])

@@ -277,3 +277,65 @@ def parts_words(parts: Optional[dict]) -> str:
         return ""
     return (f"Front yard {about_m2(parts['front'])}, back yard "
             f"{about_m2(parts['back'])}.")
+
+
+# ── What filling the gaps takes (OV-9) ──────────────────────────────────────
+
+#: Low plants for the gaps: these types, or a wildflower this short.
+FILLER_TYPES = ("grass", "sedge", "groundcover")
+FILLER_MAX_HEIGHT_M = 0.6
+FILL_SPACING_M = 0.6
+
+
+def _fillers(project: dict, get_plant, place: str) -> list:
+    """Up to two low plants to fill with: the design's own, most numerous
+    first; else the region's two best-ranked grasses or sedges (PR-1)."""
+    from src.project_store import ProjectStore
+    counts: dict = {}
+    for p in ProjectStore(project).placed_plants:
+        counts[p.get("plant_id")] = counts.get(p.get("plant_id"), 0) + 1
+    own = []
+    for pid, n in sorted(counts.items(), key=lambda kv: -kv[1]):
+        row = get_plant(pid) or {}
+        try:
+            tall = float(row.get("mature_height_meters") or 9)
+        except (TypeError, ValueError):
+            tall = 9.0
+        if (row.get("plant_type") in FILLER_TYPES
+                or (row.get("plant_type") == "wildflower"
+                    and tall <= FILLER_MAX_HEIGHT_M)):
+            own.append(row)
+    if own:
+        return own[:2]
+    from src import native_here, plant_priority, zoning
+    from src.db.plants import get_all_plants
+    names = native_here.native_names(place)
+    pool = [r for r in get_all_plants()
+            if r.get("plant_type") in ("grass", "sedge")
+            and r.get("scientific_name") in names
+            and not zoning.needs_standing_water(r)]
+    return plant_priority.rank(pool, place=place)[:2]
+
+
+def fill_plan(project: dict, *, get_plant=None, place: str = "") -> dict:
+    """``{"bare_m2", "points", "fillers", "records", "cost"}``: where Plant
+    them would put low plants 60 cm apart, which ones (alternating), and what
+    they would cost, before anything is placed."""
+    from src import region
+    from src.sourcing import estimate_cost
+    if get_plant is None:
+        from src.db.plants import get_plant                   # noqa: PLC0415
+    _proj, bare = bare_ground(project, get_plant=get_plant)
+    if not place:
+        site = ((project or {}).get("properties") or {}).get(
+            "site_config") or {}
+        place = region.for_site(site).key
+    points = fill_points(project, FILL_SPACING_M, get_plant=get_plant)
+    fillers = _fillers(project, get_plant, place) if points else []
+    records = ([(int(fillers[i % len(fillers)]["id"]), lat, lng)
+                for i, (lat, lng) in enumerate(points)] if fillers else [])
+    cost = estimate_cost([(pid, 1) for pid, _la, _ln in records],
+                         get_plant=get_plant)
+    return {"bare_m2": float(bare.area) if bare is not None else 0.0,
+            "points": points, "fillers": fillers, "records": records,
+            "cost": cost}
