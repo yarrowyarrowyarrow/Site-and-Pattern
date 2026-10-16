@@ -56,7 +56,7 @@ def _answers(given):
     by ``given`` ({scientific name: "native" | "not_native" | None}), so a test
     of a mechanism does not hang on how the owner answered (V3.13)."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    with open(os.path.join(root, "data", "local_flora.json"),
+    with open(os.path.join(root, "data", "regions", "edmonton", "local_flora.json"),
               encoding="utf-8") as fh:
         doc = json.load(fh)
     for name, ruling in given.items():

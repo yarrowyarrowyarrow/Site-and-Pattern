@@ -75,7 +75,9 @@ class TheInstallerLeavesOutWhatNobodyReads(unittest.TestCase):
                     "html/map/01-core.js", "html/scene3d/01-core.js",
                     "html/vendor/three/three.module.js",
                     "html/vendor/leaflet/leaflet.js",
-                    "data/plants_master.json", "data/local_flora.json"):
+                    "data/plants_master.json",
+                    "data/regions/edmonton/local_flora.json",
+                    "data/regions/edmonton/region.json", "data/edition.json"):
             self.assertIn(rel, self.shipped, rel)
         # Every html/ path the app's code names, but for the excluded ones it
         # names only in comments about the benches.

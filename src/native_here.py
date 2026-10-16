@@ -76,8 +76,8 @@ def province_words(plant: Mapping) -> str:
 def around_tip(place: str = EDMONTON) -> str:
     """The filter's tooltip, from the rule's own constants (no file read), so
     the numbers it states are the ones the list was derived with."""
-    from src.local_flora import PLACES                       # noqa: PLC0415
-    p = PLACES[place]
+    from src.local_flora import places                       # noqa: PLC0415
+    p = places()[place]
     return (f"Native around {p['short']}: native to "
             f"{PROVINCE_NAMES[p['province']]} as VASCAN records it, and "
             f"collected at least {MIN_COLLECTIONS} times within "
@@ -100,13 +100,17 @@ def set_document(doc: Optional[dict]) -> None:
 
 @functools.lru_cache(maxsize=1)
 def _shipped() -> dict:
-    from src.resources import resource_path                  # noqa: PLC0415
-    try:
-        with open(resource_path("data", "local_flora.json"),
-                  encoding="utf-8") as fh:
-            return parse_document(json.load(fh))
-    except (OSError, ValueError):
-        return {}
+    """Every pack's list (V3.24, ED-2: one file per pack,
+    ``data/regions/<key>/local_flora.json``)."""
+    from src import region                                   # noqa: PLC0415
+    out: dict = {}
+    for key in region.regions():
+        try:
+            with open(region.flora_path(key), encoding="utf-8") as fh:
+                out.update(parse_document(json.load(fh)))
+        except (OSError, ValueError):
+            continue
+    return out
 
 
 def _places() -> dict:

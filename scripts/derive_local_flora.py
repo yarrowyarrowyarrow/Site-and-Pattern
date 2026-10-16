@@ -5,11 +5,14 @@ scripts/derive_local_flora.py — which species are native around each place.
 **Dev-time, needs no network.** Reads the point cache
 (`data/fetched/plant_occurrences.json`), the catalogue's VASCAN province lists
 (`data/plants_master.json`) and the owner's rulings
-(`data/local_flora_rulings.json`), and writes `data/local_flora.json`, which
-ships and which every surface reads through `src/native_here.py`.
+(`data/regions/<place>/local_flora_rulings.json`), and writes the pack's
+`local_flora.json`, which ships and which every surface reads through
+`src/native_here.py`. One pack per run; `--place` names it (the default pack,
+`data/edition.json`, when left out). V3.24 moved both files into the region
+pack (ED-2).
 
     python scripts/derive_local_flora.py            # report, write nothing
-    python scripts/derive_local_flora.py --write    # write data/local_flora.json
+    python scripts/derive_local_flora.py --write    # write the pack's local_flora.json
     python scripts/derive_local_flora.py --check    # exit 1 if the shipped file is stale
     python scripts/derive_local_flora.py --merge PATH   # fold in a review, then write
 
@@ -41,8 +44,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 DATA = PROJECT_ROOT / "data"
 CACHE_PATH = DATA / "fetched" / "plant_occurrences.json"
 CATALOGUE_PATH = DATA / "plants_master.json"
-RULINGS_PATH = DATA / "local_flora_rulings.json"
-OUTPUT_PATH = DATA / "local_flora.json"
+from src import region  # noqa: E402
+
+#: The default pack's files; ``--place`` points them at another pack.
+PLACE = region.default().key
+RULINGS_PATH = Path(region.rulings_path(PLACE))
+OUTPUT_PATH = Path(region.flora_path(PLACE))
 
 
 def _shown(path: Path) -> str:
@@ -70,11 +77,11 @@ def build(cache_path: Path = CACHE_PATH, catalogue_path: Path = CATALOGUE_PATH,
                if r.get("scientific_name")}
     rulings = (parse_rulings(_load(rulings_path), species)
                if rulings_path.exists() else {})
-    return derive(catalogue, _load(cache_path), rulings)
+    return derive(catalogue, _load(cache_path), rulings, only=PLACE)
 
 
 def write() -> str:
-    """Derive and write ``data/local_flora.json``; returns the summary."""
+    """Derive and write the pack's ``local_flora.json``; returns the summary."""
     from src.local_flora import dumps
     doc = build()
     OUTPUT_PATH.write_text(dumps(doc), encoding="utf-8")
@@ -120,7 +127,7 @@ def carry_rulings(old: str, new: str = "", path: Path = RULINGS_PATH) -> list:
     return changes
 
 
-def read_review(path: Path, place: str = "edmonton") -> dict:
+def read_review(path: Path, place: str = "") -> dict:
     """A review's rulings, as ``{"places": {place: {name: ruling}}}``.
 
     ``path`` is the review page's export (a file already in that shape), or a
@@ -129,6 +136,7 @@ def read_review(path: Path, place: str = "edmonton") -> dict:
     holding a ``rulings`` folder), which belong to ``place``.
     """
     path = Path(path)
+    place = place or PLACE
     if not path.is_dir():
         return _load(path)
     folder = path / "rulings" if (path / "rulings").is_dir() else path
@@ -203,24 +211,29 @@ def summary(doc: dict) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    global PLACE, RULINGS_PATH, OUTPUT_PATH         # noqa: PLW0603
     from src.local_flora import dumps
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--write", action="store_true",
-                      help="write data/local_flora.json")
+                      help="write the pack's local_flora.json")
     mode.add_argument("--check", action="store_true",
-                      help="exit 1 if data/local_flora.json is not what a "
-                           "fresh derivation writes")
+                      help="exit 1 if the pack's local_flora.json is not what "
+                           "a fresh derivation writes")
     mode.add_argument("--merge", metavar="PATH",
-                      help="fold a review into data/local_flora_rulings.json "
-                           "(the page's export, or a directory of its rows), "
-                           "then write data/local_flora.json")
-    p.add_argument("--place", default="edmonton",
-                   help="the place a directory of rows belongs to "
-                        "(default: edmonton)")
+                      help="fold a review into the pack's "
+                           "local_flora_rulings.json (the page's export, or a "
+                           "directory of its rows), then write its list")
+    p.add_argument("--place", default="",
+                   help="the region pack (data/regions/<place>/); the "
+                        "default pack when left out")
     args = p.parse_args(argv)
+    if args.place and args.place != PLACE:
+        PLACE = args.place
+        RULINGS_PATH = Path(region.rulings_path(PLACE))
+        OUTPUT_PATH = Path(region.flora_path(PLACE))
 
     if args.merge:
         try:
@@ -249,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         OUTPUT_PATH.write_text(text, encoding="utf-8")
         print(f"\nWrote {_shown(OUTPUT_PATH)}.")
     elif text != current:
-        print("\nWould change data/local_flora.json; --write to write it.")
+        print(f"\nWould change {_shown(OUTPUT_PATH)}; --write to write it.")
     else:
         print("\nUp to date.")
     return 0

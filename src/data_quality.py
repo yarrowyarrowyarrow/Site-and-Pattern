@@ -2180,26 +2180,33 @@ def validate_local_flora() -> tuple[list[str], list[str]]:
     what the occurrence cache gives today is ``tests/test_local_flora.py``'s
     job: that reads 18 MB, and this gate should not.
     """
+    from src import region
     from src.local_flora import parse_document, parse_rulings
     errors: list[str] = []
-    try:
-        doc = json.loads((DATA_DIR / "local_flora.json")
-                         .read_text(encoding="utf-8"))
-        rulings = json.loads((DATA_DIR / "local_flora_rulings.json")
-                             .read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        return [f"local_flora: {e}"], []
     rows = {r.get("scientific_name"): r
             for r in _load_json_list(DATA_DIR / "plants_master.json")
             if isinstance(r, dict) and r.get("scientific_name")}
-    try:
-        parsed = parse_rulings(rulings, rows)
-    except ValueError as e:
-        return [f"local_flora_rulings.json: {e}"], []
-    places = parse_document(doc)
-    if not places:
-        return ["local_flora.json: no places, or a version this code cannot "
-                "read"], []
+    places: dict = {}
+    parsed: dict = {}
+    # One list and one rulings file per region pack (V3.24, ED-2).
+    for key in region.regions():
+        try:
+            pack = DATA_DIR / "regions" / key
+            doc = json.loads((pack / "local_flora.json")
+                             .read_text(encoding="utf-8"))
+            rulings = json.loads((pack / "local_flora_rulings.json")
+                                 .read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            return [f"local_flora ({key}): {e}"], []
+        try:
+            parsed.update(parse_rulings(rulings, rows))
+        except ValueError as e:
+            return [f"{key}/local_flora_rulings.json: {e}"], []
+        got = parse_document(doc)
+        if key not in got:
+            return [f"{key}/local_flora.json: no list for {key}, or a version "
+                    "this code cannot read"], []
+        places[key] = got[key]
     fix = "; run python scripts/derive_local_flora.py --write"
     for key, place in places.items():
         listed = set(place["species"])

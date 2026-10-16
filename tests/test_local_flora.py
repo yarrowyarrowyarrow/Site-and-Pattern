@@ -309,7 +309,7 @@ class TestTheReviewPage(unittest.TestCase):
         cls.data, cls.unread = build.page_data()
 
     def test_it_holds_every_species_the_rule_cannot_settle(self):
-        with open(os.path.join(ROOT, "data", "local_flora.json"),
+        with open(os.path.join(ROOT, "data", "regions", "edmonton", "local_flora.json"),
                   encoding="utf-8") as fh:
             edm = json.load(fh)["places"]["edmonton"]["species"]
         waiting = {n for n, e in edm.items()
@@ -355,15 +355,19 @@ class TestTheDataGate(unittest.TestCase):
         import tempfile
         from unittest import mock
         self.dir = pathlib.Path(tempfile.mkdtemp())
-        for name in ("local_flora.json", "local_flora_rulings.json",
-                     "plants_master.json"):
-            shutil.copy(os.path.join(ROOT, "data", name), self.dir / name)
+        pack = self.dir / "regions" / "edmonton"
+        pack.mkdir(parents=True)
+        for name in ("local_flora.json", "local_flora_rulings.json"):
+            shutil.copy(os.path.join(ROOT, "data", "regions", "edmonton", name),
+                        pack / name)
+        shutil.copy(os.path.join(ROOT, "data", "plants_master.json"),
+                    self.dir / "plants_master.json")
         patcher = mock.patch("src.data_quality.DATA_DIR", self.dir)
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def _rule(self, name, ruling):
-        path = self.dir / "local_flora_rulings.json"
+        path = self.dir / "regions" / "edmonton" / "local_flora_rulings.json"
         doc = json.loads(path.read_text(encoding="utf-8"))
         doc["places"]["edmonton"][name] = {"ruling": ruling}
         path.write_text(json.dumps(doc), encoding="utf-8")
@@ -394,7 +398,7 @@ class TestTheShippedList(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        with open(os.path.join(ROOT, "data", "local_flora.json"),
+        with open(os.path.join(ROOT, "data", "regions", "edmonton", "local_flora.json"),
                   encoding="utf-8") as fh:
             cls.text = fh.read()
         cls.doc = json.loads(cls.text)
@@ -522,7 +526,7 @@ class TestShippedWords(unittest.TestCase):
 
     def test_no_dash_the_website_refuses_reaches_a_sentence(self):
         nh.set_document(None)
-        with open(os.path.join(ROOT, "data", "local_flora.json"),
+        with open(os.path.join(ROOT, "data", "regions", "edmonton", "local_flora.json"),
                   encoding="utf-8") as fh:
             names = json.load(fh)["places"]["edmonton"]["species"]
         for name in names:

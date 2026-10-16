@@ -156,44 +156,33 @@ def first_step_line(project: dict) -> str:
 # south-west corner, so the layout is real geometry rather than an accident of
 # whatever latitude it lands at.
 
-EXAMPLE_NAME = "Example — Front Yard Lawn Conversion"
-EXAMPLE_WIDTH_M = 11.0
-EXAMPLE_DEPTH_M = 8.0
+def _example() -> dict:
+    """The default region pack's worked example (V3.24, ED-1:
+    ``data/regions/<key>/region.json``, ``example``)."""
+    from src import region                                   # noqa: PLC0415
+    return region.default().example
 
-#: Where the example lands when the user has no pin of their own: central
-#: Edmonton, zone 3b/4a — the middle of this app's actual range.
-EXAMPLE_DEFAULT_LATLNG = (53.5461, -113.4938)
+
+EXAMPLE_NAME = _example()["name"]
+EXAMPLE_WIDTH_M = float(_example()["width_m"])
+EXAMPLE_DEPTH_M = float(_example()["depth_m"])
+
+#: Where the example lands when the user has no pin of their own: the pack's
+#: centre (central Edmonton, zone 3b/4a, the middle of this app's range).
+EXAMPLE_DEFAULT_LATLNG = tuple(_example()["centre"])
 
 #: ``(preferred name, fallback names…)`` → the builder takes the first that the
 #: live catalogue actually has. Fallbacks exist because seed data changes;
 #: a species that resolves to nothing is reported, never silently skipped.
-#: Every species it can resolve to is native around Edmonton, where the
-#: example lands (V3.18; ``tests/test_onboarding.py`` holds it there): it had
-#: Canada Goldenrod and Showy Milkweed, which the Edmonton list leaves off.
-EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
-    # Backbone — two shrubs at the back, offset so the bed never reads as a row.
-    (("Saskatoon Berry",), (2.6, 6.2)),
-    (("Chokecherry",), (7.9, 6.6)),
-    (("Red Osier Dogwood",), (5.2, 6.9)),
-    # Mid layer — the nectar relay: spring, midsummer, late summer.
-    (("Golden Bean", "Purple Prairie Clover"), (1.4, 4.4)),
-    (("Wild Bergamot",), (3.5, 4.7)),
-    (("Wild Bergamot",), (4.4, 3.9)),
-    (("Oval-leaf Milkweed",), (6.4, 4.5)),
-    (("Oval-leaf Milkweed",), (7.2, 5.1)),
-    (("Stiff Goldenrod",), (9.3, 4.8)),
-    (("Blanketflower", "Prairie Coneflower"), (8.5, 3.6)),
-    (("Purple Prairie Clover", "Wild Blue Flax"), (2.2, 3.1)),
-    (("Wild Blue Flax", "Harebell"), (6.0, 3.2)),
-    # Front edge — short things you can see over, plus the grass matrix.
-    (("Prairie Crocus", "Harebell"), (1.2, 1.5)),
-    (("Blue Grama Grass", "Rough Fescue"), (3.0, 1.7)),
-    (("Blue Grama Grass", "Rough Fescue"), (5.6, 1.3)),
-    (("Blue Grama Grass", "Rough Fescue"), (8.2, 1.6)),
-    (("Wild Strawberry",), (4.2, 0.9)),
-    (("Wild Strawberry",), (7.0, 0.8)),
-    (("Boreal Yarrow",), (9.6, 2.0)),
-)
+#: Every species it can resolve to is native around the pack's place, where
+#: the example lands (V3.18; ``tests/test_onboarding.py`` and
+#: ``tests/test_region_packs.py`` hold it there): it had Canada Goldenrod and
+#: Showy Milkweed, which the Edmonton list leaves off. Read from the pack since
+#: V3.24: backbone shrubs at the back, the nectar relay in the middle, short
+#: plants and the grass matrix at the front.
+EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = tuple(
+    (tuple(names), (float(off[0]), float(off[1])))
+    for names, off in _example()["planting"])
 
 EXAMPLE_NOTES = (
     "This is a worked example, not a recommendation for your yard.\n\n"

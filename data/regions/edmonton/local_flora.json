@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated": "2026-09-25",
-  "source": "derived from data/fetched/plant_occurrences.json (GBIF occurrence search, retrieved 2026-09-25) and the province lists VASCAN gives every row of data/plants_master.json, with the owner's rulings from data/local_flora_rulings.json",
+  "source": "derived from data/fetched/plant_occurrences.json (GBIF occurrence search, retrieved 2026-09-25) and the province lists VASCAN gives every row of data/plants_master.json, with the owner's rulings from the pack's local_flora_rulings.json",
   "comment": "Which species are native around each place, with the evidence. A species is native there when VASCAN records it native in the province AND at least min_collections distinct herbarium collections lie wholly within radius_km of the centre, or the owner ruled it native. Observations are context and never counted: a city's records include its planted trees. Below the floor a species is not settled, which is not the same as not native. Regenerate with scripts/derive_local_flora.py; never edit by hand.",
   "places": {
     "edmonton": {

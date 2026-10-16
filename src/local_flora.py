@@ -65,19 +65,18 @@ from typing import Iterable, Mapping, Optional
 from src.ecoregion_ranges import MIN_RECORDS
 from src.projection import metres_per_deg
 
-#: The places with a list. The centre is the point the basemap's Edmonton dot
-#: and the worked example already use (a test keeps them equal); the radius is
-#: the owner's choice, between 30-40 km (fewer species with enough specimens)
-#: and 80 km (the boreal edge as well as the city).
-PLACES: dict = {
-    "edmonton": {
-        "name": "Edmonton region",
-        "short": "Edmonton",
-        "province": "AB",
-        "centre": (53.5461, -113.4938),
-        "radius_km": 50.0,
-    },
-}
+def places() -> dict:
+    """The places with a list: one per region pack (V3.24, ED-2;
+    ``src/region.py``), each its pack's area, name and province. The Edmonton
+    radius is the owner's choice, between 30-40 km (fewer species with enough
+    specimens) and 80 km (the boreal edge as well as the city)."""
+    from src import region                                   # noqa: PLC0415
+    return {k: r.place() for k, r in region.regions().items()}
+
+
+#: The shipped packs' places, as :func:`places` reads them at import. Read
+#: :func:`places` where a test may have swapped the packs.
+PLACES: dict = places()
 
 #: Distinct collections inside the place before it is documented there.
 MIN_COLLECTIONS = MIN_RECORDS
@@ -178,10 +177,11 @@ def parse_rulings(doc: Optional[Mapping], species: Mapping) -> dict:
     word, V3.12).
     """
     out: dict = {}
+    known = places()
     for place_key, rows in ((doc or {}).get("places") or {}).items():
-        if place_key not in PLACES:
+        if place_key not in known:
             raise ValueError(f"rulings name an unknown place: {place_key!r}")
-        province = PLACES[place_key]["province"]
+        province = known[place_key]["province"]
         kept = {}
         for name, ruling in (rows or {}).items():
             if name not in species:
@@ -202,17 +202,21 @@ def parse_rulings(doc: Optional[Mapping], species: Mapping) -> dict:
 
 
 def derive(catalogue: Iterable[Mapping], cache: Mapping,
-           rulings: Optional[Mapping] = None) -> dict:
-    """The whole shipped document, from the catalogue rows, the occurrence
-    cache and the parsed rulings. Deterministic: ``generated`` is the cache's
-    date, so a re-run over the same inputs writes the same bytes."""
+           rulings: Optional[Mapping] = None,
+           only: Optional[str] = None) -> dict:
+    """One pack's shipped document (``only``, the pack's key; every place when
+    ``None``), from the catalogue rows, the occurrence cache and the parsed
+    rulings. Deterministic: ``generated`` is the cache's date, so a re-run over
+    the same inputs writes the same bytes."""
     rows = {r["scientific_name"]: r for r in catalogue
             if r.get("scientific_name")}
     basis = list(cache.get("basis") or [])
     points = cache.get("species") or {}
     rulings = rulings or {}
-    places = {}
-    for key, place in PLACES.items():
+    listed = {}
+    for key, place in places().items():
+        if only is not None and key != only:
+            continue
         entries = {}
         for name in sorted(rows):
             ev = tally(points.get(name) or [], basis, place)
@@ -223,7 +227,7 @@ def derive(catalogue: Iterable[Mapping], cache: Mapping,
             entry.update({k: v for k, v in ev.items() if v not in (None, 0)})
             entry.update((rulings.get(key) or {}).get(name) or {})
             entries[name] = entry
-        places[key] = {"name": place["name"], "short": place["short"],
+        listed[key] = {"name": place["name"], "short": place["short"],
                        "province": place["province"],
                        "centre": list(place["centre"]),
                        "radius_km": place["radius_km"],
@@ -235,7 +239,8 @@ def derive(catalogue: Iterable[Mapping], cache: Mapping,
         "source": ("derived from data/fetched/plant_occurrences.json ("
                    + (cache.get("source") or "GBIF") + ") and the province "
                    "lists VASCAN gives every row of data/plants_master.json, "
-                   "with the owner's rulings from data/local_flora_rulings.json"),
+                   "with the owner's rulings from the pack's "
+                   "local_flora_rulings.json"),
         "comment": ("Which species are native around each place, with the "
                     "evidence. A species is native there when VASCAN records "
                     "it native in the province AND at least min_collections "
@@ -246,7 +251,7 @@ def derive(catalogue: Iterable[Mapping], cache: Mapping,
                     "species is not settled, which is not the same as not "
                     "native. Regenerate with scripts/derive_local_flora.py; "
                     "never edit by hand."),
-        "places": places,
+        "places": listed,
     }
 
 

@@ -63,7 +63,7 @@ def doc_id(name: str) -> str:
 def page_data(root: Path = ROOT) -> tuple[dict, list]:
     """``(data, species without a read)`` -- everything the page embeds."""
     place = PLACES[PLACE]
-    shipped = _load(root / "data" / "local_flora.json")
+    shipped = _load(root / "data" / "regions" / PLACE / "local_flora.json")
     doc = shipped["places"][PLACE]
     entries = doc["species"]
     rows = {r["scientific_name"]: r
