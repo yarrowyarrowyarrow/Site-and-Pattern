@@ -63,6 +63,16 @@ function box(el) {
   const r = el.getBoundingClientRect();
   return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
 }
+// An animated zoom still in flight finishes after a later setView or fitBounds
+// and puts the map back at its own zoom. About one run in ten (V3.22), the
+// double-click step below starts one (zoom 12 -> 12.2, then on), and under
+// --virtual-time-budget it ended inside the drag or the scale steps: CI's drag
+// landed beside its handle, and a scale read "5 m" at county zoom. Every step
+// that depends on the zoom waits for it first.
+async function settled() {
+  w.map.stop();
+  for (let i = 0; i < 60 && w.map._animatingZoom; i++) await wait(50);
+}
 function scaleLabel() { return w.document.querySelector('#sp-scale .sp-scale-label').textContent; }
 function sent(name) { return calls.filter(c => c[0] === name); }
 
@@ -126,6 +136,7 @@ async function run() {
 
   // QF-8: an outline read back from a file repeats its first corner.
   w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD.concat([YARD[0]]) }), false);
+  await settled();
   // Not animated (V3.21): a zoom still in flight finished after the steps
   // below and put the map back at its own zoom (a scale read "500 m" at
   // zoom 9; on CI a drag landed beside its handle).
@@ -149,25 +160,44 @@ async function run() {
   // corner's, and the drag pulled a spur out of the outline.
   w.loadBoundary(JSON.stringify({ id: 'b2', color: 'blue', points: QUAD.concat([QUAD[0]]) }), false);
   const b2 = w.boundaries[w.boundaries.length - 1];
+  await settled();
   w.map.fitBounds(b2.layer.getBounds(), { padding: [140, 140], animate: false });
   await wait(200);
   w.enterBoundaryEditMode('b2');
   calls = [];
-  const c0 = at(QUAD[0][0], QUAD[0][1]);
+  // Aimed at the handle as drawn, as a person aims, not at where the corner's
+  // coordinates say it is (V3.22: CI's Chromium twice pressed a bare DIV
+  // here, which no run in a session reproduced). If it misses again, the
+  // report says what was under the point and where the handle was drawn.
+  const want = at(QUAD[0][0], QUAD[0][1]);
+  const hEl = w.boundaryEditHandles[0] && w.boundaryEditHandles[0].getElement
+    ? w.boundaryEditHandles[0].getElement() : null;
+  const hr = hEl ? hEl.getBoundingClientRect() : null;
+  const c0 = hr && hr.width ? { x: hr.left + hr.width / 2, y: hr.top + hr.height / 2 } : want;
+  const name = el => el ? String(el.tagName) + '#' + (el.id || '') + '.' +
+                          String(el.getAttribute('class')) : null;
   const target = w.document.elementFromPoint(c0.x, c0.y);
+  const under = Array.from(w.document.elementsFromPoint(c0.x, c0.y)).slice(0, 4).map(name);
   drag(c0, { x: c0.x + 60, y: c0.y + 40 });
   const moved = sent('onBoundaryGeomChanged');
+  const r1 = n => Math.round(n);
   out.reopened_drag = { handles: w.boundaryEditHandles.length,
-                        target: target ? String(target.tagName) + '.' +
-                                         String(target.getAttribute('class')) : null,
+                        target: name(target),
+                        where: 'pressed ' + r1(c0.x) + ',' + r1(c0.y) + '; corner at ' +
+                               r1(want.x) + ',' + r1(want.y) + '; handle drawn ' +
+                               (hr ? r1(hr.left) + ',' + r1(hr.top) + ' ' + r1(hr.width) +
+                                     'x' + r1(hr.height) : 'nowhere') +
+                               '; under it ' + under.join(' > '),
                         sent: moved.length ? JSON.parse(moved[moved.length - 1][2]) : null };
   w.exitBoundaryEditMode();
 
   // QF-18: Automatic across a yard and across a county; a click fixes the other.
   w.setScaleBar(true, 'auto');
+  await settled();
   w.map.setView([LAT, LNG], 21, { animate: false });
   await wait(100);
   out.scale_yard = scaleLabel();
+  await settled();
   w.map.setView([LAT, LNG], 9, { animate: false });
   await wait(100);
   out.scale_county = scaleLabel();

@@ -324,7 +324,8 @@ class TheMapPageOffline(unittest.TestCase):
         r = self.m["reopened_drag"]
         self.assertEqual(r["handles"], 4)
         self.assertIsNotNone(r["sent"], f"the drag was never reported: it "
-                                        f"landed on {r.get('target')}")
+                                        f"landed on {r.get('target')} "
+                                        f"({r.get('where')})")
         self.assertEqual(len(r["sent"]), 4, r["sent"])
         self.assertNotAlmostEqual(r["sent"][0][0], 53.5461 - 0.0002, places=7,
                                   msg="the first corner did not move")
