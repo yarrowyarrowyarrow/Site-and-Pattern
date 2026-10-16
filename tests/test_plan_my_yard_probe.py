@@ -3,7 +3,8 @@ tests/test_plan_my_yard_probe.py — Plan My Yard keeps the probe's rules (PY-11
 V3.28; docs/homeowner/07-plan-my-yard.md §5).
 
 Runs ``scripts/probe_plan_my_yard.py``'s cases and fails on any rule: plants in
-a drawn bed and none on a lawn, path or patio; *Fill it now* at 65% cover or
+a drawn bed (with an outline or without one) and none on a lawn, path or
+patio; *Fill it now* at 65% cover or
 more and *Over two or three summers* at 35-45%; a conversion zone covered as
 fully as the open yard. About forty seconds.
 """

@@ -105,6 +105,33 @@ def planting_area(project: dict):
     return local_area(project)[1]
 
 
+def where_areas(project: dict) -> dict:
+    """What Plan My Yard's *Where* question offers (V3.28, PY-1): ``{"beds":
+    how many beds, "beds_m2": their area, "yard_m2": the outline less what
+    is not for planting}``; an area is ``0.0`` when there is none. Needs
+    shapely for an area; without it every area is ``0.0``."""
+    bounds, beds, holes = _parts(project)
+    out = {"beds": len(beds), "beds_m2": 0.0, "yard_m2": 0.0}
+    try:
+        from shapely.ops import unary_union
+        from src.projection import Projector
+    except ImportError:
+        return out
+    rings = beds + bounds
+    if not rings:
+        return out
+    proj = Projector.for_positions([(p[1], p[0]) for r in rings for p in r])
+    if beds:
+        out["beds_m2"] = float(unary_union(
+            [_poly(proj, r) for r in beds]).area)
+    if bounds:
+        yard = unary_union([_poly(proj, r) for r in bounds])
+        if holes:
+            yard = yard.difference(unary_union([_poly(proj, r) for r in holes]))
+        out["yard_m2"] = float(yard.area)
+    return out
+
+
 def bed_area_m2(project: dict) -> float:
     """The planting area in m²: what mulch is bought for and the site-prep
     sheet clears (OV-3). ``0.0`` with no boundary and no bed."""

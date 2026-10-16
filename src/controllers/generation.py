@@ -1,7 +1,8 @@
 """
-src/controllers/generation.py — one-click "Generate Design" controller.
+src/controllers/generation.py — the Plan My Yard controller (named Generate
+Design until V3.28).
 
-Owns the Generate-Design flow, extracted from MainWindow per this package's
+Owns the Plan My Yard flow, extracted from MainWindow per this package's
 controller pattern: show the goal dialog, run generation on a background
 ``QThread`` (:mod:`src.generate_worker`), and render the resulting plants onto
 the map and into the live project. Living here (not as fat methods on
@@ -65,17 +66,31 @@ class GenerationController:
         last_run, last_plants = last_plan(main._project.get("features"))
         # The first line says where the pin is; outside the two provinces
         # there is no plan (V3.25, ED-8; decision E3).
-        from src import region
+        from src import advanced_tools, yard_overview
+        from src.generate_design_dialog import NEXT_STEP
         cov = region.coverage(site_config.get("latitude"),
                               site_config.get("longitude"))
+        pack = (region.at(site_config["latitude"], site_config["longitude"])
+                if has_pin else None)
+        advanced = advanced_tools.is_on()
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
             preselected=preselected, last_plan=last_plants,
             goals=design_goals.goals_for_site(site_config),
             coverage=region.message(cov), outside=cov.kind == region.OUTSIDE,
             coverage_warns=cov.kind in (region.PROVINCE, region.OUTSIDE),
-            fauna_options=self._fauna_options(), parent=main)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+            areas=yard_overview.where_areas(main._project),
+            place=pack.short if pack is not None else "",
+            advanced=advanced,
+            fauna_options=self._fauna_options() if advanced else [],
+            parent=main)
+        result = self._exec(dlg)
+        if result == NEXT_STEP and dlg.next_step:
+            # PY-9: the dialog's button does what was missing.
+            from src import yard_overview_flow
+            yard_overview_flow.run_action(main, dlg.next_step)
+            return
+        if result != QDialog.DialogCode.Accepted:
             return
         self._replacing = last_run if dlg.replace_last() else ""
 
@@ -92,17 +107,27 @@ class GenerationController:
         # being replaced: its pond would keep the new plan out of the water.
         existing_features = without_plan(
             main._project.get("features", []) or [], self._replacing)
+        if dlg.where() == "yard":
+            # Anywhere in the outline: the beds stop being the only ground.
+            existing_features = [f for f in existing_features
+                                 if not _is_bed(f)]
         self._start(site_config=site_config or None,
                     boundary=boundary, goals=goals,
                     budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
                     match_site=dlg.match_site(), density=dlg.density(),
+                    cover=dlg.cover(),
                     existing_features=existing_features)
+
+    @staticmethod
+    def _exec(dlg) -> int:
+        """Show the dialog and wait (tests replace this)."""
+        return dlg.exec()
 
     # ── Worker lifecycle (mirrors src/site_panel.py) ─────────────────────────
 
     def _start(self, *, site_config, boundary, goals,
                budget=None, fauna_ids=None, match_site=True,
-               density="balanced", existing_features=None):
+               density="balanced", cover=None, existing_features=None):
         from src.generate_worker import GenerateWorker
         main = self._main
         if hasattr(main, "_act_generate"):
@@ -113,13 +138,14 @@ class GenerationController:
             main.first_step_bar.set_generate_enabled(False)
         except AttributeError:
             pass
-        main.statusBar().showMessage("Generating design…")
+        main.statusBar().showMessage("Planning your yard…")
 
         thread = QThread(main)
         worker = GenerateWorker(site_config=site_config,
                                 boundary=boundary, goals=goals,
                                 budget=budget, fauna_ids=fauna_ids,
                                 match_site=match_site, density=density,
+                                cover=cover,
                                 existing_features=existing_features)
         worker.moveToThread(thread)
 
@@ -190,7 +216,7 @@ class GenerationController:
             return []
         return out
 
-    @undoable("generate design")
+    @undoable("plan my yard")
     def _render(self, project):
         """Place every plant from the generated project onto the map and into
         the live project, under one shared placement group so the whole design
@@ -200,9 +226,9 @@ class GenerationController:
         plants = list(_iter_generated_plants(project))
         if not plants:
             QMessageBox.information(
-                main, "Generate Design",
-                "The generator didn't place any plants. Try different goals, "
-                "or draw a boundary / drop a property pin first.")
+                main, "Plan my yard",
+                "The plan has no plants. Try fewer must-haves, or outline "
+                "more ground to plant.")
             return
 
         # Replace, not stack (V3.18, PY-5): the last plan goes in the same
@@ -251,17 +277,24 @@ class GenerationController:
         main._mark_modified()
         main._sync_planning_panel()
         main.statusBar().showMessage(
-            ("Replaced your last plan" if replaced else "Generated design")
-            + f" — placed {len(batch)} plants"
+            ("Replaced your last plan" if replaced else "Planned your yard")
+            + f": placed {len(batch)} plants"
             + (f" and {placed_structures} structure"
                + ("s" if placed_structures != 1 else "")
                if placed_structures else "")
-            + ". Fine-tune by dragging or deleting.", 5000)
+            + ". Drag, delete or add to it as you like.", 5000)
 
         warnings = (project.as_dict().get("properties", {})
                     .get("generation_warnings", []))
         if warnings:
             QMessageBox.information(main, "Design notes", "\n\n".join(warnings))
+
+
+def _is_bed(feature) -> bool:
+    from src.yard_overview import BED_SHAPES
+    props = feature.get("properties") or {}
+    return (props.get("element_type") == "custom_shape"
+            and props.get("shape_type") in BED_SHAPES)
 
 
 def _iter_generated_structures(project):

@@ -41,12 +41,49 @@ _MISSES = 4
 
 STOP_TARGET, STOP_LIMIT, STOP_FULL = "target", "limit", "full"
 
+#: What the dialog's estimate assumes of a plan's plants, measured on the
+#: probe yard (``scripts/probe_plan_my_yard.py``, V3.28): a plant's grown
+#: spread covers about 0.7 m² and costs about $9-$19.
+TYPICAL_CANOPY_M2 = 0.7
+TYPICAL_PRICE = (9.0, 19.0)
+
 
 def target_for(density: str = "", cover: Optional[float] = None) -> float:
     """The cover a plan aims for: ``cover`` when given, else the density's."""
     if cover is not None:
         return max(0.0, min(0.95, float(cover)))
     return COVER_TARGETS.get((density or "balanced").lower(), 0.45)
+
+
+def estimate(area_m2: float, target: float) -> dict:
+    """``{"plants", "low", "high"}``: about how many plants a plan for
+    ``area_m2`` at ``target`` cover places and what they cost, before the plan
+    is made (07 §4.3), so the dialog can say *about*.
+
+    Plants overlap as they grow, so cover rises as ``1 - exp(-n a / A)``, not
+    in proportion to the count: ``n = -ln(1 - target) A / a``. On the probe
+    yard it says about 260 and 110 where the plans placed 267 and 95; in one
+    18 m² bed about 30 and 13 where they placed 20 to 74 and 11 to 34, by
+    the plants they chose. Rounded (P9)."""
+    import math
+    if area_m2 <= 0 or target <= 0:
+        return {"plants": 0, "low": 0, "high": 0}
+    n = -math.log(1.0 - min(target, 0.95)) * area_m2 / TYPICAL_CANOPY_M2
+    n = max(1, _round(n))
+    lo, hi = TYPICAL_PRICE
+    return {"plants": n, "low": _round(n * lo, money=True),
+            "high": _round(n * hi, money=True)}
+
+
+def _round(x: float, money: bool = False) -> int:
+    """To 1 under 20, 5 under 100, 10 under 1,000, else 50 (money: 10, 50,
+    100)."""
+    steps = ((100, 10), (1000, 50), (float("inf"), 100)) if money else \
+        ((20, 1), (100, 5), (1000, 10), (float("inf"), 50))
+    for top, step in steps:
+        if x < top:
+            return int(round(x / step) * step)
+    return int(x)
 
 
 def fillers(project, pool: list, get_plant: Callable) -> list:

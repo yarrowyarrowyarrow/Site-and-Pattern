@@ -434,10 +434,10 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        act_generate = file_menu.addAction("&Generate Design…")
+        act_generate = file_menu.addAction("&Plan My Yard…")
         act_generate.setShortcut("Ctrl+G")
         act_generate.setStatusTip(
-            "Make a starting design from your goals")
+            "Plan your yard with native plants, from a few questions")
         act_generate.triggered.connect(self._on_generate_design)
         self._act_generate = act_generate
 

@@ -58,32 +58,31 @@ STEPS: tuple[dict, ...] = (
         # is the sentence-shaped version the welcome and the Site panel use.
         # One source, two widths — so they can't drift into saying different
         # things about the same step.
-        "short": "Drop a pin",
-        "title": "Drop a property pin",
+        "short": "Find your yard",
+        "title": "Find your yard",
         "detail": "Search your address in the Site tab, or click "
                   "“Use Pin Drop…” and click your yard on the "
                   "map. This is what fetches your climate, soil and frost "
                   "dates.",
     },
     {
+        # V3.28 (PY-10): a bed is enough. The whole yard, or just the beds.
         "key": "boundary",
-        "short": "Draw the boundary",
-        "title": "Draw your boundary",
-        "detail": "Draw → ⬡ Boundary, then click around the area "
-                  "you want to plant. Click the first point again to close it.",
+        "short": "Outline where to plant",
+        "title": "Outline where to plant",
+        "detail": "Draw → ⬡ Boundary around your whole yard, or Draw › "
+                  "Shape → Garden Bed around just the beds. Click the first "
+                  "point again to close it.",
     },
     {
         "key": "plants",
-        "short": "Add plants",
-        # V2.41: the two halves swapped. The manual path leads because that is
-        # what the app is for; Generate is a shortcut offered second, not the
-        # headline. Same change of emphasis as taking Generate off the start
-        # screen — `short` has always said "Add plants", so this is the title
-        # catching up with the label beside it.
-        "title": "Add your plants — or let the app draft it",
-        "detail": "Pick plants from the Placement tab and click to place them. "
-                  "Or use ✨ Generate Design to fill the boundary from your "
-                  "goals and edit from there.",
+        "short": "Plan it, or pick plants yourself",
+        # V2.41 put the manual path first; V3.28 (PY-10) names both, the plan
+        # first, because the strip's button is the plan.
+        "title": "Plan it, or pick plants yourself",
+        "detail": "Plan my yard asks a few questions and plants where you "
+                  "outlined. Or pick plants from the Placement tab and click "
+                  "to place them.",
     },
 )
 
@@ -94,8 +93,14 @@ def _has_pin(project: dict) -> bool:
 
 
 def _has_boundary(project: dict) -> bool:
+    """An outline, or a bed (V3.28, PY-10): either is somewhere to plant."""
+    from src.yard_overview import BED_SHAPES                 # noqa: PLC0415
     for f in (project or {}).get("features") or []:
-        if (f.get("properties") or {}).get("element_type") == "property_boundary":
+        props = f.get("properties") or {}
+        if props.get("element_type") == "property_boundary":
+            return True
+        if (props.get("element_type") == "custom_shape"
+                and props.get("shape_type") in BED_SHAPES):
             return True
     return False
 

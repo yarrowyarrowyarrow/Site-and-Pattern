@@ -1407,32 +1407,37 @@ class TestGenerateDesignDialog(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_one_checkbox_per_goal_and_getters(self):
-        """One per goal that plant data backs: the two "guidance only — needs
-        data" goals are not offered (the owner's V3.07 answer)."""
+        """With the Advanced tools on, one box per goal that plant data backs
+        (a must-have or a More goal): the two "guidance only — needs data"
+        goals are not offered (the owner's V3.07 answer)."""
         from src.generate_design_dialog import GenerateDesignDialog
         from src.design_goals import GOALS
-        dlg = GenerateDesignDialog(has_boundary=True, has_pin=False,
+        dlg = GenerateDesignDialog(has_boundary=True, has_pin=True,
+                                   advanced=True,
                                    preselected=["native_only",
                                                 "flowers_all_season"])
         try:
-            self.assertEqual(set(dlg._checks),
+            self.assertEqual(set(dlg._musts) | set(dlg._more),
                              {g.key for g in GOALS if g.backed})
             self.assertNotIn("flowers_all_season", dlg.selected_goals())
-            self.assertTrue(dlg._checks["native_only"].isChecked())
+            self.assertTrue(dlg._more["native_only"].isChecked())
             self.assertIn("native_only", dlg.selected_goals())
             self.assertFalse(hasattr(dlg, "offline"))   # RM-3
             self.assertFalse(hasattr(dlg, "brief"))
         finally:
             dlg.deleteLater()
 
-    def test_ok_disabled_without_location(self):
+    def test_no_plan_button_without_location(self):
+        """§4.2 (V3.28): no pin, no questions and no plan button, only what
+        to do first."""
         from src.generate_design_dialog import GenerateDesignDialog
         from PyQt6.QtWidgets import QDialogButtonBox
         dlg = GenerateDesignDialog(has_boundary=False, has_pin=False)
         try:
             box = dlg.findChild(QDialogButtonBox)
-            ok = box.button(QDialogButtonBox.StandardButton.Ok)
-            self.assertFalse(ok.isEnabled())
+            self.assertIsNone(box.button(QDialogButtonBox.StandardButton.Ok))
+            self.assertEqual([b.text() for b in dlg._step_buttons],
+                             ["Find my yard"])
         finally:
             dlg.deleteLater()
 

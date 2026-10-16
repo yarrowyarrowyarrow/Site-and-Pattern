@@ -8,7 +8,7 @@ Leaflet. A slim Qt strip between the toolbars and the map costs no JS, cannot
 be repainted away by a map redraw, and reads as part of the app chrome.
 
 It shows the three-step path with the current step highlighted, carries the
-✨ Generate Design call to action, and **removes itself** once the user has a
+Plan my yard call to action, and **removes itself** once the user has a
 pin, a boundary and plants — guidance that outstays its welcome becomes
 furniture. A View-menu toggle brings it back.
 
@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 
 class FirstStepBar(QWidget):
-    """Three step chips + a Generate button + a dismiss ✕."""
+    """Three step chips + a Plan my yard button + a dismiss ✕."""
 
     #: A step chip was clicked — carries the step key ('pin'/'boundary'/'plants').
     step_clicked = pyqtSignal(str)
@@ -67,12 +67,12 @@ class FirstStepBar(QWidget):
                                    QSizePolicy.Policy.Preferred)
         row.addWidget(self._detail, 2)
 
-        self._generate = QPushButton("✨ Generate Design")
+        self._generate = QPushButton("Plan my yard")
         self._generate.setCursor(Qt.CursorShape.PointingHandCursor)
         self._generate.setToolTip(
-            "Fill your boundary with native plants chosen from your goals "
-            "(Ctrl+G).\nEverything it places stays editable — drag, delete or "
-            "add to it.")
+            "Plan where you outlined with native plants, from a few "
+            "questions (Ctrl+G).\nEverything it places stays yours to drag, "
+            "delete or add to.")
         self._generate.setStyleSheet(
             "QPushButton { background: #2e7d32; color: #e8f5e9; "
             "border: 1px solid #66bb6a; border-radius: 4px; "

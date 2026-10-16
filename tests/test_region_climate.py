@@ -111,7 +111,8 @@ class WhatTheScreensSay(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["sp-region-climate"])
 
     def test_plan_my_yard_outside_the_provinces(self):
-        """Decision E3: disabled, with the reason."""
+        """Decision E3: no plan, and the first line says why (V3.28: §4.2,
+        the questions and their button are not shown at all)."""
         from PyQt6.QtWidgets import QDialogButtonBox, QLabel
         from src.generate_design_dialog import GenerateDesignDialog
         cov = region.coverage(TORONTO["latitude"], TORONTO["longitude"])
@@ -121,10 +122,8 @@ class WhatTheScreensSay(unittest.TestCase):
         self.addCleanup(dlg.close)
         ok = dlg.findChild(QDialogButtonBox).button(
             QDialogButtonBox.StandardButton.Ok)
-        self.assertFalse(ok.isEnabled())
-        self.assertEqual(ok.toolTip(),
-                         "Plan My Yard needs a pin in Alberta or Saskatchewan.")
-        line = dlg.findChild(QLabel, "plan_coverage")
+        self.assertIsNone(ok)
+        line = dlg.findChild(QLabel, "plan_first_line")
         self.assertTrue(line.text().startswith("This pin is outside Alberta"))
 
     def test_plan_my_yard_in_the_region(self):

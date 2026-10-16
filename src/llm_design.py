@@ -1853,6 +1853,24 @@ def _too_big_for(plant: dict, area_m2: float) -> bool:
             or height > _MAX_HEIGHT_PER_SIDE * math.sqrt(area_m2))
 
 
+def _beds_box(existing_features) -> Optional[list]:
+    """``[[lat, lng], ...]``: the box around the drawn beds, or ``None``."""
+    from src.yard_overview import BED_SHAPES
+    pts = []
+    for f in existing_features or []:
+        props = f.get("properties") or {}
+        geom = f.get("geometry") or {}
+        if (props.get("element_type") == "custom_shape"
+                and props.get("shape_type") in BED_SHAPES
+                and geom.get("type") == "Polygon" and geom.get("coordinates")):
+            pts += geom["coordinates"][0]
+    if len(pts) < 3:
+        return None
+    lngs, lats = [p[0] for p in pts], [p[1] for p in pts]
+    return [[min(lats), min(lngs)], [min(lats), max(lngs)],
+            [max(lats), max(lngs)], [max(lats), min(lngs)]]
+
+
 def _plantable_m2(boundary, existing_features=None) -> float:
     """The ground a plan may plant, in m^2: the drawn beds when there are any,
     else the outline less lawn, paths, patios, water and buildings, as the
@@ -3111,6 +3129,9 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     from src.permadesign_api import Project, query_plants, list_polycultures
     from src.design_goals import filters_for_goals, community_name_hints
 
+    # Beds and no outline (V3.28, PY-10): the beds' box is the outline, so a
+    # bed alone is enough to plan; around the pin the plan had placed 4.
+    boundary = boundary or _beds_box(existing_features)
     center = _design_center(boundary, site_config)
     if center is None:
         raise LLMError(

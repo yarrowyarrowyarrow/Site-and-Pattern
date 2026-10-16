@@ -291,7 +291,7 @@ class TestFirstStepBar(unittest.TestCase):
     def test_chips_show_short_labels_and_mark_the_live_step(self):
         bar = self._bar()
         self._render(bar, _project())
-        self.assertIn("Drop a pin", bar._chips[0].text())
+        self.assertIn("Find your yard", bar._chips[0].text())
         self.assertIn("1.", bar._chips[0].text())
 
     def test_done_steps_are_ticked(self):

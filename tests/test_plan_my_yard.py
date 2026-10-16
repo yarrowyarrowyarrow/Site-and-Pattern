@@ -283,7 +283,7 @@ class TestTheDialogSaysSo(unittest.TestCase):
     def test_a_first_plan_replaces_nothing(self):
         dlg = self._dialog(0)
         self.assertFalse(dlg.replace_last())
-        self.assertEqual(self._ok_text(dlg), "Generate")
+        self.assertEqual(self._ok_text(dlg), "Plan my yard")
 
     def test_a_second_plan_says_it_replaces_the_first(self):
         from PyQt6.QtWidgets import QLabel

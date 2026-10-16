@@ -59,14 +59,15 @@ def _shape(kind, x0, y0, x1, y1):
             "properties": {"element_type": "custom_shape", "shape_type": kind}}
 
 
-def run(density: str = "balanced", features=(), cover=None) -> dict:
+def run(density: str = "balanced", features=(), cover=None,
+        boundary=BOUNDARY) -> dict:
     """One plan: ``{placed, on_shape, cover, per_m2}``."""
     from src.llm_design import generate_design_offline
     from src.onboarding import FIRST_RUN_GOALS
     from src import yard_overview
     features = list(features)
     project = generate_design_offline(
-        site_config=SITE, boundary=BOUNDARY, goals=list(FIRST_RUN_GOALS),
+        site_config=SITE, boundary=boundary, goals=list(FIRST_RUN_GOALS),
         density=density, existing_features=features, cover=cover).as_dict()
     whole = {"features": project["features"] + features}
     plants = [f for f in project["features"]
@@ -94,6 +95,8 @@ def measure() -> dict:
     out["open"] = run()
     for label, kind, *box in SHAPES:
         out["shapes"][label] = run(features=[_shape(kind, *box)])
+    # PY-10: a bed and no outline is enough to plan (V3.28).
+    out["bed_alone"] = run(features=[_shape(*SHAPES[0][1:])], boundary=None)
     return out
 
 
@@ -112,6 +115,10 @@ def failures(m: dict) -> list:
         bad.append(f"Garden Bed: {bed['on_shape']} of {bed['placed']} in it")
     if s["Lawn Area, south 60%"]["on_shape"]:
         bad.append(f"Lawn Area: {s['Lawn Area, south 60%']['on_shape']} on it")
+    alone = m["bed_alone"]
+    if alone["placed"] < 8 or alone["on_shape"] < 0.9 * alone["placed"]:
+        bad.append(f"Garden Bed, no outline: {alone['on_shape']} of "
+                   f"{alone['placed']} in it")
     path, open_yard = s["Pathway, 1 x 10 m"], m["open"]
     if path["on_shape"] or path["placed"] < 0.9 * open_yard["placed"] * 0.93:
         bad.append(f"Pathway: {path['placed']} placed, {path['on_shape']} "
@@ -145,6 +152,10 @@ def main(argv=None) -> int:
         print(f"  {label:30s} placed {r['placed']:3d} of {r['kinds']:2d} kinds; "
               f"{r['on_shape']:3d} on it; covers {r['cover']:.0%} of "
               f"{r['area']:.0f} m2")
+    r = m["bed_alone"]
+    print(f"  {'Garden Bed, no outline':30s} placed {r['placed']:3d} of "
+          f"{r['kinds']:2d} kinds; {r['on_shape']:3d} on it; covers "
+          f"{r['cover']:.0%} of {r['area']:.0f} m2")
     if "--assert" in argv:
         bad = failures(m)
         for line in bad:
