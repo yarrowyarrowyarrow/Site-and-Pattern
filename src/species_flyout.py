@@ -111,6 +111,7 @@ def install(main) -> None:
     fly.page.close_requested.connect(lambda: _on_close(main))
     fly.page.place_requested.connect(panel.place_from_elsewhere)
     fly.page.mix_requested.connect(panel.add_to_mix)
+    fly.page.place_fn = panel.picker.place       # the region it speaks for
     # The list fetches photos on a worker thread; the page asked for this one.
     panel.picker.model.imageReady.connect(fly.page.refresh_photo)
     # A plant on the map opens its page too (F19, V3.05): until now a click

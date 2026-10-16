@@ -64,7 +64,7 @@ class TestThePicker(unittest.TestCase):
     def test_the_folded_line_names_what_is_on_and_clear_clears_it(self):
         self.picker.chips["native_only"].setChecked(True)
         self.picker.set_facet("type", ["shrub"])
-        self.assertEqual(self.picker.chip_texts(), ["Type: Shrub", "Native"])
+        self.assertEqual(self.picker.chip_texts(), ["Type: Shrub", "Native to Alberta"])
         self.assertTrue(self.picker.none_label.isHidden())
         self.assertFalse(self.picker.clear_button.isHidden())
         before = len(self.picker.rows())
@@ -227,9 +227,9 @@ class TestFiltersPeopleCanRead(unittest.TestCase):
             self.assertEqual(combo.rule_text(), pf.rule(f), f.key)
         self.picker.set_facet("use", ["bird_food", "host_plant"])
         self.assertEqual(self.picker.combos["use"].lineEdit().text(),
-                         "Role: Larval Host and Bird Food")
+                         "What it does: Larval Host and Bird Food")
         self.assertEqual(self.picker.chip_texts(),
-                         ["Role: Larval Host and Bird Food"])
+                         ["What it does: Larval Host and Bird Food"])
 
     def test_a_chip_removes_its_own_filter_and_nothing_else(self):
         self.picker.set_facet("type", ["shrub", "tree"])

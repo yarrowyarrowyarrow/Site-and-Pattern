@@ -181,7 +181,7 @@ class TheLocalGoalFollowsThePin(unittest.TestCase):
         import pathlib
         from src import plant_filters as pf
         q = next(q for q in pf.QUALITIES if q.key == "local_native")
-        self.assertEqual(q.label, f"{region.default().short} native")
+        self.assertEqual(q.label, f"Native around {region.default().short}")
         self.assertEqual(q.value, region.default().key)
         self.assertEqual(pf.criteria_to_kwargs({"edmonton_native": True}),
                          {"native_near": region.default().key})

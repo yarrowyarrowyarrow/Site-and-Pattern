@@ -49,7 +49,7 @@ class TestTheVocabulary(unittest.TestCase):
             {"local_native": True, "native_only": True}, "AB")
         self.assertEqual(kwargs, {"native_province": "AB",
                                   "native_near": "edmonton"})
-        self.assertIn("Edmonton native", pf.summary({"local_native": True}))
+        self.assertIn("Native around Edmonton", pf.summary({"local_native": True}))
 
     def test_each_facet_says_how_its_values_combine(self):
         """Role is all-of in the query (one EXISTS per tag); everything else
@@ -102,7 +102,7 @@ class TestTheSummary(unittest.TestCase):
                            "use": ["pollinator", "bird_food"]})
         # In the dropdown's order, whatever order they were ticked in.
         self.assertIn("Type: Tree or Shrub", bits)
-        self.assertIn("Role: Pollinator Support and Bird Food", bits)
+        self.assertIn("What it does: Pollinator Support and Bird Food", bits)
 
     def test_many_values_name_two_and_count_the_rest_by_the_rule(self):
         """Until V3.01 a box read "3 selected": a count, with the rule gone."""
@@ -125,7 +125,7 @@ class TestTheSummary(unittest.TestCase):
 
     def test_qualities_are_named(self):
         self.assertEqual(pf.summary({"native_only": True, "pet_safe_only": True}),
-                         ["Native", "Pet safe"])
+                         ["Native to Alberta", "Not known to be poisonous to pets"])
 
 
 class TestTheFace(unittest.TestCase):
@@ -183,7 +183,7 @@ class TestWhatIsOn(unittest.TestCase):
     def test_each_restriction_in_the_order_it_is_drawn_search_last(self):
         self.assertEqual(pf.filters_on(self.CRITERIA), [
             ("type", "Type: Fern"), ("bloom_months", "Blooms in: January"),
-            ("native_only", "Native"), ("query", "aster")])
+            ("native_only", "Native to Alberta"), ("query", "aster")])
 
     def test_without_takes_off_one_and_leaves_the_rest(self):
         for key, _words in pf.filters_on(self.CRITERIA):

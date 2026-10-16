@@ -75,18 +75,13 @@ KNOWN = {
     ('plant_filters.py', 'early successional'): 1,
     ('plant_filters.py', 'keystone'): 1,
     ('plant_filters.py', 'larval host'): 1,
-    ('plant_filters.py', 'pet safe'): 1,
-    ('plant_filters.py', 'specialist'): 1,
     ('plant_filters.py', 'species'): 3,
-    ('plant_filters.py', 'spread'): 1,
     ('plant_filters.py', 'toxicity'): 2,
-    ('plant_filters.py', 'well behaved'): 1,
     ('polyculture.py', 'polyculture'): 1,
     ('range_map.py', 'spec'): 1,
     ('saves.py', 'project'): 1,
     ('site_panel.py', 'project'): 1,
-    ('species_page.py', 'specialist'): 1,
-    ('species_page.py', 'species'): 5,
+    ('species_page.py', 'species'): 3,
 }
 
 _SQL = re.compile(r"^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|"

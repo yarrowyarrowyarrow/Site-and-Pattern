@@ -107,7 +107,7 @@ FACETS: tuple = (
           "Plants that grow in any of the light you tick."),
     Facet("water", "Water", "water_needs", WATER_LABELS, "any", "Any water",
           "Plants suited to any of the water levels you tick."),
-    Facet("use", "Role", "perm_use", ROLE_LABELS, "all", "Any role",
+    Facet("use", "What it does", "perm_use", ROLE_LABELS, "all", "Any role",
           "Only plants listed for every role you tick."),
     Facet("availability", "Availability", "stock_in",
           AVAILABILITY_LABELS, "any", "Any availability",
@@ -144,32 +144,36 @@ QUALITIES: tuple = (
     # (False Box, Flat-topped White Aster, Round-leaved Alumroot, Stiff
     # Sunflower, Tall Anemone), which the flag's filter dropped although VASCAN
     # records every one in Alberta and the list's AB badge said so.
-    Quality("native_only", "Native", "native_province",
+    Quality("native_only", "Native to Alberta", "native_province",
             "Native to Alberta, as VASCAN records it.", "AB"),
     # F220 (V3.12), the owner's "Edmonton specific native plants": collected
     # near the city. Named and keyed by the default region pack since V3.24
     # (ED-3): "Calgary native" in a Calgary edition, with no code.
-    Quality("local_native", f"{_home().short} native", "native_near",
+    Quality("local_native", f"Native around {_home().short}", "native_near",
             _around_tip(_home().key), _home().key),
     Quality("perennial_only", "Perennial", "perennial_only",
             "Comes back every year."),
-    Quality("supports_specialist", "Feeds a specialist", "supports_specialist",
-            "Supports at least one animal that has nowhere else to go."),
+    Quality("supports_specialist", "Food for a fussy eater",
+            "supports_specialist", "Food for at least one animal that eats "
+            "only a few kinds of plant."),
     Quality("edible_only", "Edible", "edible_only",
             "Has parts recorded as edible for people."),
-    Quality("pet_safe_only", "Pet safe", "pet_safe_only",
+    Quality("pet_safe_only", "Not known to be poisonous to pets",
+            "pet_safe_only",
             "No recorded toxicity to pets. Silence is not a guarantee: an "
             "unassessed plant passes this filter."),
-    Quality("kid_safe_only", "Child safe", "kid_safe_only",
+    Quality("kid_safe_only", "Not known to be poisonous to people",
+            "kid_safe_only",
             "No recorded toxicity to people and no thorns. Same caveat."),
-    Quality("well_behaved_only", "Well behaved", "well_behaved_only",
-            "Does not spread aggressively."),
+    Quality("well_behaved_only", "Leaves out known spreaders",
+            "well_behaved_only", "Leaves out plants recorded as spreading "
+            "by runners or seeding freely. A plant nobody has checked stays "
+            "in."),
     # Said "Stocked somewhere other than a specialist grower" until V3.14, while
     # the search kept the native nurseries' plants, as it still does.
-    Quality("common_only", "Easy to find", "common_only",
-            "Common or sometimes available as plants at the region's "
-            "native-plant nurseries; where no list covers a plant yet, not "
-            "known to be seed only or rare."),
+    Quality("common_only", "Easy to buy", "common_only",
+            "On a plant list from the region's native-plant nurseries; where "
+            "no list covers a plant yet, not known to be seed only or rare."),
     Quality("has_image_only", "Has a photo", "has_image_only",
             "Only species this catalogue can show you."),
 )

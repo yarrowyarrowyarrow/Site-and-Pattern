@@ -36,6 +36,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from src import plant_page_sections as pps
+from src.plant_page_sections import (_apart, _bloom_colour_line,  # noqa: F401
+                                     _colour_word, _conditions, _metres,
+                                     _years)
 from src.maintenance_calendar import says_prune
 
 _HEAD = "color: #e8f5e9; font-size: 18px; font-weight: bold;"
@@ -82,6 +86,10 @@ class SpeciesPage(QWidget):
         self._entry: dict = {}
         self._placed = 0
         self._in_mix = False
+        self._advanced = False
+        self._expanded = False
+        #: The region the page speaks for (the picker's ``place``).
+        self.place_fn: Optional[Callable] = None
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(14, 10, 10, 8)
@@ -182,7 +190,7 @@ class SpeciesPage(QWidget):
     def entry(self) -> dict:
         return self._entry
 
-    def show_empty(self, text: str = "Pick a species to read about it."):
+    def show_empty(self, text: str = "Choose a plant to read about it."):
         self._row, self._entry = {}, {}
         self._head.setVisible(self._close is not None)
         self._name.setText("")
@@ -201,9 +209,14 @@ class SpeciesPage(QWidget):
 
     def set_advanced_tools(self, on: bool) -> None:
         """Add to mix only with Advanced tools on (V3.21): the mix it fills
-        is one of the builders the switch holds."""
+        is one of the builders the switch holds. The page is the long one
+        with them on, the short one off (PR-4, V3.26)."""
         if self._mix_btn is not None:
             self._mix_btn.setVisible(bool(on))
+        if bool(on) != self._advanced:
+            self._advanced = bool(on)
+            if self._entry:
+                self._render()
 
     def show_plant(self, row: dict, *, placed: int = 0, in_mix: bool = False,
                    why: Optional[list] = None):
@@ -220,6 +233,7 @@ class SpeciesPage(QWidget):
             self.show_empty()
             return
         same = self.shown_id() == int(row.get("id") or 0)
+        self._expanded = self._expanded and same
         self._row, self._entry = dict(row), entry
         self._placed, self._in_mix = int(placed or 0), bool(in_mix)
         if self._photo_warmer is not None:
@@ -280,13 +294,56 @@ class SpeciesPage(QWidget):
         entry = self._entry
         self._render_head()
         self._clear()
-        add = self._col.addWidget
-
-        add(self._photo_block(entry))
+        self._col.addWidget(self._photo_block(entry))
         if getattr(self, "_why", None):
             # F19 (V3.05): why the generator put this one here, read back
             # from the score that chose the spot.
             self._section("Why here", ". ".join(self._why) + ".")
+        # PR-4 (V3.26): the short page unless Advanced tools are on or the
+        # reader asked for everything, which then opens below it.
+        if not self._advanced:
+            self._simple_body(entry)
+        if self._advanced or self._expanded:
+            if not self._advanced:
+                self._heading(pps.MORE)
+            self._section("", pps.ID_LINE, dim=True)
+            self._advanced_body(entry)
+        self._col.addStretch()
+
+    def _simple_body(self, entry: dict):
+        place = self.place_fn() if self.place_fn else ""
+        for heading, body in pps.simple(entry, place=place):
+            if heading == pps.SEASON:
+                bloom, fruit = (entry.get("bloom_months") or [],
+                                entry.get("fruit_months") or [])
+                if bloom or fruit:
+                    self._col.addWidget(SeasonBar(bloom, fruit))
+            elif body:
+                self._section(heading, body)
+            else:
+                self._heading(heading)
+        if self._expanded:
+            return
+        more = QPushButton(f"{pps.MORE} ▸")
+        more.setObjectName("speciesPageMore")
+        more.setStyleSheet(
+            "QPushButton { color: #ffe082; background: transparent; "
+            "border: none; text-align: left; font-size: 13px; "
+            "min-height: 24px; } QPushButton:focus { border: 2px solid "
+            "#ffe082; }")
+        more.clicked.connect(self._expand)
+        self._col.addWidget(more)
+
+    def _expand(self):
+        keep = self._scroll.verticalScrollBar().value()
+        self._expanded = True
+        self._render()
+        # The button removed itself: the keyboard goes to the page (V3.02).
+        self._scroll.setFocus(Qt.FocusReason.OtherFocusReason)
+        self._scroll.verticalScrollBar().setValue(keep)
+
+    def _advanced_body(self, entry: dict):
+        """Everything (the page before V3.26), less the notes (L8, P12)."""
         if entry.get("badges"):
             self._section("Why it matters", " · ".join(entry["badges"]))
         if entry.get("roles"):
@@ -311,12 +368,17 @@ class SpeciesPage(QWidget):
         self._sourcing_block(entry)
         if entry.get("safety"):
             self._section("Safety", " · ".join(entry["safety"]))
-        if entry.get("notes"):
-            self._section("Notes", entry["notes"])
         if entry.get("provenance"):
             self._section("Where these numbers came from",
                           " · ".join(entry["provenance"]), dim=True)
-        self._col.addStretch()
+
+    def _heading(self, text: str):
+        head = QLabel(text)
+        head.setStyleSheet(_LABEL)
+        head.setWordWrap(True)
+        head.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._col.addWidget(head)
 
     def _clear(self):
         while self._col.count():
@@ -331,12 +393,7 @@ class SpeciesPage(QWidget):
         if not (body or "").strip():
             return None
         if heading:
-            head = QLabel(heading)
-            head.setStyleSheet(_LABEL)
-            head.setWordWrap(True)
-            head.setTextInteractionFlags(
-                Qt.TextInteractionFlag.TextSelectableByMouse)
-            self._col.addWidget(head)
+            self._heading(heading)
         text = QLabel(body)
         text.setWordWrap(True)
         text.setStyleSheet(_DIM if dim else _BODY)
@@ -391,8 +448,8 @@ class SpeciesPage(QWidget):
                     Qt.TextInteractionFlag.TextSelectableByMouse)
                 col.addWidget(line)
                 return holder
-        box.setText("No photograph of this species yet."
-                    if not url else "Photograph not downloaded yet.")
+        box.setText("No photo yet." if not url else
+                    "Photo not downloaded yet: it appears when you are online.")
         box.setStyleSheet(_DIM)
         box.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         return box
@@ -452,17 +509,15 @@ class SpeciesPage(QWidget):
     def _wildlife_block(self, entry: dict):
         w = entry.get("wildlife") or {}
         if not w.get("total"):
-            self._section("Wildlife", "No documented animal relationships yet, "
-                                      "which means unrecorded, not absent.",
-                          dim=True)
+            self._section("Wildlife", "No animals recorded on it yet. That "
+                          "means nobody has written it down, not that "
+                          "nothing uses it.", dim=True)
             return
         animals = int(w.get("animals") or w["total"])
         special = int(w.get("specialist_animals") or w.get("specialists") or 0)
         line = f"Feeds or shelters {animals} documented species"
         if special:
-            line += (f", {special} of them "
-                     f"{'a specialist' if special == 1 else 'specialists'} "
-                     f"with nowhere else to go (⚑)")
+            line += f", {special} of them depending on it alone (⚑)"
         self._section("Wildlife", line + ".")
         for group in w.get("groups") or []:
             label = self._section("", _group_html(group, _FIRST), rich=True)
@@ -631,63 +686,3 @@ def _month_runs(months: list) -> str:
                 runs.append(f"{_MONTHS[start - 1]} to {_MONTHS[m - 1]}")
             start = None
     return ", ".join(runs)
-
-
-def _conditions(entry: dict) -> str:
-    """Sun and water as words. The raw fields are comma-delimited snake_case
-    ("full_sun,partial_shade"); `labels_csv` is the renderer the list rows use,
-    so the two cannot disagree about what a condition is called."""
-    from src.plant_list_view import _SUN_LABELS, _WATER_LABELS, labels_csv
-    sun = labels_csv((entry.get("sun") or "").replace(" ", "_"), _SUN_LABELS)
-    water = labels_csv(entry.get("water") or "", _WATER_LABELS)
-    out = []
-    if sun and sun != "—":
-        out.append(sun)
-    if water and water != "—":
-        out.append(f"{water} water")
-    return " · ".join(out)
-
-
-def _bloom_colour_line(entry: dict) -> str:
-    """"Purple flowers (not verified, a genus-level estimate)" (V2.48). The
-    provenance rides along because the colour was seeded per genus."""
-    label = (entry.get("bloom_colour_label") or "").strip()
-    if not label:
-        return ""
-    note = (entry.get("bloom_colour_note") or "").strip()
-    # The grasses' label is already a full phrase.
-    head = label if entry.get("bloom_colour") == "straw" else f"{label} flowers"
-    return head + (f" ({note})" if note else "")
-
-
-def _colour_word(value, what: str) -> str:
-    """Colour fields hold a name or a hex triplet; the hex drives the 3D bloom
-    and is meaningless on a page. Print names, drop codes."""
-    text = (value or "").strip()
-    if not text or text.startswith("#"):
-        return ""
-    return f"{text} {what}"
-
-
-def _metres(value, word: str) -> str:
-    try:
-        v = float(value or 0)
-    except (TypeError, ValueError):
-        return ""
-    return f"{v:g} m {word}" if v else ""
-
-
-def _apart(value) -> str:
-    """The spacing in the words the buy list and the planting map's key use
-    (V3.19, QF-9): one number, printed one way."""
-    from src.planting_spacing import spacing_words           # noqa: PLC0415
-    words = spacing_words(value)
-    return f"{words} apart" if words else ""
-
-
-def _years(value) -> str:
-    try:
-        v = int(value or 0)
-    except (TypeError, ValueError):
-        return ""
-    return f"mature in {v} year{'s' if v != 1 else ''}" if v else ""

@@ -190,10 +190,13 @@ class TestWildBergamotAgrees(unittest.TestCase):
         page = SpeciesPage()
         self.addCleanup(page.deleteLater)
         page.show_plant(_row("Wild Bergamot"))
-        size = [lbl.text() for lbl in page.findChildren(QLabel)
-                if "apart" in lbl.text()]
-        self.assertEqual(len(size), 1, size)
-        self.assertTrue(size[0].endswith("0.3 m apart"), size)
+        for advanced, end in ((False, "Plant 0.3 m apart."),
+                              (True, "0.3 m apart")):
+            page.set_advanced_tools(advanced)
+            size = [lbl.text() for lbl in page.findChildren(QLabel)
+                    if "apart" in lbl.text() and lbl.isVisibleTo(page)]
+            self.assertEqual(len(size), 1, size)
+            self.assertTrue(size[0].endswith(end), size)
 
 
 if __name__ == "__main__":

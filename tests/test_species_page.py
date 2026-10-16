@@ -86,6 +86,7 @@ class TestThePage(unittest.TestCase):
         self.page = SpeciesPage(actions=True, closable=True)
         self.addCleanup(self.page.deleteLater)
         self.page.resize(400, 700)
+        self.page.set_advanced_tools(True)     # the long page (PR-4, V3.26)
         self.row = _saskatoon()
         self.page.show_plant(self.row, placed=2)
 
@@ -173,7 +174,7 @@ class TestThePage(unittest.TestCase):
     def test_an_unknown_plant_empties_the_page(self):
         self.page.show_plant({"id": 999999})
         self.assertEqual(self.page.shown_id(), 0)
-        self.assertIn("Pick a species to read about it.", _texts(self.page))
+        self.assertIn("Choose a plant to read about it.", _texts(self.page))
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

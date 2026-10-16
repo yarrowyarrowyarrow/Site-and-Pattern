@@ -149,6 +149,7 @@ class UpdateFlowController:
             from src.db.plants import _SCHEMA_VERSION as schema_v
         except Exception:
             schema_v = "?"
+        from src.plant_page_sections import ID_LINE
         is_release = parse_version_branch(branch) is not None
         kind_note = "" if is_release else (
             "\n\nYou're on a development branch — the V*.* branch "
@@ -163,7 +164,7 @@ class UpdateFlowController:
             f"Schema version: v{schema_v}<br><br>"
             f"Native-plant landscape designer for Alberta and the "
             f"Canadian prairies.<br><br>"
-            f"{about_licence_line()}"
+            f"{about_licence_line()}<br><br>{ID_LINE}"   # WD-8 (V3.26)
             + kind_note
         )
 

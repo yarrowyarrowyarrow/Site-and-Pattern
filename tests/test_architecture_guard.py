@@ -145,7 +145,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # drawn where it can be seen.
         (_SRC / "target_size.py", 160),                # 127 now
         (_SRC / "indicator_style.py", 180),            # 134 now
-        (_SRC / "species_page.py", 720),               # 653 now
+        (_SRC / "species_page.py", 720),               # 689 now
         (_SRC / "species_flyout.py", 200),             # 168 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
         # arrival, the V2.41 precedent. What does NOT live in the renderer any
@@ -318,6 +318,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "native_here.py", 280),                # 227 now
         # V3.26 (PR-1): the ranking, one table of weights and its words.
         (_SRC / "plant_priority.py", 380),             # 340 now
+        (_SRC / "plant_page_sections.py", 250),        # 209 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in
