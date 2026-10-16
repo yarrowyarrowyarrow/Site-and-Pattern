@@ -46,7 +46,6 @@ added; trust the source over this list).
 | `src/db/plants.py` | SQLite database access layer for the plant catalogue |
 | `src/db/seed_data.py` | Plant catalogue seeding for Site & Pattern |
 | `src/db/polycultures.py` | (no module docstring) |
-| `src/db/recipes.py` | Polyculture Recipe persistence |
 | `src/db/fauna.py` | Query API for the fauna registry and plant ↔ fauna junction |
 | `src/db/nurseries.py` | Query API for the native-plant nursery directory (schema v44+) |
 | `src/db/calendar_data.py` | Edmonton Zone 3b planting calendar seed data |
@@ -104,7 +103,7 @@ added; trust the source over this list).
 | Module | One line |
 |---|---|
 | `src/design_api.py` | Programmatic interface for generating landscape designs |
-| `src/llm_design.py` | Prompt-driven design generation via a local LLM |
+| `src/llm_design.py` | Design generation: rule-based `generate_design_offline` (the GUI's, V3.22) and the LLM `generate_design` (CLI/MCP only) |
 | `src/design_critic.py` | evaluate-and-repair intelligence for Generate Design |
 | `src/placement_score.py` | Ecological cell-scoring for design generation (V1.51) |
 | `src/layout.py` | Plant-group layout patterns for the design generator (V1.50) |
@@ -204,16 +203,12 @@ added; trust the source over this list).
 | `src/scene_wildlife.py` | populate a 3D scene with the animals the design's plants |
 | `src/sprite_gallery.py` | specimen scenes for the 3D sprite gallery (V1.93–94) |
 | `src/sprite_gallery_window.py` | the in-app 3D Sprite Gallery (V1.94) |
-| `src/splat_backdrop.py` | georeferenced 3D Gaussian-splat backdrop (V1.65) |
-| `src/splat_flow.py` | map-side wiring for the Gaussian-splat backdrop (V1.65) |
 | `src/web_assets.py` | a localhost HTTP server for the built-in 3D viewer (V1.77) |
 
 ## Import pipelines & export
 
 | Module | One line |
 |---|---|
-| `src/scan_import.py` | phone-scan (point cloud) import → nDSM → footprints |
-| `src/scan_import_dialog.py` | the "Import Yard Scan…" flow (V1.63) |
 | `src/footprint_extract.py` | Pluggable 2D footprint extraction from raster tiles |
 | `src/footprint_ndsm.py` | nDSM height-raster → footprint polygons + heights |
 | `src/site_photo.py` | site/drone photo map underlay (F24) |

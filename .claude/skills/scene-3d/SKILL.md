@@ -1,6 +1,6 @@
 ---
 name: scene-3d
-description: Use when working on the 3D preview, Scene JSON, html/scene3d.html, src/scene_contract.py, src/map3d_widget.py, src/map3d_js.py, sprites, the Gaussian-splat photoreal backdrop, or phone-scan import. Covers the versioned project→3D contract (build_scene), the built-in three.js viewer vs the web3d/dist fork, window.perma* hook mechanics and their contract test, the splat file→matrix→footprint→Spark→2D-bake pipeline, and what to test when touching any of it.
+description: Use when working on the 3D preview, Scene JSON, html/scene3d.html, src/scene_contract.py, src/map3d_widget.py, src/map3d_js.py, or sprites. Covers the versioned project→3D contract (build_scene), the built-in three.js viewer vs the web3d/dist fork, window.perma* hook mechanics and their contract test, what is left of the yard-scan/splat feature (removed V3.22), and what to test when touching any of it.
 ---
 
 # The 2D→3D pipeline (View → 3D Preview)
@@ -9,7 +9,7 @@ description: Use when working on the 3D preview, Scene JSON, html/scene3d.html, 
 
 Everything between the project dict and pixels in the 3D window. Use this
 skill when you: add a field to the Scene JSON, change plant/building/terrain
-rendering, touch the splat backdrop or scan import, add a `window.perma*`
+rendering, add a `window.perma*`
 hook, or edit `html/scene3d.html`.
 
 ## Architecture in one page
@@ -18,7 +18,8 @@ hook, or edit `html/scene3d.html`.
 project dict (GeoJSON FeatureCollection)
   │
   ▼
-src/scene_contract.py   build_scene(project, year=, when=, elevation=, scan=, splat=)
+src/scene_contract.py   build_scene(project, *, year=0, get_plant=None,
+  │                       elevation=None, when=None, wind=True)
   │                     → Scene JSON (SCENE_VERSION = 1, local metres,
   │                       +x east / +y north, origin = design centroid)
   ▼
@@ -26,13 +27,13 @@ src/scene3d_window.py   Scene3DWindow._push_scene()  (year/month/hour sliders,
   │                     off-thread terrain fetch, wildlife push)
   ▼
 src/map3d_widget.py     Map3DWidget.apply_scene(scene)  →  run_js(...)
-  │                     (queues JS until loadFinished; splat path → localhost URL)
+  │                     (queues JS until loadFinished)
   ▼
 src/map3d_js.py         builders emit "window.permaX && window.permaX(json)"
   │
   ▼
 html/scene3d.html       built-in three.js viewer (ES modules + importmap,
-                        vendored three.js + Spark in html/vendor/, served over
+                        vendored three.js in html/vendor/, served over
                         http://127.0.0.1 by src/web_assets.py)
         — OR —
 web3d/dist/<index.html> optional map3d fork build (city context; see web3d/README.md)
@@ -50,8 +51,8 @@ DB-free — `get_plant` injectable) producing the renderer-agnostic scene. The
 full schema lives in its module docstring; the shape:
 
 `version, year, month, origin{lat,lng}, bounds, boundary, plants[],
-buildings[] (kind: building|canopy), structures[], terrain|None,
-scan_points|None, splat{path,matrix,opacity}|None, sun|None, is_night`.
+buildings[] (kind: building|canopy), structures[], terrain|None, sun|None,
+is_night`. (`scan_points` and `splat` went with the yard scan in V3.22.)
 
 Rules of the contract:
 
@@ -91,14 +92,14 @@ Rules of the contract:
 2. else `html/scene3d.html` → the **built-in viewer**, served over a loopback
    HTTP server (`src/web_assets.py:builtin_viewer_url`). It is an ES-module
    app (importmap); `file://` module loading broke on a newer bundled Chromium
-   (V1.76), hence the server. three.js + Spark are **vendored** under
-   `html/vendor/three` and `html/vendor/spark` — `tests/test_scene3d_assets.py`
+   (V1.76), hence the server. three.js is **vendored** under
+   `html/vendor/three` — `tests/test_scene3d_assets.py`
    fails the build if a CDN import sneaks back into `html/scene3d.html`.
    (An older comment in `src/map3d_widget.py` still says "fetches from a CDN"
    — the code and the guard test win.)
 
 Both register the shared hooks; only the built-in viewer implements the full
-set (`permaSetScene`, wildlife, splat, ortho bake…).
+set (`permaSetScene`, wildlife, dossier, snapshot…).
 
 ## The `window.perma*` hook mechanic (Python→JS only)
 
@@ -106,7 +107,7 @@ Unlike the 2D map there is **no QWebChannel here** — the 3D bridge is
 one-directional: `src/map3d_js.py` builders emit
 `window.permaX && window.permaX(<json.dumps payload>);` and
 `Map3DWidget.run_js` executes them. Results come back only via
-`page().runJavaScript(js, callback)` (see `capture_ortho`).
+`page().runJavaScript(js, callback)`.
 
 To add a hook:
 
@@ -177,8 +178,8 @@ each with a test:
   `{key, credit}` where `key` is an opaque `image_cache.cache_key` handle; the
   viewer fetches `/__image?k=<key>` from the app's own loopback server, and that
   route (`src/web_assets.py`) resolves keys **inside the photo cache directory
-  and nowhere else**. It is deliberately narrower than the neighbouring
-  `/__localfile`, which takes a path. `tests/test_web_assets.py` drives the real
+  and nowhere else**: it never takes a path (the path-taking `/__localfile`
+  route went with the splat in V3.22). `tests/test_web_assets.py` drives the real
   server and asserts what it refuses.
 - **A photo without a credit is not shown at all.** Showing an open-licensed
   image obliges us to name its author, so `_photo()` returns `None` when it
@@ -241,7 +242,7 @@ Blender-generated low-poly GLB archetypes under `html/assets/models/`
 (manifest + 37 files) render **in place of** the procedural geometry above,
 per archetype, with the procedural builders as the **permanent fallback** —
 never delete them. Chunk `html/scene3d/09-models.js` fetches the manifest at
-boot (fire-and-forget, the Spark idiom), and on ready clears the archetype
+boot (fire-and-forget), and on ready clears the archetype
 caches + re-pushes `lastSceneObj` (the `permaSetQuality` idiom). The lookups
 (`window.glbTreeArch/glbShrubArch/glbHerbArch/glbLayerArch/glbCritter`) are
 consumed GLB-first in `04-quality.js` and `07-wildlife.js`.
@@ -263,61 +264,16 @@ Rules that keep it green:
   `scripts/blender/README.md`. Smoke probe: `html/model_probe.html`
   (`?month=1` winter bareness, `?close=1` critters).
 
-## Gaussian-splat photoreal backdrop (V1.65)
+## Yard scan and splat backdrop: removed (V3.22)
 
-Pipeline, end to end — Qt-free core in `src/splat_backdrop.py`, glue in
-`src/splat_flow.py`:
-
-1. **Detect**: `src/scan_import.py:is_gaussian_splat_ply` sniffs splat PLYs by
-   vertex properties (`f_dc_0`, `scale_0`, `rot_0`). Splat vertices are the
-   gaussian centres, so the normal scan georeference applies.
-2. **Align**: 2+ control-point pairs ("this scan corner = this map spot") →
-   `scan_import.similarity_transform_2d` (Horn least-squares: scale +
-   rotation + translation) →
-   `splat_backdrop.feature_from_alignment` builds the persisted feature.
-3. **Persist**: a `splat_backdrop` GeoJSON feature (`build_feature`): absolute
-   `file_path` (the 50–200 MB `.ply` is referenced, never embedded), the
-   transform, origin, lat/lng bbox footprint ring, and — once baked — the
-   `ortho_png` **data URL embedded** so the 2D layer reloads instantly.
-   (`docs/PROJECT_FILE_FORMAT.md` doesn't list this element type yet; the code
-   is the source of truth.)
-4. **Place in 3D**: `build_scene` auto-detects the feature
-   (`feature_from_project`) → `scene_field` → `scene["splat"] =
-   {path, matrix, opacity}`. `world_matrix` composes file→three.js as one 4×4
-   (**column-major**, ready for `Matrix4.fromArray`; frames F_file→F_zup→
-   F_proj→F_scene→F_three are documented in the module docstring).
-   `origin_offset` shifts between the stored projector origin and the live
-   scene origin — a constant offset between two cosLat frames.
-5. **Render**: `Map3DWidget.apply_scene` swaps `path` for a same-origin
-   `src/web_assets.py:local_file_url` (`/__localfile` route — only `.ply`
-   files are served; a `file://` URL would be a cross-origin fetch the
-   `http://` page refuses) and Spark renders it in `html/scene3d.html`.
-6. **Bake to 2D**: the window's "Add yard photo to map" button →
-   `splat_backdrop.scene_rect` frames the camera →
-   `Map3DWidget.capture_ortho` → `map3d_js.capture_ortho` →
-   `window.permaCaptureOrtho` returns a PNG data URL to the callback →
-   `splat_flow.apply_baked_ortho` stores it on the feature and draws the 2D
-   overlay (`MapWidget.draw_splat_ortho_overlay`).
-   `splat_flow.restore_splat_overlay` redraws it on project open.
-
-Gotchas: `capture_ortho` bypasses the JS queue — it returns `""` when the
-page isn't loaded or the splat is still streaming; `apply_baked_ortho`
-rejects non-`data:image` results, so surface the "let it finish loading" retry
-message rather than treating it as an error. `scene_field` does **no**
-filesystem check (pure contract); missing-file handling is
-`apply_scene`'s job (it nulls the splat so the design still renders).
-
-## Phone-scan import (overview)
-
-`src/scan_import.py` (numpy required, shapely for vectorize): `read_points`
-(.ply ASCII/binary, .xyz/.txt/.csv, .las/.laz via optional laspy) →
-`align_scan` with control points → `rasterize_ndsm` (height-above-ground
-grid) → `scan_to_footprints` via `src/footprint_ndsm.py:vectorize_ndsm` →
-`src/footprint_extract.py` adds `canopy_footprint` features — at which point
-the scanned shed/tree casts 2D shade and extrudes in 3D with **no further
-wiring**. `sample_for_scene` additionally produces the session-only
-`scene["scan_points"]` preview (stored on `main._scan_scene_sample`, not
-persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
+The phone-scan import and the Gaussian-splat backdrop (`scan_import*`,
+`scan_align`, `splat_backdrop`, `splat_flow`, Spark, the `/__localfile` route,
+`capture_ortho`, the scene's `scan_points`/`splat`) were deleted in V3.22, RM-2;
+the reasoning is in `docs/plans/V3.22-what-goes.md`. What remains: buildings a
+scan produced are ordinary `canopy_footprint` features and still draw, shade
+and extrude; an old design's `splat_backdrop` feature still opens and is
+carried untouched on save; nothing reads it (`tests/test_old_scan_designs.py`).
+`src/footprint_ndsm.py` / `src/footprint_extract.py` stay.
 
 ## What to test when touching any of this
 
@@ -327,8 +283,8 @@ persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
 | `src/scene3d.py` growth/spread math | `tests/test_scene3d.py` (and the 2D timeline still matches) |
 | `src/map3d_js.py` builders / hooks | `tests/test_map3d_js.py` + `tests/test_bridge_contract.py` |
 | `html/scene3d.html` | `tests/test_bridge_contract.py` + `tests/test_scene3d_assets.py` (no CDN, vendored files present) |
-| `src/splat_backdrop.py` / `src/splat_flow.py` | `tests/test_splat_backdrop.py`, `tests/test_splat_flow.py` |
-| `src/scan_import.py` | `tests/test_scan_import.py`, `tests/test_footprint_ndsm.py`, `tests/test_footprint_extract.py` |
+| old designs carrying a `splat_backdrop` feature | `tests/test_old_scan_designs.py` |
+| `src/footprint_ndsm.py` / `src/footprint_extract.py` | `tests/test_footprint_ndsm.py`, `tests/test_footprint_extract.py` |
 | `src/scene_wildlife.py` | `tests/test_scene_wildlife.py` |
 | `src/sprite_gallery.py` / sprite forms | `tests/test_sprite_gallery.py` (+ regenerate the gallery JSON) |
 | `html/scene3d/09-models.js` / `html/assets/models/` | `tests/test_model_assets.py` + `tests/test_scene3d_assets.py` + `tests/test_bridge_contract.py` |
@@ -341,8 +297,8 @@ persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
 ## Validation
 
 ```bash
-python -m unittest tests.test_scene_contract tests.test_scene3d tests.test_splat_backdrop -v
-python -m unittest tests.test_map3d_js tests.test_scene3d_assets tests.test_scene_wildlife tests.test_sprite_gallery tests.test_splat_flow tests.test_scan_import
+python -m unittest tests.test_scene_contract tests.test_scene3d tests.test_old_scan_designs -v
+python -m unittest tests.test_map3d_js tests.test_scene3d_assets tests.test_scene_wildlife tests.test_sprite_gallery
 python -m unittest tests.test_bridge_contract          # perma* hook contract, both directions
 python -m unittest tests.test_scene3d_window           # Qt-gated (skips headless)
 python -m unittest discover -s tests -t .                   # full suite before finishing
@@ -351,5 +307,4 @@ python -m unittest discover -s tests -t .                   # full suite before 
 All of the above pass headlessly (numpy/shapely/Qt-gated cases self-skip when
 those optional deps are absent). For a visual check with a display:
 `python main.py` → View → 3D Preview, drag the year slider (plants grow),
-drag hour past dusk (night scene), and — with a splat imported — bake the yard
-photo and confirm the 2D overlay lands on the splat's bbox.
+and drag hour past dusk (night scene).

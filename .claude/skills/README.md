@@ -23,13 +23,13 @@ them; they are part of the change, not an afterthought.
 | Starting or finishing a unit of work (branches, commits, definition of done) | `start-work` |
 | Designing or reviewing a feature against the twelve principles / P12 hard rule | `philosophy-check` |
 | Adding a feature (controllers, core+flow+widget triad, ceilings, anchors) | `add-feature` |
-| Touching Generate Design — LLM spec, placement scoring, critic loop, goals, Habitat Score | `generate-design` |
+| Touching Generate Design — placement scoring, critic loop, goals, Habitat Score (LLM spec: CLI/MCP only) | `generate-design` |
 | Changing `src/db/schema.sql` or anything needing a `_SCHEMA_VERSION` bump | `schema-change` |
 | Editing seed JSON in `data/` (plants, fauna, junctions, nurseries) | `seed-data` |
 | Touching placed-plant state, undo/redo, or the project dict | `placed-plants` |
 | Editing the Leaflet map, `html/map/*.js`, overlays, or the JS bridge | `map-frontend` |
 | Doing distance/area math, coordinates, shadow/shelter geometry | `geo-projection` |
-| Working on the 3D preview, Scene JSON, sprites, splats, scan import | `scene-3d` |
+| Working on the 3D preview, Scene JSON, sprites | `scene-3d` |
 | Adding/altering an offline data pack (terrain, buildings, soil) | `offline-packs` |
 | Adding/altering a networked data source (fetch, cache, fallback) | `external-data` |
 | Extending the scripting API, CLI, or MCP tools (frozen contract) | `agent-api` |
