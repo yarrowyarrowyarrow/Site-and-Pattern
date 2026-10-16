@@ -247,9 +247,16 @@ _EASE = {"big_box": 2, "garden_centre": 2, "native_specialist": 1,
 
 
 def ease(row) -> int:
-    """2 widely or often sold, 1 by native nurseries or as seed, 0 rarely
-    sold at all. Unrecorded counts as 1: absent is not rare (P9)."""
-    return _EASE.get(((row or {}).get("availability_class") or "").strip(), 1)
+    """2 common, 1 sold now and then or as seed, 0 hard to find, from the
+    region's nurseries' stock (V3.25, ``src.local_stock``). A plant no stock
+    list covers keeps its old tier here, at most 1: only stock shows a plant
+    is common. Unrecorded counts as 1: absent is not rare (P9)."""
+    from src import local_stock                              # noqa: PLC0415
+    try:
+        return local_stock.ease(row or {})
+    except Exception:                                      # noqa: BLE001
+        return min(_EASE.get(((row or {}).get("availability_class")
+                              or "").strip(), 1), 1)
 
 
 def hard_to_find(row) -> bool:

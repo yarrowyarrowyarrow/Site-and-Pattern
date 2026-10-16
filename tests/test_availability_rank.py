@@ -120,8 +120,12 @@ class TestTheyRankDesigns(unittest.TestCase):
     """The generator and the library read the tiers (V3.14)."""
 
     def test_ease(self):
+        """Since V3.25 only the region's nurseries' stock makes a plant easiest
+        (``src.local_stock``): the old tier alone is at most 1."""
         from src.sourcing import ease, hard_to_find
-        self.assertEqual(ease({"availability_class": "big_box"}), 2)
+        self.assertEqual(ease({"availability_class": "big_box"}), 1)
+        self.assertEqual(ease({"availability_class": "big_box",
+                               "scientific_name": "Monarda fistulosa"}), 2)
         self.assertEqual(ease({"availability_class": "native_specialist"}), 1)
         self.assertEqual(ease({"availability_class": "rare"}), 0)
         self.assertEqual(ease({}), 1, "unrecorded is not rare")
@@ -140,13 +144,16 @@ class TestTheyRankDesigns(unittest.TestCase):
         self.assertEqual(order, [2, 1])
 
     def test_among_equals_the_easier_to_buy_comes_first(self):
+        """Common in the region's stock (the owner's wild bergamot) before a
+        plant no list covers, whatever its old tier."""
         from src.llm_design import _rank_offline_plants
         nursery = {"id": 1, "plant_type": "shrub", "common_name": "N",
                    "permaculture_uses": "bird_food",
-                   "availability_class": "native_specialist"}
+                   "availability_class": "garden_centre"}
         centre = {"id": 2, "plant_type": "shrub", "common_name": "G",
                   "permaculture_uses": "bird_food",
-                  "availability_class": "garden_centre"}
+                  "scientific_name": "Monarda fistulosa",
+                  "availability_class": "native_specialist"}
         order = [p["id"] for p in _rank_offline_plants([nursery, centre])]
         self.assertEqual(order, [2, 1])
 

@@ -53,6 +53,7 @@ from src.flower_colour import COLOUR_LABELS as _COLOUR_LABELS
 from src.native_here import (PROVINCE_NAMES, around_tip as _around_tip,  # noqa: F401
                              native_in, native_tip)
 from src.plant_facets import _MONTH_LABELS, _TYPE_LABELS
+from src import local_stock as _stock
 
 
 class Facet(NamedTuple):
@@ -95,13 +96,8 @@ ROLE_LABELS: dict = {
     "riparian_filter": "Riparian Filter", "ornamental": "Ornamental",
     "aquatic": "Aquatic", "medicinal": "Medicinal",
 }
-#: How widely a plant is sold, not where (V3.24): the owner finds few natives
-#: at garden centres; a handful of native-plant retailers sell most of them.
-AVAILABILITY_LABELS: dict = {
-    "big_box": "Widely sold", "garden_centre": "Often sold",
-    "native_specialist": "Native-plant nurseries",
-    "seed_or_plug": "Seed / plug only", "rare": "Rare / hard to find",
-}
+#: How easy a plant is to buy, from the region's nurseries' stock (V3.25).
+AVAILABILITY_LABELS: dict = dict(_stock.LABELS)
 
 FACETS: tuple = (
     Facet("type", "Type", "plant_type", dict(_TYPE_LABELS), "any", "Any type",
@@ -113,9 +109,10 @@ FACETS: tuple = (
           "Plants suited to any of the water levels you tick."),
     Facet("use", "Role", "perm_use", ROLE_LABELS, "all", "Any role",
           "Only plants listed for every role you tick."),
-    Facet("availability", "Where to buy", "availability_in",
-          AVAILABILITY_LABELS, "any", "Anywhere to buy",
-          "Only plants sold by one of the kinds of seller you tick."),
+    Facet("availability", "Availability", "stock_in",
+          AVAILABILITY_LABELS, "any", "Any availability",
+          "Plants at any level you tick, from what the region's native-plant "
+          "nurseries stock. Not checked yet means no list covers it."),
     Facet("ecoregion", "Restoring toward", "ecoregion", None, "any",
           "Restoring toward…",
           "Plants recorded in any of the regions you tick. Ticking a system "
@@ -170,8 +167,9 @@ QUALITIES: tuple = (
     # Said "Stocked somewhere other than a specialist grower" until V3.14, while
     # the search kept the native nurseries' plants, as it still does.
     Quality("common_only", "Easy to find", "common_only",
-            "Sold as plants, usually by a native-plant nursery: not seed or "
-            "plugs only, and not rare in the trade."),
+            "Common or sometimes available as plants at the region's "
+            "native-plant nurseries; where no list covers a plant yet, not "
+            "known to be seed only or rare."),
     Quality("has_image_only", "Has a photo", "has_image_only",
             "Only species this catalogue can show you."),
 )

@@ -2702,6 +2702,8 @@ def search_plants(
     fruit_months: Optional[list] = None,
     flower_colours: Optional[list] = None,
     native_near: str = "",
+    stock_in: Optional[list] = None,
+    stock_region: str = "",
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -2712,6 +2714,12 @@ def search_plants(
     the query, because the list is shipped data keyed by scientific name rather
     than a column; an unknown place raises ``ValueError`` rather than filtering
     to nothing.
+
+    ``stock_in`` keeps the plants at any of the given ``src.local_stock`` tiers
+    around ``stock_region`` (the default pack when empty), and ``common_only``
+    keeps those ``local_stock.easy_to_find`` passes (V3.25: from the region's
+    nurseries' stock, not the catalogue's old tier). Both in Python, like
+    ``native_near``.
 
     ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
     matches if its recorded window covers ANY of them. See ``_month_filter``
@@ -2907,13 +2915,6 @@ def search_plants(
         sql += " AND (price_low_cad IS NULL OR price_low_cad <= ?)"
         params.append(float(max_unit_price))
 
-    if common_only:
-        # Denylist: drop only plants that are genuinely hard to buy (seed/plug
-        # only or rare). Native specialists are the normal channel for AB
-        # natives, so they pass — as does unassessed availability.
-        sql += (" AND COALESCE(availability_class,'') NOT IN "
-                "('seed_or_plug','rare')")
-
     # Allowlist (V1.84): keep only the chosen sourcing tiers. Drives the plant
     # browser's multi-select rarity dropdown — empty/None means "no restriction".
     if availability_in:
@@ -2986,6 +2987,15 @@ def search_plants(
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
         result = _colour_filter(result, flower_colours)
+        if common_only or stock_in:
+            from src import local_stock                   # noqa: PLC0415
+            if common_only:
+                result = [p for p in result
+                          if local_stock.easy_to_find(p, stock_region)]
+            if stock_in:
+                keep = {str(v) for v in stock_in}
+                result = [p for p in result
+                          if local_stock.tier(p, stock_region) in keep]
         if native_near:
             from src.native_here import native_names     # noqa: PLC0415
             local = native_names(native_near)

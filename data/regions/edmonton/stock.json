@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "key": "edmonton",
+  "about": "What the Edmonton region's native-plant nurseries stock, as lists they published and the owner's answers. Read by src/local_stock.py; folded in by scripts/merge_stock.py.",
+  "lists": [],
+  "rulings": {
+    "Achillea borealis": {"tier": "common", "on": "2026-10-16"},
+    "Agastache foeniculum": {"tier": "common", "on": "2026-10-16"},
+    "Artemisia ludoviciana": {"tier": "sometimes", "on": "2026-10-16"},
+    "Campanula rotundifolia": {"tier": "sometimes", "on": "2026-10-16"},
+    "Monarda fistulosa": {"tier": "common", "on": "2026-10-16"},
+    "Pulsatilla nuttalliana": {"tier": "common", "on": "2026-10-16"}
+  }
+}

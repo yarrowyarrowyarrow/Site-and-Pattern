@@ -199,6 +199,27 @@ def order_totals(lines: list) -> tuple:
             round(sum(l.total_high for l in lines), 2))
 
 
+def _listed_by(lat, lng) -> Callable:
+    """``name -> "Supplier (seen); …"``: the region's nurseries whose stock
+    lists carry the plant (V3.25, ``src.local_stock``). Only inside a pack, and
+    only for the region's own natives."""
+    try:
+        from src import local_stock, region                  # noqa: PLC0415
+        r = region.at(lat, lng) if lat is not None else None
+    except Exception:                                      # noqa: BLE001
+        r = None
+    if r is None:
+        return lambda _name: ""
+
+    def listed(name: str) -> str:
+        if not local_stock.tier(name, r.key):
+            return ""
+        return "; ".join(f"{s} ({seen})" if seen else s for s, seen, form
+                         in local_stock.suppliers(name, r.key)
+                         if form == "plants")
+    return listed
+
+
 def write_csv(lines: list, project: Optional[dict] = None, *,
               stream=None) -> str:
     """The order as CSV text. Writes into ``stream`` when given.
@@ -212,6 +233,7 @@ def write_csv(lines: list, project: Optional[dict] = None, *,
     lat, lng = site_latlng(project or {})
 
     writer.writerow(COLUMNS)
+    listed = _listed_by(lat, lng)
     for channel, group in group_by_channel(lines):
         writer.writerow([])
         label = CHANNEL_LABELS.get(channel, CHANNEL_LABELS[""])
@@ -224,7 +246,7 @@ def write_csv(lines: list, project: Optional[dict] = None, *,
                 line.form, line.qty,
                 f"{line.unit_low:.2f}", f"{line.unit_high:.2f}",
                 f"{line.total_low:.2f}", f"{line.total_high:.2f}",
-                label, "",
+                label, listed(line.scientific_name),
             ])
     qty, low, high = order_totals(lines)
     writer.writerow([])

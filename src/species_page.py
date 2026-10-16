@@ -513,8 +513,16 @@ class SpeciesPage(QWidget):
     def _sourcing_block(self, entry: dict):
         # The website's sentence (V3.14): this printed the raw tier, "· rare",
         # "· big box", where the site says "hard to find in the trade".
+        # Around the region, the nurseries' stock says it (V3.25); the price
+        # stays the catalogue's estimate.
+        from src.local_stock import clause
         from src.sourcing import describe
-        text, note = describe(entry.get("sourcing") or {})
+        sourcing = dict(entry.get("sourcing") or {})
+        local = clause(entry.get("scientific_name") or "")
+        if local:
+            sourcing.pop("availability", None)
+        text, note = describe(sourcing)
+        text = " ".join(t for t in (text, local) if t)
         self._section("Where to get it", text)
         if note:
             self._section("", note, dim=True)
