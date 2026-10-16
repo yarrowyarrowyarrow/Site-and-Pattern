@@ -1478,14 +1478,16 @@ class MapEventRouter:
     def _on_edmonton_dl_finished(self, total: int):
         self._main.site_panel.set_terrain_status()
         self._main.statusBar().showMessage(
-            f"Edmonton terrain download complete — {total:,} features stored offline.",
+            f"{self._main.site_panel._contour_place} terrain download "
+            f"complete — {total:,} features stored offline.",
             8000,
         )
 
     def _on_edmonton_dl_error(self, message: str):
         self._main.site_panel.set_terrain_status()
         self._main.statusBar().showMessage(
-            f"Edmonton download failed: {message}", 10000,
+            f"{self._main.site_panel._contour_place} download failed: "
+            f"{message}", 10000,
         )
 
     def _on_dl_thread_done(self):

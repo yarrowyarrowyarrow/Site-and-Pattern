@@ -77,17 +77,51 @@ def _docstrings(tree) -> set:
     return out
 
 
+_FSTART = getattr(tokenize, "FSTRING_START", None)
+_FEND = getattr(tokenize, "FSTRING_END", None)
+
+
+def _tokens(text: str):
+    """``(type, string, start line)`` with every f-string as ONE string token,
+    as Python 3.11 gives it (CI's version). From 3.12 an f-string is split into
+    FSTRING_START / MIDDLE / END with its expressions as ordinary tokens, and
+    the guard counted differently by version: V3.24 passed here on 3.13 and
+    failed on CI (V3.25)."""
+    lines = text.splitlines(keepends=True)
+    offsets = [0]
+    for ln in lines:
+        offsets.append(offsets[-1] + len(ln))
+
+    def at(pos):
+        return offsets[pos[0] - 1] + pos[1]
+    depth, start = 0, None
+    for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+        if _FSTART is not None and tok.type == _FSTART:
+            if depth == 0:
+                start = tok.start
+            depth += 1
+            continue
+        if _FEND is not None and tok.type == _FEND:
+            depth -= 1
+            if depth == 0:
+                yield tokenize.STRING, text[at(start):at(tok.end)], start[0]
+            continue
+        if depth:
+            continue
+        yield tok.type, tok.string, tok.start[0]
+
+
 def place_hits(path: Path, shorts) -> int:
     """Name and string tokens (no docstrings, no comments) naming a pack."""
     text = path.read_text(encoding="utf-8")
     docs = _docstrings(ast.parse(text))
     pats = [re.compile(rf"\b{re.escape(s)}\b", re.I) for s in shorts]
     n = 0
-    for tok in tokenize.generate_tokens(io.StringIO(text).readline):
-        if tok.type == tokenize.STRING and tok.start[0] in docs:
+    for kind, string, line in _tokens(text):
+        if kind == tokenize.STRING and line in docs:
             continue
-        if tok.type in (tokenize.NAME, tokenize.STRING) and any(
-                p.search(tok.string) for p in pats):
+        if kind in (tokenize.NAME, tokenize.STRING) and any(
+                p.search(string) for p in pats):
             n += 1
     return n
 
@@ -114,12 +148,12 @@ def _python_code_only(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
     docs = _docstrings(ast.parse(text))
     keep = []
-    for tok in tokenize.generate_tokens(io.StringIO(text).readline):
-        if tok.type == tokenize.COMMENT:
+    for kind, string, line in _tokens(text):
+        if kind == tokenize.COMMENT:
             continue
-        if tok.type == tokenize.STRING and tok.start[0] in docs:
+        if kind == tokenize.STRING and line in docs:
             continue
-        keep.append(tok.string)
+        keep.append(string)
     return " ".join(keep)
 
 
@@ -188,6 +222,15 @@ class WhatIsTrueOfAPlaceLivesInItsPack(unittest.TestCase):
             p.write_text('LABEL = "Calgary natives only"\n', encoding="utf-8")
             self.assertEqual(place_hits(p, ["Edmonton"]), 0)
             self.assertEqual(place_hits(p, ["Edmonton", "Calgary"]), 1)
+
+    def test_an_f_string_counts_once_on_every_python(self):
+        """CI runs 3.11, sessions 3.13: one count for one f-string."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "m.py"
+            p.write_text('X = f"In Edmonton, {n} plants near Edmonton"\n'
+                         'Y = f"{EDMONTON}"\n', encoding="utf-8")
+            self.assertEqual(place_hits(p, ["Edmonton"]), 2)
 
     def test_docstrings_and_comments_do_not_count(self):
         import tempfile
