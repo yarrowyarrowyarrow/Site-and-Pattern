@@ -450,7 +450,7 @@ the owner is [its part 12](homeowner/12-decisions.md).*
 | **F234** | **Simple by default, advanced on request** (MD-1 to MD-5): one remembered switch that hides tools, never work. | M | Med (every guard runs in both modes) | P13 |
 | **F237** | **The region pack** (ED-1 to ED-11, ED-13, ED-17): Edmonton as data, Calgary as a second folder; the score counts the Edmonton list (E5). | L | Med (touches twelve modules' nativity) | P9, P12 |
 | **F238** | **Plants that lead** (PR-1 to PR-6, PR-9): ranked by impact and feasibility, best picks first. *PR-1 to PR-4, PR-6, PR-9 shipped V3.26; PR-7 and PR-8 are F246 and F247.* | L | Med (a ranking people will question) | P6, P13 |
-| **F239** | **How your yard is doing** (OV-1 to OV-14): one overview, and the advanced pages made to agree. | L | Med | P5, P6, P9 |
+| **F239** | **How your yard is doing** (OV-1 to OV-14): one overview, and the advanced pages made to agree. *OV-3 to OV-8 and OV-11 shipped V3.20; OV-1, OV-2, OV-9, OV-10, OV-12, OV-13 V3.27; OV-14 optional.* | L | Med | P5, P6, P9 |
 | **F240** | **Plan My Yard** (PY-1 to PY-12): plants where the person drew, to a cover target, replace and try again. | L | Med (the generator's tests) | P1, P13 |
 | **F241** | **The words** (WD-1 to WD-8): one name for each thing, held by a test. | M | Low | P5 |
 | **F242** | **Finishing** (FN-1 to FN-8, FN-11 to FN-14): licence, install instructions, services, a stable channel, feedback, the runbook (no signing, website or donations for now, on the owner's answers). | L | High (outside parties: Riverbank, signing, Esri) | — |
