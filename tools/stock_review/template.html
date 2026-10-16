@@ -1,0 +1,625 @@
+<title>Edmonton Stock Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f3ec;
+  --surface: #fffdf7;
+  --surface-2: #efece2;
+  --ink: #1d251c;
+  --muted: #586255;
+  --line: #d9d4c4;
+  --accent: #2c6639;
+  --accent-ink: #ffffff;
+  --native: #2c6639;
+  --native-soft: #e2efe2;
+  --some: #7d6417;
+  --some-soft: #f5ecd0;
+  --not: #9b3a26;
+  --not-soft: #f6e3dc;
+  --unsettled: #7d6417;
+  --focus: #1f5fbf;
+  --shadow: 0 1px 2px rgba(30, 35, 25, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #131712;
+    --surface: #1b2019;
+    --surface-2: #232a21;
+    --ink: #e6eae1;
+    --muted: #a2ac9d;
+    --line: #333c30;
+    --accent: #86c491;
+    --accent-ink: #10180f;
+    --native: #86c491;
+    --native-soft: #1f3322;
+    --some: #dcbc63;
+    --some-soft: #3a3218;
+    --not: #ec9a83;
+    --not-soft: #3a231c;
+    --unsettled: #dcbc63;
+    --focus: #8db8ff;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #131712;
+  --surface: #1b2019;
+  --surface-2: #232a21;
+  --ink: #e6eae1;
+  --muted: #a2ac9d;
+  --line: #333c30;
+  --accent: #86c491;
+  --accent-ink: #10180f;
+  --native: #86c491;
+  --native-soft: #1f3322;
+  --some: #dcbc63;
+  --some-soft: #3a3218;
+  --not: #ec9a83;
+  --not-soft: #3a231c;
+  --unsettled: #dcbc63;
+  --focus: #8db8ff;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+h1 { font-size: clamp(1.7rem, 4.5vw, 2.3rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; margin: 40px 0 10px; }
+h3 { font-size: 1.2rem; }
+p { margin: 0 0 12px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+.eyebrow { color: var(--muted); font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.lede { font-size: 1.05rem; margin-top: 14px; }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.notice {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--unsettled);
+  background: var(--surface);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+.notice[hidden] { display: none; }
+
+.tally {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0 6px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.tally-line { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.95rem; }
+.tally-line strong { font-variant-numeric: tabular-nums; }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.bar span { display: block; height: 100%; transition: width 0.3s; }
+.bar .b-native { background: var(--native); }
+.bar .b-not { background: var(--not); }
+
+details.explain {
+  margin: 14px 0 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 2px 16px;
+}
+details.explain > summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+details.explain dl { margin: 0 0 12px; }
+details.explain dt { font-weight: 600; margin-top: 10px; }
+details.explain dd { margin: 2px 0 0; color: var(--muted); }
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 26px 0 8px;
+}
+.filters label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+select, input[type="search"], textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 100%;
+  min-height: 40px;
+}
+.shown { font-size: 0.9rem; color: var(--muted); margin: 6px 0 14px; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 18px 0;
+  box-shadow: var(--shadow);
+}
+.panel h2 { margin: 0 0 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 12px 0; }
+.grid2 label, .paste label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+input[type="month"], input[type="text"] {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; min-height: 40px;
+}
+#paste { min-height: 170px; resize: vertical; }
+.preview { margin: 10px 0 0; font-size: 0.92rem; }
+.preview ul { margin: 4px 0 8px; padding-left: 20px; columns: 2 16em; column-gap: 24px; }
+.preview li { break-inside: avoid; }
+.saved-lists { margin: 12px 0 0; padding: 0; list-style: none; }
+.saved-lists li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.saved-lists li.removed { opacity: 0.6; text-decoration: line-through; }
+
+.row {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 14px;
+  align-items: center;
+}
+.row[hidden] { display: none; }
+.row h3 { font-size: 1.05rem; }
+.sci { color: var(--muted); margin: 0; font-size: 0.9rem; }
+.level { font-size: 0.85rem; color: var(--muted); margin: 2px 0 0; }
+.chip { display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip[data-t="common"] { background: var(--native-soft); color: var(--native); }
+.chip[data-t="sometimes"] { background: var(--some-soft); color: var(--some); }
+.chip[data-t="seed"] { background: var(--some-soft); color: var(--some); }
+.chip[data-t="hard"] { background: var(--not-soft); color: var(--not); }
+.answer { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: 1fr; }
+  .answer { justify-content: flex-start; }
+  .answer button { flex: 1 1 40%; }
+}
+button {
+  font: inherit; cursor: pointer; min-height: 44px; padding: 6px 12px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.answer button { font-size: 0.9rem; }
+.answer button[aria-pressed="true"][data-v="common"] { background: var(--native); border-color: var(--native); color: var(--accent-ink); font-weight: 600; }
+.answer button[aria-pressed="true"][data-v="sometimes"],
+.answer button[aria-pressed="true"][data-v="seed"] { background: var(--some); border-color: var(--some); color: var(--accent-ink); font-weight: 600; }
+.answer button[aria-pressed="true"][data-v="hard"] { background: var(--not); border-color: var(--not); color: var(--accent-ink); font-weight: 600; }
+.msg { font-size: 0.88rem; color: var(--muted); }
+.msg.err { color: var(--not); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+#export { min-height: 140px; resize: vertical; font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.empty { text-align: center; color: var(--muted); padding: 30px 0; }
+code { font-size: 0.9em; }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Site &amp; Pattern · what the nurseries stock</p>
+    <h1 id="title">Edmonton nursery stock: your review</h1>
+    <p class="lede" id="lede"></p>
+    <p id="meaning"></p>
+    <div class="notice" id="notice" role="status" hidden></div>
+    <div class="tally" aria-live="polite">
+      <div class="tally-line" id="tally"></div>
+    </div>
+    <details class="explain">
+      <summary>How a plant's level is worked out</summary>
+      <dl id="explain"></dl>
+    </details>
+  </header>
+
+  <section class="panel" aria-labelledby="add-h">
+    <h2 id="add-h">Add a nursery's list</h2>
+    <p class="muted">Copy a nursery's plant list from its website or availability sheet and paste it below. The page finds the plants it names; prices, pot sizes and other words are ignored. Lines it cannot read are shown, so you can see what it missed.</p>
+    <div class="grid2">
+      <label>Nursery <select id="l-supplier"></select></label>
+      <label>The list is from <input type="month" id="l-seen"></label>
+      <label>Sold as
+        <select id="l-form"><option value="plants">Plants</option><option value="seed">Seed</option></select>
+      </label>
+      <label>Where you found it <input type="text" id="l-source" placeholder="e.g. website, spring list"></label>
+    </div>
+    <div class="paste">
+      <label for="paste">The list</label>
+      <textarea id="paste" placeholder="Wild Bergamot (Monarda fistulosa) 1 gal&#10;Prairie Crocus&#10;…"></textarea>
+    </div>
+    <div class="preview" id="preview" aria-live="polite"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="l-save" disabled>Save this list</button>
+      <span class="msg" id="l-msg" aria-live="polite"></span>
+    </div>
+    <h3 style="margin-top:18px">Lists so far</h3>
+    <ul class="saved-lists" id="saved-lists"></ul>
+  </section>
+
+  <h2>Mark the plants you know</h2>
+  <p class="muted" id="mark-intro"></p>
+  <section class="filters" aria-label="Filter the plants">
+    <label>Type <select id="f-type"></select></label>
+    <label>Level now <select id="f-level"></select></label>
+    <label>Your answer
+      <select id="f-ans">
+        <option value="">Any</option>
+        <option value="open">Not answered</option>
+        <option value="done">Answered</option>
+      </select>
+    </label>
+    <label>Sort
+      <select id="f-sort">
+        <option value="seen">Most often seen around the city first</option>
+        <option value="name">Common name, A to Z</option>
+      </select>
+    </label>
+    <label>Find <input type="search" id="f-q" placeholder="Name or Latin name" autocomplete="off"></label>
+  </section>
+  <p class="shown" id="shown" aria-live="polite"></p>
+  <div id="list"></div>
+
+  <section>
+    <h2>Getting this into the app</h2>
+    <p>The lists and answers are kept in this page's own database. They reach the app when a Claude Code session folds them in: it reads the lists again with the app's own name matching, checks every name against the catalogue and every nursery against the region's list, and writes <code>data/regions/<span id="key"></span>/stock.json</code>. Ask a session to <em>fold in my stock review</em>.</p>
+    <p>The same as a file, if you would rather hand it over yourself:</p>
+    <textarea id="export" readonly aria-label="Your lists and answers as JSON"></textarea>
+    <div class="actions"><button type="button" id="copy">Copy</button><span class="msg" id="copy-msg" aria-live="polite"></span></div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const DATA = /*__DATA__*/null;
+  const R = DATA.region;
+  const SPECIES = DATA.species;
+  const BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
+  const BY_SCI = new Map(SPECIES.map((s) => [s.s, s]));
+  const TIERS = ["common", "sometimes", "seed", "hard", "unchecked"];
+  const ANSWERS = ["common", "sometimes", "seed", "hard"];
+  const SHORT = { common: "Common", sometimes: "Sometimes", seed: "Seed only", hard: "Hard to find" };
+  const NAMES = Object.keys(DATA.names).sort((a, b) => b.length - a.length);
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const slug = (t) => String(t).replace(/ /g, "_").replace(/[^A-Za-z0-9_.~:@+-]/g, "_");
+
+  // ---- the same reading as src/stock_lists.match ----------------------------
+  const norm = (t) => String(t || "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  function match(text) {
+    const found = [], unread = [];
+    String(text || "").split(/\r?\n/).forEach((line) => {
+      let ln = " " + norm(line) + " ";
+      if (!ln.trim()) return;
+      let hit = false;
+      NAMES.forEach((n) => {
+        const needle = " " + n + " ";
+        if (ln.includes(needle)) {
+          const sci = DATA.names[n];
+          if (!found.includes(sci)) found.push(sci);
+          hit = true;
+          ln = ln.split(needle).join(" | ");
+        }
+      });
+      if (!hit) unread.push(line.trim());
+    });
+    return { found, unread };
+  }
+
+  // ---- state: shipped, then this page's own rows on top -----------------------
+  const pageLists = new Map();     // doc id -> row
+  const pageRulings = new Map();   // species id -> row
+  const pending = new Set();
+  let db = null, me = null, writable = false;
+
+  const listKey = (l) => l.supplier + "|" + l.seen + "|" + (l.form || "plants");
+  function allLists() {
+    const out = new Map();
+    DATA.lists.forEach((l) => out.set(listKey(l), l));
+    pageLists.forEach((row) => {
+      if (row.removed) { out.delete(listKey(row)); return; }
+      out.set(listKey(row), Object.assign({}, row, { species: match(row.text).found }));
+    });
+    return Array.from(out.values());
+  }
+  function answerOf(s) {
+    const p = pageRulings.get(s.id);
+    if (p) return ANSWERS.includes(p.tier) ? p.tier : "";
+    const r = DATA.rulings[s.s];
+    return r && ANSWERS.includes(r.tier) ? r.tier : "";
+  }
+
+  // ---- the same rules as src/local_stock.derive -------------------------------
+  function levels() {
+    const bySupplier = new Map();
+    allLists().forEach((l) => {
+      if (!bySupplier.has(l.supplier)) bySupplier.set(l.supplier, []);
+      bySupplier.get(l.supplier).push(l);
+    });
+    const out = new Map();
+    SPECIES.forEach((s) => {
+      let regular = 0, any = 0, seed = 0;
+      const who = [];
+      bySupplier.forEach((lists, supplier) => {
+        const plants = lists.filter((l) => (l.form || "plants") === "plants");
+        const named = plants.filter((l) => (l.species || []).includes(s.s));
+        if (named.length) {
+          any += 1; who.push(supplier);
+          if (named.length / plants.length >= DATA.rules.share) regular += 1;
+        }
+        if (lists.some((l) => l.form === "seed" && (l.species || []).includes(s.s))) seed += 1;
+      });
+      let t = regular >= 2 ? "common" : any ? "sometimes" : seed ? "seed"
+        : (bySupplier.size >= DATA.rules.absent ? "hard" : "unchecked");
+      const a = answerOf(s);
+      if (a) t = a;
+      else if (t === "unchecked" && s.r) t = "hard";
+      if (t === "common" && s.r) t = "sometimes";
+      out.set(s.id, { t, who });
+    });
+    return out;
+  }
+
+  // ---- the words at the top ---------------------------------------------------
+  $("#title").textContent = R.short + " nursery stock: your review";
+  $("#key").textContent = R.key;
+  $("#lede").textContent =
+    "How easy a plant is to buy should come from what " + R.short + "'s native-plant nurseries actually stock, not from a guess. " +
+    "These are the " + SPECIES.length + " plants on the " + R.short + " list. Paste a nursery's published list, mark the plants you know, or both.";
+  $("#meaning").textContent =
+    "Your answer wins over the lists. Leave a plant you are not sure of: with no list and no answer it stays Not checked yet, " +
+    "and the app ranks it below every plant the stock shows is common. A restoration plant (hard to find even as seed) is never Common. " +
+    "A tap saves; tap your answer again to take it back.";
+  $("#explain").innerHTML = [
+    ["Common", "Listed as plants by at least two of the region's nurseries, on at least half of each one's lists; or your answer. " + DATA.tips.common],
+    ["Sometimes available", "Listed by one nursery, or only on some of their lists: harebell and prairie sage, in your words. " + DATA.tips.sometimes],
+    ["Seed only", DATA.tips.seed],
+    ["Hard to find", "On none of the lists once lists from " + DATA.rules.absent + " nurseries are on file, or a restoration plant the catalogue already ranks rare."],
+    ["Not checked yet", DATA.tips.unchecked + " Not the same as hard to find."],
+    ["Which nurseries", R.nurseries.join(", ") + ". A Calgary-area nursery's list counts only for plants on the " + R.short + " list."],
+  ].map(([t, d]) => "<dt>" + esc(t) + "</dt><dd>" + esc(d) + "</dd>").join("");
+  $("#mark-intro").textContent = "Each plant shows its level as the app would rank it right now, from the lists and answers so far, and which nurseries' lists name it.";
+
+  // ---- the list form ------------------------------------------------------------
+  $("#l-supplier").innerHTML = R.nurseries.map((n) => "<option>" + esc(n) + "</option>").join("");
+  (function () { const d = new Date(); $("#l-seen").value = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); })();
+  function paintPreview() {
+    const text = $("#paste").value;
+    const m = match(text);
+    const here = m.found.filter((n) => BY_SCI.has(n));
+    const away = m.found.filter((n) => !BY_SCI.has(n));
+    const name = (n) => BY_SCI.has(n) ? BY_SCI.get(n).c : n;
+    let html = "";
+    if (text.trim()) {
+      html += "<p><strong>" + here.length + "</strong> plants on the " + esc(R.short) + " list found" +
+        (away.length ? ", and " + away.length + " that are not (kept, never ranked)" : "") + ".</p>";
+      if (here.length) html += "<ul>" + here.map((n) => "<li>" + esc(name(n)) + "</li>").join("") + "</ul>";
+      if (away.length) html += "<p class=\"muted\">Not on the list: " + esc(away.join(", ")) + "</p>";
+      if (m.unread.length) html += "<p class=\"muted\">Lines with no plant the catalogue knows (" + m.unread.length + "):</p><ul>" +
+        m.unread.slice(0, 40).map((u) => "<li class=\"muted\">" + esc(u) + "</li>").join("") + "</ul>";
+    }
+    $("#preview").innerHTML = html;
+    $("#l-save").disabled = !writable || !m.found.length || !$("#l-seen").value;
+  }
+  $("#paste").addEventListener("input", paintPreview);
+  $("#l-seen").addEventListener("change", paintPreview);
+
+  function paintSavedLists() {
+    const rows = [];
+    DATA.lists.forEach((l) => rows.push({ l, shipped: true }));
+    pageLists.forEach((row, id) => rows.push({ l: row, id }));
+    $("#saved-lists").innerHTML = rows.length ? rows.map(({ l, shipped, id }) => {
+      const n = shipped ? (l.species || []).length : match(l.text).found.length;
+      return "<li class=\"" + (l.removed ? "removed" : "") + "\"><span><strong>" + esc(l.supplier) + "</strong> · " + esc(l.seen) +
+        " · " + esc(l.form === "seed" ? "seed" : "plants") + " · " + n + " plants" +
+        (shipped ? " <span class=\"muted\">(in the app)</span>" : "") + "</span>" +
+        (id && !l.removed ? "<button type=\"button\" data-remove=\"" + esc(id) + "\">Remove</button>" : "") + "</li>";
+    }).join("") : "<li class=\"muted\">None yet.</li>";
+  }
+  $("#saved-lists").addEventListener("click", async (ev) => {
+    const id = ev.target.closest("[data-remove]") && ev.target.closest("[data-remove]").dataset.remove;
+    if (!id || !db || !writable) return;
+    const row = Object.assign({}, pageLists.get(id), { removed: true, on: today() });
+    try { await withRetry(() => db.collection("lists").doc(id).set(row)); pageLists.set(id, row); paintEverything(); }
+    catch (e) { $("#l-msg").textContent = failure(e); }
+  });
+  $("#l-save").addEventListener("click", async () => {
+    if (!db || !writable) return;
+    const row = { supplier: $("#l-supplier").value, seen: $("#l-seen").value, form: $("#l-form").value,
+                  source: $("#l-source").value.trim(), text: $("#paste").value, on: today(), removed: false };
+    if (me) row.by = me;
+    const id = slug(row.supplier + "_" + row.seen + "_" + row.form);
+    $("#l-save").disabled = true;
+    $("#l-msg").textContent = "Saving…";
+    try {
+      await withRetry(() => db.collection("lists").doc(id).set(row));
+      pageLists.set(id, row);
+      $("#paste").value = "";
+      $("#l-msg").textContent = "Saved. The levels below include it.";
+      paintEverything();
+    } catch (e) {
+      $("#l-msg").textContent = failure(e);
+    } finally { paintPreview(); }
+  });
+
+  // ---- the plants ------------------------------------------------------------------
+  const list = $("#list");
+  list.innerHTML = SPECIES.map((s) =>
+    "<article class=\"row\" id=\"sp-" + esc(s.id) + "\" data-id=\"" + esc(s.id) + "\">" +
+      "<div><h3>" + esc(s.c) + "</h3><p class=\"sci\"><i>" + esc(s.s) + "</i> · " + esc(s.t) +
+      (s.r ? " · restoration plant" : "") + "</p><p class=\"level\"></p></div>" +
+      "<div class=\"answer\" role=\"group\" aria-label=\"How easy is " + esc(s.c) + " to buy around " + esc(R.short) + "?\">" +
+        ANSWERS.map((v) => "<button type=\"button\" data-v=\"" + v + "\" aria-pressed=\"false\">" + esc(SHORT[v]) + "</button>").join("") +
+      "</div><span class=\"msg\" aria-live=\"polite\"></span>" +
+    "</article>").join("") + "<p class=\"empty\" id=\"empty\" hidden>Nothing matches these filters.</p>";
+
+  let LEVELS = levels();
+  function paintRow(s) {
+    const row = document.getElementById("sp-" + s.id);
+    const lv = LEVELS.get(s.id);
+    const a = answerOf(s);
+    row.querySelector(".level").innerHTML = "<span class=\"chip\" data-t=\"" + lv.t + "\">" + esc(DATA.labels[lv.t]) + "</span>" +
+      (lv.who.length ? " · listed by " + esc(lv.who.join(", ")) : "") + (a ? " · your answer" : "");
+    row.querySelectorAll(".answer button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.v === a));
+      b.disabled = !writable || pending.has(s.id);
+      b.title = b.dataset.v === a ? "Tap again to take this answer back" : "";
+    });
+  }
+  function paintTally() {
+    const n = {}; TIERS.forEach((t) => { n[t] = 0; });
+    LEVELS.forEach((v) => { n[v.t] += 1; });
+    let answered = 0; SPECIES.forEach((s) => { if (answerOf(s)) answered += 1; });
+    $("#tally").innerHTML = TIERS.map((t) => "<span><strong>" + n[t] + "</strong> " + esc(DATA.labels[t].toLowerCase()) + "</span>").join("") +
+      "<span><strong>" + answered + "</strong> answered by you</span>";
+    const lists = []; pageLists.forEach((row) => lists.push({ supplier: row.supplier, seen: row.seen, form: row.form,
+      source: row.source || "", text: row.text, removed: !!row.removed }));
+    const rulings = {};
+    pageRulings.forEach((row) => { rulings[row.scientific_name] = { tier: row.tier || "", on: row.on || "" }; });
+    $("#export").value = JSON.stringify({
+      comment: "Stock review for the " + R.name + ". Fold in with: python scripts/merge_stock.py --merge <this file> --write",
+      lists, rulings,
+    }, null, 2);
+  }
+  function paintEverything() {
+    LEVELS = levels();
+    SPECIES.forEach(paintRow);
+    paintSavedLists();
+    paintTally();
+  }
+
+  // ---- filters ------------------------------------------------------------------
+  const fType = $("#f-type"), fLevel = $("#f-level"), fAns = $("#f-ans"), fSort = $("#f-sort"), fQ = $("#f-q");
+  const types = Array.from(new Set(SPECIES.map((s) => s.t))).sort();
+  fType.innerHTML = "<option value=\"\">Any</option>" + types.map((t) => "<option>" + esc(t) + "</option>").join("");
+  fLevel.innerHTML = "<option value=\"\">Any</option>" + TIERS.map((t) => "<option value=\"" + t + "\">" + esc(DATA.labels[t]) + "</option>").join("");
+  const PREF = "stock-review-filters-v1";
+  try { const p = JSON.parse(localStorage.getItem(PREF) || "null"); if (p) { fType.value = p.t || ""; fLevel.value = p.l || ""; fAns.value = p.a || ""; fSort.value = p.s || "seen"; } } catch (e) { /* defaults */ }
+  function reorder() {
+    const end = $("#empty");
+    SPECIES.slice().sort((a, b) => fSort.value === "name" ? a.c.localeCompare(b.c) : (b.o - a.o) || a.c.localeCompare(b.c))
+      .forEach((s) => list.insertBefore(document.getElementById("sp-" + s.id), end));
+  }
+  function applyFilters() {
+    const q = fQ.value.trim().toLowerCase();
+    let shown = 0;
+    SPECIES.forEach((s) => {
+      const a = answerOf(s);
+      const ok = (!fType.value || s.t === fType.value) && (!fLevel.value || LEVELS.get(s.id).t === fLevel.value) &&
+        (!fAns.value || (fAns.value === "open" ? !a : !!a)) &&
+        (!q || s.c.toLowerCase().includes(q) || s.s.toLowerCase().includes(q));
+      document.getElementById("sp-" + s.id).hidden = !ok;
+      if (ok) shown += 1;
+    });
+    $("#empty").hidden = shown > 0;
+    $("#shown").textContent = "Showing " + shown + " of " + SPECIES.length + ".";
+    try { localStorage.setItem(PREF, JSON.stringify({ t: fType.value, l: fLevel.value, a: fAns.value, s: fSort.value })); } catch (e) { /* not kept */ }
+  }
+  [fType, fLevel, fAns].forEach((el) => el.addEventListener("change", applyFilters));
+  fSort.addEventListener("change", () => { reorder(); applyFilters(); });
+  fQ.addEventListener("input", applyFilters);
+
+  // ---- answering ---------------------------------------------------------------------
+  function today() {
+    const d = new Date(), z = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate());
+  }
+  function failure(e) {
+    const code = e && e.code;
+    if (["invalid_argument", "revoked", "not_granted", "capability_disabled", "capability_removed"].includes(code)) {
+      setReadOnly("This view can read the review but cannot save.");
+      return "Not saved: this view cannot save.";
+    }
+    if (code === "quota_exceeded") return "Not saved: the page's storage is full.";
+    return "Not saved. Try again in a moment.";
+  }
+  async function withRetry(fn) {
+    try { return await fn(); } catch (e) {
+      if (e && e.code === "unavailable") { await new Promise((r) => setTimeout(r, 600 + Math.random() * 900)); return await fn(); }
+      throw e;
+    }
+  }
+  list.addEventListener("click", async (ev) => {
+    const btn = ev.target.closest(".answer button");
+    if (!btn || !db || !writable) return;
+    const s = BY_ID.get(btn.closest(".row").dataset.id);
+    if (pending.has(s.id)) return;
+    const next = answerOf(s) === btn.dataset.v ? "" : btn.dataset.v;
+    const body = { scientific_name: s.s, common_name: s.c, tier: next, on: today() };
+    if (me) body.by = me;
+    const msg = btn.closest(".row").querySelector(".msg");
+    pending.add(s.id); msg.textContent = "Saving…"; paintRow(s);
+    try {
+      await withRetry(() => db.collection("rulings").doc(s.id).set(body));
+      pageRulings.set(s.id, body);
+      msg.textContent = next ? "Saved." : "Answer taken back.";
+      LEVELS = levels();
+    } catch (e) { msg.textContent = failure(e); }
+    finally { pending.delete(s.id); paintRow(s); paintTally(); }
+  });
+
+  function setReadOnly(why) {
+    writable = false;
+    const n = $("#notice"); n.textContent = why; n.hidden = false;
+    paintEverything(); paintPreview();
+  }
+
+  $("#copy").addEventListener("click", async () => {
+    const ta = $("#export"); let ok = false;
+    try { await navigator.clipboard.writeText(ta.value); ok = true; }
+    catch (e) { try { ta.focus(); ta.select(); ok = document.execCommand("copy"); } catch (e2) { ok = false; } }
+    $("#copy-msg").textContent = ok ? "Copied." : "Select the text and copy it.";
+  });
+
+  paintEverything(); reorder(); applyFilters(); paintPreview();
+
+  // ---- the database --------------------------------------------------------------------
+  $("#notice").textContent = "Connecting to the page's database…"; $("#notice").hidden = false;
+  (async function connect() {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") { setReadOnly("Lists and answers can only be saved when this page is opened on claude.ai."); return; }
+    let user = null;
+    try { [db, user] = await Promise.all([c.use("db"), c.use("user")]); } catch (e) { db = null; }
+    if (!db) { setReadOnly("Nothing can be saved in this view. Open the page on claude.ai while signed in."); return; }
+    if (user) {
+      try { me = await user.id(); } catch (e) { me = null; }
+      let can = null; try { can = await user.can("data.write"); } catch (e) { can = null; }
+      if (can === false) { setReadOnly("You can read this review, but the answers are the owner's to give."); listen(); return; }
+    }
+    writable = true; $("#notice").hidden = true;
+    paintEverything(); paintPreview(); listen();
+  })();
+  function listen() {
+    const lost = () => setReadOnly("The connection to the page's database was lost. Reload the page to keep going.");
+    db.collection("lists").onSnapshot((snap) => {
+      pageLists.clear();
+      snap.docs.forEach((d) => { if (d.exists) { const v = d.data(); if (v && v.supplier && v.seen) pageLists.set(d.id, v); } });
+      paintEverything(); applyFilters();
+    }, lost);
+    db.collection("rulings").onSnapshot((snap) => {
+      pageRulings.clear();
+      snap.docs.forEach((d) => { if (d.exists && BY_ID.has(d.id)) { const v = d.data(); if (v && v.scientific_name) pageRulings.set(d.id, v); } });
+      paintEverything(); applyFilters();
+    }, lost);
+  }
+})();
+</script>

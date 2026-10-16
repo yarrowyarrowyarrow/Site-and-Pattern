@@ -143,5 +143,58 @@ class TheAppReadsIt(unittest.TestCase):
             "Monarda fistulosa"), "", "outside the pack, no local supplier")
 
 
+class ReadingANurseryList(unittest.TestCase):
+    """``src/stock_lists`` and ``scripts/merge_stock.py``."""
+
+    def setUp(self):
+        from src import stock_lists
+        with open(os.path.join(ROOT, "data", "plants_master.json"),
+                  encoding="utf-8") as fh:
+            self.table = stock_lists.name_table(json.load(fh))
+        self.match = stock_lists.match
+
+    def test_names_old_names_and_noise(self):
+        found, unread = self.match(
+            "Wild Bergamot (Monarda fistulosa) 1 gal $12\n"
+            "Yarrow, Common - Achillea millefolium\n"
+            "Pasque flower\nWild Blue Flax\nHosta 'Blue Angel'\n", self.table)
+        self.assertEqual(found, ["Monarda fistulosa", "Achillea borealis",
+                                 "Pulsatilla nuttalliana", "Linum lewisii"])
+        self.assertEqual(unread, ["Hosta 'Blue Angel'"])
+
+    def test_merge_adds_replaces_and_takes_back(self):
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import merge_stock
+        doc = {"lists": [_list("Arnica Wildflowers", ["A a"])],
+               "rulings": {"Achillea borealis": {"tier": "common", "on": "x"}}}
+        review = {"lists": [{"supplier": "Arnica Wildflowers",
+                             "seen": "2026-05", "form": "plants",
+                             "text": "Harebell\nGiant Hyssop"}],
+                  "rulings": {"Achillea borealis": {"tier": ""},
+                              "Monarda fistulosa": {"tier": "common",
+                                                    "on": "2026-10-16"}}}
+        new, _report = merge_stock.merge(doc, review)
+        self.assertEqual(len(new["lists"]), 1, "same supplier and date: replaced")
+        self.assertEqual(new["lists"][0]["species"],
+                         ["Campanula rotundifolia", "Agastache foeniculum"])
+        self.assertNotIn("Achillea borealis", new["rulings"])
+        self.assertEqual(new["rulings"]["Monarda fistulosa"]["tier"], "common")
+
+
+class TheReviewPage(unittest.TestCase):
+
+    def test_it_builds_with_every_local_native(self):
+        from src import native_here, region
+        from tools.stock_review import build
+        data = build.page_data()
+        self.assertEqual(len(data["species"]),
+                         len(native_here.native_names(region.default().key)))
+        self.assertEqual(data["region"]["nurseries"],
+                         list(region.default().nurseries))
+        page = build.render(data)
+        self.assertNotIn("/*__DATA__*/null", page)
+        self.assertIn("<title>", page)
+
+
 if __name__ == "__main__":
     unittest.main()
