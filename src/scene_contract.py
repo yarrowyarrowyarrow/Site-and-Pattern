@@ -68,8 +68,8 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
-      "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
-      "splat": {path, matrix, opacity} | None,  # Gaussian-splat backdrop (V1.65)
+      # (scan_points and splat, the yard scan's, went with it in V3.22, RM-2:
+      # the viewer reads neither, so an older scene carrying them is harmless)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
       "is_night": bool,                # sun below horizon → moonlit 3D + nocturnal wildlife
     }
@@ -330,21 +330,12 @@ def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
-                scan: Optional[dict] = None,
-                splat: Optional[dict] = None,
                 wind: Optional[bool] = True) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
     ``elevation`` is an optional ``fetch_openmeteo_grid`` result;
     ``when`` is the local-solar moment for the sun (default summer noon);
-    ``scan`` is an optional ``scan_import.sample_for_scene`` result —
-    its points are re-framed from the scan's projection origin into this
-    scene's and exposed as ``scene["scan_points"]``.
-    ``splat`` optionally overrides the project's ``splat_backdrop`` feature
-    (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
-    from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
-    opacity}) so the 3D viewer can place it behind the design.
     ``wind`` set False skips the site's wind block (:mod:`src.wind_scene`),
     which is the one part of the scene that can touch the DB cache — tests and
     headless callers that want a pure function pass False.
@@ -657,18 +648,6 @@ def build_scene(project: dict, *, year: int = 0,
         "max_y": round(max(max(ys) + pad, 25.0), 2),
     }
 
-    scan_points = None
-    if scan and scan.get("points"):
-        # Re-frame from the scan's projection origin into this scene's:
-        # both are local cosLat frames, so the shift is a constant offset.
-        from src.projection import metres_per_deg
-        so = scan.get("origin") or {}
-        m_lat, m_lng = metres_per_deg(lat0)
-        dx = ((so.get("lng") or lng0) - lng0) * m_lng
-        dy = ((so.get("lat") or lat0) - lat0) * m_lat
-        scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
-                       for p in scan["points"]]
-
     # What each vine holds onto (V2.89, F179): the tree or shrub beside it, or
     # nothing, in which case it lies on the ground. Decided here, once, after
     # every plant (existing trees and recruits included) is in the list, so the
@@ -686,15 +665,6 @@ def build_scene(project: dict, *, year: int = 0,
     from src.succulent_habit import apply_succulent_habits
     apply_succulent_habits(plants)
 
-    splat_feature = splat
-    if splat_feature is None:
-        from src.splat_backdrop import feature_from_project
-        splat_feature = feature_from_project(project)
-    splat_field = None
-    if splat_feature:
-        from src.splat_backdrop import scene_field
-        splat_field = scene_field(splat_feature, lat0, lng0)
-
     return {
         "version": SCENE_VERSION,
         "year": int(year),
@@ -706,8 +676,6 @@ def build_scene(project: dict, *, year: int = 0,
         "buildings": buildings,
         "structures": structures,
         "terrain": _terrain_block(elevation, proj),
-        "scan_points": scan_points,
-        "splat": splat_field,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
         # Night when the sun is down (V2.12): the 3D view renders a moonlit
         # scene and swaps day pollinators for nocturnal moths & bats.

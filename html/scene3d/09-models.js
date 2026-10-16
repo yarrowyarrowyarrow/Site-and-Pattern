@@ -147,7 +147,7 @@ function _glbLoadStruct(loader, key, spec) {
   });
 }
 
-// Fire-and-forget boot load (the Spark idiom from 01-core.js): the first
+// Fire-and-forget boot load (never awaited at the top level): the first
 // render never waits on models. When everything settles and at least one
 // asset loaded, drop the archetype caches and re-push the last scene — the
 // exact permaSetQuality idiom, so the camera stays put.

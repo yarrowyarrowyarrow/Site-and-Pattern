@@ -2,7 +2,7 @@
 wind_flow.py — orchestration for fetching site wind data (V1.67).
 
 Free functions taking ``main`` (kept off MainWindow/controller, like
-``building_flow``/``splat_flow``). Pulls the seasonal wind rose
+``building_flow``). Pulls the seasonal wind rose
 (``wind.get_wind_summary``, DB-cached → offline after first fetch) plus the live
 current reading off the UI thread, and hands them to the Wind page. Falls back
 to a bundled regional approximation (``data/wind_fallback_prairie.json``) when

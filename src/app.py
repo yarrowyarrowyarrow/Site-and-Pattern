@@ -54,7 +54,6 @@ from src import indicator_style, target_size
 from src import month_tasks, onboarding_flow
 from src.yard_overview import bed_area_m2
 from src.elided_label import ElidedLabel
-from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.ui_style import APP_STYLE as _APP_STYLE
 from src.controllers import split_view as _split_view
@@ -438,16 +437,6 @@ class MainWindow(QMainWindow):
         act_generate.triggered.connect(self._on_generate_design)
         self._act_generate = act_generate
 
-        act_scan = file_menu.addAction("Import &Yard Scan…")
-        act_scan.setObjectName("file_import_yard_scan")
-        act_scan.setStatusTip(
-            "Import a phone scan (Polycam/Scaniverse PLY, XYZ, LAS) — "
-            "match 2+ points to the map and the scanned structures cast "
-            "shade and appear in 3D")
-        # Lambda, not a MainWindow method — the flow lives in
-        # src/scan_import_dialog.py (architecture-guard method ceiling).
-        act_scan.triggered.connect(lambda: _start_scan_import(self))
-
         file_menu.addSeparator()
 
         act_shopping = file_menu.addAction("Export Planting &Plan…")
@@ -717,8 +706,6 @@ class MainWindow(QMainWindow):
         )
         self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
         self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
-        self.toolbar.yard_photo_toggled.connect(
-            self.map_widget.set_splat_ortho_visible)
         self.toolbar.grid_settings_changed.connect(self._on_grid_settings_changed)
 
         # Plant panel → map (plant placement + colour). Pattern mode info
@@ -886,7 +873,7 @@ class MainWindow(QMainWindow):
             lambda: field_sheet_flow.export(self))
 
         # Site photo overlay (F24) — wired straight to the flow module (free
-        # functions taking ``main``, mirroring splat_flow; MainWindow is full).
+        # functions taking ``main``, mirroring building_flow; MainWindow is full).
         from src import site_photo_flow
         self.site_panel.site_photo_import_requested.connect(
             lambda path: site_photo_flow.import_site_photo(self, path))
@@ -1937,7 +1924,7 @@ class MainWindow(QMainWindow):
 
         # Redraw the whole map from the project's features (boundaries,
         # plants, structures, hedgerows, shapes, contours, annotations,
-        # auto-terrain, site pin, splat backdrop). Shared with undo/redo's
+        # auto-terrain, site pin). Shared with undo/redo's
         # snapshot restore — see PersistenceController.render_project_to_map.
         self._persistence.render_project_to_map(fit_view=True)
 

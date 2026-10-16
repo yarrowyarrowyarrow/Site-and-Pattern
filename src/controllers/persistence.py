@@ -675,14 +675,12 @@ class PersistenceController:
                 " and ".join(layers)
                 + " not loaded — click Generate to recompute.")
 
-        # Site pin (clearAll wiped it) + photoreal splat backdrop, both read
-        # from the project so undo of an import that removed them clears them.
+        # Site pin (clearAll wiped it), read from the project so an undo that
+        # removed it clears it.
         sc = proj.get("properties", {}).get("site_config") or {}
         plat, plng = sc.get("latitude"), sc.get("longitude")
         if plat is not None and plng is not None:
             m.map_widget.place_site_pin(plat, plng, sc.get("pin_label", ""))
-        from src import splat_flow
-        splat_flow.restore_splat_overlay(m)
         # Site photo underlay (F24) — same story: redraw from the project so
         # undo of an import that added/removed it stays in sync.
         from src import site_photo_flow

@@ -155,15 +155,6 @@ class Scene3DWindow(QWidget):
             lambda: self.viewer.run_js(
                 "window.permaResetView && window.permaResetView();"))
 
-        # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
-        # for the 2D map (V1.65). Enabled only when the project has a splat.
-        self._bake_btn = QPushButton("📷 Add yard photo to map")
-        self._bake_btn.setToolTip(
-            "Render the photoreal scan straight down and add it to the 2D map "
-            "as a personal satellite layer")
-        self._bake_btn.setEnabled(False)
-        self._bake_btn.clicked.connect(self._on_bake_yard_photo)
-
         # A render you can put in a proposal (F69). The docent's beats have
         # carried a camera, a year and a season since V2.13 and nothing read
         # them; this places the camera at the beat's own preset, renders the
@@ -315,7 +306,7 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
-        for btn in (reset_view, self._bake_btn, self._still_btn, self._ba_btn):
+        for btn in (reset_view, self._still_btn, self._ba_btn):
             bar3.addWidget(btn)
 
         root = QVBoxLayout(self)
@@ -363,12 +354,9 @@ class Scene3DWindow(QWidget):
             year=self._year.value(),
             elevation=self._elevation,
             when=self._when(),
-            # Set by the scan-import flow for this session (not persisted —
-            # the scan's footprints are; the raw points are a preview aid).
-            scan=getattr(self._main, "_scan_scene_sample", None),
         )
-        # Remember the origin so a yard-photo bake frames the splat correctly,
-        # and keep the built scene for the "show its plants" spotlight.
+        # Keep the origin and the built scene for the "show its plants"
+        # spotlight.
         self._last_origin = scene.get("origin")
         self._scene = scene
         self.viewer.apply_scene(scene)
@@ -395,30 +383,6 @@ class Scene3DWindow(QWidget):
         # Keep an active "show its plants" spotlight in sync with the new scene.
         if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
             self._push_spotlight()
-
-    def _on_bake_yard_photo(self):
-        """Render the loaded splat top-down and hand the PNG to the map layer."""
-        from src import splat_backdrop, splat_flow
-        feat = splat_backdrop.feature_from_project(self._main._project)
-        if feat is None or not self._last_origin:
-            self._main.statusBar().showMessage(
-                "No yard scan to bake — import one via File → Import Yard Scan.",
-                5000)
-            return
-        rect = splat_backdrop.scene_rect(
-            feat, self._last_origin["lat"], self._last_origin["lng"])
-
-        def _done(url):
-            if splat_flow.apply_baked_ortho(self._main, feat, url):
-                self._main.statusBar().showMessage(
-                    "Yard photo baked onto the map — toggle it under "
-                    "View → Yard photo.", 6000)
-            else:
-                self._main.statusBar().showMessage(
-                    "Bake produced no image — let the splat finish loading in "
-                    "3D, then try again.", 6000)
-
-        self.viewer.capture_ortho(rect, _done)
 
     # ── the presentation still (F69) ────────────────────────────────────────
 
@@ -782,9 +746,6 @@ class Scene3DWindow(QWidget):
         as the retired Refresh button did, without warming the photo cache
         again for every edit."""
         self._push_scene()
-        from src.splat_backdrop import feature_from_project
-        self._bake_btn.setEnabled(
-            feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
 
@@ -795,9 +756,6 @@ class Scene3DWindow(QWidget):
         # initial build honours it (queued until the viewer's JS is ready).
         self.viewer.set_quality(self._detail.currentIndex())
         self._push_scene()
-        from src.splat_backdrop import feature_from_project
-        self._bake_btn.setEnabled(
-            feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
         self._start_photo_warm()

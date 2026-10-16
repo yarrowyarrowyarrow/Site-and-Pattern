@@ -15,13 +15,13 @@ is untouched — it loads Leaflet via classic ``<script>`` tags over ``file://``
 and was never affected.
 
 The server binds to ``127.0.0.1`` on an ephemeral port, serves the bundled
-``html/`` tree read-only, plus a ``/__localfile`` route for a single imported
-Gaussian-splat ``.ply`` (which lives outside ``html/``). It runs in a daemon
-thread for the app's lifetime and starts lazily on first use.
+``html/`` tree read-only. It runs in a daemon thread for the app's lifetime and
+starts lazily on first use. (A ``/__localfile`` route served an imported yard
+scan's ``.ply`` from outside ``html/`` until the scan import was removed in
+V3.22, RM-2; nothing outside the tree and the image cache is served now.)
 
 Public API (used by ``src/map3d_widget.py``):
     builtin_viewer_url()  -> "http://127.0.0.1:<port>/scene3d.html"
-    local_file_url(path)  -> "http://127.0.0.1:<port>/__localfile?path=..."
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ import mimetypes
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 from src.resources import resource_path
 
@@ -126,8 +126,8 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        # Cached species photos for the 3D click-to-learn card. Strictly
-        # narrower than /__localfile below: the key is resolved INSIDE the image
+        # Cached species photos for the 3D click-to-learn card. The key is
+        # resolved INSIDE the image
         # cache directory and nowhere else, so no remote URL reaches the browser
         # and no path outside the cache is addressable.
         if parsed.path == "/__image":
@@ -140,20 +140,6 @@ class _Handler(BaseHTTPRequestHandler):
             except Exception:                      # noqa: BLE001 — graceful
                 target = None
             if target and _mime_for(target).startswith("image/"):
-                self._serve(target)
-            else:
-                _log(f"404 {parsed.path}")
-                self.send_error(404)
-            return
-
-        if parsed.path == "/__localfile":
-            qs = parse_qs(parsed.query)
-            raw = (qs.get("path") or [""])[0]
-            target = os.path.normpath(raw) if raw else None
-            # Only ever hand out the imported splat point cloud, never an
-            # arbitrary file, even though we're bound to loopback.
-            if (target and target.lower().endswith(".ply")
-                    and os.path.isfile(target)):
                 self._serve(target)
             else:
                 _log(f"404 {parsed.path}")
@@ -216,7 +202,3 @@ def builtin_viewer_url() -> str:
     """URL for the built-in three.js viewer (starts the server on first call)."""
     return _ensure_server() + "/scene3d.html"
 
-
-def local_file_url(path: str) -> str:
-    """Same-origin URL for a local splat ``.ply`` so the viewer can fetch it."""
-    return _ensure_server() + "/__localfile?path=" + quote(os.path.abspath(path))

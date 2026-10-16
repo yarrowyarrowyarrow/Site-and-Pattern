@@ -54,7 +54,6 @@ ADVANCED_ACTIONS: tuple = (
     "view_growth_snapshots",
     "view_scale_units",               # rank 9: map settings and units
     "view_map_settings",
-    "file_import_yard_scan",          # deleted by RM-2; hidden until then
 )
 
 #: The Draw and View rows' items: actions, or a widget the row holds.
@@ -66,7 +65,6 @@ ADVANCED_TOOLBAR_ITEMS: tuple = (
     "toolbar._grid_btn",
     "toolbar._act_canopy",
     "toolbar._act_structures_layer",
-    "toolbar._act_yard_photo",        # deleted by RM-2
 )
 
 #: Controls inside a page that stays: each a container made for the purpose,

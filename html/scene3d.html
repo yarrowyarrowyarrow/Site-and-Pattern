@@ -28,7 +28,7 @@
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
   height → +y. Every critter model faces −Z (see critterHeading).
 
-  three.js + Spark are vendored under html/vendor/ and served over a localhost
+  three.js is vendored under html/vendor/ and served over a localhost
   http:// origin (src/web_assets.py), so the 3D view loads offline and is immune
   to CDN outages. The offline notice appears only if WebGL itself is
   unavailable or the bundled assets are missing.
@@ -258,8 +258,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 {
   "imports": {
     "three": "./vendor/three/three.module.js",
-    "three/addons/": "./vendor/three/addons/",
-    "@sparkjsdev/spark": "./vendor/spark/spark.module.js"
+    "three/addons/": "./vendor/three/addons/"
   }
 }
 </script>

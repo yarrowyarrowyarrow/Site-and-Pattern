@@ -143,9 +143,9 @@ class Map3DWidget(QWebEngineView):
             self._channel.registerObject("bridge", self.bridge)
             self.page().setWebChannel(self._channel)
 
-        # The built-in viewer fetches three.js + Spark from a CDN and, for the
-        # Gaussian-splat backdrop, loads a local .ply via a file:// URL — both
-        # need these relaxations on the file:// page (mirrors MapWidget).
+        # Relaxations from when the viewer loaded over file:// (mirrors
+        # MapWidget). The yard scan's .ply they also served went in V3.22
+        # (RM-2); they are left as they were, not re-audited here.
         s = self.settings()
         s.setAttribute(
             QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
@@ -196,37 +196,8 @@ class Map3DWidget(QWebEngineView):
         self.page().runJavaScript(js)
 
     def apply_scene(self, scene: dict):
-        """Push a full Scene JSON (``src.scene_contract.build_scene``).
-
-        A ``scene["splat"]`` field carries a local file ``path`` for the
-        Gaussian-splat backdrop; turn it into a ``file://`` ``url`` Spark can
-        fetch (and drop it when the file is gone, so the design still renders).
-        """
-        splat = scene.get("splat")
-        if splat:
-            path = splat.get("path")
-            if path and os.path.exists(path):
-                splat = dict(splat)
-                # Serve the .ply from the same localhost origin as the viewer so
-                # Spark fetches it same-origin (a file:// URL would be a
-                # cross-origin fetch the http:// page would refuse).
-                from src.web_assets import local_file_url
-                splat["url"] = local_file_url(path)
-                scene = dict(scene, splat=splat)
-            else:
-                scene = dict(scene, splat=None)
+        """Push a full Scene JSON (``src.scene_contract.build_scene``)."""
         self.run_js(map3d_js.set_scene(scene))
-
-    def capture_ortho(self, rect: dict, callback, *, width: int = 2048):
-        """Bake a top-down PNG of the loaded splat backdrop (for the 2D map's
-        "yard photo" layer) and hand the data URL to ``callback``. ``rect`` is
-        the scene-metre frame ``{min_x, max_x, min_y, max_y}``. The splat must
-        already be loaded (call after the 3D view is open); a missing/loading
-        splat yields ``''``/``False`` to the callback."""
-        if not self._loaded:
-            callback("")
-            return
-        self.page().runJavaScript(map3d_js.capture_ortho(rect, width), callback)
 
     def snapshot(self, callback, *, px: int = 320, height: int = 0,
                  pixel_ratio: int = 0, mime: str = "", quality: float = 0.0):

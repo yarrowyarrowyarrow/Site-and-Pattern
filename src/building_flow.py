@@ -2,8 +2,8 @@
 building_flow.py — orchestration for the offline building pack (V1.66).
 
 Free functions taking ``main``, kept off ``MapEventRouter`` so the controller
-stays under its line ceiling (mirrors ``scan_import_dialog.start_scan_import``
-and ``splat_flow``). Two entry points:
+stays under its line ceiling (as ``site_photo_flow`` and ``wind_flow`` are).
+Two entry points:
 
   * :func:`import_buildings_offline` — the per-design "Import from OpenStreetMap"
     fast path: if this area's pack is downloaded, place its buildings straight

@@ -22,15 +22,14 @@ network once" notice even online. Vendoring removes that whole class of failure.
 | `three/three.core.js` | npm `three` → `build/three.core.js` (three.module.js re-exports from it — **required sibling**) | 0.180.0 (MIT) |
 | `three/addons/controls/OrbitControls.js` | npm `three` → `examples/jsm/controls/` | 0.180.0 (MIT) |
 | `three/addons/utils/BufferGeometryUtils.js` | npm `three` → `examples/jsm/utils/` | 0.180.0 (MIT) |
-| `three/addons/postprocessing/Pass.js` | npm `three` → `examples/jsm/postprocessing/` (Spark needs it) | 0.180.0 (MIT) |
 | `three/addons/loaders/GLTFLoader.js` | npm `three` → `examples/jsm/loaders/` (Blender GLB assets, V2.27; its `../utils/BufferGeometryUtils.js` import resolves to the row above) | 0.180.0 (MIT) |
-| `spark/spark.module.js` | npm `@sparkjsdev/spark` → `dist/spark.module.js` | 2.1.0 (MIT) |
 
 The directory layout mirrors the old importmap keys, so the importmap in
 `scene3d.html` just points at `./vendor/...`. The trailing
 `//# sourceMappingURL=` comments were stripped (the `.map` files are not
-vendored). Spark's wasm is inlined as a `data:` URL and its workers are built
-from inline blobs, so no extra files are needed.
+vendored). Spark (`@sparkjsdev/spark`, which drew the yard scan's Gaussian
+splat) and the `Pass.js` it imported were removed with the yard scan in V3.22
+(RM-2), taking about 5 MB out of the installer.
 
 To refresh a version: `npm pack <pkg>@<ver>`, copy the files above into place,
 strip the trailing sourcemap comment, and bump the table.

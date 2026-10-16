@@ -627,32 +627,10 @@ def clear_wind_shadow() -> str:
     return "clearWindShadow();"
 
 
-def draw_splat_ortho_overlay(png_data_url: str, bbox: dict,
-                             opacity: float) -> str:
-    """Render the baked top-down splat photo as its own image overlay (V1.65)
-    — a personal, fresher "satellite" layer of the user's yard. Separate from
-    the slope/shade overlays so all can show at once; mirrors
-    ``draw_shade_overlay``."""
-    payload = {"image": png_data_url, "bbox": bbox, "opacity": float(opacity)}
-    return f"drawSplatOrthoOverlay({_jsobj(payload)});"
-
-
-def set_splat_ortho_visible(visible: bool) -> str:
-    return f"setSplatOrthoVisible({_jsbool(visible)});"
-
-
-def set_splat_ortho_opacity(opacity: float) -> str:
-    return f"setSplatOrthoOpacity({float(opacity)});"
-
-
-def clear_splat_ortho() -> str:
-    return "clearSplatOrtho();"
-
-
 def draw_site_photo_overlay(image_data_url: str, bbox: dict,
                             opacity: float) -> str:
     """Render a user yard/drone photo as a georeferenced map underlay (F24) —
-    its own image layer (like the splat ortho / shade overlays) so it composes
+    its own image layer (like the shade overlay) so it composes
     with everything else."""
     payload = {"image": image_data_url, "bbox": bbox, "opacity": float(opacity)}
     return f"drawSitePhotoOverlay({_jsobj(payload)});"

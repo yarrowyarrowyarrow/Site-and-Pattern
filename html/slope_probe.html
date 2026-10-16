@@ -55,7 +55,7 @@ function scene(terrain) {
     sun: { azimuth_deg: 200, altitude_deg: 48 },
     buildings: [{ kind: 'building', height_m: 3, ring: [[-8, 4], [-4, 4], [-4, 8], [-8, 8]] }],
     structures: [{ x: 5, y: 5, size_m: 1, height_m: 1 }],    // no struct_id: the box
-    scan_points: [], splat: null, terrain: terrain, plants: PLANTS.map(plant),
+    terrain: terrain, plants: PLANTS.map(plant),
   };
 }
 

@@ -82,8 +82,8 @@ class ImageRouteTest(unittest.TestCase):
 
     def test_the_route_cannot_be_walked_out_of_the_cache(self):
         """The key is resolved against the cache's own metadata, so a path is
-        not a key — but assert it explicitly, because this route's whole reason
-        to be narrower than /__localfile is that it takes a URL parameter."""
+        not a key — but assert it explicitly, because the route takes a URL
+        parameter."""
         for hostile in ("../../etc/passwd",
                         "..%2f..%2fetc%2fpasswd",
                         "/etc/passwd",
@@ -118,17 +118,19 @@ class ContainmentTest(unittest.TestCase):
         for path in ("/../main.py", "/..%2fmain.py", "/../../etc/passwd"):
             self.assertNotEqual(_get(self.base + path)[0], 200, path)
 
-    def test_localfile_serves_only_ply(self):
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as fh:
-            fh.write(b"not a point cloud")
-            txt = fh.name
+    def test_no_local_file_route_is_left(self):
+        """V3.22 (RM-2): /__localfile served a yard scan's .ply from outside
+        the html tree; it went with the scan import, a .ply included."""
+        with tempfile.NamedTemporaryFile(suffix=".ply", delete=False) as fh:
+            fh.write(b"ply")
+            ply = fh.name
         try:
             url = (self.base + "/__localfile?path="
-                   + urllib.parse.quote(os.path.abspath(txt)))
+                   + urllib.parse.quote(os.path.abspath(ply)))
             self.assertEqual(_get(url)[0], 404)
+            self.assertFalse(hasattr(wa, "local_file_url"))
         finally:
-            os.unlink(txt)
-
+            os.unlink(ply)
 
 if __name__ == "__main__":
     unittest.main()

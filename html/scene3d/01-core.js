@@ -5,19 +5,6 @@
 // are globals set by the bootstrap), so load ORDER is dependency
 // order. Do not add ES `import`/`export` here.
 
-// Spark — the OPTIONAL photoreal yard-scan backdrop (V1.65). Load it WITHOUT
-// blocking module evaluation: a top-level `await` here would stall the entire
-// viewer — window.permaSetScene is registered far below, so nothing past this
-// point runs until the import settles, and if Spark were slow or hung the whole
-// 3D view would silently never start. Fire-and-forget instead; SplatMesh /
-// SparkRenderer fill in when ready and the splat code (all guarded, and the
-// SparkRenderer is created lazily) simply no-ops until then. The core 3D view
-// never waits on Spark.
-let SplatMesh = null, SparkRenderer = null;
-import('@sparkjsdev/spark')
-  .then((m) => { SplatMesh = m.SplatMesh; SparkRenderer = m.SparkRenderer; })
-  .catch((err) => console.warn('Spark splat backdrop unavailable:', err));
-
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
 // ── wind + time ─────────────────────────────────────────────────────────────
@@ -119,23 +106,6 @@ const scene = new THREE.Scene();
 // The gradient sky dome (below) is the backdrop; fog blends the ground plane
 // into its horizon band. Both colours track the sun via updateAtmosphere.
 scene.fog = new THREE.Fog(0xeaf2f8, 380, 1500);
-
-// Spark needs a SparkRenderer in the scene to draw splats with the normal
-// THREE.WebGLRenderer (V1.65). Created LAZILY — only once Spark has loaded
-// (background import above) AND a splat is actually added — so the core view
-// never depends on Spark. Constructed defensively: if it fails, the design
-// still renders, only the photoreal backdrop is unavailable.
-let sparkRenderer = null;
-function ensureSparkRenderer() {
-  if (sparkRenderer || !SparkRenderer) return sparkRenderer;
-  try {
-    sparkRenderer = new SparkRenderer({ renderer });
-    scene.add(sparkRenderer);
-  } catch (e) {
-    sparkRenderer = null;
-  }
-  return sparkRenderer;
-}
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
 camera.position.set(45, 38, 55);

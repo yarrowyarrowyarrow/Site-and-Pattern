@@ -1341,8 +1341,7 @@ class TestMainWindowSmoke(unittest.TestCase):
         broken, seen = [], 0
         # Modules a person reaches only with Advanced tools on: their words
         # are read in advanced mode, never in the simple app (V3.21).
-        advanced_only = {"scan_import_dialog.py", "scene3d_window.py",
-                         "snow_microsite_flow.py"}
+        advanced_only = {"scene3d_window.py", "snow_microsite_flow.py"}
         for path in sorted(root.rglob("*.py")):
             if simple and path.name in advanced_only:
                 continue

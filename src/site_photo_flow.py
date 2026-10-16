@@ -5,7 +5,7 @@ The Qt-free maths and persistence live in :mod:`src.site_photo`; this module is
 the thin glue that loads an image file, embeds it on the project's ``site_photo``
 feature, and keeps the 2D map overlay + the Site panel's controls in sync. Kept
 as free functions taking ``main`` (never new MainWindow methods — it is at the
-architecture-guard method ceiling), mirroring :mod:`src.splat_flow`.
+architecture-guard method ceiling), as :mod:`src.building_flow` is.
 
 Design principle P11 (the body and the site know things the screen does not) —
 see docs/DESIGN_PHILOSOPHY.md.
