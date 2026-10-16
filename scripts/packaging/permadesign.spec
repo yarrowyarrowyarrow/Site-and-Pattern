@@ -5,6 +5,7 @@
 # "SiteAndPattern" (no spaces/ampersand) so the build scripts and NSIS paths
 # stay quoting-safe. Shortcuts/Start-Menu/.app show the display name.
 
+import fnmatch
 import os
 import sys
 
@@ -16,10 +17,35 @@ block_cipher = None
 # regardless of where the spec file sits.
 _ROOT = os.getcwd()
 
+# What the source tree holds and the installed app never reads (V3.22, RM-7):
+# the raw downloads the seed scripts derive the catalogue from (about 32 MB),
+# and the developer pages the tests and the tuning benches open from the
+# source tree. Matched against paths relative to the repo root, with '/'.
+_NOT_SHIPPED = (
+    'data/fetched/*',
+    'html/*_probe.html',
+    'html/inspect_probe_data.json',
+    'html/tune_*.html',
+    'html/sprite_gallery*',
+)
+
+
+def _tree(top):
+    """Every file under ``top`` but the ones ``_NOT_SHIPPED`` names, as
+    ``(source, destination folder)`` pairs."""
+    out = []
+    for folder, subfolders, files in os.walk(os.path.join(_ROOT, top)):
+        subfolders[:] = sorted(d for d in subfolders if d != '__pycache__')
+        for name in sorted(files):
+            source = os.path.join(folder, name)
+            rel = os.path.relpath(source, _ROOT).replace(os.sep, '/')
+            if not any(fnmatch.fnmatch(rel, p) for p in _NOT_SHIPPED):
+                out.append((source, os.path.dirname(rel)))
+    return out
+
+
 # Runtime data files, preserving their relative layout under the bundle root.
-_datas = [
-    (os.path.join(_ROOT, 'data'), 'data'),
-    (os.path.join(_ROOT, 'html'), 'html'),
+_datas = _tree('data') + _tree('html') + [
     (os.path.join(_ROOT, 'src', 'db', 'schema.sql'), 'src/db'),
     # The window icon at every size (src/app_icon.py).
     (os.path.join(_ROOT, 'assets', 'icon', 'app_*.png'), 'assets/icon'),
