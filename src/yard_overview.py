@@ -10,6 +10,11 @@ of the PDF each summed the area of **every** drawn shape and costed mulch for
 it, lawn, path, patio and pond included (OVF-3). Drawing a path made the mulch
 dearer.
 
+V3.27 (OV-1, OV-9, PY-12) adds what the overview measures on it: how much
+the plants cover once grown (:func:`cover`), the ground they leave bare
+(:func:`bare_ground`) and the yard either side of the house
+(:func:`yard_parts`). The six items themselves are ``yard_overview_items``.
+
 The planting area, as part 06 §5.1 defines it:
 
   * the union of the bed-like shapes, when any is drawn (Garden Bed, Mulch
@@ -66,28 +71,34 @@ def _parts(project: dict) -> tuple:
     return bounds, beds, holes
 
 
-def planting_area(project: dict):
-    """The planting area as a shapely geometry in local metres (east, north
-    of the rings' centroid), or ``None`` with nothing to plant in. Needs
-    shapely."""
-    from shapely.geometry import Polygon
+def local_area(project: dict) -> tuple:
+    """``(projector, planting area)``: the area as a shapely geometry in local
+    metres (east, north of the rings' centroid) and the projector that put it
+    there, or ``(None, None)`` with nothing to plant in. Needs shapely."""
     from shapely.ops import unary_union
     from src.projection import Projector
     bounds, beds, holes = _parts(project)
     rings = beds or bounds
     if not rings:
-        return None
+        return None, None
     proj = Projector.for_positions(
         [(p[1], p[0]) for r in rings for p in r])
-
-    def poly(ring):
-        shape = Polygon([proj.to_xy(p[1], p[0]) for p in ring])
-        return shape if shape.is_valid else shape.buffer(0)
-
-    area = unary_union([poly(r) for r in rings])
+    area = unary_union([_poly(proj, r) for r in rings])
     if not beds and holes:
-        area = area.difference(unary_union([poly(r) for r in holes]))
-    return None if area.is_empty else area
+        area = area.difference(unary_union([_poly(proj, r) for r in holes]))
+    return (None, None) if area.is_empty else (proj, area)
+
+
+def _poly(proj, ring):
+    from shapely.geometry import Polygon
+    shape = Polygon([proj.to_xy(p[1], p[0]) for p in ring])
+    return shape if shape.is_valid else shape.buffer(0)
+
+
+def planting_area(project: dict):
+    """The planting area as a shapely geometry in local metres, or ``None``
+    with nothing to plant in. Needs shapely."""
+    return local_area(project)[1]
 
 
 def bed_area_m2(project: dict) -> float:
@@ -104,3 +115,165 @@ def bed_area_m2(project: dict) -> float:
                    - sum(_ring_area_m2(r) for r in holes) if bounds else 0.0)
     area = planting_area(project)
     return float(area.area) if area is not None else 0.0
+
+
+# ── Cover once grown (OV-1, §5.1) ───────────────────────────────────────────
+
+#: The share of the planting area that reads as well filled once grown (O3).
+WELL_FILLED = 0.70
+
+#: Words for a share, from the top (§5.1): ``(at least, words)``.
+SHARE_WORDS = ((0.85, "almost all"), (0.72, "about three quarters"),
+               (0.60, "about two thirds"), (0.45, "about half"),
+               (0.28, "about a third"), (0.18, "about a quarter"),
+               (0.0, "less than a fifth"))
+
+#: Bare patches smaller than this are not worth planting (OV-9).
+SLIVER_M2 = 0.5
+
+
+def share_words(share: float) -> str:
+    return next(w for floor, w in SHARE_WORDS if share >= floor)
+
+
+def canopy_m(row: dict) -> float:
+    """A plant's mature spread: ``mature_canopy_m``, else 1.5 × its planting
+    spacing, which is how every catalogue value was made."""
+    try:
+        width = float(row.get("mature_canopy_m") or 0)
+    except (TypeError, ValueError):
+        width = 0.0
+    if width > 0:
+        return width
+    from src.planting_spacing import spacing_to_plant_m       # noqa: PLC0415
+    return 1.5 * float(spacing_to_plant_m(row) or 0.3)
+
+
+def _discs(proj, project: dict, get_plant):
+    from shapely.geometry import Point
+    from shapely.ops import unary_union
+    from src.project_store import ProjectStore
+    if get_plant is None:
+        from src.db.plants import get_plant                   # noqa: PLC0415
+    rows: dict = {}
+    discs = []
+    for p in ProjectStore(project).placed_plants:
+        pid = p.get("plant_id")
+        if pid not in rows:
+            rows[pid] = get_plant(pid) or {}
+        if p.get("lat") is None or p.get("lng") is None:
+            continue
+        x, y = proj.to_xy(p["lat"], p["lng"])
+        discs.append(Point(x, y).buffer(canopy_m(rows[pid]) / 2.0, 24))
+    return unary_union(discs) if discs else None
+
+
+def cover(project: dict, *, get_plant=None) -> Optional[dict]:
+    """``{"area_m2", "covered_m2", "share"}``: the planting area and how much
+    of it the placed plants' mature spread covers, or ``None`` with no area.
+    An estimate, said as "about" (every spread is a 1.5 × spacing default)."""
+    proj, area = local_area(project)
+    if area is None or area.area <= 0:
+        return None
+    discs = _discs(proj, project, get_plant)
+    covered = discs.intersection(area).area if discs is not None else 0.0
+    return {"area_m2": float(area.area), "covered_m2": float(covered),
+            "share": float(covered / area.area)}
+
+
+def bare_ground(project: dict, *, get_plant=None) -> tuple:
+    """``(projector, geometry)``: the planting area the grown plants leave
+    bare, patches under :data:`SLIVER_M2` dropped; ``(None, None)`` with no
+    area."""
+    from shapely.ops import unary_union
+    proj, area = local_area(project)
+    if area is None:
+        return None, None
+    discs = _discs(proj, project, get_plant)
+    bare = area.difference(discs) if discs is not None else area
+    parts = [g for g in getattr(bare, "geoms", [bare])
+             if g.area >= SLIVER_M2]
+    return proj, (unary_union(parts) if parts else None)
+
+
+def fill_points(project: dict, spacing_m: float = 0.6, *,
+                get_plant=None) -> list:
+    """``[(lat, lng)]`` on a staggered grid ``spacing_m`` apart over the bare
+    ground: where Fill the gaps plants (OV-9)."""
+    from shapely.geometry import Point
+    from shapely.prepared import prep
+    proj, bare = bare_ground(project, get_plant=get_plant)
+    if bare is None or spacing_m <= 0:
+        return []
+    inside = prep(bare)
+    x0, y0, x1, y1 = bare.bounds
+    out, row, y = [], 0, y0 + spacing_m / 2
+    while y <= y1:
+        x = x0 + spacing_m / 2 + (spacing_m / 2 if row % 2 else 0.0)
+        while x <= x1:
+            if inside.contains(Point(x, y)):
+                out.append(proj.to_latlng(x, y))
+            x += spacing_m
+        row, y = row + 1, y + spacing_m * 0.866
+    return out
+
+
+# ── Front and back (PY-12, the owner's L3) ──────────────────────────────────
+
+def _house(project: dict, proj):
+    """The largest building footprint, in local metres, or ``None``."""
+    best = None
+    for f in (project or {}).get("features", []) or []:
+        props = f.get("properties", {}) or {}
+        if (props.get("element_type") == "canopy_footprint"
+                and (props.get("shape_type") or "").startswith("Building")):
+            ring = _ring(f)
+            if ring is not None:
+                shape = _poly(proj, ring)
+                if best is None or shape.area > best.area:
+                    best = shape
+    return best
+
+
+def yard_parts(project: dict) -> Optional[dict]:
+    """The planting area either side of the house: ``{"front", "back"}`` in
+    m², split by a line through the house's middle across the way to the
+    street (``cues_to_care.frontage_for``: the road when known, else the south
+    side, and ``assumed`` says which); ``{"whole"}`` with no building drawn;
+    ``None`` with no area."""
+    from shapely.geometry import Polygon
+    import math
+    proj, area = local_area(project)
+    if area is None:
+        return None
+    house = _house(project, proj)
+    if house is None:
+        return {"whole": float(area.area)}
+    from src.cues_to_care import frontage_for                 # noqa: PLC0415
+    side = frontage_for(project)
+    b = math.radians(side.bearing)
+    ux, uy = math.sin(b), math.cos(b)            # towards the street
+    cx, cy = house.centroid.x, house.centroid.y
+    reach = 4 * max(area.bounds[2] - area.bounds[0],
+                    area.bounds[3] - area.bounds[1], 1.0)
+    px, py = -uy * reach, ux * reach             # along the line
+    street = Polygon([(cx + px, cy + py), (cx - px, cy - py),
+                      (cx - px + ux * reach, cy - py + uy * reach),
+                      (cx + px + ux * reach, cy + py + uy * reach)])
+    front = area.intersection(street).area
+    return {"front": float(front), "back": float(area.area - front),
+            "assumed": not side.measured}
+
+
+def about_m2(m2: float) -> str:
+    """"about 60 m²": to 5 m² under 100, else to 10 (P9)."""
+    step = 5 if m2 < 100 else 10
+    return f"about {max(step, int(round(m2 / step)) * step):,} m²"
+
+
+def parts_words(parts: Optional[dict]) -> str:
+    """"Front yard about 60 m², back yard about 140 m²." or ``""``."""
+    if not parts or "front" not in parts:
+        return ""
+    return (f"Front yard {about_m2(parts['front'])}, back yard "
+            f"{about_m2(parts['back'])}.")
