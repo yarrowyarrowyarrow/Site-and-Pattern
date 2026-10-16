@@ -95,9 +95,8 @@ ROLE_LABELS: dict = {
     "riparian_filter": "Riparian Filter", "ornamental": "Ornamental",
     "aquatic": "Aquatic", "medicinal": "Medicinal",
 }
-#: The owner (V3.24): few native plants are sold at garden centres or big-box
-#: stores; a handful of native-plant retailers sell almost all of them. The
-#: two top tiers say how widely a plant is sold, not where.
+#: How widely a plant is sold, not where (V3.24): the owner finds few natives
+#: at garden centres; a handful of native-plant retailers sell most of them.
 AVAILABILITY_LABELS: dict = {
     "big_box": "Widely sold", "garden_centre": "Often sold",
     "native_specialist": "Native-plant nurseries",
@@ -142,7 +141,6 @@ def _home():
     from src import region                                   # noqa: PLC0415
     return region.default()
 
-
 QUALITIES: tuple = (
     # Read from the province list VASCAN supplies (V2.80), not from the
     # native_to_alberta flag: five species still carry the seed's "1?" there
@@ -152,9 +150,8 @@ QUALITIES: tuple = (
     Quality("native_only", "Native", "native_province",
             "Native to Alberta, as VASCAN records it.", "AB"),
     # F220 (V3.12), the owner's "Edmonton specific native plants": collected
-    # near the city, not only recorded somewhere in the province. Named and
-    # keyed by the default region pack since V3.24 (ED-3): "Calgary native"
-    # in a Calgary edition, with no code.
+    # near the city. Named and keyed by the default region pack since V3.24
+    # (ED-3): "Calgary native" in a Calgary edition, with no code.
     Quality("local_native", f"{_home().short} native", "native_near",
             _around_tip(_home().key), _home().key),
     Quality("perennial_only", "Perennial", "perennial_only",
