@@ -320,7 +320,11 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "plant_priority.py", 380),             # 340 now
         (_SRC / "plant_page_sections.py", 250),        # 209 now
         # V3.27 (OV-1): what the overview measures, and its six items.
-        (_SRC / "yard_overview.py", 400),              # 341 now
+        (_SRC / "yard_overview.py", 400),              # 372 now (V3.28)
+        # Plan My Yard (V3.28): the fill to cover, and the dialog, which grew
+        # by its four states and its advanced half.
+        (_SRC / "plan_cover.py", 250),                 # 162 now
+        (_SRC / "generate_design_dialog.py", 600),     # 497 now
         (_SRC / "yard_overview_items.py", 480),        # 430 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
