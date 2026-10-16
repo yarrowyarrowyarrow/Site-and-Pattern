@@ -99,9 +99,9 @@ class ADesignIsNamedFromItsAddress(unittest.TestCase):
     def test_the_pin_handler_and_the_first_save_ask_it(self):
         import pathlib
         root = pathlib.Path(__file__).resolve().parent.parent / "src"
-        events = (root / "controllers" / "map_events.py").read_text("utf-8")
+        events = (root / "controllers" / "map_events.py").read_text(encoding="utf-8")
         self.assertIn("start_flow.name_from_pin", events)
-        persistence = (root / "controllers" / "persistence.py").read_text("utf-8")
+        persistence = (root / "controllers" / "persistence.py").read_text(encoding="utf-8")
         self.assertIn("ask_design_name", persistence)
         self.assertIn("is_placeholder", persistence)
 
@@ -139,8 +139,8 @@ class ADesignCanBeRenamed(_TempSaves):
     def test_file_menu_and_the_saves_list_offer_it(self):
         import pathlib
         root = pathlib.Path(__file__).resolve().parent.parent / "src"
-        self.assertIn("Rename Design", (root / "app.py").read_text("utf-8"))
-        self.assertIn("Rename…", (root / "saves_dialog.py").read_text("utf-8"))
+        self.assertIn("Rename Design", (root / "app.py").read_text(encoding="utf-8"))
+        self.assertIn("Rename…", (root / "saves_dialog.py").read_text(encoding="utf-8"))
 
 
 class UnsavedWorkIsKept(_TempSaves):
@@ -173,7 +173,7 @@ class UnsavedWorkIsKept(_TempSaves):
         import ast
         import pathlib
         src = (pathlib.Path(__file__).resolve().parent.parent / "src"
-               / "onboarding_flow.py").read_text("utf-8")
+               / "onboarding_flow.py").read_text(encoding="utf-8")
         fn = next(n for n in ast.walk(ast.parse(src))
                   if isinstance(n, ast.FunctionDef)
                   and n.name == "choose_start_action")
@@ -233,7 +233,7 @@ class OneWayToStartANewYard(unittest.TestCase):
     def test_file_new_asks_no_name(self):
         import pathlib
         app = (pathlib.Path(__file__).resolve().parent.parent / "src"
-               / "app.py").read_text("utf-8")
+               / "app.py").read_text(encoding="utf-8")
         self.assertNotIn('"Project name:"', app)
         self.assertIn("start_flow.start_new_yard(self)", app)
 
@@ -245,7 +245,7 @@ class TheExampleOpensAsACopy(unittest.TestCase):
         import ast
         import pathlib
         src = (pathlib.Path(__file__).resolve().parent.parent / "src"
-               / "onboarding_flow.py").read_text("utf-8")
+               / "onboarding_flow.py").read_text(encoding="utf-8")
         fn = next(n for n in ast.walk(ast.parse(src))
                   if isinstance(n, ast.FunctionDef) and n.name == "open_example")
         dump = ast.dump(fn)
@@ -326,7 +326,7 @@ class TheScreenCanBeRead(unittest.TestCase):
         import re
         import pathlib
         src = (pathlib.Path(__file__).resolve().parent.parent / "src"
-               / "start_screen.py").read_text("utf-8")
+               / "start_screen.py").read_text(encoding="utf-8")
         sizes = [int(n) for n in re.findall(r"font-size:\s*(\d+)px", src)]
         self.assertTrue(sizes)
         self.assertGreaterEqual(min(sizes), 12)
