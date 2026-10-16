@@ -47,8 +47,7 @@ ADVANCED_LETTERS = ("measure", "note")
 
 
 def letters(advanced=None) -> tuple:
-    """:data:`MAP_LETTERS` the current mode offers (``advanced`` defaults to
-    the remembered switch)."""
+    """:data:`MAP_LETTERS` the mode offers (default: the remembered switch)."""
     if advanced is None:
         from src import advanced_tools
         advanced = advanced_tools.is_on()
