@@ -314,6 +314,13 @@ class TheMapPageOffline(unittest.TestCase):
         self.assertEqual(len(corners), 4, corners)
         self.assertFalse(outline_check.crosses_itself(corners))
 
+    def test_the_closing_double_click_does_not_zoom(self):
+        """The owner, V3.23: a double-click that closed an outline also zoomed
+        the map, because Leaflet's own double-click zoom ran before the app's
+        handler. It zooms now only with no tool armed."""
+        # Who zoomed, by the mode at the time: only the no-tool double-click.
+        self.assertEqual(self.m["double_click_zooms"], ["none"])
+
     @unittest.skipUnless(outline_check._HAVE_SHAPELY, "shapely not installed")
     def test_a_corner_of_an_outline_from_a_file_drags_like_any_other(self):
         """QF-14, the review: on an outline opened from a file (or redrawn by

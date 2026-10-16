@@ -208,6 +208,23 @@ async function run() {
   click({ x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 });
   out.scale_click = { label: scaleLabel(), told: sent('onScaleUnitChanged') };
 
+  // The owner (V3.23): the double-click that closes an outline also zoomed.
+  // Counted as calls to the map's zoom, since headless Chromium runs no
+  // animation frames this late and an animated zoom never lands. On open
+  // ground: with a tool armed it must not zoom; with none it still does.
+  await settled();
+  w.map.setView([LAT, LNG], 18, { animate: false });
+  const zooms = [], zoomAround = w.map.setZoomAround;
+  w.map.setZoomAround = function () { zooms.push(w.currentMode); return zoomAround.apply(this, arguments); };
+  const open = at(LAT - D * 2, LNG + D * 5);
+  w.setMode('hedgerow');
+  click(open); click({ x: open.x + 80, y: open.y }); fire('dblclick', { x: open.x + 80, y: open.y });
+  w.setMode('none');
+  fire('dblclick', { x: open.x + 40, y: open.y + 60 });
+  w.map.setZoomAround = zoomAround;
+  out.double_click_zooms = zooms;
+  await settled();
+
   // QF-6 (the review): where the line sits, beside the scale bar and the map.
   w._showOffline(true);
   out.places = { line: box(w.document.getElementById('sp-offline')),

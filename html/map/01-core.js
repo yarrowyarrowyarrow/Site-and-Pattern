@@ -502,7 +502,8 @@
         zoomControl: true,
         zoomSnap: 0.1,
         zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
-        wheelPxPerZoomLevel: 60
+        wheelPxPerZoomLevel: 60,
+        doubleClickZoom: false    // onMapDblClick zooms, only with no tool (V3.23)
       });
 
       // ── The basemap, and why it is not CARTO any more (V2.80) ───────────
@@ -810,9 +811,14 @@
       boundaryHover(e);
     }
 
+    // Leaflet's own double-click zoom ran first, so the double-click that
+    // closes an outline also zoomed the map (the owner, V3.23). It is off;
+    // with no tool armed a double-click zooms as it did, by the scroll step.
     function onMapDblClick(e) {
       L.DomEvent.stop(e);
-      finishDrawing();
+      if (currentMode !== 'none') { finishDrawing(); return; }
+      var d = map.options.zoomDelta, o = e.originalEvent || {};
+      map.setZoomAround(e.containerPoint, map.getZoom() + (o.shiftKey ? -d : d));
     }
 
     // What a double-click finishes, and Shift+Enter on the map (V3.02,
