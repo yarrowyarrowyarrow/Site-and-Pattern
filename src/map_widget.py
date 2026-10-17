@@ -518,6 +518,11 @@ class MapWidget(QWebEngineView):
         # JS error / warning that fires during page load surfaces on
         # stderr instead of disappearing into the sandbox.
         self.setPage(_LoggingPage(self))
+        # The tiles say who is asking (V3.31, FN-6): OpenStreetMap's tile
+        # policy asks apps not to send a browser's default User-Agent. One
+        # string with the Python requests (http_utils.user_agent).
+        from src.http_utils import user_agent
+        self.page().profile().setHttpUserAgent(user_agent())
         # Catch render-subprocess crashes. When QtWebEngine's renderer
         # process dies (often during a canvas/GPU paint with bad input),
         # JS halts mid-tick — no errors, no heartbeat, map goes blank.

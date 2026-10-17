@@ -10,6 +10,37 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 
 ---
 
+## Get started
+
+### Download
+
+Download the newest installer from the [Releases page](https://github.com/yarrowyarrowyarrow/Site-and-Pattern/releases): **`SiteAndPattern-V…-Setup.exe`** for Windows 10 or 11, **`SiteAndPattern-V….dmg`** for macOS 11 Big Sur or newer. The app is free and needs no account.
+
+The installers are not code-signed, so the first launch shows a warning once:
+
+- **Windows:** SmartScreen says *"Windows protected your PC"*. Click **More info**, then **Run anyway**. Then follow the installer.
+- **macOS:** open the `.dmg` and drag **Site & Pattern** onto **Applications**. Double-click it once; macOS blocks it. Then open the Apple menu → **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (On macOS 11 to 14, right-click the app → **Open** → **Open** also works.) On Apple Silicon, click Install if macOS offers Rosetta.
+
+After that it opens normally, and **Help → Check for Updates** installs new versions.
+
+### Your first yard, in five steps
+
+1. **Find your yard.** On the **Site** tab, type your address and press **Find**, or press **Click my yard on the map** and click it.
+2. **Outline a bed.** Press **▱ Shape** above the map, choose *Garden Bed*, press **Draw on the map**, click the bed's corners and click the first corner again to close it.
+3. **Plan my yard.** Press **Plan my yard** in the strip above the map. It fills the bed with plants native to your area, and **Try another** gives a different plan.
+4. **Look at the overview.** **Design → Overview** says what the plan feeds, when it flowers, how full it is and what it will take.
+5. **Print the plan.** **Share → Export → Export PDF…** gives the overview, the ground preparation, a shopping list, a planting map and a care calendar.
+
+The same five steps open from **Help → How to Plan Your Yard**. The rest of the tools wait behind **View → Advanced tools**.
+
+**It is not an identification guide.** The photographs and descriptions help you choose what to plant; check a plant's identity with a book or a person before you collect it from the wild or eat it.
+
+**What leaves your computer.** The address you type goes to OpenStreetMap's address search when you press Find. Your yard's location goes to Open-Meteo and SoilGrids for its climate and soil, and the map's tile servers see the part of the map on screen. When you ask, a box around your yard goes to Overpass, Natural Resources Canada or the City of Edmonton. Nothing else leaves: no account, no analytics. **Help → About** says the same, and **Help → Where This Data Came From** credits every service.
+
+**Feedback.** **Help → Send Feedback…** copies your message, ready to email, with no account needed; or [open an issue](https://github.com/yarrowyarrowyarrow/Site-and-Pattern/issues/new) if you have a GitHub account.
+
+---
+
 ## Features
 
 - **Site analysis overlays** — sun, wind, water, and other site condition mapping
@@ -37,7 +68,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 
 ## Installation
 
-> **One-click installer**: A standalone Windows installer is available — see [INSTALL.md](INSTALL.md) for details. The instructions below are for installing from source.
+> **Installers** for Windows and macOS are on the [Releases page](https://github.com/yarrowyarrowyarrow/Site-and-Pattern/releases); [Get started](#get-started) says what the first launch looks like, and [INSTALL.md](INSTALL.md) has the details. The instructions below are for installing from source.
 
 ### From source
 
@@ -225,6 +256,7 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 - [`docs/3D_ASSETS.md`](docs/3D_ASSETS.md) — Blender-generated GLB assets for the 3D viewer: the `scripts/blender/assetlib` generator package (headless + Blender-MCP workflows), the generator↔viewer contract, and regeneration
 - [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
 - [`LICENSE`](LICENSE) — GNU General Public License, version 3
+- [`THIRD_PARTY_NOTICES.txt`](THIRD_PARTY_NOTICES.txt) — the licences of Qt, PyQt6, Python, Leaflet, three.js and the other software the installer carries
 
 ---
 
@@ -268,4 +300,4 @@ Site & Pattern was developed with significant assistance from AI coding tools.
 
 ## Contact
 
-For questions, bug reports, or feature suggestions, open an issue on this repository.
+For questions, bug reports, or feature suggestions, use **Help → Send Feedback…** in the app, or open an issue on this repository.

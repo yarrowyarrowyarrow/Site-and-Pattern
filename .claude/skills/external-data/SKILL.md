@@ -42,8 +42,12 @@ tests can monkeypatch `<module>._http_get_json`* — the real logic stays in one
 place. Mirror that: add a `_http_get_json` alias in your module and call it, so
 your tests have a seam.
 
-The User-Agent deliberately keeps the pre-rebrand string
-(`"PermaDesign/1.0 ..."`) — see CLAUDE.md; don't "fix" it to Site & Pattern.
+The User-Agent is one string, `http_utils.user_agent()`
+(`SiteAndPattern/<version> (+repo URL)`), sent by every Python request and by
+the map's tiles (V3.31, FN-6). It kept the pre-rebrand `PermaDesign/1.0` until
+then "for providers' allow-lists", but no provider has an entry for it. Import
+`_USER_AGENT` from `http_utils`; never write a copy. A new host goes in
+`src/services.py` with its credit, or `tests/test_services.py` fails.
 
 ### Timeout discipline
 

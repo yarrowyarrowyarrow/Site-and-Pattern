@@ -34,7 +34,7 @@ from src.pond_planting import seat_water, split_water
 
 DEFAULT_ENDPOINT = "http://localhost:11434/v1"
 DEFAULT_MODEL = "llama3.2"
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
 _TIMEOUT = 120.0
 # Grid cell size (metres) between placed items in the generated layout. Wide
 # enough that adjacent communities don't overlap; the user fine-tunes after.

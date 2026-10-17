@@ -85,8 +85,8 @@ chat-completions endpoint; the default is **local Ollama**
 with stdlib `urllib` only. Resolution order for endpoint/model:
 explicit arg → `PERMADESIGN_LLM_ENDPOINT`/`PERMADESIGN_LLM_MODEL` env →
 `~/.permadesign_config.json` via `src/settings.py` (`llm_endpoint` /
-`llm_model`) → built-in default. Timeout 120 s. The User-Agent keeps the
-legacy `PermaDesign/1.0` string on purpose (see `legacy-lessons`).
+`llm_model`) → built-in default. Timeout 120 s. The User-Agent is
+`http_utils.user_agent()`, the app's one identity (V3.31).
 
 Spec safety rails, in order of defence:
 - `_parse_spec_json` tolerates markdown fences / prose around the JSON.

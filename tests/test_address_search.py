@@ -42,6 +42,20 @@ _PLACE = {"lat": "53.5232", "lon": "-113.4935", "importance": 0.4,
           "address": {"state": "Alberta", "house_number": "10423"}}
 
 
+
+def setUpModule():
+    """These tests ask the same addresses with different replies; the cache
+    (FN-6, V3.31) would answer the second from the first."""
+    global _SIZE
+    _SIZE = property_data._GEOCODE_CACHE_SIZE
+    property_data._GEOCODE_CACHE_SIZE = 0
+    property_data.clear_geocode_cache()
+
+
+def tearDownModule():
+    property_data._GEOCODE_CACHE_SIZE = _SIZE
+
+
 class TestTheTwoAnswers(unittest.TestCase):
     """``geocode_address``: ``None`` when it could not ask, ``[]`` when it
     asked and nothing matched."""

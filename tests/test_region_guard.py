@@ -44,6 +44,7 @@ ALLOWED = {
     "terrain.py": "the City of Edmonton contour dataset",
     "terrain_store.py": "the edmonton_tiles table in users' terrain.db",
     "terrain_downloader.py": "the City of Edmonton contour dataset",
+    "services.py": "the City of Edmonton's open data, credited by name",
     "db/polycultures.py": "seeded community names, pending E9",
     "ecoregion_basemap.py": "the basemap's city dots",
     "vocabulary.py": "the glossary's own words (09-words.md §2)",

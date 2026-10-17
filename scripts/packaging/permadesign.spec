@@ -53,6 +53,9 @@ _datas = _tree('data') + _tree('html') + [
     # receives the program receives the licence with it, and Help › About
     # points to this file.
     (os.path.join(_ROOT, 'LICENSE'), '.'),
+    # The licences of what ships with it (V3.31, FN-2), written by
+    # scripts/write_third_party_notices.py.
+    (os.path.join(_ROOT, 'THIRD_PARTY_NOTICES.txt'), '.'),
 ]
 
 # The app's icon (F232, V3.17), made by scripts/packaging/make_app_icon.py.
@@ -66,6 +69,10 @@ _ICON_MAC = os.path.join(_ROOT, 'assets', 'icon', 'site_and_pattern.icns')
 # absent in a plain source checkout, so only bundle it when present.
 if os.path.exists(os.path.join(_ROOT, 'version.txt')):
     _datas.append((os.path.join(_ROOT, 'version.txt'), '.'))
+# build-versions.txt (V3.31, FN-12): what the build scripts installed, so an
+# installer says which libraries it carries. Written beside version.txt.
+if os.path.exists(os.path.join(_ROOT, 'build-versions.txt')):
+    _datas.append((os.path.join(_ROOT, 'build-versions.txt'), '.'))
 
 a = Analysis(
     [os.path.join(_ROOT, 'main.py')],

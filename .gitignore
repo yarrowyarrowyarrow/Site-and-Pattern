@@ -28,6 +28,7 @@ data/usda_plants_raw.txt
 # Build-time version stamp (written by build_installer.sh/.bat for the
 # frozen app's in-app updater; regenerated on every build)
 version.txt
+build-versions.txt
 
 # Editor / OS
 .idea/

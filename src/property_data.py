@@ -638,6 +638,15 @@ _SEARCH_PROVINCES = {"Alberta", "Saskatchewan"}
 _SEARCH_ISO = {"CA-AB", "CA-SK"}
 
 
+#: Address searches answered this run, by request (FN-6): ``{url: reply}``.
+_GEOCODE_CACHE: dict = {}
+_GEOCODE_CACHE_SIZE = 64
+
+
+def clear_geocode_cache() -> None:
+    _GEOCODE_CACHE.clear()
+
+
 def geocode_address(query: str, limit: int = 6,
                     *, near: "tuple[float, float] | None" = None,
                     radius_km: float = 50.0) -> "list[dict] | None":
@@ -719,7 +728,15 @@ def geocode_address(query: str, limit: int = 6,
         **extra_params,
     })
     url = "https://nominatim.openstreetmap.org/search?" + params
-    data = _http_get_json(url)
+    # One request per query (V3.31, FN-6): Nominatim's usage policy asks for
+    # no repeated or autocomplete queries, so an answer is kept for the run.
+    data = _GEOCODE_CACHE.get(url)
+    if data is None:
+        data = _http_get_json(url)
+        if isinstance(data, list) and _GEOCODE_CACHE_SIZE:
+            if len(_GEOCODE_CACHE) >= _GEOCODE_CACHE_SIZE:
+                _GEOCODE_CACHE.pop(next(iter(_GEOCODE_CACHE)))
+            _GEOCODE_CACHE[url] = data
     if not isinstance(data, list):
         return None             # not reached, or not an answer (QF-3)
 

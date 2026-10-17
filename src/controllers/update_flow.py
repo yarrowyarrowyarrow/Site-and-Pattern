@@ -165,6 +165,7 @@ class UpdateFlowController:
             f"Native-plant landscape designer for Alberta and the "
             f"Canadian prairies.<br><br>"
             f"{about_licence_line()}<br><br>{ID_LINE}"   # WD-8 (V3.26)
+            f"<br><br>{_privacy()}"                     # FN-5 (V3.31)
             + kind_note
         )
 
@@ -750,3 +751,9 @@ class UpdateFlowController:
 
     def _open_releases_page(self):
         QDesktopServices.openUrl(QUrl(_REPO_RELEASES_URL))
+
+
+def _privacy() -> str:
+    """About's paragraph on what leaves the computer (V3.31, FN-5)."""
+    from src.services import PRIVACY
+    return PRIVACY

@@ -431,7 +431,6 @@ class SitePanel(QWidget):
         self._worker: Optional[_SiteFetchWorker] = None
         self._geo_thread: Optional[QThread] = None
         self._geo_worker: Optional[_GeocodeWorker] = None
-        self._geo_debounce: Optional[QTimer] = None
         self._auto_color = "#44cc00"
         self._contour_color = "#795548"
         # Map widget reference, set by MainWindow via attach_map_widget().
@@ -2525,21 +2524,12 @@ class SitePanel(QWidget):
     # ── Address search (Nominatim) ─────────────────────────────────────────
 
     def _on_address_text_changed(self, text: str):
-        """Debounced typeahead — fire a geocode after 350 ms of idle."""
-        # Cancel any pending debounce timer.
-        if self._geo_debounce is None:
-            self._geo_debounce = QTimer(self)
-            self._geo_debounce.setSingleShot(True)
-            self._geo_debounce.timeout.connect(self._on_address_search_typeahead)
-        self._geo_debounce.stop()
+        """Typing searches nothing (V3.31, FN-6): OpenStreetMap's address
+        search asks apps not to query as people type, so the search runs on
+        Enter or Find. A cleared box clears the matches."""
         if len((text or "").strip()) < 3:
             self._addr_results.clear()
             self._addr_results.setVisible(False)
-            return
-        self._geo_debounce.start(350)
-
-    def _on_address_search_typeahead(self):
-        self._run_geocode(self._addr_input.text())
 
     def _on_address_search(self):
         # Manual submit (Enter / Find) — show "Searching…" feedback.

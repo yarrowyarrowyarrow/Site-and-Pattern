@@ -29,6 +29,13 @@ fi
 echo -e "${YELLOW}Installing build dependencies...${NC}"
 pip install -q pyinstaller
 
+# Record what this build was made with (V3.31, FN-12): pip runs quietly, so
+# until V3.31 no log said which PyQt6 or numpy went into an installer. The
+# file ships in the bundle and is printed into the build log.
+pip freeze > build-versions.txt
+pip --version >> build-versions.txt
+cat build-versions.txt
+
 # Bake the version into the bundle so the frozen app knows which
 # V<major>.<minor> it is for the in-app updater (src/app_version.py). CI
 # passes APP_BUILD_VERSION (the branch/tag); locally we read the git branch.

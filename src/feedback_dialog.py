@@ -11,17 +11,24 @@ Renders only; every decision about what a report contains lives in the Qt-free
     problem as a defect still has something worth hearing.
   * The diagnostics are shown in full, in a read-only box, before the checkbox
     that attaches them. Nothing leaves the machine that the user has not read.
+  * No account is needed (FN-8, V3.31): the edition's address is shown to copy,
+    *Copy message* puts the whole report on the clipboard, and *Report it on
+    GitHub* is the second way. With no address named, GitHub and the copy are
+    what is offered.
 """
 
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QPlainTextEdit,
-    QPushButton, QVBoxLayout,
+    QApplication, QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
+    QPlainTextEdit, QPushButton, QVBoxLayout,
 )
 
-from src.feedback import CATEGORIES, category, format_diagnostics
+from src.feedback import CATEGORIES, category, email_text, format_diagnostics
+
+#: The ways a report leaves, as :meth:`FeedbackDialog.way` reports them.
+EMAIL, GITHUB = "email", "github"
 
 _CAT_STYLE = """
 QPushButton {
@@ -38,12 +45,18 @@ QPushButton:checked {
 class FeedbackDialog(QDialog):
     """Collects a category + a message, and optionally the setup details."""
 
-    def __init__(self, diagnostics: dict | None = None, parent=None):
+    def __init__(self, diagnostics: dict | None = None, parent=None,
+                 address: str | None = None):
         super().__init__(parent)
         self.setWindowTitle("Send Feedback")
         self.setMinimumWidth(460)
         self._diag = diagnostics or {}
         self._key = CATEGORIES[0][0]
+        if address is None:
+            from src.region import feedback_address
+            address = feedback_address()
+        self._address = address
+        self._way = ""
         self._build()
 
     def _build(self):
@@ -99,19 +112,50 @@ class FeedbackDialog(QDialog):
             Qt.TextInteractionFlag.TextSelectableByMouse)
         root.addWidget(self._diag_box)
 
-        note = QLabel(
-            "Opens a prefilled report in your browser — you can read and edit it "
-            "before posting. Nothing is sent from the app itself.")
+        if self._address:
+            where = QLabel(f"Email it to <b>{self._address}</b>: no account "
+                           "needed. <i>Copy message</i> copies everything "
+                           "above, ready to paste.")
+        else:
+            where = QLabel("<i>Copy message</i> copies everything above, "
+                           "ready to paste into an email or a message.")
+        where.setWordWrap(True)
+        where.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        where.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+        self._where = where
+        root.addWidget(where)
+
+        ways = QHBoxLayout()
+        self._copy = QPushButton("Copy message")
+        self._copy.clicked.connect(self._copy_message)
+        ways.addWidget(self._copy)
+        self._email = QPushButton("Open in my email…")
+        self._email.setToolTip(
+            "Opens your email program with the message filled in. If nothing "
+            "opens, copy the message and send it to the address above.")
+        self._email.clicked.connect(lambda: self._send(EMAIL))
+        self._email.setVisible(bool(self._address))
+        ways.addWidget(self._email)
+        self._github = QPushButton("Report it on GitHub…")
+        self._github.setToolTip(
+            "Opens a prefilled report in your browser, which you can read and "
+            "edit before posting. Needs a GitHub account.")
+        self._github.clicked.connect(lambda: self._send(GITHUB))
+        ways.addWidget(self._github)
+        ways.addStretch(1)
+        root.addLayout(ways)
+
+        self._copied = QLabel("")
+        self._copied.setStyleSheet("color: #a5d6a7; font-size: 12px;")
+        root.addWidget(self._copied)
+
+        note = QLabel("Nothing is sent from the app itself.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         root.addWidget(note)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel)
-        self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
-        self._ok.setText("Review and send…")
-        buttons.accepted.connect(self.accept)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
@@ -131,11 +175,35 @@ class FeedbackDialog(QDialog):
         self._diag_box.setVisible(self._attach.isChecked())
 
     def _sync_ok(self):
-        # Nothing to send is not a report; keep the button honest rather than
+        # Nothing to send is not a report; keep the buttons honest rather than
         # opening a browser on an empty issue.
-        self._ok.setEnabled(bool(self._text.toPlainText().strip()))
+        has = bool(self._text.toPlainText().strip())
+        for btn in (self._copy, self._email, self._github):
+            btn.setEnabled(has)
+        self._copied.setText("")
+
+    def copy_text(self) -> str:
+        return email_text(self._key, self.message(),
+                          self._diag if self.wants_diagnostics() else None)
+
+    def _copy_message(self):
+        QApplication.clipboard().setText(self.copy_text())
+        self._copied.setText(
+            f"Copied. Paste it into an email to {self._address}."
+            if self._address else "Copied.")
+
+    def _send(self, way: str):
+        self._way = way
+        self.accept()
 
     # ── results ──────────────────────────────────────────────────────────────
+
+    def way(self) -> str:
+        """``"email"`` or ``"github"``: how the person chose to send it."""
+        return self._way
+
+    def address(self) -> str:
+        return self._address
 
     def category_key(self) -> str:
         return self._key

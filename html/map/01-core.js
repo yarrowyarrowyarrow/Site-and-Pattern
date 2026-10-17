@@ -525,7 +525,11 @@
       var BASEMAPS = [
         { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
                'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-          opts: { attribution: '© <a href="https://www.esri.com/">Esri</a>',
+          // D4 (V3.31): Esri asks for "Powered by Esri" and the data's
+          // sources on any map showing its basemaps.
+          opts: { attribution: 'Powered by <a href="https://www.esri.com/">Esri</a> | ' +
+                               'Esri and its data partners, © OpenStreetMap contributors, ' +
+                               'and the GIS User Community',
                   maxZoom: 22, maxNativeZoom: 19 } },
         { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           opts: { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -588,7 +592,9 @@
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 24, maxNativeZoom: 19,
+        { attribution: 'Powered by <a href="https://www.esri.com/">Esri</a> | ' +
+                       'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+          maxZoom: 24, maxNativeZoom: 19,
           pane: 'satellitePane' }
       );
       watchBaseTiles(satelliteLayer, null);

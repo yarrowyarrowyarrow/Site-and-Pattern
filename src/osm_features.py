@@ -35,7 +35,7 @@ import urllib.request
 from typing import Optional
 
 _TIMEOUT = 25.0
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
 # Public Overpass instance; the app degrades gracefully if it's unreachable.
 _OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 # Primary + fallback mirror. The public primary rate-limits per-IP hard —

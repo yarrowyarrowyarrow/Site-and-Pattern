@@ -15,6 +15,11 @@ Two deliberate choices:
     liking something, not only breakage. Most of what a first user knows is not
     a defect report, and a form that only accepts defects collects only defects
     — which is exactly the feedback a design tool least needs.
+  * **No account needed (FN-8, V3.31).** A GitHub issue needs a GitHub
+    account most people do not have, so the dialog also shows an address to
+    copy (``region.feedback_address``, the edition's mailbox) and copies the
+    whole message, details included, for any email program. GitHub stays the
+    second way.
   * **Nothing is sent silently.** The submission is a prefilled URL the user
     opens and reviews before posting. Diagnostics are opt-in and shown in full
     first. An app that mails home about its user without showing them what it
@@ -117,3 +122,28 @@ def issue_url(key: str, message: str, diag: dict | None = None,
         "labels": issue_label,
     })
     return f"https://github.com/{repo}/issues/new?{query}"
+
+
+def email_subject(key: str, message: str) -> str:
+    return "Site & Pattern: " + build_title(key, message)
+
+
+def email_text(key: str, message: str, diag: dict | None = None) -> str:
+    """What *Copy message* puts on the clipboard: the subject on the first
+    line, then the body, so a paste into any email says everything."""
+    return (f"Subject: {email_subject(key, message)}\n\n"
+            f"{build_body(message, diag)}\n")
+
+
+def mailto_url(address: str, key: str, message: str,
+               diag: dict | None = None) -> str:
+    """A ``mailto:`` link with the subject and body filled in, or ``""`` with
+    no address. A convenience only: the address shown is the thing, because a
+    computer with no email program set up opens nothing."""
+    if not address:
+        return ""
+    query = urllib.parse.urlencode(
+        {"subject": email_subject(key, message),
+         "body": build_body(message, diag)},
+        quote_via=urllib.parse.quote)
+    return f"mailto:{address}?{query}"

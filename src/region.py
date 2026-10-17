@@ -181,6 +181,15 @@ def _edition() -> dict:
         return {}
 
 
+def feedback_address() -> str:
+    """The address *Send Feedback* shows (FN-8, V3.31): ``data/edition.json``'s
+    ``feedback_email``, a mailbox kept for the app and never a person's own.
+    ``""`` until the owner names one, and the dialog then offers GitHub and
+    the copied message only."""
+    address = str(_edition().get("feedback_email") or "").strip()
+    return address if "@" in address and " " not in address else ""
+
+
 def default() -> Region:
     """The pack the app uses before a pin exists (``data/edition.json``)."""
     packs = regions()

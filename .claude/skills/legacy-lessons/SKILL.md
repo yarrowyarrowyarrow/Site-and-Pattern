@@ -192,7 +192,6 @@ or someone when "fixed" naively):
 | DB filename `permadesign.db` | Renaming it orphans every existing install's data. |
 | `src/permadesign_api.py`, CLI prog, MCP server name | Frozen public contract — renaming breaks every agent/script (see `agent-api`). |
 | QSettings org/app name | Renaming silently resets all user preferences. |
-| HTTP User-Agent (`src/http_utils.py`) | Stable identity for API providers' allow/rate lists. |
 | `~/.permadesign_config.json` | Existing users' LLM endpoint config. |
 
 The data *folder* did migrate (`PermaDesign` → `Site & Pattern`, once,
