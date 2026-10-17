@@ -752,7 +752,14 @@ class TestMainWindowSmoke(unittest.TestCase):
         area = sp.info_page
         self.assertIsInstance(area, QScrollArea)
         self.assertEqual(sp._lbl_label.text(), address)
-        self.assertTrue(sp._btn_browse_comms.isVisibleTo(area))
+        # The communities link is under Details and advanced-only since
+        # V3.30 (WD-2): open Details, and the link shows with the switch on.
+        sp._details_btn.setChecked(True)
+        self.addCleanup(sp._details_btn.setChecked, False)
+        self._app.processEvents()
+        from src import advanced_tools
+        self.assertEqual(sp._btn_browse_comms.isVisibleTo(area),
+                         advanced_tools.is_on())
         widths = [("filled", area.widget().minimumSizeHint().width())]
         sp._on_ecoregion({"keys": ["aspen_parkland", "boreal_transition"],
                           "label": "Aspen Parkland (central AB / SK) + "

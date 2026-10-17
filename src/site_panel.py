@@ -103,8 +103,10 @@ def _wrap_form_values(page: QWidget) -> None:
 # restores the normal value colour.
 _DASH = "<span style='color:#90a4ae;'>—</span>"
 #: What the four lines and the sellers say before there is a pin (V3.30).
-SUMMARY_EMPTY = "Find your yard to see its cold, rain and soil here."
-NURSERIES_EMPTY = "Find your yard to list native plant sellers near you."
+#: Not an instruction: the strip says how (R26), so these say what will come.
+SUMMARY_EMPTY = "Your yard's cold, rain and soil show here once it is found."
+NURSERIES_EMPTY = ("Native plant sellers near your yard show here once it is "
+                   "found.")
 
 
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
@@ -581,7 +583,12 @@ class SitePanel(QWidget):
             "Then click your yard on the map to put its pin there.")
         self._btn_drop.setStyleSheet(_BTN_PRIMARY)
         self._btn_drop.clicked.connect(self.pin_drop_requested.emit)
-        btn_row.addWidget(self._btn_drop)
+        # A row of its own (V3.30): beside Refresh and Clear its longer words
+        # pushed Site Info 13 px past the panel in CI's DejaVu Sans.
+        drop_row = QHBoxLayout()
+        drop_row.addWidget(self._btn_drop)
+        drop_row.addStretch(1)
+        pin_layout.addLayout(drop_row)
 
         self._btn_refresh = QPushButton("Refresh data")
         self._btn_refresh.setToolTip(
