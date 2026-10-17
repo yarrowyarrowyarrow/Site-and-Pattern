@@ -126,10 +126,11 @@ def export_pdf(
         site_config = project.get("properties", {}).get("site_config")
         place = place_line(site_config)
         try:
-            from src.planting_plan import sources_near
+            from src.planting_plan import buy_heading, sources_near
             sources = sources_near(site_config)
+            heading = buy_heading(site_config)
         except Exception:                                  # noqa: BLE001
-            sources = []
+            sources, heading = [], "Where to buy"
         y = _draw_title_block(painter, w, project_name, zone, created, dpi_scale,
                               place=place)
 
@@ -231,10 +232,11 @@ def export_pdf(
         except Exception:
             plan = None
         if plan is not None:
-            _draw_planting_plan(painter, w, h, plan, dpi_scale, sources=sources)
+            _draw_planting_plan(painter, w, h, plan, dpi_scale, sources=sources,
+                                heading=heading)
         else:
             _draw_plant_list(painter, w, h, placed_plants, dpi_scale,
-                             sources=sources)
+                             sources=sources, heading=heading)
 
         # ── Page 4: The numbered planting map (F41) ───────────────────────
         # A scale drawing, not the satellite capture on page 1: this is the
@@ -433,7 +435,8 @@ def _draw_overview(painter: QPainter, printer, w: float, h: float, y: float,
 
 
 def _draw_plant_list(painter: QPainter, w: float, h: float,
-                     plants: list[dict], s: float, sources=None) -> float:
+                     plants: list[dict], s: float, sources=None,
+                     heading: str = "Where to buy") -> float:
     """Draw a detailed plant list table. Returns final Y."""
     # Title
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor(BAR))
@@ -504,13 +507,13 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
 
     # Where to buy: the same directory list the order file reads (EDF-1).
     if y < h - 50 * s:
-        y = _draw_sources(painter, w, h, y + 14 * s, s, sources)
+        y = _draw_sources(painter, w, h, y + 14 * s, s, sources, heading)
 
     return y
 
 
 def _draw_sources(painter: QPainter, w: float, h: float, y: float, s: float,
-                  sources) -> float:
+                  sources, heading: str = "Where to buy") -> float:
     """The suppliers nearest the design's pin (V3.18, EDF-1), or a line saying
     to set the pin. Until V3.18 this printed four Calgary-area names, two of
     them in no directory, whatever the yard. Returns the Y after it."""
@@ -519,8 +522,7 @@ def _draw_sources(painter: QPainter, w: float, h: float, y: float, s: float,
     painter.setPen(QColor(HEAD))
     painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                      Qt.AlignmentFlag.AlignLeft,
-                     "Native plant nurseries and seed sources near your yard"
-                     if sources else "Where to buy")
+                     heading if sources else "Where to buy")
     y += 13 * s
     painter.setFont(_font(7 * s))
     painter.setPen(QColor(MUTED))
@@ -552,7 +554,7 @@ def _wrap(text: str, width: int) -> list[str]:
 
 
 def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float,
-                        sources=None) -> float:
+                        sources=None, heading: str = "Where to buy") -> float:
     """Draw the buy-it / plant-it Planting Plan page (F40): species grouped by
     nursery source with form / qty / spacing / when / price, then a phased
     planting schedule and the nursery footer. Returns final Y."""
@@ -647,7 +649,7 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float,
 
     # Where to buy: the same directory list the order file reads (EDF-1).
     if y < h - 45 * s:
-        y = _draw_sources(painter, w, h, y + 6 * s, s, sources)
+        y = _draw_sources(painter, w, h, y + 6 * s, s, sources, heading)
 
     return y
 

@@ -340,3 +340,37 @@ class TestTheFirstPageIsTheOverview(unittest.TestCase):
         cost = next(it for it in yi.overview(project) if it.key == "cost")
         self.assertIn(cost.lines[0].split(" for ")[0], flat)
         self.assertNotIn("Habitat Value Score", flat)
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestThePrintoutSaysWhereToBuy(unittest.TestCase):
+    """WD-5 (V3.30): the printout says Where to buy around Edmonton."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="permadesign_pdf_buy_")
+        import src.db.plants as plants_mod
+        plants_mod._DATA_DIR = cls._tmp
+        plants_mod._DB_PATH = os.path.join(cls._tmp, "t.db")
+        plants_mod.init_db()
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def test_where_to_buy_around_edmonton(self):
+        import shutil
+        import subprocess
+        if not shutil.which("pdftotext"):
+            self.skipTest("pdftotext not installed")
+        from src.onboarding import build_example_project
+        from src.pdf_export import export_pdf
+        from src.project_store import ProjectStore
+        project, _missing = build_example_project()
+        placed = list(ProjectStore(project).placed_plants)
+        out = os.path.join(self._tmp, "buy.pdf")
+        export_pdf(out, project, placed, [], notes="")
+        flat = " ".join(subprocess.run(
+            ["pdftotext", "-layout", out, "-"], capture_output=True,
+            text=True, encoding="utf-8").stdout.split())
+        self.assertIn("Where to buy around Edmonton", flat)
+        for gone in ("seed sources near your yard", "AB retail"):
+            self.assertNotIn(gone, flat)

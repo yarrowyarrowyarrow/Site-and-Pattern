@@ -131,7 +131,7 @@ def detect_trees_for_site(main) -> None:
     bbox, area_note = bbox_with_area_note(boundary, sc,
                                           pad_m=max(30.0, margin))
     if bbox is None:
-        main.site_panel.set_osm_status("Drop a pin or draw a boundary first.")
+        main.site_panel.set_osm_status("Find your yard or outline it first.")
         return
     main.site_panel.set_osm_status(
         "Detecting trees from the canopy-height map… (~10–30 s)")

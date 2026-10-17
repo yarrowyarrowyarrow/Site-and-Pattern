@@ -67,6 +67,38 @@ NO_PIN_SOURCES = ("Set your yard's pin to list the native plant nurseries "
                   "and seed sources near you.")
 
 
+def _pack(site_config):
+    from src import region
+    sc = site_config or {}
+    if sc.get("latitude") is None or sc.get("longitude") is None:
+        return None
+    return region.at(sc["latitude"], sc["longitude"])
+
+
+def buy_heading(site_config) -> str:
+    """"Where to buy around Edmonton" inside a region pack, else "Where to
+    buy near your yard" (V3.30, WD-5): the printout's and the order file's
+    heading over the sellers."""
+    pack = _pack(site_config)
+    return (f"Where to buy around {pack.short}" if pack is not None
+            else "Where to buy near your yard")
+
+
+def price_words(site_config) -> str:
+    """What a cost range is: "at Edmonton native nurseries" from the pack
+    (OV-13), else "an estimate", with the caveat that prices vary."""
+    # The pin's pack, or the default with no pin, as the Overview reads it;
+    # a pin outside every pack names no nurseries.
+    pack = _pack(site_config)
+    if pack is None and (site_config or {}).get("latitude") is None:
+        from src import region
+        pack = region.default()
+    note = ((getattr(pack, "overview", None) or {}).get("price_note")
+            or "").strip() if pack is not None else ""
+    return ((f"an estimate {note}" if note else "an estimate")
+            + "; prices vary by nursery and year")
+
+
 def sources_near(site_config, limit: int = 6) -> list:
     """``[(name, how to reach it, web address), ...]`` for the native-plant
     suppliers nearest the design's pin, from the nursery directory
@@ -351,7 +383,8 @@ def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0
     )
 
 
-def render_plan_text(plan: PlantingPlan, sources=None) -> str:
+def render_plan_text(plan: PlantingPlan, sources=None,
+                     site_config=None) -> str:
     """Render a :class:`PlantingPlan` as the plain-text export (buy list +
     phased planting schedule + where to buy). ``sources`` is
     :func:`sources_near` for the design's pin; ``None`` or ``[]`` says to set
@@ -407,7 +440,7 @@ def render_plan_text(plan: PlantingPlan, sources=None) -> str:
         lines.append(f"Mulch:            {fc(plan.mulch_low, plan.mulch_high)}")
     lines.append(
         f"ESTIMATED TOTAL:  {fc(plan.grand_low, plan.grand_high)}  "
-        f"(AB retail/install estimate — varies by nursery, year, site)"
+        f"({price_words(site_config)})"
     )
     lines.append("")
 
@@ -423,7 +456,7 @@ def render_plan_text(plan: PlantingPlan, sources=None) -> str:
         lines.append("")
 
     if sources:
-        lines.append("Native plant nurseries and seed sources near your yard:")
+        lines.append(buy_heading(site_config) + ":")
         for nm, where, url in sources:
             line = f"  • {nm}"
             if where:

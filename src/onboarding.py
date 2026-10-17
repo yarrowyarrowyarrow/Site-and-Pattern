@@ -60,19 +60,16 @@ STEPS: tuple[dict, ...] = (
         # things about the same step.
         "short": "Find your yard",
         "title": "Find your yard",
-        "detail": "Search your address in the Site tab, or click "
-                  "“Use Pin Drop…” and click your yard on the "
-                  "map. This is what fetches your climate, soil and frost "
-                  "dates.",
+        # V3.30 (WD-2): the words of 09-words.md §3.1.
+        "detail": "Type your address, or click your yard on the map.",
     },
     {
         # V3.28 (PY-10): a bed is enough. The whole yard, or just the beds.
         "key": "boundary",
         "short": "Outline where to plant",
         "title": "Outline where to plant",
-        "detail": "Draw → ⬡ Boundary around your whole yard, or Draw › "
-                  "Shape → Garden Bed around just the beds. Click the first "
-                  "point again to close it.",
+        "detail": "Click around your yard, or around one bed. Click the "
+                  "first point again to finish.",
     },
     {
         "key": "plants",
@@ -80,9 +77,7 @@ STEPS: tuple[dict, ...] = (
         # V2.41 put the manual path first; V3.28 (PY-10) names both, the plan
         # first, because the strip's button is the plan.
         "title": "Plan it, or pick plants yourself",
-        "detail": "Plan my yard asks a few questions and plants where you "
-                  "outlined. Or pick plants from the Placement tab and click "
-                  "to place them.",
+        "detail": "Plan my yard suggests a planting you can change.",
     },
 )
 

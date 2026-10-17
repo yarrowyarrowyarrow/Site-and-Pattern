@@ -18,6 +18,8 @@ return ``None`` from the fetcher and the corresponding row shows
 
 from __future__ import annotations
 
+import html
+
 import time
 from typing import Optional
 
@@ -100,6 +102,9 @@ def _wrap_form_values(page: QWidget) -> None:
 # the rich-text span; handlers later call setText() with plain strings, which
 # restores the normal value colour.
 _DASH = "<span style='color:#90a4ae;'>—</span>"
+#: What the four lines and the sellers say before there is a pin (V3.30).
+SUMMARY_EMPTY = "Find your yard to see its cold, rain and soil here."
+NURSERIES_EMPTY = "Find your yard to list native plant sellers near you."
 
 
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
@@ -515,7 +520,7 @@ class SitePanel(QWidget):
         # instruction three times on one screen (R26). The strip says it.
 
         # ── Property pin (with address search) ───────────────────────
-        pin_box = QGroupBox("Property pin")
+        pin_box = QGroupBox("Your yard")
         pin_box.setStyleSheet(_GROUP_STYLE)
         pin_layout = QVBoxLayout(pin_box)
         pin_layout.setSpacing(6)
@@ -540,10 +545,7 @@ class SitePanel(QWidget):
         search_row.addWidget(self._addr_input, 1)
 
         self._btn_search = QPushButton("Find")
-        self._btn_search.setToolTip(
-            "Look the address up and list matches below — click one to drop\n"
-            "the property pin there. No internet? Use “Use Pin Drop…” instead."
-        )
+        self._btn_search.setToolTip("Find this address on the map.")
         self._btn_search.setStyleSheet(_BTN_PRIMARY)
         self._btn_search.clicked.connect(self._on_address_search)
         search_row.addWidget(self._btn_search)
@@ -570,15 +572,13 @@ class SitePanel(QWidget):
         self._lbl_label.setWordWrap(True)
         self._lbl_coords = QLabel("—")
         pin_form.addRow("Location:", self._lbl_label)
-        pin_form.addRow("Coordinates:", self._lbl_coords)
         pin_layout.addLayout(pin_form)
 
         # Action buttons (manual pin drop / refresh / clear).
         btn_row = QHBoxLayout()
-        self._btn_drop = QPushButton("Use Pin Drop…")
+        self._btn_drop = QPushButton("Click my yard on the map")
         self._btn_drop.setToolTip(
-            "Click then click the map to drop the property pin manually"
-        )
+            "Then click your yard on the map to put its pin there.")
         self._btn_drop.setStyleSheet(_BTN_PRIMARY)
         self._btn_drop.clicked.connect(self.pin_drop_requested.emit)
         btn_row.addWidget(self._btn_drop)
@@ -620,6 +620,59 @@ class SitePanel(QWidget):
             "color: #ffcc80; font-size: 12px; padding: 2px 4px;"
         )
         layout.addWidget(self._lbl_status)
+
+        # ── Four lines, then Details (V3.30, WD-2; decision W5) ───────
+        # Where, Cold, Rain and Soil in plain words (src/site_summary.py);
+        # everything the page showed before waits under Details.
+        self._facts: dict = {}
+        self._summary_box = QFrame()
+        self._summary_box.setObjectName("siteSummary")
+        self._summary_box.setAccessibleName("Your yard in four lines")
+        self._summary_box.setStyleSheet(
+            "QFrame#siteSummary { background: #16281a; border: 1px solid "
+            "#2e4a2e; border-radius: 4px; }"
+            "QLabel { color: #e8f5e9; font-size: 13px; }")
+        sum_col = QVBoxLayout(self._summary_box)
+        sum_col.setContentsMargins(8, 6, 8, 6)
+        sum_col.setSpacing(4)
+        self._summary_labels: dict = {}
+        from src.site_summary import LINES
+        for _key, title in LINES:
+            lab = QLabel("")
+            lab.setWordWrap(True)
+            lab.setTextFormat(Qt.TextFormat.RichText)
+            lab.setVisible(False)
+            sum_col.addWidget(lab)
+            self._summary_labels[title] = lab
+        self._summary_empty = QLabel(SUMMARY_EMPTY)
+        self._summary_empty.setWordWrap(True)
+        sum_col.addWidget(self._summary_empty)
+        layout.addWidget(self._summary_box)
+
+        self._details_btn = QPushButton("Details ▸")
+        self._details_btn.setCheckable(True)
+        self._details_btn.setFlat(True)
+        self._details_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._details_btn.setToolTip(
+            "Growing-degree days, the snow, the soil's make-up and where "
+            "each figure comes from.")
+        self._details_btn.setStyleSheet(
+            "QPushButton { color: #a5d6a7; border: none; text-align: left; "
+            "padding: 2px 4px; font-size: 13px; }"
+            "QPushButton:focus { border: 1px solid #ffe082; }")
+        self._details_btn.toggled.connect(self._show_details)
+        layout.addWidget(self._details_btn)
+        self._details = QWidget()
+        self._details.setAccessibleName("Site details")
+        details_col = QVBoxLayout(self._details)
+        details_col.setContentsMargins(0, 0, 0, 0)
+        self._details.setVisible(False)
+        layout.addWidget(self._details)
+        outer_layout, layout = layout, details_col
+        coords_row = QFormLayout()
+        coords_row.setContentsMargins(4, 0, 0, 0)
+        coords_row.addRow("Coordinates:", self._lbl_coords)
+        layout.addLayout(coords_row)
 
         # ── Hardiness + climate ──────────────────────────────────────
         # Order: zone → GDD → frost window → rainfall → soil sit directly
@@ -678,7 +731,13 @@ class SitePanel(QWidget):
         # and beside "Growing-degree days:" this one made Site Info 458 px wide
         # of 402 under Arial metrics once a pin found communities (V3.19, QF-5,
         # R8). It first showed in V3.14; the guard had measured the empty page.
-        hl.addRow(self._btn_browse_comms)
+        # In a box of its own, so the Advanced tools switch can hide it
+        # (V3.30, WD-2) while the fetch shows and hides the link inside.
+        self._browse_box = QWidget()
+        browse_col = QVBoxLayout(self._browse_box)
+        browse_col.setContentsMargins(0, 0, 0, 0)
+        browse_col.addWidget(self._btn_browse_comms)
+        hl.addRow(self._browse_box)
         # After addRow, always: labelForField only resolves once the row exists.
         # The zone gets its base explanation here and a refreshed one naming the
         # measured zone in _on_hardiness — set once at build time it would go
@@ -801,6 +860,9 @@ class SitePanel(QWidget):
         # One-time offline soil pack (Gridded Soil Landscapes of Canada): real
         # per-location soil offline, instead of the regional approximation that
         # the paused SoilGrids API otherwise forces.
+        self._soil_dl_box = QWidget()          # advanced only (V3.30, WD-2)
+        soil_dl_col = QVBoxLayout(self._soil_dl_box)
+        soil_dl_col.setContentsMargins(0, 0, 0, 0)
         soil_btn_row = QHBoxLayout()
         self._soil_dl_btn = QPushButton("⬇ Download soil data (offline)")
         self._soil_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
@@ -813,30 +875,31 @@ class SitePanel(QWidget):
         self._soil_cancel_btn.setStyleSheet(_BTN_SECONDARY)
         self._soil_cancel_btn.setVisible(False)
         soil_btn_row.addWidget(self._soil_cancel_btn)
-        sl.addRow(soil_btn_row)
+        soil_dl_col.addLayout(soil_btn_row)
         self._soil_dl_status = QLabel("")
         self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._soil_dl_status.setWordWrap(True)
-        sl.addRow(self._soil_dl_status)
+        soil_dl_col.addWidget(self._soil_dl_status)
+        sl.addRow(self._soil_dl_box)
         layout.addWidget(self._soil_box)
+        layout = outer_layout
 
         # ── Where to buy — native plant sources near the pin (V2.18) ──────────
-        self._nursery_box = QGroupBox("Where to buy — native plant sources")
+        self._nursery_box = QGroupBox("Where to buy")
         self._nursery_box.setStyleSheet(_GROUP_STYLE)
         nl = QVBoxLayout(self._nursery_box)
         self._lbl_nurseries = QLabel(
-            "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
-            "nurseries, seed houses and native-plant societies near you.</span>")
+            f"<span style='color:#90a4ae;'>{NURSERIES_EMPTY}</span>")
         self._lbl_nurseries.setWordWrap(True)
         self._lbl_nurseries.setTextFormat(Qt.TextFormat.RichText)
         self._lbl_nurseries.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextBrowserInteraction)
         self._lbl_nurseries.setOpenExternalLinks(True)
         nl.addWidget(self._lbl_nurseries)
+        # The pack's words (ED-4): which sellers these are, and to check.
+        from src import region as _region
         self._lbl_nursery_note = QLabel(
-            "From the Native Plant Society of Saskatchewan's list "
-            "(npss.sk.ca). Stock is seasonal and often grown to order: check "
-            "before you go.")
+            getattr(_region.default(), "nursery_note", "") or "")
         self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_nursery_note.setWordWrap(True)
         nl.addWidget(self._lbl_nursery_note)
@@ -1350,6 +1413,7 @@ class SitePanel(QWidget):
         """
         self._lat, self._lng, self._label = lat, lng, label or self._label
         self._lbl_coords.setText(f"{lat:.5f}, {lng:.5f}")
+        self._facts = {"lat": lat, "lng": lng, "label": self._label}
         self._show_coverage()
         # Nurseries are local (no network) — fill immediately on pin.
         self._update_nurseries(lat, lng)
@@ -1358,6 +1422,7 @@ class SitePanel(QWidget):
         else:
             self._lbl_label.setText("(custom pin)")
         self._reset_data_rows()
+        self._refresh_summary()
         if fetch:
             self._start_fetch()
         else:
@@ -1397,7 +1462,11 @@ class SitePanel(QWidget):
         try:
             # The one list (V3.24, ED-4): the pin's region pack's suppliers.
             from src.db.nurseries import region_nurseries
+            from src import region_climate
             rows = region_nurseries(lat, lng, limit=5)
+            pack = region_climate.pack_for({"latitude": lat, "longitude": lng})
+            self._lbl_nursery_note.setText(
+                getattr(pack, "nursery_note", "") if pack is not None else "")
         except Exception:  # noqa: BLE001 — directory is a nicety, never fatal
             rows = []
         if not rows:
@@ -1417,9 +1486,48 @@ class SitePanel(QWidget):
                          f"font-size:12px;'>{access}</span>")
         self._lbl_nurseries.setText("<br>".join(lines))
 
+    # ── The four lines (V3.30, WD-2) ─────────────────────────────────────────
+
+    def _fact(self, key: str, value) -> None:
+        """A fetch came back: keep what the four lines need, and redraw them."""
+        if getattr(self, "_facts", None) is None or self._lat is None:
+            return
+        self._facts[key] = value
+        self._refresh_summary()
+
+    def _refresh_summary(self) -> None:
+        if not hasattr(self, "_summary_labels"):
+            return
+        from src import site_summary
+        try:
+            shown = dict(site_summary.lines(dict(
+                self._facts, lat=self._lat, lng=self._lng)))
+        except Exception:   # noqa: BLE001 — a summary never blocks the page
+            shown = {}
+        for title, lab in self._summary_labels.items():
+            text = shown.get(title, "")
+            lab.setText(f"<b>{title}:</b> {html.escape(text)}" if text else "")
+            lab.setVisible(bool(text))
+        self._summary_empty.setVisible(not shown)
+
+    def summary_text(self) -> str:
+        """The four lines as plain text, as a person reads them."""
+        return "\n".join(lab.text().replace("<b>", "").replace("</b>", "")
+                         for lab in self._summary_labels.values()
+                         if lab.isVisibleTo(self) and lab.text())
+
+    def _show_details(self, on: bool) -> None:
+        self._details.setVisible(bool(on))
+        self._details_btn.setText("Details ▾" if on else "Details ▸")
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """With the advanced tools on, Site Info opens on its details."""
+        self._details_btn.setChecked(bool(on))
+
     def _refresh_clicked(self):
         if not self.has_pin():
-            self._lbl_status.setText("No pin set — search an address first.")
+            self._lbl_status.setText(
+                "Find your yard first: type your address above.")
             return
         self._reset_data_rows()
         self._start_fetch()
@@ -1430,7 +1538,9 @@ class SitePanel(QWidget):
         self._outside = cov.kind == region.OUTSIDE
         text = region.message(cov)
         self._lbl_coverage.setText(text)
-        self._lbl_coverage.setVisible(bool(text))
+        # Inside the region the Where line says it (V3.30, WD-2); the line
+        # stays for a pin outside it, where it says what that changes.
+        self._lbl_coverage.setVisible(bool(text) and cov.kind != region.REGION)
         self._lbl_coverage.setStyleSheet(
             f"color: {'#ffcc80' if cov.kind != region.REGION else '#c8e6c9'};"
             " font-size: 13px; padding: 2px 4px;")
@@ -1450,12 +1560,13 @@ class SitePanel(QWidget):
             self._lbl_coverage.setVisible(False)
         self._lbl_label.setText(_DASH)
         self._lbl_coords.setText(_DASH)
-        self._lbl_status.setText("Drop a pin to auto-fill site data.")
+        self._lbl_status.setText("")
+        self._facts = {}
+        self._refresh_summary()
         self._reset_data_rows()
         if hasattr(self, "_lbl_nurseries"):
             self._lbl_nurseries.setText(
-                "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
-                "societies, nurseries and seed houses near you.</span>")
+                f"<span style='color:#90a4ae;'>{NURSERIES_EMPTY}</span>")
 
     def _reset_data_rows(self):
         # Placeholders render dimmed (rich-text span) so the pre-pin panel
@@ -1574,6 +1685,7 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+        self._fact("zone", zone)
         # Re-explain the zone now that we know which one it is (F122, V2.55).
         # This is the row whose explanation depends on the measured value, so it
         # is refreshed here rather than left at the generic text set at build
@@ -1696,6 +1808,8 @@ class SitePanel(QWidget):
         last = data.get("last_spring_frost_doy")
         first = data.get("first_fall_frost_doy")
         free = data.get("frost_free_days")
+        self._fact("frost", (last, first) if last is not None
+                   and first is not None else None)
         if last is not None and first is not None:
             self._lbl_frost.setText(
                 f"{doy_to_date_label(last)} → {doy_to_date_label(first)}"
@@ -1783,6 +1897,7 @@ class SitePanel(QWidget):
             self._lbl_rain_monthly.setText(row)
         self._lbl_rain_src.setText(data.get("source", ""))
         self._show_precip_timing(data)
+        self._fact("rain", data)
 
     def _show_precip_timing(self, data):
         """Surface what the precipitation total hides — *when* the water is
@@ -1843,6 +1958,7 @@ class SitePanel(QWidget):
         if depth:
             self._lbl_soil_depth.setText(f"{depth} cm reported")
         self._lbl_soil_src.setText(data.get("source", ""))
+        self._fact("soil", data)
 
     def _on_fast_ready(self):
         """The non-climate fetches are in — flip the user-visible status

@@ -1365,7 +1365,7 @@ class MapEventRouter:
         self._main._osm_margin = margin
         if bbox is None:
             self._main.site_panel.set_osm_status(
-                "Drop a pin or draw a boundary first.")
+                "Find your yard or outline it first.")
             return
 
         # Prefer the offline building pack when this area has been downloaded

@@ -74,6 +74,8 @@ ADVANCED_CONTROLS: tuple = (
     "site_panel._features_more",      # Features beyond Scan this area (rank 4)
     "site_panel._existing_box",
     "site_panel._sat_align_box",
+    "site_panel._browse_box",         # Site Info's communities link and the
+    "site_panel._soil_dl_box",        # soil download (V3.30, WD-2)
     "plant_panel._mix_box",           # rank 5: Placement's builders
     "polyculture_panel._builder_rows",
     "polyculture_panel._mix_community_box",
@@ -91,6 +93,7 @@ ADVANCED_HOOKS: tuple = (
     "species_flyout.page",            # the plant page's Add to mix
     "species_flyout.community",       # the community page's pattern card
     "toolbar.shape_tool",             # Draw › Shape's lines and Custom
+    "site_panel",                     # Site Info opens on its details (WD-2)
 )
 
 

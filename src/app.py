@@ -505,7 +505,7 @@ class MainWindow(QMainWindow):
         self._act_step_bar.setCheckable(True)
         self._act_step_bar.setChecked(True)
         self._act_step_bar.setStatusTip(
-            "Show the three-step strip above the map (pin → boundary → plants)")
+            "Show the getting-started steps above the map")
         # Lambda → flow function: the behaviour is in src/onboarding_flow.py,
         # off MainWindow's method ledger.
         self._act_step_bar.triggered.connect(

@@ -582,8 +582,8 @@ class OnThisDesignPanel(QWidget):
         if tot:
             parts.append(f"<b>Total: {format_cost(tot[0], tot[1])}</b>")
         parts.append(
-            "<br><span style='color:#90a4ae;font-size:12px;'>AB retail/install "
-            "estimate — varies by nursery, year, site.</span></p>"
+            "<br><span style='color:#90a4ae;font-size:12px;'>"
+            f"{_price_words(self)}.</span></p>"
         )
         return "".join(parts)
 
@@ -677,3 +677,11 @@ class OnThisDesignPanel(QWidget):
         rows.append(cues_html)
         rows.append(cost_html)
         self._stats_text.setHtml("".join(rows))
+
+
+def _price_words(panel) -> str:
+    """"An estimate at Edmonton native nurseries; prices vary by nursery and
+    year" (V3.30, WD-5): the pack's words, never "AB retail"."""
+    from src.planting_plan import price_words
+    words = price_words(getattr(panel, "_site_config", None))
+    return words[0].upper() + words[1:]

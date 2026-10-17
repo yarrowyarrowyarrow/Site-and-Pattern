@@ -63,7 +63,7 @@ def start_building_download(main) -> None:
     boundary = main._map_events._project_boundary_latlng()
     base = bbox_from_boundary_or_pin(boundary, sc, radius_m=2500.0)
     if base is None:
-        main.site_panel.set_osm_status("Drop a pin or draw a boundary first.")
+        main.site_panel.set_osm_status("Find your yard or outline it first.")
         main.site_panel.reset_buildings_download()
         return
     region = _pad_bbox(base, 2000.0)

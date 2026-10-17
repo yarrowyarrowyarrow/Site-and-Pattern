@@ -1623,8 +1623,10 @@ class AnalysisPanel(QWidget):
             from src.sourcing import estimate_cost, format_cost
             low, high = estimate_cost(self._placed_plants)
             if high > 0:
+                from src.planting_plan import price_words
                 lines.append(
-                    f"Est. plant cost    {format_cost(low, high)}   (AB retail estimate)")
+                    f"Plant cost    {format_cost(low, high)}   "
+                    f"({price_words({'latitude': self._sun_lat, 'longitude': self._sun_lng})})")
         except Exception:  # noqa: BLE001 — cost is a nicety, never break the score
             pass
 

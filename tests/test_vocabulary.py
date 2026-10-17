@@ -55,7 +55,6 @@ SIMPLE_MODULES = (
 
 #: Today's uses, ``{(module, word): count}``: WD-2 to WD-6 take these out.
 KNOWN = {
-    ('analysis_panel.py', 'AB retail estimate'): 1,
     ('app.py', '.perma.geojson'): 1,
     ('controllers/map_events.py', 'polyculture'): 1,
     ('controllers/persistence.py', '.perma.geojson'): 1,
@@ -68,7 +67,6 @@ KNOWN = {
     ('feedback_flow.py', 'project'): 1,
     ('landing_check.py', 'boundary'): 3,
     ('occurrence_points.py', 'project'): 2,
-    ('onboarding.py', 'boundary'): 1,
     ('onboarding.py', 'forb'): 1,
     ('plant_filters.py', 'canopy'): 1,
     ('plant_filters.py', 'early successional'): 1,

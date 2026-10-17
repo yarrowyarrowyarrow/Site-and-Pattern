@@ -314,9 +314,14 @@ class TestFirstStepBar(unittest.TestCase):
     def test_detail_is_elided_not_clipped(self):
         bar = self._bar()
         bar.resize(300, 30)
-        self._render(bar, _project())
+        # Any detail too long for its room (V3.30's are short enough to fit).
+        current = dict(onboarding.first_step(_project()),
+                       detail="Type your address, or click your yard on the "
+                              "map, and the climate and soil fill in below "
+                              "once the fetch has finished.")
+        bar.set_progress(onboarding.steps_progress(_project()), current)
         shown = bar._detail.text()
-        full = onboarding.first_step(_project())["detail"]
+        full = current["detail"]
         self.assertNotEqual(shown, full)
         self.assertEqual(bar._detail.toolTip(), full,
                          "the full sentence must survive as a tooltip")

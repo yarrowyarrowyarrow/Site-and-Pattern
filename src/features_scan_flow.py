@@ -101,7 +101,7 @@ def scan_area(main) -> None:
     margin = main.site_panel.osm_neighbour_margin()
     bbox, area_note = bbox_with_area_note(boundary, sc, pad_m=max(30.0, margin))
     if bbox is None:
-        main.site_panel.set_osm_status("Drop a pin or draw a boundary first.")
+        main.site_panel.set_osm_status("Find your yard or outline it first.")
         return
     main.site_panel.set_osm_status(
         "Scanning: buildings from OpenStreetMap, trees from the canopy-height "
