@@ -68,6 +68,7 @@ maker a coffee, finished well enough that the owner can **move on**.
 | [10 · Finishing](10-finishing.md) | Licence, signing, outside services, a stable release channel, donations, feedback, the runbook | FN-1 to FN-14 | D1–D7 |
 | [11 · The work plan](11-work-plan.md) | Fifteen increments (V3.18 to V3.32), the quick fixes, R1–R40 mapped, feature IDs F233–F249 | QF-1 to QF-19 | K1 |
 | [12 · The decisions](12-decisions.md) | All 68 owner decisions with a recommendation and when each is needed; **answered 13 October 2026**, the 13 that differ from the recommendations in its §0 | — | all |
+| [13 · After the plan](13-after-the-plan.md) | Written at V3.32: where finishing stands, what went well and what is weak, decisions not yet carried out, the rough edges a screen walk found, and suggestions for where next | — | — |
 
 ## How to read it
 
