@@ -27,9 +27,16 @@ fi
 
 # Install build dependencies
 echo -e "${YELLOW}Installing build dependencies...${NC}"
-pip install -q pyinstaller
+# On macOS at the versions the last good release was built with
+# (constraints-macos.txt, V3.32 FN-12); the workflow installs requirements.txt
+# against the same file.
+CONSTRAINTS=""
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    CONSTRAINTS="-c scripts/packaging/constraints-macos.txt"
+fi
+pip install -q pyinstaller $CONSTRAINTS
 
-# Record what this build was made with (V3.31, FN-12): pip runs quietly, so
+# Record what this build was made with (V3.32, FN-12): pip runs quietly, so
 # until V3.31 no log said which PyQt6 or numpy went into an installer. The
 # file ships in the bundle and is printed into the build log.
 pip freeze > build-versions.txt

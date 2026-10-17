@@ -111,6 +111,7 @@ def install(main) -> None:
     fly.page.close_requested.connect(lambda: _on_close(main))
     fly.page.place_requested.connect(panel.place_from_elsewhere)
     fly.page.mix_requested.connect(panel.add_to_mix)
+    fly.page.swap_requested.connect(lambda row: _swap(main, row))
     fly.page.place_fn = panel.picker.place       # the region it speaks for
     # The list fetches photos on a worker thread; the page asked for this one.
     panel.picker.model.imageReady.connect(fly.page.refresh_photo)
@@ -156,6 +157,18 @@ def on_plant_clicked(main, plant_id: int, lat: float, lng: float) -> bool:
     placed = sum(1 for p in plants if p.get("plant_id") == plant_id)
     fly.show_plant({"id": plant_id}, placed=placed, why=here.get("why_here"))
     return True
+
+
+def _swap(main, row: dict) -> None:
+    """The page's Swap…: the Overview's swap dialog (OV-10), for any plant in
+    the design; then the page shows the plant swapped in."""
+    from src import yard_overview_dialogs
+    new_id = yard_overview_dialogs.swap(main, int(row.get("id") or 0))
+    fly = getattr(main, "species_flyout", None)
+    if new_id and fly is not None:
+        placed = sum(1 for p in getattr(main, "_placed_plants", []) or []
+                     if p.get("plant_id") == new_id)
+        fly.show_plant({"id": new_id}, placed=placed)
 
 
 def _on_close(main) -> None:

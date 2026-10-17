@@ -113,7 +113,7 @@ def fill_gaps(main) -> str:
     return dialog.answer
 
 
-# ── Swap for a local native (OV-10) ─────────────────────────────────────────
+# ── Swap for a local native (OV-10), or any plant from its page (V3.32) ─────
 
 def swap_choices(main, plant_id: int, limit: int = 3) -> list:
     from src import substitution
@@ -131,9 +131,14 @@ def swap_dialog(main, plant_id: int, choices: list) -> QDialog:
     from src.what_it_feeds import span
     site = ((main._project.get("properties") or {}).get("site_config")
             or {})
-    name = (get_plant(plant_id) or {}).get("common_name") or "This plant"
+    row0 = get_plant(plant_id) or {}
+    name = row0.get("common_name") or "This plant"
     dialog, col = _dialog(main, f"Swap {name}")
-    col.addWidget(_label(f"{name} is not {design_native.words(site)}.", _HEAD))
+    # From the plant page any plant can be swapped (V3.32); only one that is
+    # not native is said to be.
+    col.addWidget(_label(
+        f"Instead of {name}" if design_native.is_native(row0, site)
+        else f"{name} is not {design_native.words(site)}.", _HEAD))
     if not choices:
         col.addWidget(_label("Nothing native here does a similar job, as far "
                              "as the records go. Keep it, or choose another "

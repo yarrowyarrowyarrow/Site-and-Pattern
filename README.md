@@ -4,7 +4,7 @@
 
 Site & Pattern is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a catalogue of over 400 plants native to Alberta and Saskatchewan. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
 
-> **Status:** Site & Pattern is in active development. Recent releases have concentrated on the accuracy of the plant catalogue and on its public website, [grownativeplants.ca](https://grownativeplants.ca). See [Going Forward](#going-forward) for where the live plan is kept.
+> **Status:** nearly finished. The homeowner's path (find your yard, plan it, read how it is doing, print it) is built; the last step is watching five homeowners use it ([`tools/usability/`](tools/usability/README.md)). After that it is maintained for fixes, by the runbook in [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md).
 
 > **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — thirteen principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, beauty as the mechanism the ecology survives by, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
 
@@ -255,6 +255,7 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
 - [`docs/3D_ASSETS.md`](docs/3D_ASSETS.md) — Blender-generated GLB assets for the 3D viewer: the `scripts/blender/assetlib` generator package (headless + Blender-MCP workflows), the generator↔viewer contract, and regeneration
 - [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
+- [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) — the runbook: cutting and promoting a release, the pinned build, the yearly checks, what happens when a service breaks
 - [`LICENSE`](LICENSE) — GNU General Public License, version 3
 - [`THIRD_PARTY_NOTICES.txt`](THIRD_PARTY_NOTICES.txt) — the licences of Qt, PyQt6, Python, Leaflet, three.js and the other software the installer carries
 

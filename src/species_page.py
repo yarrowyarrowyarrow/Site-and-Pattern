@@ -71,6 +71,9 @@ class SpeciesPage(QWidget):
     place_requested = pyqtSignal(dict)
     #: The page's Add to mix button.
     mix_requested = pyqtSignal(dict)
+    #: The page's Swap… button, shown while the plant is in the design
+    #: (V3.32: session task 5 had no way to do it in the simple app).
+    swap_requested = pyqtSignal(dict)
     #: The ✕, or Esc while the page has focus.
     close_requested = pyqtSignal()
 
@@ -140,6 +143,7 @@ class SpeciesPage(QWidget):
 
         self._place_btn = None
         self._mix_btn = None
+        self._swap_btn = None
         if actions:
             from src.place_action import PlaceButton
             row = QHBoxLayout()
@@ -163,6 +167,15 @@ class SpeciesPage(QWidget):
             self._mix_btn.clicked.connect(
                 lambda: self._row and self.mix_requested.emit(self._row))
             row.addWidget(self._mix_btn)
+            self._swap_btn = QPushButton("Swap…")
+            self._swap_btn.setObjectName("speciesPageSwap")
+            self._swap_btn.setToolTip(
+                "Put a plant that does a similar job here in its place, "
+                "wherever it is in this design. Undo puts it back.")
+            self._swap_btn.setStyleSheet(self._mix_btn.styleSheet())
+            self._swap_btn.clicked.connect(
+                lambda: self._row and self.swap_requested.emit(self._row))
+            row.addWidget(self._swap_btn)
             self._actions = QWidget()
             self._actions.setLayout(row)
             outer.addWidget(self._actions)
@@ -289,6 +302,8 @@ class SpeciesPage(QWidget):
             self._mix_btn.setAccessibleName(
                 f"{name} is in the mix" if self._in_mix
                 else f"Add {name} to the mix")
+            self._swap_btn.setVisible(bool(self._placed))
+            self._swap_btn.setAccessibleName(f"Swap {name} for another plant")
 
     def _render(self):
         entry = self._entry

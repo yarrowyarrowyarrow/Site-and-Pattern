@@ -70,6 +70,29 @@ class TheInstallerShipsThem(unittest.TestCase):
             bodies.append(body)
         self.assertEqual(bodies[0], bodies[1])
 
+    def test_the_builds_install_the_pinned_versions(self):
+        """FN-12 (V3.32): every requirement and PyInstaller has one exact
+        version for each platform, and each build installs against it."""
+        import re
+        wanted = {n.lower().replace("_", "-")
+                  for n in notices.required_names()
+                  if not os.path.isdir(os.path.join(ROOT, "html", "vendor", n))}
+        wanted.add("pyinstaller")
+        for name in ("constraints-windows.txt", "constraints-macos.txt"):
+            text = _read("scripts", "packaging", name)
+            pins = {m.group(1).lower().replace("_", "-"): m.group(2)
+                    for m in re.finditer(r"^([A-Za-z0-9_.\-]+)==(\S+)$",
+                                         text, re.M)}
+            self.assertEqual(wanted - set(pins), set(), name)
+        self.assertIn("-c scripts\\packaging\\constraints-windows.txt",
+                      _read("scripts", "packaging", "build_installer.bat"))
+        self.assertIn("constraints-macos.txt",
+                      _read("scripts", "packaging", "build_installer.sh"))
+        self.assertIn("-c scripts/packaging/constraints-macos.txt",
+                      _read(".github", "workflows", "release-macos.yml"))
+        mac = _read("scripts", "packaging", "constraints-macos.txt")
+        self.assertRegex(mac, r"(?m)^PyQt6==6\.7\.", "Big Sur needs Qt 6.7")
+
     def test_the_windows_build_is_pinned(self):
         wf = _read(".github", "workflows", "release-windows.yml")
         self.assertIn("runs-on: windows-2025", wf)
