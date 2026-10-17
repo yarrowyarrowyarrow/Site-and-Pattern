@@ -63,7 +63,9 @@ jobs:
         run: |
           set -eux
           arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
-          arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller
+          # At the versions of the last good build (V3.32, FN-12).
+          arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller \
+            -c scripts/packaging/constraints-macos.txt
 
       - name: Shim pip/pyinstaller to the x86_64 framework Python
         # The python.org framework ships `pip3`, not a bare `pip`, and we need
