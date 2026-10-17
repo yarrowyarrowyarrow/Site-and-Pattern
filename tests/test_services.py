@@ -15,6 +15,10 @@ from src import services  # noqa: E402
 
 _HOST = re.compile(r"https?://([A-Za-z0-9.-]+)")
 
+#: Named only by the command line's local model, which left the app in V3.22
+#: (RM-3); kept here, not in services.py, which the app's own words test reads.
+CLI_ONLY = {"ollama.com"}
+
 
 def _code_hosts() -> dict:
     """``{host: [file]}`` for every URL in ``src/`` and the map's scripts."""
@@ -42,7 +46,7 @@ def _code_hosts() -> dict:
 class EveryServiceIsCredited(unittest.TestCase):
 
     def test_every_host_in_the_code_is_a_service_or_said_why_not(self):
-        known = services.hosts() | set(services.NOT_ASKED)
+        known = services.hosts() | set(services.NOT_ASKED) | CLI_ONLY
         missing = {h: f for h, f in _code_hosts().items()
                    if h not in known
                    and not any(h.startswith(k) for k in known)}

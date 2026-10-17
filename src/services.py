@@ -112,7 +112,6 @@ NOT_ASKED: dict = {
     "cloud.umami.is": "website analytics, off unless the site is built with it",
     "eu.umami.is": "website analytics, off unless the site is built with it",
     "static.cloudflareinsights": "website analytics, off unless asked for",
-    "ollama.com": "the command line's AI only, never the app",
     "plants.usda.gov": "a developer's import script, never the app",
 }
 
