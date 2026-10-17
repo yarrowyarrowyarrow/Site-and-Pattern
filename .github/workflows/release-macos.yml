@@ -145,6 +145,19 @@ jobs:
 
             *Apple Silicon (M1–M4): if macOS offers to install **Rosetta** on first launch, click Install (one time).*
 
+            ### Your first yard, in five steps
+            1. **Find your yard:** type your address on the Site tab and press Find, or click your yard on the map.
+            2. **Outline a bed:** press **▱ Shape** above the map, choose *Garden Bed*, press *Draw on the map*, click the bed's corners and click the first corner again to close it.
+            3. **Plan my yard:** the button in the strip above the map fills the bed with plants native to your area.
+            4. **Look at the overview:** Design › Overview says what the plan feeds, how full it is and what it will take.
+            5. **Print the plan:** Share › Export › **Export PDF…** gives the overview, a shopping list, a planting map and a care calendar.
+
+            The app is not an identification guide: check a plant's identity with a book or a person before you collect or eat it.
+
+            **What leaves your computer:** the address you type (to OpenStreetMap's address search), your yard's location (to Open-Meteo and SoilGrids, for its climate and soil) and the part of the map on screen (to the map's tile servers). No account, no analytics. Help › About says the same.
+
+            **Feedback:** Help › Send Feedback… in the app, or [open an issue](https://github.com/yarrowyarrowyarrow/Site-and-Pattern/issues/new) if you have a GitHub account.
+
             ---
           generate_release_notes: true
           fail_on_unmatched_files: true
