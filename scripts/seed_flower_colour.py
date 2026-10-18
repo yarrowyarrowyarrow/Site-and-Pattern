@@ -192,7 +192,14 @@ def apply(rows: list) -> tuple:
     colours = types = 0
     missing = []
 
+    # A plant checked against photographs (V3.33, src/colour_checks.py) is
+    # the latest word on it: re-applying a name or epithet read must not undo
+    # the owner's answer.
+    from src.colour_checks import load_checks                 # noqa: PLC0415
+    checked = set(load_checks())
     for sci, (colour, source, _why) in CORRECTIONS.items():
+        if sci in checked:
+            continue
         targets = by_sci.get(sci)
         if not targets:
             missing.append(sci)
