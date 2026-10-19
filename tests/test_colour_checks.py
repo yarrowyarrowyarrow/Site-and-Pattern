@@ -71,11 +71,19 @@ class TheList(unittest.TestCase):
         self.assertNotIn("Solidago a", names)
         self.assertIn("Solidago b", names)
 
-    def test_the_real_catalogue_lists_the_audit_first(self):
-        items = cc.worklist(cc.load_master())
-        self.assertEqual({i["reason"] for i in items[:len(cc.FLAGGED)]},
-                         {"flagged"})
-        self.assertGreater(len(items), 150)
+    def test_a_flagged_plant_once_looked_at_leaves_the_list(self):
+        """With or without the checks file: the row's own ``photo`` says so."""
+        rows = ROWS + [_row("Silene acaulis", "Moss Campion", "#e58fb0",
+                            "photo")]
+        self.assertNotIn("Silene acaulis",
+                         [i["scientific_name"] for i in cc.worklist(rows)])
+
+    def test_every_flowering_plant_in_the_catalogue_was_looked_at(self):
+        """V3.34 folded in the owner's 343 answers: nothing is left to look
+        at. A plant added later with a guessed colour reappears here, which
+        is the list working, not this test breaking: its message names it."""
+        left = [i["scientific_name"] for i in cc.worklist(cc.load_master())]
+        self.assertEqual(left, [], "not yet looked at in photographs")
 
 
 class TheAnswers(unittest.TestCase):

@@ -518,7 +518,13 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v96 (V3.26): no DDL. The nursery directory's "Edmonton Native Plant Group"
 # is the Edmonton Native Plant Society, renamed so the plant pages and the
 # order file name it as people know it; one plant note follows.
-_SCHEMA_VERSION = 96
+# v97 (V3.34): no DDL. The owner's flower colour review folded in (F172,
+# data/flower_colour_checks.json): all 343 plants on the list looked at in
+# photographs of them in flower, each now `photo`. 156 stand as they were;
+# the main colour changed on 70 and the second on 67; 25 of the 49 blanks
+# have a colour, 24 have no showy flower, and duckweed's guess is cleared.
+# Blue 28 -> 16, most of the rest purple.
+_SCHEMA_VERSION = 97
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

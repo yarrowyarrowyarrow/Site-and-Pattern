@@ -910,6 +910,10 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
     where the name legitimately describes a berry, a seed head or the foliage
     are listed in ``scripts/seed_flower_colour.py:KEEP`` with a reason and are
     skipped here by the same list, so the audit and the fix cannot drift.
+    **A colour the owner checked in photographs** (``photo``, V3.34) is
+    skipped too: the name was evidence because nobody had looked, and somebody
+    now has. *Purple* Coneflower flowers pink; ``data/flower_colour_checks.json``
+    holds the observations that say so, which is the reason KEEP would hold.
 
     **A genus where three or more species share one hex and not one of them is
     checkable** is a WARNING. It is not proof of an error (a goldenrod genus
@@ -953,7 +957,7 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
         sci = (rec.get("scientific_name") or "").strip()
         if (rec.get("flower_color") or "").strip():
             genera[sci.split(" ")[0]].append(rec)
-        if sci in KEEP:
+        if sci in KEEP or rec.get("flower_colour_source") == "photo":
             continue
         name = (rec.get("common_name") or "").lower()
         if any(token in name for token in not_the_flower):
@@ -979,8 +983,8 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
             continue
         if len({(r.get("flower_color") or "") for r in rows}) > 1:
             continue
-        if any((r.get("flower_colour_source") or "") in ("name", "epithet")
-               for r in rows):
+        if any((r.get("flower_colour_source") or "") in
+               ("name", "epithet", "photo", "checked") for r in rows):
             continue
         warnings.append(
             f"flower colour: all {len(rows)} {genus} species share one hex and "

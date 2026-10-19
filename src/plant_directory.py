@@ -396,7 +396,8 @@ def _bloom_colour(plant: dict) -> dict:
                  f"{COLOUR_LABELS.get(keys[1], keys[1]).lower()}")
     else:
         named = [COLOUR_LABELS.get(k, k) for k in keys]
-        label = ", ".join(named[:-1]) + " and " + named[-1].lower()
+        named = named[:1] + [n.lower() for n in named[1:]]
+        label = ", ".join(named[:-1]) + " and " + named[-1]
     return {
         "bloom_colour": key,
         "bloom_colours": keys,

@@ -106,10 +106,12 @@ def reason(row: dict) -> str:
     """The key in :data:`REASONS` for a row on the list, or ``""``."""
     if (row.get("plant_type") or "") in WIND_POLLINATED_TYPES:
         return ""
+    src = _source(row)
+    if src in ("photo", "checked"):
+        return ""                   # already looked at, flagged or not
     sci = (row.get("scientific_name") or "").strip()
     if sci in FLAGGED:
         return "flagged"
-    src = _source(row)
     if src == "estimated":
         return "estimated"
     if src in ("name", "epithet"):
@@ -118,7 +120,7 @@ def reason(row: dict) -> str:
         return "blank"
     if src == "flora":
         return "flora"
-    return ""                       # photo, checked: already looked at
+    return ""
 
 
 def share_groups(rows: Iterable[dict]) -> list:

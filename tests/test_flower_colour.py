@@ -121,9 +121,14 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: V3.18: green -1, white +1. *Asclepias ovalifolia* was coloured from the
     #: name "Green Milkweed", which belongs to *A. viridiflora* (F171); renamed
     #: Oval-leaf Milkweed, its hoods are white to cream.
+    #: V3.34: the owner's photo review (F172), every flowering plant looked
+    #: at in photographs of it in flower. The main colour changed on 70 of
+    #: 343, 25 blanks gained one and duckweed's guess was cleared; each answer
+    #: with the observations shown is in `data/flower_colour_checks.json`.
+    #: Blue -12 is the largest move: most "blue" flowers look purple.
     EXPECTED = {
-        "straw": 78, "yellow": 79, "white": 80, "purple": 45, "pink": 34,
-        "blue": 28, "cream": 14, "red": 6, "green": 4, "orange": 3, "brown": 2,
+        "straw": 78, "yellow": 85, "white": 85, "purple": 43, "pink": 46,
+        "blue": 16, "cream": 14, "red": 13, "green": 5, "orange": 5, "brown": 7,
     }
 
     def test_every_seeded_species_lands_where_it_did(self):
@@ -141,8 +146,12 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
         wind-pollinated or catkin-bearing (two cottonwoods, a willow, a maple,
         an elm and a juniper), and their rows leave the colour blank rather
         than guess one. 49 -> 51 in V2.89: the two horsetails that wore a
-        grass plume. They make spores in a cone and have no bloom colour."""
-        self.assertEqual(bucket_counts(_seed_rows()).get(""), 51)
+        grass plume. They make spores in a cone and have no bloom colour.
+        51 -> 27 in V3.34: the owner looked at each blank in photographs and
+        gave 25 of them a colour (Trembling Aspen's catkins are brown, Wild
+        Sarsaparilla is white), and found duckweed's guessed white was no
+        showy flower."""
+        self.assertEqual(bucket_counts(_seed_rows()).get(""), 27)
 
     def test_no_seeded_hex_falls_through_unclassified(self):
         unclassified = sorted({
@@ -365,24 +374,30 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
         return species_entry(row[0])
 
     def test_a_checked_colour_says_so(self):
-        entry = self._entry("Blue Columbine")
-        self.assertEqual(entry["bloom_colour"], "blue")
-        self.assertEqual(entry["bloom_colour_label"], "Blue")
+        entry = self._entry("Oval-leaf Milkweed")
+        self.assertEqual(entry["bloom_colour"], "white")
         self.assertIn("checked", entry["bloom_colour_note"])
 
+    def test_a_colour_read_off_photographs_says_so(self):
+        """Blue Columbine was the checked example until V3.34, when the
+        owner's photo review recorded it blue to purple."""
+        entry = self._entry("Blue Columbine")
+        self.assertEqual(entry["bloom_colour"], "blue")
+        self.assertEqual(entry["bloom_colour_label"], "Blue to purple")
+        self.assertIn("photograph", entry["bloom_colour_note"])
+
     def test_an_estimated_colour_says_that_instead(self):
-        """Pinned to a species no flora has been read for. Wild Bergamot was
-        the example until V2.80 sourced it from Budd's, which is the point of
-        the exercise rather than a regression -- so this now looks the example
-        up instead of naming one that can be corrected out from under it."""
-        row = next((r for r in search_plants()
-                    if (r.get("flower_colour_source") or "") == "estimated"
-                    and classify(r)), None)
-        self.assertIsNotNone(row, "nothing is estimated any more")
-        from src.plant_directory import species_entry     # noqa: PLC0415
-        entry = species_entry(row["id"])
-        self.assertTrue(entry["bloom_colour"])
-        self.assertIn("not verified", entry["bloom_colour_note"])
+        """Wild Bergamot was the example until V2.80 sourced it from Budd's,
+        and then the example was looked up; since V3.34 no flowering plant's
+        colour is a guess (every one was looked at in photographs), so the
+        row is made up. The wording still matters: the next species added
+        with its genus's colour must say it is not verified."""
+        from src.plant_directory import _bloom_colour     # noqa: PLC0415
+        note = _bloom_colour({"plant_type": "wildflower",
+                              "flower_color": "#8e6fc4",
+                              "flower_colour_source": "estimated"}
+                             )["bloom_colour_note"]
+        self.assertIn("not verified", note)
 
     def test_a_grass_is_not_described_as_unverified(self):
         """A sedge's straw bucket is a botanical fact about a wind-pollinated
@@ -489,11 +504,13 @@ class TestThePageSaysTheWholeRange(unittest.TestCase):
             "White to pink")
 
     def test_three_or_more_read_as_a_list(self):
-        """"yellow to pinkish orange" is a range; three colours is a set."""
+        """"yellow to pinkish orange" is a range; three colours is a set, and
+        a sentence: "Yellow, Pink and orange" until V3.34, when the photo
+        review gave eight plants three colours and the capital showed."""
         self.assertEqual(
             self._label(flower_color="#f2c11e",
                         flower_colours="yellow,pink,orange"),
-            "Yellow, Pink and orange")
+            "Yellow, pink and orange")
 
     def test_one_colour_is_unchanged(self):
         self.assertEqual(self._label(flower_color="#f2c11e"), "Yellow")
@@ -536,8 +553,13 @@ class TestTheRangeReachesThePublishedPage(unittest.TestCase):
         cls.entry = species_entry(row["id"])
 
     def test_the_entry_carries_the_range(self):
-        self.assertEqual(self.entry["bloom_colours"], ("yellow", "orange"))
-        self.assertEqual(self.entry["bloom_colour_label"], "Yellow to orange")
+        """Yellow to orange until V3.34; the owner's photographs added the
+        magenta that started the thread, so three colours read as a set,
+        capitalised as a sentence is ("Yellow, Orange and pink" before)."""
+        self.assertEqual(self.entry["bloom_colours"],
+                         ("yellow", "orange", "pink"))
+        self.assertEqual(self.entry["bloom_colour_label"],
+                         "Yellow, orange and pink")
 
     def test_the_cell_links_every_colour_of_the_range(self):
         from src.static_site_species import colour_cell_html

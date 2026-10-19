@@ -42,8 +42,9 @@ WIND_POLLINATED_TYPES = frozenset({"grass", "sedge", "rush"})
 #: ``(key, label, swatch, note)`` — the filter vocabulary, in the order a colour
 #: wheel runs so the facet list reads as a spectrum rather than a frequency
 #: table. ``swatch`` is a representative hex for a UI chip; ``note`` is the
-#: tooltip. Buckets with no species today (green) are kept: the vocabulary
-#: describes the colour space, not this month's seed data.
+#: tooltip. A bucket with no species in it would still be kept: the vocabulary
+#: describes the colour space, not this month's seed data. So no note counts
+#: its species: "three species" of orange was five once the owner looked.
 COLOURS: tuple = (
     ("white",  "White",            "#f2f2ea",
      "Clean white — the moon-garden palette."),
@@ -52,7 +53,7 @@ COLOURS: tuple = (
     ("yellow", "Yellow",           "#f2c11e",
      "The prairie's most common bloom colour by a wide margin."),
     ("orange", "Orange",           "#e07020",
-     "Rare here — three species."),
+     "Rare here."),
     ("red",    "Red",              "#d6453a",
      "Includes the deep wine reds."),
     ("pink",   "Pink",             "#e58fb0",
