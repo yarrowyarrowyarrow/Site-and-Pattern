@@ -1,0 +1,5734 @@
+{
+ "animals": {
+  "Acanthis flammea": {
+   "group": "bird",
+   "near": 10196,
+   "province": 58828
+  },
+  "Acleris celiana": {
+   "group": "lepidoptera",
+   "near": 27,
+   "province": 37
+  },
+  "Acleris cornana": {
+   "group": "lepidoptera",
+   "near": 14,
+   "province": 16
+  },
+  "Acronicta fragilis": {
+   "group": "lepidoptera",
+   "near": 60,
+   "province": 195
+  },
+  "Acronicta hasta": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 73
+  },
+  "Acronicta impleta": {
+   "group": "lepidoptera",
+   "near": 35,
+   "province": 113
+  },
+  "Acronicta impressa": {
+   "group": "lepidoptera",
+   "near": 56,
+   "province": 209
+  },
+  "Acronicta insita": {
+   "group": "lepidoptera",
+   "near": 9,
+   "province": 140
+  },
+  "Acronicta oblinita": {
+   "group": "lepidoptera",
+   "near": 34,
+   "province": 89
+  },
+  "Acronicta radcliffei": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 46
+  },
+  "Acronicta vulpina": {
+   "group": "lepidoptera",
+   "near": 25,
+   "province": 88
+  },
+  "Adalia bipunctata": {
+   "group": "other_insect",
+   "near": 721,
+   "province": 1929
+  },
+  "Adejeania vexatrix": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 25
+  },
+  "Adela septentrionella": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 50
+  },
+  "Adelges cooleyi": {
+   "group": "other_insect",
+   "near": 15,
+   "province": 244
+  },
+  "Adelges lariciatus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 125
+  },
+  "Adelphocoris rapidus": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 70
+  },
+  "Agapostemon femoratus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Agapostemon splendens": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Agapostemon texanus": {
+   "group": "bee",
+   "near": 0,
+   "province": 409
+  },
+  "Agapostemon virescens": {
+   "group": "bee",
+   "near": 0,
+   "province": 468
+  },
+  "Agelaius phoeniceus": {
+   "group": "bird",
+   "near": 32952,
+   "province": 311109
+  },
+  "Ageniella accepta": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Aglais milberti": {
+   "group": "lepidoptera",
+   "near": 691,
+   "province": 3475
+  },
+  "Agriades aquilo": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Agrilus anxius": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 17
+  },
+  "Agriphila ruricolellus": {
+   "group": "lepidoptera",
+   "near": 56,
+   "province": 509
+  },
+  "Agromyza pseudoreptans": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 9
+  },
+  "Agromyza vockerothi": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 9
+  },
+  "Agrotis ipsilon": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 17
+  },
+  "Agrotis venerabilis": {
+   "group": "lepidoptera",
+   "near": 63,
+   "province": 357
+  },
+  "Albuna pyramidalis": {
+   "group": "lepidoptera",
+   "near": 6,
+   "province": 326
+  },
+  "Allograpta obliqua": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Alydus pilosulus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Alypia octomaculata": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Amblyptilia pica": {
+   "group": "lepidoptera",
+   "near": 34,
+   "province": 155
+  },
+  "Ammophila aberti": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 10
+  },
+  "Ammophila procera": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 11
+  },
+  "Amphigonalia gothica": {
+   "group": "other_insect",
+   "near": 20,
+   "province": 88
+  },
+  "Amphipoea americana": {
+   "group": "lepidoptera",
+   "near": 52,
+   "province": 190
+  },
+  "Anagrapha falcifera": {
+   "group": "lepidoptera",
+   "near": 79,
+   "province": 313
+  },
+  "Anania funebris": {
+   "group": "lepidoptera",
+   "near": 35,
+   "province": 218
+  },
+  "Anania tertialis": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 71
+  },
+  "Anarta nigrolunata": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 59
+  },
+  "Anas clypeata": {
+   "group": "bird",
+   "near": 16205,
+   "province": 130915
+  },
+  "Anasimyia bilinearis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 3
+  },
+  "Anastoechus barbatus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 6
+  },
+  "Anastrangalia laetifica": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 143
+  },
+  "Anax junius": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 73
+  },
+  "Ancistrocerus adiabatus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 13
+  },
+  "Ancistrocerus catskill": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Andrena amphibola": {
+   "group": "bee",
+   "near": 2,
+   "province": 12
+  },
+  "Andrena angustitarsata": {
+   "group": "bee",
+   "near": 0,
+   "province": 21
+  },
+  "Andrena astragali": {
+   "group": "bee",
+   "near": 0,
+   "province": 43
+  },
+  "Andrena auricoma": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Andrena birtwelli": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Andrena caerulea": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Andrena canadensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Andrena candida": {
+   "group": "bee",
+   "near": 0,
+   "province": 12
+  },
+  "Andrena carlini": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Andrena carolina": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Andrena clarkella": {
+   "group": "bee",
+   "near": 6,
+   "province": 15
+  },
+  "Andrena columbiana": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Andrena crataegi": {
+   "group": "bee",
+   "near": 1,
+   "province": 22
+  },
+  "Andrena cressonii": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Andrena cyanophila": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Andrena erythrogaster": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Andrena forbesii": {
+   "group": "bee",
+   "near": 0,
+   "province": 8
+  },
+  "Andrena frigida": {
+   "group": "bee",
+   "near": 8,
+   "province": 36
+  },
+  "Andrena helianthi": {
+   "group": "bee",
+   "near": 0,
+   "province": 11
+  },
+  "Andrena hippotes": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Andrena hirticincta": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Andrena knuthiana": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Andrena lawrencei": {
+   "group": "bee",
+   "near": 0,
+   "province": 24
+  },
+  "Andrena lupinorum": {
+   "group": "bee",
+   "near": 0,
+   "province": 17
+  },
+  "Andrena mariae": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Andrena medionitens": {
+   "group": "bee",
+   "near": 0,
+   "province": 28
+  },
+  "Andrena melanochroa": {
+   "group": "bee",
+   "near": 0,
+   "province": 24
+  },
+  "Andrena merriami": {
+   "group": "bee",
+   "near": 0,
+   "province": 25
+  },
+  "Andrena microchlora": {
+   "group": "bee",
+   "near": 0,
+   "province": 36
+  },
+  "Andrena milwaukeensis": {
+   "group": "bee",
+   "near": 81,
+   "province": 238
+  },
+  "Andrena miranda": {
+   "group": "bee",
+   "near": 0,
+   "province": 54
+  },
+  "Andrena miserabilis": {
+   "group": "bee",
+   "near": 1,
+   "province": 18
+  },
+  "Andrena nigrihirta": {
+   "group": "bee",
+   "near": 1,
+   "province": 5
+  },
+  "Andrena nigrocaerulea": {
+   "group": "bee",
+   "near": 1,
+   "province": 45
+  },
+  "Andrena nivalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 61
+  },
+  "Andrena pallidifovea": {
+   "group": "bee",
+   "near": 0,
+   "province": 16
+  },
+  "Andrena persimulata": {
+   "group": "bee",
+   "near": 2,
+   "province": 3
+  },
+  "Andrena porterae": {
+   "group": "bee",
+   "near": 0,
+   "province": 12
+  },
+  "Andrena prunorum": {
+   "group": "bee",
+   "near": 6,
+   "province": 265
+  },
+  "Andrena robervalensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Andrena rufosignata": {
+   "group": "bee",
+   "near": 0,
+   "province": 27
+  },
+  "Andrena salicifloris": {
+   "group": "bee",
+   "near": 0,
+   "province": 20
+  },
+  "Andrena salictaria": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Andrena schuhi": {
+   "group": "bee",
+   "near": 0,
+   "province": 10
+  },
+  "Andrena scurra": {
+   "group": "bee",
+   "near": 0,
+   "province": 41
+  },
+  "Andrena sigmundi": {
+   "group": "bee",
+   "near": 2,
+   "province": 3
+  },
+  "Andrena sladeni": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Andrena sola": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Andrena spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Andrena subtilis": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Andrena surda": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Andrena thaspii": {
+   "group": "bee",
+   "near": 1,
+   "province": 73
+  },
+  "Andrena topazana": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Andrena transnigra": {
+   "group": "bee",
+   "near": 0,
+   "province": 48
+  },
+  "Andrena trevoris": {
+   "group": "bee",
+   "near": 0,
+   "province": 27
+  },
+  "Andrena vicina": {
+   "group": "bee",
+   "near": 1,
+   "province": 13
+  },
+  "Andrena w-scripta": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Andrena wheeleri": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Androloma maccullochii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 129
+  },
+  "Anisosticta bitriangularis": {
+   "group": "other_insect",
+   "near": 42,
+   "province": 186
+  },
+  "Anoplius virginiensis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 5
+  },
+  "Anser caerulescens": {
+   "group": "bird",
+   "near": 2092,
+   "province": 23334
+  },
+  "Anthaxia inornata": {
+   "group": "other_insect",
+   "near": 38,
+   "province": 269
+  },
+  "Antheraea polyphemus": {
+   "group": "lepidoptera",
+   "near": 183,
+   "province": 846
+  },
+  "Antherophagus ochraceus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 9
+  },
+  "Anthidiellum robertsoni": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Anthidium atrifrons": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Anthidium mormonum": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Anthidium tenuiflorae": {
+   "group": "bee",
+   "near": 0,
+   "province": 88
+  },
+  "Anthidium utahense": {
+   "group": "bee",
+   "near": 0,
+   "province": 16
+  },
+  "Anthocharis julia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 942
+  },
+  "Anthophora bomboides": {
+   "group": "bee",
+   "near": 10,
+   "province": 109
+  },
+  "Anthophora occidentalis": {
+   "group": "bee",
+   "near": 1,
+   "province": 35
+  },
+  "Anthophora pacifica": {
+   "group": "bee",
+   "near": 0,
+   "province": 8
+  },
+  "Anthophora peritomae": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Anthophora porterae": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Anthophora terminalis": {
+   "group": "bee",
+   "near": 51,
+   "province": 1134
+  },
+  "Anthophora urbana": {
+   "group": "bee",
+   "near": 0,
+   "province": 17
+  },
+  "Anthophora ursina": {
+   "group": "bee",
+   "near": 0,
+   "province": 66
+  },
+  "Anthophora walshii": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Anthrax irroratus": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 84
+  },
+  "Apamea inordinata": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 39
+  },
+  "Apamea unanimis": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 8
+  },
+  "Aphilanthops frigidus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 11
+  },
+  "Archilochus colubris": {
+   "group": "bird",
+   "near": 2697,
+   "province": 10800
+  },
+  "Archips cerasivorana": {
+   "group": "lepidoptera",
+   "near": 14,
+   "province": 60
+  },
+  "Argynnis aphrodite": {
+   "group": "lepidoptera",
+   "near": 43,
+   "province": 683
+  },
+  "Argynnis hydaspe": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1096
+  },
+  "Argynnis idalia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1
+  },
+  "Argynnis mormonia": {
+   "group": "lepidoptera",
+   "near": 6,
+   "province": 1980
+  },
+  "Asemosyrphus polygrammus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 19
+  },
+  "Asteromyia carbonifera": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 20
+  },
+  "Asteromyia modesta": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 8
+  },
+  "Atrichopogon fusculus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 8
+  },
+  "Augochlorella aurata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Aulagromyza cornigera": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 31
+  },
+  "Autographa californica": {
+   "group": "lepidoptera",
+   "near": 173,
+   "province": 1137
+  },
+  "Autographa precationis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 2
+  },
+  "Baccha cognata": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 9
+  },
+  "Batyle ignicollis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 12
+  },
+  "Batyle suturalis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 97
+  },
+  "Bellamira scalaris": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Bembix americana": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 211
+  },
+  "Bembix amoena": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Bibio albipennis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 72
+  },
+  "Bicyrtes ventralis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 26
+  },
+  "Blaesodiplosis crataegifolia": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 45
+  },
+  "Blaesoxipha hunteri": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 34
+  },
+  "Blepharida rhois": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 10
+  },
+  "Blera confusa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Blera nigra": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 35
+  },
+  "Boisea trivittata": {
+   "group": "other_insect",
+   "near": 227,
+   "province": 996
+  },
+  "Boloria astarte": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 242
+  },
+  "Boloria bellona": {
+   "group": "lepidoptera",
+   "near": 82,
+   "province": 712
+  },
+  "Boloria chariclea": {
+   "group": "lepidoptera",
+   "near": 35,
+   "province": 842
+  },
+  "Boloria epithore": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 427
+  },
+  "Boloria freija": {
+   "group": "lepidoptera",
+   "near": 11,
+   "province": 754
+  },
+  "Boloria frigga": {
+   "group": "lepidoptera",
+   "near": 14,
+   "province": 392
+  },
+  "Bombus appositus": {
+   "group": "bee",
+   "near": 0,
+   "province": 533
+  },
+  "Bombus balteatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 36
+  },
+  "Bombus bifarius": {
+   "group": "bee",
+   "near": 0,
+   "province": 1147
+  },
+  "Bombus bohemicus": {
+   "group": "bee",
+   "near": 1,
+   "province": 12
+  },
+  "Bombus borealis": {
+   "group": "bee",
+   "near": 144,
+   "province": 1351
+  },
+  "Bombus centralis": {
+   "group": "bee",
+   "near": 360,
+   "province": 2200
+  },
+  "Bombus cryptarum": {
+   "group": "bee",
+   "near": 440,
+   "province": 1287
+  },
+  "Bombus fervidus": {
+   "group": "bee",
+   "near": 10,
+   "province": 446
+  },
+  "Bombus flavidus": {
+   "group": "bee",
+   "near": 16,
+   "province": 231
+  },
+  "Bombus flavifrons": {
+   "group": "bee",
+   "near": 70,
+   "province": 1020
+  },
+  "Bombus frigidus": {
+   "group": "bee",
+   "near": 52,
+   "province": 548
+  },
+  "Bombus griseocollis": {
+   "group": "bee",
+   "near": 1,
+   "province": 292
+  },
+  "Bombus huntii": {
+   "group": "bee",
+   "near": 63,
+   "province": 3173
+  },
+  "Bombus insularis": {
+   "group": "bee",
+   "near": 52,
+   "province": 1070
+  },
+  "Bombus kirbiellus": {
+   "group": "bee",
+   "near": 0,
+   "province": 21
+  },
+  "Bombus melanopygus": {
+   "group": "bee",
+   "near": 32,
+   "province": 1895
+  },
+  "Bombus mixtus": {
+   "group": "bee",
+   "near": 55,
+   "province": 1294
+  },
+  "Bombus nevadensis": {
+   "group": "bee",
+   "near": 159,
+   "province": 1996
+  },
+  "Bombus occidentalis": {
+   "group": "bee",
+   "near": 11,
+   "province": 1473
+  },
+  "Bombus pensylvanicus": {
+   "group": "bee",
+   "near": 1,
+   "province": 5
+  },
+  "Bombus perplexus": {
+   "group": "bee",
+   "near": 512,
+   "province": 1413
+  },
+  "Bombus polaris": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Bombus rufocinctus": {
+   "group": "bee",
+   "near": 776,
+   "province": 4043
+  },
+  "Bombus sitkensis": {
+   "group": "bee",
+   "near": 13,
+   "province": 200
+  },
+  "Bombus spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Bombus suckleyi": {
+   "group": "bee",
+   "near": 23,
+   "province": 293
+  },
+  "Bombus sylvicola": {
+   "group": "bee",
+   "near": 2,
+   "province": 104
+  },
+  "Bombus ternarius": {
+   "group": "bee",
+   "near": 816,
+   "province": 6284
+  },
+  "Bombus terricola": {
+   "group": "bee",
+   "near": 115,
+   "province": 777
+  },
+  "Bombus vagans": {
+   "group": "bee",
+   "near": 523,
+   "province": 2805
+  },
+  "Bombus vancouverensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 1887
+  },
+  "Bombycilla cedrorum": {
+   "group": "bird",
+   "near": 17136,
+   "province": 160990
+  },
+  "Bombycilla garrulus": {
+   "group": "bird",
+   "near": 14887,
+   "province": 61718
+  },
+  "Bombylius major": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 90
+  },
+  "Bombylius pulchellus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 10
+  },
+  "Bombylius pygmaeus": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 22
+  },
+  "Bonasa umbellus": {
+   "group": "bird",
+   "near": 3791,
+   "province": 40557
+  },
+  "Botanophila fugax": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 84
+  },
+  "Brachiacantha ursina": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 17
+  },
+  "Brachyopa notata": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 10
+  },
+  "Brachysomida nigripennis": {
+   "group": "other_insect",
+   "near": 9,
+   "province": 15
+  },
+  "Bracon atrator": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 12
+  },
+  "Bromius obscurus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 182
+  },
+  "Bubo virginianus": {
+   "group": "bird",
+   "near": 4600,
+   "province": 45898
+  },
+  "Buprestis nutalli": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 55
+  },
+  "Burnsius communis": {
+   "group": "lepidoptera",
+   "near": 5,
+   "province": 657
+  },
+  "Buteo jamaicensis": {
+   "group": "bird",
+   "near": 13490,
+   "province": 183930
+  },
+  "Byturus unicolor": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 24
+  },
+  "Caenurgina crassiuscula": {
+   "group": "lepidoptera",
+   "near": 47,
+   "province": 278
+  },
+  "Caenurgina erechtea": {
+   "group": "lepidoptera",
+   "near": 8,
+   "province": 115
+  },
+  "Calliopsis andreniformis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Calliopsis coloradensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Calliphora vomitoria": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 61
+  },
+  "Callophrys affinis": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 125
+  },
+  "Callophrys augustinus": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 1306
+  },
+  "Callophrys dumetorum": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3
+  },
+  "Callophrys eryphon": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1241
+  },
+  "Callophrys niphon": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 61
+  },
+  "Callophrys polios": {
+   "group": "lepidoptera",
+   "near": 12,
+   "province": 949
+  },
+  "Callophrys sheridanii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 368
+  },
+  "Callophrys spinetorum": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 212
+  },
+  "Calvia quatuordecimguttata": {
+   "group": "other_insect",
+   "near": 52,
+   "province": 300
+  },
+  "Campiglossa albiceps": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 13
+  },
+  "Campiglossa picciola": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 25
+  },
+  "Camponotus novaeboracensis": {
+   "group": "other_insect",
+   "near": 66,
+   "province": 120
+  },
+  "Carterocephalus mandan": {
+   "group": "lepidoptera",
+   "near": 206,
+   "province": 881
+  },
+  "Carterocephalus skada": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 947
+  },
+  "Catocala concumbens": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 25
+  },
+  "Celastrina ladon": {
+   "group": "lepidoptera",
+   "near": 53,
+   "province": 1742
+  },
+  "Celastrina lucia": {
+   "group": "lepidoptera",
+   "near": 695,
+   "province": 1541
+  },
+  "Celastrina neglecta": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 44
+  },
+  "Ceratina acantha": {
+   "group": "bee",
+   "near": 0,
+   "province": 99
+  },
+  "Ceratina calcarata": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Ceratomia undulosa": {
+   "group": "lepidoptera",
+   "near": 45,
+   "province": 131
+  },
+  "Cerceris deserta": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Cerceris nigrescens": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 43
+  },
+  "Cerceris sexta": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Cercyonis oetus": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 1332
+  },
+  "Cercyonis pegala": {
+   "group": "lepidoptera",
+   "near": 442,
+   "province": 3365
+  },
+  "Cercyonis sthenele": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 242
+  },
+  "Chaitophorus populicola": {
+   "group": "other_insect",
+   "near": 135,
+   "province": 399
+  },
+  "Chaitophorus populifolii": {
+   "group": "other_insect",
+   "near": 100,
+   "province": 448
+  },
+  "Chalcosyrphus curvaria": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 21
+  },
+  "Chalcosyrphus nemorum": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 32
+  },
+  "Chalcosyrphus piger": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 9
+  },
+  "Chalcosyrphus vecors": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Charadra deridens": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Chauliognathus pensylvanicus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Cheilosia latrans": {
+   "group": "other_insect",
+   "near": 10,
+   "province": 307
+  },
+  "Chionaspis pinifoliae": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 10
+  },
+  "Chionodes viduella": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 21
+  },
+  "Chirosia betuleti": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 13
+  },
+  "Chlosyne acastus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 220
+  },
+  "Chlosyne gorgone": {
+   "group": "lepidoptera",
+   "near": 19,
+   "province": 98
+  },
+  "Chlosyne harrisii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Chlosyne palla": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 945
+  },
+  "Choreutis diana": {
+   "group": "lepidoptera",
+   "near": 21,
+   "province": 64
+  },
+  "Choristoneura fumiferana": {
+   "group": "lepidoptera",
+   "near": 30,
+   "province": 182
+  },
+  "Choristoneura pinus": {
+   "group": "lepidoptera",
+   "near": 12,
+   "province": 278
+  },
+  "Choristoneura rosaceana": {
+   "group": "lepidoptera",
+   "near": 77,
+   "province": 328
+  },
+  "Chrysis iris": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 44
+  },
+  "Chrysochus auratus": {
+   "group": "other_insect",
+   "near": 31,
+   "province": 164
+  },
+  "Chrysochus cobaltinus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 73
+  },
+  "Chrysopa oculata": {
+   "group": "other_insect",
+   "near": 66,
+   "province": 625
+  },
+  "Chrysoperla carnea": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 128
+  },
+  "Chrysops sackeni": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Chrysoteuchia topiarius": {
+   "group": "lepidoptera",
+   "near": 112,
+   "province": 657
+  },
+  "Cimbex americana": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 77
+  },
+  "Cingilia catenaria": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 11
+  },
+  "Cisseps fulvicollis": {
+   "group": "lepidoptera",
+   "near": 42,
+   "province": 218
+  },
+  "Cladara limitaria": {
+   "group": "lepidoptera",
+   "near": 27,
+   "province": 106
+  },
+  "Clastoptera proteus": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 21
+  },
+  "Clemensia albata": {
+   "group": "lepidoptera",
+   "near": 25,
+   "province": 118
+  },
+  "Clusia lateralis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 4
+  },
+  "Clytus ruricola": {
+   "group": "other_insect",
+   "near": 134,
+   "province": 218
+  },
+  "Coccinella novemnotata": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 156
+  },
+  "Coccinella transversoguttata": {
+   "group": "other_insect",
+   "near": 65,
+   "province": 448
+  },
+  "Coccinella trifasciata": {
+   "group": "other_insect",
+   "near": 44,
+   "province": 345
+  },
+  "Coelioxys edita": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Coelioxys funerarius": {
+   "group": "bee",
+   "near": 5,
+   "province": 37
+  },
+  "Coelioxys grindeliae": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Coelioxys octodentatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Coelioxys porterae": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Coelioxys rufitarsis": {
+   "group": "bee",
+   "near": 3,
+   "province": 41
+  },
+  "Coelioxys sodalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 20
+  },
+  "Coenonympha tullia": {
+   "group": "lepidoptera",
+   "near": 103,
+   "province": 2088
+  },
+  "Coenophila opacifrons": {
+   "group": "lepidoptera",
+   "near": 5,
+   "province": 45
+  },
+  "Colaptes auratus": {
+   "group": "bird",
+   "near": 16886,
+   "province": 445642
+  },
+  "Colias christina": {
+   "group": "lepidoptera",
+   "near": 6,
+   "province": 1763
+  },
+  "Colias eurytheme": {
+   "group": "lepidoptera",
+   "near": 46,
+   "province": 977
+  },
+  "Colias hecla": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 14
+  },
+  "Colias interior": {
+   "group": "lepidoptera",
+   "near": 22,
+   "province": 1042
+  },
+  "Colias nastes": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 522
+  },
+  "Colias palaeno": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 16
+  },
+  "Colias philodice": {
+   "group": "lepidoptera",
+   "near": 473,
+   "province": 5672
+  },
+  "Colletes compactus": {
+   "group": "bee",
+   "near": 0,
+   "province": 12
+  },
+  "Colletes consors": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Colletes fulgidus": {
+   "group": "bee",
+   "near": 0,
+   "province": 29
+  },
+  "Colletes gypsicolens": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Colletes inaequalis": {
+   "group": "bee",
+   "near": 5,
+   "province": 10
+  },
+  "Colletes kincaidii": {
+   "group": "bee",
+   "near": 0,
+   "province": 30
+  },
+  "Colletes phaceliae": {
+   "group": "bee",
+   "near": 2,
+   "province": 33
+  },
+  "Colletes simulans": {
+   "group": "bee",
+   "near": 2,
+   "province": 12
+  },
+  "Conocephalus saltans": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 16
+  },
+  "Conophorus columbiensis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 16
+  },
+  "Conophorus sackenii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Contarinia virginianiae": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 13
+  },
+  "Conura torvina": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Copestylum comstocki": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Copestylum satur": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 22
+  },
+  "Copestylum vittatum": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Corimelaena pulicaria": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 13
+  },
+  "Cortodera longicornis": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 60
+  },
+  "Cortodera subpilosa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 35
+  },
+  "Corythucha cydoniae": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 32
+  },
+  "Corythucha morrilli": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 21
+  },
+  "Cosmopepla lintneriana": {
+   "group": "other_insect",
+   "near": 278,
+   "province": 693
+  },
+  "Crambodes talidiformis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 19
+  },
+  "Crambus girardellus": {
+   "group": "lepidoptera",
+   "near": 6,
+   "province": 28
+  },
+  "Crambus unistriatellus": {
+   "group": "lepidoptera",
+   "near": 16,
+   "province": 64
+  },
+  "Crossidius coralinus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Crossidius discoideus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 12
+  },
+  "Crossidius pulchellus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 19
+  },
+  "Ctenucha virginica": {
+   "group": "lepidoptera",
+   "near": 353,
+   "province": 671
+  },
+  "Cucullia convexipennis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Cuerna alpina": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 30
+  },
+  "Cupido amyntula": {
+   "group": "lepidoptera",
+   "near": 343,
+   "province": 2922
+  },
+  "Cupido comyntas": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 105
+  },
+  "Cyanocitta cristata": {
+   "group": "bird",
+   "near": 55294,
+   "province": 186852
+  },
+  "Cycnia tenera": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 160
+  },
+  "Cynomya cadaverina": {
+   "group": "other_insect",
+   "near": 48,
+   "province": 338
+  },
+  "Cyrtophorus verrucosus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Danaus gilippus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Danaus plexippus": {
+   "group": "lepidoptera",
+   "near": 55,
+   "province": 370
+  },
+  "Dargida diffusa": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 115
+  },
+  "Dasineura epilobii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Dasineura folliculi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Dasysyrphus venustus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Datana perspicua": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3
+  },
+  "Dejongia lobidactylus": {
+   "group": "lepidoptera",
+   "near": 7,
+   "province": 47
+  },
+  "Diabrotica undecimpunctata": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 2
+  },
+  "Diabrotica virgifera": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Diachrysia aereoides": {
+   "group": "lepidoptera",
+   "near": 39,
+   "province": 121
+  },
+  "Diadasia australis": {
+   "group": "bee",
+   "near": 0,
+   "province": 18
+  },
+  "Diadasia diminuta": {
+   "group": "bee",
+   "near": 0,
+   "province": 30
+  },
+  "Dianthidium curvatum": {
+   "group": "bee",
+   "near": 0,
+   "province": 49
+  },
+  "Dianthidium pudicum": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Dianthidium subparvum": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Dianthidium ulkei": {
+   "group": "bee",
+   "near": 0,
+   "province": 23
+  },
+  "Diastrophus turgidus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Dicerca tenebrica": {
+   "group": "other_insect",
+   "near": 45,
+   "province": 136
+  },
+  "Dicerca tenebrosa": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 16
+  },
+  "Dichelonyx backii": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 328
+  },
+  "Dioxyna picciola": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 25
+  },
+  "Diplolepis bassetti": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 77
+  },
+  "Diplolepis bicolor": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 53
+  },
+  "Diplolepis spinosa": {
+   "group": "other_insect",
+   "near": 95,
+   "province": 295
+  },
+  "Diploschizia impigritella": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 7
+  },
+  "Dolerus aprilis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Dolichovespula albida": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Dolichovespula arctica": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 74
+  },
+  "Dolichovespula arenaria": {
+   "group": "other_insect",
+   "near": 142,
+   "province": 665
+  },
+  "Dolichovespula maculata": {
+   "group": "other_insect",
+   "near": 197,
+   "province": 1055
+  },
+  "Dolichovespula norvegicoides": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 75
+  },
+  "Drasteria hudsonica": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 270
+  },
+  "Drasteria petricola": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 190
+  },
+  "Dryobates pubescens": {
+   "group": "bird",
+   "near": 55090,
+   "province": 258077
+  },
+  "Dufourea marginata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Dufourea trochantera": {
+   "group": "bee",
+   "near": 0,
+   "province": 35
+  },
+  "Dumetella carolinensis": {
+   "group": "bird",
+   "near": 4877,
+   "province": 73240
+  },
+  "Dysstroma citrata": {
+   "group": "lepidoptera",
+   "near": 50,
+   "province": 362
+  },
+  "Ectemnius arcuatus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 32
+  },
+  "Ectemnius continuus": {
+   "group": "other_insect",
+   "near": 9,
+   "province": 48
+  },
+  "Ectemnius dilectus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 27
+  },
+  "Ectemnius lapidarius": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 30
+  },
+  "Ectemnius maculosus": {
+   "group": "other_insect",
+   "near": 10,
+   "province": 17
+  },
+  "Ectemnius ruficornis": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 23
+  },
+  "Ectemnius rufifemur": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Ectemnius spiniferus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Ectoedemia populella": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 12
+  },
+  "Ectropis crepuscularia": {
+   "group": "lepidoptera",
+   "near": 52,
+   "province": 213
+  },
+  "Ellychnia corrusca": {
+   "group": "other_insect",
+   "near": 20,
+   "province": 249
+  },
+  "Elophila icciusalis": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 9
+  },
+  "Emmelina monodactyla": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 63
+  },
+  "Enallagma cyathigerum": {
+   "group": "other_insect",
+   "near": 15,
+   "province": 140
+  },
+  "Enargia fausta": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 19
+  },
+  "Enchenopa latipes": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 21
+  },
+  "Eosphoropteryx thyatyroides": {
+   "group": "lepidoptera",
+   "near": 21,
+   "province": 39
+  },
+  "Epalpus signifer": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 23
+  },
+  "Epargyreus clarus": {
+   "group": "lepidoptera",
+   "near": 87,
+   "province": 596
+  },
+  "Epeolus americanus": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Epeolus compactus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Epeolus minimus": {
+   "group": "bee",
+   "near": 2,
+   "province": 29
+  },
+  "Epeolus olympiellus": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Epiblema scudderiana": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Epicauta ferruginea": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 36
+  },
+  "Epicauta pensylvanica": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 26
+  },
+  "Epicauta puncticollis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 118
+  },
+  "Epicauta sericans": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Epirrhoe alternata": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 154
+  },
+  "Epistrophe emarginata": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 19
+  },
+  "Epistrophe grossulariae": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 37
+  },
+  "Epistrophe xanthostoma": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 8
+  },
+  "Epistrophella emarginata": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 19
+  },
+  "Eptesicus fuscus": {
+   "group": "mammal",
+   "near": 7,
+   "province": 129
+  },
+  "Epuraea aestiva": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 6
+  },
+  "Epuraea truncatella": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 170
+  },
+  "Erebia discoidalis": {
+   "group": "lepidoptera",
+   "near": 189,
+   "province": 1050
+  },
+  "Erebia epipsodea": {
+   "group": "lepidoptera",
+   "near": 298,
+   "province": 3281
+  },
+  "Erebia vidleri": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 182
+  },
+  "Eristalis anthophorina": {
+   "group": "other_insect",
+   "near": 25,
+   "province": 80
+  },
+  "Eristalis dimidiata": {
+   "group": "other_insect",
+   "near": 25,
+   "province": 54
+  },
+  "Eristalis flavipes": {
+   "group": "other_insect",
+   "near": 20,
+   "province": 61
+  },
+  "Eristalis hirta": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 77
+  },
+  "Eristalis obscura": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 21
+  },
+  "Eristalis stipator": {
+   "group": "other_insect",
+   "near": 57,
+   "province": 123
+  },
+  "Eristalis tenax": {
+   "group": "other_insect",
+   "near": 137,
+   "province": 1829
+  },
+  "Erynnis afranius": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 182
+  },
+  "Erynnis brizo": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Erynnis icelus": {
+   "group": "lepidoptera",
+   "near": 142,
+   "province": 1404
+  },
+  "Erynnis juvenalis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Erynnis pacuvius": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 220
+  },
+  "Erynnis persius": {
+   "group": "lepidoptera",
+   "near": 11,
+   "province": 1556
+  },
+  "Erynnis propertius": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3
+  },
+  "Estigmene acrea": {
+   "group": "lepidoptera",
+   "near": 59,
+   "province": 319
+  },
+  "Etorofus obliteratus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 32
+  },
+  "Euaresta aequalis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Eucera acerba": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Eucera atriventris": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Eucera douglasiana": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Eucera edwardsii": {
+   "group": "bee",
+   "near": 0,
+   "province": 14
+  },
+  "Eucera frater": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Eucera fulvitarsis": {
+   "group": "bee",
+   "near": 0,
+   "province": 12
+  },
+  "Eucera hamata": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Eucerceris cressoni": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Euchlaena marginaria": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 97
+  },
+  "Euchloe ausonides": {
+   "group": "lepidoptera",
+   "near": 8,
+   "province": 1030
+  },
+  "Euchloe creusa": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 239
+  },
+  "Euchloe olympia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 100
+  },
+  "Eucirroedia pampina": {
+   "group": "lepidoptera",
+   "near": 16,
+   "province": 124
+  },
+  "Euclidia ardita": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 14
+  },
+  "Euclidia cuspidea": {
+   "group": "lepidoptera",
+   "near": 53,
+   "province": 174
+  },
+  "Euhexomyza schineri": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 7
+  },
+  "Eumea caesar": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 27
+  },
+  "Eumenes crucifera": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 36
+  },
+  "Euodynerus annulatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 24
+  },
+  "Euodynerus foraminatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Euodynerus hidalgo": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Euodynerus pratensis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Eupeodes americanus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 4
+  },
+  "Eupeodes fumipennis": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 187
+  },
+  "Eupeodes latifasciatus": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 11
+  },
+  "Eupeodes perplexus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 13
+  },
+  "Eupeodes snowi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Eupeodes volucris": {
+   "group": "other_insect",
+   "near": 28,
+   "province": 258
+  },
+  "Euphilotes battoides": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 308
+  },
+  "Euphydryas anicia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3064
+  },
+  "Euphydryas chalcedona": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 51
+  },
+  "Euphydryas colon": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 51
+  },
+  "Euphydryas editha": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 300
+  },
+  "Euphydryas gillettii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 126
+  },
+  "Euphyia intermediata": {
+   "group": "lepidoptera",
+   "near": 26,
+   "province": 106
+  },
+  "Euplexia benesimilis": {
+   "group": "lepidoptera",
+   "near": 43,
+   "province": 240
+  },
+  "Eupsilia tristigmata": {
+   "group": "lepidoptera",
+   "near": 42,
+   "province": 96
+  },
+  "Euptoieta claudia": {
+   "group": "lepidoptera",
+   "near": 16,
+   "province": 279
+  },
+  "Eurimyia stipatus": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 15
+  },
+  "Eurosta solidaginis": {
+   "group": "other_insect",
+   "near": 26,
+   "province": 264
+  },
+  "Eusarca confusaria": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Eusphalerum pothos": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 220
+  },
+  "Eutreta diana": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 17
+  },
+  "Euxoa auxiliaris": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 195
+  },
+  "Euxoa catenula": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 39
+  },
+  "Euxoa detersa": {
+   "group": "lepidoptera",
+   "near": 14,
+   "province": 100
+  },
+  "Evagetes parvus": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 9
+  },
+  "Evergestis pallidata": {
+   "group": "lepidoptera",
+   "near": 17,
+   "province": 53
+  },
+  "Evodinus monticola": {
+   "group": "other_insect",
+   "near": 21,
+   "province": 87
+  },
+  "Exoprosopa decora": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Exoprosopa dorcadion": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 40
+  },
+  "Exoprosopa doris": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Exoprosopa eremita": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 17
+  },
+  "Exoprosopa fascipennis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Exorista mella": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 3
+  },
+  "Falco columbarius": {
+   "group": "bird",
+   "near": 9368,
+   "province": 78591
+  },
+  "Falco sparverius": {
+   "group": "bird",
+   "near": 1940,
+   "province": 58695
+  },
+  "Feltia herilis": {
+   "group": "lepidoptera",
+   "near": 78,
+   "province": 302
+  },
+  "Feltia jaculifera": {
+   "group": "lepidoptera",
+   "near": 194,
+   "province": 1057
+  },
+  "Feralia comstocki": {
+   "group": "lepidoptera",
+   "near": 18,
+   "province": 69
+  },
+  "Formica fusca": {
+   "group": "other_insect",
+   "near": 16,
+   "province": 93
+  },
+  "Formica obscuripes": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 277
+  },
+  "Formica obtusopilosa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 16
+  },
+  "Frankliniella tritici": {
+   "group": "other_insect",
+   "near": 43,
+   "province": 906
+  },
+  "Fumibotys fumalis": {
+   "group": "lepidoptera",
+   "near": 13,
+   "province": 37
+  },
+  "Geina tenuidactylus": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 34
+  },
+  "Gesneria centuriella": {
+   "group": "lepidoptera",
+   "near": 17,
+   "province": 631
+  },
+  "Gillmeria pallidactyla": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 100
+  },
+  "Glaucopsyche lygdamus": {
+   "group": "lepidoptera",
+   "near": 826,
+   "province": 5668
+  },
+  "Glaucopsyche piasus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 236
+  },
+  "Gnathacmaeops pratensis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 199
+  },
+  "Gnophaela clappiana": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Gnophaela latipennis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 6
+  },
+  "Gnophaela vermiculata": {
+   "group": "lepidoptera",
+   "near": 384,
+   "province": 1967
+  },
+  "Gnorimoschema octomaculella": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 39
+  },
+  "Gorytes simillimus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 10
+  },
+  "Grammoptera subargentata": {
+   "group": "other_insect",
+   "near": 43,
+   "province": 287
+  },
+  "Graphiphora augur": {
+   "group": "lepidoptera",
+   "near": 33,
+   "province": 277
+  },
+  "Graphocephala coccinea": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Grus canadensis": {
+   "group": "bird",
+   "near": 2805,
+   "province": 20574
+  },
+  "Habropoda cineraria": {
+   "group": "bee",
+   "near": 1,
+   "province": 208
+  },
+  "Haemorhous mexicanus": {
+   "group": "bird",
+   "near": 37922,
+   "province": 276830
+  },
+  "Haemorhous purpureus": {
+   "group": "bird",
+   "near": 6206,
+   "province": 21329
+  },
+  "Halictus confusus": {
+   "group": "bee",
+   "near": 17,
+   "province": 265
+  },
+  "Halictus farinosus": {
+   "group": "bee",
+   "near": 0,
+   "province": 220
+  },
+  "Halictus ligatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 242
+  },
+  "Halictus rubicundus": {
+   "group": "bee",
+   "near": 69,
+   "province": 607
+  },
+  "Halictus spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Halictus tripartitus": {
+   "group": "bee",
+   "near": 0,
+   "province": 153
+  },
+  "Halictus virgatellus": {
+   "group": "bee",
+   "near": 0,
+   "province": 10
+  },
+  "Halysidota tessellaris": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1
+  },
+  "Hammerschmidtia rufa": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 11
+  },
+  "Harmostes reflexulus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 61
+  },
+  "Hedriodiscus binotatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 11
+  },
+  "Helina evecta": {
+   "group": "other_insect",
+   "near": 225,
+   "province": 2374
+  },
+  "Heliothis phloxiphaga": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 72
+  },
+  "Helophilus fasciatus": {
+   "group": "other_insect",
+   "near": 42,
+   "province": 104
+  },
+  "Helophilus hybridus": {
+   "group": "other_insect",
+   "near": 96,
+   "province": 322
+  },
+  "Helophilus lapponicus": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 7
+  },
+  "Helophilus latifrons": {
+   "group": "other_insect",
+   "near": 28,
+   "province": 159
+  },
+  "Hemadas nubilipennis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 5
+  },
+  "Hemaris diffinis": {
+   "group": "lepidoptera",
+   "near": 40,
+   "province": 137
+  },
+  "Hemaris gracilis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 5
+  },
+  "Hemaris thetis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 505
+  },
+  "Hemaris thysbe": {
+   "group": "lepidoptera",
+   "near": 83,
+   "province": 298
+  },
+  "Hemileuca nevadensis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 22
+  },
+  "Hemipenthes morioides": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 12
+  },
+  "Heriades carinata": {
+   "group": "bee",
+   "near": 5,
+   "province": 95
+  },
+  "Heriades cressoni": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Heriades variolosa": {
+   "group": "bee",
+   "near": 2,
+   "province": 20
+  },
+  "Herpetogramma abdominalis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 5
+  },
+  "Herpetogramma aquilonalis": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 28
+  },
+  "Herpetogramma thestealis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 2
+  },
+  "Hesperia comma": {
+   "group": "lepidoptera",
+   "near": 4,
+   "province": 1647
+  },
+  "Hesperia dacotae": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Hesperia juba": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 321
+  },
+  "Hesperia uncas": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 204
+  },
+  "Heterogaster behrensii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 9
+  },
+  "Hippodamia convergens": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 655
+  },
+  "Hippodamia parenthesis": {
+   "group": "other_insect",
+   "near": 64,
+   "province": 460
+  },
+  "Holcopasites calliopsidis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Holopyga ventralis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 43
+  },
+  "Homoeosoma electella": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 25
+  },
+  "Hoplitis albifrons": {
+   "group": "bee",
+   "near": 3,
+   "province": 105
+  },
+  "Hoplitis fulgida": {
+   "group": "bee",
+   "near": 0,
+   "province": 67
+  },
+  "Hoplitis grinnelli": {
+   "group": "bee",
+   "near": 0,
+   "province": 10
+  },
+  "Hoplitis hypocrita": {
+   "group": "bee",
+   "near": 0,
+   "province": 11
+  },
+  "Hoplitis pilosifrons": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Hoplitis producta": {
+   "group": "bee",
+   "near": 2,
+   "province": 34
+  },
+  "Hoplitis robusta": {
+   "group": "bee",
+   "near": 0,
+   "province": 18
+  },
+  "Hoplitis sambuci": {
+   "group": "bee",
+   "near": 0,
+   "province": 32
+  },
+  "Hoplitis spoliata": {
+   "group": "bee",
+   "near": 2,
+   "province": 34
+  },
+  "Hoplitis truncata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Hyalophora cecropia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 7
+  },
+  "Hydria undulata": {
+   "group": "lepidoptera",
+   "near": 39,
+   "province": 99
+  },
+  "Hylaeus affinis": {
+   "group": "bee",
+   "near": 2,
+   "province": 27
+  },
+  "Hylaeus annulatus": {
+   "group": "bee",
+   "near": 18,
+   "province": 482
+  },
+  "Hylaeus basalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 31
+  },
+  "Hylaeus leptocephalus": {
+   "group": "bee",
+   "near": 0,
+   "province": 11
+  },
+  "Hylaeus mesillae": {
+   "group": "bee",
+   "near": 1,
+   "province": 38
+  },
+  "Hylaeus modestus": {
+   "group": "bee",
+   "near": 8,
+   "province": 124
+  },
+  "Hylaeus verticalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 10
+  },
+  "Hyles gallii": {
+   "group": "lepidoptera",
+   "near": 77,
+   "province": 798
+  },
+  "Hyles lineata": {
+   "group": "lepidoptera",
+   "near": 11,
+   "province": 281
+  },
+  "Hypena humuli": {
+   "group": "lepidoptera",
+   "near": 11,
+   "province": 145
+  },
+  "Hypena scabra": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Hyperaspis undulata": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 48
+  },
+  "Hyphantria cunea": {
+   "group": "lepidoptera",
+   "near": 17,
+   "province": 229
+  },
+  "Hystricia abrupta": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 11
+  },
+  "Icaricia icarioides": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3106
+  },
+  "Icaricia saepiolus": {
+   "group": "lepidoptera",
+   "near": 75,
+   "province": 1862
+  },
+  "Icterus galbula": {
+   "group": "bird",
+   "near": 3768,
+   "province": 27445
+  },
+  "Isodontia elegans": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 64
+  },
+  "Isodontia mexicana": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Janus abbreviatus": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 3
+  },
+  "Judolia instabilis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 20
+  },
+  "Judolia montivagans": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 150
+  },
+  "Junco hyemalis": {
+   "group": "bird",
+   "near": 24243,
+   "province": 239136
+  },
+  "Lacinipolia renigera": {
+   "group": "lepidoptera",
+   "near": 117,
+   "province": 400
+  },
+  "Lagopus lagopus": {
+   "group": "bird",
+   "near": 0,
+   "province": 288
+  },
+  "Lagopus leucura": {
+   "group": "bird",
+   "near": 0,
+   "province": 1955
+  },
+  "Lagopus muta": {
+   "group": "bird",
+   "near": 0,
+   "province": 3
+  },
+  "Lapposyrphus aberrantis": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 6
+  },
+  "Lapposyrphus lapponicus": {
+   "group": "other_insect",
+   "near": 10,
+   "province": 265
+  },
+  "Lasioglossum acuminatum": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Lasioglossum aff.nevadense": {
+   "group": "bee",
+   "near": 0,
+   "province": 55
+  },
+  "Lasioglossum albipenne": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Lasioglossum albohirtum": {
+   "group": "bee",
+   "near": 0,
+   "province": 40
+  },
+  "Lasioglossum anhypops": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Lasioglossum athabascense": {
+   "group": "bee",
+   "near": 1,
+   "province": 18
+  },
+  "Lasioglossum brunneiventre": {
+   "group": "bee",
+   "near": 0,
+   "province": 32
+  },
+  "Lasioglossum buccale": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Lasioglossum colatum": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Lasioglossum cooleyi": {
+   "group": "bee",
+   "near": 0,
+   "province": 24
+  },
+  "Lasioglossum coriaceum": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Lasioglossum cressonii": {
+   "group": "bee",
+   "near": 2,
+   "province": 12
+  },
+  "Lasioglossum dashwoodi": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Lasioglossum egregium": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Lasioglossum glabriventre": {
+   "group": "bee",
+   "near": 0,
+   "province": 27
+  },
+  "Lasioglossum incompletum": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Lasioglossum inconditum": {
+   "group": "bee",
+   "near": 2,
+   "province": 31
+  },
+  "Lasioglossum kincaidii": {
+   "group": "bee",
+   "near": 0,
+   "province": 8
+  },
+  "Lasioglossum knereri": {
+   "group": "bee",
+   "near": 0,
+   "province": 34
+  },
+  "Lasioglossum laevissimum": {
+   "group": "bee",
+   "near": 0,
+   "province": 27
+  },
+  "Lasioglossum lineatulum": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Lasioglossum macroprosopum": {
+   "group": "bee",
+   "near": 0,
+   "province": 21
+  },
+  "Lasioglossum marinense": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Lasioglossum mellipes": {
+   "group": "bee",
+   "near": 0,
+   "province": 37
+  },
+  "Lasioglossum nevadense": {
+   "group": "bee",
+   "near": 0,
+   "province": 55
+  },
+  "Lasioglossum nigroviride": {
+   "group": "bee",
+   "near": 2,
+   "province": 10
+  },
+  "Lasioglossum novascotiae": {
+   "group": "bee",
+   "near": 3,
+   "province": 44
+  },
+  "Lasioglossum nr.pavoninum": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Lasioglossum obnubilum": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Lasioglossum occidentale": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Lasioglossum ovaliceps": {
+   "group": "bee",
+   "near": 0,
+   "province": 25
+  },
+  "Lasioglossum pacatum": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Lasioglossum paraforbesii": {
+   "group": "bee",
+   "near": 0,
+   "province": 60
+  },
+  "Lasioglossum pectorale": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Lasioglossum pilosum": {
+   "group": "bee",
+   "near": 1,
+   "province": 70
+  },
+  "Lasioglossum prasinogaster": {
+   "group": "bee",
+   "near": 0,
+   "province": 89
+  },
+  "Lasioglossum pruinosum": {
+   "group": "bee",
+   "near": 0,
+   "province": 49
+  },
+  "Lasioglossum punctatoventre": {
+   "group": "bee",
+   "near": 0,
+   "province": 22
+  },
+  "Lasioglossum quebecense": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Lasioglossum ruidosense": {
+   "group": "bee",
+   "near": 5,
+   "province": 143
+  },
+  "Lasioglossum sandhousiellum": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Lasioglossum sedi": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Lasioglossum semicaeruleum": {
+   "group": "bee",
+   "near": 0,
+   "province": 66
+  },
+  "Lasioglossum sisymbrii": {
+   "group": "bee",
+   "near": 0,
+   "province": 16
+  },
+  "Lasioglossum spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Lasioglossum succinipenne": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Lasioglossum trizonatum": {
+   "group": "bee",
+   "near": 0,
+   "province": 31
+  },
+  "Lasioglossum versans": {
+   "group": "bee",
+   "near": 6,
+   "province": 9
+  },
+  "Lasioglossum zephyrum": {
+   "group": "bee",
+   "near": 1,
+   "province": 40
+  },
+  "Lasionycteris noctivagans": {
+   "group": "mammal",
+   "near": 5,
+   "province": 96
+  },
+  "Lasius neoniger": {
+   "group": "other_insect",
+   "near": 13,
+   "province": 139
+  },
+  "Lebia viridis": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 74
+  },
+  "Lepturobosca chrysocoma": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 623
+  },
+  "Leucoptera pachystimella": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 20
+  },
+  "Leucospis affinis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  },
+  "Leucozona americana": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 12
+  },
+  "Libellula quadrimaculata": {
+   "group": "other_insect",
+   "near": 191,
+   "province": 924
+  },
+  "Limenitis archippus": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 100
+  },
+  "Limenitis arthemis": {
+   "group": "lepidoptera",
+   "near": 462,
+   "province": 2268
+  },
+  "Limenitis lorquini": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 2248
+  },
+  "Limnophora narona": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 10
+  },
+  "Lindenius columbianus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 63
+  },
+  "Liriomyza eupatorii": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 6
+  },
+  "Liriomyza galiivora": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 11
+  },
+  "Liris argentatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Lispe uliginosa": {
+   "group": "other_insect",
+   "near": 50,
+   "province": 298
+  },
+  "Lithophane bethunei": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 0
+  },
+  "Lithophane fagina": {
+   "group": "lepidoptera",
+   "near": 38,
+   "province": 100
+  },
+  "Lobophora nivigerata": {
+   "group": "lepidoptera",
+   "near": 26,
+   "province": 218
+  },
+  "Lomographa semiclarata": {
+   "group": "lepidoptera",
+   "near": 32,
+   "province": 146
+  },
+  "Lomographa vestaliata": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1
+  },
+  "Lon hobomok": {
+   "group": "lepidoptera",
+   "near": 599,
+   "province": 828
+  },
+  "Lophocampa maculata": {
+   "group": "lepidoptera",
+   "near": 349,
+   "province": 1580
+  },
+  "Lopidea instabilis": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 17
+  },
+  "Loxia curvirostra": {
+   "group": "bird",
+   "near": 1211,
+   "province": 37939
+  },
+  "Loxia leucoptera": {
+   "group": "bird",
+   "near": 2813,
+   "province": 27937
+  },
+  "Lucidota atra": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Lucilia illustris": {
+   "group": "other_insect",
+   "near": 9,
+   "province": 80
+  },
+  "Lucilia silvarum": {
+   "group": "other_insect",
+   "near": 14,
+   "province": 39
+  },
+  "Lycaena cupreus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 155
+  },
+  "Lycaena heteronea": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 198
+  },
+  "Lycomorpha pholus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1
+  },
+  "Lygaeus kalmii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 304
+  },
+  "Lygus lineolaris": {
+   "group": "other_insect",
+   "near": 48,
+   "province": 245
+  },
+  "Lygus rufidorsus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 1
+  },
+  "Lyroda subita": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Macaria truncataria": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 121
+  },
+  "Macropis nuda": {
+   "group": "bee",
+   "near": 0,
+   "province": 17
+  },
+  "Macrosiphum albifrons": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 6
+  },
+  "Malacosoma californica": {
+   "group": "lepidoptera",
+   "near": 9,
+   "province": 905
+  },
+  "Malacosoma disstria": {
+   "group": "lepidoptera",
+   "near": 708,
+   "province": 1788
+  },
+  "Mallota bautias": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 10
+  },
+  "Mallota posticata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Marmara oregonensis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 12
+  },
+  "Megachile angelarum": {
+   "group": "bee",
+   "near": 0,
+   "province": 23
+  },
+  "Megachile apicalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 25
+  },
+  "Megachile brevis": {
+   "group": "bee",
+   "near": 0,
+   "province": 26
+  },
+  "Megachile centuncularis": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Megachile fidelis": {
+   "group": "bee",
+   "near": 0,
+   "province": 22
+  },
+  "Megachile frigida": {
+   "group": "bee",
+   "near": 9,
+   "province": 161
+  },
+  "Megachile gemula": {
+   "group": "bee",
+   "near": 1,
+   "province": 30
+  },
+  "Megachile inermis": {
+   "group": "bee",
+   "near": 50,
+   "province": 253
+  },
+  "Megachile lapponica": {
+   "group": "bee",
+   "near": 0,
+   "province": 20
+  },
+  "Megachile latimanus": {
+   "group": "bee",
+   "near": 4,
+   "province": 11
+  },
+  "Megachile melanophaea": {
+   "group": "bee",
+   "near": 17,
+   "province": 236
+  },
+  "Megachile montivaga": {
+   "group": "bee",
+   "near": 0,
+   "province": 8
+  },
+  "Megachile nivalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 20
+  },
+  "Megachile onobrychidis": {
+   "group": "bee",
+   "near": 0,
+   "province": 16
+  },
+  "Megachile parallela": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Megachile perihirta": {
+   "group": "bee",
+   "near": 6,
+   "province": 207
+  },
+  "Megachile pugnata": {
+   "group": "bee",
+   "near": 8,
+   "province": 81
+  },
+  "Megachile relativa": {
+   "group": "bee",
+   "near": 33,
+   "province": 312
+  },
+  "Megachile rotundata": {
+   "group": "bee",
+   "near": 3,
+   "province": 146
+  },
+  "Megachile spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Megachile subnigra": {
+   "group": "bee",
+   "near": 0,
+   "province": 14
+  },
+  "Megachile texana": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Megachile wheeleri": {
+   "group": "bee",
+   "near": 0,
+   "province": 24
+  },
+  "Megacyllene robiniae": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Megasyrphus laxus": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 39
+  },
+  "Melanchra assimilis": {
+   "group": "lepidoptera",
+   "near": 17,
+   "province": 44
+  },
+  "Melangyna lasiophthalma": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 38
+  },
+  "Melanoplus bivittatus": {
+   "group": "other_insect",
+   "near": 355,
+   "province": 1948
+  },
+  "Melanoplus femurrubrum": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 95
+  },
+  "Melanoplus infantilis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 50
+  },
+  "Melanostoma mellina": {
+   "group": "other_insect",
+   "near": 8,
+   "province": 200
+  },
+  "Melecta pacifica": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Melecta separata": {
+   "group": "bee",
+   "near": 0,
+   "province": 15
+  },
+  "Melecta thoracica": {
+   "group": "bee",
+   "near": 0,
+   "province": 24
+  },
+  "Meliscaeva cinctella": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 56
+  },
+  "Melissodes agilis": {
+   "group": "bee",
+   "near": 0,
+   "province": 44
+  },
+  "Melissodes bimaculatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Melissodes bimatris": {
+   "group": "bee",
+   "near": 0,
+   "province": 29
+  },
+  "Melissodes communis": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Melissodes druriellus": {
+   "group": "bee",
+   "near": 0,
+   "province": 20
+  },
+  "Melissodes lupinus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Melissodes menuachus": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Melissodes microstictus": {
+   "group": "bee",
+   "near": 0,
+   "province": 21
+  },
+  "Melissodes pallidisignatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 14
+  },
+  "Melissodes rivalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 112
+  },
+  "Melissodes spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Melissodes trinodis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Melissodes utahensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Melospiza melodia": {
+   "group": "bird",
+   "near": 25710,
+   "province": 279862
+  },
+  "Mesembrina latreillii": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 203
+  },
+  "Mesoleuca gratulata": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 67
+  },
+  "Mesoleuca ruficillata": {
+   "group": "lepidoptera",
+   "near": 28,
+   "province": 187
+  },
+  "Metallus capitalis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 4
+  },
+  "Microdon cothurnatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Microrhopala vittata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 41
+  },
+  "Microtus pennsylvanicus": {
+   "group": "mammal",
+   "near": 114,
+   "province": 5152
+  },
+  "Molorchus bimaculatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Mompha raschkiella": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 5
+  },
+  "Mompha unifasciella": {
+   "group": "lepidoptera",
+   "near": 48,
+   "province": 79
+  },
+  "Mordellina pustulata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Mordellistena cervicalis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Mordellistena ornata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Mordwilkoja vagabunda": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Morellia micans": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Myopa clausa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Myospila meditabunda": {
+   "group": "other_insect",
+   "near": 15,
+   "province": 76
+  },
+  "Myotis lucifugus": {
+   "group": "mammal",
+   "near": 12,
+   "province": 391
+  },
+  "Neophasia menapia": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 438
+  },
+  "Neorhynchocephalus sackenii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 18
+  },
+  "Nephelodes minians": {
+   "group": "lepidoptera",
+   "near": 167,
+   "province": 400
+  },
+  "Neurocolpus nubilus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Nomada aquilarum": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Nomada articulata": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Nomada bella": {
+   "group": "bee",
+   "near": 1,
+   "province": 2
+  },
+  "Nomada crotchii": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Nomada cuneata": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Nomada lehighensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Nomada snowii": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Nomada texana": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Nomada valida": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Nomada vincta": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Nomia melanderi": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Nomophila nearctica": {
+   "group": "lepidoptera",
+   "near": 12,
+   "province": 87
+  },
+  "Nycteola cinereana": {
+   "group": "lepidoptera",
+   "near": 13,
+   "province": 63
+  },
+  "Nymphalis antiopa": {
+   "group": "lepidoptera",
+   "near": 1355,
+   "province": 5859
+  },
+  "Nymphalis l-album": {
+   "group": "lepidoptera",
+   "near": 298,
+   "province": 1643
+  },
+  "Nysson plagiatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Oarisma garita": {
+   "group": "lepidoptera",
+   "near": 50,
+   "province": 781
+  },
+  "Ochlodes sylvanoides": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3963
+  },
+  "Odynerus dilectus": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 11
+  },
+  "Oecanthus californicus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 289
+  },
+  "Oecanthus nigricornis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Oeneis chryxus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1023
+  },
+  "Oeneis melissa": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 214
+  },
+  "Oeneis uhleri": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 638
+  },
+  "Oiceoptoma noveboracense": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 52
+  },
+  "Okanagana bella": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 9
+  },
+  "Orgyia leucostigma": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 0
+  },
+  "Orsodacne atra": {
+   "group": "other_insect",
+   "near": 87,
+   "province": 189
+  },
+  "Orthonevra pulchella": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 28
+  },
+  "Orthosia hibisci": {
+   "group": "lepidoptera",
+   "near": 118,
+   "province": 358
+  },
+  "Osmia aff.paradisica": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Osmia albolateralis": {
+   "group": "bee",
+   "near": 0,
+   "province": 11
+  },
+  "Osmia atriventris": {
+   "group": "bee",
+   "near": 2,
+   "province": 22
+  },
+  "Osmia atrocyanea": {
+   "group": "bee",
+   "near": 0,
+   "province": 31
+  },
+  "Osmia bella": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Osmia brevis": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Osmia bruneri": {
+   "group": "bee",
+   "near": 0,
+   "province": 10
+  },
+  "Osmia bucephala": {
+   "group": "bee",
+   "near": 2,
+   "province": 113
+  },
+  "Osmia californica": {
+   "group": "bee",
+   "near": 0,
+   "province": 71
+  },
+  "Osmia calla": {
+   "group": "bee",
+   "near": 0,
+   "province": 13
+  },
+  "Osmia coloradensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 48
+  },
+  "Osmia cyanella": {
+   "group": "bee",
+   "near": 0,
+   "province": 14
+  },
+  "Osmia densa": {
+   "group": "bee",
+   "near": 2,
+   "province": 55
+  },
+  "Osmia exigua": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Osmia inermis": {
+   "group": "bee",
+   "near": 0,
+   "province": 31
+  },
+  "Osmia integra": {
+   "group": "bee",
+   "near": 1,
+   "province": 10
+  },
+  "Osmia juxta": {
+   "group": "bee",
+   "near": 1,
+   "province": 14
+  },
+  "Osmia kincaidii": {
+   "group": "bee",
+   "near": 0,
+   "province": 41
+  },
+  "Osmia lignaria": {
+   "group": "bee",
+   "near": 25,
+   "province": 135
+  },
+  "Osmia longula": {
+   "group": "bee",
+   "near": 0,
+   "province": 31
+  },
+  "Osmia malina": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Osmia marginipennis": {
+   "group": "bee",
+   "near": 0,
+   "province": 19
+  },
+  "Osmia montana": {
+   "group": "bee",
+   "near": 0,
+   "province": 44
+  },
+  "Osmia nanula": {
+   "group": "bee",
+   "near": 3,
+   "province": 6
+  },
+  "Osmia nigriventris": {
+   "group": "bee",
+   "near": 0,
+   "province": 21
+  },
+  "Osmia odontogaster": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Osmia paradisica": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Osmia pentstemonis": {
+   "group": "bee",
+   "near": 0,
+   "province": 4
+  },
+  "Osmia proxima": {
+   "group": "bee",
+   "near": 0,
+   "province": 34
+  },
+  "Osmia pusilla": {
+   "group": "bee",
+   "near": 4,
+   "province": 20
+  },
+  "Osmia simillima": {
+   "group": "bee",
+   "near": 1,
+   "province": 95
+  },
+  "Osmia spp.": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Osmia subaustralis": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Osmia tersula": {
+   "group": "bee",
+   "near": 10,
+   "province": 129
+  },
+  "Osmia trevoris": {
+   "group": "bee",
+   "near": 1,
+   "province": 23
+  },
+  "Osmia tristella": {
+   "group": "bee",
+   "near": 0,
+   "province": 49
+  },
+  "Oxybelus emarginatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 54
+  },
+  "Oxybelus uniglumis": {
+   "group": "other_insect",
+   "near": 6,
+   "province": 37
+  },
+  "Pachypappa sacculi": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 11
+  },
+  "Pachysphinx modesta": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 287
+  },
+  "Palthis angulalis": {
+   "group": "lepidoptera",
+   "near": 58,
+   "province": 177
+  },
+  "Panurginus atriceps": {
+   "group": "bee",
+   "near": 0,
+   "province": 70
+  },
+  "Panurginus ineptus": {
+   "group": "bee",
+   "near": 0,
+   "province": 11
+  },
+  "Paonias myops": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 336
+  },
+  "Papilio canadensis": {
+   "group": "lepidoptera",
+   "near": 466,
+   "province": 3139
+  },
+  "Papilio eurymedon": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1182
+  },
+  "Papilio machaon": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 783
+  },
+  "Papilio polyxenes": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 11
+  },
+  "Papilio rutulus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1695
+  },
+  "Papilio zelicaon": {
+   "group": "lepidoptera",
+   "near": 29,
+   "province": 1669
+  },
+  "Paraclemensia acerifoliella": {
+   "group": "lepidoptera",
+   "near": 7,
+   "province": 23
+  },
+  "Paragus haemorrhous": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 101
+  },
+  "Paraleucoptera albella": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 5
+  },
+  "Paranthrene robiniae": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 35
+  },
+  "Parasyrphus relictus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 23
+  },
+  "Paravilla separata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Parhelophilus laetus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 3
+  },
+  "Parhelophilus obsoletus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Parhelophilus rex": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 7
+  },
+  "Parnassius clodius": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 274
+  },
+  "Parnassius smintheus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 3882
+  },
+  "Peleteria anaxias": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 14
+  },
+  "Pemphredon inornata": {
+   "group": "other_insect",
+   "near": 14,
+   "province": 92
+  },
+  "Pennisetia marginatum": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 59
+  },
+  "Pentaria trifasciata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 110
+  },
+  "Perdita fallax": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Perdita nevadensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 453
+  },
+  "Perdita octomaculata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Perdita perpallida": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Perdita swenki": {
+   "group": "bee",
+   "near": 0,
+   "province": 6
+  },
+  "Perisoreus canadensis": {
+   "group": "bird",
+   "near": 135,
+   "province": 46270
+  },
+  "Peromyscus maniculatus": {
+   "group": "mammal",
+   "near": 252,
+   "province": 9217
+  },
+  "Phalaenophana pyramusalis": {
+   "group": "lepidoptera",
+   "near": 19,
+   "province": 59
+  },
+  "Phaonia serva": {
+   "group": "other_insect",
+   "near": 52,
+   "province": 40
+  },
+  "Phasia robertsonii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Pheucticus melanocephalus": {
+   "group": "bird",
+   "near": 1,
+   "province": 19046
+  },
+  "Philanthus bilunatus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 17
+  },
+  "Philanthus crabroniformis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 27
+  },
+  "Philanthus gibbosus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 86
+  },
+  "Philanthus multimaculatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 74
+  },
+  "Philanthus politus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Philanthus sanbornii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Philanthus solivagus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 2
+  },
+  "Philanthus ventilabris": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 42
+  },
+  "Pholisora catullus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 511
+  },
+  "Phormia regina": {
+   "group": "other_insect",
+   "near": 10,
+   "province": 94
+  },
+  "Phyciodes batesii": {
+   "group": "lepidoptera",
+   "near": 21,
+   "province": 343
+  },
+  "Phyciodes cocyta": {
+   "group": "lepidoptera",
+   "near": 676,
+   "province": 8849
+  },
+  "Phyciodes mylitta": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 667
+  },
+  "Phyciodes pulchella": {
+   "group": "lepidoptera",
+   "near": 676,
+   "province": 8849
+  },
+  "Phyciodes tharos": {
+   "group": "lepidoptera",
+   "near": 676,
+   "province": 8849
+  },
+  "Phyllocnistis populiella": {
+   "group": "lepidoptera",
+   "near": 32,
+   "province": 2795
+  },
+  "Phyllonorycter anderidae": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 10
+  },
+  "Phyllonorycter apparella": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 47
+  },
+  "Phyllonorycter ledella": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 61
+  },
+  "Phyllonorycter nipigon": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 13
+  },
+  "Physocephala burgessi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 42
+  },
+  "Physocephala furcillata": {
+   "group": "other_insect",
+   "near": 18,
+   "province": 31
+  },
+  "Physocephala texana": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 22
+  },
+  "Physocephala tibialis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 6
+  },
+  "Physoconops obscuripennis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Phytomyza agromyzina": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 54
+  },
+  "Pica hudsonia": {
+   "group": "bird",
+   "near": 94437,
+   "province": 571081
+  },
+  "Pidonia scripta": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 136
+  },
+  "Pieris angelika": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 7
+  },
+  "Pieris marginalis": {
+   "group": "lepidoptera",
+   "near": 9,
+   "province": 855
+  },
+  "Pieris napi": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 4
+  },
+  "Pieris oleracea": {
+   "group": "lepidoptera",
+   "near": 484,
+   "province": 900
+  },
+  "Pimpla pedalis": {
+   "group": "other_insect",
+   "near": 38,
+   "province": 166
+  },
+  "Pinicola enucleator": {
+   "group": "bird",
+   "near": 4849,
+   "province": 37154
+  },
+  "Pipilo maculatus": {
+   "group": "bird",
+   "near": 6,
+   "province": 63964
+  },
+  "Pipiza femoralis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Pipiza quadrimaculata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 102
+  },
+  "Piranga ludoviciana": {
+   "group": "bird",
+   "near": 2677,
+   "province": 50510
+  },
+  "Plagiognathus obscurus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 39
+  },
+  "Plateumaris nitida": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 13
+  },
+  "Plateumaris shoemakeri": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 2
+  },
+  "Platycheirus rosarum": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 10
+  },
+  "Platycheirus stegnus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 4
+  },
+  "Plebejus anna": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 43
+  },
+  "Plebejus idas": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 1485
+  },
+  "Plebejus melissa": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 1809
+  },
+  "Plebejus saepiolus": {
+   "group": "lepidoptera",
+   "near": 62,
+   "province": 996
+  },
+  "Podalonia robusta": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 27
+  },
+  "Podosesia syringae": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 6
+  },
+  "Poecilanthrax tegminipennis": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 37
+  },
+  "Poecile atricapillus": {
+   "group": "bird",
+   "near": 96491,
+   "province": 589199
+  },
+  "Poecilognathus sulphureus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 19
+  },
+  "Polia purpurissata": {
+   "group": "lepidoptera",
+   "near": 21,
+   "province": 308
+  },
+  "Polistes aurifer": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 401
+  },
+  "Polistes fuscatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 42
+  },
+  "Polites peckius": {
+   "group": "lepidoptera",
+   "near": 163,
+   "province": 532
+  },
+  "Polites themistocles": {
+   "group": "lepidoptera",
+   "near": 102,
+   "province": 374
+  },
+  "Polydontomyia curvipes": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 22
+  },
+  "Polygonia faunus": {
+   "group": "lepidoptera",
+   "near": 236,
+   "province": 4381
+  },
+  "Polygonia gracilis": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 1984
+  },
+  "Polygonia interrogationis": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 2
+  },
+  "Polygonia progne": {
+   "group": "lepidoptera",
+   "near": 217,
+   "province": 626
+  },
+  "Polygonia satyrus": {
+   "group": "lepidoptera",
+   "near": 696,
+   "province": 3407
+  },
+  "Polygonia zephyrus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 27
+  },
+  "Ponana pectoralis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Ponometia candefacta": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Pontia occidentalis": {
+   "group": "lepidoptera",
+   "near": 160,
+   "province": 3095
+  },
+  "Pontia protodice": {
+   "group": "lepidoptera",
+   "near": 20,
+   "province": 88
+  },
+  "Prionyx atratus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 36
+  },
+  "Prionyx canadensis": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 27
+  },
+  "Prochoerodes lineola": {
+   "group": "lepidoptera",
+   "near": 118,
+   "province": 267
+  },
+  "Prociphilus tessellatus": {
+   "group": "other_insect",
+   "near": 37,
+   "province": 42
+  },
+  "Protandrena albitarsis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Pseudanarta flava": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 12
+  },
+  "Pseudepipona aldrichi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 9
+  },
+  "Pseudogaurotina cressoni": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 148
+  },
+  "Pseudohermonassa bicarnea": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 5
+  },
+  "Pseudomasaris vespoides": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 19
+  },
+  "Pseudopanurgus parvus": {
+   "group": "bee",
+   "near": 2,
+   "province": 75
+  },
+  "Pterocheilus quinquefasciatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 15
+  },
+  "Pterostichus spp.": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Pyrausta orphisalis": {
+   "group": "lepidoptera",
+   "near": 49,
+   "province": 80
+  },
+  "Pyrausta subsequalis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 14
+  },
+  "Pyrgus centaureae": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 328
+  },
+  "Pyrgus ruralis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 584
+  },
+  "Pyrrharctia isabella": {
+   "group": "lepidoptera",
+   "near": 232,
+   "province": 722
+  },
+  "Quiscalus quiscula": {
+   "group": "bird",
+   "near": 8050,
+   "province": 61563
+  },
+  "Rabdophaga rigidae": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 18
+  },
+  "Rabdophaga salicisbrassicoides": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 15
+  },
+  "Rabdophaga strobiloides": {
+   "group": "other_insect",
+   "near": 39,
+   "province": 410
+  },
+  "Renia flavipunctalis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Rheumaptera hastata": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 244
+  },
+  "Rhingia nasica": {
+   "group": "other_insect",
+   "near": 102,
+   "province": 187
+  },
+  "Rhopalomyia capitata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Rhopalomyia chrysothamni": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 8
+  },
+  "Rhopalomyia medusa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 122
+  },
+  "Rhopalomyia medusirrasa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 48
+  },
+  "Rhopalomyia obovata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Rhopalomyia pomum": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 123
+  },
+  "Rhopalomyia utahensis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 12
+  },
+  "Rivula propinqualis": {
+   "group": "lepidoptera",
+   "near": 48,
+   "province": 157
+  },
+  "Saperda populnea": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 8
+  },
+  "Sarcophaga nearctica": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 30
+  },
+  "Sarcophaga sinuata": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 24
+  },
+  "Satyrium acadica": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 114
+  },
+  "Satyrium behrii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 609
+  },
+  "Satyrium calanus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Satyrium californica": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 114
+  },
+  "Satyrium edwardsii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 0
+  },
+  "Satyrium liparops": {
+   "group": "lepidoptera",
+   "near": 85,
+   "province": 202
+  },
+  "Satyrium saepium": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 254
+  },
+  "Satyrium sylvinus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 250
+  },
+  "Satyrium titus": {
+   "group": "lepidoptera",
+   "near": 7,
+   "province": 338
+  },
+  "Saucrobotys futilalis": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 57
+  },
+  "Scaeva affinis": {
+   "group": "other_insect",
+   "near": 95,
+   "province": 620
+  },
+  "Scathophaga furcata": {
+   "group": "other_insect",
+   "near": 51,
+   "province": 210
+  },
+  "Scathophaga stercoraria": {
+   "group": "other_insect",
+   "near": 26,
+   "province": 537
+  },
+  "Sceliphron caementarium": {
+   "group": "other_insect",
+   "near": 20,
+   "province": 211
+  },
+  "Scelolyperus varipes": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Schinia arcigera": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1
+  },
+  "Schinia florida": {
+   "group": "lepidoptera",
+   "near": 21,
+   "province": 51
+  },
+  "Schinia gaurae": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 11
+  },
+  "Schinia persimilis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 22
+  },
+  "Schinia walsinghami": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 4
+  },
+  "Schizura concinna": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 4
+  },
+  "Scoliopteryx libatrix": {
+   "group": "lepidoptera",
+   "near": 19,
+   "province": 184
+  },
+  "Scopula junctaria": {
+   "group": "lepidoptera",
+   "near": 63,
+   "province": 251
+  },
+  "Scudderia furcata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 246
+  },
+  "Selasphorus calliope": {
+   "group": "bird",
+   "near": 2,
+   "province": 25977
+  },
+  "Selasphorus rufus": {
+   "group": "bird",
+   "near": 39,
+   "province": 44149
+  },
+  "Semioscopis inornata": {
+   "group": "lepidoptera",
+   "near": 17,
+   "province": 90
+  },
+  "Senotainia trilineata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 2
+  },
+  "Sericomyia chalcopyga": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 119
+  },
+  "Sericomyia lata": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 21
+  },
+  "Sericomyia militaris": {
+   "group": "other_insect",
+   "near": 15,
+   "province": 89
+  },
+  "Sericomyia transversa": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 4
+  },
+  "Setophaga coronata": {
+   "group": "bird",
+   "near": 14085,
+   "province": 196810
+  },
+  "Setophaga petechia": {
+   "group": "bird",
+   "near": 20780,
+   "province": 163452
+  },
+  "Sitta canadensis": {
+   "group": "bird",
+   "near": 38499,
+   "province": 308744
+  },
+  "Sitta carolinensis": {
+   "group": "bird",
+   "near": 37049,
+   "province": 136357
+  },
+  "Smerinthus jamaicensis": {
+   "group": "lepidoptera",
+   "near": 46,
+   "province": 348
+  },
+  "Sorex cinereus": {
+   "group": "mammal",
+   "near": 30,
+   "province": 656
+  },
+  "Speyeria adiaste": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 11
+  },
+  "Speyeria aphrodite": {
+   "group": "lepidoptera",
+   "near": 43,
+   "province": 683
+  },
+  "Speyeria atlantis": {
+   "group": "lepidoptera",
+   "near": 287,
+   "province": 3761
+  },
+  "Speyeria callippe": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 674
+  },
+  "Speyeria cybele": {
+   "group": "lepidoptera",
+   "near": 410,
+   "province": 1522
+  },
+  "Speyeria edwardsii": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 146
+  },
+  "Speyeria hesperis": {
+   "group": "lepidoptera",
+   "near": 171,
+   "province": 2400
+  },
+  "Speyeria mormonia": {
+   "group": "lepidoptera",
+   "near": 6,
+   "province": 1980
+  },
+  "Speyeria zerene": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1163
+  },
+  "Sphaerophoria contigua": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 37
+  },
+  "Sphaerophoria sulphuripes": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 29
+  },
+  "Sphecodes pecosensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 29
+  },
+  "Sphecomyia pattonii": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 15
+  },
+  "Sphecomyia vittata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Sphenometopa tergata": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 5
+  },
+  "Sphex ichneumoneus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 164
+  },
+  "Sphex lucae": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 29
+  },
+  "Spilomyia sayi": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 27
+  },
+  "Spilosoma virginica": {
+   "group": "lepidoptera",
+   "near": 133,
+   "province": 546
+  },
+  "Spinus pinus": {
+   "group": "bird",
+   "near": 12596,
+   "province": 188848
+  },
+  "Spinus tristis": {
+   "group": "bird",
+   "near": 11369,
+   "province": 178770
+  },
+  "Stelis aff.permaculata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Stelis calliphorina": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Stelis coarctatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Stelis foederalis": {
+   "group": "bee",
+   "near": 0,
+   "province": 9
+  },
+  "Stelis lateralis": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Stelis monticola": {
+   "group": "bee",
+   "near": 0,
+   "province": 3
+  },
+  "Stelis permaculata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Stictoleptura canadensis": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 137
+  },
+  "Stigmella populetorum": {
+   "group": "lepidoptera",
+   "near": 5,
+   "province": 31
+  },
+  "Stratiomys badia": {
+   "group": "other_insect",
+   "near": 16,
+   "province": 18
+  },
+  "Stratiomys normula": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 8
+  },
+  "Strongygaster triangulifera": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Strymon melinus": {
+   "group": "lepidoptera",
+   "near": 3,
+   "province": 1834
+  },
+  "Sunira bicolorago": {
+   "group": "lepidoptera",
+   "near": 132,
+   "province": 167
+  },
+  "Symmorphus albomarginatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Symmorphus canadensis": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 6
+  },
+  "Symmorphus cristatus": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 27
+  },
+  "Sympetrum internum": {
+   "group": "other_insect",
+   "near": 61,
+   "province": 308
+  },
+  "Synanthedon albicornis": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 5
+  },
+  "Synanthedon bibionipennis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 56
+  },
+  "Synanthedon exitiosa": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 7
+  },
+  "Synanthedon pictipes": {
+   "group": "lepidoptera",
+   "near": 20,
+   "province": 22
+  },
+  "Synanthedon polygoni": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 39
+  },
+  "Synchlora aerata": {
+   "group": "lepidoptera",
+   "near": 48,
+   "province": 314
+  },
+  "Syngrapha epigaea": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 42
+  },
+  "Syrphus opinator": {
+   "group": "other_insect",
+   "near": 29,
+   "province": 376
+  },
+  "Syrphus rectus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 4
+  },
+  "Syrphus ribesii": {
+   "group": "other_insect",
+   "near": 24,
+   "province": 123
+  },
+  "Syrphus torvus": {
+   "group": "other_insect",
+   "near": 4,
+   "province": 44
+  },
+  "Syrphus vitripennis": {
+   "group": "other_insect",
+   "near": 24,
+   "province": 34
+  },
+  "Systoechus oreas": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 24
+  },
+  "Systoechus vulgaris": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Tabanus punctifer": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 30
+  },
+  "Tachytes sayi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 11
+  },
+  "Tamalia coweni": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 54
+  },
+  "Tapinoma sessile": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 747
+  },
+  "Temnostoma alternans": {
+   "group": "other_insect",
+   "near": 3,
+   "province": 10
+  },
+  "Temnostoma venustum": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 1
+  },
+  "Terellia occidentalis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 6
+  },
+  "Tetracis cachexiata": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 65
+  },
+  "Thamnotettix confinis": {
+   "group": "other_insect",
+   "near": 15,
+   "province": 87
+  },
+  "Tharsalea dione": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 137
+  },
+  "Tharsalea dorcas": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 139
+  },
+  "Tharsalea editha": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 29
+  },
+  "Tharsalea helloides": {
+   "group": "lepidoptera",
+   "near": 52,
+   "province": 1294
+  },
+  "Tharsalea heteronea": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 389
+  },
+  "Tharsalea hyllus": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 167
+  },
+  "Tharsalea mariposa": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 1277
+  },
+  "Tharsalea nivalis": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 79
+  },
+  "Tharsalea rubidus": {
+   "group": "lepidoptera",
+   "near": 0,
+   "province": 43
+  },
+  "Thecabius populimonilis": {
+   "group": "other_insect",
+   "near": 10,
+   "province": 107
+  },
+  "Toxomerus geminatus": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Toxomerus marginatus": {
+   "group": "other_insect",
+   "near": 118,
+   "province": 291
+  },
+  "Toxomerus occidentalis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 30
+  },
+  "Toxostoma rufum": {
+   "group": "bird",
+   "near": 25,
+   "province": 6315
+  },
+  "Trachysida aspera": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 75
+  },
+  "Trachysida mutabilis": {
+   "group": "other_insect",
+   "near": 12,
+   "province": 26
+  },
+  "Tremex columba": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 16
+  },
+  "Trichiotinus assimilis": {
+   "group": "other_insect",
+   "near": 69,
+   "province": 479
+  },
+  "Trichodes ornatus": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 1002
+  },
+  "Trichodezia albovittata": {
+   "group": "lepidoptera",
+   "near": 37,
+   "province": 285
+  },
+  "Trichopsomyia apisaon": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 10
+  },
+  "Triepeolus balteatus": {
+   "group": "bee",
+   "near": 0,
+   "province": 5
+  },
+  "Triepeolus concavus": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Triepeolus dacotensis": {
+   "group": "bee",
+   "near": 0,
+   "province": 1
+  },
+  "Triepeolus helianthi": {
+   "group": "bee",
+   "near": 0,
+   "province": 2
+  },
+  "Triepeolus micropygius": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Triepeolus obliteratus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Triepeolus paenepectoralis": {
+   "group": "bee",
+   "near": 0,
+   "province": 22
+  },
+  "Triepeolus subalpinus": {
+   "group": "bee",
+   "near": 0,
+   "province": 7
+  },
+  "Tritoxa flexa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 3
+  },
+  "Tropidia quadrata": {
+   "group": "other_insect",
+   "near": 11,
+   "province": 28
+  },
+  "Turdus migratorius": {
+   "group": "bird",
+   "near": 50787,
+   "province": 529315
+  },
+  "Tyrannus tyrannus": {
+   "group": "bird",
+   "near": 3989,
+   "province": 84371
+  },
+  "Udea rubigalis": {
+   "group": "lepidoptera",
+   "near": 10,
+   "province": 17
+  },
+  "Urocerus flavicornis": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 148
+  },
+  "Vanessa atalanta": {
+   "group": "lepidoptera",
+   "near": 169,
+   "province": 809
+  },
+  "Vanessa cardui": {
+   "group": "lepidoptera",
+   "near": 214,
+   "province": 1576
+  },
+  "Vanessa virginiensis": {
+   "group": "lepidoptera",
+   "near": 2,
+   "province": 20
+  },
+  "Vespula acadica": {
+   "group": "other_insect",
+   "near": 7,
+   "province": 47
+  },
+  "Vespula alascensis": {
+   "group": "other_insect",
+   "near": 74,
+   "province": 274
+  },
+  "Vespula atropilosa": {
+   "group": "other_insect",
+   "near": 44,
+   "province": 275
+  },
+  "Vespula consobrina": {
+   "group": "other_insect",
+   "near": 72,
+   "province": 197
+  },
+  "Vespula flavopilosa": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Vespula germanica": {
+   "group": "other_insect",
+   "near": 34,
+   "province": 90
+  },
+  "Vespula maculifrons": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 0
+  },
+  "Vespula pensylvanica": {
+   "group": "other_insect",
+   "near": 201,
+   "province": 861
+  },
+  "Villa alternata": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 35
+  },
+  "Villa fulviana": {
+   "group": "other_insect",
+   "near": 9,
+   "province": 41
+  },
+  "Villa hypomelas": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 31
+  },
+  "Villa lateralis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 30
+  },
+  "Vireo gilvus": {
+   "group": "bird",
+   "near": 3006,
+   "province": 79630
+  },
+  "Vireo olivaceus": {
+   "group": "bird",
+   "near": 12177,
+   "province": 59273
+  },
+  "Volucella bombylans": {
+   "group": "other_insect",
+   "near": 1,
+   "province": 19
+  },
+  "Volucella facialis": {
+   "group": "other_insect",
+   "near": 2,
+   "province": 43
+  },
+  "Xeromelecta californica": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Xestia c-nigrum": {
+   "group": "lepidoptera",
+   "near": 31,
+   "province": 249
+  },
+  "Xestia normaniana": {
+   "group": "lepidoptera",
+   "near": 20,
+   "province": 62
+  },
+  "Xestia smithii": {
+   "group": "lepidoptera",
+   "near": 79,
+   "province": 407
+  },
+  "Xestoleptura crassipes": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 129
+  },
+  "Xestoleptura tibialis": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 107
+  },
+  "Xylena curvimacula": {
+   "group": "lepidoptera",
+   "near": 50,
+   "province": 194
+  },
+  "Xylota flavitibia": {
+   "group": "other_insect",
+   "near": 5,
+   "province": 20
+  },
+  "Zacosmia maculata": {
+   "group": "bee",
+   "near": 0,
+   "province": 0
+  },
+  "Zaira georgiae": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 58
+  },
+  "Zale minerea": {
+   "group": "lepidoptera",
+   "near": 47,
+   "province": 206
+  },
+  "Zanclognatha jacchusalis": {
+   "group": "lepidoptera",
+   "near": 23,
+   "province": 45
+  },
+  "Zelleria haimbachi": {
+   "group": "lepidoptera",
+   "near": 1,
+   "province": 29
+  },
+  "Zenaida macroura": {
+   "group": "bird",
+   "near": 1260,
+   "province": 89602
+  },
+  "Zonitis sayi": {
+   "group": "other_insect",
+   "near": 0,
+   "province": 7
+  }
+ },
+ "centre": [
+  53.5461,
+  -113.4938
+ ],
+ "fetched": "2026-10-19",
+ "key": "edmonton",
+ "province": "AB",
+ "radius_km": 50.0,
+ "source": "GBIF occurrence counts: within the pack's circle (scripts/fetch_animals_near.py) and across its province (scripts/fetch_fauna_nativity.py); living specimens and fossils left out of both",
+ "version": 1
+}

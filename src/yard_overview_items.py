@@ -137,11 +137,23 @@ def english_name(animal: dict) -> str:
     return name
 
 
-def example_animal(animals: list, familiar: tuple = ()) -> str:
+def example_animal(animals: list, familiar: tuple = (), records=None) -> str:
     """The one animal the item names (§5.2): from the pack's familiar list
     when it has one (O4), else a bird that eats the seed or fruit, else a
-    butterfly or moth, else a bumble bee; most of the design's plants first."""
+    butterfly or moth, else a bumble bee; most of the design's plants first.
+
+    ``records`` (``fauna_fit.Records``, V3.37) names only an animal recorded
+    near the yard, and in each tier puts first the familiar ones, recorded
+    there at least as often as the middle of their group (F249, until the
+    owner's list), so a moth one person noted never outranks the Mourning
+    Cloak."""
     named = [a for a in animals if a["food"] and english_name(a)]
+    if records is not None:
+        def sci(a):
+            return a.get("scientific_name") or ""
+        from src.fauna_fit import HERE                       # noqa: PLC0415
+        named = [a for a in named if records.band(sci(a)) == HERE]
+        named.sort(key=lambda a: not records.familiar(sci(a)))
     if familiar:
         known = [a for a in named if english_name(a) in familiar]
         if known:
@@ -174,10 +186,11 @@ def item_food(d: Design) -> Item:
         _kinds(bees, "kind of bee", "kinds of bee") if bees else "",
         f"{leps} of butterfly and moth" if leps else "",
         f"{birds} of bird" if birds else "") if g]
-    from src import region
+    from src import fauna_fit, region
     pack = region.for_site(d.site) or region.default()
     name = example_animal(animals, tuple(
-        (pack.overview or {}).get("familiar_animals") or ()))
+        (pack.overview or {}).get("familiar_animals") or ()),
+        fauna_fit.for_point(d.site.get("latitude"), d.site.get("longitude")))
     if groups:
         line = f"Recorded as food for {_and(groups)}"
         line += f", such as the {name}." if name else "."

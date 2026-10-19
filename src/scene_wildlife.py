@@ -717,12 +717,18 @@ def _drawn_height(pl: dict) -> float:
 
 def wildlife_for_scene(scene: dict, *,
                        fauna_edges: Optional[Callable] = None,
+                       locality: Optional[Callable] = None,
                        max_creatures: int = _TOTAL_CAP) -> list[dict]:
     """Return ambient creatures for ``scene`` (a ``build_scene`` result).
 
     ``fauna_edges`` resolves ``plant_ids -> list of fauna+relationship rows``
     (defaults to ``src.db.fauna.fauna_for_plants``; injectable for tests). Each
     returned creature: ``{kind, x, y, h, name, on, rel, seed, app}``.
+
+    ``locality`` is ``scientific_name -> band`` (``src.fauna_fit``; by default
+    for the scene's ``origin``): an animal recorded only far from the yard, or
+    only as a stray, is not drawn (F190, V3.37), so an Edmonton yard's
+    bearberry no longer brings a ptarmigan down from the mountains.
     """
     # Each plant where it is DRAWN: a vine is on its host's crown (V2.89).
     plants = [drawn_frame(p) for p in (scene.get("plants") or [])
@@ -743,6 +749,13 @@ def wildlife_for_scene(scene: dict, *,
     rows = fauna_edges(list(by_id.keys()))
     if not rows:
         return []
+    if locality is None:
+        from src.fauna_fit import rule
+        origin = scene.get("origin") or {}
+        locality = rule(origin.get("lat"), origin.get("lng"))
+    from src.fauna_fit import DRAWN
+    rows = [r for r in rows
+            if locality(r.get("scientific_name") or "") in DRAWN]
 
     # Season + day/night truth (V2.12): only show a creature when it is actually
     # out. Attribute maps are best-effort — if unavailable, nothing is gated.

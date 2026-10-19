@@ -230,6 +230,12 @@ def rulings_path(key: str) -> str:
     return os.path.join(_data_dir(), "regions", key, "local_flora_rulings.json")
 
 
+def animal_records_path(key: str) -> str:
+    """How often each animal is recorded near the pack's place and across its
+    province (``src.fauna_fit``, V3.37)."""
+    return os.path.join(_data_dir(), "regions", key, "animal_records.json")
+
+
 def _distance(a, b) -> float:
     from src.local_flora import distance_km                  # noqa: PLC0415
     return distance_km(a, b)

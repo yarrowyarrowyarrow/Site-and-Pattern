@@ -626,7 +626,11 @@ Suggested order:
   validating them.
 - **Named animals.** Whether the named examples (Cedar Waxwing, Silvery Blue,
   Brown-belted Bumble Bee, American Goldfinch) are common in central Edmonton
-  yards is F190's question, unanswered.
+  yards is F190's question, unanswered. *(V3.37: answered by GBIF's records
+  within 50 km of downtown: Cedar Waxwing 17,136, American Goldfinch 11,369,
+  Silvery Blue 826, Brown-belted Bumble Bee one. The Overview now names only
+  an animal recorded near the yard, familiar ones first,
+  [plan](../plans/V3.37-animals-recorded-near-the-yard.md).)*
 - **Bloom months.** The example's March bloom (Prairie Crocus) comes from the
   catalogue's `bloom_period`. An Edmonton gardener would expect April; not
   checked.

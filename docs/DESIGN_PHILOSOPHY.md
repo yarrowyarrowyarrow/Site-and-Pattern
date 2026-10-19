@@ -295,6 +295,11 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > cherry has one collection and 189 observations and is about as Edmonton as a shrub gets. A
 > person settles it with a yes or a no, on a page that shows the evidence beside a read labelled
 > as opinion, and every page that prints the answer says it rests on review.
+> **V3.37 asked when absence is evidence, for animals** (`src/fauna_fit.py`). None near
+> Edmonton means *not here* for a bird, among 778,488 bird records in the circle; for a bee
+> with forty Alberta records it means nothing. The rule asks how many records the province
+> predicts near the place, from the animal's own group, and calls an absence telling only past
+> ten, so 464 of 1,144 animals read *unknown* and are still drawn, and the ptarmigans are not.
 > **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects
