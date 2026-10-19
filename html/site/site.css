@@ -393,6 +393,15 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
   border-radius: var(--radius); display: block; box-shadow: var(--shadow);
 }
 .hero-photo .credit { margin: .45rem 0 0; }
+/* A plant's other photographs (V3.35): thumbnails linked to the larger copy,
+   then their credits, numbered from 2 because the lead is 1. */
+.photo-strip { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none;
+  padding: 0; margin: -.6rem 0 .3rem; }
+.photo-strip a { display: block; border-radius: var(--radius); }
+.photo-strip img { width: 6.5rem; height: 6.5rem; object-fit: cover;
+  border-radius: var(--radius); display: block; box-shadow: var(--shadow); }
+.photo-credits { margin: 0 0 1.3rem; padding-left: 1.6rem; }
+.photo-credits li { margin: .1rem 0; }
 /* Wildlife pages are a wide layout, and an insect photographed close up looks
    absurd at 60rem across. */
 .hero-photo.narrow { max-width: 32rem; }

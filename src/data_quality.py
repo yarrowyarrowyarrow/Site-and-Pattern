@@ -1933,7 +1933,7 @@ def validate_host_genus_coverage() -> tuple[list[str], list[str]]:
 # this module stays importable without the DB layer (it is run by the CLI gate
 # and by tests that never open a database); tests/test_plant_photos.py asserts
 # the two lists agree.
-PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+PHOTO_SLOTS = ("flower", "habit", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
 
 
@@ -2006,6 +2006,13 @@ def validate_photo_coverage() -> tuple[list[str], list[str]]:
         if slot not in PHOTO_SLOTS:
             errors.append(f"plant_photos: {sci}: unknown slot {slot!r}")
         lic = (e.get("license") or "").lower().strip()
+        # The licence itself was not checked here until V3.35, when this file
+        # went from 2 rows to a few hundred; validate_plant_images had only
+        # ever read the one photo in plants_master.json.
+        if lic not in _PLANT_IMAGE_LICENSES:
+            errors.append(
+                f"plant_photos: {sci}: licence {lic!r} is not in the permitted "
+                f"set {sorted(_PLANT_IMAGE_LICENSES)}")
         if lic and lic != "cc0" and not (e.get("attribution") or "").strip():
             errors.append(
                 f"plant_photos: {sci}: {lic} photo needs a non-empty attribution")

@@ -32,14 +32,25 @@ _HERE        = os.path.dirname(os.path.abspath(__file__))
 # bundle (where a module's __file__ is unreliable), not just in a source tree.
 _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
-# The photo slots (schema v55, F70), in the order `_attach_photos` prefers them
-# when it synthesizes `image_url`. `habit` leads deliberately: the whole plant
-# with something for scale is what someone deciding whether they want it — or
-# trying to find it in their own yard in May — actually needs, and it is the
-# frame iNaturalist's leading photo almost never is.
-PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+# The photo slots (schema v55, F70), in the order `photo_order` falls back to
+# when nothing else decides. `habit` led from V2.35, for someone deciding
+# whether they want the plant; since V3.35 the flower leads, the owner's
+# decision D2: at a list row's size a whole plant is a green smudge and a
+# flower is why somebody stops, and the whole plant comes second.
+PHOTO_SLOTS = ("flower", "habit", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
+_SLOT_INDEX = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
 _PLANT_PHOTOS_JSON_PATH = resource_path("data", "plant_photos.json")
+
+
+def photo_order(row) -> tuple:
+    """Sort key for one species' photographs, best first (V3.35): a person's
+    own photograph (``origin='user'``) before a shipped one, because they
+    added it on purpose; then the order the owner picked the shipped ones in
+    (``rank``, so the one they starred leads, ``src.photo_picks``); then the
+    slot order above; then age."""
+    return (0 if row["origin"] == "user" else 1, int(row["rank"] or 0),
+            _SLOT_INDEX.get(row["slot"], 99), int(row["id"] or 0))
 
 
 def _user_data_dir() -> pathlib.Path:
@@ -2483,11 +2494,12 @@ def _attach_photos(plants: list[dict]) -> None:
     ``photo_warm`` all get better photographs here without one line of change at
     the call site.
 
-    Preference order is ``PHOTO_SLOTS`` — **habit first** — and a person's own
-    photograph (``origin='user'``) beats a shipped one in the same slot, because
-    a picture of the plant in THEIR yard is more use than a stranger's. Where the
-    table has nothing, the row keeps whatever ``plants.image_url`` already held,
-    so a species the photo set doesn't cover renders exactly as it did before.
+    Preference order is :func:`photo_order`: a person's own photograph first,
+    because a picture of the plant in THEIR yard is more use than a
+    stranger's, then the owner's picked order, then the slot (the flower
+    first since V3.35). Where the table has nothing, the row keeps whatever
+    ``plants.image_url`` already held, so a species the photo set doesn't
+    cover renders exactly as it did before.
     """
     names = [(p.get("scientific_name") or "").strip() for p in plants]
     wanted = {n for n in names if n}
@@ -2499,10 +2511,10 @@ def _attach_photos(plants: list[dict]) -> None:
         # 434 rows and render_project_to_map is called on every File→Open.
         marks = ",".join("?" * len(wanted))
         rows = conn.execute(
-            f"SELECT scientific_name, slot, url, attribution, license, source,"
-            f"       origin, taken_on, rank"
-            f"  FROM plant_photos WHERE scientific_name IN ({marks})"
-            f" ORDER BY rank, id", tuple(wanted)).fetchall()
+            f"SELECT id, scientific_name, slot, url, attribution, license,"
+            f"       source, origin, taken_on, rank"
+            f"  FROM plant_photos WHERE scientific_name IN ({marks})",
+            tuple(wanted)).fetchall()
     except sqlite3.OperationalError:
         return          # pre-v55 DB mid-migration; the column keeps working
     finally:
@@ -2512,16 +2524,13 @@ def _attach_photos(plants: list[dict]) -> None:
     for r in rows:
         by_name.setdefault(r["scientific_name"], []).append(dict(r))
 
-    order = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
     for p in plants:
         shots = by_name.get((p.get("scientific_name") or "").strip())
         if not shots:
             p.setdefault("photos", [])
             continue
-        p["photos"] = shots
-        best = min(shots, key=lambda s: (order.get(s["slot"], 99),
-                                         0 if s["origin"] == "user" else 1,
-                                         s["rank"]))
+        p["photos"] = shots = sorted(shots, key=photo_order)
+        best = shots[0]
         p["image_url"] = best["url"]
         p["image_attribution"] = best["attribution"]
         p["image_license"] = best["license"]

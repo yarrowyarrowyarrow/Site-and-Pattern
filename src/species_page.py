@@ -29,7 +29,7 @@ from __future__ import annotations
 import html
 from typing import Callable, Optional
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QToolButton,
@@ -85,6 +85,7 @@ class SpeciesPage(QWidget):
         self.setObjectName("speciesPage")
         self._entry_fn = entry_fn
         self._photo_warmer = photo_warmer
+        self._photo_shown: dict = {}        # {scientific name: thumbnail}
         self._row: dict = {}
         self._entry: dict = {}
         self._placed = 0
@@ -424,50 +425,16 @@ class SpeciesPage(QWidget):
         return text
 
     def _photo_block(self, entry: dict) -> QWidget:
-        """The photograph, or an honest line about not having one. Roughly a
-        quarter of the catalogue has no picture; saying so beats an empty
-        frame, and it is also the work list."""
-        from src.image_cache import credit_line, get_cached_image
-        box = QLabel()
-        photos = entry.get("photos") or []
-        url = photos[0].get("url") if photos else ""
-        path = get_cached_image(url) if url else None
-        if path:
-            from PyQt6.QtGui import QPixmap
-            pix = QPixmap(path)
-            if not pix.isNull():
-                # Inside 320 x 240 either way round: a herbarium sheet scaled
-                # to the width alone stood 356 px tall and pushed every
-                # section below the fold.
-                box.setPixmap(pix.scaled(
-                    QSize(max(240, min(320, self.width() - 40)), 240),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation))
-                credit = credit_line(photos[0].get("attribution") or "",
-                                     photos[0].get("license") or "")
-                box.setToolTip(credit or "")
-                box.setAccessibleName(
-                    f"Photograph of {entry.get('name') or 'this plant'}"
-                    + (f". {credit}" if credit else ""))
-                if not credit:
-                    return box
-                holder = QWidget()
-                col = QVBoxLayout(holder)
-                col.setContentsMargins(0, 0, 0, 0)
-                col.setSpacing(2)
-                col.addWidget(box)
-                line = QLabel(credit)
-                line.setStyleSheet(_DIM)
-                line.setWordWrap(True)
-                line.setTextInteractionFlags(
-                    Qt.TextInteractionFlag.TextSelectableByMouse)
-                col.addWidget(line)
-                return holder
-        box.setText("No photo yet." if not url else
-                    "Photo not downloaded yet: it appears when you are online.")
-        box.setStyleSheet(_DIM)
-        box.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        return box
+        """The photographs (``src.photo_strip``: the first large, the rest
+        as thumbnails, since V3.35), or an honest line about not having one.
+        The thumbnail chosen is kept across a redraw."""
+        from src.photo_strip import PhotoStrip
+        sci = entry.get("scientific_name") or ""
+        return PhotoStrip(
+            entry.get("photos") or [], entry.get("name") or "",
+            width=max(240, min(320, self.width() - 40)),
+            selected=self._photo_shown.get(sci, 0),
+            on_select=lambda i: self._photo_shown.__setitem__(sci, i))
 
     def _season_block(self, entry: dict):
         """Bloom and fruit as words, the bar under them, and the calendar's

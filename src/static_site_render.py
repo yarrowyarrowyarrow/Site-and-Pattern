@@ -60,7 +60,6 @@ from src.site_facets import FACETS, GROUPS
 from src.site_share import NONE as SHARE_NONE, Share, page_title
 from src.site_share import configure as configure_share
 from src.site_share import default_card as share_default
-from src.static_site import _first_photo
 
 #: Plain text, never pre-escaped: everything here goes through ``_esc`` at the
 #: point of use. Storing the entity form instead produced ``&amp;amp;`` in every
@@ -720,6 +719,7 @@ def _stage_photos(model: dict, root: pathlib.Path, say: Callable) -> dict:
     insect that share a common name.
     """
     from src.image_cache import get_cached_image
+    from src.static_site_gallery import credited
     dest = root / "assets" / "photos"
     (dest / "wildlife").mkdir(parents=True, exist_ok=True)
     out: dict = {}
@@ -742,8 +742,9 @@ def _stage_photos(model: dict, root: pathlib.Path, say: Callable) -> dict:
                 pass
         out[url] = url
 
-    for entry in model["species"]:
-        stage(entry["slug"], (_first_photo(entry).get("url") or "").strip(), "")
+    for entry in model["species"]:      # every credited photo, V3.35
+        for i, photo in enumerate(credited(entry)):
+            stage(entry["slug"] + (f"-{i + 1}" if i else ""), photo["url"].strip(), "")
     for animal in model.get("wildlife") or []:
         stage(animal["slug"], (animal.get("image") or "").strip(), "wildlife")
 

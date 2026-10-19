@@ -158,7 +158,7 @@ def _vocabularies() -> dict:
 
 VOCABULARIES = _vocabularies()
 
-PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+PHOTO_SLOTS = ("flower", "habit", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
 
 # An eighth, synthetic bucket: a photograph the catalogue already HAS but that

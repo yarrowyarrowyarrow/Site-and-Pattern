@@ -21,10 +21,10 @@ from src.nativity import provinces
 from src.site_share import photo_card as share_photo
 from src.sourcing import describe as sourcing_text
 from src.static_site import _first_photo, hub_slug
+from src.static_site_gallery import gallery_html
 from src.static_site_points import occurrence_map
 from src.static_site_range import range_section
-from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
-                                    _swatch, _up)
+from src.static_site_render import _crumb, _esc, _page, _swatch, _up
 
 
 def colour_cell_html(entry: dict, primary: str, depth: int) -> str:
@@ -72,15 +72,8 @@ def render_species(entry: dict, model: dict, photo_src: dict,
     row = entry.get("row") or {}
     colour = classify(row)
     photo = _first_photo(entry)
-
-    if photo:
-        hero = (f'<figure class="hero-photo">'
-                f'{_photo_img(photo, depth, photo_src, entry.get("name") or "")}'
-                f'{_credit(photo)}</figure>')
-    else:
-        hero = ('<p class="note">No openly-licensed photograph of this species '
-                'is in the catalogue yet. We show a photo only when we can '
-                'credit the photographer.</p>')
+    # V3.35: the lead and the rest, each with its credit (F251).
+    hero = gallery_html(entry, depth, photo_src)
 
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))

@@ -69,12 +69,26 @@ class TestSlots(unittest.TestCase):
         for slot in PHOTO_SLOTS:
             self.assertIn(slot, schema, f"schema.sql does not mention {slot!r}")
 
-    def test_habit_leads_the_preference_order(self):
-        """The whole diagnosis behind F70: the app had 323 flower macros and
-        zero photographs of a whole plant, because the fetch script's rule was
-        'first redistributable licence' and iNaturalist's leading photo is a
-        flower. `habit` leading is what makes the fix show up on screen."""
-        self.assertEqual(PHOTO_SLOTS[0], "habit")
+    def test_the_flower_leads_then_the_whole_plant(self):
+        """`habit` led from V2.35: the app had 323 flower macros and no whole
+        plant, and a whole plant is what deciding needs. The owner reversed it
+        in V3.35 (decision D2): at a list row's size a whole plant is a green
+        smudge and a flower is why somebody stops; the whole plant comes
+        second, and the photo the owner stars leads whatever its slot."""
+        self.assertEqual(PHOTO_SLOTS[:2], ("flower", "habit"))
+
+    def test_the_starred_photo_leads_whatever_its_slot(self):
+        """The fold writes the owner's order as `rank`; the slot only breaks
+        a tie, and a person's own photograph comes before both."""
+        from src.db.plants import photo_order             # noqa: PLC0415
+        rows = [
+            {"id": 1, "slot": "flower", "rank": 1, "origin": "seed"},
+            {"id": 2, "slot": "habit", "rank": 0, "origin": "seed"},
+            {"id": 3, "slot": "winter", "rank": 0, "origin": "user"},
+            {"id": 4, "slot": "fruit", "rank": 1, "origin": "seed"},
+        ]
+        self.assertEqual([r["id"] for r in sorted(rows, key=photo_order)],
+                         [3, 2, 1, 4])
 
 
 class TestReseedSurvival(unittest.TestCase):
@@ -188,7 +202,9 @@ class TestReadSynthesis(unittest.TestCase):
         self.assertGreater(len(cov["missing"]), 0,
                            "the gap should be counted, not zero")
 
-    def test_image_url_prefers_a_habit_photo_over_a_flower_macro(self):
+    def test_image_url_prefers_a_persons_own_photo(self):
+        """Their whole plant leads over the shipped flower (V3.35: by being
+        theirs; until then by being a whole plant)."""
         before = self._rudbeckia()["image_url"]
         photos.add_photo(_SCI, "habit", "/photos/whole-plant.jpg",
                          attribution="Yarrow", license="cc-by-sa",
