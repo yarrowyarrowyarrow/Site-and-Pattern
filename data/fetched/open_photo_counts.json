@@ -1,0 +1,3391 @@
+{
+ "Campanula lasiocarpa": {
+  "taxon": 142791,
+  "fetched": "2026-10-19T03:36:44Z",
+  "open_here": 54,
+  "open_anywhere": 321,
+  "nc_anywhere": 1527,
+  "any_anywhere": 2299
+ },
+ "Penstemon albertinus": {
+  "taxon": 166318,
+  "fetched": "2026-10-19T03:36:50Z",
+  "open_here": 74,
+  "open_anywhere": 107,
+  "nc_anywhere": 430,
+  "any_anywhere": 678
+ },
+ "Endotropis alnifolia": {
+  "taxon": 78843,
+  "fetched": "2026-10-19T03:36:57Z",
+  "open_here": 39,
+  "open_anywhere": 407,
+  "nc_anywhere": 2004,
+  "any_anywhere": 3063
+ },
+ "Bolboschoenus maritimus": {
+  "taxon": 58345,
+  "fetched": "2026-10-19T03:37:04Z",
+  "open_here": 20,
+  "open_anywhere": 926,
+  "nc_anywhere": 2753,
+  "any_anywhere": 4437
+ },
+ "Spartina gracilis": {
+  "taxon": 772996,
+  "fetched": "2026-10-19T03:37:13Z",
+  "open_here": 71,
+  "open_anywhere": 124,
+  "nc_anywhere": 165,
+  "any_anywhere": 363
+ },
+ "Aster alpinus": {
+  "taxon": 123449,
+  "fetched": "2026-10-19T03:37:19Z",
+  "open_here": 17,
+  "open_anywhere": 1288,
+  "nc_anywhere": 6248,
+  "any_anywhere": 9419
+ },
+ "Bistorta vivipara": {
+  "taxon": 130545,
+  "fetched": "2026-10-19T03:37:25Z",
+  "open_here": 90,
+  "open_anywhere": 1714,
+  "nc_anywhere": 9648,
+  "any_anywhere": 14044
+ },
+ "Poa alpina": {
+  "taxon": 167076,
+  "fetched": "2026-10-19T03:37:32Z",
+  "open_here": 18,
+  "open_anywhere": 255,
+  "nc_anywhere": 1038,
+  "any_anywhere": 1534
+ },
+ "Myosotis asiatica": {
+  "taxon": 83057,
+  "fetched": "2026-10-19T03:37:39Z",
+  "open_here": 91,
+  "open_anywhere": 297,
+  "nc_anywhere": 1570,
+  "any_anywhere": 2337
+ },
+ "Hedysarum americanum": {
+  "taxon": 553040,
+  "fetched": "2026-10-19T03:37:45Z",
+  "open_here": 8,
+  "open_anywhere": 18,
+  "nc_anywhere": 186,
+  "any_anywhere": 273
+ },
+ "Androsace chamaejasme": {
+  "taxon": 930840,
+  "fetched": "2026-10-19T03:37:50Z",
+  "open_here": 0,
+  "open_anywhere": 103,
+  "nc_anywhere": 533,
+  "any_anywhere": 805
+ },
+ "Veronica americana": {
+  "taxon": 57277,
+  "fetched": "2026-10-19T03:37:58Z",
+  "open_here": 122,
+  "open_anywhere": 1071,
+  "nc_anywhere": 5504,
+  "any_anywhere": 8458
+ },
+ "Eurybia sibirica": {
+  "taxon": 162890,
+  "fetched": "2026-10-19T03:38:04Z",
+  "open_here": 51,
+  "open_anywhere": 272,
+  "nc_anywhere": 1776,
+  "any_anywhere": 2610
+ },
+ "Sagittaria cuneata": {
+  "taxon": 78925,
+  "fetched": "2026-10-19T03:38:10Z",
+  "open_here": 175,
+  "open_anywhere": 430,
+  "nc_anywhere": 1441,
+  "any_anywhere": 2288
+ },
+ "Astragalus laxmannii": {
+  "taxon": 494579,
+  "fetched": "2026-10-19T03:38:17Z",
+  "open_here": 130,
+  "open_anywhere": 738,
+  "nc_anywhere": 3337,
+  "any_anywhere": 5044
+ },
+ "Carex atherodes": {
+  "taxon": 76015,
+  "fetched": "2026-10-19T03:38:25Z",
+  "open_here": 37,
+  "open_anywhere": 158,
+  "nc_anywhere": 436,
+  "any_anywhere": 680
+ },
+ "Escobaria vivipara": {
+  "taxon": 148405,
+  "fetched": "2026-10-19T03:38:30Z",
+  "open_here": 197,
+  "open_anywhere": 2635,
+  "nc_anywhere": 9229,
+  "any_anywhere": 15555
+ },
+ "Abies balsamea": {
+  "taxon": 54261,
+  "fetched": "2026-10-19T03:38:37Z",
+  "open_here": 41,
+  "open_anywhere": 11479,
+  "nc_anywhere": 24370,
+  "any_anywhere": 43355
+ },
+ "Populus balsamifera": {
+  "taxon": 54838,
+  "fetched": "2026-10-19T03:38:43Z",
+  "open_here": 183,
+  "open_anywhere": 1254,
+  "nc_anywhere": 6421,
+  "any_anywhere": 9538
+ },
+ "Balsamorhiza sagittata": {
+  "taxon": 62266,
+  "fetched": "2026-10-19T03:38:49Z",
+  "open_here": 1078,
+  "open_anywhere": 2574,
+  "nc_anywhere": 13324,
+  "any_anywhere": 20279
+ },
+ "Salix petiolaris": {
+  "taxon": 54848,
+  "fetched": "2026-10-19T03:38:56Z",
+  "open_here": 39,
+  "open_anywhere": 153,
+  "nc_anywhere": 764,
+  "any_anywhere": 1104
+ },
+ "Corylus cornuta": {
+  "taxon": 53374,
+  "fetched": "2026-10-19T03:39:01Z",
+  "open_here": 233,
+  "open_anywhere": 2759,
+  "nc_anywhere": 15134,
+  "any_anywhere": 22919
+ },
+ "Carex rostrata": {
+  "taxon": 152956,
+  "fetched": "2026-10-19T03:39:09Z",
+  "open_here": 7,
+  "open_anywhere": 651,
+  "nc_anywhere": 2690,
+  "any_anywhere": 3781
+ },
+ "Arctostaphylos uva-ursi": {
+  "taxon": 68049,
+  "fetched": "2026-10-19T03:39:15Z",
+  "open_here": 1115,
+  "open_anywhere": 6162,
+  "nc_anywhere": 33093,
+  "any_anywhere": 49960
+ },
+ "Carex bebbii": {
+  "taxon": 116348,
+  "fetched": "2026-10-19T03:39:22Z",
+  "open_here": 20,
+  "open_anywhere": 62,
+  "nc_anywhere": 331,
+  "any_anywhere": 454
+ },
+ "Salix bebbiana": {
+  "taxon": 54843,
+  "fetched": "2026-10-19T03:39:28Z",
+  "open_here": 188,
+  "open_anywhere": 651,
+  "nc_anywhere": 3143,
+  "any_anywhere": 4749
+ },
+ "Andropogon gerardi": {
+  "taxon": 121968,
+  "fetched": "2026-10-19T03:39:36Z",
+  "open_here": 2,
+  "open_anywhere": 2183,
+  "nc_anywhere": 13314,
+  "any_anywhere": 20120
+ },
+ "Artemisia tridentata": {
+  "taxon": 75598,
+  "fetched": "2026-10-19T03:39:43Z",
+  "open_here": 344,
+  "open_anywhere": 3028,
+  "nc_anywhere": 13372,
+  "any_anywhere": 21209
+ },
+ "Juncus vaseyi": {
+  "taxon": 164292,
+  "fetched": "2026-10-19T03:39:50Z",
+  "open_here": 1,
+  "open_anywhere": 5,
+  "nc_anywhere": 32,
+  "any_anywhere": 41
+ },
+ "Spiraea betulifolia": {
+  "taxon": 84724,
+  "fetched": "2026-10-19T03:39:58Z",
+  "open_here": 0,
+  "open_anywhere": 17,
+  "nc_anywhere": 81,
+  "any_anywhere": 104
+ },
+ "Mitella nuda": {
+  "taxon": 144149,
+  "fetched": "2026-10-19T03:40:04Z",
+  "open_here": 288,
+  "open_anywhere": 893,
+  "nc_anywhere": 3500,
+  "any_anywhere": 5266
+ },
+ "Crataegus douglasii": {
+  "taxon": 76469,
+  "fetched": "2026-10-19T03:40:10Z",
+  "open_here": 17,
+  "open_anywhere": 188,
+  "nc_anywhere": 1644,
+  "any_anywhere": 2473
+ },
+ "Picea mariana": {
+  "taxon": 84296,
+  "fetched": "2026-10-19T03:40:16Z",
+  "open_here": 100,
+  "open_anywhere": 1268,
+  "nc_anywhere": 4265,
+  "any_anywhere": 6914
+ },
+ "Gaillardia aristata": {
+  "taxon": 77183,
+  "fetched": "2026-10-19T03:40:23Z",
+  "open_here": 709,
+  "open_anywhere": 1460,
+  "nc_anywhere": 10554,
+  "any_anywhere": 16027
+ },
+ "Clematis occidentalis": {
+  "taxon": 117512,
+  "fetched": "2026-10-19T03:40:30Z",
+  "open_here": 300,
+  "open_anywhere": 608,
+  "nc_anywhere": 4656,
+  "any_anywhere": 7108
+ },
+ "Aquilegia brevistyla": {
+  "taxon": 158459,
+  "fetched": "2026-10-19T03:40:36Z",
+  "open_here": 89,
+  "open_anywhere": 146,
+  "nc_anywhere": 839,
+  "any_anywhere": 1291
+ },
+ "Bouteloua gracilis": {
+  "taxon": 71257,
+  "fetched": "2026-10-19T03:40:43Z",
+  "open_here": 153,
+  "open_anywhere": 1012,
+  "nc_anywhere": 5022,
+  "any_anywhere": 7959
+ },
+ "Sisyrinchium montanum": {
+  "taxon": 127372,
+  "fetched": "2026-10-19T03:40:50Z",
+  "open_here": 229,
+  "open_anywhere": 607,
+  "nc_anywhere": 3848,
+  "any_anywhere": 5861
+ },
+ "Festuca idahoensis": {
+  "taxon": 61200,
+  "fetched": "2026-10-19T03:41:01Z",
+  "open_here": 9,
+  "open_anywhere": 81,
+  "nc_anywhere": 397,
+  "any_anywhere": 615
+ },
+ "Calamagrostis canadensis": {
+  "taxon": 75925,
+  "fetched": "2026-10-19T03:41:08Z",
+  "open_here": 35,
+  "open_anywhere": 330,
+  "nc_anywhere": 1519,
+  "any_anywhere": 2372
+ },
+ "Vaccinium uliginosum": {
+  "taxon": 64714,
+  "fetched": "2026-10-19T03:41:14Z",
+  "open_here": 4,
+  "open_anywhere": 3191,
+  "nc_anywhere": 18305,
+  "any_anywhere": 26301
+ },
+ "Vaccinium oxycoccos": {
+  "taxon": 126560,
+  "fetched": "2026-10-19T03:41:20Z",
+  "open_here": 98,
+  "open_anywhere": 2535,
+  "nc_anywhere": 10960,
+  "any_anywhere": 16463
+ },
+ "Achillea borealis": {
+  "taxon": 1626108,
+  "fetched": "2026-10-19T03:41:27Z",
+  "open_here": 38,
+  "open_anywhere": 103,
+  "nc_anywhere": 436,
+  "any_anywhere": 674
+ },
+ "Oxytropis borealis": {
+  "taxon": 78309,
+  "fetched": "2026-10-19T03:41:34Z",
+  "open_here": 26,
+  "open_anywhere": 140,
+  "nc_anywhere": 1128,
+  "any_anywhere": 1531
+ },
+ "Lonicera involucrata": {
+  "taxon": 60881,
+  "fetched": "2026-10-19T03:41:40Z",
+  "open_here": 501,
+  "open_anywhere": 2911,
+  "nc_anywhere": 21367,
+  "any_anywhere": 33164
+ },
+ "Ribes lacustre": {
+  "taxon": 78858,
+  "fetched": "2026-10-19T03:41:46Z",
+  "open_here": 143,
+  "open_anywhere": 754,
+  "nc_anywhere": 4278,
+  "any_anywhere": 6319
+ },
+ "Opuntia fragilis": {
+  "taxon": 62474,
+  "fetched": "2026-10-19T03:41:52Z",
+  "open_here": 986,
+  "open_anywhere": 2271,
+  "nc_anywhere": 8267,
+  "any_anywhere": 12495
+ },
+ "Sagittaria latifolia": {
+  "taxon": 48070,
+  "fetched": "2026-10-19T03:41:58Z",
+  "open_here": 10,
+  "open_anywhere": 2156,
+  "nc_anywhere": 12506,
+  "any_anywhere": 19312
+ },
+ "Alisma triviale": {
+  "taxon": 61167,
+  "fetched": "2026-10-19T03:42:05Z",
+  "open_here": 54,
+  "open_anywhere": 311,
+  "nc_anywhere": 1333,
+  "any_anywhere": 2085
+ },
+ "Anticlea occidentalis": {
+  "taxon": 425083,
+  "fetched": "2026-10-19T03:42:10Z",
+  "open_here": 79,
+  "open_anywhere": 166,
+  "nc_anywhere": 1123,
+  "any_anywhere": 1589
+ },
+ "Gutierrezia sarothrae": {
+  "taxon": 77312,
+  "fetched": "2026-10-19T03:42:17Z",
+  "open_here": 108,
+  "open_anywhere": 955,
+  "nc_anywhere": 7044,
+  "any_anywhere": 9772
+ },
+ "Menyanthes trifoliata": {
+  "taxon": 78016,
+  "fetched": "2026-10-19T03:42:24Z",
+  "open_here": 255,
+  "open_anywhere": 3400,
+  "nc_anywhere": 15220,
+  "any_anywhere": 23556
+ },
+ "Cornus canadensis": {
+  "taxon": 47192,
+  "fetched": "2026-10-19T03:42:30Z",
+  "open_here": 842,
+  "open_anywhere": 8427,
+  "nc_anywhere": 43855,
+  "any_anywhere": 68470
+ },
+ "Quercus macrocarpa": {
+  "taxon": 54781,
+  "fetched": "2026-10-19T03:42:36Z",
+  "open_here": 14,
+  "open_anywhere": 3370,
+  "nc_anywhere": 21987,
+  "any_anywhere": 32851
+ },
+ "Oenothera cespitosa": {
+  "taxon": 78240,
+  "fetched": "2026-10-19T03:42:43Z",
+  "open_here": 54,
+  "open_anywhere": 798,
+  "nc_anywhere": 4521,
+  "any_anywhere": 7144
+ },
+ "Anemonastrum canadense": {
+  "taxon": 881527,
+  "fetched": "2026-10-19T03:42:49Z",
+  "open_here": 290,
+  "open_anywhere": 2377,
+  "nc_anywhere": 19655,
+  "any_anywhere": 30185
+ },
+ "Shepherdia canadensis": {
+  "taxon": 79072,
+  "fetched": "2026-10-19T03:42:56Z",
+  "open_here": 1077,
+  "open_anywhere": 3021,
+  "nc_anywhere": 16560,
+  "any_anywhere": 24191
+ },
+ "Solidago canadensis": {
+  "taxon": 67808,
+  "fetched": "2026-10-19T03:43:03Z",
+  "open_here": 6,
+  "open_anywhere": 3377,
+  "nc_anywhere": 21222,
+  "any_anywhere": 30637
+ },
+ "Astragalus canadensis": {
+  "taxon": 75631,
+  "fetched": "2026-10-19T03:43:09Z",
+  "open_here": 21,
+  "open_anywhere": 353,
+  "nc_anywhere": 2794,
+  "any_anywhere": 4165
+ },
+ "Piptatherum canadense": {
+  "taxon": 1225097,
+  "fetched": "2026-10-19T03:43:16Z",
+  "open_here": 3,
+  "open_anywhere": 12,
+  "nc_anywhere": 63,
+  "any_anywhere": 102
+ },
+ "Elodea canadensis": {
+  "taxon": 76793,
+  "fetched": "2026-10-19T03:43:23Z",
+  "open_here": 38,
+  "open_anywhere": 1088,
+  "nc_anywhere": 4754,
+  "any_anywhere": 6847
+ },
+ "Elymus canadensis": {
+  "taxon": 129000,
+  "fetched": "2026-10-19T03:43:30Z",
+  "open_here": 63,
+  "open_anywhere": 774,
+  "nc_anywhere": 4112,
+  "any_anywhere": 6329
+ },
+ "Typha latifolia": {
+  "taxon": 48685,
+  "fetched": "2026-10-19T03:43:36Z",
+  "open_here": 319,
+  "open_anywhere": 6035,
+  "nc_anywhere": 30999,
+  "any_anywhere": 44617
+ },
+ "Prunus virginiana": {
+  "taxon": 54835,
+  "fetched": "2026-10-19T03:43:43Z",
+  "open_here": 664,
+  "open_anywhere": 4560,
+  "nc_anywhere": 31900,
+  "any_anywhere": 49134
+ },
+ "Heuchera richardsonii": {
+  "taxon": 127946,
+  "fetched": "2026-10-19T03:43:49Z",
+  "open_here": 109,
+  "open_anywhere": 647,
+  "nc_anywhere": 2650,
+  "any_anywhere": 4483
+ },
+ "Utricularia vulgaris": {
+  "taxon": 1505195,
+  "fetched": "2026-10-19T03:43:55Z",
+  "open_here": 172,
+  "open_anywhere": 1239,
+  "nc_anywhere": 5694,
+  "any_anywhere": 8534
+ },
+ "Equisetum arvense": {
+  "taxon": 52724,
+  "fetched": "2026-10-19T03:44:01Z",
+  "open_here": 346,
+  "open_anywhere": 12302,
+  "nc_anywhere": 59029,
+  "any_anywhere": 89043
+ },
+ "Juniperus communis": {
+  "taxon": 58725,
+  "fetched": "2026-10-19T03:44:07Z",
+  "open_here": 913,
+  "open_anywhere": 10894,
+  "nc_anywhere": 50244,
+  "any_anywhere": 75516
+ },
+ "Hippuris vulgaris": {
+  "taxon": 77422,
+  "fetched": "2026-10-19T03:44:13Z",
+  "open_here": 177,
+  "open_anywhere": 1116,
+  "nc_anywhere": 4636,
+  "any_anywhere": 7006
+ },
+ "Equisetum hyemale": {
+  "taxon": 52673,
+  "fetched": "2026-10-19T03:44:20Z",
+  "open_here": 137,
+  "open_anywhere": 4174,
+  "nc_anywhere": 21932,
+  "any_anywhere": 33499
+ },
+ "Symphoricarpos albus": {
+  "taxon": 48523,
+  "fetched": "2026-10-19T03:44:25Z",
+  "open_here": 250,
+  "open_anywhere": 4740,
+  "nc_anywhere": 29020,
+  "any_anywhere": 44097
+ },
+ "Glyceria grandis": {
+  "taxon": 77291,
+  "fetched": "2026-10-19T03:44:33Z",
+  "open_here": 32,
+  "open_anywhere": 95,
+  "nc_anywhere": 229,
+  "any_anywhere": 388
+ },
+ "Physaria didymocarpa": {
+  "taxon": 166822,
+  "fetched": "2026-10-19T03:44:38Z",
+  "open_here": 78,
+  "open_anywhere": 94,
+  "nc_anywhere": 307,
+  "any_anywhere": 498
+ },
+ "Lathyrus ochroleucus": {
+  "taxon": 164440,
+  "fetched": "2026-10-19T03:44:44Z",
+  "open_here": 381,
+  "open_anywhere": 743,
+  "nc_anywhere": 3619,
+  "any_anywhere": 5473
+ },
+ "Juniperus horizontalis": {
+  "taxon": 47573,
+  "fetched": "2026-10-19T03:44:50Z",
+  "open_here": 309,
+  "open_anywhere": 948,
+  "nc_anywhere": 4888,
+  "any_anywhere": 7178
+ },
+ "Mahonia repens": {
+  "taxon": 133104,
+  "fetched": "2026-10-19T03:44:56Z",
+  "open_here": 110,
+  "open_anywhere": 2336,
+  "nc_anywhere": 12673,
+  "any_anywhere": 20566
+ },
+ "Sibbaldia procumbens": {
+  "taxon": 79076,
+  "fetched": "2026-10-19T03:45:02Z",
+  "open_here": 104,
+  "open_anywhere": 622,
+  "nc_anywhere": 3210,
+  "any_anywhere": 4471
+ },
+ "Eleocharis palustris": {
+  "taxon": 1419558,
+  "fetched": "2026-10-19T03:45:09Z",
+  "open_here": 7,
+  "open_anywhere": 648,
+  "nc_anywhere": 2844,
+  "any_anywhere": 3942
+ },
+ "Viola pedatifida": {
+  "taxon": 170255,
+  "fetched": "2026-10-19T03:45:15Z",
+  "open_here": 13,
+  "open_anywhere": 228,
+  "nc_anywhere": 1473,
+  "any_anywhere": 2361
+ },
+ "Eriogonum androsaceum": {
+  "taxon": 162578,
+  "fetched": "2026-10-19T03:45:21Z",
+  "open_here": 31,
+  "open_anywhere": 31,
+  "nc_anywhere": 143,
+  "any_anywhere": 219
+ },
+ "Anemone multifida": {
+  "taxon": 75442,
+  "fetched": "2026-10-19T03:45:27Z",
+  "open_here": 230,
+  "open_anywhere": 894,
+  "nc_anywhere": 5609,
+  "any_anywhere": 8328
+ },
+ "Solanum triflorum": {
+  "taxon": 79144,
+  "fetched": "2026-10-19T03:45:32Z",
+  "open_here": 17,
+  "open_anywhere": 138,
+  "nc_anywhere": 792,
+  "any_anywhere": 1248
+ },
+ "Carex pseudocyperus": {
+  "taxon": 62212,
+  "fetched": "2026-10-19T03:45:40Z",
+  "open_here": 46,
+  "open_anywhere": 941,
+  "nc_anywhere": 4135,
+  "any_anywhere": 5932
+ },
+ "Primula conjugens": {
+  "taxon": 549934,
+  "fetched": "2026-10-19T03:45:45Z",
+  "open_here": 60,
+  "open_anywhere": 88,
+  "nc_anywhere": 1006,
+  "any_anywhere": 1390
+ },
+ "Rubus pubescens": {
+  "taxon": 132855,
+  "fetched": "2026-10-19T03:45:51Z",
+  "open_here": 256,
+  "open_anywhere": 1700,
+  "nc_anywhere": 7773,
+  "any_anywhere": 11974
+ },
+ "Liatris punctata": {
+  "taxon": 130379,
+  "fetched": "2026-10-19T03:45:58Z",
+  "open_here": 235,
+  "open_anywhere": 1528,
+  "nc_anywhere": 11100,
+  "any_anywhere": 17155
+ },
+ "Pseudotsuga menziesii": {
+  "taxon": 48256,
+  "fetched": "2026-10-19T03:46:04Z",
+  "open_here": 910,
+  "open_anywhere": 8539,
+  "nc_anywhere": 42123,
+  "any_anywhere": 66040
+ },
+ "Acer glabrum": {
+  "taxon": 63078,
+  "fetched": "2026-10-19T03:46:10Z",
+  "open_here": 598,
+  "open_anywhere": 2065,
+  "nc_anywhere": 8516,
+  "any_anywhere": 13069
+ },
+ "Cinna latifolia": {
+  "taxon": 76340,
+  "fetched": "2026-10-19T03:46:17Z",
+  "open_here": 17,
+  "open_anywhere": 79,
+  "nc_anywhere": 344,
+  "any_anywhere": 490
+ },
+ "Astragalus drummondii": {
+  "taxon": 84354,
+  "fetched": "2026-10-19T03:46:23Z",
+  "open_here": 33,
+  "open_anywhere": 264,
+  "nc_anywhere": 2196,
+  "any_anywhere": 3046
+ },
+ "Juncus drummondii": {
+  "taxon": 77565,
+  "fetched": "2026-10-19T03:46:30Z",
+  "open_here": 4,
+  "open_anywhere": 36,
+  "nc_anywhere": 141,
+  "any_anywhere": 214
+ },
+ "Betula glandulosa": {
+  "taxon": 75763,
+  "fetched": "2026-10-19T03:46:36Z",
+  "open_here": 27,
+  "open_anywhere": 234,
+  "nc_anywhere": 1232,
+  "any_anywhere": 1803
+ },
+ "Rubus arcticus": {
+  "taxon": 121363,
+  "fetched": "2026-10-19T03:46:42Z",
+  "open_here": 181,
+  "open_anywhere": 1244,
+  "nc_anywhere": 6571,
+  "any_anywhere": 9684
+ },
+ "Viola adunca": {
+  "taxon": 53328,
+  "fetched": "2026-10-19T03:46:48Z",
+  "open_here": 551,
+  "open_anywhere": 1616,
+  "nc_anywhere": 9539,
+  "any_anywhere": 14767
+ },
+ "Oxytropis sericea": {
+  "taxon": 166025,
+  "fetched": "2026-10-19T03:46:53Z",
+  "open_here": 225,
+  "open_anywhere": 676,
+  "nc_anywhere": 4975,
+  "any_anywhere": 7021
+ },
+ "Aquilegia canadensis": {
+  "taxon": 49868,
+  "fetched": "2026-10-19T03:46:59Z",
+  "open_here": 4,
+  "open_anywhere": 4168,
+  "nc_anywhere": 34251,
+  "any_anywhere": 53869
+ },
+ "Solidago lepida": {
+  "taxon": 79152,
+  "fetched": "2026-10-19T03:47:05Z",
+  "open_here": 12,
+  "open_anywhere": 144,
+  "nc_anywhere": 790,
+  "any_anywhere": 1207
+ },
+ "Oenothera biennis": {
+  "taxon": 62207,
+  "fetched": "2026-10-19T03:47:12Z",
+  "open_here": 43,
+  "open_anywhere": 2649,
+  "nc_anywhere": 14904,
+  "any_anywhere": 23192
+ },
+ "Paxistima myrsinites": {
+  "taxon": 63893,
+  "fetched": "2026-10-19T03:47:18Z",
+  "open_here": 444,
+  "open_anywhere": 1954,
+  "nc_anywhere": 8534,
+  "any_anywhere": 12693
+ },
+ "Physostegia ledinghamii": {
+  "taxon": 166857,
+  "fetched": "2026-10-19T03:47:23Z",
+  "open_here": 6,
+  "open_anywhere": 6,
+  "nc_anywhere": 22,
+  "any_anywhere": 40
+ },
+ "Physostegia parviflora": {
+  "taxon": 166860,
+  "fetched": "2026-10-19T03:47:29Z",
+  "open_here": 4,
+  "open_anywhere": 12,
+  "nc_anywhere": 70,
+  "any_anywhere": 98
+ },
+ "Maianthemum amplexicaule": {
+  "taxon": 53012,
+  "fetched": "2026-10-19T03:47:35Z",
+  "open_here": 291,
+  "open_anywhere": 1684,
+  "nc_anywhere": 9088,
+  "any_anywhere": 14338
+ },
+ "Cerastium arvense": {
+  "taxon": 50851,
+  "fetched": "2026-10-19T03:47:41Z",
+  "open_here": 173,
+  "open_anywhere": 2299,
+  "nc_anywhere": 11372,
+  "any_anywhere": 17494
+ },
+ "Antennaria neglecta": {
+  "taxon": 127005,
+  "fetched": "2026-10-19T03:47:47Z",
+  "open_here": 5,
+  "open_anywhere": 162,
+  "nc_anywhere": 1090,
+  "any_anywhere": 1638
+ },
+ "Chamaenerion angustifolium": {
+  "taxon": 564969,
+  "fetched": "2026-10-19T03:47:53Z",
+  "open_here": 1447,
+  "open_anywhere": 19602,
+  "nc_anywhere": 113822,
+  "any_anywhere": 173142
+ },
+ "Euthamia graminifolia": {
+  "taxon": 130989,
+  "fetched": "2026-10-19T03:47:59Z",
+  "open_here": 41,
+  "open_anywhere": 2430,
+  "nc_anywhere": 12622,
+  "any_anywhere": 19388
+ },
+ "Doellingeria umbellata": {
+  "taxon": 120179,
+  "fetched": "2026-10-19T03:48:05Z",
+  "open_here": 6,
+  "open_anywhere": 2545,
+  "nc_anywhere": 14595,
+  "any_anywhere": 21966
+ },
+ "Caltha natans": {
+  "taxon": 159703,
+  "fetched": "2026-10-19T03:48:10Z",
+  "open_here": 24,
+  "open_anywhere": 80,
+  "nc_anywhere": 264,
+  "any_anywhere": 412
+ },
+ "Festuca campestris": {
+  "taxon": 162944,
+  "fetched": "2026-10-19T03:48:18Z",
+  "open_here": 31,
+  "open_anywhere": 41,
+  "nc_anywhere": 269,
+  "any_anywhere": 397
+ },
+ "Glyceria striata": {
+  "taxon": 77293,
+  "fetched": "2026-10-19T03:48:25Z",
+  "open_here": 9,
+  "open_anywhere": 274,
+  "nc_anywhere": 1257,
+  "any_anywhere": 1874
+ },
+ "Rhus aromatica": {
+  "taxon": 1616198,
+  "fetched": "2026-10-19T03:48:30Z",
+  "open_here": 65,
+  "open_anywhere": 3647,
+  "nc_anywhere": 21722,
+  "any_anywhere": 34733
+ },
+ "Bromus ciliatus": {
+  "taxon": 75899,
+  "fetched": "2026-10-19T03:48:38Z",
+  "open_here": 50,
+  "open_anywhere": 177,
+  "nc_anywhere": 604,
+  "any_anywhere": 974
+ },
+ "Lysimachia ciliata": {
+  "taxon": 62441,
+  "fetched": "2026-10-19T03:48:44Z",
+  "open_here": 134,
+  "open_anywhere": 2197,
+  "nc_anywhere": 13234,
+  "any_anywhere": 20730
+ },
+ "Penstemon eriantherus": {
+  "taxon": 166357,
+  "fetched": "2026-10-19T03:48:49Z",
+  "open_here": 44,
+  "open_anywhere": 159,
+  "nc_anywhere": 866,
+  "any_anywhere": 1321
+ },
+ "Sparganium eurycarpum": {
+  "taxon": 63348,
+  "fetched": "2026-10-19T03:48:56Z",
+  "open_here": 67,
+  "open_anywhere": 418,
+  "nc_anywhere": 2521,
+  "any_anywhere": 3931
+ },
+ "Agastache foeniculum": {
+  "taxon": 158076,
+  "fetched": "2026-10-19T03:49:01Z",
+  "open_here": 114,
+  "open_anywhere": 493,
+  "nc_anywhere": 2947,
+  "any_anywhere": 4602
+ },
+ "Leymus cinereus": {
+  "taxon": 164672,
+  "fetched": "2026-10-19T03:49:08Z",
+  "open_here": 23,
+  "open_anywhere": 247,
+  "nc_anywhere": 927,
+  "any_anywhere": 1550
+ },
+ "Erythronium grandiflorum": {
+  "taxon": 60496,
+  "fetched": "2026-10-19T03:49:14Z",
+  "open_here": 456,
+  "open_anywhere": 1618,
+  "nc_anywhere": 9456,
+  "any_anywhere": 15265
+ },
+ "Thermopsis rhombifolia": {
+  "taxon": 169720,
+  "fetched": "2026-10-19T03:49:20Z",
+  "open_here": 696,
+  "open_anywhere": 904,
+  "nc_anywhere": 6714,
+  "any_anywhere": 9488
+ },
+ "Ribes aureum": {
+  "taxon": 55544,
+  "fetched": "2026-10-19T03:49:26Z",
+  "open_here": 39,
+  "open_anywhere": 1404,
+  "nc_anywhere": 10986,
+  "any_anywhere": 17071
+ },
+ "Draba aurea": {
+  "taxon": 162008,
+  "fetched": "2026-10-19T03:49:33Z",
+  "open_here": 0,
+  "open_anywhere": 32,
+  "nc_anywhere": 149,
+  "any_anywhere": 216
+ },
+ "Carex aurea": {
+  "taxon": 76017,
+  "fetched": "2026-10-19T03:49:41Z",
+  "open_here": 53,
+  "open_anywhere": 417,
+  "nc_anywhere": 1635,
+  "any_anywhere": 2527
+ },
+ "Coreopsis tinctoria": {
+  "taxon": 76445,
+  "fetched": "2026-10-19T03:49:46Z",
+  "open_here": 9,
+  "open_anywhere": 1335,
+  "nc_anywhere": 10113,
+  "any_anywhere": 16107
+ },
+ "Schoenoplectus acutus": {
+  "taxon": 59205,
+  "fetched": "2026-10-19T03:49:52Z",
+  "open_here": 64,
+  "open_anywhere": 251,
+  "nc_anywhere": 1111,
+  "any_anywhere": 1686
+ },
+ "Canadanthus modestus": {
+  "taxon": 159806,
+  "fetched": "2026-10-19T03:49:58Z",
+  "open_here": 46,
+  "open_anywhere": 151,
+  "nc_anywhere": 601,
+  "any_anywhere": 957
+ },
+ "Alnus alnobetula": {
+  "taxon": 868167,
+  "fetched": "2026-10-19T03:50:04Z",
+  "open_here": 67,
+  "open_anywhere": 1658,
+  "nc_anywhere": 9746,
+  "any_anywhere": 14012
+ },
+ "Asclepias ovalifolia": {
+  "taxon": 47905,
+  "fetched": "2026-10-19T03:50:10Z",
+  "open_here": 80,
+  "open_anywhere": 334,
+  "nc_anywhere": 1005,
+  "any_anywhere": 1699
+ },
+ "Nassella viridula": {
+  "taxon": 165661,
+  "fetched": "2026-10-19T03:50:17Z",
+  "open_here": 38,
+  "open_anywhere": 86,
+  "nc_anywhere": 385,
+  "any_anywhere": 633
+ },
+ "Astragalus crassicarpus": {
+  "taxon": 139634,
+  "fetched": "2026-10-19T03:50:23Z",
+  "open_here": 22,
+  "open_anywhere": 427,
+  "nc_anywhere": 2523,
+  "any_anywhere": 4170
+ },
+ "Grindelia squarrosa": {
+  "taxon": 77305,
+  "fetched": "2026-10-19T03:50:29Z",
+  "open_here": 304,
+  "open_anywhere": 1844,
+  "nc_anywhere": 8858,
+  "any_anywhere": 13627
+ },
+ "Arnica mollis": {
+  "taxon": 75575,
+  "fetched": "2026-10-19T03:50:35Z",
+  "open_here": 3,
+  "open_anywhere": 52,
+  "nc_anywhere": 346,
+  "any_anywhere": 476
+ },
+ "Heterotheca villosa": {
+  "taxon": 1466398,
+  "fetched": "2026-10-19T03:50:41Z",
+  "open_here": 343,
+  "open_anywhere": 1168,
+  "nc_anywhere": 6916,
+  "any_anywhere": 10491
+ },
+ "Leymus innovatus": {
+  "taxon": 164675,
+  "fetched": "2026-10-19T03:50:48Z",
+  "open_here": 97,
+  "open_anywhere": 119,
+  "nc_anywhere": 378,
+  "any_anywhere": 616
+ },
+ "Campanula rotundifolia": {
+  "taxon": 984576,
+  "fetched": "2026-10-19T03:50:54Z",
+  "open_here": 639,
+  "open_anywhere": 6456,
+  "nc_anywhere": 32806,
+  "any_anywhere": 50885
+ },
+ "Zizia aptera": {
+  "taxon": 119795,
+  "fetched": "2026-10-19T03:51:00Z",
+  "open_here": 199,
+  "open_anywhere": 522,
+  "nc_anywhere": 2699,
+  "any_anywhere": 4095
+ },
+ "Arnica cordifolia": {
+  "taxon": 75569,
+  "fetched": "2026-10-19T03:51:06Z",
+  "open_here": 246,
+  "open_anywhere": 781,
+  "nc_anywhere": 5574,
+  "any_anywhere": 8072
+ },
+ "Viburnum opulus": {
+  "taxon": 1622164,
+  "fetched": "2026-10-19T03:51:11Z",
+  "open_here": 118,
+  "open_anywhere": 9114,
+  "nc_anywhere": 54341,
+  "any_anywhere": 81648
+ },
+ "Dieteria canescens": {
+  "taxon": 76655,
+  "fetched": "2026-10-19T03:51:17Z",
+  "open_here": 40,
+  "open_anywhere": 569,
+  "nc_anywhere": 3625,
+  "any_anywhere": 5141
+ },
+ "Spiranthes romanzoffiana": {
+  "taxon": 50743,
+  "fetched": "2026-10-19T03:51:23Z",
+  "open_here": 105,
+  "open_anywhere": 856,
+  "nc_anywhere": 4195,
+  "any_anywhere": 6594
+ },
+ "Avenula hookeri": {
+  "taxon": 899140,
+  "fetched": "2026-10-19T03:51:30Z",
+  "open_here": 10,
+  "open_anywhere": 30,
+  "nc_anywhere": 127,
+  "any_anywhere": 213
+ },
+ "Eriocoma hymenoides": {
+  "taxon": 1220378,
+  "fetched": "2026-10-19T03:51:38Z",
+  "open_here": 50,
+  "open_anywhere": 994,
+  "nc_anywhere": 2855,
+  "any_anywhere": 4976
+ },
+ "Lemna trisulca": {
+  "taxon": 77655,
+  "fetched": "2026-10-19T03:51:44Z",
+  "open_here": 44,
+  "open_anywhere": 710,
+  "nc_anywhere": 3044,
+  "any_anywhere": 4284
+ },
+ "Pinus banksiana": {
+  "taxon": 58724,
+  "fetched": "2026-10-19T03:51:50Z",
+  "open_here": 91,
+  "open_anywhere": 1947,
+  "nc_anywhere": 8323,
+  "any_anywhere": 13190
+ },
+ "Helianthus tuberosus": {
+  "taxon": 122970,
+  "fetched": "2026-10-19T03:51:56Z",
+  "open_here": 0,
+  "open_anywhere": 1475,
+  "nc_anywhere": 9454,
+  "any_anywhere": 13423
+ },
+ "Eutrochium maculatum": {
+  "taxon": 117440,
+  "fetched": "2026-10-19T03:52:02Z",
+  "open_here": 5,
+  "open_anywhere": 2205,
+  "nc_anywhere": 16720,
+  "any_anywhere": 24835
+ },
+ "Koeleria macrantha": {
+  "taxon": 57183,
+  "fetched": "2026-10-19T03:52:09Z",
+  "open_here": 154,
+  "open_anywhere": 935,
+  "nc_anywhere": 4133,
+  "any_anywhere": 6198
+ },
+ "Juncus nodosus": {
+  "taxon": 77586,
+  "fetched": "2026-10-19T03:52:17Z",
+  "open_here": 28,
+  "open_anywhere": 101,
+  "nc_anywhere": 362,
+  "any_anywhere": 571
+ },
+ "Ledum groenlandicum": {
+  "taxon": 180413,
+  "fetched": "2026-10-19T03:52:22Z",
+  "open_here": 541,
+  "open_anywhere": 3781,
+  "nc_anywhere": 20137,
+  "any_anywhere": 30522
+ },
+ "Carex lacustris": {
+  "taxon": 82309,
+  "fetched": "2026-10-19T03:52:29Z",
+  "open_here": 1,
+  "open_anywhere": 180,
+  "nc_anywhere": 769,
+  "any_anywhere": 1156
+ },
+ "Sedum lanceolatum": {
+  "taxon": 79026,
+  "fetched": "2026-10-19T03:52:35Z",
+  "open_here": 477,
+  "open_anywhere": 2408,
+  "nc_anywhere": 11138,
+  "any_anywhere": 17657
+ },
+ "Geum macrophyllum": {
+  "taxon": 77266,
+  "fetched": "2026-10-19T03:52:41Z",
+  "open_here": 117,
+  "open_anywhere": 1774,
+  "nc_anywhere": 11021,
+  "any_anywhere": 16294
+ },
+ "Solidago gigantea": {
+  "taxon": 83073,
+  "fetched": "2026-10-19T03:52:47Z",
+  "open_here": 16,
+  "open_anywhere": 2235,
+  "nc_anywhere": 10317,
+  "any_anywhere": 14761
+ },
+ "Oxytropis monticola": {
+  "taxon": 241915,
+  "fetched": "2026-10-19T03:52:52Z",
+  "open_here": 18,
+  "open_anywhere": 38,
+  "nc_anywhere": 218,
+  "any_anywhere": 312
+ },
+ "Arnica chamissonis": {
+  "taxon": 75568,
+  "fetched": "2026-10-19T03:52:58Z",
+  "open_here": 17,
+  "open_anywhere": 51,
+  "nc_anywhere": 230,
+  "any_anywhere": 327
+ },
+ "Symphyotrichum foliaceum": {
+  "taxon": 56113,
+  "fetched": "2026-10-19T03:53:04Z",
+  "open_here": 16,
+  "open_anywhere": 126,
+  "nc_anywhere": 525,
+  "any_anywhere": 771
+ },
+ "Penstemon gracilis": {
+  "taxon": 166372,
+  "fetched": "2026-10-19T03:53:09Z",
+  "open_here": 38,
+  "open_anywhere": 221,
+  "nc_anywhere": 1079,
+  "any_anywhere": 1715
+ },
+ "Symphyotrichum ciliolatum": {
+  "taxon": 169455,
+  "fetched": "2026-10-19T03:53:15Z",
+  "open_here": 119,
+  "open_anywhere": 323,
+  "nc_anywhere": 1793,
+  "any_anywhere": 2750
+ },
+ "Schizachyrium scoparium": {
+  "taxon": 122603,
+  "fetched": "2026-10-19T03:53:22Z",
+  "open_here": 18,
+  "open_anywhere": 2540,
+  "nc_anywhere": 13724,
+  "any_anywhere": 20851
+ },
+ "Heuchera parvifolia": {
+  "taxon": 77407,
+  "fetched": "2026-10-19T03:53:28Z",
+  "open_here": 33,
+  "open_anywhere": 265,
+  "nc_anywhere": 1012,
+  "any_anywhere": 1580
+ },
+ "Pinus contorta": {
+  "taxon": 48934,
+  "fetched": "2026-10-19T03:53:33Z",
+  "open_here": 703,
+  "open_anywhere": 3716,
+  "nc_anywhere": 19352,
+  "any_anywhere": 31525
+ },
+ "Anemone cylindrica": {
+  "taxon": 130456,
+  "fetched": "2026-10-19T03:53:39Z",
+  "open_here": 41,
+  "open_anywhere": 438,
+  "nc_anywhere": 2271,
+  "any_anywhere": 3425
+ },
+ "Vaccinium myrtillus": {
+  "taxon": 127029,
+  "fetched": "2026-10-19T03:53:45Z",
+  "open_here": 7,
+  "open_anywhere": 8488,
+  "nc_anywhere": 40215,
+  "any_anywhere": 60695
+ },
+ "Townsendia exscapa": {
+  "taxon": 169837,
+  "fetched": "2026-10-19T03:53:51Z",
+  "open_here": 31,
+  "open_anywhere": 108,
+  "nc_anywhere": 380,
+  "any_anywhere": 686
+ },
+ "Viburnum edule": {
+  "taxon": 79499,
+  "fetched": "2026-10-19T03:53:56Z",
+  "open_here": 344,
+  "open_anywhere": 1258,
+  "nc_anywhere": 6861,
+  "any_anywhere": 10267
+ },
+ "Penstemon lyallii": {
+  "taxon": 166394,
+  "fetched": "2026-10-19T03:54:02Z",
+  "open_here": 60,
+  "open_anywhere": 97,
+  "nc_anywhere": 318,
+  "any_anywhere": 550
+ },
+ "Hedysarum mackenziei": {
+  "taxon": null,
+  "note": "iNaturalist has no taxon by this name",
+  "fetched": "2026-10-19T03:54:09Z"
+ },
+ "Symphyotrichum ericoides": {
+  "taxon": 126654,
+  "fetched": "2026-10-19T03:54:09Z",
+  "open_here": 66,
+  "open_anywhere": 1016,
+  "nc_anywhere": 5857,
+  "any_anywhere": 8979
+ },
+ "Symphyotrichum boreale": {
+  "taxon": 169452,
+  "fetched": "2026-10-19T03:54:14Z",
+  "open_here": 30,
+  "open_anywhere": 143,
+  "nc_anywhere": 568,
+  "any_anywhere": 866
+ },
+ "Comarum palustre": {
+  "taxon": 62213,
+  "fetched": "2026-10-19T03:54:20Z",
+  "open_here": 212,
+  "open_anywhere": 4038,
+  "nc_anywhere": 17396,
+  "any_anywhere": 26075
+ },
+ "Stachys pilosa": {
+  "taxon": 79192,
+  "fetched": "2026-10-19T03:54:26Z",
+  "open_here": 182,
+  "open_anywhere": 243,
+  "nc_anywhere": 1065,
+  "any_anywhere": 1703
+ },
+ "Caltha palustris": {
+  "taxon": 56224,
+  "fetched": "2026-10-19T03:54:32Z",
+  "open_here": 307,
+  "open_anywhere": 10937,
+  "nc_anywhere": 58185,
+  "any_anywhere": 90765
+ },
+ "Scutellaria galericulata": {
+  "taxon": 79016,
+  "fetched": "2026-10-19T03:54:38Z",
+  "open_here": 215,
+  "open_anywhere": 3162,
+  "nc_anywhere": 14849,
+  "any_anywhere": 21950
+ },
+ "Viola palustris": {
+  "taxon": 79514,
+  "fetched": "2026-10-19T03:54:43Z",
+  "open_here": 23,
+  "open_anywhere": 605,
+  "nc_anywhere": 2985,
+  "any_anywhere": 4465
+ },
+ "Helianthus maximiliani": {
+  "taxon": 130192,
+  "fetched": "2026-10-19T03:54:49Z",
+  "open_here": 5,
+  "open_anywhere": 946,
+  "nc_anywhere": 6872,
+  "any_anywhere": 10466
+ },
+ "Arnica fulgens": {
+  "taxon": 75571,
+  "fetched": "2026-10-19T03:54:56Z",
+  "open_here": 24,
+  "open_anywhere": 63,
+  "nc_anywhere": 387,
+  "any_anywhere": 567
+ },
+ "Liatris ligulistylis": {
+  "taxon": 130381,
+  "fetched": "2026-10-19T03:55:02Z",
+  "open_here": 89,
+  "open_anywhere": 286,
+  "nc_anywhere": 1192,
+  "any_anywhere": 1982
+ },
+ "Carex praticola": {
+  "taxon": 76095,
+  "fetched": "2026-10-19T03:55:10Z",
+  "open_here": 4,
+  "open_anywhere": 14,
+  "nc_anywhere": 81,
+  "any_anywhere": 116
+ },
+ "Spiraea alba": {
+  "taxon": 126823,
+  "fetched": "2026-10-19T03:55:15Z",
+  "open_here": 54,
+  "open_anywhere": 4412,
+  "nc_anywhere": 25172,
+  "any_anywhere": 38640
+ },
+ "Astragalus missouriensis": {
+  "taxon": 158940,
+  "fetched": "2026-10-19T03:55:21Z",
+  "open_here": 54,
+  "open_anywhere": 378,
+  "nc_anywhere": 2193,
+  "any_anywhere": 3147
+ },
+ "Silene acaulis": {
+  "taxon": 68886,
+  "fetched": "2026-10-19T03:55:27Z",
+  "open_here": 204,
+  "open_anywhere": 2735,
+  "nc_anywhere": 15115,
+  "any_anywhere": 23114
+ },
+ "Phlox hoodii": {
+  "taxon": 78548,
+  "fetched": "2026-10-19T03:55:33Z",
+  "open_here": 241,
+  "open_anywhere": 711,
+  "nc_anywhere": 6714,
+  "any_anywhere": 8913
+ },
+ "Bromus marginatus": {
+  "taxon": 159467,
+  "fetched": "2026-10-19T03:55:41Z",
+  "open_here": 0,
+  "open_anywhere": 14,
+  "nc_anywhere": 52,
+  "any_anywhere": 73
+ },
+ "Gentiana calycosa": {
+  "taxon": 56350,
+  "fetched": "2026-10-19T03:55:46Z",
+  "open_here": 37,
+  "open_anywhere": 484,
+  "nc_anywhere": 2575,
+  "any_anywhere": 4305
+ },
+ "Iliamna rivularis": {
+  "taxon": 77489,
+  "fetched": "2026-10-19T03:55:52Z",
+  "open_here": 79,
+  "open_anywhere": 250,
+  "nc_anywhere": 1246,
+  "any_anywhere": 2011
+ },
+ "Osmorhiza berteroi": {
+  "taxon": 53166,
+  "fetched": "2026-10-19T03:55:58Z",
+  "open_here": 12,
+  "open_anywhere": 539,
+  "nc_anywhere": 2875,
+  "any_anywhere": 4274
+ },
+ "Salix exigua": {
+  "taxon": 59008,
+  "fetched": "2026-10-19T03:56:04Z",
+  "open_here": 4,
+  "open_anywhere": 586,
+  "nc_anywhere": 3179,
+  "any_anywhere": 4952
+ },
+ "Hieracium umbellatum": {
+  "taxon": 55909,
+  "fetched": "2026-10-19T03:56:09Z",
+  "open_here": 116,
+  "open_anywhere": 2989,
+  "nc_anywhere": 13396,
+  "any_anywhere": 18274
+ },
+ "Eriophorum angustifolium": {
+  "taxon": 127215,
+  "fetched": "2026-10-19T03:56:17Z",
+  "open_here": 16,
+  "open_anywhere": 1216,
+  "nc_anywhere": 5701,
+  "any_anywhere": 8528
+ },
+ "Hesperostipa comata": {
+  "taxon": 157659,
+  "fetched": "2026-10-19T03:56:25Z",
+  "open_here": 52,
+  "open_anywhere": 353,
+  "nc_anywhere": 1178,
+  "any_anywhere": 1959
+ },
+ "Eleocharis acicularis": {
+  "taxon": 57020,
+  "fetched": "2026-10-19T03:56:32Z",
+  "open_here": 3,
+  "open_anywhere": 169,
+  "nc_anywhere": 848,
+  "any_anywhere": 1169
+ },
+ "Allium cernuum": {
+  "taxon": 116364,
+  "fetched": "2026-10-19T03:56:37Z",
+  "open_here": 210,
+  "open_anywhere": 1496,
+  "nc_anywhere": 8734,
+  "any_anywhere": 13435
+ },
+ "Galium boreale": {
+  "taxon": 77188,
+  "fetched": "2026-10-19T03:56:43Z",
+  "open_here": 579,
+  "open_anywhere": 3542,
+  "nc_anywhere": 17525,
+  "any_anywhere": 25377
+ },
+ "Ribes hudsonianum": {
+  "taxon": 78855,
+  "fetched": "2026-10-19T03:56:49Z",
+  "open_here": 35,
+  "open_anywhere": 135,
+  "nc_anywhere": 559,
+  "any_anywhere": 826
+ },
+ "Gentianella amarella": {
+  "taxon": 60389,
+  "fetched": "2026-10-19T03:56:55Z",
+  "open_here": 141,
+  "open_anywhere": 590,
+  "nc_anywhere": 2647,
+  "any_anywhere": 4079
+ },
+ "Hedysarum boreale": {
+  "taxon": 84822,
+  "fetched": "2026-10-19T03:57:02Z",
+  "open_here": 202,
+  "open_anywhere": 586,
+  "nc_anywhere": 4434,
+  "any_anywhere": 6402
+ },
+ "Elymus lanceolatus": {
+  "taxon": 76799,
+  "fetched": "2026-10-19T03:57:09Z",
+  "open_here": 8,
+  "open_anywhere": 49,
+  "nc_anywhere": 187,
+  "any_anywhere": 303
+ },
+ "Helianthus nuttallii": {
+  "taxon": 77359,
+  "fetched": "2026-10-19T03:57:15Z",
+  "open_here": 26,
+  "open_anywhere": 64,
+  "nc_anywhere": 328,
+  "any_anywhere": 519
+ },
+ "Geum triflorum": {
+  "taxon": 57460,
+  "fetched": "2026-10-19T03:57:21Z",
+  "open_here": 782,
+  "open_anywhere": 2159,
+  "nc_anywhere": 14747,
+  "any_anywhere": 22029
+ },
+ "Matteuccia struthiopteris": {
+  "taxon": 82574,
+  "fetched": "2026-10-19T03:57:27Z",
+  "open_here": 41,
+  "open_anywhere": 4454,
+  "nc_anywhere": 28434,
+  "any_anywhere": 41530
+ },
+ "Agoseris glauca": {
+  "taxon": 75303,
+  "fetched": "2026-10-19T03:57:33Z",
+  "open_here": 136,
+  "open_anywhere": 335,
+  "nc_anywhere": 1785,
+  "any_anywhere": 2591
+ },
+ "Petasites frigidus": {
+  "taxon": 55780,
+  "fetched": "2026-10-19T03:57:39Z",
+  "open_here": 591,
+  "open_anywhere": 2725,
+  "nc_anywhere": 16915,
+  "any_anywhere": 25309
+ },
+ "Betula papyrifera": {
+  "taxon": 49883,
+  "fetched": "2026-10-19T03:57:45Z",
+  "open_here": 185,
+  "open_anywhere": 4632,
+  "nc_anywhere": 18100,
+  "any_anywhere": 28186
+ },
+ "Danthonia parryi": {
+  "taxon": 161631,
+  "fetched": "2026-10-19T03:57:52Z",
+  "open_here": 2,
+  "open_anywhere": 10,
+  "nc_anywhere": 56,
+  "any_anywhere": 94
+ },
+ "Townsendia parryi": {
+  "taxon": 169849,
+  "fetched": "2026-10-19T03:57:58Z",
+  "open_here": 28,
+  "open_anywhere": 77,
+  "nc_anywhere": 435,
+  "any_anywhere": 678
+ },
+ "Anaphalis margaritacea": {
+  "taxon": 52833,
+  "fetched": "2026-10-19T03:58:04Z",
+  "open_here": 349,
+  "open_anywhere": 4814,
+  "nc_anywhere": 30809,
+  "any_anywhere": 47190
+ },
+ "Erigeron philadelphicus": {
+  "taxon": 67820,
+  "fetched": "2026-10-19T03:58:09Z",
+  "open_here": 145,
+  "open_anywhere": 3254,
+  "nc_anywhere": 23310,
+  "any_anywhere": 35942
+ },
+ "Prunus pensylvanica": {
+  "taxon": 54833,
+  "fetched": "2026-10-19T03:58:16Z",
+  "open_here": 136,
+  "open_anywhere": 1020,
+  "nc_anywhere": 5160,
+  "any_anywhere": 7903
+ },
+ "Capnoides sempervirens": {
+  "taxon": 204148,
+  "fetched": "2026-10-19T03:58:22Z",
+  "open_here": 127,
+  "open_anywhere": 1392,
+  "nc_anywhere": 8914,
+  "any_anywhere": 13895
+ },
+ "Erythranthe lewisii": {
+  "taxon": 777190,
+  "fetched": "2026-10-19T03:58:28Z",
+  "open_here": 103,
+  "open_anywhere": 974,
+  "nc_anywhere": 5652,
+  "any_anywhere": 8931
+ },
+ "Antennaria rosea": {
+  "taxon": 53096,
+  "fetched": "2026-10-19T03:58:34Z",
+  "open_here": 174,
+  "open_anywhere": 592,
+  "nc_anywhere": 3506,
+  "any_anywhere": 5181
+ },
+ "Pyrola asarifolia": {
+  "taxon": 78793,
+  "fetched": "2026-10-19T03:58:40Z",
+  "open_here": 539,
+  "open_anywhere": 1932,
+  "nc_anywhere": 10848,
+  "any_anywhere": 16588
+ },
+ "Muhlenbergia cuspidata": {
+  "taxon": 165546,
+  "fetched": "2026-10-19T03:58:47Z",
+  "open_here": 12,
+  "open_anywhere": 55,
+  "nc_anywhere": 187,
+  "any_anywhere": 319
+ },
+ "Opuntia polyacantha": {
+  "taxon": 78269,
+  "fetched": "2026-10-19T03:58:52Z",
+  "open_here": 466,
+  "open_anywhere": 4780,
+  "nc_anywhere": 22180,
+  "any_anywhere": 33919
+ },
+ "Artemisia campestris": {
+  "taxon": 1677722,
+  "fetched": "2026-10-19T03:58:58Z",
+  "open_here": 7,
+  "open_anywhere": 1338,
+  "nc_anywhere": 6563,
+  "any_anywhere": 9808
+ },
+ "Hesperostipa spartea": {
+  "taxon": 163706,
+  "fetched": "2026-10-19T03:59:06Z",
+  "open_here": 4,
+  "open_anywhere": 126,
+  "nc_anywhere": 718,
+  "any_anywhere": 1035
+ },
+ "Carex hystericina": {
+  "taxon": 60750,
+  "fetched": "2026-10-19T03:59:14Z",
+  "open_here": 8,
+  "open_anywhere": 358,
+  "nc_anywhere": 1820,
+  "any_anywhere": 2683
+ },
+ "Danthonia spicata": {
+  "taxon": 130174,
+  "fetched": "2026-10-19T03:59:21Z",
+  "open_here": 1,
+  "open_anywhere": 766,
+  "nc_anywhere": 3363,
+  "any_anywhere": 5055
+ },
+ "Ranunculus rhomboideus": {
+  "taxon": 167753,
+  "fetched": "2026-10-19T03:59:27Z",
+  "open_here": 67,
+  "open_anywhere": 209,
+  "nc_anywhere": 975,
+  "any_anywhere": 1540
+ },
+ "Potentilla pensylvanica": {
+  "taxon": 78736,
+  "fetched": "2026-10-19T03:59:32Z",
+  "open_here": 112,
+  "open_anywhere": 260,
+  "nc_anywhere": 855,
+  "any_anywhere": 1301
+ },
+ "Drymocallis arguta": {
+  "taxon": 204304,
+  "fetched": "2026-10-19T03:59:38Z",
+  "open_here": 88,
+  "open_anywhere": 510,
+  "nc_anywhere": 2998,
+  "any_anywhere": 4584
+ },
+ "Ratibida columnifera": {
+  "taxon": 78836,
+  "fetched": "2026-10-19T03:59:44Z",
+  "open_here": 124,
+  "open_anywhere": 3528,
+  "nc_anywhere": 26706,
+  "any_anywhere": 41265
+ },
+ "Spartina pectinata": {
+  "taxon": 772984,
+  "fetched": "2026-10-19T03:59:51Z",
+  "open_here": 4,
+  "open_anywhere": 521,
+  "nc_anywhere": 2775,
+  "any_anywhere": 4104
+ },
+ "Pulsatilla nuttalliana": {
+  "taxon": 881504,
+  "fetched": "2026-10-19T03:59:57Z",
+  "open_here": 1203,
+  "open_anywhere": 2528,
+  "nc_anywhere": 20353,
+  "any_anywhere": 29520
+ },
+ "Sporobolus heterolepis": {
+  "taxon": 120557,
+  "fetched": "2026-10-19T04:00:05Z",
+  "open_here": 1,
+  "open_anywhere": 168,
+  "nc_anywhere": 1162,
+  "any_anywhere": 1664
+ },
+ "Gentiana affinis": {
+  "taxon": 67805,
+  "fetched": "2026-10-19T04:00:11Z",
+  "open_here": 33,
+  "open_anywhere": 235,
+  "nc_anywhere": 1442,
+  "any_anywhere": 2290
+ },
+ "Solidago missouriensis": {
+  "taxon": 130378,
+  "fetched": "2026-10-19T04:00:17Z",
+  "open_here": 69,
+  "open_anywhere": 169,
+  "nc_anywhere": 963,
+  "any_anywhere": 1485
+ },
+ "Allium textile": {
+  "taxon": 148940,
+  "fetched": "2026-10-19T04:00:23Z",
+  "open_here": 115,
+  "open_anywhere": 441,
+  "nc_anywhere": 2507,
+  "any_anywhere": 3728
+ },
+ "Rosa arkansana": {
+  "taxon": 83065,
+  "fetched": "2026-10-19T04:00:29Z",
+  "open_here": 181,
+  "open_anywhere": 424,
+  "nc_anywhere": 4096,
+  "any_anywhere": 5861
+ },
+ "Artemisia ludoviciana": {
+  "taxon": 71127,
+  "fetched": "2026-10-19T04:00:35Z",
+  "open_here": 251,
+  "open_anywhere": 1764,
+  "nc_anywhere": 9824,
+  "any_anywhere": 15161
+ },
+ "Artemisia frigida": {
+  "taxon": 146898,
+  "fetched": "2026-10-19T04:00:40Z",
+  "open_here": 606,
+  "open_anywhere": 2118,
+  "nc_anywhere": 11294,
+  "any_anywhere": 16441
+ },
+ "Cirsium flodmanii": {
+  "taxon": 160602,
+  "fetched": "2026-10-19T04:00:46Z",
+  "open_here": 33,
+  "open_anywhere": 175,
+  "nc_anywhere": 839,
+  "any_anywhere": 1339
+ },
+ "Pediomelum esculentum": {
+  "taxon": 166268,
+  "fetched": "2026-10-19T04:00:52Z",
+  "open_here": 46,
+  "open_anywhere": 232,
+  "nc_anywhere": 1333,
+  "any_anywhere": 2124
+ },
+ "Sphenopholis obtusata": {
+  "taxon": 79182,
+  "fetched": "2026-10-19T04:01:00Z",
+  "open_here": 0,
+  "open_anywhere": 110,
+  "nc_anywhere": 536,
+  "any_anywhere": 772
+ },
+ "Rosa acicularis": {
+  "taxon": 132527,
+  "fetched": "2026-10-19T04:01:06Z",
+  "open_here": 335,
+  "open_anywhere": 1701,
+  "nc_anywhere": 8305,
+  "any_anywhere": 12317
+ },
+ "Geum rivale": {
+  "taxon": 55750,
+  "fetched": "2026-10-19T04:01:12Z",
+  "open_here": 66,
+  "open_anywhere": 3875,
+  "nc_anywhere": 20883,
+  "any_anywhere": 31054
+ },
+ "Echinacea angustifolia": {
+  "taxon": 162167,
+  "fetched": "2026-10-19T04:01:17Z",
+  "open_here": 7,
+  "open_anywhere": 418,
+  "nc_anywhere": 2065,
+  "any_anywhere": 3385
+ },
+ "Schizachne purpurascens": {
+  "taxon": 129497,
+  "fetched": "2026-10-19T04:01:24Z",
+  "open_here": 44,
+  "open_anywhere": 188,
+  "nc_anywhere": 784,
+  "any_anywhere": 1217
+ },
+ "Lathyrus venosus": {
+  "taxon": 164444,
+  "fetched": "2026-10-19T04:01:30Z",
+  "open_here": 221,
+  "open_anywhere": 512,
+  "nc_anywhere": 1857,
+  "any_anywhere": 3087
+ },
+ "Dalea purpurea": {
+  "taxon": 63547,
+  "fetched": "2026-10-19T04:01:36Z",
+  "open_here": 184,
+  "open_anywhere": 1255,
+  "nc_anywhere": 9927,
+  "any_anywhere": 15191
+ },
+ "Calamagrostis purpurascens": {
+  "taxon": 75929,
+  "fetched": "2026-10-19T04:01:44Z",
+  "open_here": 4,
+  "open_anywhere": 51,
+  "nc_anywhere": 240,
+  "any_anywhere": 360
+ },
+ "Symphyotrichum puniceum": {
+  "taxon": 82307,
+  "fetched": "2026-10-19T04:01:49Z",
+  "open_here": 45,
+  "open_anywhere": 928,
+  "nc_anywhere": 4843,
+  "any_anywhere": 7247
+ },
+ "Salix discolor": {
+  "taxon": 54844,
+  "fetched": "2026-10-19T04:01:55Z",
+  "open_here": 25,
+  "open_anywhere": 533,
+  "nc_anywhere": 3207,
+  "any_anywhere": 4801
+ },
+ "Ericameria nauseosa": {
+  "taxon": 57934,
+  "fetched": "2026-10-19T04:02:01Z",
+  "open_here": 437,
+  "open_anywhere": 4128,
+  "nc_anywhere": 19652,
+  "any_anywhere": 30884
+ },
+ "Acorus americanus": {
+  "taxon": 157984,
+  "fetched": "2026-10-19T04:02:07Z",
+  "open_here": 16,
+  "open_anywhere": 121,
+  "nc_anywhere": 438,
+  "any_anywhere": 709
+ },
+ "Carex raymondii": {
+  "taxon": 159879,
+  "fetched": "2026-10-19T04:02:15Z",
+  "open_here": 9,
+  "open_anywhere": 29,
+  "nc_anywhere": 99,
+  "any_anywhere": 156
+ },
+ "Actaea rubra": {
+  "taxon": 49870,
+  "fetched": "2026-10-19T04:02:21Z",
+  "open_here": 588,
+  "open_anywhere": 3863,
+  "nc_anywhere": 26835,
+  "any_anywhere": 41450
+ },
+ "Aquilegia formosa": {
+  "taxon": 48244,
+  "fetched": "2026-10-19T04:02:27Z",
+  "open_here": 99,
+  "open_anywhere": 3032,
+  "nc_anywhere": 22602,
+  "any_anywhere": 35117
+ },
+ "Castilleja miniata": {
+  "taxon": 76148,
+  "fetched": "2026-10-19T04:02:33Z",
+  "open_here": 279,
+  "open_anywhere": 1777,
+  "nc_anywhere": 10807,
+  "any_anywhere": 16421
+ },
+ "Cornus sericea": {
+  "taxon": 53387,
+  "fetched": "2026-10-19T04:02:39Z",
+  "open_here": 1024,
+  "open_anywhere": 6162,
+  "nc_anywhere": 40297,
+  "any_anywhere": 58957
+ },
+ "Eriocoma richardsonii": {
+  "taxon": 1224699,
+  "fetched": "2026-10-19T04:02:46Z",
+  "open_here": 14,
+  "open_anywhere": 40,
+  "nc_anywhere": 211,
+  "any_anywhere": 288
+ },
+ "Chamaenerion latifolium": {
+  "taxon": 564970,
+  "fetched": "2026-10-19T04:02:52Z",
+  "open_here": 219,
+  "open_anywhere": 1397,
+  "nc_anywhere": 8994,
+  "any_anywhere": 13299
+ },
+ "Bolboschoenus fluviatilis": {
+  "taxon": 64228,
+  "fetched": "2026-10-19T04:02:59Z",
+  "open_here": 2,
+  "open_anywhere": 144,
+  "nc_anywhere": 569,
+  "any_anywhere": 882
+ },
+ "Agrimonia striata": {
+  "taxon": 75308,
+  "fetched": "2026-10-19T04:03:06Z",
+  "open_here": 124,
+  "open_anywhere": 239,
+  "nc_anywhere": 986,
+  "any_anywhere": 1518
+ },
+ "Peritoma serrulata": {
+  "taxon": 1415100,
+  "fetched": "2026-10-19T04:03:12Z",
+  "open_here": 20,
+  "open_anywhere": 673,
+  "nc_anywhere": 5025,
+  "any_anywhere": 8147
+ },
+ "Festuca saximontana": {
+  "taxon": 77144,
+  "fetched": "2026-10-19T04:03:19Z",
+  "open_here": 7,
+  "open_anywhere": 11,
+  "nc_anywhere": 54,
+  "any_anywhere": 83
+ },
+ "Penstemon ellipticus": {
+  "taxon": 166356,
+  "fetched": "2026-10-19T04:03:25Z",
+  "open_here": 162,
+  "open_anywhere": 221,
+  "nc_anywhere": 1183,
+  "any_anywhere": 1743
+ },
+ "Rhodiola integrifolia": {
+  "taxon": 78846,
+  "fetched": "2026-10-19T04:03:30Z",
+  "open_here": 70,
+  "open_anywhere": 708,
+  "nc_anywhere": 4542,
+  "any_anywhere": 7238
+ },
+ "Antennaria microphylla": {
+  "taxon": 75467,
+  "fetched": "2026-10-19T04:03:37Z",
+  "open_here": 4,
+  "open_anywhere": 15,
+  "nc_anywhere": 67,
+  "any_anywhere": 99
+ },
+ "Festuca hallii": {
+  "taxon": 162950,
+  "fetched": "2026-10-19T04:03:44Z",
+  "open_here": 32,
+  "open_anywhere": 32,
+  "nc_anywhere": 145,
+  "any_anywhere": 389
+ },
+ "Prosartes trachycarpa": {
+  "taxon": 68917,
+  "fetched": "2026-10-19T04:03:50Z",
+  "open_here": 486,
+  "open_anywhere": 741,
+  "nc_anywhere": 3448,
+  "any_anywhere": 5435
+ },
+ "Heuchera cylindrica": {
+  "taxon": 77403,
+  "fetched": "2026-10-19T04:03:56Z",
+  "open_here": 434,
+  "open_anywhere": 816,
+  "nc_anywhere": 3503,
+  "any_anywhere": 5032
+ },
+ "Drosera rotundifolia": {
+  "taxon": 52658,
+  "fetched": "2026-10-19T04:04:01Z",
+  "open_here": 441,
+  "open_anywhere": 6151,
+  "nc_anywhere": 31313,
+  "any_anywhere": 48286
+ },
+ "Viola orbiculata": {
+  "taxon": 71112,
+  "fetched": "2026-10-19T04:04:07Z",
+  "open_here": 41,
+  "open_anywhere": 132,
+  "nc_anywhere": 877,
+  "any_anywhere": 1286
+ },
+ "Stuckenia pectinata": {
+  "taxon": 64239,
+  "fetched": "2026-10-19T04:04:12Z",
+  "open_here": 29,
+  "open_anywhere": 627,
+  "nc_anywhere": 2730,
+  "any_anywhere": 3900
+ },
+ "Primula pauciflora": {
+  "taxon": 498086,
+  "fetched": "2026-10-19T04:04:19Z",
+  "open_here": 172,
+  "open_anywhere": 752,
+  "nc_anywhere": 5130,
+  "any_anywhere": 7711
+ },
+ "Distichlis spicata": {
+  "taxon": 58372,
+  "fetched": "2026-10-19T04:04:26Z",
+  "open_here": 21,
+  "open_anywhere": 1218,
+  "nc_anywhere": 6020,
+  "any_anywhere": 9187
+ },
+ "Calamovilfa longifolia": {
+  "taxon": 773026,
+  "fetched": "2026-10-19T04:04:32Z",
+  "open_here": 114,
+  "open_anywhere": 209,
+  "nc_anywhere": 665,
+  "any_anywhere": 1139
+ },
+ "Salix interior": {
+  "taxon": 131125,
+  "fetched": "2026-10-19T04:04:38Z",
+  "open_here": 111,
+  "open_anywhere": 769,
+  "nc_anywhere": 4037,
+  "any_anywhere": 6162
+ },
+ "Poa secunda": {
+  "taxon": 57198,
+  "fetched": "2026-10-19T04:04:45Z",
+  "open_here": 8,
+  "open_anywhere": 194,
+  "nc_anywhere": 647,
+  "any_anywhere": 1092
+ },
+ "Carex sartwellii": {
+  "taxon": 160095,
+  "fetched": "2026-10-19T04:04:52Z",
+  "open_here": 3,
+  "open_anywhere": 21,
+  "nc_anywhere": 233,
+  "any_anywhere": 314
+ },
+ "Amelanchier alnifolia": {
+  "taxon": 75415,
+  "fetched": "2026-10-19T04:05:00Z",
+  "open_here": 1109,
+  "open_anywhere": 3434,
+  "nc_anywhere": 21536,
+  "any_anywhere": 31565
+ },
+ "Oenothera suffrutescens": {
+  "taxon": 78250,
+  "fetched": "2026-10-19T04:05:06Z",
+  "open_here": 146,
+  "open_anywhere": 862,
+  "nc_anywhere": 5741,
+  "any_anywhere": 9010
+ },
+ "Phacelia sericea": {
+  "taxon": 78524,
+  "fetched": "2026-10-19T04:05:12Z",
+  "open_here": 137,
+  "open_anywhere": 642,
+  "nc_anywhere": 4497,
+  "any_anywhere": 7059
+ },
+ "Prunella vulgaris": {
+  "taxon": 52764,
+  "fetched": "2026-10-19T04:05:17Z",
+  "open_here": 268,
+  "open_anywhere": 23211,
+  "nc_anywhere": 129803,
+  "any_anywhere": 201387
+ },
+ "Polygala senega": {
+  "taxon": 1569067,
+  "fetched": "2026-10-19T04:05:23Z",
+  "open_here": 31,
+  "open_anywhere": 343,
+  "nc_anywhere": 1919,
+  "any_anywhere": 2897
+ },
+ "Salix brachycarpa": {
+  "taxon": 78935,
+  "fetched": "2026-10-19T04:05:29Z",
+  "open_here": 23,
+  "open_anywhere": 48,
+  "nc_anywhere": 151,
+  "any_anywhere": 245
+ },
+ "Eurybia conspicua": {
+  "taxon": 162879,
+  "fetched": "2026-10-19T04:05:35Z",
+  "open_here": 294,
+  "open_anywhere": 371,
+  "nc_anywhere": 2088,
+  "any_anywhere": 2941
+ },
+ "Erigeron speciosus": {
+  "taxon": 84732,
+  "fetched": "2026-10-19T04:05:41Z",
+  "open_here": 101,
+  "open_anywhere": 541,
+  "nc_anywhere": 2509,
+  "any_anywhere": 3905
+ },
+ "Polemonium pulcherrimum": {
+  "taxon": 78668,
+  "fetched": "2026-10-19T04:05:47Z",
+  "open_here": 129,
+  "open_anywhere": 702,
+  "nc_anywhere": 4740,
+  "any_anywhere": 7209
+ },
+ "Oxytropis splendens": {
+  "taxon": 118530,
+  "fetched": "2026-10-19T04:05:52Z",
+  "open_here": 167,
+  "open_anywhere": 342,
+  "nc_anywhere": 2598,
+  "any_anywhere": 3833
+ },
+ "Asclepias speciosa": {
+  "taxon": 62292,
+  "fetched": "2026-10-19T04:06:00Z",
+  "open_here": 309,
+  "open_anywhere": 3450,
+  "nc_anywhere": 20034,
+  "any_anywhere": 31655
+ },
+ "Antennaria pulcherrima": {
+  "taxon": 158415,
+  "fetched": "2026-10-19T04:06:06Z",
+  "open_here": 7,
+  "open_anywhere": 27,
+  "nc_anywhere": 117,
+  "any_anywhere": 173
+ },
+ "Dasiphora fruticosa": {
+  "taxon": 76606,
+  "fetched": "2026-10-19T04:06:12Z",
+  "open_here": 556,
+  "open_anywhere": 4122,
+  "nc_anywhere": 23565,
+  "any_anywhere": 35789
+ },
+ "Bouteloua curtipendula": {
+  "taxon": 75858,
+  "fetched": "2026-10-19T04:06:19Z",
+  "open_here": 3,
+  "open_anywhere": 2256,
+  "nc_anywhere": 10631,
+  "any_anywhere": 16738
+ },
+ "Lupinus sericeus": {
+  "taxon": 164926,
+  "fetched": "2026-10-19T04:06:25Z",
+  "open_here": 103,
+  "open_anywhere": 245,
+  "nc_anywhere": 1564,
+  "any_anywhere": 2069
+ },
+ "Shepherdia argentea": {
+  "taxon": 79071,
+  "fetched": "2026-10-19T04:06:30Z",
+  "open_here": 117,
+  "open_anywhere": 355,
+  "nc_anywhere": 2606,
+  "any_anywhere": 3791
+ },
+ "Artemisia cana": {
+  "taxon": 75588,
+  "fetched": "2026-10-19T04:06:36Z",
+  "open_here": 182,
+  "open_anywhere": 376,
+  "nc_anywhere": 3546,
+  "any_anywhere": 4568
+ },
+ "Elaeagnus commutata": {
+  "taxon": 162212,
+  "fetched": "2026-10-19T04:06:42Z",
+  "open_here": 630,
+  "open_anywhere": 831,
+  "nc_anywhere": 6339,
+  "any_anywhere": 9031
+ },
+ "Potentilla anserina": {
+  "taxon": 158615,
+  "fetched": "2026-10-19T04:06:48Z",
+  "open_here": 344,
+  "open_anywhere": 9222,
+  "nc_anywhere": 40141,
+  "any_anywhere": 59747
+ },
+ "Lupinus argenteus": {
+  "taxon": 62691,
+  "fetched": "2026-10-19T04:06:53Z",
+  "open_here": 18,
+  "open_anywhere": 434,
+  "nc_anywhere": 2369,
+  "any_anywhere": 3936
+ },
+ "Valeriana sitchensis": {
+  "taxon": 79477,
+  "fetched": "2026-10-19T04:07:00Z",
+  "open_here": 271,
+  "open_anywhere": 1187,
+  "nc_anywhere": 7214,
+  "any_anywhere": 10614
+ },
+ "Ribes glandulosum": {
+  "taxon": 85475,
+  "fetched": "2026-10-19T04:07:06Z",
+  "open_here": 44,
+  "open_anywhere": 485,
+  "nc_anywhere": 1837,
+  "any_anywhere": 2946
+ },
+ "Penstemon procerus": {
+  "taxon": 78414,
+  "fetched": "2026-10-19T04:07:12Z",
+  "open_here": 219,
+  "open_anywhere": 616,
+  "nc_anywhere": 2966,
+  "any_anywhere": 4467
+ },
+ "Potentilla gracilis": {
+  "taxon": 78728,
+  "fetched": "2026-10-19T04:07:18Z",
+  "open_here": 120,
+  "open_anywhere": 467,
+  "nc_anywhere": 2110,
+  "any_anywhere": 3282
+ },
+ "Urtica gracilis": {
+  "taxon": 141854,
+  "fetched": "2026-10-19T04:07:24Z",
+  "open_here": 314,
+  "open_anywhere": 2585,
+  "nc_anywhere": 15142,
+  "any_anywhere": 23815
+ },
+ "Elymus trachycaulus": {
+  "taxon": 61202,
+  "fetched": "2026-10-19T04:07:31Z",
+  "open_here": 48,
+  "open_anywhere": 179,
+  "nc_anywhere": 667,
+  "any_anywhere": 1115
+ },
+ "Beckmannia syzigachne": {
+  "taxon": 75747,
+  "fetched": "2026-10-19T04:07:38Z",
+  "open_here": 60,
+  "open_anywhere": 396,
+  "nc_anywhere": 1553,
+  "any_anywhere": 2278
+ },
+ "Carex utriculata": {
+  "taxon": 76124,
+  "fetched": "2026-10-19T04:07:44Z",
+  "open_here": 96,
+  "open_anywhere": 633,
+  "nc_anywhere": 2513,
+  "any_anywhere": 3806
+ },
+ "Scirpus microcarpus": {
+  "taxon": 59068,
+  "fetched": "2026-10-19T04:07:51Z",
+  "open_here": 82,
+  "open_anywhere": 416,
+  "nc_anywhere": 2103,
+  "any_anywhere": 3099
+ },
+ "Antennaria parvifolia": {
+  "taxon": 158414,
+  "fetched": "2026-10-19T04:07:57Z",
+  "open_here": 34,
+  "open_anywhere": 183,
+  "nc_anywhere": 859,
+  "any_anywhere": 1348
+ },
+ "Symphyotrichum laeve": {
+  "taxon": 129607,
+  "fetched": "2026-10-19T04:08:02Z",
+  "open_here": 286,
+  "open_anywhere": 770,
+  "nc_anywhere": 5492,
+  "any_anywhere": 8213
+ },
+ "Penstemon nitidus": {
+  "taxon": 166406,
+  "fetched": "2026-10-19T04:08:08Z",
+  "open_here": 216,
+  "open_anywhere": 321,
+  "nc_anywhere": 2649,
+  "any_anywhere": 3609
+ },
+ "Erigeron glabellus": {
+  "taxon": 162477,
+  "fetched": "2026-10-19T04:08:14Z",
+  "open_here": 101,
+  "open_anywhere": 125,
+  "nc_anywhere": 591,
+  "any_anywhere": 896
+ },
+ "Osmorhiza longistylis": {
+  "taxon": 130368,
+  "fetched": "2026-10-19T04:08:20Z",
+  "open_here": 26,
+  "open_anywhere": 1180,
+  "nc_anywhere": 7249,
+  "any_anywhere": 11502
+ },
+ "Elymus glaucus": {
+  "taxon": 52791,
+  "fetched": "2026-10-19T04:08:28Z",
+  "open_here": 4,
+  "open_anywhere": 183,
+  "nc_anywhere": 869,
+  "any_anywhere": 1336
+ },
+ "Helenium autumnale": {
+  "taxon": 77349,
+  "fetched": "2026-10-19T04:08:33Z",
+  "open_here": 39,
+  "open_anywhere": 1274,
+  "nc_anywhere": 9149,
+  "any_anywhere": 14134
+ },
+ "Yucca glauca": {
+  "taxon": 60541,
+  "fetched": "2026-10-19T04:08:39Z",
+  "open_here": 14,
+  "open_anywhere": 1778,
+  "nc_anywhere": 7270,
+  "any_anywhere": 12069
+ },
+ "Arnica lonchophylla": {
+  "taxon": 158688,
+  "fetched": "2026-10-19T04:08:45Z",
+  "open_here": 0,
+  "open_anywhere": 10,
+  "nc_anywhere": 30,
+  "any_anywhere": 54
+ },
+ "Koeleria spicata": {
+  "taxon": 1538791,
+  "fetched": "2026-10-19T04:08:52Z",
+  "open_here": 19,
+  "open_anywhere": 220,
+  "nc_anywhere": 845,
+  "any_anywhere": 1314
+ },
+ "Myriophyllum sibiricum": {
+  "taxon": 61034,
+  "fetched": "2026-10-19T04:08:58Z",
+  "open_here": 47,
+  "open_anywhere": 205,
+  "nc_anywhere": 730,
+  "any_anywhere": 1073
+ },
+ "Apocynum androsaemifolium": {
+  "taxon": 47359,
+  "fetched": "2026-10-19T04:09:04Z",
+  "open_here": 681,
+  "open_anywhere": 4372,
+  "nc_anywhere": 23503,
+  "any_anywhere": 36466
+ },
+ "Carex sprengelii": {
+  "taxon": 160108,
+  "fetched": "2026-10-19T04:09:11Z",
+  "open_here": 52,
+  "open_anywhere": 367,
+  "nc_anywhere": 1965,
+  "any_anywhere": 3121
+ },
+ "Claytonia lanceolata": {
+  "taxon": 62584,
+  "fetched": "2026-10-19T04:09:17Z",
+  "open_here": 217,
+  "open_anywhere": 822,
+  "nc_anywhere": 4534,
+  "any_anywhere": 6884
+ },
+ "Mimulus ringens": {
+  "taxon": 62399,
+  "fetched": "2026-10-19T04:09:22Z",
+  "open_here": 4,
+  "open_anywhere": 2257,
+  "nc_anywhere": 13847,
+  "any_anywhere": 21478
+ },
+ "Maianthemum stellatum": {
+  "taxon": 53268,
+  "fetched": "2026-10-19T04:09:28Z",
+  "open_here": 825,
+  "open_anywhere": 5541,
+  "nc_anywhere": 34889,
+  "any_anywhere": 52741
+ },
+ "Solidago glutinosa": {
+  "taxon": 118568,
+  "fetched": "2026-10-19T04:09:34Z",
+  "open_here": 19,
+  "open_anywhere": 101,
+  "nc_anywhere": 531,
+  "any_anywhere": 820
+ },
+ "Geranium viscosissimum": {
+  "taxon": 77264,
+  "fetched": "2026-10-19T04:09:41Z",
+  "open_here": 237,
+  "open_anywhere": 1038,
+  "nc_anywhere": 7741,
+  "any_anywhere": 11889
+ },
+ "Solidago rigida": {
+  "taxon": 125721,
+  "fetched": "2026-10-19T04:09:47Z",
+  "open_here": 67,
+  "open_anywhere": 1126,
+  "nc_anywhere": 7027,
+  "any_anywhere": 10853
+ },
+ "Helianthus pauciflorus": {
+  "taxon": 130383,
+  "fetched": "2026-10-19T04:09:52Z",
+  "open_here": 53,
+  "open_anywhere": 203,
+  "nc_anywhere": 1225,
+  "any_anywhere": 1827
+ },
+ "Blitum capitatum": {
+  "taxon": 895061,
+  "fetched": "2026-10-19T04:09:58Z",
+  "open_here": 69,
+  "open_anywhere": 186,
+  "nc_anywhere": 1465,
+  "any_anywhere": 2388
+ },
+ "Hedysarum sulphurescens": {
+  "taxon": 163582,
+  "fetched": "2026-10-19T04:10:04Z",
+  "open_here": 131,
+  "open_anywhere": 207,
+  "nc_anywhere": 1448,
+  "any_anywhere": 1989
+ },
+ "Equisetum fluviatile": {
+  "taxon": 47745,
+  "fetched": "2026-10-19T04:10:10Z",
+  "open_here": 85,
+  "open_anywhere": 2369,
+  "nc_anywhere": 10904,
+  "any_anywhere": 15440
+ },
+ "Galium triflorum": {
+  "taxon": 53065,
+  "fetched": "2026-10-19T04:10:17Z",
+  "open_here": 231,
+  "open_anywhere": 1948,
+  "nc_anywhere": 8874,
+  "any_anywhere": 13487
+ },
+ "Anthoxanthum hirtum": {
+  "taxon": 204239,
+  "fetched": "2026-10-19T04:10:24Z",
+  "open_here": 52,
+  "open_anywhere": 186,
+  "nc_anywhere": 788,
+  "any_anywhere": 1218
+ },
+ "Panicum virgatum": {
+  "taxon": 125727,
+  "fetched": "2026-10-19T04:10:31Z",
+  "open_here": 2,
+  "open_anywhere": 1593,
+  "nc_anywhere": 9212,
+  "any_anywhere": 13880
+ },
+ "Anemone virginiana": {
+  "taxon": 126369,
+  "fetched": "2026-10-19T04:10:37Z",
+  "open_here": 28,
+  "open_anywhere": 1908,
+  "nc_anywhere": 11112,
+  "any_anywhere": 17104
+ },
+ "Solidago altissima": {
+  "taxon": 79148,
+  "fetched": "2026-10-19T04:10:44Z",
+  "open_here": 2,
+  "open_anywhere": 1821,
+  "nc_anywhere": 7355,
+  "any_anywhere": 11812
+ },
+ "Polemonium acutiflorum": {
+  "taxon": 167155,
+  "fetched": "2026-10-19T04:10:50Z",
+  "open_here": 11,
+  "open_anywhere": 247,
+  "nc_anywhere": 1362,
+  "any_anywhere": 1972
+ },
+ "Delphinium glaucum": {
+  "taxon": 76625,
+  "fetched": "2026-10-19T04:10:57Z",
+  "open_here": 129,
+  "open_anywhere": 356,
+  "nc_anywhere": 2037,
+  "any_anywhere": 3060
+ },
+ "Mertensia paniculata": {
+  "taxon": 146900,
+  "fetched": "2026-10-19T04:11:03Z",
+  "open_here": 530,
+  "open_anywhere": 1129,
+  "nc_anywhere": 6048,
+  "any_anywhere": 9454
+ },
+ "Thalictrum dasycarpum": {
+  "taxon": 169657,
+  "fetched": "2026-10-19T04:11:09Z",
+  "open_here": 11,
+  "open_anywhere": 315,
+  "nc_anywhere": 1514,
+  "any_anywhere": 2318
+ },
+ "Achillea alpina": {
+  "taxon": 516573,
+  "fetched": "2026-10-19T04:11:15Z",
+  "open_here": 95,
+  "open_anywhere": 316,
+  "nc_anywhere": 963,
+  "any_anywhere": 1538
+ },
+ "Larix laricina": {
+  "taxon": 58721,
+  "fetched": "2026-10-19T04:11:21Z",
+  "open_here": 152,
+  "open_anywhere": 3592,
+  "nc_anywhere": 16889,
+  "any_anywhere": 26244
+ },
+ "Rubus parviflorus": {
+  "taxon": 51646,
+  "fetched": "2026-10-19T04:11:27Z",
+  "open_here": 834,
+  "open_anywhere": 6159,
+  "nc_anywhere": 45541,
+  "any_anywhere": 68705
+ },
+ "Alnus incana": {
+  "taxon": 75377,
+  "fetched": "2026-10-19T04:11:33Z",
+  "open_here": 43,
+  "open_anywhere": 3046,
+  "nc_anywhere": 15374,
+  "any_anywhere": 22441
+ },
+ "Schoenoplectus pungens": {
+  "taxon": 59072,
+  "fetched": "2026-10-19T04:11:40Z",
+  "open_here": 28,
+  "open_anywhere": 812,
+  "nc_anywhere": 1969,
+  "any_anywhere": 3426
+ },
+ "Agrostis scabra": {
+  "taxon": 75319,
+  "fetched": "2026-10-19T04:11:47Z",
+  "open_here": 12,
+  "open_anywhere": 83,
+  "nc_anywhere": 388,
+  "any_anywhere": 592
+ },
+ "Juncus torreyi": {
+  "taxon": 77596,
+  "fetched": "2026-10-19T04:11:54Z",
+  "open_here": 3,
+  "open_anywhere": 190,
+  "nc_anywhere": 964,
+  "any_anywhere": 1490
+ },
+ "Rubus pedatus": {
+  "taxon": 130220,
+  "fetched": "2026-10-19T04:12:01Z",
+  "open_here": 152,
+  "open_anywhere": 800,
+  "nc_anywhere": 4603,
+  "any_anywhere": 6357
+ },
+ "Populus tremuloides": {
+  "taxon": 54840,
+  "fetched": "2026-10-19T04:12:12Z",
+  "open_here": 1050,
+  "open_anywhere": 10412,
+  "nc_anywhere": 43207,
+  "any_anywhere": 67997
+ },
+ "Deschampsia cespitosa": {
+  "taxon": 76639,
+  "fetched": "2026-10-19T04:12:21Z",
+  "open_here": 12,
+  "open_anywhere": 1125,
+  "nc_anywhere": 4741,
+  "any_anywhere": 6754
+ },
+ "Glyceria elata": {
+  "taxon": 77289,
+  "fetched": "2026-10-19T04:12:28Z",
+  "open_here": 0,
+  "open_anywhere": 9,
+  "nc_anywhere": 44,
+  "any_anywhere": 60
+ },
+ "Carex retrorsa": {
+  "taxon": 152962,
+  "fetched": "2026-10-19T04:12:35Z",
+  "open_here": 31,
+  "open_anywhere": 391,
+  "nc_anywhere": 1600,
+  "any_anywhere": 2510
+ },
+ "Arnica sororia": {
+  "taxon": 75579,
+  "fetched": "2026-10-19T04:12:41Z",
+  "open_here": 2,
+  "open_anywhere": 11,
+  "nc_anywhere": 59,
+  "any_anywhere": 79
+ },
+ "Linnaea borealis": {
+  "taxon": 77780,
+  "fetched": "2026-10-19T04:12:47Z",
+  "open_here": 832,
+  "open_anywhere": 6355,
+  "nc_anywhere": 32249,
+  "any_anywhere": 47673
+ },
+ "Lonicera dioica": {
+  "taxon": 119808,
+  "fetched": "2026-10-19T04:12:53Z",
+  "open_here": 311,
+  "open_anywhere": 949,
+  "nc_anywhere": 5488,
+  "any_anywhere": 8556
+ },
+ "Eriogonum umbellatum": {
+  "taxon": 77040,
+  "fetched": "2026-10-19T04:12:59Z",
+  "open_here": 101,
+  "open_anywhere": 2284,
+  "nc_anywhere": 12420,
+  "any_anywhere": 19663
+ },
+ "Equisetum variegatum": {
+  "taxon": 118784,
+  "fetched": "2026-10-19T04:13:06Z",
+  "open_here": 57,
+  "open_anywhere": 538,
+  "nc_anywhere": 2674,
+  "any_anywhere": 3715
+ },
+ "Thalictrum venulosum": {
+  "taxon": 169666,
+  "fetched": "2026-10-19T04:13:12Z",
+  "open_here": 62,
+  "open_anywhere": 211,
+  "nc_anywhere": 646,
+  "any_anywhere": 1000
+ },
+ "Vaccinium myrtilloides": {
+  "taxon": 52741,
+  "fetched": "2026-10-19T04:13:18Z",
+  "open_here": 188,
+  "open_anywhere": 1200,
+  "nc_anywhere": 4832,
+  "any_anywhere": 7600
+ },
+ "Calla palustris": {
+  "taxon": 60460,
+  "fetched": "2026-10-19T04:13:23Z",
+  "open_here": 137,
+  "open_anywhere": 2502,
+  "nc_anywhere": 13263,
+  "any_anywhere": 19676
+ },
+ "Betula occidentalis": {
+  "taxon": 75764,
+  "fetched": "2026-10-19T04:13:29Z",
+  "open_here": 106,
+  "open_anywhere": 282,
+  "nc_anywhere": 1845,
+  "any_anywhere": 2607
+ },
+ "Sium suave": {
+  "taxon": 79131,
+  "fetched": "2026-10-19T04:13:35Z",
+  "open_here": 64,
+  "open_anywhere": 752,
+  "nc_anywhere": 3739,
+  "any_anywhere": 5615
+ },
+ "Carex aquatilis": {
+  "taxon": 76013,
+  "fetched": "2026-10-19T04:13:42Z",
+  "open_here": 52,
+  "open_anywhere": 218,
+  "nc_anywhere": 986,
+  "any_anywhere": 1432
+ },
+ "Persicaria amphibia": {
+  "taxon": 78450,
+  "fetched": "2026-10-19T04:13:48Z",
+  "open_here": 217,
+  "open_anywhere": 4418,
+  "nc_anywhere": 20256,
+  "any_anywhere": 30716
+ },
+ "Iris missouriensis": {
+  "taxon": 57730,
+  "fetched": "2026-10-19T04:13:54Z",
+  "open_here": 2,
+  "open_anywhere": 943,
+  "nc_anywhere": 6813,
+  "any_anywhere": 10749
+ },
+ "Viola rugulosa": {
+  "taxon": 243368,
+  "fetched": "2026-10-19T04:14:00Z",
+  "open_here": 18,
+  "open_anywhere": 35,
+  "nc_anywhere": 291,
+  "any_anywhere": 376
+ },
+ "Festuca occidentalis": {
+  "taxon": 59091,
+  "fetched": "2026-10-19T04:14:07Z",
+  "open_here": 0,
+  "open_anywhere": 24,
+  "nc_anywhere": 110,
+  "any_anywhere": 167
+ },
+ "Symphyotrichum campestre": {
+  "taxon": 79296,
+  "fetched": "2026-10-19T04:14:13Z",
+  "open_here": 0,
+  "open_anywhere": 10,
+  "nc_anywhere": 45,
+  "any_anywhere": 61
+ },
+ "Thalictrum occidentale": {
+  "taxon": 79343,
+  "fetched": "2026-10-19T04:14:18Z",
+  "open_here": 58,
+  "open_anywhere": 309,
+  "nc_anywhere": 1582,
+  "any_anywhere": 2386
+ },
+ "Sorbus scopulina": {
+  "taxon": 79159,
+  "fetched": "2026-10-19T04:14:24Z",
+  "open_here": 15,
+  "open_anywhere": 291,
+  "nc_anywhere": 1675,
+  "any_anywhere": 2549
+ },
+ "Hesperostipa curtiseta": {
+  "taxon": 163704,
+  "fetched": "2026-10-19T04:14:31Z",
+  "open_here": 14,
+  "open_anywhere": 15,
+  "nc_anywhere": 110,
+  "any_anywhere": 196
+ },
+ "Symphoricarpos occidentalis": {
+  "taxon": 169448,
+  "fetched": "2026-10-19T04:14:37Z",
+  "open_here": 491,
+  "open_anywhere": 925,
+  "nc_anywhere": 8049,
+  "any_anywhere": 11416
+ },
+ "Pascopyrum smithii": {
+  "taxon": 76806,
+  "fetched": "2026-10-19T04:14:44Z",
+  "open_here": 9,
+  "open_anywhere": 82,
+  "nc_anywhere": 338,
+  "any_anywhere": 564
+ },
+ "Symphyotrichum hesperium": {
+  "taxon": 81407,
+  "fetched": "2026-10-19T04:14:50Z",
+  "open_here": 3,
+  "open_anywhere": 44,
+  "nc_anywhere": 103,
+  "any_anywhere": 176
+ },
+ "Lilium philadelphicum": {
+  "taxon": 61253,
+  "fetched": "2026-10-19T04:14:57Z",
+  "open_here": 427,
+  "open_anywhere": 1201,
+  "nc_anywhere": 8955,
+  "any_anywhere": 13560
+ },
+ "Anticlea elegans": {
+  "taxon": 118830,
+  "fetched": "2026-10-19T04:15:03Z",
+  "open_here": 368,
+  "open_anywhere": 1167,
+  "nc_anywhere": 7363,
+  "any_anywhere": 11381
+ },
+ "Oenothera nuttallii": {
+  "taxon": 165810,
+  "fetched": "2026-10-19T04:15:09Z",
+  "open_here": 57,
+  "open_anywhere": 83,
+  "nc_anywhere": 416,
+  "any_anywhere": 701
+ },
+ "Geranium richardsonii": {
+  "taxon": 77260,
+  "fetched": "2026-10-19T04:15:15Z",
+  "open_here": 150,
+  "open_anywhere": 1085,
+  "nc_anywhere": 6337,
+  "any_anywhere": 10197
+ },
+ "Dryas hookeriana": {
+  "taxon": 1308823,
+  "fetched": "2026-10-19T04:15:21Z",
+  "open_here": 161,
+  "open_anywhere": 347,
+  "nc_anywhere": 2365,
+  "any_anywhere": 3358
+ },
+ "Dalea candida": {
+  "taxon": 81598,
+  "fetched": "2026-10-19T04:15:27Z",
+  "open_here": 48,
+  "open_anywhere": 609,
+  "nc_anywhere": 3572,
+  "any_anywhere": 5332
+ },
+ "Picea glauca": {
+  "taxon": 117326,
+  "fetched": "2026-10-19T04:15:34Z",
+  "open_here": 192,
+  "open_anywhere": 1833,
+  "nc_anywhere": 9035,
+  "any_anywhere": 13544
+ },
+ "Oryzopsis asperifolia": {
+  "taxon": 129483,
+  "fetched": "2026-10-19T04:15:43Z",
+  "open_here": 92,
+  "open_anywhere": 441,
+  "nc_anywhere": 1832,
+  "any_anywhere": 2767
+ },
+ "Monarda fistulosa": {
+  "taxon": 85320,
+  "fetched": "2026-10-19T04:15:49Z",
+  "open_here": 228,
+  "open_anywhere": 5009,
+  "nc_anywhere": 40181,
+  "any_anywhere": 62872
+ },
+ "Ribes americanum": {
+  "taxon": 125487,
+  "fetched": "2026-10-19T04:15:55Z",
+  "open_here": 42,
+  "open_anywhere": 577,
+  "nc_anywhere": 3152,
+  "any_anywhere": 4788
+ },
+ "Linum lewisii": {
+  "taxon": 60490,
+  "fetched": "2026-10-19T04:16:00Z",
+  "open_here": 233,
+  "open_anywhere": 1144,
+  "nc_anywhere": 8025,
+  "any_anywhere": 12512
+ },
+ "Allium schoenoprasum": {
+  "taxon": 59254,
+  "fetched": "2026-10-19T04:16:06Z",
+  "open_here": 91,
+  "open_anywhere": 1064,
+  "nc_anywhere": 6509,
+  "any_anywhere": 9933
+ },
+ "Clematis ligusticifolia": {
+  "taxon": 58996,
+  "fetched": "2026-10-19T04:16:12Z",
+  "open_here": 152,
+  "open_anywhere": 573,
+  "nc_anywhere": 3149,
+  "any_anywhere": 4726
+ },
+ "Ribes oxyacanthoides": {
+  "taxon": 71033,
+  "fetched": "2026-10-19T04:16:18Z",
+  "open_here": 124,
+  "open_anywhere": 236,
+  "nc_anywhere": 1580,
+  "any_anywhere": 2300
+ },
+ "Glycyrrhiza lepidota": {
+  "taxon": 58896,
+  "fetched": "2026-10-19T04:16:25Z",
+  "open_here": 253,
+  "open_anywhere": 1197,
+  "nc_anywhere": 7204,
+  "any_anywhere": 10789
+ },
+ "Maianthemum canadense": {
+  "taxon": 67748,
+  "fetched": "2026-10-19T04:16:31Z",
+  "open_here": 315,
+  "open_anywhere": 10681,
+  "nc_anywhere": 51896,
+  "any_anywhere": 82046
+ },
+ "Mentha canadensis": {
+  "taxon": 77991,
+  "fetched": "2026-10-19T04:16:37Z",
+  "open_here": 406,
+  "open_anywhere": 1195,
+  "nc_anywhere": 5194,
+  "any_anywhere": 8134
+ },
+ "Rubus idaeus": {
+  "taxon": 54436,
+  "fetched": "2026-10-19T04:16:43Z",
+  "open_here": 466,
+  "open_anywhere": 7683,
+  "nc_anywhere": 40158,
+  "any_anywhere": 57653
+ },
+ "Ribes triste": {
+  "taxon": 118750,
+  "fetched": "2026-10-19T04:16:49Z",
+  "open_here": 144,
+  "open_anywhere": 406,
+  "nc_anywhere": 1636,
+  "any_anywhere": 2565
+ },
+ "Aralia nudicaulis": {
+  "taxon": 119828,
+  "fetched": "2026-10-19T04:16:54Z",
+  "open_here": 601,
+  "open_anywhere": 8626,
+  "nc_anywhere": 40326,
+  "any_anywhere": 63187
+ },
+ "Fragaria virginiana": {
+  "taxon": 77155,
+  "fetched": "2026-10-19T04:17:00Z",
+  "open_here": 968,
+  "open_anywhere": 5965,
+  "nc_anywhere": 30655,
+  "any_anywhere": 46304
+ },
+ "Vicia americana": {
+  "taxon": 53320,
+  "fetched": "2026-10-19T04:17:06Z",
+  "open_here": 497,
+  "open_anywhere": 1952,
+  "nc_anywhere": 10714,
+  "any_anywhere": 16235
+ },
+ "Symphyotrichum lanceolatum": {
+  "taxon": 79301,
+  "fetched": "2026-10-19T04:17:12Z",
+  "open_here": 66,
+  "open_anywhere": 1239,
+  "nc_anywhere": 5579,
+  "any_anywhere": 8919
+ },
+ "Krascheninnikovia lanata": {
+  "taxon": 52113,
+  "fetched": "2026-10-19T04:17:19Z",
+  "open_here": 60,
+  "open_anywhere": 1058,
+  "nc_anywhere": 4426,
+  "any_anywhere": 6889
+ },
+ "Juncus balticus": {
+  "taxon": 58347,
+  "fetched": "2026-10-19T04:17:26Z",
+  "open_here": 79,
+  "open_anywhere": 431,
+  "nc_anywhere": 1920,
+  "any_anywhere": 2926
+ },
+ "Pedicularis bracteosa": {
+  "taxon": 78367,
+  "fetched": "2026-10-19T04:17:32Z",
+  "open_here": 263,
+  "open_anywhere": 887,
+  "nc_anywhere": 5198,
+  "any_anywhere": 7677
+ },
+ "Fragaria vesca": {
+  "taxon": 50298,
+  "fetched": "2026-10-19T04:17:38Z",
+  "open_here": 336,
+  "open_anywhere": 9404,
+  "nc_anywhere": 45508,
+  "any_anywhere": 68315
+ },
+ "Rosa woodsii": {
+  "taxon": 78887,
+  "fetched": "2026-10-19T04:17:45Z",
+  "open_here": 305,
+  "open_anywhere": 1009,
+  "nc_anywhere": 6105,
+  "any_anywhere": 9483
+ },
+ "Potentilla hippiana": {
+  "taxon": 167354,
+  "fetched": "2026-10-19T04:17:51Z",
+  "open_here": 162,
+  "open_anywhere": 282,
+  "nc_anywhere": 725,
+  "any_anywhere": 1194
+ },
+ "Carex pellita": {
+  "taxon": 76091,
+  "fetched": "2026-10-19T04:17:58Z",
+  "open_here": 18,
+  "open_anywhere": 276,
+  "nc_anywhere": 1190,
+  "any_anywhere": 1858
+ },
+ "Angelica dawsonii": {
+  "taxon": 158373,
+  "fetched": "2026-10-19T04:18:04Z",
+  "open_here": 36,
+  "open_anywhere": 41,
+  "nc_anywhere": 187,
+  "any_anywhere": 310
+ },
+ "Geum aleppicum": {
+  "taxon": 77265,
+  "fetched": "2026-10-19T04:18:10Z",
+  "open_here": 65,
+  "open_anywhere": 1708,
+  "nc_anywhere": 8112,
+  "any_anywhere": 11130
+ },
+ "Penstemon confertus": {
+  "taxon": 119121,
+  "fetched": "2026-10-19T04:18:16Z",
+  "open_here": 203,
+  "open_anywhere": 331,
+  "nc_anywhere": 1698,
+  "any_anywhere": 2438
+ },
+ "Eriogonum flavum": {
+  "taxon": 133440,
+  "fetched": "2026-10-19T04:18:21Z",
+  "open_here": 208,
+  "open_anywhere": 475,
+  "nc_anywhere": 4557,
+  "any_anywhere": 5812
+ },
+ "Aquilegia flavescens": {
+  "taxon": 158463,
+  "fetched": "2026-10-19T04:18:27Z",
+  "open_here": 205,
+  "open_anywhere": 415,
+  "nc_anywhere": 2919,
+  "any_anywhere": 4501
+ },
+ "Linum rigidum": {
+  "taxon": 122585,
+  "fetched": "2026-10-19T04:18:33Z",
+  "open_here": 11,
+  "open_anywhere": 131,
+  "nc_anywhere": 876,
+  "any_anywhere": 1403
+ },
+ "Cypripedium parviflorum": {
+  "taxon": 50713,
+  "fetched": "2026-10-19T04:18:39Z",
+  "open_here": 335,
+  "open_anywhere": 1844,
+  "nc_anywhere": 13133,
+  "any_anywhere": 20795
+ },
+ "Erythranthe guttata": {
+  "taxon": 470643,
+  "fetched": "2026-10-19T04:18:45Z",
+  "open_here": 24,
+  "open_anywhere": 2187,
+  "nc_anywhere": 10697,
+  "any_anywhere": 17128
+ },
+ "Dryas drummondii": {
+  "taxon": 83540,
+  "fetched": "2026-10-19T04:18:50Z",
+  "open_here": 217,
+  "open_anywhere": 399,
+  "nc_anywhere": 2506,
+  "any_anywhere": 3665
+ },
+ "Orthocarpus luteus": {
+  "taxon": 78290,
+  "fetched": "2026-10-19T04:18:56Z",
+  "open_here": 64,
+  "open_anywhere": 227,
+  "nc_anywhere": 1062,
+  "any_anywhere": 1645
+ },
+ "Castilleja lutescens": {
+  "taxon": 160204,
+  "fetched": "2026-10-19T04:19:02Z",
+  "open_here": 14,
+  "open_anywhere": 31,
+  "nc_anywhere": 175,
+  "any_anywhere": 270
+ },
+ "Nuphar variegata": {
+  "taxon": 204164,
+  "fetched": "2026-10-19T04:19:09Z",
+  "open_here": 394,
+  "open_anywhere": 1526,
+  "nc_anywhere": 6806,
+  "any_anywhere": 10410
+ },
+ "Lithospermum ruderale": {
+  "taxon": 77795,
+  "fetched": "2026-10-19T04:19:15Z",
+  "open_here": 492,
+  "open_anywhere": 1189,
+  "nc_anywhere": 6844,
+  "any_anywhere": 9919
+ },
+ "Rhinanthus minor": {
+  "taxon": 61470,
+  "fetched": "2026-10-19T04:19:21Z",
+  "open_here": 5,
+  "open_anywhere": 3190,
+  "nc_anywhere": 9629,
+  "any_anywhere": 15839
+ },
+ "Oxytropis campestris": {
+  "taxon": 154238,
+  "fetched": "2026-10-19T04:19:27Z",
+  "open_here": 95,
+  "open_anywhere": 525,
+  "nc_anywhere": 3227,
+  "any_anywhere": 4566
+ },
+ "Fritillaria pudica": {
+  "taxon": 77177,
+  "fetched": "2026-10-19T04:19:33Z",
+  "open_here": 217,
+  "open_anywhere": 963,
+  "nc_anywhere": 5192,
+  "any_anywhere": 7952
+ },
+ "Draba incerta": {
+  "taxon": 162030,
+  "fetched": "2026-10-19T04:19:40Z",
+  "open_here": 1,
+  "open_anywhere": 5,
+  "nc_anywhere": 23,
+  "any_anywhere": 40
+ },
+ "Sphaeralcea coccinea": {
+  "taxon": 126671,
+  "fetched": "2026-10-19T04:19:45Z",
+  "open_here": 198,
+  "open_anywhere": 1431,
+  "nc_anywhere": 9269,
+  "any_anywhere": 14516
+ },
+ "Comandra umbellata": {
+  "taxon": 59991,
+  "fetched": "2026-10-19T04:19:51Z",
+  "open_here": 396,
+  "open_anywhere": 2074,
+  "nc_anywhere": 11315,
+  "any_anywhere": 16801
+ },
+ "Symphyotrichum falcatum": {
+  "taxon": 169462,
+  "fetched": "2026-10-19T04:19:57Z",
+  "open_here": 14,
+  "open_anywhere": 69,
+  "nc_anywhere": 644,
+  "any_anywhere": 878
+ },
+ "Packera cana": {
+  "taxon": 78317,
+  "fetched": "2026-10-19T04:20:03Z",
+  "open_here": 142,
+  "open_anywhere": 341,
+  "nc_anywhere": 2561,
+  "any_anywhere": 3466
+ },
+ "Erigeron caespitosus": {
+  "taxon": 325385,
+  "fetched": "2026-10-19T04:20:08Z",
+  "open_here": 110,
+  "open_anywhere": 139,
+  "nc_anywhere": 815,
+  "any_anywhere": 1176
+ },
+ "Salix amygdaloides": {
+  "taxon": 54842,
+  "fetched": "2026-10-19T04:20:15Z",
+  "open_here": 2,
+  "open_anywhere": 142,
+  "nc_anywhere": 710,
+  "any_anywhere": 1056
+ },
+ "Populus deltoides": {
+  "taxon": 52119,
+  "fetched": "2026-10-19T04:20:21Z",
+  "open_here": 37,
+  "open_anywhere": 4733,
+  "nc_anywhere": 24991,
+  "any_anywhere": 39340
+ },
+ "Populus angustifolia": {
+  "taxon": 52130,
+  "fetched": "2026-10-19T04:20:26Z",
+  "open_here": 11,
+  "open_anywhere": 220,
+  "nc_anywhere": 950,
+  "any_anywhere": 1540
+ },
+ "Acer negundo": {
+  "taxon": 47726,
+  "fetched": "2026-10-19T04:20:32Z",
+  "open_here": 203,
+  "open_anywhere": 20107,
+  "nc_anywhere": 120289,
+  "any_anywhere": 178660
+ },
+ "Crataegus chrysocarpa": {
+  "taxon": 54817,
+  "fetched": "2026-10-19T04:20:38Z",
+  "open_here": 18,
+  "open_anywhere": 377,
+  "nc_anywhere": 509,
+  "any_anywhere": 1052
+ },
+ "Juniperus scopulorum": {
+  "taxon": 135883,
+  "fetched": "2026-10-19T04:20:44Z",
+  "open_here": 343,
+  "open_anywhere": 1725,
+  "nc_anywhere": 7195,
+  "any_anywhere": 11371
+ },
+ "Ulmus americana": {
+  "taxon": 53547,
+  "fetched": "2026-10-19T04:20:49Z",
+  "open_here": 12,
+  "open_anywhere": 2705,
+  "nc_anywhere": 17800,
+  "any_anywhere": 25811
+ }
+}
