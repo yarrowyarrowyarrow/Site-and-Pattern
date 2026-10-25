@@ -25,6 +25,7 @@ _NOT_SHIPPED = (
     'data/fetched/*',
     'html/*_probe.html',
     'html/inspect_probe_data.json',
+    'html/probe_watch.js',
     'html/tune_*.html',
     'html/sprite_gallery*',
 )

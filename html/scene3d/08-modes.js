@@ -114,6 +114,31 @@ function resolveCritterCollision(pos, radius, target) {
   }
 }
 
+// Where the bee's camera can start (V3.37). beeSpawn (06-fly.js) puts it 6 m
+// south of the design's centre, 1.6 m up, which is an ordinary place for a
+// shrub; from inside one the view is its stems as two dark walls. The walker
+// had the same fault and was moved off trunks in V2.46; a camera at shrub height
+// needs the whole crown cleared, so this steps south from `z`, away from the
+// design, until it is clear of every crown taller than the bee flies and every
+// building, and returns that z.
+function clearOfCrowns(x, z) {
+  const sc = lastSceneObj || {};
+  const solid = (sc.plants || []).filter((p) => (p.height_m || 0) > 1.2)
+    .map((p) => ({ x: p.x, z: -p.y, r: (p.canopy_m || 1) / 2 + 0.6 }));
+  for (const b of sc.buildings || []) {
+    const ring = b.ring || [];
+    if (ring.length < 3) continue;
+    const cx = ring.reduce((s, pt) => s + pt[0], 0) / ring.length;
+    const cy = ring.reduce((s, pt) => s + pt[1], 0) / ring.length;
+    const r = Math.max(...ring.map((pt) => Math.hypot(pt[0] - cx, pt[1] - cy)));
+    solid.push({ x: cx, z: -cy, r: r + 0.6 });
+  }
+  for (let step = 0; step < 200; step++, z += 0.5) {
+    if (!solid.some((o) => Math.hypot(x - o.x, z - o.z) < o.r)) break;
+  }
+  return z;
+}
+
 // Push a proposed (x,z) out of any obstacle it lands inside (a couple of passes
 // so a corner between two trunks still resolves). Returns [x, z].
 function resolveWalkCollision(x, z) {

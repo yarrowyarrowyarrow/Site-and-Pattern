@@ -159,20 +159,27 @@ to the snapshot the test defends.
 | `tests/test_imports_resolved.py` | Every `src/` module imports cleanly (catches typos, bad lazy imports) | …fix the import; often a missing optional-dep guard. |
 | `tests/test_safety_filters.py` | Plant safety-tag filtering behaves | …fix the data/filter; never weaken a safety filter to pass. |
 | `tests/test_resource_path.py` | Frozen-build resource resolution via `resource_path` | …resolve bundled files through `src/resources.py`, not `__file__` joins. |
+| `tests/test_js_names.py` | Every function the 3D viewer's and the map's chunks call by bare name is declared in some chunk or the page (V3.37: V3.22 deleted `buildStructures` and every 3D scene push threw for fifteen releases) | …declare the function, or fix the call. A browser built-in it does not know goes in `BROWSER`, never a project function. |
+| `html/probe_watch.js` + `tests/test_scene3d_render.py` `fail_on_viewer_errors` | A 3D probe whose viewer throws **fails** instead of skipping as "no WebGL" (the V3.22–V3.37 masking) | …read the error it names: it is the viewer's. Only `permaBootError` (no WebGL) still skips. |
 | `tests/test_skill_library.py` | This skill library (frontmatter, dead paths, index) | …fix the skill: update a moved path, add the missing `SKILL.md`, or list it in `.claude/skills/README.md`. |
 
 ## Pitfalls
 
 - **A green suite is necessary but not sufficient** for UI-visible changes —
-  many widgets only get an offscreen smoke test, and the map/3D pages aren't
-  exercised headlessly at all. See the `verify` skill for the gap.
+  many widgets only get an offscreen smoke test, and the map/3D pages are
+  exercised only by the headless-Chromium probe tests, which need a Chromium
+  (`_find_chromium`). See the `verify` skill for the gap.
 - **Don't add a real network call to a test.** The slow tests are a known
   tax; new tests must stub the fetch (see `external-data` for how existing
   tests inject a fake `fetch_json`).
 - **Patch the DB globals before importing DB-openers**, or your test writes
   to the real user DB.
-- Skips are green. If you *want* the Qt/shapely path exercised, install the
-  dep locally — don't interpret `s` as broken.
+- Skips are green, and **a skip reason is a claim to check**, not a fact. "the
+  probe never reported — no WebGL" skipped three render gates on every CI run
+  from V3.22 to V3.37 while the viewer threw on every scene push; "no Chromium
+  binary" skipped every browser test in sessions because the finder did not
+  know `chrome-linux64`. Read the runner's skip reasons, and install the dep
+  (or point `CHROME=` at a browser) when one names something you have.
 
 ## Key files
 

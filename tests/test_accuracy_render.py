@@ -35,7 +35,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import src.db.plants as _plants_mod  # noqa: E402
 from src import pond_habit, scene_wildlife, vine_habit  # noqa: E402
-from tests.test_scene3d_render import _Server, _find_chromium, _read_js  # noqa: E402
+from tests.test_scene3d_render import (  # noqa: E402
+    _Server, _find_chromium, _read_js, fail_on_viewer_errors)
 
 _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_accuracy_test_")
 
@@ -253,6 +254,7 @@ class AccuracyRenderTest(unittest.TestCase):
             server.stop()
             raise unittest.SkipTest(f"Chromium would not run headlessly: {exc}")
         server.stop()
+        fail_on_viewer_errors(proc.stdout)
         match = re.search(r"ACCURACY (\{.*\})</title>", proc.stdout, re.S)
         if not match:
             raise unittest.SkipTest(

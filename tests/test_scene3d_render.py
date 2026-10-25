@@ -28,6 +28,7 @@ same thing the render gate does: what ends up on the screen, as opposed to what
 ends up in the geometry.
 """
 
+import html
 import json
 import os
 import re
@@ -59,14 +60,37 @@ def _find_chromium():
     pw = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
     if os.path.isdir(pw):
         for entry in sorted(os.listdir(pw)):
-            cand = os.path.join(pw, entry, "chrome-linux", "chrome")
-            if os.path.isfile(cand):
-                return cand
+            # Playwright's folder was chrome-linux and is chrome-linux64 now
+            # (V3.37): the old name alone skipped every gate in a session.
+            for folder in ("chrome-linux", "chrome-linux64"):
+                cand = os.path.join(pw, entry, folder, "chrome")
+                if os.path.isfile(cand):
+                    return cand
     for name in ("chromium", "chromium-browser", "google-chrome", "chrome"):
         found = shutil.which(name)
         if found:
             return found
     return None
+
+
+def viewer_errors(dom):
+    """What ``html/probe_watch.js`` caught the probe page or the viewer throwing,
+    from a ``--dump-dom`` of the probe page, or "" (V3.37).
+
+    A probe whose viewer throws never writes its title, and the render gates
+    read an unwritten title as "no WebGL in this environment" and skipped: from
+    V3.22 to V3.37 three of them skipped on every CI run while every scene push
+    threw, because ``buildStructures`` had been deleted. Call this before
+    looking for the result, and fail on anything it returns."""
+    match = re.search(r'<pre id="probe-errors"[^>]*>(.*?)</pre>', dom, re.S)
+    return html.unescape(match.group(1)).strip() if match else ""
+
+
+def fail_on_viewer_errors(dom):
+    errors = viewer_errors(dom)
+    if errors:
+        raise AssertionError("the 3D viewer threw, so the probe could not "
+                             "finish:\n" + errors)
 
 
 class _Server:
@@ -113,6 +137,7 @@ class Scene3DRenderTest(unittest.TestCase):
             server.stop()
             raise unittest.SkipTest(f"Chromium would not run headlessly: {exc}")
         server.stop()
+        fail_on_viewer_errors(proc.stdout)
         match = re.search(r"MEASURED (\[.*?\])</title>", proc.stdout, re.S)
         if not match:
             raise unittest.SkipTest(

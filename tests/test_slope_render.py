@@ -39,7 +39,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tests.test_scene3d_render import _find_chromium, _Server  # noqa: E402
+from tests.test_scene3d_render import (  # noqa: E402
+    _find_chromium, _Server, fail_on_viewer_errors)
 
 _JS = pathlib.Path(__file__).resolve().parent.parent / "html" / "scene3d"
 
@@ -61,6 +62,7 @@ def _run_probe():
         raise unittest.SkipTest(f"Chromium would not run headlessly: {exc}")
     finally:
         server.stop()
+    fail_on_viewer_errors(proc.stdout)
     match = re.search(r"MEASURED (\{.*?\})</title>", proc.stdout, re.S)
     if not match:
         raise unittest.SkipTest(

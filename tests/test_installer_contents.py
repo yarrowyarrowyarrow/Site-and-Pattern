@@ -47,10 +47,11 @@ class TheInstallerLeavesOutWhatNobodyReads(unittest.TestCase):
         cls.shipped = {dest + "/" + os.path.basename(src)
                        for src, dest in tree("data") + tree("html")}
 
-    def test_the_spec_names_the_five_exclusions(self):
+    def test_the_spec_names_the_six_exclusions(self):
         self.assertEqual(set(self.patterns), {
             "data/fetched/*", "html/*_probe.html",
-            "html/inspect_probe_data.json", "html/tune_*.html",
+            "html/inspect_probe_data.json", "html/probe_watch.js",
+            "html/tune_*.html",
             "html/sprite_gallery*"})
 
     def test_the_spec_no_longer_copies_whole_folders(self):
@@ -61,7 +62,8 @@ class TheInstallerLeavesOutWhatNobodyReads(unittest.TestCase):
 
     def test_nothing_excluded_is_shipped(self):
         for rel in ("data/fetched/plant_occurrences.json",
-                    "html/offline_probe.html", "html/tune_fauna.html",
+                    "html/offline_probe.html", "html/probe_watch.js",
+                    "html/tune_fauna.html",
                     "html/sprite_gallery.html",
                     "html/sprite_gallery_scenes.json",
                     "html/inspect_probe_data.json"):

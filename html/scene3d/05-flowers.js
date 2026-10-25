@@ -432,6 +432,28 @@ function buildFlowers(plants, month, terrain) {
   }
 }
 
+// The placed structures: bee hotel, brush pile, pond, rain barrel. V3.22 took
+// this out with the splat code it sat between, and every scene push threw here,
+// after the plants and before the sun, the shadows and the camera (V3.37).
+function buildStructures(group, structures) {
+  for (const s of structures || []) {
+    // Blender GLB structure first (09-models.js), box as the fallback.
+    const glb = window.glbStructure && window.glbStructure(s);
+    if (glb) {
+      glb.position.set(s.x, terrainHeightAt(s.x, s.y, lastTerrain), -s.y);
+      group.add(glb);
+      continue;
+    }
+    const size = Math.max(0.3, s.size_m || 1), h = Math.max(0.3, s.height_m || 1);
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(size, h, size),
+      new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 }));
+    mesh.position.set(s.x, terrainHeightAt(s.x, s.y, lastTerrain) + h / 2, -s.y);
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+}
+
 // Render the CURRENT scene from the CURRENT camera into an off-size frame and
 // hand back a data URL. This is what lets the sprite gallery build a contact
 // sheet: push a specimen, snapshot it, repeat — every tile drawn by the real
