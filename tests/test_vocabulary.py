@@ -55,7 +55,6 @@ SIMPLE_MODULES = (
 
 #: Today's uses, ``{(module, word): count}``: WD-2 to WD-6 take these out.
 KNOWN = {
-    ('app.py', '.perma.geojson'): 1,
     ('controllers/map_events.py', 'polyculture'): 1,
     ('controllers/persistence.py', '.perma.geojson'): 1,
     ('controllers/persistence.py', 'polyculture'): 2,
@@ -79,6 +78,8 @@ KNOWN = {
     ('saves.py', 'project'): 1,
     ('site_panel.py', 'project'): 1,
     ('species_page.py', 'species'): 3,
+    # The file dialog's filter, moved from app.py with the dialog (V3.37).
+    ('start_flow.py', '.perma.geojson'): 1,
 }
 
 _SQL = re.compile(r"^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|"

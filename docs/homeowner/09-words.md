@@ -85,6 +85,7 @@ These add to `UI_PRINCIPLES.md`'s checklist; they do not replace it.
 | Early plants that fade | **fills in first, then gives way** | early successional | **pioneer**, colonizer (`review.md`) |
 | The habitat score | — (the overview has no 0–100 number, O1) | Habitat score | Habitat Value Score in simple text |
 | A natural region | **the Edmonton region** | ecoregion, natural subregion | — |
+| The middle of the moisture scale | **medium moisture** (neither dry nor wet; the Water filter's *Medium*) | — | mesic (the owner, V3.37: "not understandable to many") |
 | Prices | **about $X–$Y at Edmonton native nurseries** | estimated retail price | AB retail estimate |
 
 The *Never* column is enforced in all user text; the *Advanced* column only in

@@ -1906,12 +1906,9 @@ class MainWindow(QMainWindow):
 
     def _ask_for_design_file(self) -> str:
         """The OS file dialog, for a design that lives outside the saves
-        folder."""
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Design", "",
-            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
-        )
-        return path or ""
+        folder (shared with the start screen's Open a file…, V3.37)."""
+        from src import start_flow
+        return start_flow.ask_for_design_file(self)
 
     def _load_from_path(self, path: str):
         proj = project_io.load_project(path)
@@ -2327,8 +2324,13 @@ class MainWindow(QMainWindow):
         # the crash-recovery autosave would only nag next launch. A crash
         # never reaches this line — which is exactly the point. Guarded on
         # the recovery check having run so a window that never got a live
-        # map (offscreen tests) can't delete a real session's recovery file.
-        if getattr(self._persistence, "_recovery_checked", False):
+        # map (offscreen tests) can't delete a real session's recovery file,
+        # or on the file being this session's own: the check stands aside
+        # while the start screen is up, and passing over its Restore row
+        # left it unanswered all session, so every Don't save came back as
+        # one more "(unsaved changes from …)" design (V3.37).
+        if (getattr(self._persistence, "_recovery_checked", False)
+                or getattr(self._persistence, "_wrote_autosave", False)):
             self._persistence.clear_autosave()
         # The 3D preview is a *top-level* window (Scene3DWindow.__init__ passes
         # parent None), so stop_threads below cannot see it — findChildren only

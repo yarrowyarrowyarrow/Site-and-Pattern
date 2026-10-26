@@ -203,6 +203,13 @@ def _community_sun(members) -> str:
     return _GROUP_SUN.get(dom, "Mixed") if dom else "Unknown"
 
 
+#: The middle of the moisture scale, in a homeowner's words: neither dry nor
+#: wet (V3.37). It said "Mesic", the ecologist's word, which the owner found
+#: many people do not understand; the plant list's Water filter already says
+#: Medium for the same value.
+MEDIUM_MOISTURE = "Medium moisture"
+
+
 def _community_moisture(members) -> str:
     waters = []
     for m in members:
@@ -211,7 +218,7 @@ def _community_moisture(members) -> str:
     if dom == "low":
         return "Dry"
     if dom in ("medium", "moderate"):
-        return "Mesic"
+        return MEDIUM_MOISTURE
     if dom == "high":
         return "Wet"
     return "Unknown"
@@ -328,7 +335,7 @@ def facet_filter_choices() -> dict:
     from src.community_regions import FALLBACK_LABELS
     return {
         "sun":       list(_GROUP_SUN.values()),
-        "moisture":  ["Dry", "Mesic", "Wet"],
+        "moisture":  ["Dry", MEDIUM_MOISTURE, "Wet"],
         "structure": [label for _key, label in _GROUP_LAYER_ORDER],
         "habitat":   (list(dict.fromkeys(_GROUP_ECOREGION.values()))
                       + list(FALLBACK_LABELS.values())),

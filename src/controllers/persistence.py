@@ -249,6 +249,9 @@ class PersistenceController:
         data["properties"] = props
         try:
             project_io.save_project(data, autosave_path())
+            # This session's own copy: a clean exit may delete it whatever
+            # became of the recovery question (see closeEvent).
+            self._wrote_autosave = True
         except Exception:
             _log.warning("autosave failed", exc_info=True)
 
@@ -265,6 +268,11 @@ class PersistenceController:
         One-shot per launch; the file is consumed (deleted) either way —
         declining means the user chose the on-disk version."""
         if getattr(self, "_recovery_checked", False):
+            return
+        if getattr(self, "_wrote_autosave", False):
+            # The file is this session's own (a page load late in a session),
+            # not one a crash left behind.
+            self._recovery_checked = True
             return
         # A pre-V2.39 autosave still sits in the home directory. Move it before
         # looking, or the one launch that most needs it would find nothing.

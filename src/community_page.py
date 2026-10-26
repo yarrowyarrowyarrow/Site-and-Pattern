@@ -167,7 +167,8 @@ class CommunityPage(QWidget):
 
     def show_community(self, polyculture: dict, *, facts: str = "") -> None:
         """Fill the page for ``polyculture``; ``facts`` is its one line
-        ("8 plants · Full Sun · Mesic"), worked out from it when not given."""
+        ("8 plants · Full Sun · Medium moisture"), worked out from it when
+        not given."""
         self._community = dict(polyculture or {})
         name = self._community.get("name") or ""
         self._name.setText(name)

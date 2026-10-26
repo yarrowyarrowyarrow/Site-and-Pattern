@@ -336,7 +336,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # site_facets.py and belongs beside the pages that use it.
         (_SRC / "static_site_wildlife.py", 340),       # 274 now
         (_HTML / "site" / "browse.js", 200),           # 156 now
-        (_SRC / "start_screen.py", 380),               # 292 now
+        (_SRC / "start_screen.py", 380),               # 376 now (V3.37)
         (_SRC / "onboarding_flow.py", 620),            # 571 now (V3.04)
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
         # ceiling added late is a ceiling set around whatever shape the file

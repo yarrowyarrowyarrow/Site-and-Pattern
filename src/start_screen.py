@@ -90,6 +90,33 @@ def cut(text: str, chars: int) -> str:
     return text if len(text) <= chars else text[:chars - 1].rstrip() + "…"
 
 
+def _clear(layout) -> None:
+    """Empty ``layout``, nested layouts and their widgets included."""
+    while layout.count():
+        item = layout.takeAt(0)
+        if item.widget() is not None:
+            item.widget().hide()
+            item.widget().deleteLater()
+        elif item.layout() is not None:
+            _clear(item.layout())
+
+
+def _retab(layout) -> None:
+    """Tab in the order drawn: a widget made after its window was built
+    joins the end of the window's tab chain."""
+    def walk(lay):
+        for item in (lay.itemAt(i) for i in range(lay.count())):
+            w = item.widget()
+            if w is None and item.layout() is not None:
+                yield from walk(item.layout())
+            elif w is not None and not w.isHidden() and (
+                    w.focusPolicy() & Qt.FocusPolicy.TabFocus):
+                yield w
+    chain = list(walk(layout))
+    for a, b in zip(chain, chain[1:]):
+        QWidget.setTabOrder(a, b)
+
+
 class _Row(QPushButton):
     """One choice: what it is, and one fact about it, in two columns."""
 
@@ -126,25 +153,29 @@ class StartScreen(QDialog):
     ``chosen_path()`` is the design.
 
     ``designs`` are :func:`src.start_flow.screen_designs` rows (``path``,
-    ``name``, ``when``, ``summary``, ``error``), newest first; ``total`` is how
-    many there are in all. ``flowering`` is the line of what is in flower,
-    ``""`` for none."""
+    ``name``, ``when``, ``summary``, ``place``, ``error``), newest first;
+    ``total`` is how many there are in all. ``flowering`` is the line of what
+    is in flower, ``""`` for none.
+
+    With ``rename(screen, path)``, each design has a Rename beside it (V3.37,
+    the owner); it returns ``(designs, total)`` afresh, or ``None``, and the
+    screen stays open and redraws its list."""
 
     def __init__(self, parent: QWidget | None = None, *,
                  recover: str = "", designs=(), total: int = 0,
                  show_skip: bool = False, hidden: bool = False,
                  version: str = "", flowering: str = "",
-                 flowering_tip: str = ""):
+                 flowering_tip: str = "", rename=None):
         super().__init__(parent)
         self.setWindowTitle(f"{APP_NAME} {version}" if version else APP_NAME)
-        self.setMinimumWidth(560)
+        self.setMinimumWidth(600 if rename else 560)
         self._choice = ""
         self._path = ""
         self._primary: _Row | None = None
+        self._recover = bool(recover)
+        self._rename = rename
         # Carried, not inherited: this opens before the MainWindow exists.
         self.setStyleSheet(BASE_SURFACE)
-        designs = list(designs)[:SHOWN]
-        total = max(int(total or 0), len(designs))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 20, 24, 16)
@@ -179,20 +210,10 @@ class StartScreen(QDialog):
         heading.setStyleSheet("color: #e8f5e9; font-size: 15px; "
                               "font-weight: bold;")
         layout.addWidget(heading)
-        if not designs:
-            empty = QLabel("Designs you save will be listed here.")
-            empty.setStyleSheet("color: #a5c4a7;")
-            layout.addWidget(empty)
-        for i, d in enumerate(designs):
-            note = "can't be opened" if d.get("error") else d.get("when", "")
-            row = self._add_row(
-                layout, OPEN_PATH, cut(d.get("name", ""), NAME_CHARS), note,
-                primary="green" if (i == 0 and not recover) else "",
-                path=d.get("path", ""))
-            if d.get("summary"):
-                row.setToolTip(d["summary"])
-        if total > len(designs):
-            layout.addWidget(self._link(ALL_DESIGNS, f"All {total} designs…"))
+        self._designs = QVBoxLayout()
+        self._designs.setSpacing(9)
+        layout.addLayout(self._designs)
+        self._show_designs(designs, total)
         layout.addWidget(self._rule())
 
         # ── Foot ────────────────────────────────────────────────────────────
@@ -220,6 +241,58 @@ class StartScreen(QDialog):
             self._primary.setDefault(True)
             self._primary.setFocus()
 
+    # ── Your designs ────────────────────────────────────────────────────────
+
+    def _show_designs(self, designs, total, focus_path: str = "") -> None:
+        """Fill (or refill, after a rename) the list of designs: up to
+        :data:`SHOWN` rows, each with its Rename, and "All N designs…"."""
+        _clear(self._designs)
+        designs = list(designs)[:SHOWN]
+        total = max(int(total or 0), len(designs))
+        if not designs:
+            empty = QLabel("Designs you save will be listed here.")
+            empty.setStyleSheet("color: #a5c4a7;")
+            self._designs.addWidget(empty)
+        focus = None
+        for i, d in enumerate(designs):
+            name, path = d.get("name", ""), d.get("path", "")
+            note = "can't be opened" if d.get("error") else d.get("when", "")
+            line = QHBoxLayout()
+            line.setSpacing(10)
+            row = self._add_row(
+                line, OPEN_PATH, cut(name, NAME_CHARS), note,
+                primary="green" if (i == 0 and not self._recover) else "",
+                path=path, stretch=1)
+            tip = "\n".join(t for t in (name, d.get("summary", ""),
+                                        d.get("place", "")) if t)
+            if tip:
+                row.setToolTip(tip)
+            if self._rename is not None and not d.get("error"):
+                btn = self._link("", "Rename", "Give this design a new name.")
+                btn.clicked.connect(
+                    lambda _c=False, p=path: self._rename_design(p))
+                btn.setAccessibleName(f"Rename {name}")
+                line.addWidget(btn)
+            self._designs.addLayout(line)
+            if path and path == focus_path:
+                focus = row
+        if total > len(designs):
+            self._designs.addWidget(
+                self._link(ALL_DESIGNS, f"All {total} designs…"))
+        if focus_path:                      # a refill: the rows are new
+            _retab(self.layout())
+            if self._primary is not None:
+                self._primary.setDefault(True)
+            (focus or self._primary or self).setFocus()
+
+    def _rename_design(self, path: str) -> None:
+        fresh = self._rename(self, path) if self._rename else None
+        if fresh:
+            # Written afresh, the renamed design is the newest: the first row.
+            designs, total = fresh
+            first = designs[0].get("path", "") if designs else ""
+            self._show_designs(designs, total, focus_path=first or path)
+
     # ── Construction helpers ────────────────────────────────────────────────
 
     def _masthead(self) -> QHBoxLayout:
@@ -245,24 +318,27 @@ class StartScreen(QDialog):
         top.addStretch()
         return top
 
-    def _add_row(self, layout, key, title, note, *, primary="", path=""):
+    def _add_row(self, layout, key, title, note, *, primary="", path="",
+                 stretch=0):
         colours = {"green": _PRIMARY, "amber": _AMBER}.get(primary, _PLAIN)
         row = _Row(title, note, colours, self)
         row.clicked.connect(lambda _c=False, k=key, p=path: self._pick(k, p))
-        layout.addWidget(row)
+        layout.addWidget(row, stretch)
         if primary:
             self._primary = row
         return row
 
     def _link(self, key: str, text: str, tooltip: str = "") -> QPushButton:
-        btn = QPushButton(text)
+        """A link-like button; it picks ``key`` when there is one."""
+        btn = QPushButton(text, self)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setFlat(True)
         btn.setAutoDefault(False)
         btn.setStyleSheet(_LINK)
         if tooltip:
             btn.setToolTip(tooltip)
-        btn.clicked.connect(lambda _c=False, k=key: self._pick(k))
+        if key:
+            btn.clicked.connect(lambda _c=False, k=key: self._pick(k))
         return btn
 
     @staticmethod

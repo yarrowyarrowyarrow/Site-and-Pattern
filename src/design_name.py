@@ -54,10 +54,18 @@ def from_address(label) -> str:
         return ""
 
 
-def renamed(current, label) -> str:
+def renamed(current, label, previous="") -> str:
     """The name a design should take when its pin arrives with ``label``:
     the address's name when ``current`` is a placeholder and the label names
-    somewhere, else ``""`` (no change)."""
-    if not is_placeholder(current):
+    somewhere, else ``""`` (no change).
+
+    A name the last address gave (``previous`` is that pin's label) is a
+    placeholder too, so it follows the pin when the pin moves (V3.37): the
+    owner's list held a design called "8103 95A Street NW" pinned at 10173
+    144 Street NW. Once the person changes the name it is theirs."""
+    taken = from_address(previous) if previous else ""
+    if not is_placeholder(current) and not (
+            taken and (current or "").strip() == taken):
         return ""
-    return from_address(label)
+    name = from_address(label)
+    return "" if name == (current or "").strip() else name

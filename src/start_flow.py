@@ -39,17 +39,13 @@ def screen_designs(limit: int = screen.SHOWN, directory=None):
     is ``{path, name, when, summary, error}``. Never raises."""
     from src import saves
     try:
-        entries = saves.list_saves(directory)
-        last = saves.last_design()
-        if last and not any(os.path.abspath(e["path"]) == os.path.abspath(last)
-                            for e in entries):
-            entries.append(saves.describe(last))
-        entries.sort(key=lambda e: e.get("modified") or 0, reverse=True)
+        entries = saves.your_designs(directory)
     except Exception:                                      # noqa: BLE001
         return [], 0
     rows = [{"path": e["path"], "name": e.get("name") or e.get("filename", ""),
              "when": saves.when(e), "summary": saves.summary_line(e),
-             "error": e.get("error", "")} for e in entries[:limit]]
+             "place": e.get("site", ""), "error": e.get("error", "")}
+            for e in entries[:limit]]
     return rows, len(entries)
 
 
@@ -76,7 +72,7 @@ def open_screen(parent, *, recover: str, version: str, hidden: bool) -> str:
     dlg = screen.StartScreen(
         parent, recover=recover, designs=designs, total=total,
         show_skip=bool(saves.last_design()), hidden=hidden, version=version,
-        flowering=line, flowering_tip=tip)
+        flowering=line, flowering_tip=tip, rename=rename_listed)
     accepted = bool(dlg.exec())
     from src.onboarding_flow import START_SCREEN_OFF_KEY, _settings
     _settings().setValue(START_SCREEN_OFF_KEY, dlg.suppressed())
@@ -85,6 +81,70 @@ def open_screen(parent, *, recover: str, version: str, hidden: bool) -> str:
     if dlg.choice() == screen.OPEN_PATH:
         return path_choice(dlg.chosen_path())
     return dlg.choice()
+
+
+def choose_design(parent, *, listed: bool) -> str:
+    """*All N designs…* (``listed``) or *Open a file…*, answered over the
+    start screen before the map is shown (V3.37): the saves list, with
+    Browse… a step further, or the system's file dialog. The design's path,
+    or ``""`` when the person backed out, which returns them to the screen."""
+    if not listed:
+        return ask_for_design_file(parent)
+    from PyQt6.QtWidgets import QDialog
+    from src.saves_dialog import BROWSE, SavesDialog
+    dlg = SavesDialog(parent)
+    result = dlg.exec()
+    if result == BROWSE:
+        return ask_for_design_file(parent)
+    return dlg.chosen() if result == QDialog.DialogCode.Accepted else ""
+
+
+def ask_for_design_file(parent) -> str:
+    """The system's file dialog, for a design kept outside the saves
+    folder (File › Open's Browse…, and the start screen's Open a file…)."""
+    from PyQt6.QtWidgets import QFileDialog
+    path, _ = QFileDialog.getOpenFileName(
+        parent, "Open Design", "",
+        "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;"
+        "All files (*)")
+    return path or ""
+
+
+def rename_design(parent, path: str) -> str:
+    """Ask for a new name and give it to the design at ``path``, inside the
+    file and on it (ST-7); the new path, or ``""`` when nothing changed.
+
+    The start screen's Rename (V3.37) and the saves list's Rename… both come
+    here. When the design is the one open in the window (``parent``'s
+    parent, the start screen or the list being over it), the window follows:
+    its path, its name and its title."""
+    from src import plain_messages, saves
+    current = saves.describe(path).get("name", "")
+    new = plain_messages.ask_design_name(
+        parent, title="Rename design", label="New name:", suggested=current)
+    if not new or new == current:
+        return ""
+    try:
+        target = saves.rename_save(path, new)
+    except Exception:                                      # noqa: BLE001
+        plain_messages.tell_save_failed(parent, current)
+        return ""
+    saves.clear_cache()
+    main = parent.parent() if parent is not None else None
+    open_path = getattr(main, "_project_path", "") or ""
+    if open_path and os.path.abspath(open_path) == os.path.abspath(path):
+        main._project_path = target
+        main._project.setdefault("properties", {})["project_name"] = new
+        _retitle(main, new)
+    return target
+
+
+def rename_listed(parent, path: str):
+    """The start screen's Rename beside a design: ``(rows, total)`` read
+    afresh once it is renamed, or ``None`` when it was not."""
+    if not rename_design(parent, path):
+        return None
+    return screen_designs()
 
 
 def keep_passed_autosave() -> str:
@@ -116,6 +176,8 @@ def dispatch(main, choice: str) -> bool:
     elif key == screen.OPEN_PATH:
         _open(main, path)
     elif key == screen.ALL_DESIGNS:
+        # The screen's loop answers these before the map (V3.37); a caller
+        # handing one over directly still gets the list or the picker.
         main._on_open()
     elif key == screen.OPEN_FILE:
         path = main._ask_for_design_file()
@@ -150,13 +212,14 @@ def start_new_yard(main) -> None:
         pass
 
 
-def name_from_pin(main, label: str) -> None:
+def name_from_pin(main, label: str, previous: str = "") -> None:
     """ST-5: a placeholder-named design takes its address's name when the pin
     arrives with one, and the title follows. A named design, a dragged pin
-    (``''``) and a bare coordinate change nothing."""
+    (``''``) and a bare coordinate change nothing. A name the ``previous``
+    pin's address gave follows the new one (V3.37)."""
     from src import design_name
     props = main._project.setdefault("properties", {})
-    name = design_name.renamed(props.get("project_name", ""), label)
+    name = design_name.renamed(props.get("project_name", ""), label, previous)
     if not name:
         return
     props["project_name"] = name

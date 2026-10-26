@@ -383,7 +383,15 @@ class TestOpenGoesThroughTheList(unittest.TestCase):
         fn = next(n for n in ast.walk(tree)
                   if isinstance(n, ast.FunctionDef)
                   and n.name == "_ask_for_design_file")
-        self.assertIn("getOpenFileName", ast.dump(fn))
+        # One file dialog since V3.37, shared with the start screen's
+        # Open a file….
+        self.assertIn("ask_for_design_file", ast.dump(fn))
+        flow = (pathlib.Path(__file__).resolve().parent.parent
+                / "src" / "start_flow.py").read_text(encoding="utf-8")
+        shared = next(n for n in ast.walk(ast.parse(flow))
+                      if isinstance(n, ast.FunctionDef)
+                      and n.name == "ask_for_design_file")
+        self.assertIn("getOpenFileName", ast.dump(shared))
         opener = next(n for n in ast.walk(tree)
                       if isinstance(n, ast.FunctionDef) and n.name == "_on_open")
         self.assertIn("BROWSE", ast.dump(opener))

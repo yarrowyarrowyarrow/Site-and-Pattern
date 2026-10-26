@@ -58,6 +58,7 @@ GLOSSARY: tuple = (
     ("The habitat score", "", ("habitat score",), ("Habitat Value Score",)),
     ("A natural region", "the Edmonton region",
      ("ecoregion", "natural subregion"), ()),
+    ("The middle of the moisture scale", "medium moisture", (), ("mesic",)),
     ("Prices", "about $X–$Y at Edmonton native nurseries",
      ("estimated retail price",), ("AB retail estimate",)),
 )

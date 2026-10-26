@@ -51,9 +51,10 @@ _FACTS_GREY = "#90a4ae"
 
 
 def community_facts(entry: dict) -> str:
-    """"8 plants · Full Sun · Mesic": what a community is, in the row, so a
-    list of them can be compared without opening each (F196, V3.05). Unknown
-    sun or moisture is left out rather than printed as "Unknown"."""
+    """"8 plants · Full Sun · Medium moisture": what a community is, in the
+    row, so a list of them can be compared without opening each (F196,
+    V3.05). Unknown sun or moisture is left out rather than printed as
+    "Unknown"."""
     n = int(entry.get("member_count") or 0)
     parts = [f"{n} plant{'s' if n != 1 else ''}"]
     facets = entry.get("facets") or {}
@@ -1149,7 +1150,8 @@ class PolyculturePanel(QWidget):
         self._facet_combos["sun"].setToolTip(
             "Dominant sun need across the community's members.")
         self._facet_combos["moisture"].setToolTip(
-            "Dominant moisture need across the community's members.")
+            "What most of the community's plants need: dry ground, medium\n"
+            "moisture (neither dry nor wet), or wet ground.")
         self._facet_combos["structure"].setToolTip(
             "Tallest vegetation layer the community reaches.")
         self._facet_combos["habitat"].setToolTip(

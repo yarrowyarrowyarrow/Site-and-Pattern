@@ -43,7 +43,15 @@ class SavesDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Open a Design")
         self.setMinimumSize(QSize(560, 420))
+        if parent is None:
+            # Opened from the start screen, before the main window (V3.37):
+            # a top-level window inherits none of its stylesheet.
+            from src.ui_style import WINDOW_STYLE
+            self.setStyleSheet(WINDOW_STYLE)
         self._directory = directory or saves.saves_dir()
+        # The design you were last in is listed when it lives elsewhere, as
+        # the start screen counts it; not for a folder a caller names.
+        self._include_last = directory is None
         self._chosen = ""
 
         layout = QVBoxLayout(self)
@@ -57,8 +65,18 @@ class SavesDialog(QDialog):
 
         self._list = QListWidget()
         self._list.setAlternatingRowColors(True)
+        # Its own dark stripe: the palette's is near-white under Fusion, which
+        # put the app's pale text on white once the list could open before
+        # the main window (V3.37).
+        self._list.setStyleSheet(
+            "QListWidget { alternate-background-color: #213321; }")
         self._list.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection)
+        # A long line is cut with "…" and whole in the tooltip, never a
+        # sideways scroll bar under the list (V3.37).
+        self._list.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self._list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._list.itemDoubleClicked.connect(lambda _i: self._open())
         self._list.currentItemChanged.connect(self._sync_buttons)
         layout.addWidget(self._list, 1)
@@ -97,12 +115,15 @@ class SavesDialog(QDialog):
 
     def refresh(self):
         self._list.clear()
-        entries = saves.list_saves(self._directory)
+        entries = saves.your_designs(self._directory,
+                                     include_last=self._include_last)
         for entry in entries:
             item = QListWidgetItem(
                 f"{entry['name']}\n    {saves.when(entry)} · "
                 f"{saves.summary_line(entry)}")
             item.setData(Qt.ItemDataRole.UserRole, entry["path"])
+            item.setData(Qt.ItemDataRole.UserRole + 1,
+                         bool(entry.get("elsewhere")))
             if entry["error"]:
                 # Listed, not hidden — a save disappearing from this list is
                 # how a person concludes their work is gone. Marked so they can
@@ -110,13 +131,19 @@ class SavesDialog(QDialog):
                 item.setForeground(Qt.GlobalColor.darkYellow)
                 item.setToolTip(entry["error"])
             else:
-                item.setToolTip(entry["path"])
+                item.setToolTip("\n".join(
+                    t for t in (entry["name"], entry.get("site", ""),
+                                entry["path"]) if t))
             self._list.addItem(item)
 
         if entries:
+            n = len(entries)
+            where = ("in your saves folder" if not any(
+                e.get("elsewhere") for e in entries) else "")
             self._blurb.setText(
-                f"{len(entries)} design{'s' if len(entries) != 1 else ''} in "
-                f"your saves folder. Double-click to open one.")
+                f"{n} design{'s' if n != 1 else ''}"
+                + (f" {where}" if where else "")
+                + ". Double-click to open one.")
             self._list.setCurrentRow(0)
         else:
             self._blurb.setText(
@@ -125,10 +152,17 @@ class SavesDialog(QDialog):
         self._sync_buttons()
 
     def _sync_buttons(self, *_args):
-        has = self._list.currentItem() is not None
+        item = self._list.currentItem()
+        has = item is not None
+        elsewhere = bool(has and item.data(Qt.ItemDataRole.UserRole + 1))
         self._btn_open.setEnabled(has)
         self._btn_rename.setEnabled(has)
-        self._btn_delete.setEnabled(has)
+        # A file kept outside the saves folder is the person's to delete
+        # where they keep it, not from here.
+        self._btn_delete.setEnabled(has and not elsewhere)
+        self._btn_delete.setToolTip(
+            "This design is kept outside your saves folder." if elsewhere
+            else "")
 
     # ── Actions ─────────────────────────────────────────────────────────────
 
@@ -145,30 +179,20 @@ class SavesDialog(QDialog):
 
     def _rename(self):
         """V3.23 (ST-7): a new name inside the file and on it. The design
-        open in the window follows when it is the one renamed."""
-        from src import plain_messages
+        open in the window follows when it is the one renamed (one body with
+        the start screen's Rename since V3.37: ``start_flow.rename_design``)."""
+        from src import start_flow
         path = self._current_path()
         if not path:
             return
-        current = saves.describe(path).get("name", "")
-        new = plain_messages.ask_design_name(
-            self, title="Rename design", label="New name:", suggested=current)
-        if not new or new == current:
+        target = start_flow.rename_design(self, path)
+        if not target:
             return
-        try:
-            target = saves.rename_save(path, new)
-        except Exception:                                  # noqa: BLE001
-            plain_messages.tell_save_failed(self, current)
-            return
-        main = self.parent()
-        if os.path.abspath(getattr(main, "_project_path", "") or "") == \
-                os.path.abspath(path):
-            main._project_path = target
-            main._project.setdefault("properties", {})["project_name"] = new
-            from src import start_flow
-            start_flow._retitle(main, new)
-        saves.clear_cache()
         self.refresh()
+        for row in range(self._list.count()):
+            if self._list.item(row).data(Qt.ItemDataRole.UserRole) == target:
+                self._list.setCurrentRow(row)
+                break
 
     def _delete(self):
         path = self._current_path()
