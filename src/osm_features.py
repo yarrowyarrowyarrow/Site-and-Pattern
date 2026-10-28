@@ -38,6 +38,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -134,11 +135,12 @@ def _host(url: str) -> str:
     return urllib.parse.urlsplit(url).hostname or url
 
 
-def _send(url: str, body: bytes, context=None) -> bytes:
-    req = urllib.request.Request(
-        url, data=body,
-        headers={"User-Agent": _USER_AGENT,
-                 "Content-Type": "application/x-www-form-urlencoded"})
+def _send(url: str, body: Optional[bytes] = None, context=None) -> bytes:
+    """POST ``body`` to ``url``, or GET it when there is none."""
+    headers = {"User-Agent": _USER_AGENT}
+    if body is not None:
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    req = urllib.request.Request(url, data=body, headers=headers)
     with urllib.request.urlopen(req, timeout=_TIMEOUT, context=context) as resp:
         return resp.read()
 
@@ -208,14 +210,14 @@ def _read_answer(url: str, raw: bytes):
     return data
 
 
-def _post_overpass(query: str, url: str = _OVERPASS_URL):
-    """POST an Overpass QL query to one server: the parsed answer, or an
-    :class:`Unanswered` saying what went wrong (V3.37; it was ``None`` for
-    every failure, recorded nowhere)."""
-    body = b"data=" + urllib.parse.quote(query).encode("utf-8")
+def fetch_bytes(url: str, body: Optional[bytes] = None):
+    """GET ``url`` (or POST ``body`` to it): the raw answer, or an
+    :class:`Unanswered` saying what went wrong. A certificate the computer's
+    store cannot check is checked against certifi's list before it counts as
+    a failure (:func:`_mozilla_context`). Shared with ``vector_tiles``."""
     context = _mozilla["context"]
     try:
-        raw = _send(url, body, context)
+        return _send(url, body, context)
     except Exception as exc:  # noqa: BLE001 — classified, the caller moves on
         second = _mozilla_context() if (
             context is None and _certificate_failed(exc)) else None
@@ -226,10 +228,28 @@ def _post_overpass(query: str, url: str = _OVERPASS_URL):
         except Exception as exc2:  # noqa: BLE001
             return _unanswered(url, exc2)
         _mozilla["context"] = second
-        log.warning("Overpass: %s's certificate checked against certifi's "
-                    "list; the computer's own store could not (%s)",
+        log.warning("%s's certificate checked against certifi's list; the "
+                    "computer's own store could not (%s)",
                     _host(url), getattr(exc, "reason", exc))
-    return _read_answer(url, raw)
+        return raw
+
+
+def _post_overpass(query: str, url: str = _OVERPASS_URL):
+    """POST an Overpass QL query to one server: the parsed answer, or an
+    :class:`Unanswered` saying what went wrong (V3.37; it was ``None`` for
+    every failure, recorded nowhere)."""
+    raw = fetch_bytes(url, b"data=" + urllib.parse.quote(query).encode("utf-8"))
+    if isinstance(raw, Unanswered):
+        return raw
+    answer = _read_answer(url, raw)
+    if (isinstance(answer, Unanswered) and "[maxsize:" in query
+            and "out of memory" in answer.detail.lower()):
+        # The memory a yard's query declares was not enough after all: ask
+        # once more with the server's own default rather than fail on it.
+        log.warning("Overpass %s: out of memory at the yard's maxsize; "
+                    "asking again without it", answer.host)
+        return _post_overpass(re.sub(r"\[maxsize:\d+\]", "", query), url)
+    return answer
 
 
 def _fetch_overpass(query: str, *, _post=None, _sleep=None,
@@ -306,11 +326,35 @@ def trying_words(miss: Unanswered) -> str:
             "is being tried…")
 
 
+#: What a server said, in a word or two, for :func:`server_words`.
+_BRIEF = {SLOW: "too slow", CERTIFICATE: "certificate not checked",
+          GARBLED: "unreadable answer", UNREACHABLE: "not reached"}
+
+
+def server_words(why) -> str:
+    """"overpass-api.de HTTP 429 · overpass.private.coffee not reached": each
+    server's answer in the order asked. Shown at the end of a failure, so a
+    screenshot of one says what each server said; the owner's two reports
+    of V3.37 could not, and the log is a file nobody opens."""
+    bits = []
+    for m in why or []:
+        if m.detail.startswith("HTTP "):
+            said = m.detail
+        elif m.kind == BUSY:
+            said = ("out of memory" if "memory" in m.detail.lower()
+                    else "cut its answer short")
+        else:
+            said = _BRIEF.get(m.kind, m.kind)
+        bits.append(f"{m.host} {said}")
+    return " · ".join(bits)
+
+
 def failure_words(why, lost: str = "nothing was imported") -> str:
     """One sentence for a fetch that failed: the worst news among ``why``
     (the :class:`Unanswered` a fetch collected) in plain words, what was lost,
-    and what to do. "didn't answer" stays its first words, whatever the kind:
-    it is how a person tells a failure from an empty answer."""
+    and what to do, then what each server said. "didn't answer" stays its
+    first words, whatever the kind: it is how a person tells a failure from an
+    empty answer."""
     misses = list(why or [])
     kind = next((k for k in _KINDS if any(m.kind == k for m in misses)),
                 UNREACHABLE if misses else None)
@@ -321,7 +365,7 @@ def failure_words(why, lost: str = "nothing was imported") -> str:
     detail = next((m.detail for m in misses if m.kind == kind), "")
     return " ".join(filter(None, (
         f"OpenStreetMap didn't answer: {said.format(detail=detail)}, "
-        f"so {lost}.", todo)))
+        f"so {lost}.", todo, f"({server_words(misses)})")))
 
 
 def _parse_height(tags: dict, default: float) -> float:
@@ -522,6 +566,34 @@ def fetch_existing_features(bbox: dict, *, trees: bool = True,
     }
 
 
+#: The status line while the tiles are read instead.
+TILES_WORDS = ("OpenStreetMap's query servers didn't answer: reading the "
+               "buildings off its map tiles instead…")
+#: Said after buildings that came off the tiles.
+TILES_NOTE = ("The buildings came off OpenStreetMap's map tiles, as its query "
+              "servers didn't answer; mapped trees and streets need those.")
+
+
+def fetch_with_fallback(bbox: dict, *, why: Optional[list] = None,
+                        on_miss=None, on_tiles=None) -> Optional[dict]:
+    """Buildings, trees and streets from Overpass; when no Overpass server
+    answers, the buildings alone off OpenStreetMap's map tiles
+    (``vector_tiles``, V3.37), marked ``"from_tiles": True``. ``None`` when
+    neither answered. ``on_tiles`` is told before the tiles are asked."""
+    misses = why if why is not None else []
+    res = fetch_existing_features(bbox, why=misses, on_miss=on_miss)
+    if res is not None:
+        return res
+    if on_tiles is not None:
+        on_tiles()
+    from src import vector_tiles
+    buildings = vector_tiles.fetch_buildings(bbox, why=misses)
+    if buildings is None:
+        return None
+    return {"buildings": buildings, "trees": [], "roads": [],
+            "from_tiles": True}
+
+
 def fetch_buildings_or_none(bbox: dict,
                             why: Optional[list] = None) -> Optional[list]:
     """Buildings only, or None when no server answered: for the bulk
@@ -704,9 +776,10 @@ if _HAVE_QT:
         def run(self):
             why: list = []
             try:
-                res = fetch_existing_features(
+                res = fetch_with_fallback(
                     self._bbox, why=why,
-                    on_miss=lambda m: self.progress.emit(trying_words(m)))
+                    on_miss=lambda m: self.progress.emit(trying_words(m)),
+                    on_tiles=lambda: self.progress.emit(TILES_WORDS))
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 log.exception("Overpass fetch raised")
                 res = None
@@ -865,14 +938,17 @@ def import_osm_result(res: Optional[dict], project_dict: dict, *,
     feats = list(res.get("buildings", [])) + list(res.get("trees", []))
     kept, n_inside, n_neigh = filter_to_boundary(feats, boundary, margin_m)
     added = add_features_to_project(kept, project_dict)
+    from_tiles = bool(res.get("from_tiles"))
     # Streets (V2.58). NOT boundary-filtered and NOT counted in `added`: a road
     # is useful precisely because it is *outside* the property, and counting it
     # as an imported feature would inflate "found 12 buildings" with things the
     # user never asked to place. Stored so src.frontage can measure which edge
-    # faces the street instead of assuming south.
+    # faces the street instead of assuming south. The map tiles' fallback
+    # brings none, which must not wipe the ones an earlier import stored.
     try:
         from src.frontage import store_roads
-        store_roads(project_dict, res.get("roads") or [])
+        if not from_tiles:
+            store_roads(project_dict, res.get("roads") or [])
     except Exception:      # noqa: BLE001 — never fail an import over this
         pass
     msg = f"Found {len(feats)} nearby; "
@@ -889,5 +965,7 @@ def import_osm_result(res: Optional[dict], project_dict: dict, *,
     elif not feats:
         msg += (" OSM knows no buildings/trees here — anything missing can "
                 "be drawn by hand below.")
+    if from_tiles:
+        msg += (" " + TILES_NOTE)
     return {"added": added, "kept": len(kept), "found": len(feats),
-            "message": msg}
+            "from_tiles": from_tiles, "message": msg}

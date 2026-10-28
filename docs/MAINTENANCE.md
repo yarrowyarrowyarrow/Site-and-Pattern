@@ -93,7 +93,8 @@ The app keeps working without each one; nothing needs an emergency fix.
 | Map tiles (Esri, OpenStreetMap) | The map tries the next basemap, then says it needs a connection; the design is safe | `html/map/01-core.js`, `html/map/11-map-furniture.js` |
 | Open-Meteo (climate, elevation, wind) | Site Info says the region's typical figures instead | `src/property_data.py`, `src/region_climate.py`, `data/*_fallback_prairie.json` |
 | SoilGrids (soil) | The offline soil pack if downloaded, else the regional soil atlas | `src/property_data.py` `fetch_soil`, `src/soil_grid.py` |
-| Overpass (buildings, *Scan this area*) | Three public servers are asked in turn; with none answering, the offline building pack, else the status line says "OpenStreetMap didn't answer" and why (busy, too slow, refused, a certificate, offline), and the log names each server's answer (lines starting "Overpass") | `src/osm_features.py`, `src/building_store.py` |
+| Overpass (buildings, *Scan this area*) | Three public servers are asked in turn; with none answering, the buildings are read off OpenFreeMap's map tiles (no trees or streets that way), else the offline building pack, else the status line says "OpenStreetMap didn't answer", why (busy, too slow, refused, a certificate, offline) and what each server said | `src/osm_features.py`, `src/vector_tiles.py`, `src/building_store.py` |
+| OpenFreeMap (map tiles, as data) | Only asked when Overpass did not answer; without it the import says what each server said | `src/vector_tiles.py` |
 | iNaturalist photographs | Plant pages and lists show no photograph; nothing else changes | `src/db/photos.py`, `src/image_cache.py` |
 | GitHub (*Check for Updates*) | Says it could not reach GitHub; the app carries on | `src/github_releases.py`, `src/controllers/update_flow.py` |
 

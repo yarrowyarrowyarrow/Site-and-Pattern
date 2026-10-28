@@ -48,6 +48,12 @@ SERVICES: tuple = (
             "buildings, trees and roads near the yard (Scan this area)",
             "© OpenStreetMap contributors (ODbL)",
             "a box around the yard, when you ask"),
+    Service("OpenFreeMap", ("tiles.openfreemap.org",),
+            "buildings for Scan this area when no Overpass server answers "
+            "(V3.37), read off OpenStreetMap's map tiles",
+            "OpenFreeMap © OpenMapTiles, data © OpenStreetMap contributors "
+            "(ODbL)",
+            "which map tiles hold the yard, when Overpass did not answer"),
     Service("Esri basemaps (World Topographic Map, World Imagery)",
             ("server.arcgisonline.com",),
             "the street map and the satellite view; trees for Scan this area "
@@ -122,7 +128,9 @@ PRIVACY = (
     "address search when you press Find; your yard's pin goes to Open-Meteo "
     "and SoilGrids for its climate and soil, and the map's tile servers see "
     "the part of the map on screen. When you ask, a box around your yard goes "
-    "to Overpass, Natural Resources Canada or the City of Edmonton. Nothing "
+    "to Overpass (or, when it does not answer, OpenFreeMap is asked for the "
+    "map tiles around it), Natural Resources Canada or the City of Edmonton. "
+    "Nothing "
     "else leaves: there is no account, no analytics, and feedback is sent "
     "only when you send it. Photographs you add have their location removed.")
 

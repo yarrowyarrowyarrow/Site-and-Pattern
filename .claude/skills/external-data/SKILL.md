@@ -194,7 +194,8 @@ Every test in this repo runs offline. Patterns:
 | `src/climate.py` | Hardiness bbox lookup + GDD/frost (DB-cached in `climate_cache`). |
 | `src/wind.py` | Wind rose fetch + pure aggregation + `wind_cache` DB cache. |
 | `src/wind_flow.py` | Off-thread wind fetch worker + regional fallback (`wind_fallback_prairie.json`). |
-| `src/osm_features.py` | Overpass buildings/trees import: three servers in turn, a certifi second opinion on a certificate, and each failure kept as an `Unanswered` kind, logged and said by `failure_words` (V3.37) — the pattern for a fetch the person asked for. |
+| `src/osm_features.py` | Overpass buildings/trees import: three servers in turn, a certifi second opinion on a certificate, and each failure kept as an `Unanswered` kind, logged and said by `failure_words` with each server's answer (V3.37) — the pattern for a fetch the person asked for. |
+| `src/vector_tiles.py` | The buildings off OpenFreeMap's OpenStreetMap map tiles when no Overpass server answers (V3.37): a plain-Python vector-tile decoder for the `building` layer, tile arithmetic, `fetch_buildings` with an injectable `_get`. |
 | `src/hrdem.py` | NRCan HRDEM elevation (STAC + COG windowed reads; injectable seams). |
 | `src/image_cache.py` | Open-licensed photo cache + attribution sidecar. |
 | `data/rainfall_fallback_prairie.json` / `soil_fallback_prairie.json` / `wind_fallback_prairie.json` / `hardiness_zones.json` | Bundled regional fallbacks / lookups. |

@@ -65,9 +65,13 @@ def summary(found: list, osm: dict, trees: dict) -> str:
         return (f"The scan found {n_trees} tree{'s' if n_trees != 1 else ''}. "
                 + failure_words(osm["failed"], lost="no buildings came")
                 + " Untick in the list any tree that is not there.")
-    return (f"The scan found {n_bldg} building{'s' if n_bldg != 1 else ''} "
+    line = (f"The scan found {n_bldg} building{'s' if n_bldg != 1 else ''} "
             f"and {n_trees} tree{'s' if n_trees != 1 else ''}: untick in the "
             f"list any that are not there.")
+    if osm.get("from_tiles"):
+        from src.osm_features import TILES_NOTE
+        line += " " + TILES_NOTE
+    return line
 
 
 def found_since(project: dict, before: set) -> list:
