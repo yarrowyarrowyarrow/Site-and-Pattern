@@ -143,8 +143,30 @@ def is_leaf_off(month) -> bool:
 
 # ── What is actually casting the shade ───────────────────────────────────────
 
+def is_existing_caster(props: dict) -> bool:
+    """Is a feature with these properties something already on the site that
+    casts shade: a tree or building marked, drawn, scanned or imported. Placed
+    plants are not: they join the shade automatically."""
+    et = props.get("element_type")
+    return (et in ("existing_tree", "existing_building", "canopy_footprint")
+            or (et == "custom_shape" and bool(props.get("cast_shade"))))
+
+
+def is_tree(props: dict) -> bool:
+    return (props.get("element_type") == "existing_tree"
+            or props.get("caster_kind") == "tree")
+
+
+def shade_is_off(props: dict) -> bool:
+    """Unticked in Sun & Shade › Existing features (V3.37): kept in the
+    design, but casting no shade (``shade.SHADE_OFF``)."""
+    from src.shade import SHADE_OFF
+    return bool(props.get(SHADE_OFF))
+
+
 def caster_counts(project_dict: dict | None) -> tuple[int, int]:
-    """``(buildings, trees)`` among the project's existing features.
+    """``(buildings, trees)`` among the project's existing features that cast
+    shade: one switched off in Sun & Shade is not counted (V3.37).
 
     Pure feature scan, no DB. Placed design trees join the shade automatically
     and are not counted here — this line answers "did my import land?", not
@@ -153,34 +175,155 @@ def caster_counts(project_dict: dict | None) -> tuple[int, int]:
     trees = buildings = 0
     for f in (project_dict or {}).get("features") or []:
         props = f.get("properties") or {}
-        et = props.get("element_type")
-        if et == "existing_tree":
+        if not is_existing_caster(props) or shade_is_off(props):
+            continue
+        if is_tree(props):
             trees += 1
-        elif et == "existing_building":
+        else:
             buildings += 1
-        elif (et == "canopy_footprint"
-              or (et == "custom_shape" and props.get("cast_shade"))):
-            if props.get("caster_kind") == "tree":
-                trees += 1
-            else:
-                buildings += 1
     return buildings, trees
 
 
+def switched_off(project_dict: dict | None) -> int:
+    """How many existing features are switched off in Sun & Shade."""
+    return sum(1 for f in (project_dict or {}).get("features") or []
+               if is_existing_caster(f.get("properties") or {})
+               and shade_is_off(f.get("properties") or {}))
+
+
 def caster_summary(buildings: int, trees: int,
-                   where: str = "the Site tab") -> tuple[str, bool]:
+                   where: str = "the Site tab",
+                   off: int = 0, off_where: str = "in Sun & Shade"
+                   ) -> tuple[str, bool]:
     """``(line, have_any)`` for the inventory shown before the shade is drawn.
 
     Told *before* the click, because a shade map cast by nothing looks the same
-    as a shade map cast by a site with no shade.
+    as a shade map cast by a site with no shade. ``off`` is how many were
+    switched off in Sun & Shade (``off_where``: "below" on that page), said so
+    a smaller count is not a mystery.
     """
+    note = (f" {off} switched off {off_where}." if off else "")
     if not buildings and not trees:
+        if off:
+            return (f"Nothing is casting shade:{note}", False)
         return (f"No existing features yet — import or draw them on "
                 f"{where} so the shade is real.", False)
     return (f"Casting shade: {buildings} building"
             f"{'s' if buildings != 1 else ''} · {trees} tree"
             f"{'s' if trees != 1 else ''} (+ your placed plants, "
-            "automatically).", True)
+            f"automatically).{note}", True)
+
+
+# ── The list Sun & Shade › Existing features shows (V3.37) ───────────────────
+
+def describe_feature(feature: dict) -> str:
+    """A row's first words: "Tree (canopy height) · crown 6 m · 11 m tall".
+    Shared with the scan's review list (``features_scan_flow``)."""
+    props = feature.get("properties") or {}
+    tree = is_tree(props)
+    label = props.get("label") or ("Tree" if tree else "Building")
+    height = float(props.get("height_m") or 0)
+    bits = [label]
+    if tree:
+        bits.append(f"crown {2 * float(props.get('canopy_radius_m') or 0):.0f} m")
+    if height:
+        bits.append(f"{height:.0f} m tall")
+    return " · ".join(bits)
+
+
+def feature_centre(feature: dict):
+    """``(lat, lng)`` of a point, or the centroid of a polygon; or ``None``."""
+    geom = feature.get("geometry") or {}
+    coords = geom.get("coordinates") or []
+    if geom.get("type") == "Point" and len(coords) >= 2:
+        return float(coords[1]), float(coords[0])
+    if geom.get("type") == "Polygon" and coords and coords[0]:
+        from src.osm_features import ring_centroid
+        return ring_centroid(coords[0])
+    return None
+
+
+_COMPASS = ("north", "north-east", "east", "south-east", "south",
+            "south-west", "west", "north-west")
+
+
+def _offset_m(point, middle) -> tuple[float, float]:
+    """``(north, east)`` metres from ``middle`` to ``point``, the cosLat way
+    (``src/projection.py``'s default, centimetres at yard scale)."""
+    import math
+    from src.projection import M_PER_DEG_LAT
+    return ((point[0] - middle[0]) * M_PER_DEG_LAT,
+            (point[1] - middle[1]) * M_PER_DEG_LAT
+            * math.cos(math.radians(middle[0])))
+
+
+def where_from(point, middle) -> str:
+    """"12 m north-west": from the yard's middle to ``point``, both
+    ``(lat, lng)``; "in the middle" within 2 m; "" when either is unknown.
+    Rows that would otherwise read alike (four "Tree (detected)") differ by
+    where they are, which is how a person tells them apart."""
+    if not point or not middle:
+        return ""
+    import math
+    north, east = _offset_m(point, middle)
+    dist = math.hypot(north, east)
+    if dist < 2.0:
+        return "in the middle"
+    bearing = math.degrees(math.atan2(east, north)) % 360
+    return f"{dist:.0f} m {_COMPASS[int((bearing + 22.5) // 45) % 8]}"
+
+
+def caster_rows(project_dict: dict | None,
+                site_config: dict | None = None) -> list[dict]:
+    """One row per existing feature that can cast shade, for the list:
+    ``{"index", "text", "where", "on", "centre"}``, where ``index`` is the
+    feature's place in ``features``. Buildings first, then trees, each nearest
+    the yard's middle first."""
+    feats = (project_dict or {}).get("features") or []
+    middle = default_anchor(project_dict, site_config)
+    rows = []
+    for i, f in enumerate(feats):
+        props = f.get("properties") or {}
+        if not is_existing_caster(props):
+            continue
+        centre = feature_centre(f)
+        where = where_from(centre, middle)
+        text = describe_feature(f) + (f" · {where}" if where else "")
+        rows.append({"index": i, "text": text, "where": where,
+                     "on": not shade_is_off(props), "centre": centre,
+                     "_order": (is_tree(props), _distance(centre, middle))})
+    rows.sort(key=lambda r: r.pop("_order"))
+    return rows
+
+
+def _distance(point, middle) -> float:
+    if not point or not middle:
+        return float("inf")
+    import math
+    return math.hypot(*_offset_m(point, middle))
+
+
+def set_shade(project_dict: dict, indexes, on: bool) -> int:
+    """Switch the shade of the features at ``indexes`` on or off (V3.37).
+    Returns how many changed. Pure: mutates the project in place; the caller
+    wraps it in one undo step. On is the default, so it is written by
+    removing the key: a design that never switched anything off is the file
+    it always was."""
+    from src.shade import SHADE_OFF
+    feats = (project_dict or {}).get("features") or []
+    changed = 0
+    for i in indexes:
+        if not 0 <= i < len(feats):
+            continue
+        props = feats[i].setdefault("properties", {})
+        if not is_existing_caster(props) or shade_is_off(props) == (not on):
+            continue
+        if on:
+            props.pop(SHADE_OFF, None)
+        else:
+            props[SHADE_OFF] = True
+        changed += 1
+    return changed
 
 
 # ── Where the arc goes when nobody has said ──────────────────────────────────

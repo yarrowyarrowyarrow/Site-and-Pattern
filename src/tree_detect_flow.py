@@ -157,6 +157,7 @@ def detect_trees_for_site(main) -> None:
         if out["added"]:
             main._mark_modified()
             main._map_events._reload_existing_features()
+            main._map_events._refresh_shade_if_active()
         main.site_panel.set_osm_status(out["message"])
 
     def _done():

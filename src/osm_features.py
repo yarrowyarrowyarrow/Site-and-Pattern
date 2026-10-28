@@ -24,28 +24,63 @@ Public API:
   * ``fetch_existing_features(bbox) -> dict`` (both, one Overpass call)
 Each returned item: ``{"kind": "tree"|"building", "lat", "lng", "height_m",
 "radius_m"}`` — ready for ``design_api.add_existing_tree/building``.
+
+**Why a fetch failed is kept (V3.37).** Every failure used to come back as
+``None`` with nothing recorded, so "busy", "offline", "the computer could not
+check the server's certificate" and "blocked" all read "OpenStreetMap didn't
+answer (busy or offline)", in the app and in its log. Each server's answer is
+now an :class:`Unanswered` with its kind, logged, and :func:`failure_words`
+turns the list into the one sentence the status line shows.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import math
+import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Optional
+from typing import NamedTuple, Optional
 
-_TIMEOUT = 25.0
+# The server is told 25 s; the client waits a little longer, because a busy
+# server queues a query before it runs it (V3.37: both were 25 s).
+_TIMEOUT = 30.0
 from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
-# Public Overpass instance; the app degrades gracefully if it's unreachable.
+from src.log import get_logger  # noqa: E402
+
+log = get_logger(__name__)
+
+# Public Overpass instances, asked in this order. The main one rate-limits per
+# address hard (two imports within seconds routinely get a 429), and until
+# V3.37 a failure asked it again after two seconds, which mostly got the same
+# answer, before the one mirror. Now the others are asked first, and the main
+# one again only when it said it was busy, after a longer pause.
 _OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-# Primary + fallback mirror. The public primary rate-limits per-IP hard —
-# two imports within seconds routinely get a 429 — so a failed attempt
-# retries once (after a pause) and then tries the mirror before giving up.
 _OVERPASS_URLS = [
     _OVERPASS_URL,
+    "https://overpass.private.coffee/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
 ]
-_RETRY_PAUSE_S = 2.0
+_BUSY_PAUSE_S = 5.0
+
+# What went wrong with one server (V3.37), worst news for the person first:
+# the order :func:`failure_words` picks the sentence by.
+BUSY = "busy"                 # 429, 502-504, or a query it cut short
+SLOW = "slow"                 # no answer within _TIMEOUT
+REFUSED = "refused"           # any other HTTP error: a 403 would be a block
+CERTIFICATE = "certificate"   # its certificate could not be checked
+GARBLED = "garbled"           # an answer that was not Overpass's JSON
+UNREACHABLE = "unreachable"   # no connection: offline, no DNS, refused
+_KINDS = (BUSY, SLOW, REFUSED, CERTIFICATE, GARBLED, UNREACHABLE)
+
+
+class Unanswered(NamedTuple):
+    """One server that did not answer: its host, the kind (above), and the
+    detail the log keeps (an HTTP status, the exception's words)."""
+    host: str
+    kind: str
+    detail: str
 
 _DEFAULT_TREE_HEIGHT_M = 7.0
 _DEFAULT_TREE_RADIUS_M = 3.0
@@ -66,6 +101,14 @@ ROAD_HIGHWAYS = ("motorway", "trunk", "primary", "secondary", "tertiary",
                  "unclassified", "residential", "living_street", "service")
 
 
+#: A yard's query declares this much memory (V3.37). Overpass admits a query
+#: only while what it declares fits what the server has free, and the default
+#: (512 MiB) is far more than a few hundred metres of buildings needs, so a
+#: busy server turned a yard's query away for asking what a city's would.
+_YARD_MAXSIZE = 64 * 1024 * 1024
+_YARD_SPAN_DEG = 0.01           # a box under ~1 km a side counts as a yard
+
+
 def _query(bbox: dict, include_trees: bool, include_buildings: bool,
            include_roads: bool = False) -> str:
     # Both ways AND relations: large complexes (apartment blocks with
@@ -79,42 +122,206 @@ def _query(bbox: dict, include_trees: bool, include_buildings: bool,
     if include_trees:
         parts.append(f'node["natural"="tree"]({b});')
     if include_roads:
-        # One regex arm rather than nine, so the query stays short enough for
-        # the Overpass GET fallback.
+        # One regex arm rather than nine, to keep the query short.
         parts.append(f'way["highway"~"^({"|".join(ROAD_HIGHWAYS)})$"]({b});')
-    return f"[out:json][timeout:25];({''.join(parts)});out geom;"
+    small = (bbox["north"] - bbox["south"] < _YARD_SPAN_DEG
+             and bbox["east"] - bbox["west"] < _YARD_SPAN_DEG)
+    maxsize = f"[maxsize:{_YARD_MAXSIZE}]" if small else ""
+    return f"[out:json][timeout:25]{maxsize};({''.join(parts)});out geom;"
 
 
-def _post_overpass(query: str, url: str = _OVERPASS_URL) -> Optional[dict]:
-    """POST an Overpass QL query to one endpoint; parsed JSON or None."""
+def _host(url: str) -> str:
+    return urllib.parse.urlsplit(url).hostname or url
+
+
+def _send(url: str, body: bytes, context=None) -> bytes:
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"User-Agent": _USER_AGENT,
+                 "Content-Type": "application/x-www-form-urlencoded"})
+    with urllib.request.urlopen(req, timeout=_TIMEOUT, context=context) as resp:
+        return resp.read()
+
+
+def _certificate_failed(exc: BaseException) -> bool:
+    import ssl
+    reason = getattr(exc, "reason", exc)
+    return isinstance(reason, ssl.SSLCertVerificationError) or isinstance(
+        exc, ssl.SSLCertVerificationError)
+
+
+#: Mozilla's certificates (certifi, shipped with the app), once they have
+#: worked where the computer's own did not; None until then.
+_mozilla: dict = {"context": None}
+
+
+def _mozilla_context():
+    """An SSL context over certifi's list, or None without certifi.
+
+    Windows fills its store of root certificates on demand, as a browser or a
+    Windows program first needs each one, and Python reads only what is in the
+    store already; ``ssl_bootstrap`` steps in only when the store is empty. So
+    a server whose root nothing on the computer has needed yet fails here while
+    the browser opens it. A second opinion from Mozilla's list is still a
+    checked certificate, and it is asked only after the computer's said no, so
+    antivirus or a work network that installs its own root keeps working."""
     try:
-        data = b"data=" + urllib.parse.quote(query).encode("utf-8")
-        req = urllib.request.Request(
-            url, data=data,
-            headers={"User-Agent": _USER_AGENT,
-                     "Content-Type": "application/x-www-form-urlencoded"})
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception:  # noqa: BLE001 — the caller retries / falls back
+        import ssl
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # noqa: BLE001 — no certifi: the first answer stands
         return None
 
 
-def _fetch_overpass(query: str, *, _post=None, _sleep=None) -> Optional[dict]:
-    """Fetch with retry + mirror fallback: primary → (pause) primary again →
-    mirror. Returns parsed JSON, or None only when every attempt failed —
-    which callers must report as *failure*, never as an empty result.
-    ``_post``/``_sleep`` are injectable for tests."""
+def _unanswered(url: str, exc: BaseException) -> Unanswered:
+    """What kind of failure ``exc`` is, for one server."""
+    import socket
+    host = _host(url)
+    if isinstance(exc, urllib.error.HTTPError):
+        kind = BUSY if exc.code in (429, 502, 503, 504) else REFUSED
+        return Unanswered(host, kind, f"HTTP {exc.code}")
+    if _certificate_failed(exc):
+        return Unanswered(host, CERTIFICATE, str(getattr(exc, "reason", exc)))
+    reason = getattr(exc, "reason", exc)
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return Unanswered(host, SLOW, f"no answer in {_TIMEOUT:.0f} s")
+    # An SSLError's reason is a word ("UNEXPECTED_EOF_WHILE_READING"): name
+    # the exception, not the str.
+    named = exc if isinstance(reason, str) else reason
+    return Unanswered(host, UNREACHABLE, f"{type(named).__name__}: {reason}")
+
+
+def _read_answer(url: str, raw: bytes):
+    """The parsed answer, or an :class:`Unanswered` for one that is not one."""
+    host = _host(url)
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return Unanswered(host, GARBLED, raw[:120].decode("utf-8", "replace"))
+    if not isinstance(data, dict) or "elements" not in data:
+        return Unanswered(host, GARBLED, "no elements in the answer")
+    remark = str(data.get("remark") or "")
+    if "runtime error" in remark.lower():
+        # Out of time or memory: what came back is part of the answer, and a
+        # part read as the whole is the "Found 0 buildings" lie again (V2.13).
+        return Unanswered(host, BUSY, remark[:200])
+    return data
+
+
+def _post_overpass(query: str, url: str = _OVERPASS_URL):
+    """POST an Overpass QL query to one server: the parsed answer, or an
+    :class:`Unanswered` saying what went wrong (V3.37; it was ``None`` for
+    every failure, recorded nowhere)."""
+    body = b"data=" + urllib.parse.quote(query).encode("utf-8")
+    context = _mozilla["context"]
+    try:
+        raw = _send(url, body, context)
+    except Exception as exc:  # noqa: BLE001 — classified, the caller moves on
+        second = _mozilla_context() if (
+            context is None and _certificate_failed(exc)) else None
+        if second is None:
+            return _unanswered(url, exc)
+        try:
+            raw = _send(url, body, second)
+        except Exception as exc2:  # noqa: BLE001
+            return _unanswered(url, exc2)
+        _mozilla["context"] = second
+        log.warning("Overpass: %s's certificate checked against certifi's "
+                    "list; the computer's own store could not (%s)",
+                    _host(url), getattr(exc, "reason", exc))
+    return _read_answer(url, raw)
+
+
+def _fetch_overpass(query: str, *, _post=None, _sleep=None,
+                    why: Optional[list] = None,
+                    on_miss=None) -> Optional[dict]:
+    """Ask each server in turn until one answers: the main one, the others,
+    then the main one again after a pause when it was only busy. Returns the
+    parsed answer, or None when none did, which callers must report as a
+    *failure*, never as an empty result (V2.13). ``why``, when given, collects
+    an :class:`Unanswered` per failed attempt, and ``on_miss`` is told each
+    one as it happens (the status line's "still asking"). ``_post``/``_sleep``
+    are injectable for tests; a ``_post`` may return None for a failure."""
     import time
     post = _post or _post_overpass
     sleep = _sleep or time.sleep
-    attempts = [_OVERPASS_URLS[0], _OVERPASS_URLS[0]] + _OVERPASS_URLS[1:]
-    for i, url in enumerate(attempts):
-        if i > 0:
-            sleep(_RETRY_PAUSE_S)   # etiquette: back off before hammering again
-        data = post(query, url)
+    misses = why if why is not None else []
+
+    def ask(url):
+        got = post(query, url)
+        if isinstance(got, dict):
+            return got
+        miss = (got if isinstance(got, Unanswered)
+                else Unanswered(_host(url), UNREACHABLE, "no answer"))
+        misses.append(miss)
+        # Busy, slow and offline are routine; the rest is news (src/log.py).
+        routine = miss.kind in (BUSY, SLOW, UNREACHABLE)
+        log.log(logging.INFO if routine else logging.WARNING,
+                "Overpass %s: %s (%s)", miss.host, miss.kind, miss.detail)
+        if on_miss is not None:
+            on_miss(miss)
+        return None
+
+    start = len(misses)
+    for url in _OVERPASS_URLS:
+        data = ask(url)
         if data is not None:
             return data
+    if misses[start].kind == BUSY:
+        sleep(_BUSY_PAUSE_S)    # etiquette: a pause before asking it again
+        data = ask(_OVERPASS_URLS[0])
+        if data is not None:
+            return data
+    log.warning("Overpass: no server answered (%s)", "; ".join(
+        f"{m.host} {m.kind}" for m in misses[start:]))
     return None
+
+
+#: The sentence for each kind: (what happened, what to do).
+_SAID = {
+    BUSY: ("its servers are busy", "Try again in a minute."),
+    SLOW: ("it took too long", "Try again in a minute."),
+    REFUSED: ("it refused the request ({detail})", ""),
+    CERTIFICATE: ("its secure connection could not be checked (a wrong "
+                  "clock, antivirus or a network that inspects connections "
+                  "can do this)", ""),
+    GARBLED: ("its answer could not be read", "Try again in a minute."),
+    UNREACHABLE: ("it could not be reached", "Is the computer online?"),
+}
+
+
+#: One server's miss, said while the others are asked.
+_SHORT = {BUSY: "is busy", SLOW: "is slow to answer",
+          REFUSED: "refused the request",
+          CERTIFICATE: "has a certificate that could not be checked",
+          GARBLED: "sent an answer that could not be read",
+          UNREACHABLE: "could not be reached"}
+
+
+def trying_words(miss: Unanswered) -> str:
+    """The status line while a fetch moves on: a slow server costs 30 s, and
+    four of them two minutes, which reads as hung unless something says so."""
+    return (f"Still asking OpenStreetMap: {miss.host} "
+            f"{_SHORT.get(miss.kind, 'did not answer')}, so another server "
+            "is being tried…")
+
+
+def failure_words(why, lost: str = "nothing was imported") -> str:
+    """One sentence for a fetch that failed: the worst news among ``why``
+    (the :class:`Unanswered` a fetch collected) in plain words, what was lost,
+    and what to do. "didn't answer" stays its first words, whatever the kind:
+    it is how a person tells a failure from an empty answer."""
+    misses = list(why or [])
+    kind = next((k for k in _KINDS if any(m.kind == k for m in misses)),
+                UNREACHABLE if misses else None)
+    if kind is None:
+        return (f"OpenStreetMap didn't answer, so {lost}. "
+                "Try again in a minute.")
+    said, todo = _SAID[kind]
+    detail = next((m.detail for m in misses if m.kind == kind), "")
+    return " ".join(filter(None, (
+        f"OpenStreetMap didn't answer: {said.format(detail=detail)}, "
+        f"so {lost}.", todo)))
 
 
 def _parse_height(tags: dict, default: float) -> float:
@@ -291,15 +498,20 @@ def fetch_roads(bbox: dict) -> Optional[list]:
 
 def fetch_existing_features(bbox: dict, *, trees: bool = True,
                             buildings: bool = True,
-                            roads: bool = True) -> Optional[dict]:
+                            roads: bool = True,
+                            why: Optional[list] = None,
+                            on_miss=None) -> Optional[dict]:
     """Fetch existing trees and/or buildings in ``bbox`` from OSM. Returns
     ``{"trees": [...], "buildings": [...]}``, or **None when the network
-    fetch failed** (timeout / rate-limit / server busy, after retry + mirror).
+    fetch failed** (timeout / rate-limit / server busy, on every server).
     A None must be reported as a failure — for years a failed request was
-    silently rendered as "Found 0 buildings", which is a lie (V2.13)."""
+    silently rendered as "Found 0 buildings", which is a lie (V2.13).
+    ``why`` collects what each server said (:func:`failure_words`) and
+    ``on_miss`` hears each as it happens."""
     if not (trees or buildings or roads):
         return {"trees": [], "buildings": [], "roads": []}
-    data = _fetch_overpass(_query(bbox, trees, buildings, roads))
+    data = _fetch_overpass(_query(bbox, trees, buildings, roads), why=why,
+                           on_miss=on_miss)
     if data is None:
         return None
     feats = parse_elements(data)
@@ -310,15 +522,25 @@ def fetch_existing_features(bbox: dict, *, trees: bool = True,
     }
 
 
+def fetch_buildings_or_none(bbox: dict,
+                            why: Optional[list] = None) -> Optional[list]:
+    """Buildings only, or None when no server answered: for the bulk
+    downloader, which must not store a part that failed as an empty one
+    (V3.37). No roads: until V3.37 every part of a bulk download also fetched
+    every street in it, a heavier query for a busy server to turn away."""
+    res = fetch_existing_features(bbox, trees=False, buildings=True,
+                                  roads=False, why=why)
+    return None if res is None else res["buildings"]
+
+
 def fetch_buildings(bbox: dict) -> list[dict]:
-    """Buildings only; keeps the legacy []-on-failure contract for the bulk
-    downloader (which has its own retry/progress handling)."""
-    res = fetch_existing_features(bbox, trees=False, buildings=True)
-    return res["buildings"] if res else []
+    """Buildings only, with the legacy []-on-failure contract."""
+    return fetch_buildings_or_none(bbox) or []
 
 
 def fetch_trees(bbox: dict) -> list[dict]:
-    res = fetch_existing_features(bbox, trees=True, buildings=False)
+    res = fetch_existing_features(bbox, trees=True, buildings=False,
+                                  roads=False)
     return res["trees"] if res else []
 
 
@@ -467,22 +689,30 @@ if _HAVE_QT:
         """Fetch existing OSM features for a bbox off the UI thread.
 
             worker = OSMWorker(bbox)
-            worker.ready.connect(on_ready)   # emits the fetch result, or None
+            worker.ready.connect(on_ready)   # the fetch result, or a failure
         """
 
         ready = pyqtSignal(object)
         finished = pyqtSignal()
+        #: "Still asking…" while it moves between servers (V3.37).
+        progress = pyqtSignal(str)
 
         def __init__(self, bbox, parent=None):
             super().__init__(parent)
             self._bbox = bbox
 
         def run(self):
+            why: list = []
             try:
-                res = fetch_existing_features(self._bbox)
+                res = fetch_existing_features(
+                    self._bbox, why=why,
+                    on_miss=lambda m: self.progress.emit(trying_words(m)))
             except Exception:  # noqa: BLE001 — never crash the worker thread
+                log.exception("Overpass fetch raised")
                 res = None
-            self.ready.emit(res)
+            # A failure carries what each server said (V3.37), for
+            # import_osm_result to put into words.
+            self.ready.emit(res if res is not None else {"failed": why})
             self.finished.emit()
 
 
@@ -625,11 +855,13 @@ def import_osm_result(res: Optional[dict], project_dict: dict, *,
     the status message — the whole import tail in one pure, testable call
     (the map controller sits at its line ceiling). Returns
     ``{"added": int, "kept": int, "found": int, "message": str}``;
-    ``res=None`` (network failure) produces added=0 and the honest message."""
-    if res is None:
-        return {"added": 0, "kept": 0, "found": 0,
-                "message": ("OpenStreetMap didn't answer (busy or offline) — "
-                            "nothing was imported. Wait ~30 s and try again.")}
+    a failed fetch (``None``, or the worker's ``{"failed": [Unanswered]}``)
+    produces added=0, ``"failed"`` (what each server said) and the honest
+    message, which says why since V3.37."""
+    if res is None or "failed" in res:
+        why = list((res or {}).get("failed") or [])
+        return {"added": 0, "kept": 0, "found": 0, "failed": why,
+                "message": failure_words(why)}
     feats = list(res.get("buildings", [])) + list(res.get("trees", []))
     kept, n_inside, n_neigh = filter_to_boundary(feats, boundary, margin_m)
     added = add_features_to_project(kept, project_dict)

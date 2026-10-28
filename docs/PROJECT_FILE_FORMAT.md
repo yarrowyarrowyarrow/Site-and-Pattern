@@ -191,6 +191,16 @@ ring and re-derives `canopy_radius_m`.
 }
 ```
 
+### `shade_off` — on any existing feature (V3.37)
+`existing_tree`, `existing_building`, `canopy_footprint` and a `custom_shape`
+with `cast_shade` are what is already on the site, and each casts shade unless
+it carries `"shade_off": true`: unticked in Site › Sun & Shade › Existing
+features. It stays in the design (drawn, kept out of by the planner, in the 3D
+preview); `shade.casters_from_project` leaves it out, so the shade map, the
+planting zones, Plan My Yard and the over-time model all do. Ticking it again
+removes the key, so a file that never switched anything off is unchanged.
+Optional, so the format's version does not change.
+
 ### `contour_line` — LineString
 ```jsonc
 {

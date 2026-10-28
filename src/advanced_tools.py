@@ -71,6 +71,7 @@ ADVANCED_TOOLBAR_ITEMS: tuple = (
 #: so nothing else that shows or hides the controls inside it is overruled.
 ADVANCED_CONTROLS: tuple = (
     "analysis_panel._sun_arc_box",    # Sun & Shade's arc and shadow arrows
+    "analysis_panel.shade_features.by_hand_box",  # its features' hand tools
     "site_panel._features_more",      # Features beyond Scan this area (rank 4)
     "site_panel._existing_box",
     "site_panel._sat_align_box",

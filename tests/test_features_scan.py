@@ -46,7 +46,7 @@ class _Main:
         self._project = {"type": "FeatureCollection", "features": [],
                          "properties": {}}
         self.status, self.checkpoints, self.framed = [], [], []
-        self.modified = 0
+        self.modified = self.shade_refreshed = 0
         main = self
 
         class _Persistence:
@@ -61,6 +61,9 @@ class _Main:
         class _Events:
             def _reload_existing_features(self):
                 pass
+
+            def _refresh_shade_if_active(self):
+                main.shade_refreshed += 1
 
         class _Site:
             def set_osm_status(self, text):
@@ -113,6 +116,19 @@ class TestTheWords(unittest.TestCase):
             scan.summary([], {"message": "OSM was offline."},
                          {"message": "No trees."}),
             "The scan added nothing new. OSM was offline. No trees.")
+
+    def test_buildings_that_did_not_come_are_not_called_none(self):
+        # V3.37: trees came, the buildings' fetch failed, and the line read
+        # "found 0 buildings and 4 trees", which is a yard with no buildings.
+        from src import features_scan_flow as scan
+        from src.osm_features import BUSY, Unanswered
+        osm = {"failed": [Unanswered("overpass-api.de", BUSY, "HTTP 429")],
+               "message": "OpenStreetMap didn't answer"}
+        line = scan.summary([_tree(0, 0), _tree(1, 1)], osm, {})
+        self.assertNotIn("0 buildings", line)
+        self.assertIn("2 trees", line)
+        self.assertIn("busy", line)
+        self.assertIn("no buildings came", line)
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")

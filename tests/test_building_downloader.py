@@ -27,6 +27,9 @@ _BUILDING_WAY = {
                  {"lat": 53.5004, "lon": -113.5000},
                  {"lat": 53.5000, "lon": -113.5000}]}
 _REGION = {"south": 53.49, "north": 53.51, "west": -113.51, "east": -113.49}
+# Two by two parts at the downloader's own 0.03° step.
+_FOUR_PARTS = {"south": 53.49, "north": 53.55, "west": -113.55,
+               "east": -113.49}
 
 
 def _building_items():
@@ -85,11 +88,41 @@ class TestDownloadRegion(unittest.TestCase):
         self.assertFalse(self.store.has_data())   # not marked complete
 
     def test_flaky_tile_does_not_abort_run(self):
-        def fetch(_b):
-            raise RuntimeError("overpass hiccup")
-        # Should swallow the error per-tile and still complete the region.
-        download_region(_REGION, self.store, fetch_fn=fetch, pace_s=0)
+        # One part raises the first time it is asked: the run goes on to the
+        # others, asks that part again at the end, and completes.
+        asked = []
+
+        def fetch(sub):
+            asked.append(sub)
+            if len(asked) == 1:
+                raise RuntimeError("overpass hiccup")
+            return _building_items() if len(asked) == 2 else []
+
+        tiles = tile_region(_FOUR_PARTS)
+        self.assertEqual(len(tiles), 4)
+        download_region(_FOUR_PARTS, self.store, fetch_fn=fetch, pace_s=0)
+        self.assertEqual(len(asked), len(tiles) + 1)
+        self.assertEqual(asked[-1], asked[0])        # the failed part, again
         self.assertTrue(self.store.has_data())
+
+    def test_a_run_nobody_answered_is_not_a_pack(self):
+        # V3.37: a failure read as an empty part, so a run on which the
+        # server never answered was "ready" with 0 footprints.
+        from src.building_downloader import DownloadFailed
+        with self.assertRaises(DownloadFailed) as caught:
+            download_region(_REGION, self.store, fetch_fn=lambda b: None,
+                            pace_s=0)
+        self.assertIn("didn't answer", str(caught.exception))
+        self.assertFalse(self.store.has_data())
+
+    def test_a_part_that_never_came_says_how_many(self):
+        from src.building_downloader import DownloadFailed
+        first = tile_region(_FOUR_PARTS)[0]
+        with self.assertRaises(DownloadFailed) as caught:
+            download_region(_FOUR_PARTS, self.store, pace_s=0,
+                            fetch_fn=lambda b: None if b == first else [])
+        self.assertIn("1 of 4 parts", str(caught.exception))
+        self.assertFalse(self.store.has_data())
 
 
 class TestPipelineCompatibility(unittest.TestCase):

@@ -81,7 +81,7 @@ def start_building_download(main) -> None:
         main.site_panel.reset_buildings_download()
         main.site_panel.set_osm_status(
             f"Building pack ready — {total:,} footprint(s) cached offline. "
-            "Use 'Import from OpenStreetMap' to place them.")
+            "Scan this area places them from it.")
         main.statusBar().showMessage(
             f"Building download complete — {total:,} footprints cached offline.",
             8000)

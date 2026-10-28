@@ -388,6 +388,9 @@ class SitePanel(QWidget):
     # F207 (V3.10): buildings and trees in one scan, then a review
     # (src/features_scan_flow.py).
     features_scan_requested = pyqtSignal()
+    # The import's status line changed: Sun & Shade › Existing features
+    # repeats it (V3.37, src/shade_features_flow.py).
+    osm_status_changed = pyqtSignal(str)
     # Bulk-download a region's building footprints for offline reuse (V1.66).
     download_buildings_requested = pyqtSignal()
 
@@ -494,6 +497,7 @@ class SitePanel(QWidget):
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
         self.slope_page = tabs.widget(tabs.count() - 1)
         self._build_features_page(self._add_scroll_page(tabs, "Features"))
+        self.features_page = tabs.widget(tabs.count() - 1)
         # "Notes" since V3.08: the site walk's questions, and below them the
         # design journal and the notes pinned on the map, which the Planning
         # tab built (src/side_panel_layout.py puts them in _journal_slot).
@@ -2030,7 +2034,8 @@ class SitePanel(QWidget):
         from src import sun_shade
         buildings, trees = sun_shade.caster_counts(project_dict)
         text, have = sun_shade.caster_summary(
-            buildings, trees, where="this tab")
+            buildings, trees, where="this tab",
+            off=sun_shade.switched_off(project_dict))
         lbl.setText(text)
         lbl.setStyleSheet(
             f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
@@ -2331,7 +2336,7 @@ class SitePanel(QWidget):
         self._bldg_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._bldg_dl_btn.setToolTip(
             "Bulk-download OpenStreetMap building footprints around this "
-            "property into a local cache so 'Import from OpenStreetMap' works "
+            "property into a local cache so 'Scan this area' works "
             "instantly and offline here afterwards.")
         self._bldg_dl_btn.clicked.connect(self._on_download_buildings_clicked)
         bld_row.addWidget(self._bldg_dl_btn)
@@ -2378,6 +2383,7 @@ class SitePanel(QWidget):
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)
+        self.osm_status_changed.emit(text)      # Sun & Shade says it too
 
     def osm_neighbour_margin(self) -> float:
         """How far past the boundary the OSM import keeps neighbours (m)."""

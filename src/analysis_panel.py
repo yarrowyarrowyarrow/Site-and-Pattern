@@ -153,7 +153,10 @@ class AnalysisPanel(QWidget):
         The existing-features *import* stayed on the Site tab: entering what is
         already on the ground is data capture, not analysis, and folding the
         two together is what made "Features & Shade" two things under one
-        label.
+        label. V3.37 brought the features back as a list, at the owner's ask,
+        closed until opened: which of them cast the shade, a tick each, and
+        Scan this area to bring them in (src/shade_features.py). The tools
+        for drawing them stay on Site › Features.
         """
         page = QScrollArea()
         page.setWidgetResizable(True)
@@ -355,8 +358,13 @@ class AnalysisPanel(QWidget):
         self._caster_summary = QLabel("")
         self._caster_summary.setWordWrap(True)
         self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 12px;")
+        # V3.37, the owner's ask: the trees and buildings themselves, closed
+        # until opened, each ticked while it casts (src/shade_features.py).
+        from src.shade_features import ShadeFeatures
+        self.shade_features = ShadeFeatures()
         self.update_caster_summary(None)
         v.addWidget(self._caster_summary)
+        v.addWidget(self.shade_features)
 
         opa_row = QHBoxLayout()
         opa_row.addWidget(QLabel("Opacity:"))
@@ -591,10 +599,13 @@ class AnalysisPanel(QWidget):
         from src import sun_shade
         buildings, trees = sun_shade.caster_counts(project_dict)
         text, have = sun_shade.caster_summary(
-            buildings, trees, where="Site → Features")
+            buildings, trees, where="Site → Features",
+            off=sun_shade.switched_off(project_dict), off_where="below")
         lbl.setText(text)
         lbl.setStyleSheet(
             f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
+        sc = ((project_dict or {}).get("properties") or {}).get("site_config")
+        self.shade_features.refresh(project_dict, sc)
 
     def mark_zones_shown(self):
         """Re-check the 'Show on map' box (without re-emitting) after a classify

@@ -194,7 +194,7 @@ Every test in this repo runs offline. Patterns:
 | `src/climate.py` | Hardiness bbox lookup + GDD/frost (DB-cached in `climate_cache`). |
 | `src/wind.py` | Wind rose fetch + pure aggregation + `wind_cache` DB cache. |
 | `src/wind_flow.py` | Off-thread wind fetch worker + regional fallback (`wind_fallback_prairie.json`). |
-| `src/osm_features.py` | Overpass buildings/trees import (retry + mirror; graceful `[]`). |
+| `src/osm_features.py` | Overpass buildings/trees import: three servers in turn, a certifi second opinion on a certificate, and each failure kept as an `Unanswered` kind, logged and said by `failure_words` (V3.37) — the pattern for a fetch the person asked for. |
 | `src/hrdem.py` | NRCan HRDEM elevation (STAC + COG windowed reads; injectable seams). |
 | `src/image_cache.py` | Open-licensed photo cache + attribution sidecar. |
 | `data/rainfall_fallback_prairie.json` / `soil_fallback_prairie.json` / `wind_fallback_prairie.json` / `hardiness_zones.json` | Bundled regional fallbacks / lookups. |

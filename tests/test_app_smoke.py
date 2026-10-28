@@ -996,6 +996,48 @@ class TestMainWindowSmoke(unittest.TestCase):
     def _labels(self, tabs):
         return [tabs.tabText(i).replace("&&", "&") for i in range(tabs.count())]
 
+    def test_sun_and_shade_picks_what_casts_the_shade(self):
+        """V3.37, the owner's ask: Sun & Shade lists the existing features,
+        closed when the app opens, and a tick taken off is one undo step the
+        shade model honours."""
+        from PyQt6.QtCore import Qt
+        from src import shade
+        win = self._win
+        section = win.analysis_panel.shade_features
+        self.assertTrue(win.analysis_panel._sun_page.isAncestorOf(section))
+        self.assertFalse(section.toggle.isChecked())
+        self.assertTrue(section.body.isHidden())
+        d = 0.00005
+        ring = [[-113.5 - d, 53.5 - d], [-113.5 + d, 53.5 - d],
+                [-113.5 + d, 53.5 + d], [-113.5 - d, 53.5 - d]]
+        win._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"element_type": "canopy_footprint",
+                           "height_m": 6.0, "cast_shade": True,
+                           "label": "Building (OSM)", "source": "osm"}})
+        self.addCleanup(win._clear_undo)
+        self.addCleanup(setattr, win, "_modified", False)
+        self.addCleanup(lambda: (win._project["features"].clear(),
+                                 win._sync_planning_panel()))
+        win._sync_planning_panel()
+        self.assertEqual(section.toggle.text(), "Existing features (1) ▸")
+        section.toggle.setChecked(True)
+        self.addCleanup(section.toggle.setChecked, False)
+        section.list.item(0).setCheckState(Qt.CheckState.Unchecked)
+        self.assertTrue(win._project["features"][0]["properties"].get(
+            shade.SHADE_OFF))
+        self.assertEqual(win._undo_stack[-1]["label"], "stop casting shade")
+        self.assertEqual(shade.casters_from_project(win._project), [])
+        self.assertIn("switched off", win.analysis_panel._caster_summary.text())
+        win._do_undo()
+        self.assertNotIn(shade.SHADE_OFF,
+                         win._project["features"][0]["properties"])
+        self.assertEqual(section.list.item(0).checkState(),
+                         Qt.CheckState.Checked)
+        # Drawing by hand stays an advanced tool, here as on Site › Features.
+        self.assertEqual(section.by_hand_box.isHidden(), not self.advanced)
+
     def test_the_side_panel_follows_the_owners_answers(self):
         from src import side_panel_layout
         win = self._win

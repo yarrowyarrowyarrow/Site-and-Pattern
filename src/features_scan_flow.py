@@ -32,50 +32,39 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from src import sun_shade
+
 #: What a scan adds, and so what the review lists.
 FOUND_TYPES = ("existing_tree", "existing_building", "canopy_footprint")
 
 
-def describe(feature: dict) -> str:
-    """A review row: "Tree (canopy height) · crown 6 m · 11 m tall"."""
-    props = feature.get("properties") or {}
-    kind = props.get("element_type")
-    label = props.get("label") or ("Tree" if kind == "existing_tree"
-                                   else "Building")
-    height = float(props.get("height_m") or 0)
-    bits = [label]
-    if kind == "existing_tree":
-        bits.append(f"crown {2 * float(props.get('canopy_radius_m') or 0):.0f} m")
-    if height:
-        bits.append(f"{height:.0f} m tall")
-    return " · ".join(bits)
-
-
-def centre(feature: dict):
-    """``(lat, lng)`` of a find, or ``None``."""
-    geom = feature.get("geometry") or {}
-    coords = geom.get("coordinates") or []
-    if geom.get("type") == "Point" and len(coords) >= 2:
-        return float(coords[1]), float(coords[0])
-    if geom.get("type") == "Polygon" and coords and coords[0]:
-        from src.osm_features import ring_centroid
-        c = ring_centroid(coords[0])
-        if c is not None:
-            return c
-    return None
+# A review row's words and where it is on the map: the same as a row of Sun &
+# Shade › Existing features (V3.37), so they live with that list, Qt-free.
+describe = sun_shade.describe_feature
+centre = sun_shade.feature_centre
 
 
 def summary(found: list, osm: dict, trees: dict) -> str:
     """The status line: what the scan found, or, when it added nothing, what
-    each source said (offline, nothing nearby, all already marked)."""
+    each source said (offline, nothing nearby, all already marked).
+
+    A building fetch that failed is said even when trees came (V3.37): until
+    then the line read "found 0 buildings and 4 trees", which is a yard with
+    no buildings, the "Found 0" lie V2.13 took out of the import."""
+    osm = osm or {}
     if not found:
-        said = [m for m in ((osm or {}).get("message"),
+        said = [m for m in (osm.get("message"),
                             (trees or {}).get("message")) if m]
         return "The scan added nothing new. " + " ".join(said)
     n_trees = sum(1 for f in found
                   if (f.get("properties") or {}).get("element_type")
                   == "existing_tree")
     n_bldg = len(found) - n_trees
+    if "failed" in osm:
+        from src.osm_features import failure_words
+        return (f"The scan found {n_trees} tree{'s' if n_trees != 1 else ''}. "
+                + failure_words(osm["failed"], lost="no buildings came")
+                + " Untick in the list any tree that is not there.")
     return (f"The scan found {n_bldg} building{'s' if n_bldg != 1 else ''} "
             f"and {n_trees} tree{'s' if n_trees != 1 else ''}: untick in the "
             f"list any that are not there.")
@@ -96,6 +85,12 @@ def scan_area(main) -> None:
     from src.osm_features import OSMWorker, bbox_with_area_note
     from src import tree_detect_flow
 
+    # One scan at a time (V3.37): a second press used to start a second scan,
+    # two more queries at a server that limits each address.
+    if getattr(main, "_scan_jobs", None):
+        main.site_panel.set_osm_status(
+            "Still scanning: what it finds will show here.")
+        return
     sc = dict(main._project.get("properties", {}).get("site_config", {}) or {})
     boundary = main._map_events._project_boundary_latlng()
     margin = main.site_panel.osm_neighbour_margin()
@@ -116,6 +111,8 @@ def scan_area(main) -> None:
         "trees": tree_detect_flow._TreeDetectWorker(
             bbox, tree_detect_flow._building_anchors(main._project), min_h),
     }
+    # "Still asking…" while the building fetch moves between servers (V3.37).
+    jobs["buildings"].progress.connect(main.site_panel.set_osm_status)
     threads = []
     main._scan_jobs = (jobs, threads)            # kept alive while they run
 
@@ -163,6 +160,8 @@ def _apply(main, results: dict, *, boundary, margin, area_note, bbox) -> None:
     if found:
         main._mark_modified()
         main._map_events._reload_existing_features()
+        # A shade map on screen takes in what was found (V3.37).
+        main._map_events._refresh_shade_if_active()
     main.site_panel.set_osm_status(summary(found, osm, trees))
     if found:
         from PyQt6.QtWidgets import QWidget
@@ -191,6 +190,7 @@ def remove(main, features: list) -> int:
     if persistence is not None:
         persistence.render_project_to_map()
     main._sync_planning_panel()
+    main._map_events._refresh_shade_if_active()
     main.site_panel.set_osm_status(
         f"Took out the {len(drop)} you unticked.")
     return len(drop)

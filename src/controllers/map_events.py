@@ -1376,10 +1376,13 @@ class MapEventRouter:
         if building_flow.import_buildings_offline(self._main, bbox,
                                                   boundary=boundary,
                                                   margin_m=margin):
+            self._refresh_shade_if_active()      # the shade takes them in
             return
 
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
-        self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
+        worker = OSMWorker(bbox)
+        worker.progress.connect(self._main.site_panel.set_osm_status)
+        self._run_worker(worker, self._on_osm_ready, "osm")
 
     def _on_footprint_import_requested(self, tiff_path: str):
         """Vectorize shade-casting footprints from an nDSM GeoTIFF off-thread."""
@@ -1422,6 +1425,7 @@ class MapEventRouter:
             self._main._mark_modified()
             # Re-render the newly imported features through the structure path.
             self._reload_existing_features()
+            self._refresh_shade_if_active()      # the shade takes them in
         self._main.site_panel.set_osm_status(out["message"])
 
     def _reload_existing_features(self):
