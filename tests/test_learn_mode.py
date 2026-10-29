@@ -441,17 +441,41 @@ class TestTheLearnScreens(_TempDataDir):
 
     def test_the_last_lesson_can_be_left(self):
         """Its button read Finish and was disabled, so it could never be
-        pressed. It starts the lessons again now."""
+        pressed (V3.38). Since V3.41 the end of a lesson leads to the next,
+        and the end of the last starts them again."""
         from src.lesson_track_widget import LessonTrackWidget
         w = LessonTrackWidget(plants_provider=lambda: [])
-        for _ in range(len(w._steps) - 1):
+        lessons = w._lesson_box.count()
+        self.assertEqual(lessons, 3)
+        for n in range(lessons):
+            self.assertEqual(w._lesson_box.currentIndex(), n)
+            for _ in range(len(w._steps) - 1):
+                w._next.click()
+            self.assertEqual(w._i, len(w._steps) - 1)
+            self.assertTrue(w._next.isEnabled())
+            self.assertEqual(w._next.text(), "Next lesson →"
+                             if n + 1 < lessons else "Start again")
             w._next.click()
-        self.assertEqual(w._i, len(w._steps) - 1)
-        self.assertTrue(w._next.isEnabled())
-        self.assertEqual(w._next.text(), "Start again")
-        w._next.click()
-        self.assertEqual(w._i, 0)
+            self.assertEqual(w._i, 0)
+        self.assertEqual(w._lesson_box.currentIndex(), 0)
         w.deleteLater()
+
+    def test_a_lesson_talks_about_a_landscape_you_choose(self):
+        """V3.41: "taught against your design" meant the walk's sandbox, and
+        read as unclear. The first landscape is named for what it is, and a
+        walk can be chosen instead."""
+        from src.learn_menu import LearnStudioWindow
+        win = LearnStudioWindow([], title="Aspen Parkland grove")
+        w = win.panel._lesson_track
+        self.assertEqual(w._about.itemText(0),
+                         "The walk you planted in: Aspen Parkland grove")
+        walk = next(i for i in range(w._about.count())
+                    if w._about.itemData(i) == ("walk", "boreal_mixedwood"))
+        w._about.setCurrentIndex(walk)
+        self.assertTrue(w._readout.isVisibleTo(w))
+        self.assertIn("Boreal Mixedwood", w._readout.text())
+        self.assertIn("caterpillar", w._readout.text())
+        win.close()
 
     def test_the_lessons_door_opens_its_window(self):
         """V3.17 shipped this door dead: a NameError (``_sandbox_plants``)

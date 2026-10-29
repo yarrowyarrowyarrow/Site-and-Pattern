@@ -132,6 +132,11 @@ class LearnStudioWindow(QWidget):
         from src.learn_panel import LearnPanel
         self.panel = LearnPanel(self, present=False)
         lay.addWidget(self.panel)
+        # The lessons' first landscape is the walk planted in, not "your
+        # design" (V3.41).
+        self.panel._lesson_track.set_here_label(
+            f"The walk you planted in: {title}" if title
+            else "The walk you planted in")
         self.set_plants(plants or [])
 
     def set_plants(self, plants: list) -> None:
