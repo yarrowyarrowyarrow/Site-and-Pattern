@@ -159,8 +159,9 @@ class TestTheEditAnimations(unittest.TestCase):
         return _read("html", "scene3d", "17-anim.js")
 
     def test_the_chunk_is_loaded_and_stepped(self):
-        html = _read("html", "scene3d.html")
-        self.assertIn("'scene3d/17-anim.js',", html)
+        # The chunk list left the page in V3.39 (html/scene3d/chunks.js).
+        chunks = _read("html", "scene3d", "chunks.js")
+        self.assertIn("'scene3d/17-anim.js',", chunks)
         modes = _read("html", "scene3d", "08-modes.js")
         self.assertIn("stepTweens(t)", modes)
         # Same forward-reference guard stepThreads uses: this chunk loads after

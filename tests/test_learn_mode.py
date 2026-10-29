@@ -492,18 +492,18 @@ class TestTheEditingBridge(unittest.TestCase):
 
     def test_the_chunk_is_loaded_by_the_viewer(self):
         import pathlib
-        html = (pathlib.Path(__file__).resolve().parent.parent
-                / "html" / "scene3d.html").read_text(encoding="utf-8")
-        self.assertIn("scene3d/16-editing.js", html)
+        html_dir = pathlib.Path(__file__).resolve().parent.parent / "html"
+        html = (html_dir / "scene3d.html").read_text(encoding="utf-8")
         self.assertIn("qwebchannel.js", html)
-        # Last in the FILES array: its pointer handlers must register after
-        # 10-inspect.js's so both see the same click. Matched against the
-        # array entry, not the first mention — the comment above the
-        # qwebchannel tag names the file too.
+        # The chunk list left the page in V3.39 (html/scene3d/chunks.js).
+        chunks = (html_dir / "scene3d" / "chunks.js").read_text(
+            encoding="utf-8")
+        # After 15-florets.js in the list: its pointer handlers must register
+        # after 10-inspect.js's so both see the same click.
         entry = "'scene3d/16-editing.js',"
-        self.assertIn(entry, html)
-        self.assertGreater(html.index(entry),
-                           html.index("'scene3d/15-florets.js',"))
+        self.assertIn(entry, chunks)
+        self.assertGreater(chunks.index(entry),
+                           chunks.index("'scene3d/15-florets.js',"))
 
     def test_the_viewer_reports_coordinates_and_decides_nothing(self):
         """Geometry in, coordinates out. Placement logic here would be a

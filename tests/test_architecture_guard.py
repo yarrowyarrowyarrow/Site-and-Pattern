@@ -445,9 +445,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        # 400 now (V2.94, 01c-leaves.js), NONE LEFT: the next chunk needs the
-        # bootstrap's FILES list moved out of the page, not a bigger number.
+        # 400 at V2.94 (01c-leaves.js), none left; V3.39 moved the bootstrap's
+        # FILES list out to html/scene3d/chunks.js, as this note asked: 357 now.
         (_HTML / "scene3d.html", 400),
+        (_HTML / "scene3d" / "chunks.js", 120),        # ~60 now (V3.39)
         (_HTML / "scene3d" / "01-core.js", 700),       # 606 now (V3.04)
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both

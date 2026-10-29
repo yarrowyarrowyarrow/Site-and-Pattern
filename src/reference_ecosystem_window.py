@@ -261,8 +261,9 @@ class ReferenceEcosystemWindow(QWidget):
             self._palette = []
         self._species.clear()
         for item in self._palette:
-            self._species.addItem(
-                f"{item['common_name']}  ·  {item['layer']}", item)
+            # The glossary's words, not the layer keys (WD-1, V3.39).
+            kind = _KIND_WORDS.get(item["layer"], item["layer"])
+            self._species.addItem(f"{item['common_name']}  ·  {kind}", item)
 
         try:
             from src.db import progress
@@ -275,8 +276,9 @@ class ReferenceEcosystemWindow(QWidget):
     def _render(self):
         """Rebuild the Scene JSON from the current project and push it.
 
-        A full rebuild per edit. At ~35 plants that is a brief hitch and it is
-        bought deliberately: the alternative is an incremental scene patch,
+        A full rebuild per edit. At 60 to 130 plants (V3.39) that is a brief
+        hitch, under a tenth of a second in Python, and it is bought
+        deliberately: the alternative is an incremental scene patch,
         which would be a second definition of how a project becomes geometry
         and would drift from ``scene_contract.build_scene`` within a release.
         """
@@ -366,6 +368,11 @@ class ReferenceEcosystemWindow(QWidget):
         return data if isinstance(data, dict) else None
 
     # ── Edits ───────────────────────────────────────────────────────────────
+
+
+#: What the planting list calls each layer: the glossary's words.
+_KIND_WORDS = {"canopy": "tree", "shrub": "shrub", "forb": "wildflower",
+               "grass": "grass"}
 
 
 def _project_center(project: dict) -> Optional[tuple]:
