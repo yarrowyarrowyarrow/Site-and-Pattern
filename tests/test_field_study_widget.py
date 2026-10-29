@@ -48,13 +48,56 @@ class TestFieldStudyWidgetFlow(unittest.TestCase):
     def tearDownClass(cls):
         _plants_mod._user_data_dir = cls._orig_dir
 
-    def _widget(self, provider=None):
+    def _widget(self, provider=None, topic="mixed"):
         from src.field_study_widget import FieldStudyWidget
         w = FieldStudyWidget(provider)
+        # These tests drive the old mixed quiz (field_study.generate_quiz),
+        # which is where the crash lived; the topics are tested below.
+        w.set_topic(topic)
         # Never touch the network from a test; the warm path is covered
         # separately by its own assertions below.
         w._warm_photo_pool = lambda *a, **k: None
         return w
+
+    # ── the topics (V3.40, F208) ─────────────────────────────────────────────
+
+    def test_the_topics_are_grouped_and_any_plant_comes_first(self):
+        from src.field_study_widget import FieldStudyWidget
+        w = FieldStudyWidget(None)
+        self.assertEqual(w._topic.currentData(), "any_plant")
+        headings = [w._topic.itemText(i) for i in range(w._topic.count())
+                    if not w._topic.model().item(i).isEnabled()]
+        self.assertEqual(headings, ["Name the plant", "Who uses whom",
+                                    "When and where", "Mixed"])
+        self.assertEqual(w._length.currentData(), 10)
+
+    def test_a_topic_makes_its_own_questions(self):
+        w = self._widget(topic="flowering")
+        w._focus.setCurrentIndex(w._focus.findData("all"))
+        w.new_quiz()
+        self.assertEqual(len(w._quiz), 10)
+        self.assertEqual({q["type"] for q in w._quiz}, {"flowering"})
+
+    def test_a_topic_with_nothing_to_ask_says_why(self):
+        """Never another topic's questions in its place."""
+        w = self._widget(topic="landscape")
+        w.new_quiz()
+        self.assertEqual(w._quiz, [])
+        self.assertIn("Walk a landscape", w._progress.text())
+        for b in w._opt_btns:
+            self.assertFalse(b.isVisible())
+
+    def test_finishing_keeps_the_best_score(self):
+        from src import quiz_topics
+        w = self._widget(topic="growing")
+        w._length.setCurrentIndex(w._length.findData(5))
+        w.new_quiz()
+        n = len(w._quiz)
+        for _ in range(n):
+            w._answer(w._quiz[w._i]["answer_index"])
+            w._next()
+        self.assertEqual(quiz_topics.best("growing", w._choice()[1]), (n, n))
+        self.assertIn(f"Your best: {n} of {n}", w._status.text())
 
     # ── the crash that was reported ──────────────────────────────────────────
 
