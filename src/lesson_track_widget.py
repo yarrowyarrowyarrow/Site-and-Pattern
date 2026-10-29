@@ -134,8 +134,11 @@ class LessonTrackWidget(QWidget):
             f"<span style='color:#dcedc8'>{step['your_design']}</span>")
         self._dots.setText(self._dot_row())
         self._back.setEnabled(self._i > 0)
-        self._next.setText("Finish" if self._i + 1 >= len(self._steps) else "Next →")
-        self._next.setEnabled(self._i + 1 < len(self._steps))
+        # The last step's button was labelled Finish and disabled, so it could
+        # never be pressed (V3.38). It goes back to the first step.
+        last = self._i + 1 >= len(self._steps)
+        self._next.setText("Start again" if last else "Next →")
+        self._next.setEnabled(True)
 
     def _dot_row(self) -> str:
         out = []
@@ -153,6 +156,7 @@ class LessonTrackWidget(QWidget):
             self._show()
 
     def _advance(self):
-        if self._i + 1 < len(self._steps):
-            self._i += 1
-            self._show()
+        if not self._steps:
+            return
+        self._i = self._i + 1 if self._i + 1 < len(self._steps) else 0
+        self._show()

@@ -28,10 +28,15 @@ class LearnPanel(QWidget):
     """Panel housing the Field Study quiz, the guided lesson track, and the
     docent/presentation mode."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, present: bool = True):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
         self._structures: list[dict] = []
+        # The Learn window builds no Present (V3.38, F258): the tour says the
+        # landscape "began as lawn", which is false of a wild community, and
+        # presenting a design is not learning. The main window's panel still
+        # builds it for Share › Present until the owner's D4.
+        self._with_present = present
         self._build_ui()
 
     def _build_ui(self):
@@ -50,7 +55,8 @@ class LearnPanel(QWidget):
 
         self._build_field_study_tab()
         self._build_lesson_tab()
-        self._build_present_tab()
+        if self._with_present:
+            self._build_present_tab()
 
         layout.addWidget(self._tabs)
 

@@ -103,7 +103,8 @@ class LearnMenu(QDialog):
 # ── The lessons window ───────────────────────────────────────────────────────
 
 class LearnStudioWindow(QWidget):
-    """Lessons, Field Study and Present, as a window of their own.
+    """Lessons and Field Study, as a window of their own. Present left it in
+    V3.38 (F258): it narrated a lawn conversion over a wild community.
 
     ``LearnPanel`` is a self-contained ``QWidget`` that takes its design
     through two provider callables and knows nothing about ``MainWindow`` — so
@@ -129,7 +130,7 @@ class LearnStudioWindow(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
 
         from src.learn_panel import LearnPanel
-        self.panel = LearnPanel(self)
+        self.panel = LearnPanel(self, present=False)
         lay.addWidget(self.panel)
         self.set_plants(plants or [])
 

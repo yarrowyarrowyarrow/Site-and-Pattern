@@ -422,6 +422,37 @@ class TestTheLearnScreens(_TempDataDir):
         self.assertIsNotNone(win.panel)
         win.close()
 
+    def test_the_lessons_window_has_no_present(self):
+        """V3.38 (F258): the tour told a wild community it "began as lawn".
+        The Learn window keeps Field Study and Lessons; the main window's
+        panel still builds Present for Share › Present (the owner's D4)."""
+        from src.learn_menu import LearnStudioWindow
+        from src.learn_panel import LearnPanel
+        win = LearnStudioWindow([], "")
+        tabs = win.panel._tabs
+        self.assertEqual([tabs.tabText(i) for i in range(tabs.count())],
+                         ["Field Study", "Lessons"])
+        self.assertFalse(hasattr(win.panel, "_docent"))
+        win.set_plants([])                 # refreshes without a docent
+        win.close()
+        panel = LearnPanel()
+        self.assertTrue(hasattr(panel, "_present_page"))
+        panel.deleteLater()
+
+    def test_the_last_lesson_can_be_left(self):
+        """Its button read Finish and was disabled, so it could never be
+        pressed. It starts the lessons again now."""
+        from src.lesson_track_widget import LessonTrackWidget
+        w = LessonTrackWidget(plants_provider=lambda: [])
+        for _ in range(len(w._steps) - 1):
+            w._next.click()
+        self.assertEqual(w._i, len(w._steps) - 1)
+        self.assertTrue(w._next.isEnabled())
+        self.assertEqual(w._next.text(), "Start again")
+        w._next.click()
+        self.assertEqual(w._i, 0)
+        w.deleteLater()
+
     def test_the_lessons_door_opens_its_window(self):
         """V3.17 shipped this door dead: a NameError (``_sandbox_plants``)
         swallowed by ``_safely``, then main.py's safety net showed the design
