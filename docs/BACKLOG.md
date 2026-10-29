@@ -475,7 +475,7 @@ the owner's decisions are in the [V3.38 plan](plans/V3.38-the-learn-side-and-the
 |----|---------|--------|------|---|
 | ~~**F253**~~ | ✅ **Shipped in V3.38.** Help › How to Plan Your Yard opens `data/guide.md` in a window, offline; the README's five steps are held equal to it by a test | S | Low | P13 |
 | **F254** | **The example yard, authored from a real design.** It opened on a downtown street, 19 plants covering 35% of an 88 m² rectangle. A tool turns a saved design into the pack's example; the lot is the owner's (D1). Planned V3.38 | M | Low | P2, P13 |
-| **F255** | **The walk teaches one plant at a time.** Plant cards that lead to animals and back to plants, here and not here yet; the walks' species named (the Aspen Parkland walk has no aspen) and planted in clumps; the wheel zooms. Planned V3.38–V3.39 | L | Med (a 3D page and its bridge) | P3, P5, P10 |
+| **F255** | **The walk teaches one plant at a time.** Built V3.38–V3.39: the click opens a card, the wheel zooms, the cards lead plant → animals → plants here and not here yet, the roster is one line, the walks plant their lead species in clumps. Left: the owner's review of the lead species (D7), and animal photographs (F257) | S | Low | P3, P5, P10 |
 | **F256** | **The score and features in the walk.** Animals fed and the Habitat Value Score with their change; features added and pulled; structure points by what each does (D3). Planned V3.40 | M | Med (a headline change) | P6, P9 |
 | **F258** | **Present leaves Learn.** The tour told a wild community it began as lawn; Share › Present is D4. Planned V3.38 | S | Low | P5 |
 

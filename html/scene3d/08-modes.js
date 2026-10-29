@@ -186,8 +186,7 @@ function setWalkHintUI(on) {
   h.style.display = on ? 'block' : 'none';
   if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
     + 'right-drag to look around · scroll to zoom · '
-    + '<b>left-click a plant</b> to learn about it · '
-    + 'the creatures are the wildlife your plants support'
+    + '<b>left-click a plant</b> to see who uses it'
     // V2.46: the net is held, and it has a reach. Say so here, because
     // "I clicked the butterfly and nothing happened" is otherwise the
     // first thing that happens. V2.46c: and it no longer asks you to hit a

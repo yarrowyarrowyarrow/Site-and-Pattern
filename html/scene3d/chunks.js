@@ -53,4 +53,8 @@ window.SCENE3D_CHUNKS = [
   // plants showing what reaches the surface, broad leaves on stalks.
   'scene3d/23-pond.js',
   'scene3d/24-succulents.js',   // V2.93: cacti, yucca and roseroot (F177)
+  // V3.39: what a card says, its links and the trail back (F255). After
+  // 16-editing.js, whose bridge Plant one calls, and after 10-inspect.js,
+  // whose showCard draws through it.
+  'scene3d/25-cards.js',
 ];

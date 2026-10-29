@@ -231,6 +231,29 @@
   #inspect-card .gbar i { display: block; height: 7px; border-radius: 4px; background: #6f9a55; }
   #inspect-card .growrow.gnow .gbar i { background: #ffe89a; }
   #inspect-card .gv { font-size: 10.5px; color: #a9bda2; white-space: nowrap; }
+  /* The V3.39 cards (25-cards.js): what it is food for first, animals as
+     links with a photograph or their group's sign, the rest folded. */
+  #inspect-card .does p { margin: 8px 0 0; font-size: 13.5px; color: #eef5ea; }
+  #inspect-card .arow, #inspect-card .prow, #wild-roster .link { cursor: pointer; }
+  #inspect-card .arow { display: flex; gap: 8px; align-items: flex-start; }
+  #inspect-card .arow:hover b, #inspect-card .prow:hover b,
+  #wild-roster .link:hover { color: #ffe89a; text-decoration: underline; }
+  #inspect-card .athumb { flex: none; width: 34px; height: 34px; border-radius: 6px;
+    overflow: hidden; background: #223126; text-align: center; line-height: 34px;
+    font-size: 18px; }
+  #inspect-card .athumb img { width: 34px; height: 34px; object-fit: cover; }
+  #inspect-card .atext { min-width: 0; }
+  #inspect-card .asign { font-size: 40px; line-height: 1; margin: 2px 0 6px; }
+  #inspect-card details { margin-top: 10px; }
+  #inspect-card details > summary { cursor: pointer; color: #b7d8a8; font-size: 12px; }
+  #inspect-card .iback, #inspect-card .plant-one {
+    font: inherit; font-size: 12px; cursor: pointer; border-radius: 5px;
+    color: #10200f; background: #8fc47e; border: 1px solid #b6dfa6; padding: 2px 8px; }
+  #inspect-card .iback { margin: 0 24px 8px 0; color: #d7e6d2;
+    background: rgba(90,140,70,.22); border-color: #3a5a3a; }
+  #inspect-card .idesc { margin-top: 9px; color: #c9d8c2; font-size: 12px; }
+  #inspect-card .dim { color: #7d8f77; font-style: italic; }
+  #wild-roster summary { cursor: pointer; color: #b7d8ea; margin-top: 4px; }
 </style>
 </head>
 <body>

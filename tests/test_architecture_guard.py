@@ -449,6 +449,8 @@ class TestStructuralCeilings(unittest.TestCase):
         # FILES list out to html/scene3d/chunks.js, as this note asked: 357 now.
         (_HTML / "scene3d.html", 400),
         (_HTML / "scene3d" / "chunks.js", 120),        # ~60 now (V3.39)
+        # V3.39: what a card says, its links and the trail back (F255).
+        (_HTML / "scene3d" / "25-cards.js", 320),      # ~280 now
         (_HTML / "scene3d" / "01-core.js", 700),       # 606 now (V3.04)
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both

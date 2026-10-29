@@ -21,47 +21,63 @@ const _KIND_LABEL = { bee: '🐝 Bees', butterfly: '🦋 Butterflies', moth: '�
   bird: '🐦 Birds', fly: '🪰 Flies & dragonflies', beetle: '🐞 Beetles',
   mammal: '🦇 Mammals' };
 const _KIND_ORDER = ['bee', 'butterfly', 'moth', 'fly', 'beetle', 'bird', 'mammal'];
-const _TAXON_WORD = { bee: 'bees', lepidoptera: 'butterflies & moths',
-  bird: 'birds', other_insect: 'other insects', mammal: 'mammals' };
+
+// The roster (V3.39). Until now a wall: every creature out, by group, under a
+// count of everything the plants support. The owner: the standalone "who
+// lives here" "simply overwhelms and does not encourage learning". So one
+// line, and the creatures out now folded under it, each a link to its card
+// (25-cards.js), the ones known only by a Latin name folded again. The count
+// is the scene's animals recorded as food for (src/scene_dossier.py `reach`,
+// the V3.20 rule: each once, shelter alone not counted), and falls back to
+// the summary pushed with the creatures.
+let _rosterOpen = false;
+
+function _rosterTotal() {
+  const reach = (typeof DOSSIER !== 'undefined' && DOSSIER && DOSSIER.reach)
+    || WILD_SUMMARY || {};
+  return Object.values(reach).reduce((a, b) => a + (b | 0), 0);
+}
+
+function _rosterRow(name) {
+  const known = DOSSIER.fauna && DOSSIER.fauna[name];
+  return '<div class="row' + (known ? ' link" data-open-fauna="' + _escHtml(name)
+    + '" tabindex="0' : '') + '">' + _escHtml(name) + '</div>';
+}
 
 function updateRoster() {
   const el = document.getElementById('wild-roster');
   if (!el) return;
   if (!wildLabelsOn || !WILDLIFE.length) { el.style.display = 'none'; return; }
-  const byKind = {};
-  for (const c of WILDLIFE) (byKind[c.kind] = byKind[c.kind] || []).push(c);
-  let html = '<h4>🌿 Who lives here — ' + WILDLIFE.length + ' out now</h4>';
-  // Headline the design's total ecological reach (the score's wildlife tally):
-  // "supports N wildlife species" so the count behind the Habitat Value Score
-  // is legible right beside the creatures it represents.
-  if (WILD_SUMMARY) {
-    const total = Object.values(WILD_SUMMARY).reduce((a, b) => a + (b | 0), 0);
-    if (total) {
-      const parts = _KIND_ORDER.map(k => {
-        const tax = k === 'butterfly' || k === 'moth' ? 'lepidoptera'
-          : k === 'fly' || k === 'beetle' ? 'other_insect' : k;
-        return [tax, k];
-      });
-      const seen = {}, bits = [];
-      for (const [tax] of parts) {
-        if (seen[tax] || !WILD_SUMMARY[tax]) continue;
-        seen[tax] = 1;
-        bits.push(WILD_SUMMARY[tax] + ' ' + (_TAXON_WORD[tax] || tax));
-      }
-      html += '<div class="reach">🌎 Your plants support <b>' + total
-        + ' wildlife species</b>' + (bits.length ? ' · ' + bits.join(', ') : '')
-        + '</div>';
-    }
+  const byKind = {}, seen = new Set();
+  for (const c of WILDLIFE) {
+    if (!c.name || seen.has(c.name)) continue;
+    seen.add(c.name);
+    (byKind[c.kind] = byKind[c.kind] || []).push(c.name);
   }
+  const total = _rosterTotal();
+  let html = '<h4>' + (total ? 'This landscape is recorded as food for ' + total
+    + ' kinds of animals.' : 'Who is out') + '</h4>';
+  html += '<details class="outnow"' + (_rosterOpen ? ' open' : '') + '><summary>'
+    + seen.size + (seen.size === 1 ? ' is' : ' are') + ' out now</summary>';
   for (const k of _KIND_ORDER) {
     const list = byKind[k]; if (!list || !list.length) continue;
+    const named = [], latin = [];
+    for (const name of list) {
+      const f = DOSSIER.fauna && DOSSIER.fauna[name];
+      (f && f.english === false ? latin : named).push(name);
+    }
     html += '<div class="grp">' + (_KIND_LABEL[k] || k) + ' · ' + list.length + '</div>';
-    for (const c of list)
-      html += '<div class="row">' + _escHtml(c.name)
-        + (c.on ? ' <span class="on">· ' + _escHtml(c.on) + '</span>' : '') + '</div>';
+    html += named.map(_rosterRow).join('');
+    if (latin.length) {
+      html += '<details class="latin"><summary>and ' + latin.length
+        + ' known only by a Latin name</summary>' + latin.map(_rosterRow).join('')
+        + '</details>';
+    }
   }
-  el.innerHTML = html;
+  el.innerHTML = html + '</details>';
   el.style.display = 'block';
+  const fold = el.querySelector('details.outnow');
+  if (fold) fold.addEventListener('toggle', () => { _rosterOpen = fold.open; });
 }
 function _escHtml(s) {
   return String(s || '').replace(/[&<>]/g,

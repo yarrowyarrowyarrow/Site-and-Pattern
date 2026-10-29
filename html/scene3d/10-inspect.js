@@ -235,105 +235,23 @@ function photoBlock(e) {
     + '<figcaption>' + esc(p.credit) + '</figcaption></figure>';
 }
 
-function plantCardHtml(e) {
-  let h = photoBlock(e);
-  h += '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
-    + '<div class="isci">' + esc(e.scientific_name) + '</div></div>';
-  h += chips(e.badges, 'good');
-  const bits = [];
-  if (e.plant_type) bits.push(esc(e.plant_type));
-  if (e.sun) bits.push(esc(e.sun));
-  if (e.water) bits.push(esc(e.water) + ' water');
-  if (e.native) bits.push('native to ' + esc(e.native));
-  if (bits.length) h += '<div class="ifacts">' + bits.join(' · ') + '</div>';
-  // What it looks like — the same morphology that shapes the model on screen.
-  if (e.morphology && e.morphology.length) {
-    h += '<div class="ifacts">' + esc(e.morphology.join(' · ')) + '</div>';
-  }
-
-  h += seasonBar(e);
-  h += growthStrip(e);
-
-  if (e.users && e.users.length) {
-    h += '<div class="isec">who uses it here — ' + e.users.length
-      + ' documented ' + (e.users.length === 1 ? 'species' : 'species') + '</div><ul class="ilist">';
-    for (const u of e.users) {
-      // F12 (V2.53): the citation rides on the row. Every one of these edges
-      // has carried a source since it was written and no screen ever showed
-      // one, so the app's most distinctive data looked like it came from
-      // nowhere. An unattributable edge simply gets no cite — never a
-      // placeholder dressed up as a reference.
-      h += '<li><b>' + esc(u.name) + '</b>'
-        + (u.specialist ? '<span class="chip warn">specialist</span>' : '')
-        + '<span class="how">' + esc(u.how) + ' this plant</span>'
-        + (u.source ? '<span class="cite">' + esc(u.source) + '</span>' : '')
-        + '</li>';
-    }
-    h += '</ul>';
-    if (e.sources && (e.sources.works || []).length) {
-      h += '<details class="isrcs"><summary>where these come from</summary><ul>';
-      for (const w of e.sources.works) h += '<li>' + esc(w) + '</li>';
-      if (e.sources.unattributed) {
-        h += '<li class="dim">' + e.sources.unattributed + ' of these '
-          + 'relationships were seeded without naming a specific work, and '
-          + 'are not yet attributable.</li>';
-      }
-      h += '</ul></details>';
-    }
-  } else {
-    h += '<div class="isec">no documented wildlife edges yet</div>';
-  }
-  if (e.only_source && e.only_source.length) {
-    h += '<div class="ionly"><b>Pull this plant and ' + e.only_source.length
-      + ' species lose their only support here:</b> '
-      + esc(e.only_source.join(', ')) + '</div>';
-  }
-  if (e.safety && e.safety.length) h += chips(e.safety, 'warn');
-  if (e.sourcing && (e.sourcing.price || e.sourcing.availability)) {
-    h += '<div class="isrc">' + esc([e.sourcing.price, e.sourcing.availability]
-      .filter(Boolean).join(' · ')) + '</div>';
-  }
-  // No free-text notes (V3.38, L8, P12): scene_dossier no longer sends them.
-  return h;
-}
-
-function faunaCardHtml(e) {
-  let h = photoBlock(e);
-  h += '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
-    + '<div class="isci">' + esc(e.scientific_name)
-    + (e.taxon_label ? ' · ' + esc(e.taxon_label) : '') + '</div></div>';
-  if (e.status) h += chips([e.status], 'warn');
-  if (e.description) h += '<div class="inotes">' + esc(e.description) + '</div>';
-  h += seasonBar(e);
-  if (e.facts && e.facts.length) {
-    h += '<ul class="ilist plain">';
-    for (const f of e.facts) h += '<li>' + esc(f) + '</li>';
-    h += '</ul>';
-  }
-  if (e.uses && e.uses.length) {
-    h += '<div class="isec">your plants it uses</div><ul class="ilist">';
-    for (const u of e.uses) {
-      h += '<li><b>' + esc(u.plant) + '</b><span class="how">'
-        + esc(u.how) + ' it</span></li>';
-    }
-    h += '</ul>';
-  }
-  if (e.range_notes) h += '<div class="isrc">' + esc(e.range_notes) + '</div>';
-  return h;
-}
+// The cards themselves (what a plant's and an animal's card say, the links
+// between them and the trail back) are in 25-cards.js since V3.39.
 
 function showCard(entry) {
   const card = inspectCard();
   if (!card) return;
   card.innerHTML = '<button id="inspect-close" title="Close">×</button>'
-    + (entry.kind === 'fauna' ? faunaCardHtml(entry) : plantCardHtml(entry));
+    + cardHtml(entry);
   card.style.display = 'block';
+  card.scrollTop = 0;
   const btn = document.getElementById('inspect-close');
   if (btn) btn.addEventListener('click', clearSelection);
 }
 
 function clearSelection() {
   selection = null;
+  resetCardTrail();
   clearThreads();
   const card = inspectCard();
   if (card) { card.style.display = 'none'; card.innerHTML = ''; }
@@ -378,6 +296,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   // open rather than closing it out from under the user, which is what a
   // near-miss used to do.
   if (!entry) return;
+  resetCardTrail();      // a card opened from the scene starts a new trail
   selection = hit;
   showCard(entry);
   buildThreads();
@@ -568,6 +487,8 @@ window.permaVisibility = function () {
 // push keeps the card live while the year / season sliders move underneath it.
 window.permaSetDossier = function (d) {
   DOSSIER = d && d.plants ? d : { plants: {}, fauna: {} };
+  // The roster's count and links read the cards (V3.39, 19-roster.js).
+  if (typeof updateRoster === 'function' && wildLabelsOn) updateRoster();
   if (!selection) return;
   const entry = selection.type === 'fauna'
     ? DOSSIER.fauna[selection.key] : DOSSIER.plants[String(selection.key)];

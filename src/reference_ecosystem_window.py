@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
 from src.map3d_widget import Map3DWidget
 from src import reference_edit_flow as edit_flow
 from src import scene3d_edit_flow
+from src import walk_cards
 from src.scene3d_toolbar import Scene3DToolBar
 from src.branding import APP_NAME
 
@@ -228,6 +229,9 @@ class ReferenceEcosystemWindow(QWidget):
             lambda kind, key: edit_flow.on_inspected(self, kind, key))
         bridge.species_caught.connect(
             lambda name: edit_flow.on_caught(self, name))
+        # V3.39: *Plant one* on an animal's card (src/walk_cards.py).
+        bridge.plant_chosen.connect(
+            lambda pid: walk_cards.on_plant_chosen(self, pid))
         # V2.46: the net is held now, and a held net has a reach — a miss has
         # to say so or the click looks broken.
         bridge.out_of_reach.connect(
@@ -305,7 +309,6 @@ class ReferenceEcosystemWindow(QWidget):
             self.viewer.set_wildlife([])
         # The cards a click opens (V3.38, F255): until now only the 3D
         # preview sent them, so "left-click a plant" did nothing here.
-        from src import walk_cards
         walk_cards.push(self, scene)
         # The magnification lives in the viewer and resets to life size on a
         # fresh page, so a remembered choice has to be re-pushed (V2.46).

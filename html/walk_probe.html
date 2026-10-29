@@ -22,13 +22,13 @@ fetch('./walk_probe_data.json').then(r => r.json()).then((D) => {
   let pushed = false;
   const timer = setInterval(() => {
     const w = v.contentWindow;
-    // Wait for the LAST chunk, not the one that defines permaSetScene (05):
-    // pushing while 06–24 are still loading throws in 04's groundcover
-    // builder, which lives in 14. The app is not exposed to this:
-    // Map3DWidget holds every push until loadFinished, which the chained
-    // chunk loads keep back until the last one has run.
+    // Wait for the LAST chunk (25-cards.js since V3.39), not the one that
+    // defines permaSetScene (05): pushing while 06–25 are still loading
+    // throws in 04's groundcover builder, which lives in 14. The app is not
+    // exposed to this: Map3DWidget holds every push until loadFinished, which
+    // the chained chunk loads keep back until the last one has run.
     if (!w || typeof w.permaSetScene !== 'function'
-        || typeof w.succulentAnchorsFor !== 'function') return;
+        || typeof w.labelWanted !== 'function') return;
     if (!pushed) {
       w.permaSetScene(D.scene);
       if (w.permaSetWildlife) w.permaSetWildlife(D.wildlife, D.support);
@@ -78,7 +78,34 @@ fetch('./walk_probe_data.json').then(r => r.json()).then((D) => {
           const rows = card.querySelectorAll('ul.ilist li').length;
           const result = { name: name, creatures: rows,
                            key: String(hit.key),
-                           notes: !!card.querySelector('.inotes') };
+                           notes: !!card.querySelector('.inotes'),
+                           does: card.querySelectorAll('.does p').length,
+                           shown: card.querySelectorAll(':scope > ul.ilist > li.arow').length,
+                           folded: !!card.querySelector('details.amore'),
+                           more: !!card.querySelector('details.more') };
+          // V3.39: an animal on the card opens its card, which leads back.
+          const link = card.querySelector('[data-open-fauna]');
+          if (link) {
+            result.animal_link = link.getAttribute('data-open-fauna');
+            link.click();
+            result.animal = (card.querySelector('.iname') || {}).textContent || '';
+            result.here = card.querySelectorAll('[data-open-plant]').length;
+            result.plant_one = card.querySelectorAll('[data-plant-one]').length;
+            const back = card.querySelector('[data-card-back]');
+            result.back = back ? back.textContent : '';
+            if (back) {
+              back.click();
+              result.back_to = (card.querySelector('.iname') || {}).textContent || '';
+            }
+          }
+          // The roster: one line, the creatures folded under it.
+          if (w.permaSetWildlifeLabels) {
+            w.permaSetWildlifeLabels(true);
+            const roster = w.document.getElementById('wild-roster');
+            result.roster_head = ((roster && roster.querySelector('h4')) || {}).textContent || '';
+            const fold = roster && roster.querySelector('details.outnow');
+            result.roster_folded = !!fold && !fold.open;
+          }
           status.textContent = 'card: ' + name;
           document.title = 'WALK_CARD ' + JSON.stringify(result);
           return;
