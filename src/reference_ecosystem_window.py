@@ -301,6 +301,10 @@ class ReferenceEcosystemWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # The cards a click opens (V3.38, F255): until now only the 3D
+        # preview sent them, so "left-click a plant" did nothing here.
+        from src import walk_cards
+        walk_cards.push(self, scene)
         # The magnification lives in the viewer and resets to life size on a
         # fresh page, so a remembered choice has to be re-pushed (V2.46).
         # Follow the toolbar rather than forcing walk mode on. Before V2.44

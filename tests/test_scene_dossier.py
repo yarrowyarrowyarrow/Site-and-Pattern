@@ -118,6 +118,18 @@ class DossierShapeTest(unittest.TestCase):
 
 
 class PlantEntryTest(unittest.TestCase):
+    def test_no_free_text_notes(self):
+        """V3.38 (L8, P12): the plant page dropped the notes in V3.26, and the
+        card now opens in the Learn walk too. The fixture's Saskatoon has a
+        note; the card must not carry it, and the page must not draw one."""
+        import pathlib
+        e = _build(scene=_scene(1))["plants"]["1"]
+        self.assertNotIn("notes", e)
+        self.assertNotIn("A prairie keystone.", json.dumps(e))
+        js = (pathlib.Path(__file__).resolve().parent.parent / "html"
+              / "scene3d" / "10-inspect.js").read_text(encoding="utf-8")
+        self.assertNotIn("e.notes", js)
+
     def test_identity_and_seasons(self):
         e = _build(scene=_scene(1))["plants"]["1"]
         self.assertEqual(e["name"], "Saskatoon Berry")

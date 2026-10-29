@@ -16,7 +16,12 @@ const walkKeys = new Set();
 let walkDragging = false, walkLastX = 0, walkLastY = 0;
 let walkPrevT = 0, walkStride = 0;
 let walkObstacles = [];                    // {x, z, r} trunks/buildings to not walk through
-const _WALK_DIST = 6.5;
+// How far behind the walker the camera follows. The wheel moves it (V3.38,
+// F255): walk mode turns OrbitControls off, which is what owned the wheel,
+// and this was a constant, so the owner's "use the scroll wheel to zoom out
+// or in" did nothing while walking.
+const _WALK_DIST_MIN = 2, _WALK_DIST_MAX = 30;
+let _walkDist = 6.5;
 const _WALKER_R = 0.35;                     // the walker's body radius
 
 // Solid things the walker shouldn't pass through: tree/tall-shrub trunks and
@@ -180,7 +185,8 @@ function setWalkHintUI(on) {
   if (!h) return;
   h.style.display = on ? 'block' : 'none';
   if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
-    + 'right-drag to look around · <b>left-click a plant</b> to learn about it · '
+    + 'right-drag to look around · scroll to zoom · '
+    + '<b>left-click a plant</b> to learn about it · '
     + 'the creatures are the wildlife your plants support'
     // V2.46: the net is held, and it has a reach. Say so here, because
     // "I clicked the butterfly and nothing happened" is otherwise the
@@ -269,7 +275,7 @@ function walkStep(t) {
   const head = walkAvatar.position.clone().add(new THREE.Vector3(0, 1.5, 0));
   const cp = Math.cos(walkPitch);
   const cam = new THREE.Vector3(-Math.sin(walkYaw) * cp, Math.sin(walkPitch), Math.cos(walkYaw) * cp);
-  const desired = head.clone().addScaledVector(cam, _WALK_DIST);
+  const desired = head.clone().addScaledVector(cam, _walkDist);
   const gy = groundAt(desired.x, desired.z) + 0.4;
   if (desired.y < gy) desired.y = gy;          // don't clip through terrain
   camera.position.lerp(desired, Math.min(1, dt * 8));
@@ -293,6 +299,18 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   walkDragging = true; walkLastX = e.clientX; walkLastY = e.clientY;
 });
 addEventListener('pointerup', () => { walkDragging = false; });
+// Each notch of a mouse wheel (deltaY about 100) is about 16% nearer or
+// farther; a trackpad's small deltas move it smoothly. Not passive, so the
+// page does not scroll as well.
+renderer.domElement.addEventListener('wheel', (e) => {
+  if (!walkMode) return;
+  e.preventDefault();
+  _walkDist = walkZoom(_walkDist, e.deltaY || 0);
+}, { passive: false });
+function walkZoom(dist, deltaY) {
+  const next = dist * Math.exp(deltaY * 0.0015);
+  return Math.max(_WALK_DIST_MIN, Math.min(_WALK_DIST_MAX, next));
+}
 renderer.domElement.addEventListener('pointermove', (e) => {
   if (!walkMode || !walkDragging) return;
   walkYaw -= (e.clientX - walkLastX) * 0.005;

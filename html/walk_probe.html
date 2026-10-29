@@ -1,0 +1,95 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#101815;color:#dfe;font:14px system-ui}
+  iframe{width:1280px;height:820px;border:0;display:block}
+  #status{position:fixed;left:8px;top:8px;background:#000a;padding:6px 10px;
+          z-index:99;font-weight:600}
+</style></head><body>
+<div id="status">booting…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script src="probe_watch.js"></script>
+<script>
+// The walk's click-to-learn, end to end (V3.38, F255; dev page, not shipped).
+// tests/test_walk_cards.py serves walk_probe_data.json: a walk community's
+// scene, wildlife and cards, built by the same functions the walk window
+// calls (reference_ecosystem → scene_contract → walk_cards). This pushes them,
+// puts the viewer in walk mode as the window does, finds a point where the
+// viewer's own picker hits a plant, clicks there, and writes in the title
+// which card opened:  WALK_CARD {"name": …, "creatures": n}  or WALK_NO_CARD.
+fetch('./walk_probe_data.json').then(r => r.json()).then((D) => {
+  const v = document.getElementById('v');
+  const status = document.getElementById('status');
+  let pushed = false;
+  const timer = setInterval(() => {
+    const w = v.contentWindow;
+    // Wait for the LAST chunk, not the one that defines permaSetScene (05):
+    // pushing while 06–24 are still loading throws in 04's groundcover
+    // builder, which lives in 14. The app is not exposed to this:
+    // Map3DWidget holds every push until loadFinished, which the chained
+    // chunk loads keep back until the last one has run.
+    if (!w || typeof w.permaSetScene !== 'function'
+        || typeof w.succulentAnchorsFor !== 'function') return;
+    if (!pushed) {
+      w.permaSetScene(D.scene);
+      if (w.permaSetWildlife) w.permaSetWildlife(D.wildlife, D.support);
+      if (w.permaSetDossier) w.permaSetDossier(D.dossier);
+      if (w.permaSetWalkMode) w.permaSetWalkMode(true);
+      pushed = true;
+      status.textContent = 'pushed';
+      return;
+    }
+    clearInterval(timer);
+    const settle = (fn) => {
+      let waited = 0;
+      const tick = () => {
+        if ((w.permaModelsReady && w.permaModelsReady()) || waited > 12000) {
+          setTimeout(fn, 800);
+          return;
+        }
+        waited += 100;
+        setTimeout(tick, 100);
+      };
+      tick();
+    };
+    // A sweep that opens nothing is tried again after a pause, up to three
+    // times: on a cold start the baked models can land after the wait above
+    // and rebuild the scene in the middle of a sweep.
+    const sweep = (attempt) => {
+      const cv = w.document.querySelector('canvas');
+      const r = cv.getBoundingClientRect();
+      const seen = { points: 0, plants: 0, fauna: 0, mode: '' };
+      for (let gy = 0.30; gy <= 0.85; gy += 0.025) {
+        for (let gx = 0.10; gx <= 0.90; gx += 0.025) {
+          const x = r.left + r.width * gx, y = r.top + r.height * gy;
+          const hit = w.scenePick(x, y);
+          seen.points++;
+          if (hit && hit.type === 'fauna') seen.fauna++;
+          if (!hit || hit.type !== 'plant') continue;
+          seen.plants++;
+          seen.mode = String(w.__permaEditMode || '');
+          for (const type of ['pointerdown', 'pointerup']) {
+            cv.dispatchEvent(new PointerEvent(type, {
+              pointerId: 1, isPrimary: true, button: 0, clientX: x,
+              clientY: y, bubbles: true, cancelable: true }));
+          }
+          const card = w.document.getElementById('inspect-card');
+          if (!card || card.style.display !== 'block') continue;
+          const name = (card.querySelector('.iname') || {}).textContent || '';
+          const rows = card.querySelectorAll('ul.ilist li').length;
+          const result = { name: name, creatures: rows,
+                           key: String(hit.key),
+                           notes: !!card.querySelector('.inotes') };
+          status.textContent = 'card: ' + name;
+          document.title = 'WALK_CARD ' + JSON.stringify(result);
+          return;
+        }
+      }
+      if (attempt < 3) { setTimeout(() => sweep(attempt + 1), 3000); return; }
+      status.textContent = 'no plant card opened';
+      document.title = 'WALK_NO_CARD ' + JSON.stringify(seen);
+    };
+    settle(() => sweep(1));
+  }, 250);
+});
+</script>
+</body></html>

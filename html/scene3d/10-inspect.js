@@ -293,7 +293,7 @@ function plantCardHtml(e) {
     h += '<div class="isrc">' + esc([e.sourcing.price, e.sourcing.availability]
       .filter(Boolean).join(' · ')) + '</div>';
   }
-  if (e.notes) h += '<div class="inotes">' + esc(e.notes) + '</div>';
+  // No free-text notes (V3.38, L8, P12): scene_dossier no longer sends them.
   return h;
 }
 

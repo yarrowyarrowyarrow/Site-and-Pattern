@@ -255,7 +255,9 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "only_source": sorted(only_source),
         "safety": _safety_notes(plant),
         "sourcing": _sourcing(plant),
-        "notes": plant.get("notes") or "",
+        # No free-text notes (V3.38): the plant page dropped them in V3.26
+        # (L8, P12), because about 43 seeded notes describe traditional plant
+        # use, and the card is shown in the Learn walk too now.
         "edible_parts": plant.get("edible_parts") or "",
         # The works behind the wildlife rows above, deduped and in full (F12).
         "sources": _source_block(edges),
