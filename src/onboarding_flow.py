@@ -409,18 +409,7 @@ def open_example(main) -> None:
     if not _confirm_discard(main, "Open Example"):
         return
 
-    lat = lng = None
-    try:
-        coords = main.site_panel.current_coords()
-        if coords:
-            lat, lng = coords
-    except Exception:                                      # noqa: BLE001
-        pass
-    # The example's plants are the pack's: at a pin outside every pack it
-    # opens at the pack's own centre, not planted in Toronto (V3.25, ED-8).
-    from src import region
-    if region.at(lat, lng) is None:
-        lat = lng = None
+    lat, lng = example_position(main)
 
     from src import saves
     previous = saves.last_design()
@@ -450,6 +439,25 @@ def open_example(main) -> None:
                  + ("…" if len(missing) > 3 else "") + ")")
     main.statusBar().showMessage(note, 15000)
     refresh(main)
+
+
+def example_position(main) -> tuple:
+    """Where the example opens: ``(None, None)`` for its own place, else the
+    person's pin. Its own place when the example was made from a real lot
+    (V3.38, F254: its house and walk are that lot's), and when the pin is
+    outside every pack, since its plants are the pack's and would otherwise
+    be planted in Toronto (V3.25, ED-8)."""
+    from src import region
+    from src.onboarding import EXAMPLE_OWN_PLACE
+    if EXAMPLE_OWN_PLACE:
+        return None, None
+    try:
+        coords = main.site_panel.current_coords()
+    except Exception:                                      # noqa: BLE001
+        coords = None
+    if not coords or region.at(*coords) is None:
+        return None, None
+    return coords
 
 
 def _confirm_discard(main, title: str) -> bool:
