@@ -39,31 +39,75 @@ def build(scene: dict, *, plantable=(), province: str = "") -> dict:
         return {}
 
 
+def plantable(win) -> set:
+    """What *Plant one* may put on the walk's trowel: its planting list, and
+    any plant that suits the community (``reference_ecosystem.plantable_ids``).
+    The first build offered the planting list alone, and every plant on it was
+    already in the walk, so no animal's card ever showed the button."""
+    ids = {p["plant_id"] for p in getattr(win, "_palette", []) or []
+           if p.get("plant_id") is not None}
+    community = getattr(win, "_community", "")
+    if community:
+        # The same for every push in one community: kept on the window, not
+        # worked out again on every plant and pull.
+        cached = getattr(win, "_plantable_for", None)
+        if not cached or cached[0] != community:
+            try:
+                from src.reference_ecosystem import plantable_ids
+                cached = (community, frozenset(plantable_ids(community)))
+            except Exception:      # noqa: BLE001
+                cached = (community, frozenset())
+            win._plantable_for = cached
+        ids |= cached[1]
+    return ids
+
+
 def push(win, scene: dict) -> None:
     """Send ``win.viewer`` the cards for everything in ``scene``.
 
     Called with every scene the walk pushes, so a card left open follows the
     year and the plants under it.
     """
-    plantable = [p["plant_id"] for p in getattr(win, "_palette", []) or []
-                 if p.get("plant_id") is not None]
-    win.viewer.set_dossier(build(scene, plantable=plantable,
+    win.viewer.set_dossier(build(scene, plantable=sorted(plantable(win)),
                                  province=WALK_PROVINCE))
 
 
-def on_plant_chosen(win, plant_id: int) -> None:
+#: The planting list's word for a plant's kind (the glossary's), for a plant
+#: *Plant one* adds to it.
+_KIND = {"tree": "tree", "shrub": "shrub", "grass": "grass", "sedge": "grass",
+         "graminoid": "grass"}
+
+
+def on_plant_chosen(win, plant_id: int, *,
+                    get_plant=None) -> None:
     """*Plant one* on an animal's card: put that plant on the trowel, so the
-    next click on the ground plants it. Only the walk's own plants are offered
-    (``plantable``), so it is always in the planting list."""
+    next click on the ground plants it. A plant not on the planting list yet
+    is added to it first; one the walk does not offer changes nothing."""
     combo = getattr(win, "_species", None)
     if combo is None:
         return
-    for i in range(combo.count()):
-        item = combo.itemData(i)
-        if isinstance(item, dict) and item.get("plant_id") == int(plant_id):
-            combo.setCurrentIndex(i)
-            win._plant_btn.setChecked(True)
-            win._set_mode("plant")
-            win._say.setText(f"Click the ground to plant "
-                             f"{item.get('common_name') or 'it'}.")
+    pid = int(plant_id)
+    index = next((i for i in range(combo.count())
+                  if isinstance(combo.itemData(i), dict)
+                  and combo.itemData(i).get("plant_id") == pid), -1)
+    if index < 0:
+        if pid not in plantable(win):
             return
+        if get_plant is None:
+            from src.db.plants import get_plant
+        row = get_plant(pid) or {}
+        if not row:
+            return
+        item = {"plant_id": pid,
+                "common_name": row.get("common_name") or "plant",
+                "scientific_name": row.get("scientific_name") or "",
+                "layer": ""}
+        kind = _KIND.get((row.get("plant_type") or "").lower(), "wildflower")
+        combo.addItem(f"{item['common_name']}  ·  {kind}", item)
+        index = combo.count() - 1
+    combo.setCurrentIndex(index)
+    item = combo.itemData(index)
+    win._plant_btn.setChecked(True)
+    win._set_mode("plant")
+    win._say.setText(f"Click the ground to plant "
+                     f"{item.get('common_name') or 'it'}.")

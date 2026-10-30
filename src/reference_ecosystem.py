@@ -442,6 +442,30 @@ def layer_plan(ecoregion: Optional[str], *,
     return plan
 
 
+def plantable_ids(ecoregion: Optional[str], *,
+                  plants: Optional[list] = None,
+                  resolve_genus: Optional[Callable] = None,
+                  resolve_names: Optional[Callable] = None) -> set:
+    """The plants a walk lets you plant (V3.41): any plant of its four layers
+    native to the province and taking the community's typical ground, the
+    rule its own fill passes (:func:`_fits_place`). The planting list starts
+    with the community's own species; *Plant one* on an animal's card can add
+    any of these, because the plants an animal relies on that are not in the
+    walk are, almost by definition, not among its own."""
+    plan = layer_plan(ecoregion, resolve_genus=resolve_genus,
+                      resolve_names=resolve_names)
+    typical = _typical_water([row for spec in plan
+                              for row, _s in spec["leads"]])
+    if plants is None:
+        from src.db.plants import get_all_plants
+        plants = get_all_plants()
+    kinds = set().union(*_LAYER_TYPES.values())
+    return {r["id"] for r in plants
+            if r.get("id") is not None
+            and (r.get("plant_type") or "").lower() in kinds
+            and _fits_place(r, typical)}
+
+
 def _latlng(center_lat: float, center_lng: float, dx: float, dy: float):
     """(lat, lng) ``dx`` metres east and ``dy`` north of the centre, by the
     app's own metric (src.projection), as the sandbox converts clicks."""

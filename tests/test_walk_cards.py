@@ -96,6 +96,7 @@ class PlantOnePutsItOnTheTrowel(unittest.TestCase):
             def __init__(self):
                 self.items = [{"plant_id": 3, "common_name": "June Grass"},
                               {"plant_id": 7, "common_name": "Wild Bergamot"}]
+                self.texts = []
                 self.current = 0
 
             def count(self):
@@ -106,6 +107,10 @@ class PlantOnePutsItOnTheTrowel(unittest.TestCase):
 
             def setCurrentIndex(self, i):                   # noqa: N802
                 self.current = i
+
+            def addItem(self, text, data):                  # noqa: N802
+                self.items.append(data)
+                self.texts.append(text)
 
         class Button:
             checked = False
@@ -123,6 +128,10 @@ class PlantOnePutsItOnTheTrowel(unittest.TestCase):
         win._species, win._plant_btn, win._say = Combo(), Button(), Say()
         win.modes = []
         win._set_mode = win.modes.append
+        win._palette = [{"plant_id": 3}, {"plant_id": 7}]
+        # A walk that suits plant 12 and no other (the community's ground).
+        win._community, win._plantable_for = "wet_meadow", (
+            "wet_meadow", frozenset({12}))
         return win
 
     def test_it_chooses_the_plant_and_holds_out_the_trowel(self):
@@ -135,8 +144,20 @@ class PlantOnePutsItOnTheTrowel(unittest.TestCase):
 
     def test_a_plant_the_walk_does_not_offer_changes_nothing(self):
         win = self._win()
-        walk_cards.on_plant_chosen(win, 99)
+        walk_cards.on_plant_chosen(win, 99, get_plant=lambda pid: {})
         self.assertEqual((win._species.current, win.modes), (0, []))
+
+    def test_a_plant_that_suits_the_walk_joins_the_planting_list(self):
+        """The first build offered only the planting list, every plant of
+        which was already in the walk: no card ever showed Plant one."""
+        win = self._win()
+        walk_cards.on_plant_chosen(win, 12, get_plant=lambda pid: {
+            "id": 12, "common_name": "Marsh Marigold",
+            "plant_type": "wildflower"})
+        self.assertEqual(win._species.current, 2)
+        self.assertEqual(win._species.texts, ["Marsh Marigold  ·  wildflower"])
+        self.assertEqual(win.modes, ["plant"])
+        self.assertIn("Marsh Marigold", win._say.text)
 
     def test_the_page_the_bridge_and_the_window_agree(self):
         widget = (_ROOT / "src" / "map3d_widget.py").read_text(encoding="utf-8")
@@ -164,11 +185,13 @@ def _walk_probe_data() -> bytes:
                                       center_lng=-113.49)
     scene = build_scene(project, year=12, when=datetime(2025, 6, 21, 13, 0))
     pids = [p["plant_id"] for p in scene["plants"] if p.get("plant_id")]
-    plantable = [p["plant_id"] for p in palette("aspen_parkland")]
+    from types import SimpleNamespace
+    win = SimpleNamespace(_palette=palette("aspen_parkland"),
+                          _community="aspen_parkland")
     return json.dumps({"scene": scene, "wildlife": wildlife_for_scene(scene),
                        "support": support_by_taxon(pids),
                        "dossier": walk_cards.build(
-                           scene, plantable=plantable,
+                           scene, plantable=sorted(walk_cards.plantable(win)),
                            province=walk_cards.WALK_PROVINCE)}).encode("utf-8")
 
 
@@ -273,6 +296,15 @@ class AClickInTheWalkOpensTheCard(unittest.TestCase):
         self.assertEqual(card["back_to"], card["name"])
         # No Plant one without the walk's bridge (this page has none).
         self.assertEqual(card["plant_one"], 0)
+
+    def test_plant_one_sends_the_plant_to_the_walk(self):
+        """With a bridge, an animal's card offers Plant one for a plant the
+        walk suits, and the button sends that plant (V3.41)."""
+        card = self.card
+        self.assertTrue(card.get("plant_one_shown"), "no card offered Plant one")
+        self.assertEqual(card["plant_one_sent"], card["plant_one_id"])
+        self.assertIn(card["plant_one_id"], self.dossier["plantable"])
+        self.assertIn("click the ground", card["plant_one_after"])
 
     def test_the_roster_is_one_line_and_a_fold(self):
         self.assertIn("recorded as food for", self.card["roster_head"])

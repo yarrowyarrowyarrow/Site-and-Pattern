@@ -97,6 +97,24 @@ fetch('./walk_probe_data.json').then(r => r.json()).then((D) => {
               back.click();
               result.back_to = (card.querySelector('.iname') || {}).textContent || '';
             }
+            // Plant one needs the walk's bridge, which this page lacks: a
+            // stand-in records what the button would send (V3.41).
+            w.eval("_bridge = { choosePlant: function (id) { window.__chosen = id; },"
+                   + " inspected: function () {} };");
+            const withPlant = Object.entries(w.eval("DOSSIER").fauna).find(([, f]) =>
+              (f.elsewhere || []).some((e) => e.plantable));
+            if (withPlant) {
+              w.openCard('fauna', withPlant[0]);
+              const button = card.querySelector('[data-plant-one]');
+              result.plant_one_shown = !!button;
+              if (button) {
+                result.plant_one_id = Number(button.getAttribute('data-plant-one'));
+                button.click();
+                result.plant_one_sent = w.__chosen;
+                result.plant_one_after = button.textContent;
+              }
+            }
+            w.eval("_bridge = null;");
           }
           // The roster: one line, the creatures folded under it.
           if (w.permaSetWildlifeLabels) {

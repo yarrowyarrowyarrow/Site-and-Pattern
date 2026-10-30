@@ -221,6 +221,26 @@ class TheWalksOnTheCatalogue(unittest.TestCase):
         self.assertEqual(props["reference_version"], RE.COMMUNITY_VERSION)
         self.assertEqual(props["reference_center"], [53.5, -113.5])
 
+    def test_a_walk_can_plant_what_suits_its_ground(self):
+        """Plant one (V3.41): any plant native here that takes the
+        community's typical ground; a dry prairie plant does not suit the
+        wet meadow, and a wet-ground sedge does not suit the dry prairie."""
+        wet = RE.plantable_ids("wet_meadow")
+        dry = RE.plantable_ids("mixedgrass_prairie")
+        from src.db.plants import get_connection
+        conn = get_connection()
+        try:
+            ids = {r["common_name"]: r["id"] for r in conn.execute(
+                "SELECT id, common_name FROM plants WHERE common_name IN "
+                "('Prairie Crocus', 'Water Sedge', 'Marsh Marigold')")}
+        finally:
+            conn.close()
+        self.assertNotIn(ids["Prairie Crocus"], wet)
+        self.assertIn(ids["Marsh Marigold"], wet)
+        self.assertIn(ids["Prairie Crocus"], dry)
+        self.assertNotIn(ids["Water Sedge"], dry)
+        self.assertGreater(len(wet), 50)
+
     def test_the_palette_leads_with_the_leads(self):
         from src import reference_edit
         pal = reference_edit.palette("aspen_parkland")
