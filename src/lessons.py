@@ -136,8 +136,8 @@ LESSONS = (
              "Treat the numbers as a guide to what is likely, and then go "
              "outside and look. What visits your plants in July is the real "
              "answer, and it is worth writing down."),
-         "look": ("In a design, Site › Field Notes has a sheet to print and "
-                  "take outside."),
+         "look": ("In a design, Site › Notes has a sheet to print and take "
+                  "outside."),
          "sources": (),
          "readout": "ranges"},
     )),
@@ -268,8 +268,8 @@ LESSONS = (
              "stand near the front without hiding what is behind them. Keep "
              "plants low where people need to see past them, at a corner or "
              "beside a driveway."),
-         "look": ("In a design, View › 3D Preview shows the planting at its "
-                  "height in any year."),
+         "look": ("In a design, with View › Advanced tools on, View › 3D "
+                  "Preview shows the planting at its height in any year."),
          "sources": (),
          "readout": "height"},
         {"title": "Layers and filling the ground",
@@ -564,13 +564,15 @@ def _soil(land, **_kw) -> str:
 def _slope(land, **_kw) -> str:
     if land["site"].get("latitude") is None:
         return "A walk is drawn on flat ground."
-    return "Site › Slope reads this design's slope from the elevation data."
+    return ("With View › Advanced tools on, Site › Slope reads this "
+            "design's slope from the elevation data.")
 
 
 def _wind(land, **_kw) -> str:
     if land["site"].get("latitude") is None:
         return ""
-    return "Site › Wind reads this design's winds for its pin."
+    return ("With View › Advanced tools on, Site › Wind reads this "
+            "design's winds for its pin.")
 
 
 def _frost(land, **_kw) -> str:
