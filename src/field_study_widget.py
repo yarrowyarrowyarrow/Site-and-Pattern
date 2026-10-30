@@ -181,6 +181,12 @@ class FieldStudyWidget(QWidget):
         font.setBold(True)
         item.setFont(font)
 
+    def set_landscape_words(self, words: str):
+        """What the landscape topic calls the plants it asks about ("the
+        landscape you walked" in the Learn window, "this design" in the main
+        window's Learn tab)."""
+        self._where = words
+
     def set_topic(self, key: str):
         """Choose a topic (``quiz_topics`` key, or ``MIXED``)."""
         i = self._topic.findData(key)
@@ -211,8 +217,9 @@ class FieldStudyWidget(QWidget):
                              + (" The rest download while you play, when "
                                 "you are connected." if have < total else ""))
             elif topic == "landscape":
-                lines.append("About the landscape you walked: its plants, and "
-                             "who would lose the only plant there they use.")
+                lines.append(f"About {getattr(self, '_where', '') or quiz_topics.WALKED}: "
+                             "its plants, and who would lose the only plant "
+                             "there they use.")
             score, out_of = quiz_topics.best(topic, focus)
             if out_of:
                 lines.append(f"Your best: {score} of {out_of}.")
@@ -228,9 +235,10 @@ class FieldStudyWidget(QWidget):
         if topic == MIXED:
             from src.field_study import generate_quiz
             return generate_quiz(plants, seed=seed, n=n)
-        from src.quiz_topics import build_quiz
+        from src.quiz_topics import WALKED, build_quiz
         return build_quiz(topic, focus=focus, n=n, seed=seed,
-                          walk_plants=plants or [])
+                          walk_plants=plants or [],
+                          where=getattr(self, "_where", "") or WALKED)
 
     def _why_empty(self) -> str:
         """Why a topic made no questions, in words, rather than another

@@ -57,7 +57,7 @@ GROUPS = (
     ("when", "When and where", (
         ("flowering", "When it flowers"),
         ("growing", "Where it grows"),
-        ("landscape", "The landscape you walked"),
+        ("landscape", "The landscape you are in"),
     )),
 )
 TOPIC_WORDS = {key: words for _g, _gw, topics in GROUPS
@@ -80,6 +80,9 @@ _FOOD_PART = {"fruit_food": "fruit", "seed_food": "seeds"}
 
 ALL = "all"
 LOCAL = "local"
+#: What the landscape topic calls its plants: the walk in the Learn window,
+#: the design in the main window's Learn tab ("this design").
+WALKED = "the landscape you walked"
 
 
 # ── data access (injectable) ─────────────────────────────────────────────────
@@ -503,7 +506,7 @@ def _growing_question(rng, pool, catalogue) -> Optional[dict]:
 
 
 def _landscape_questions(rng, walk: list[dict], catalogue, edges,
-                         design_state) -> list:
+                         design_state, where: str = WALKED) -> list:
     """About the landscape you walked: which plants grow in it, and who
     would lose the only plant there it is recorded with if one were pulled;
     and its food-web gap, when it has one."""
@@ -522,7 +525,7 @@ def _landscape_questions(rng, walk: list[dict], catalogue, edges,
     if distract:
         opts, idx = _mc(rng, target["common_name"], distract)
         out.append({"type": "landscape", "subject": target["common_name"],
-                    "prompt": "Which of these grows in the landscape you walked?",
+                    "prompt": f"Which of these grows in {where}?",
                     "image_url": "", "hint": "", "options": opts,
                     "answer_index": idx,
                     "explanation": (f"{target['common_name']} grows there. "
@@ -542,8 +545,8 @@ def _landscape_questions(rng, walk: list[dict], catalogue, edges,
             out.append({
                 "type": "landscape", "subject": "pull " + plant["common_name"],
                 "prompt": (f"Pull the {plant['common_name']}, and which of "
-                           "these animals loses the only plant in the "
-                           "landscape it is recorded with?"),
+                           "these animals loses the only plant in "
+                           f"{where} it is recorded with?"),
                 "image_url": "", "hint": "", "options": opts,
                 "answer_index": idx,
                 "explanation": (f"The {answer} is recorded with the "
@@ -569,13 +572,15 @@ def build_quiz(topic: str, *, focus: str = ALL, n: int = 10, seed: int = 0,
                walk_plants: Optional[list[dict]] = None,
                design_state: Optional[dict] = None,
                community: Optional[Callable] = None,
-               local: Optional[Callable] = None) -> list[dict]:
+               local: Optional[Callable] = None,
+               where: str = WALKED) -> list[dict]:
     """Up to ``n`` questions on ``topic`` about the plants ``focus`` covers.
 
     Fewer than ``n`` when the topic cannot make more (too few photos on this
     computer, too few plants in the focus): the caller says so; nothing from
     another topic stands in. ``walk_plants`` are the landscape the person
-    walked (the "landscape" topic, which ignores the focus)."""
+    walked (the "landscape" topic, which ignores the focus), called
+    ``where`` in its questions."""
     if topic not in TOPIC_WORDS:
         raise ValueError(f"unknown topic {topic!r}")
     rng = random.Random(seed)
@@ -604,7 +609,7 @@ def build_quiz(topic: str, *, focus: str = ALL, n: int = 10, seed: int = 0,
         while len(made) < n and tries < n * 6:
             tries += 1
             for q in _landscape_questions(rng, walk, catalogue, rows,
-                                          design_state):
+                                          design_state, where):
                 key = (q["type"], q.get("subject") or q["prompt"])
                 if key not in seen and len(made) < n:
                     seen.add(key)

@@ -75,6 +75,9 @@ class LearnPanel(QWidget):
         # "spot the food-web gap" question is about the user's own design.
         self._field_study = FieldStudyWidget(
             plants_provider=lambda: self._placed_plants)
+        # The main window's Learn tab is about the open design; the Learn
+        # window says otherwise (learn_menu.LearnStudioWindow).
+        self._field_study.set_landscape_words("this design")
         self._tabs.addTab(self._scroll_page(self._field_study), "Field Study")
 
     # ── F53 — Guided lesson track ────────────────────────────────────────────

@@ -137,6 +137,8 @@ class LearnStudioWindow(QWidget):
         self.panel._lesson_track.set_here_label(
             f"The walk you planted in: {title}" if title
             else "The walk you planted in")
+        from src.quiz_topics import WALKED
+        self.panel._field_study.set_landscape_words(WALKED)
         self.set_plants(plants or [])
 
     def set_plants(self, plants: list) -> None:

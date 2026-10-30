@@ -245,6 +245,7 @@ function showCard(entry) {
     + cardHtml(entry);
   card.style.display = 'block';
   card.scrollTop = 0;
+  document.body.classList.add('card-open');
   const btn = document.getElementById('inspect-close');
   if (btn) btn.addEventListener('click', clearSelection);
 }
@@ -255,6 +256,7 @@ function clearSelection() {
   clearThreads();
   const card = inspectCard();
   if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+  document.body.classList.remove('card-open');
 }
 
 // ── picking ─────────────────────────────────────────────────────────────────
