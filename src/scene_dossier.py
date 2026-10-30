@@ -583,20 +583,25 @@ def build_dossier(scene: dict, *,
         except Exception:                                    # noqa: BLE001
             plans = {}
     can_plant = {int(p) for p in plantable}
+    # Each animal's facts in two queries for the whole scene, not a connection
+    # per animal: a walk's cards cover 450 animals and are rebuilt on every
+    # edit, and the per-animal lookups were half the build (V3.41).
+    preloaded = (_attrs_for(fauna_rows) if fauna_attrs is None else {})
+    rels: dict = {}
+    for r in rows:
+        if r.get("id") is not None and r.get("plant_id") is not None:
+            rels.setdefault((r["id"], int(r["plant_id"])), []).append(
+                r.get("relationship") or "")
     fauna_entries = {}
     for fid, row in fauna_rows.items():
-        attrs = {}
         if fauna_attrs is not None:
             attrs = fauna_attrs(fid, row.get("taxon")) or {}
         else:
-            attrs = _default_attrs(fid, row.get("taxon"))
+            attrs = preloaded.get(fid, {})
         uses = [{"plant": names.get(pid, ""), "plant_id": pid,
                  "how": _REL_FROM_ANIMAL.get(
-                     next((e.get("relationship") for e in by_plant.get(pid, [])
-                           if e.get("id") == fid), ""), "uses"),
-                 "does": _uses_words(e.get("relationship")
-                                     for e in by_plant.get(pid, [])
-                                     if e.get("id") == fid)}
+                     (rels.get((fid, pid)) or [""])[0], "uses"),
+                 "does": _uses_words(rels.get((fid, pid)) or [])}
                 for pid in sorted(supporters.get(fid, ()))]
         name = row.get("common_name") or ""
         if name:
@@ -629,6 +634,34 @@ def _reach(rows: list) -> dict:
     out: dict = {}
     for taxon in taxon_of.values():
         out[taxon] = out.get(taxon, 0) + 1
+    return out
+
+
+def _attrs_for(fauna_rows: dict) -> dict:
+    """``{fauna_id: attribute row}`` for every bee and butterfly or moth among
+    ``fauna_rows`` (``{fauna_id: row}``), from the two narrow tables in one
+    connection. Best-effort: an empty dict when they cannot be read."""
+    tables = {"bee": "bee_attributes", "lepidoptera": "lepidoptera_attributes"}
+    out: dict = {}
+    try:
+        from src.db.plants import get_connection           # noqa: PLC0415
+        conn = get_connection()
+    except Exception:                                        # noqa: BLE001
+        return out
+    try:
+        for taxon, table in tables.items():
+            ids = sorted(fid for fid, r in fauna_rows.items()
+                         if r.get("taxon") == taxon)
+            if not ids:
+                continue
+            marks = ",".join("?" * len(ids))
+            for r in conn.execute(f"SELECT * FROM {table} "
+                                  f"WHERE fauna_id IN ({marks})", ids):
+                out[r["fauna_id"]] = dict(r)
+    except Exception:                                        # noqa: BLE001
+        pass
+    finally:
+        conn.close()
     return out
 
 
