@@ -63,6 +63,9 @@ Ranked by direct relevance to the application's architecture, data modeling, UX,
 - Doug Tallamy — *Nature's Best Hope* (2019)
 - Doug Tallamy — *Bringing Nature Home* (2007)
 - Rick Darke & Doug Tallamy — *The Living Landscape* (2014)
+- J. Scott MacIvor & Laurence Packer — *'Bee Hotels' as Tools for Native Pollinator Conservation: A Premature Verdict?*, PLOS ONE 10(3): e0122126 (2015)
+  Cited by the lessons (V3.41): a bee hotel's tubes spread parasites and disease unless they
+  are cleaned or replaced each year, and they draw introduced bees and wasps as well.
 - Erik Ohlsen — *The Regenerative Landscaper* (2023)
 - Dave Jacke & Eric Toensmeier — *Edible Forest Gardens, Vol. 1* (2005)
 - Nancy Lawson — *Wildscape* (2023)

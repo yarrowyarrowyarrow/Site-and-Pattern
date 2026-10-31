@@ -114,14 +114,20 @@ def open_sandbox(community: str, *, center: Optional[tuple] = None,
     """The project to walk into: the saved sandbox if there is one, otherwise
     a fresh build of the curated community.
 
+    A sandbox saved from an older version of the community is rebuilt around
+    what the person planted (:func:`src.reference_upgrade.upgrade_sandbox`):
+    a saved walk is never built again, so without it the walks planted before
+    V3.39 would keep their alphabetical trees for good.
+
     ``build`` is injectable so tests need no database.
     """
-    saved = load_sandbox(community)
-    if saved is not None:
-        return saved
     if build is None:
         from src.reference_ecosystem import build_reference_project
         build = build_reference_project
+    saved = load_sandbox(community)
+    if saved is not None:
+        from src.reference_upgrade import upgrade_sandbox
+        return upgrade_sandbox(community, saved, build=build)
     lat, lng = center or (51.05, -114.07)
     return build(community, center_lat=lat, center_lng=lng)
 
@@ -224,13 +230,16 @@ def nearest_plant(project: dict, center: tuple, dx_m: float, dy_m: float, *,
 
 #: How many species the palette offers. A palette is a set of choices, not the
 #: catalogue: 439 species in a dropdown is the Design side's job, and putting
-#: it here would rebuild the complexity Learn mode exists to avoid.
-PALETTE_SIZE = 14
+#: it here would rebuild the complexity Learn mode exists to avoid. Every lead
+#: species is offered even past it (V3.39).
+PALETTE_SIZE = 18
 
 
 def palette(community: str, *, resolve: Optional[Callable] = None,
+            resolve_names: Optional[Callable] = None,
             limit: int = PALETTE_SIZE) -> list[dict]:
-    """What you can plant here: the curated community's own species.
+    """What you can plant here: the curated community's own species, its
+    lead species first.
 
     **The community's species, and not the whole catalogue** — that is the
     design decision in this function. Learn mode is teaching what belongs
@@ -239,34 +248,47 @@ def palette(community: str, *, resolve: Optional[Callable] = None,
     app would then have to answer.
 
     Returns ``[{plant_id, common_name, scientific_name, layer}]``, ordered
-    canopy → shrub → forb → grass so the list reads like the community does.
+    canopy → shrub → forb → grass so the list reads like the community does;
+    inside a layer the lead species come first, then the species that fill the
+    walk out (those that suit its ground, :func:`reference_ecosystem.layer_plan`),
+    as many as the palette has room for, a layer at a time in turn.
     """
-    if resolve is None:
-        from src.db.fauna import plants_in_genera
-        resolve = plants_in_genera
-    from src.reference_ecosystem import reference_community
-
-    spec = reference_community(community)
+    from src.reference_ecosystem import layer_plan
+    try:
+        plan = layer_plan(community, resolve_genus=resolve,
+                          resolve_names=resolve_names)
+    except Exception:                                      # noqa: BLE001
+        return []
+    seen: set = set()
+    leads: dict[str, list] = {}
+    rest: dict[str, list] = {}
+    for spec in plan:
+        layer = spec["layer"]
+        for row in [r for r, _s in spec["leads"]]:
+            if row.get("id") is not None and row.get("id") not in seen:
+                seen.add(row.get("id"))
+                leads.setdefault(layer, []).append(row)
+        for row in spec["fill"]:
+            if row.get("id") is not None and row.get("id") not in seen:
+                seen.add(row.get("id"))
+                rest.setdefault(layer, []).append(row)
+    room = max(0, (limit or 10 ** 6) - sum(len(v) for v in leads.values()))
+    taken: dict[str, int] = {}
+    while room > 0 and any(taken.get(l, 0) < len(r) for l, r in rest.items()):
+        for layer in ("canopy", "shrub", "forb", "grass"):
+            if room > 0 and taken.get(layer, 0) < len(rest.get(layer, [])):
+                taken[layer] = taken.get(layer, 0) + 1
+                room -= 1
     out: list[dict] = []
-    seen: set[int] = set()
     for layer in ("canopy", "shrub", "forb", "grass"):
-        lspec = (spec.get("layers") or {}).get(layer) or {}
-        try:
-            rows = resolve(lspec.get("genera", [])) or []
-        except Exception:                                  # noqa: BLE001
-            rows = []
-        for row in rows:
-            pid = row.get("id")
-            if pid is None or pid in seen:
-                continue
-            seen.add(pid)
+        for row in leads.get(layer, []) + rest.get(layer, [])[:taken.get(layer, 0)]:
             out.append({
-                "plant_id": pid,
+                "plant_id": row.get("id"),
                 "common_name": row.get("common_name") or "plant",
                 "scientific_name": row.get("scientific_name") or "",
                 "layer": layer,
             })
-    return out[:limit] if limit else out
+    return out
 
 
 # ── What changed ─────────────────────────────────────────────────────────────

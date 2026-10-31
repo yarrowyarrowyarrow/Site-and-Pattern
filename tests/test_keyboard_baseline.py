@@ -480,18 +480,24 @@ class TestNamesOutsideTheWindow(unittest.TestCase):
 
     def test_the_start_screens_choices_are_named(self):
         """Each read as "button": the words are child labels."""
-        from src.start_screen import StartScreen, _Row
+        from src.start_rows import Row
+        from src.start_screen import StartScreen
         designs = [{"path": "/tmp/a", "name": "My Yard", "when": "just now",
-                    "summary": "", "error": ""}]
+                    "line": "3 plants", "summary": "", "error": "",
+                    "deletable": True}]
         screen = StartScreen(None, recover="Back yard", designs=designs,
-                             total=1)
+                             total=1, rename=lambda *a: None,
+                             delete=lambda *a: None)
         self.addCleanup(screen.deleteLater)
-        rows = screen.findChildren(_Row)
-        self.assertEqual(len(rows), 3)
+        rows = screen.findChildren(Row)
+        # Restore, Plan a new yard, the design, and the Learn card's four.
+        self.assertEqual(len(rows), 7)
         for row in rows:
             self.assertTrue(row.accessibleName(), row)
             self.assertTrue(row.accessibleDescription(), row)
-        self.assertIn("My Yard", [r.accessibleName() for r in rows])
+        names = [b.accessibleName() for b in screen.findChildren(QPushButton)]
+        for name in ("My Yard", "Rename My Yard", "Delete My Yard", "Quizzes"):
+            self.assertIn(name, names)
 
     def test_the_side_panel_strip_takes_focus_and_says_what_it_does(self):
         from src.collapsible_panel import CollapsibleSidebar

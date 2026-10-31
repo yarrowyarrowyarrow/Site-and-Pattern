@@ -16,8 +16,6 @@ replaces so a box never waits for an answer nobody will give.
 
 from __future__ import annotations
 
-import os
-
 from src.log import get_logger, log_file_path
 
 log = get_logger(__name__)
@@ -26,7 +24,8 @@ log = get_logger(__name__)
 # ── The words ───────────────────────────────────────────────────────────────
 
 def open_failed_text(path: str) -> str:
-    name = os.path.basename(path or "") or "the design"
+    from src.saves import file_stem
+    name = file_stem(path) or "the design"
     return (f"Couldn't open \"{name}\". The file may be damaged or from a "
             "newer version. Your other designs are fine.")
 
@@ -60,6 +59,22 @@ def save_before_closing_text(name: str) -> str:
 def discard_for_new_text(name: str) -> str:
     return (f"Discard unsaved changes to \"{name or 'this design'}\" and "
             "start a new yard?")
+
+
+def bin_name() -> str:
+    """What the system calls the place a deleted file goes (V3.42)."""
+    import sys
+    return "Recycle Bin" if sys.platform.startswith("win") else "Trash"
+
+
+def delete_text(name: str) -> str:
+    return (f"Move \"{name or 'this design'}\" to the {bin_name()}? You can "
+            "get it back from there.")
+
+
+def delete_failed_text(name: str) -> str:
+    return (f"Couldn't move \"{name or 'this design'}\" to the "
+            f"{bin_name()}, so it is still in your designs.")
 
 
 def details_text() -> str:
@@ -137,6 +152,25 @@ def ask_discard_for_new(parent, name: str) -> bool:
     box.setStandardButtons(B.Discard | B.Cancel)
     box.setDefaultButton(B.Cancel)
     return _run(box) == B.Discard
+
+
+def ask_delete_design(parent, name: str) -> bool:
+    """V3.42: the start screen's and the saves list's Delete. The design goes
+    to the system's bin, so the question says where and that it comes back;
+    Cancel is the default."""
+    from PyQt6.QtWidgets import QMessageBox
+    B = QMessageBox.StandardButton
+    box = _box(parent, "Delete design", delete_text(name), warning=False)
+    box.setStandardButtons(B.Yes | B.Cancel)
+    box.button(B.Yes).setText(f"Move to {bin_name()}")
+    box.setDefaultButton(B.Cancel)
+    return _run(box) == B.Yes
+
+
+def tell_delete_failed(parent, name: str) -> None:
+    log.warning("could not move %s to the bin", name)
+    _run(_box(parent, "Couldn't delete", delete_failed_text(name),
+              details=details_text()))
 
 
 def ask_design_name(parent, *, title: str = "Save design",

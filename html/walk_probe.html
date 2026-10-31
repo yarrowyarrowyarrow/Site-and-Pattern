@@ -1,0 +1,140 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#101815;color:#dfe;font:14px system-ui}
+  iframe{width:1280px;height:820px;border:0;display:block}
+  #status{position:fixed;left:8px;top:8px;background:#000a;padding:6px 10px;
+          z-index:99;font-weight:600}
+</style></head><body>
+<div id="status">booting…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script src="probe_watch.js"></script>
+<script>
+// The walk's click-to-learn, end to end (V3.38, F255; dev page, not shipped).
+// tests/test_walk_cards.py serves walk_probe_data.json: a walk community's
+// scene, wildlife and cards, built by the same functions the walk window
+// calls (reference_ecosystem → scene_contract → walk_cards). This pushes them,
+// puts the viewer in walk mode as the window does, finds a point where the
+// viewer's own picker hits a plant, clicks there, and writes in the title
+// which card opened:  WALK_CARD {"name": …, "creatures": n}  or WALK_NO_CARD.
+fetch('./walk_probe_data.json').then(r => r.json()).then((D) => {
+  const v = document.getElementById('v');
+  const status = document.getElementById('status');
+  let pushed = false;
+  const timer = setInterval(() => {
+    const w = v.contentWindow;
+    // Wait for the LAST chunk (25-cards.js since V3.39), not the one that
+    // defines permaSetScene (05): pushing while 06–25 are still loading
+    // throws in 04's groundcover builder, which lives in 14. The app is not
+    // exposed to this: Map3DWidget holds every push until loadFinished, which
+    // the chained chunk loads keep back until the last one has run.
+    if (!w || typeof w.permaSetScene !== 'function'
+        || typeof w.labelWanted !== 'function') return;
+    if (!pushed) {
+      w.permaSetScene(D.scene);
+      if (w.permaSetWildlife) w.permaSetWildlife(D.wildlife, D.support);
+      if (w.permaSetDossier) w.permaSetDossier(D.dossier);
+      if (w.permaSetWalkMode) w.permaSetWalkMode(true);
+      pushed = true;
+      status.textContent = 'pushed';
+      return;
+    }
+    clearInterval(timer);
+    const settle = (fn) => {
+      let waited = 0;
+      const tick = () => {
+        if ((w.permaModelsReady && w.permaModelsReady()) || waited > 12000) {
+          setTimeout(fn, 800);
+          return;
+        }
+        waited += 100;
+        setTimeout(tick, 100);
+      };
+      tick();
+    };
+    // A sweep that opens nothing is tried again after a pause, up to three
+    // times: on a cold start the baked models can land after the wait above
+    // and rebuild the scene in the middle of a sweep.
+    const sweep = (attempt) => {
+      const cv = w.document.querySelector('canvas');
+      const r = cv.getBoundingClientRect();
+      const seen = { points: 0, plants: 0, fauna: 0, mode: '' };
+      for (let gy = 0.30; gy <= 0.85; gy += 0.025) {
+        for (let gx = 0.10; gx <= 0.90; gx += 0.025) {
+          const x = r.left + r.width * gx, y = r.top + r.height * gy;
+          const hit = w.scenePick(x, y);
+          seen.points++;
+          if (hit && hit.type === 'fauna') seen.fauna++;
+          if (!hit || hit.type !== 'plant') continue;
+          seen.plants++;
+          seen.mode = String(w.__permaEditMode || '');
+          for (const type of ['pointerdown', 'pointerup']) {
+            cv.dispatchEvent(new PointerEvent(type, {
+              pointerId: 1, isPrimary: true, button: 0, clientX: x,
+              clientY: y, bubbles: true, cancelable: true }));
+          }
+          const card = w.document.getElementById('inspect-card');
+          if (!card || card.style.display !== 'block') continue;
+          const name = (card.querySelector('.iname') || {}).textContent || '';
+          const rows = card.querySelectorAll('ul.ilist li').length;
+          const result = { name: name, creatures: rows,
+                           key: String(hit.key),
+                           notes: !!card.querySelector('.inotes'),
+                           does: card.querySelectorAll('.does p').length,
+                           shown: card.querySelectorAll(':scope > ul.ilist > li.arow').length,
+                           folded: !!card.querySelector('details.amore'),
+                           more: !!card.querySelector('details.more') };
+          // V3.39: an animal on the card opens its card, which leads back.
+          const link = card.querySelector('[data-open-fauna]');
+          if (link) {
+            result.animal_link = link.getAttribute('data-open-fauna');
+            link.click();
+            result.animal = (card.querySelector('.iname') || {}).textContent || '';
+            result.here = card.querySelectorAll('[data-open-plant]').length;
+            result.plant_one = card.querySelectorAll('[data-plant-one]').length;
+            const back = card.querySelector('[data-card-back]');
+            result.back = back ? back.textContent : '';
+            if (back) {
+              back.click();
+              result.back_to = (card.querySelector('.iname') || {}).textContent || '';
+            }
+            // Plant one needs the walk's bridge, which this page lacks: a
+            // stand-in records what the button would send (V3.41).
+            w.eval("_bridge = { choosePlant: function (id) { window.__chosen = id; },"
+                   + " inspected: function () {} };");
+            const withPlant = Object.entries(w.eval("DOSSIER").fauna).find(([, f]) =>
+              (f.elsewhere || []).some((e) => e.plantable));
+            if (withPlant) {
+              w.openCard('fauna', withPlant[0]);
+              const button = card.querySelector('[data-plant-one]');
+              result.plant_one_shown = !!button;
+              if (button) {
+                result.plant_one_id = Number(button.getAttribute('data-plant-one'));
+                button.click();
+                result.plant_one_sent = w.__chosen;
+                result.plant_one_after = button.textContent;
+              }
+            }
+            w.eval("_bridge = null;");
+          }
+          // The roster: one line, the creatures folded under it.
+          if (w.permaSetWildlifeLabels) {
+            w.permaSetWildlifeLabels(true);
+            const roster = w.document.getElementById('wild-roster');
+            result.roster_head = ((roster && roster.querySelector('h4')) || {}).textContent || '';
+            const fold = roster && roster.querySelector('details.outnow');
+            result.roster_folded = !!fold && !fold.open;
+          }
+          status.textContent = 'card: ' + name;
+          document.title = 'WALK_CARD ' + JSON.stringify(result);
+          return;
+        }
+      }
+      if (attempt < 3) { setTimeout(() => sweep(attempt + 1), 3000); return; }
+      status.textContent = 'no plant card opened';
+      document.title = 'WALK_NO_CARD ' + JSON.stringify(seen);
+    };
+    settle(() => sweep(1));
+  }, 250);
+});
+</script>
+</body></html>

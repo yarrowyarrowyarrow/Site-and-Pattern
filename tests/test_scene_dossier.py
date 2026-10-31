@@ -118,6 +118,60 @@ class DossierShapeTest(unittest.TestCase):
 
 
 class PlantEntryTest(unittest.TestCase):
+    def test_no_free_text_notes(self):
+        """V3.38 (L8, P12): the plant page dropped the notes in V3.26, and the
+        card now opens in the Learn walk too. The fixture's Saskatoon has a
+        note; the card must not carry it, and the page must not draw one."""
+        import pathlib
+        e = _build(scene=_scene(1))["plants"]["1"]
+        self.assertNotIn("notes", e)
+        self.assertNotIn("A prairie keystone.", json.dumps(e))
+        for chunk in ("10-inspect.js", "25-cards.js"):
+            js = (pathlib.Path(__file__).resolve().parent.parent / "html"
+                  / "scene3d" / chunk).read_text(encoding="utf-8")
+            self.assertNotIn("e.notes", js, chunk)
+
+    def test_it_says_what_the_plant_is_recorded_as_food_for(self):
+        """V3.39: the card's first lines, by part of the plant, each animal
+        once, and "recorded as food for", never "feeds" (V3.20, OV-5)."""
+        e = _build(scene=_scene(1, 2))["plants"]["2"]
+        self.assertEqual(e["does"], [
+            "Its flowers are recorded as food for 1 bee.",
+            "Its leaves are recorded as food for the caterpillars of 1 "
+            "butterfly or moth.",
+        ])
+        both = _build(scene=_scene(1))["plants"]["1"]["does"]
+        self.assertIn("Its fruit is recorded as food for 1 bird.", both)
+        self.assertFalse(any("feeds" in line for line in both))
+
+    def test_one_row_per_animal_with_every_use(self):
+        edges = _EDGES + [{"plant_id": 1, "id": 11, "common_name": "Bumble Bee",
+                           "scientific_name": "Bombus sp.", "taxon": "bee",
+                           "relationship": "pollen",
+                           "specificity": "generalist"}]
+        e = _build(scene=_scene(1),
+                   fauna_edges=lambda pids: [dict(r) for r in edges
+                                             if r["plant_id"] in pids]
+                   )["plants"]["1"]
+        bees = [u for u in e["users"] if u["name"] == "Bumble Bee"]
+        self.assertEqual(len(bees), 1, "one row per animal")
+        self.assertEqual(bees[0]["kinds"], ["nectar", "pollen"])
+        self.assertEqual(bees[0]["words"], "nectar and pollen")
+        self.assertEqual(bees[0]["how"], "nectar and pollen for")
+        self.assertIn("Its flowers are recorded as food for 1 bee.", e["does"])
+
+    def test_animals_with_an_english_name_come_first(self):
+        edges = [dict(_EDGES[0]), {"plant_id": 1, "id": 20,
+                                   "common_name": "Andrena salictaria",
+                                   "scientific_name": "Andrena salictaria",
+                                   "taxon": "bee", "relationship": "pollen",
+                                   "specificity": "generalist"}]
+        users = _build(scene=_scene(1), fauna_edges=lambda _p: edges
+                       )["plants"]["1"]["users"]
+        self.assertEqual([u["name"] for u in users],
+                         ["Cedar Waxwing", "Andrena salictaria"])
+        self.assertEqual([u["english"] for u in users], [True, False])
+
     def test_identity_and_seasons(self):
         e = _build(scene=_scene(1))["plants"]["1"]
         self.assertEqual(e["name"], "Saskatoon Berry")
@@ -186,6 +240,47 @@ class FaunaEntryTest(unittest.TestCase):
     def test_relationship_reads_from_the_animals_side(self):
         d = _build(scene=_scene(2))
         self.assertEqual(d["fauna"]["Monarch"]["uses"][0]["how"], "lays eggs on")
+        self.assertEqual(d["fauna"]["Monarch"]["uses"][0]["does"],
+                         "lays eggs on it")
+
+    def test_its_plants_here_are_links(self):
+        d = _build(scene=_scene(1, 2))
+        self.assertEqual([u["plant_id"] for u in d["fauna"]["Bumble Bee"]["uses"]],
+                         [1, 2])
+
+    def test_the_plants_it_uses_that_are_not_here_yet(self):
+        """V3.39: opt-in, from ``what_it_feeds.animal_plans``, the walk's own
+        plants marked as ones Plant one can offer."""
+        calls = []
+
+        def plans(fids, pids, **kw):
+            calls.append((sorted(fids), sorted(pids), kw))
+            return {12: {"elsewhere": [
+                {"plant_id": 7, "name": "Swamp Milkweed",
+                 "kinds": ["nectar", "larval_host"]},
+                {"plant_id": 8, "name": "Wild Bergamot", "kinds": ["nectar"]}],
+                "elsewhere_total": 5}}
+        d = _build(scene=_scene(2), animal_plans=plans, plantable=(8,),
+                   province="AB")
+        self.assertEqual(len(calls), 1, "one call for every animal")
+        self.assertEqual(calls[0][2]["prefer"], (8,))
+        self.assertEqual(calls[0][2]["province"], "AB")
+        away = d["fauna"]["Monarch"]["elsewhere"]
+        self.assertEqual(away[0]["does"],
+                         "lays eggs on it and sips nectar at it")
+        self.assertEqual([p["plantable"] for p in away], [False, True])
+        self.assertEqual(d["fauna"]["Monarch"]["elsewhere_total"], 5)
+        self.assertEqual(d["plantable"], [8])
+        self.assertNotIn("elsewhere", _build(scene=_scene(2))["fauna"]["Monarch"])
+
+    def test_the_reach_counts_food_once_and_not_shelter(self):
+        edges = _EDGES + [{"plant_id": 1, "id": 30, "common_name": "Robin",
+                           "scientific_name": "Turdus migratorius",
+                           "taxon": "bird", "relationship": "nesting"}]
+        d = _build(scene=_scene(1, 2),
+                   fauna_edges=lambda pids: [dict(r) for r in edges
+                                             if r["plant_id"] in pids])
+        self.assertEqual(d["reach"], {"bird": 1, "bee": 1, "lepidoptera": 1})
 
     def test_bee_facts_come_from_the_narrow_attribute_table(self):
         f = _build(scene=_scene(1))["fauna"]["Bumble Bee"]

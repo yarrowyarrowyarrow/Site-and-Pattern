@@ -46,7 +46,7 @@ EXEMPT_PREFIXES = ("static_site",)
 #: column only in the modules that build simple surfaces"), grown as the
 #: rewrites land.
 SIMPLE_MODULES = (
-    "first_step_bar.py", "onboarding.py", "start_screen.py",
+    "first_step_bar.py", "onboarding.py", "start_screen.py", "start_rows.py",
     "structure_panel.py", "share_panel.py", "community_page.py",
     "species_page.py", "plant_filters.py", "filter_area.py",
     "placement_bar.py", "landing_check.py", "plain_messages.py",

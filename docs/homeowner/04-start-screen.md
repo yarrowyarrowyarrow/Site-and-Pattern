@@ -13,6 +13,14 @@ claim comes from reading code rather than running it, it says so.*
 > Landscape and Lessons & Field Study (S2, S3). Every other S answer took the
 > recommendation.
 
+> **Since V3.42** ([plan](../plans/V3.42-the-start-screen-in-two-columns.md),
+> F259) the screen is two columns on the owner's answers to sketches: Your
+> yards (Plan a new yard filled, the last design outlined, a Delete to the
+> Recycle Bin under each Rename) beside a Learn card (the example yard, the
+> walk, Lessons, Quizzes). The Learn menu and the line of what is in flower
+> are gone. This chapter is the V3.17 review and the V3.23 design, kept as
+> the record.
+
 ![Today's start screen, V3.17](img/start-screen-today.png)
 
 The owner, with a screenshot of this screen on Windows: *"This feels

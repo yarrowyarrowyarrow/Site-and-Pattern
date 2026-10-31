@@ -4,8 +4,9 @@ learn_flow.py — Qt-shaped wiring for Learn mode (V2.43).
 Free functions taking ``main`` (the MainWindow), the flow-module pattern from
 ``src/wind_flow.py`` and ``src/onboarding_flow.py``. Everything user-visible is
 decided in the Qt-free :mod:`src.app_mode` and :mod:`src.reference_edit`; this
-does the Qt-shaped half — open the second screen, open the lessons over the
-sandbox, and read the counts those screens display.
+does the Qt-shaped half — open the lessons or the quizzes over the sandbox,
+and read the count the start screen's walk door displays. (It opened the
+Learn menu too, until V3.42 put the Learn doors on the start screen.)
 
 Split out of ``onboarding_flow`` when the Learn wiring took that module past
 its 620-line ceiling. That guard says, in its own words, that the fix is
@@ -22,7 +23,7 @@ note column.
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QDialog
+from src.app_mode import LESSONS, QUIZZES
 
 
 def _safely(fn, what: str) -> None:
@@ -41,41 +42,38 @@ def _safely(fn, what: str) -> None:
         slot_errors.report(what)
 
 
-def open_learn_menu(parent) -> str:
-    """Show the Learn menu, built against what the learner has actually done."""
-    from src.learn_menu import LearnMenu
-    dlg = LearnMenu(parent, communities=community_count(),
-                    sandbox=sandbox_name())
-    if dlg.exec() != QDialog.DialogCode.Accepted:
-        return ""
-    return dlg.choice()
-
-
-def open_studio(main) -> None:
-    """Open the lessons over the sandbox — the landscape the user has been
-    planting in, not an empty design.
+def open_studio(main, page: str = LESSONS) -> None:
+    """Open the lessons or the quizzes (``page``) over the sandbox — the
+    landscape the user has been planting in, not an empty design.
 
     This is the point of the V2.43 sandbox: ``LearnPanel`` is design-aware and
     had nothing to talk about in Learn mode until the reference landscape
     became a real, editable, saved project. With no sandbox yet it still opens
     and still works — the quiz falls back to the catalogue — so a first-time
     learner is never shown a locked door.
+
+    One window per page, kept on ``main._learn_windows`` and raised again on
+    a second click (V3.42: the start screen's Lessons and Quizzes are
+    separate doors).
     """
-    from src.learn_menu import LearnStudioWindow
+    from src.learn_window import TITLES, LearnStudioWindow
+    page = page if page in TITLES else LESSONS
 
     def _go():
         plants, title = sandbox_plants()
-        win = getattr(main, "_learn_studio", None)
+        windows = getattr(main, "_learn_windows", None)
+        if windows is None:
+            windows = main._learn_windows = {}
+        win = windows.get(page)
         if win is None:
-            win = LearnStudioWindow(plants, title)
-            main._learn_studio = win
+            win = windows[page] = LearnStudioWindow(plants, title, page=page)
         else:
             win.set_plants(plants)
         win.show()
         win.raise_()
         win.activateWindow()
 
-    _safely(_go, "The Lessons")
+    _safely(_go, "The Quizzes" if page == QUIZZES else "The Lessons")
 
 
 def sandbox_key() -> str:
@@ -88,7 +86,7 @@ def sandbox_key() -> str:
 
 
 def sandbox_name() -> str:
-    """The human name of that community, for the Learn menu's note column."""
+    """The human name of that community, for the Learn windows' titles."""
     key = sandbox_key()
     if not key:
         return ""
@@ -117,7 +115,8 @@ def sandbox_plants() -> tuple:
 
 
 def community_count() -> int:
-    """How many wild communities there are to walk into."""
+    """How many wild communities there are to walk into: the start screen's
+    "Seven native places, in 3D"."""
     try:
         from src.reference_ecosystem import community_keys
         return len(community_keys())

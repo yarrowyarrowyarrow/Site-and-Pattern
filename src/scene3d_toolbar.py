@@ -26,7 +26,7 @@ presentation still, fly as a bee, seasonal tour, spotlight, flyover) stay in
 ``Scene3DWindow``, because a wild community has no design to refresh from and
 no proposal to illustrate.
 
-Presentation only, like ``start_screen`` and ``learn_menu``: it emits signals
+Presentation only, like ``start_screen``: it emits signals
 and never touches a viewer, a project or the database. The windows decide what
 a control *means*; this decides what it looks like and that both get the same
 one.

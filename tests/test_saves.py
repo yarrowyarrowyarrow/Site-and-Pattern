@@ -122,7 +122,23 @@ class TestDescribingASave(unittest.TestCase):
         d = saves.describe(path)
         self.assertTrue(d["error"])
         self.assertEqual(d["filename"], "broken" + saves.SAVE_SUFFIX)
+        self.assertEqual(d["name"], "broken")
         self.assertIn("Could not be read", saves.summary_line(d))
+
+    def test_a_design_with_no_name_is_listed_by_its_stem(self):
+        """V3.42: the owner's start screen showed "From Learn Aspen Parkland
+        grove.perma.g…" in its highlighted row. ".perma.geojson" is a word
+        the app never shows (vocabulary.NEVER)."""
+        project = _project()
+        project["properties"].pop("project_name")
+        path = _write(self.dir, "From Learn Aspen Parkland grove"
+                      + saves.SAVE_SUFFIX, project)
+        self.assertEqual(saves.describe(path)["name"],
+                         "From Learn Aspen Parkland grove")
+        self.assertEqual(saves.file_stem("/x/plain.geojson"), "plain")
+        self.assertEqual(saves.file_stem("/x/notes.txt"), "notes.txt")
+        self.assertTrue(saves.file_stem(saves.SAVE_SUFFIX),
+                        "never an empty name")
 
     def test_a_missing_file_is_not_an_exception(self):
         d = saves.describe(os.path.join(self.dir, "nope" + saves.SAVE_SUFFIX))

@@ -329,7 +329,13 @@ class TheMapPageOffline(unittest.TestCase):
         edit was refused as crossing. The same drag on a freshly drawn outline
         was kept."""
         r = self.m["reopened_drag"]
-        self.assertEqual(r["handles"], 4)
+        # Said in full when it fails (V3.38): CI once read 0 here and printed
+        # only "0 != 4", which cannot tell a press that missed the handle (and
+        # so ended edit mode) from handles that were never drawn.
+        why = (f"{r.get('handles_open')} handles before the drag; it landed "
+               f"on {r.get('target')} ({r.get('where')})")
+        self.assertEqual(r.get("handles_open"), 4, why)
+        self.assertEqual(r["handles"], 4, why)
         self.assertIsNotNone(r["sent"], f"the drag was never reported: it "
                                         f"landed on {r.get('target')} "
                                         f"({r.get('where')})")

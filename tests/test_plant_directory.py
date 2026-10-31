@@ -345,8 +345,14 @@ class TestP12(unittest.TestCase):
     def test_no_indigenous_knowledge_vocabulary_reaches_the_screen(self):
         # The page moved out of the window in V3.00 and is shown beside the
         # Browse list too: the guard follows it.
-        for name in ("plant_directory.py", "start_screen.py", "species_page.py", "species_flyout.py",
-                     "plant_picker.py", "plant_filters.py"):
+        # V3.39–V3.41: the walk's cards, the quiz and the lessons are learning
+        # surfaces (BACKLOG F88: every one joins this scan).
+        for name in ("plant_directory.py", "start_screen.py", "start_rows.py",
+                     "species_page.py", "species_flyout.py",
+                     "plant_picker.py", "plant_filters.py", "lessons.py",
+                     "lesson_track_widget.py", "quiz_topics.py",
+                     "field_study_widget.py", "walk_cards.py",
+                     "scene_dossier.py"):
             for text in self._user_facing(_ROOT / "src" / name):
                 for word in self._FORBIDDEN:
                     self.assertNotIn(word, text.lower(),

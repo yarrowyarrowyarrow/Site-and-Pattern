@@ -376,8 +376,8 @@ class Scene3DWindow(QWidget):
         # no round trip. Re-pushed each time because the growth/season sliders
         # change what the card says ("size over time" marks the current year).
         try:
-            from src.scene_dossier import build_dossier
-            self.viewer.set_dossier(build_dossier(scene))
+            from src import walk_cards       # one card for both windows (V3.39)
+            self.viewer.set_dossier(walk_cards.build(scene))
         except Exception:      # noqa: BLE001 — the card is a read nicety
             self.viewer.set_dossier({})
         # Keep an active "show its plants" spotlight in sync with the new scene.
@@ -809,10 +809,10 @@ class Scene3DWindow(QWidget):
     def _on_photos_warmed(self):
         """Re-push the dossier so photos that just landed show on the next click."""
         try:
-            from src.scene_dossier import build_dossier
+            from src import walk_cards
             scene = getattr(self, "_scene", None)
             if scene:
-                self.viewer.set_dossier(build_dossier(scene))
+                self.viewer.set_dossier(walk_cards.build(scene))
         except Exception:      # noqa: BLE001 — the card is a read nicety
             pass
 
