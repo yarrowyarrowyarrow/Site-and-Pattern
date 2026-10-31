@@ -14,6 +14,10 @@ name: Build & publish macOS DMG
 # an x86_64 (Intel) app on the arm64 runner via Rosetta 2 + a python.org
 # universal2 Python. An x86_64 app runs natively on Intel and under Rosetta on
 # Apple Silicon. (A native arm64 build would NOT run on Intel Macs at all.)
+# None of that depends on the runner's own macOS version: Big Sur support
+# comes from the python.org "macos11" Python and the pinned wheels
+# (scripts/packaging/constraints-macos.txt), so the runner label can move
+# up as GitHub retires images without changing what the DMG runs on.
 #
 # Runs on every push to a V<major>.<minor> branch, or via "Run workflow".
 
@@ -30,7 +34,13 @@ permissions:
 jobs:
   build-macos:
     name: Build x86_64 DMG on Apple Silicon (Big Sur 11+ compatible)
-    runs-on: macos-14            # Apple Silicon (Intel runners are gone)
+    # Apple Silicon. macos-14 was retired on 2 November 2026, after
+    # "brownouts" that failed every job on it in set hours (V3.42's first
+    # build was one: the annotation says "scheduled macOS 14 runner image
+    # brownout"; actions/runner-images#13518). A job that fails within
+    # seconds with "brownout" in its annotation means: move this label up.
+    # GitHub announces each retirement as an issue in actions/runner-images.
+    runs-on: macos-15
     timeout-minutes: 45
     env:
       PY_VERSION: "3.11.9"
