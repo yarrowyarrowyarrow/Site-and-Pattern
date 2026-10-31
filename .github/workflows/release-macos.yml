@@ -73,6 +73,19 @@ jobs:
         run: |
           set -eux
           arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
+          # numpy for Big Sur first (V3.42). numpy publishes two Intel Mac
+          # wheels: OpenBLAS for macOS 10.9 and newer, Accelerate for 14 and
+          # newer. pip takes the best one for the machine it runs on, which
+          # is macOS 14 or later here, so V3.41's DMG carried 13 numpy
+          # modules that cannot load on Big Sur to Ventura. Fetched for the
+          # platform the app declares, the install below finds numpy already
+          # satisfied. build_installer.sh checks every binary afterwards
+          # (scripts/packaging/check_min_macos.py).
+          arch -x86_64 "$PY_BIN" -m pip download --only-binary=:all: --no-deps \
+            --platform macosx_11_0_x86_64 --python-version 3.11 \
+            --implementation cp --abi cp311 -d "$RUNNER_TEMP/bigsur" \
+            -c scripts/packaging/constraints-macos.txt numpy
+          arch -x86_64 "$PY_BIN" -m pip install --no-deps "$RUNNER_TEMP"/bigsur/numpy-*.whl
           # At the versions of the last good build (V3.32, FN-12).
           arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller \
             -c scripts/packaging/constraints-macos.txt

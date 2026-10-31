@@ -97,6 +97,20 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     fi
     echo -e "${GREEN}✓ Signature verified (ad-hoc). Right-click -> Open will work.${NC}"
 
+    # --- Every binary runs on the macOS the app declares (V3.42) ---------
+    # Info.plist says Big Sur (LSMinimumSystemVersion 11.0). V3.41's DMG
+    # carried 13 numpy modules that needed macOS 14, picked by pip for the
+    # build machine, and nothing noticed: the app opened, and the parts that
+    # need numpy failed only on an older Mac.
+    echo -e "${YELLOW}Checking every binary runs on the macOS the app declares...${NC}"
+    if ! python3 scripts/packaging/check_min_macos.py "$APP"; then
+        echo "ERROR: a binary in the app needs a newer macOS than the app" >&2
+        echo "       declares, so that part would fail on older Macs." >&2
+        echo "       Fetch its wheel for the declared platform (see the" >&2
+        echo "       numpy step in .github/workflows/release-macos.yml)." >&2
+        exit 1
+    fi
+
     echo -e "${YELLOW}Creating macOS DMG installer...${NC}"
     STAGING="dist/dmg-staging"
     rm -rf "$STAGING"
