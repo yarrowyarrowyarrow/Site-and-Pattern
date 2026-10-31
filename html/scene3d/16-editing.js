@@ -39,20 +39,44 @@ const _hitPoint = new THREE.Vector3();
 const _editRay = new THREE.Raycaster();
 const _editPtr = new THREE.Vector2();
 
-// Raycast against a mathematical horizontal plane rather than the ground mesh.
-// The terrain is a displaced PlaneGeometry that may not exist at all (a scene
-// with no DEM gets only the apron), and a click has to land somewhere in every
-// case. The height it returns is not used: the plant is placed by lat/lng and
-// the next scene build samples the real terrain under it, so the only thing
-// riding on this is where in PLAN the plant lands, which the flat plane gets
-// right to within the slope error across one plant's width.
+// Where a click meets the ground. Until V3.04 this was a horizontal plane at
+// height 0, on the reasoning that the plant is placed by lat/lng and only its
+// position in PLAN rides on the hit. True, but the terrain's heights are metres
+// above the site's LOWEST point, so on a slope the plane lay under nearly all of
+// the yard and a click on the uphill side planted metres beyond the spot under
+// the cursor: 3 m of rise seen 30 degrees down is 5 m out. So the ray is walked
+// from the camera against terrainHeightAt, the height every plant stands on, and
+// the crossing refined by halving. The flat plane is still the answer with no
+// terrain, and the walk is bounded by the plane through the highest ground.
+let _hiKey = null, _hiM = 0;
 function groundPointAt(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
   _editPtr.x = ((clientX - rect.left) / rect.width) * 2 - 1;
   _editPtr.y = -((clientY - rect.top) / rect.height) * 2 + 1;
   _editRay.setFromCamera(_editPtr, camera);
-  if (!_editRay.ray.intersectPlane(_GROUND, _hitPoint)) return null;
-  return { x: _hitPoint.x, y: -_hitPoint.z };
+  const ray = _editRay.ray, t = lastTerrain;
+  if (!t || t.rows < 2 || t.cols < 2) {
+    if (!ray.intersectPlane(_GROUND, _hitPoint)) return null;
+    return { x: _hitPoint.x, y: -_hitPoint.z, h: 0 };
+  }
+  if (_hiKey !== t) { _hiKey = t; _hiM = Math.max(...t.heights.map(r => Math.max(...r))); }
+  const o = ray.origin, dy = ray.direction.y;
+  if (o.y > _hiM && dy >= 0) return null;               // above every hill, looking up
+  const over = (s) => { ray.at(s, _hitPoint);
+    return _hitPoint.y - terrainHeightAt(_hitPoint.x, -_hitPoint.z, t); };
+  const s0 = (o.y > _hiM && dy < 0) ? (o.y - _hiM) / -dy : 0;
+  const s1 = dy < 0 ? o.y / -dy : 3000;                  // y = 0 is the lowest ground
+  const step = Math.max(0.25, (s1 - s0) / 600);
+  let a = s0, b = -1;
+  for (let s = s0; s <= s1 + step; s += step) {
+    if (over(s) <= 0) { b = s; break; }
+    a = s;
+  }
+  if (b < 0) return null;
+  for (let i = 0; i < 30; i++) { const m = (a + b) / 2; if (over(m) > 0) a = m; else b = m; }
+  ray.at(b, _hitPoint);
+  return { x: _hitPoint.x, y: -_hitPoint.z,
+           h: terrainHeightAt(_hitPoint.x, -_hitPoint.z, t) };
 }
 
 // ── The ghost ────────────────────────────────────────────────────────────────
@@ -81,7 +105,7 @@ function ensureGhost() {
 function moveGhost(pt, colour) {
   const g = ensureGhost();
   if (!pt) { g.visible = false; return; }
-  g.position.set(pt.x, 0.02, -pt.y);
+  g.position.set(pt.x, (pt.h || 0) + 0.02, -pt.y);
   g.traverse((o) => { if (o.material && o.material.color) o.material.color.setHex(colour); });
   g.visible = true;
 }

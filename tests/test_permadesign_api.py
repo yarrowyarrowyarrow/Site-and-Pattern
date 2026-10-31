@@ -203,7 +203,7 @@ class TestNoQtImport(unittest.TestCase):
     def test_module_import_statements_have_no_qt(self):
         import ast
         import src.permadesign_api as api
-        tree = ast.parse(open(api.__file__).read())
+        tree = ast.parse(open(api.__file__, encoding="utf-8").read())
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:

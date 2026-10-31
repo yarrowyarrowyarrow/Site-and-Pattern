@@ -75,8 +75,8 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
                 decimate_to_budget(o, budget)
             bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
                     seed_key=key + prefix + "bark")
-            bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
-                    seed_key=key + prefix)
+            bake_ao([parts[C.PART_FOLIAGE]], gradient=True,
+                    seed_key=key + prefix, **CROWN_AO)
             tris[prefix] = _check_budget(f"{key}/{prefix}", objs, budget)
             for o in objs:
                 o.parent = root
@@ -99,8 +99,8 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
                 decimate_to_budget(o, _budget_for(spec))
             bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
                     seed_key=key + prefix + "bark")
-            bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
-                    seed_key=key + prefix)
+            bake_ao([parts[C.PART_FOLIAGE]], gradient=True,
+                    seed_key=key + prefix, **CROWN_AO)
             tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
                                          _budget_for(spec))
             for o in objs:
@@ -189,6 +189,22 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
     else:
         raise KeyError(f"unknown asset kind for {key}")
     return tris
+
+
+#: How a tree's crown is shaded (F186, V2.94). A crown is baked on its own, so
+#: the old default put the ground at its lowest leaf, and rays that reach 60% of
+#: the tree found nearly every interior leaf buried: the baked shade averaged
+#: 0.30 over the trees, and the viewer multiplied it into the sun as well as the
+#: sky. The crown's depth is the shadow map's job; the bake keeps what the map is
+#: too coarse to see, a leaf's own neighbours.
+#:
+#: Shrubs too since V2.96 (F188), when the viewer started drawing a shrub's
+#: baked shade: until then it asked for their leaf material with vertex colours
+#: off, and the old bake (0.85, rays reaching 60% of the plant, the ground at the
+#: lowest leaf) turned on as it was put 35% of a shrub's pixels near-black from
+#: a path. A lighter bake was tried for shrubs and bought little; one rule for
+#: every crown is the one to keep (docs/plans/V2.96-shrubs-show-their-shade.md).
+CROWN_AO = dict(strength=0.65, max_dist=0.15, floor_z=0.0, gradient_floor=0.8)
 
 
 def _match(key, only):

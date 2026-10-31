@@ -17,7 +17,7 @@ import os
 
 try:                                   # keep importable Qt-free (headless API)
     from PyQt6.QtCore import QSettings, QTimer
-    from PyQt6.QtWidgets import QDialog, QMessageBox
+    from PyQt6.QtWidgets import QMessageBox
     _HAVE_QT = True
 except ImportError:                    # pragma: no cover — headless
     _HAVE_QT = False
@@ -73,29 +73,41 @@ def should_show_welcome() -> bool:
 _WELCOME_DELAY_MS = 150
 
 
+#: What closing the start screen at launch means (S7): quit. From Help ›
+#: Start Screen, closing it only closes it.
+QUIT = "quit"
+
+
 def choose_start_action() -> str:
-    """Open the start menu **before the main window exists**, and return the
+    """Open the start screen **before the main window exists**, and return the
     choice (V2.40).
 
-    The menu used to be a modal over an already-painted map: you saw the app,
-    then a dialog on top of it, which is a greeting rather than a start screen.
-    Running it first — with no parent, so it is a window of its own rather than
-    a sheet over something — means the first thing you see is the choice, and
-    the map appears already carrying it.
+    Running it first, with no parent, means the first thing seen is the
+    choice, and the map appears already carrying it. It needs no MainWindow:
+    everything on it is read from disk (the saves folder, the last-design
+    path, a surviving autosave, the catalogue's flowering months). Acting on
+    the answer is :func:`act_on_start_choice`, once there is a window.
 
-    Needs no MainWindow, which is what makes the ordering possible: everything
-    on the menu is read from disk (the saves folder, the last-design path, a
-    surviving autosave). Acting on the answer is :func:`act_on_start_choice`,
-    once there is a window to act on.
-
-    Returns ``""`` when the menu is turned off or dismissed.
+    Since V3.23: closing it returns :data:`QUIT` (S7); a screen turned off
+    opens the last design, or the blank map when there is none (S8); and
+    unsaved work the screen offered to restore is kept as its own design
+    when another row is chosen (ST-8, S13).
     """
-    if not _HAVE_QT or not should_show_welcome():
+    if not _HAVE_QT:
         return ""
-    return _menu_loop(None)
+    from src.start_screen import CONTINUE, RECOVER
+    if not should_show_welcome():
+        from src import saves
+        return CONTINUE if saves.last_design() else ""
+    offered = bool(_pending_recovery_name())
+    choice = _menu_loop(None, at_launch=True)
+    if offered and choice not in (RECOVER, QUIT, ""):
+        from src import start_flow
+        start_flow.keep_passed_autosave()
+    return choice
 
 
-def _menu_loop(parent) -> str:
+def _menu_loop(parent, *, at_launch: bool = False) -> str:
     """The start screen, plus the Learn menu behind its first door (V2.43).
 
     A loop rather than two calls, because **Back has to go somewhere**. The
@@ -107,10 +119,25 @@ def _menu_loop(parent) -> str:
     Returns the choice to act on once there is a window — which may be a
     Learn-side key (see :func:`src.app_mode.opens_main_window`, which is what
     decides whether the MainWindow is shown at all).
+
+    *All N designs…* and *Open a file…* are answered here too (V3.37), on the
+    screen's side of the map: the list and the file picker open over the
+    start screen, a design picked there comes back as that design, and
+    Cancel comes back to the screen. Until V3.37 they were acted on once the
+    window was shown, so the map opened first and the list sat over it (the
+    owner: it "opens the whole app map page which it shouldn't until the
+    actual design has been selected").
     """
-    from src import app_mode, learn_flow
+    from src import app_mode, learn_flow, start_flow
+    from src.start_screen import ALL_DESIGNS, OPEN_FILE
     while True:
-        choice = _open_menu(parent)
+        choice = _open_menu(parent, at_launch=at_launch)
+        if choice in (ALL_DESIGNS, OPEN_FILE):
+            path = start_flow.choose_design(parent,
+                                            listed=choice == ALL_DESIGNS)
+            if path:
+                return start_flow.path_choice(path)
+            continue            # Cancel: back to the start screen
         if choice != app_mode.LEARN:
             return choice
         sub = learn_flow.open_learn_menu(parent)
@@ -119,46 +146,29 @@ def _menu_loop(parent) -> str:
         # Back, or closed. Round again to the start screen.
 
 
-def _open_menu(parent) -> str:
-    """Build the screen against what is on disk, show it, and return the row
-    the user picked (``""`` if they closed it).
+def _open_menu(parent, *, at_launch: bool = False) -> str:
+    """Build the screen against what is on disk, show it, and return the
+    choice: ``""`` when closed from Help, :data:`QUIT` when closed at launch.
 
-    One body for both entry points — the launch sequence and Help → Welcome —
-    because *which rows exist* is the whole feature, and two copies of that
-    decision would be two answers to it within a release or two.
+    One body for both entry points, the launch and Help › Start Screen,
+    because *which rows exist* is the whole feature. Restore is offered only
+    at launch: later in a session the autosave is this session's own.
     """
-    from src.start_screen import StartScreen
-    from src import learn_flow, saves
-
-    last_path = saves.last_design()
-    last_name = ""
-    if last_path:
-        entry = saves.describe(last_path)
-        last_name = "" if entry.get("error") else entry["name"]
-    recover_name = _pending_recovery_name()
-
-    dlg = StartScreen(parent, last_design=last_name, recover=recover_name,
-                      saves_count=len(saves.list_saves()),
-                      species_count=_species_count(),
-                      bloom_line=_bloom_line(), version=_version_line(),
-                      discovery_line=learn_flow.discovery_line(),
-                      hidden=not should_show_welcome())
-    result = dlg.exec()
-    # Written every time, not only when ticked. A checkbox that can be turned
-    # on and never off is a trapdoor, and this app shipped one: the only way
-    # back was hand-editing PermaDesign.conf. Closing the screen is still not
-    # an answer to it — that means "I'll start from the blank map".
-    _settings().setValue(START_SCREEN_OFF_KEY, dlg.suppressed())
-    if result != QDialog.DialogCode.Accepted:
-        return ""
-    return dlg.choice()
+    from src import start_flow
+    choice = start_flow.open_screen(
+        parent, recover=_pending_recovery_name() if at_launch else "",
+        version=_version_line(), hidden=not should_show_welcome())
+    if not choice and at_launch:
+        return QUIT
+    return choice
 
 
 #: Rows that put a project on the map, so they must wait until it can render.
-#: Everything else — the directory, a reference ecosystem, the update check —
+#: Everything else — a reference ecosystem, the update check —
 #: runs the moment the window exists. Kept as a set rather than an ``if`` chain
 #: so a new row's author has to decide which it is.
-_NEEDS_MAP = frozenset({"recover", "continue", "open", "example"})
+_NEEDS_MAP = frozenset({"recover", "continue", "example", "new_yard",
+                        "open_path", "all_designs", "open_file"})
 
 
 def act_on_start_choice(main, choice: str) -> None:
@@ -187,9 +197,10 @@ def act_on_start_choice(main, choice: str) -> None:
     reference ecosystem touches no map, and making those sit through a Leaflet
     load would be a delay bought for nothing.
     """
-    if not choice:
+    if not choice or choice == QUIT:
         return
-    if choice not in _NEEDS_MAP:
+    from src.start_flow import split_choice
+    if split_choice(choice)[0] not in _NEEDS_MAP:
         _dispatch(main, choice)
         return
 
@@ -202,12 +213,32 @@ def act_on_start_choice(main, choice: str) -> None:
         if is_alive(main):
             _dispatch(main, choice)
 
+    # The map has usually loaded already: the window is built behind the start
+    # screen, and map_ready fires once per page load, while the screen is still
+    # up. Waiting for it then waited forever, and Continue, Open a design, See
+    # a finished design and Recover did nothing (F197, V3.04).
+    if _map_is_ready(main):
+        QTimer.singleShot(0, _go)
+        return
     try:
         main.map_widget.bridge.map_ready.connect(_go)
     except Exception:                                      # noqa: BLE001
         # No bridge to wait on (headless, or a test double). Fall back to the
         # timer rather than dropping the user's choice on the floor.
         QTimer.singleShot(_WELCOME_DELAY_MS, _go)
+
+
+def _map_is_ready(main) -> bool:
+    """Whether the window's map has already said ``map_ready``. False for a
+    window that is gone or has no map: asking a deleted widget for an attribute
+    raises ``RuntimeError``, which ``getattr``'s default does not catch."""
+    from src.qt_safety import is_alive
+    if not is_alive(main):
+        return False
+    try:
+        return bool(main.map_widget.is_ready)
+    except Exception:                                      # noqa: BLE001
+        return False
 
 
 def _pending_recovery_name() -> str:
@@ -238,9 +269,9 @@ def _open_last_design(main) -> None:
         return
     try:
         main._load_from_path(path)
-    except Exception as exc:                               # noqa: BLE001
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.critical(main, "Open failed", str(exc))
+    except Exception:                                      # noqa: BLE001
+        from src import plain_messages
+        plain_messages.tell_open_failed(main, path)
 
 
 def _autosave_pending() -> bool:
@@ -278,107 +309,48 @@ def show_welcome(main, *, mark_seen: bool = False) -> None:
 def _dispatch(main, choice: str) -> None:
     """Act on a start-screen choice. Shared by the Help menu and the launch
     sequence, so the two can never drift about what a row does."""
-    if not choice:
+    if not choice or choice == QUIT:
         return
+    from src import start_flow
     from src.app_mode import STUDIO
-    from src.start_screen import (BLOOM, CONTINUE, DESIGN, DIRECTORY, EXAMPLE,
-                                  OPEN, RECOVER, REFERENCE, UPDATE)
-    if choice == RECOVER:
+    from src.start_screen import CONTINUE, EXAMPLE, RECOVER, REFERENCE, UPDATE
+    if start_flow.dispatch(main, choice):
+        pass            # NEW_YARD, OPEN_PATH, ALL_DESIGNS, OPEN_FILE (V3.23)
+    elif choice == RECOVER:
         # Tell the controller this is the screen asking, so its "the screen
         # will handle it" guard stands aside.
         main._persistence._recovery_from_menu = True
         main._persistence.maybe_offer_autosave_recovery()
     elif choice == CONTINUE:
         _open_last_design(main)
-    elif choice == OPEN:
-        main._on_open()
     elif choice == EXAMPLE:
         open_example(main)
-    elif choice in (DIRECTORY, BLOOM):
-        _open_directory(main, bloom=(choice == BLOOM))
     elif choice == REFERENCE:
         _open_reference(main)
     elif choice == STUDIO:
         from src import learn_flow
         learn_flow.open_studio(main)
     elif choice == UPDATE:
-        _safely(lambda: main._on_check_for_updates())
-    elif choice == DESIGN:
-        # Nothing to build — just point at step one and put the cursor where
-        # the user has to act.
-        _safely(lambda: (main._side_tabs.setCurrentWidget(main.site_panel),
-                         main.site_panel.focus_address_search()))
+        _safely(lambda: main._on_check_for_updates(), "The update check")
     refresh(main)
 
 
-def _safely(fn) -> None:
+def _safely(fn, what: str) -> None:
     """Run a dispatch action without letting it take the launch with it. A row
     that fails should leave the user on a working blank map, not on a
-    traceback."""
+    traceback, and it says so (V3.18, ST-3: a bare ``pass`` here and in
+    ``learn_flow`` hid a dead door for a release). ``what`` names the thing
+    in the message's own words ("The address search")."""
     try:
         fn()
     except Exception:                                      # noqa: BLE001
-        pass
-
-
-def _open_directory(main, *, bloom: bool = False) -> None:
-    """Open the plant directory (F90), optionally already filtered to what is
-    flowering this month — which is what the start screen's in-bloom line is a
-    link to."""
-    from src.plant_directory_window import open_plant_directory
-    criteria = None
-    if bloom:
-        import datetime
-        criteria = {"bloom_months": [str(datetime.date.today().month)]}
-    _safely(lambda: open_plant_directory(main, criteria))
+        from src import slot_errors
+        slot_errors.report(what)
 
 
 def _open_reference(main) -> None:
     from src.reference_ecosystem_window import open_reference_ecosystem
-    _safely(lambda: open_reference_ecosystem(main))
-
-
-def _species_count() -> int:
-    """How big the catalogue is, for the directory row. Silent on failure: the
-    row then reads "look up any native species", which is true either way."""
-    try:
-        from src.plant_directory import catalogue_size
-        return catalogue_size()
-    except Exception:                                      # noqa: BLE001
-        return 0
-
-
-def _bloom_line() -> str:
-    """The footer's living number. Never raises and returns ``""`` when it has
-    nothing to say — a start screen must not fail to open because a count
-    could not be computed."""
-    try:
-        from src.plant_directory import bloom_line, in_bloom_now
-        return bloom_line(in_bloom_now(ecoregion=_last_ecoregion()))
-    except Exception:                                      # noqa: BLE001
-        return ""
-
-
-def _last_ecoregion() -> str:
-    """The ecoregion of the design you were last in, if any.
-
-    The start screen runs before any project is open, so this is the only
-    location it can honestly claim. With nothing here the bloom line says
-    "across the catalogue" rather than implying a regional count (P9).
-    """
-    try:
-        from src import saves
-        from src.project import load_project
-        path = saves.last_design()
-        if not path:
-            return ""
-        props = (load_project(path).get("properties") or {})
-        regions = (props.get("site_config") or {}).get("ecoregion") or ""
-        if isinstance(regions, (list, tuple)):
-            return regions[0] if regions else ""
-        return str(regions).split(",")[0].strip()
-    except Exception:                                      # noqa: BLE001
-        return ""
+    _safely(lambda: open_reference_ecosystem(main), "Walk a Wild Landscape")
 
 
 def _version_line() -> str:
@@ -403,7 +375,7 @@ def _version_line() -> str:
         repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         out = subprocess.run(
             ["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=3)
+            capture_output=True, text=True, timeout=3, encoding="utf-8")
         branch = (out.stdout or "").strip().split("/")[-1]
         return branch if branch.startswith("V") else ""
     except Exception:                                      # noqa: BLE001
@@ -444,23 +416,33 @@ def open_example(main) -> None:
             lat, lng = coords
     except Exception:                                      # noqa: BLE001
         pass
+    # The example's plants are the pack's: at a pin outside every pack it
+    # opens at the pack's own centre, not planted in Toronto (V3.25, ED-8).
+    from src import region
+    if region.at(lat, lng) is None:
+        lat = lng = None
 
+    from src import saves
+    previous = saves.last_design()
     try:
         project, missing = build_example_project(lat, lng)
         path = example_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         save_project(project, path)
         main._load_from_path(path)
+        # A copy (V3.23, ST-9): Save writes a new design to the saves folder,
+        # and the example is not "your" last design, so it never lists on the
+        # start screen as one and opens pristine every time.
+        main._project_path = None
+        saves.remember_last_design(previous)
     except Exception as exc:                               # noqa: BLE001
         QMessageBox.critical(main, "Example unavailable",
                              f"Could not build the example design:\n{exc}")
         return
 
-    # The project is a fresh artifact, not the user's own work — but it IS
-    # now on disk under its own name, so leave it unmodified and let Save
-    # write back to it.
-    note = ("Opened the example design — a front-yard lawn conversion. "
-            "Everything in it is editable; Planning → Notes says what to try.")
+    # Unmodified until changed; a Save then goes to Your designs.
+    note = ("Opened the example yard. Changes you save go to Your designs; "
+            "Site › Notes says what to try.")
     if missing:
         # Never quietly ship a thinner design than the one described (P9).
         note += (f"  ({len(missing)} species in the example aren't in this "
@@ -485,14 +467,16 @@ def _confirm_discard(main, title: str) -> bool:
 # ── Keeping the guidance live ────────────────────────────────────────────────
 
 def refresh(main) -> None:
-    """Re-read the project and update the step bar + the Site panel line.
+    """Re-read the project and update the step bar.
 
     Called after anything that could complete a step (pin, boundary, plant,
     project load, undo). Never raises — onboarding guidance must not be able
-    to break the app it is trying to explain.
+    to break the app it is trying to explain. Until V3.19 it also wrote the
+    step into a box at the top of Site Info, under the strip saying the same
+    thing (R26, QF-12); the strip is the one place it is said now.
     """
     try:
-        from src.onboarding import first_step, first_step_line, steps_progress
+        from src.onboarding import first_step, steps_progress
         project = main._project
         steps = steps_progress(project)
         current = first_step(project)
@@ -508,11 +492,6 @@ def refresh(main) -> None:
             bar.setVisible(not current["complete"] and not step_bar_hidden())
         except Exception:                                  # noqa: BLE001
             pass
-
-    try:
-        main.site_panel.set_first_step(first_step_line(project))
-    except Exception:                                      # noqa: BLE001
-        pass
 
     act = getattr(main, "_act_step_bar", None)
     if act is not None:
@@ -541,11 +520,12 @@ def on_step_clicked(main, key: str) -> None:
     """
     try:
         if key == "pin":
-            main._side_tabs.setCurrentWidget(main.site_panel)
+            # Opens Site › Site Info whatever page is in front, then the box.
             main.site_panel.focus_address_search()
         elif key == "boundary":
             main.toolbar.activate_boundary_tool()
         elif key == "plants":
-            main._side_tabs.setCurrentWidget(main._plant_poly_tab)
+            from src.keyboard_help import show_panel
+            show_panel(main.plant_panel)
     except Exception:                                      # noqa: BLE001
         pass

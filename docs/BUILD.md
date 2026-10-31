@@ -334,15 +334,20 @@ This is what powers **in-app updates**:
 - **Frozen installs** (`.dmg`/`.exe`): there's no git, so the updater asks the
   GitHub Releases API for published versions (`src/github_releases.py`),
   compares against the baked-in `version.txt` (`src/app_version.py`), and
-  **downloads + opens the matching installer in-app** — listing real version
-  names (V1.72, V1.73, …) for both "Check for Updates" and "Switch to a
-  specific version". The Qt download/progress glue lives in
-  `src/controllers/update_flow.py`.
+  **downloads + opens the matching installer in-app**. Prereleases are
+  skipped. (Help → Switch to a specific version… went in V3.18; an older
+  installer stays on the releases page.) The Qt download/progress glue lives
+  in `src/controllers/update_flow.py`.
   - macOS bonus: an app-initiated download isn't quarantined, so the update
     installs with **no Gatekeeper warning**.
 
-So the publish loop is: push `V1.73` → Actions builds + publishes the DMG →
-every installed Mac app offers V1.73 under Help → Check for Updates.
+So the publish loop is: push `V3.18` → Actions builds both installers and
+publishes them as a **prerelease** → the owner promotes it (the release page:
+**Edit**, untick *Set as a pre-release*, tick *Set as the latest release*; or
+**Actions → Promote a release**, once `promote-release.yml` is on the default
+branch, since GitHub runs a hand-started workflow only from there) → every
+installed copy offers V3.18 under Help → Check for Updates. Until V3.18 every push was a full release, offered at once
+(FN-7; the owner's decision D5).
 
 > **Windows** isn't auto-published here (the user builds the `.exe` and
 > uploads it to the release manually). The in-app updater still handles it: it

@@ -631,7 +631,7 @@ function beeSpawn() {
   if (lastBounds) {
     const cx = (lastBounds.min_x + lastBounds.max_x) / 2;
     const cz = -(lastBounds.min_y + lastBounds.max_y) / 2;
-    camera.position.set(cx, 0, cz + 6);
+    camera.position.set(cx, 0, clearOfCrowns(cx, cz + 6));   // 08-modes.js
   }
   beeYaw = 0; beePitch = -0.05;
   camera.position.y = groundAtCamera() + 1.6;   // flower-and-a-bit height

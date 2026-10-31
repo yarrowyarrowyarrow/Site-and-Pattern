@@ -26,7 +26,11 @@ def _utc_now_iso() -> str:
 # 1.9 (V2.22): plant features carry a stable `feature_id` (pf_<hex>), minted
 # at placement by src/project_store.plant_feature. Identity for mutations —
 # coordinate matching remains as the legacy-file fallback. Additive.
-SCHEMA_VERSION = "1.9"
+# 1.10 (V3.11): the `measurement` feature type (src/measurements.py: a
+# measurement is part of the design, so undo and save reach it), and a
+# boundary's `name` and `show_handles` properties (the legend's names and the
+# corner-handle switch). Additive, like 1.7 and 1.8.
+SCHEMA_VERSION = "1.10"
 
 
 def new_placement_group_id() -> str:
@@ -205,8 +209,10 @@ def project_to_map_data(project: dict) -> dict:
     Extract map elements from the project for loading into the map widget.
     Returns dict with boundaries (list), plants, structures, hedgerows, shapes.
     """
+    from src import measurements
     result = {
-        "boundaries": [],   # list of {id, points, color, showLengths, showArea}
+        "boundaries": [],   # list of {id, points, color, showLengths, showArea,
+                            #          showHandles, name}
         "boundary": None,   # kept for backward compat — first boundary's points
         "plants": [],
         "structures": [],
@@ -217,6 +223,7 @@ def project_to_map_data(project: dict) -> dict:
         "slope_overlay": None, # cached slope-overlay metadata (PNG regenerated on demand)
         "water_overlay": None, # cached water-flow metadata (PNG regenerated on demand)
         "annotations": [],     # text notes pinned to the map (V1.81)
+        "measurements": [],    # {id, points: [[lat, lng], [lat, lng]]} (V3.11)
     }
     for feature in project.get("features", []):
         props = feature.get("properties", {})
@@ -232,6 +239,8 @@ def project_to_map_data(project: dict) -> dict:
                 "color":       props.get("color", "green"),
                 "showLengths": props.get("show_lengths", True),
                 "showArea":    props.get("show_area", True),
+                "showHandles": props.get("show_handles", True),
+                "name":        props.get("name") or "",
             }
             result["boundaries"].append(bd)
             if result["boundary"] is None:
@@ -359,5 +368,10 @@ def project_to_map_data(project: dict) -> dict:
                 "lng": lng,
                 "text": props.get("text", ""),
             })
+
+        elif etype == measurements.ELEMENT_TYPE:
+            ms = measurements.to_map_data(feature)
+            if ms:
+                result["measurements"].append(ms)
 
     return result

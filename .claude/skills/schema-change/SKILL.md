@@ -19,8 +19,56 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.65`,
-`_SCHEMA_VERSION = 74` (in `src/db/plants.py`) — v71 is a reseed only: 26
+**Current facts (verify before quoting):** branch `V3.14`,
+`_SCHEMA_VERSION = 97` (in `src/db/plants.py`; V3.34 folded in the owner's 343 flower colour answers, each now `photo`; V3.26 renamed the Edmonton Native Plant Group to the Edmonton Native Plant Society; V3.18 renamed Green Milkweed Oval-leaf Milkweed, the row being *Asclepias ovalifolia*; V3.14 re-ranked availability and added five "Easy" communities; V3.12 added the seven Edmonton
+communities and corrected five notes that contradicted VASCAN, F221/F222, with
+no DDL).
+
+v79 adds `plants.native_provinces_source` (V2.80) and reseeds. It is the worked
+example of the half of a seed change that fails **silently**: the apply wrote
+the field into `data/plants_master.json` for 414 species, the report said so,
+the JSON diff looked right -- and with no column behind it the value is dropped
+on load, so `nativity.provenance` saw nothing and all 430 published pages went
+on saying the claim was inferred. Nothing raised. The column, the migration,
+the seed INSERT and the version bump are one change, not four, and
+`tests/test_nativity_source_column.py` asserts it through a real reseed rather
+than against the JSON.
+
+v78 is a reseed only. The GBIF harvest is capped at 6,000 records per species
+and GBIF orders newest-first, so for a common plant that window was recent
+observations and nothing before them; sixteen species held 89,964 records and
+**thirty-one herbarium specimens between them**. A separate
+`--specimen-pass` query reached what the cap cut, and the result is **purely
+additive**: 15 new region rows, none dropped, 13 confidence bands up and none
+down. **Every new region is northern**, because specimen share runs 90%+ in the
+remote north (Athabasca Plain 92.4%) against 3-5% in the settled south
+(Fescue Grassland 2.7%) — the observation layer maps where people live, so a
+newest-first cap was dropping the north rather than merely dropping old
+material.
+
+v77 before it was a reseed only, and the
+first time this catalogue has **corrected** a number rather than added one.
+Species ranges were re-derived after V2.75 found that `ranges_for_species` had
+inherited a 5 km proximity buffer meant for site detection: attributed records
+489,546 → **361,447**, and the error was **concentrated in one region** rather
+than scattered (`western_continental_ranges` is clipped to 0.02% of the mapped
+area inside Alberta and went from 135 species to 15). Note the shape of a good
+boundary fix: interior regions barely moved.
+
+v76 was the **second** species removal in as many releases: *Helianthus giganteus* is an
+eastern plant (VASCAN records it from Ontario eastward; Moss does not treat
+it) that shipped `native_provinces = "AB,SK"`. It took 11 documented edges and
+one seeded polyculture membership, and orphaned no animal.
+**The two removals have different evidence shapes and the difference is the
+lesson**: v75's *Rudbeckia hirta* was removed *against* 215 georeferenced
+occurrence records, because presence is not nativity; v76's had no occurrence
+entry at all, which is weaker than it looks — the derived file records only
+species WITH rows, so an absence there means either no records or a fetch GBIF
+refused, and it cannot tell them apart afterwards. `data/excluded_taxa.json`
+carries that distinction per entry.
+v75 was the first removal ever, and note what one exercises that an addition
+does not — `_remap_user_polyculture_plants` dropping user community members
+whose plant no longer ships, a branch that had existed unexercised since v46. v71 is a reseed only: 26
 recovered `larval_host` edges and the 9 animals they connect (F131), plus 80
 species gaining a `host_plant` or `bird_food` use tag the cited edges already
 justified (F120). v70 is a reseed only too: the

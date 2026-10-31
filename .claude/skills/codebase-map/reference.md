@@ -11,14 +11,14 @@ added; trust the source over this list).
 |---|---|
 | `main.py` | Site & Pattern entry point |
 | `src/app.py` | Main application window for Site & Pattern |
-| `src/toolbar.py` | Top toolbars for drawing tools, view layout, and project actions |
+| `src/toolbar.py` | The Draw row (Boundary, Shape, Measure, Note, Select, Undo/Redo/Cancel) and the View row's layer toggles |
 | `src/ui_style.py` | shared Qt stylesheet snippets so panels look consistent |
 | `src/collapsible_panel.py` | Reusable header-with-chevron panel widget |
 | `src/fill_tab_widget.py` | a QTabWidget whose tabs stretch to fill the full strip |
 | `src/filter_widgets.py` | Shared search/filter widgets for the side-panel browsers |
 | `src/branding.py` | the app's display identity (V1.69 rebrand) |
 | `src/settings.py` | Persistent configuration storage |
-| `src/preferences_dialog.py` | Map settings dialog for optional API tokens |
+| `src/preferences_dialog.py` | View › Map Settings: the scroll-wheel zoom step and an optional Mapbox token |
 | `src/user_paths.py` | the single source of truth for the per-user data directory (incl. the PermaDesign→Site & Pattern rename migration) |
 | `src/resources.py` | locate bundled, read-only data files in both source checkouts and frozen builds |
 | `src/app_version.py` | what version the running build identifies as |
@@ -46,7 +46,6 @@ added; trust the source over this list).
 | `src/db/plants.py` | SQLite database access layer for the plant catalogue |
 | `src/db/seed_data.py` | Plant catalogue seeding for Site & Pattern |
 | `src/db/polycultures.py` | (no module docstring) |
-| `src/db/recipes.py` | Polyculture Recipe persistence |
 | `src/db/fauna.py` | Query API for the fauna registry and plant ↔ fauna junction |
 | `src/db/nurseries.py` | Query API for the native-plant nursery directory (schema v44+) |
 | `src/db/calendar_data.py` | Edmonton Zone 3b planting calendar seed data |
@@ -60,24 +59,41 @@ added; trust the source over this list).
 |---|---|
 | `src/map_widget.py` | QtWebEngine wrapper around the Leaflet map |
 | `src/map_js.py` | Typed builders for every JS entry point in html/map.html |
-| `src/member_colors.py` | marker colour tables for plant-community members |
+| `src/member_colors.py` | The one plant colour table, by type, for the map, the plant list, the builder and the 3D contract (V3.03) |
 
 ## Side panels & Qt widgets
 
 | Module | One line |
 |---|---|
-| `src/plant_panel.py` | Right-side panel: plant browser, search, filters, detail view, placement |
-| `src/plant_list_view.py` | Model + delegate for the plant browser's virtualized |
-| `src/on_this_design_panel.py` | The "On this design" review tab |
+| `src/plant_panel.py` | Plants → Browse: the shared picker, Place, and the mix (V3.00) |
+| `src/plant_list_view.py` | The plant list every picker shows: model + row delegate, per-badge tooltips |
+| `src/plant_picker.py` | Search, filters, order and list as one widget: Browse, the Directory, the builder |
+| `src/plant_filters.py` | Qt-free: the one filter vocabulary, criteria → search kwargs, the orders, what a filter reads and what emptied a result |
+| `src/filter_status.py` | The picker's chips (one per filter that is on, each removable) and its empty state (V3.01) |
+| `src/species_page.py` | One species as a page of labels (the Directory's, moved out in V3.00) |
+| `src/species_flyout.py` | The page beside the side panel, over the map's right edge |
+| `src/focus_ring.py` | One focus ring that follows the keyboard in every window, drawn over the control (V3.02) |
+| `src/keyboard_help.py` | Every key the app answers to: the map's letters, F6 between map and panel, Help → Keyboard Shortcuts (V3.02) |
+| `src/accessible_names.py` | Names the scroll areas and tab widgets no panel builds, after their tab (V3.02) |
+| `src/target_size.py` | Every control at least 24 px, by one app-wide filter that only ever raises a minimum (V3.03) |
+| `src/indicator_style.py` | A checkbox's box and a radio button's ring drawn where they can be seen, the platform style otherwise (V3.03) |
+| `src/on_this_design_panel.py` | What is on the design: Species + Communities (Design › Planted) and Stats (Design › Report card) |
 | `src/placement_controls.py` | Shared placement-controls widget used by the Plants tab and the Plant |
 | `src/polyculture_panel.py` | (no module docstring) |
-| `src/structure_panel.py` | Side-panel tab for browsing and placing structures, hedgerows, and shapes |
+| `src/structure_panel.py` | Placement › Structures: browse and place habitat structures |
+| `src/side_panel_layout.py` | The side panel's five tabs, Site · Placement · Design · Share · Learn (F94, V3.07–V3.08): moves built pages between tab widgets; address pages by widget, never index; a page put in a layout must be shown again |
+| `src/food_page.py` | Design › Food: one animal, any animal, and month by month with people's harvest kept apart (V3.08) |
+| `src/what_it_feeds.py` | Food's Qt-free arithmetic over the edges layer, and Planted's "feeds N · flowers … · fruit …" line (V3.08) |
+| `src/share_panel.py` | Share: Present and Export (every export, Growth Snapshots, the 3D outputs, Where to buy) (V3.08) |
+| `src/follow_design.py` | The 3D preview and Growth Snapshots rebuild when the design changes; no Refresh (F89, V3.08) |
+| `src/shape_tool.py` | Draw › Shape: areas, lawn-conversion zones and hedge/fence/windbreak lines in one form under a Draw-row button (V3.07) |
+| `src/map_settings_flow.py` | View › Map Settings: the zoom step, saved and sent on every map load (V3.07) |
 | `src/site_panel.py` | Side-panel tab for the property pin and auto-filled site data |
-| `src/analysis_panel.py` | Side-panel tab for site analysis overlays |
-| `src/planning_panel.py` | Side-panel tab for planning and analysis features |
+| `src/analysis_panel.py` | The Design tab's widget (its strip: Report card, Planted, Habitat, Food, Over time, Water) and the Site tab's Sun & Shade and Wind pages, which it builds and runs |
+| `src/planning_panel.py` | Builds and runs the pages Planning had: Over time's year by year and hours, Design › Water, the journal on Site › Notes; hidden itself since V3.08 |
 | `src/wind_rose_widget.py` | a small QPainter wind-rose (V1.67) |
 | `src/phenology_widget.py` | the "what's happening now" dashboard UI (F51) |
-| `src/learn_panel.py` | the Learn side tab: Field Study / Lessons / Present (V2.25) |
+| `src/learn_panel.py` | the Learn side tab: Field Study / Lessons (V2.25); still builds Present, which is Share › Present since V3.08 |
 | `src/docent_widget.py` | the docent / presentation-mode UI (F52) |
 | `src/field_study_widget.py` | the Field Study quiz runner UI (F48) |
 | `src/lesson_track_widget.py` | the guided lesson-track stepper UI (F53) |
@@ -87,7 +103,7 @@ added; trust the source over this list).
 | Module | One line |
 |---|---|
 | `src/design_api.py` | Programmatic interface for generating landscape designs |
-| `src/llm_design.py` | Prompt-driven design generation via a local LLM |
+| `src/llm_design.py` | Design generation: rule-based `generate_design_offline` (the GUI's, V3.22) and the LLM `generate_design` (CLI/MCP only) |
 | `src/design_critic.py` | evaluate-and-repair intelligence for Generate Design |
 | `src/placement_score.py` | Ecological cell-scoring for design generation (V1.51) |
 | `src/layout.py` | Plant-group layout patterns for the design generator (V1.50) |
@@ -147,7 +163,7 @@ added; trust the source over this list).
 | `src/water_flow.py` | map-side glue for the water flow & accumulation overlay (V2.13) |
 | `src/precip_split.py` | separate precipitation by *when its water is available* |
 | `src/wind.py` | seasonal wind rose + live current wind from Open-Meteo (V1.67) |
-| `src/wind_flow.py` | orchestration for fetching site wind data (V1.67) |
+| `src/wind_flow.py` | the site's wind: the pin's rose to the Wind page (V3.07), Refresh's fetch, the cached rose on open (V1.67) |
 | `src/wind_shadow.py` | porosity-aware shelterbelt (wind shadow) geometry (V1.68) |
 | `src/wind_shadow_flow.py` | orchestration for the live wind-shadow overlay (V1.68) |
 | `src/snow.py` | winter snow cover & survival metrics (the *insulation* function) |
@@ -187,16 +203,12 @@ added; trust the source over this list).
 | `src/scene_wildlife.py` | populate a 3D scene with the animals the design's plants |
 | `src/sprite_gallery.py` | specimen scenes for the 3D sprite gallery (V1.93–94) |
 | `src/sprite_gallery_window.py` | the in-app 3D Sprite Gallery (V1.94) |
-| `src/splat_backdrop.py` | georeferenced 3D Gaussian-splat backdrop (V1.65) |
-| `src/splat_flow.py` | map-side wiring for the Gaussian-splat backdrop (V1.65) |
 | `src/web_assets.py` | a localhost HTTP server for the built-in 3D viewer (V1.77) |
 
 ## Import pipelines & export
 
 | Module | One line |
 |---|---|
-| `src/scan_import.py` | phone-scan (point cloud) import → nDSM → footprints |
-| `src/scan_import_dialog.py` | the "Import Yard Scan…" flow (V1.63) |
 | `src/footprint_extract.py` | Pluggable 2D footprint extraction from raster tiles |
 | `src/footprint_ndsm.py` | nDSM height-raster → footprint polygons + heights |
 | `src/site_photo.py` | site/drone photo map underlay (F24) |

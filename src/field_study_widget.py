@@ -71,11 +71,10 @@ class FieldStudyWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "Test your recall — identify plants, trace specialist relationships, "
-            "and spot the gaps in your own design. Great prep for a nursery or "
-            "trail visit.")
+            "Identify plants, trace who depends on whom, and find the gaps in "
+            "your design.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
 
         self._start_btn = QPushButton("Start a quiz")
@@ -87,7 +86,7 @@ class FieldStudyWidget(QWidget):
         lay.addWidget(self._start_btn)
 
         self._progress = QLabel("")
-        self._progress.setStyleSheet("color: #a5d6a7; font-size: 11px; font-weight: bold;")
+        self._progress.setStyleSheet("color: #a5d6a7; font-size: 12px; font-weight: bold;")
         lay.addWidget(self._progress)
 
         self._photo = QLabel("")
@@ -103,13 +102,16 @@ class FieldStudyWidget(QWidget):
 
         self._hint = QLabel("")
         self._hint.setWordWrap(True)
-        self._hint.setStyleSheet("color: #9ccc9c; font-size: 11px; font-style: italic;")
+        self._hint.setStyleSheet("color: #9ccc9c; font-size: 12px; font-style: italic;")
         self._hint.setVisible(False)
         lay.addWidget(self._hint)
 
         self._opt_btns: list[QPushButton] = []
         for i in range(4):
             b = QPushButton("")
+            # Its text is the answer, set with each question, and names it;
+            # tests/test_app_smoke reads this to know (V3.02).
+            b.setProperty("namedByContent", True)
             b.setStyleSheet(_OPT_STYLE)
             b.clicked.connect(lambda _=False, idx=i: self._answer(idx))
             b.setVisible(False)
@@ -120,7 +122,7 @@ class FieldStudyWidget(QWidget):
         self._explain.setWordWrap(True)
         self._explain.setVisible(False)
         self._explain.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; padding: 8px; background: #1a2a1a; "
+            "color: #dcedc8; font-size: 12px; padding: 8px; background: #1a2a1a; "
             "border: 1px solid #2e4a2e; border-radius: 4px;")
         lay.addWidget(self._explain)
 

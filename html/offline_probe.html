@@ -1,0 +1,248 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">waiting for the map…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// The map page with no internet (dev page + the harness behind
+// tests/test_offline_map.py, V3.19). The run is offline: every host but the
+// local server is unresolvable, so every tile fails, as it does for a person
+// with no connection. Reads what the page then says (QF-6), and what it draws
+// that the review found wrong at yard scale: a "0.0 m" side on an outline read
+// back from a file (QF-8), the scale bar in kilometres (QF-18), and an edited
+// outline put back by Python (QF-14). Clicks go to whatever is under each point
+// (document.elementFromPoint), as boundary_probe.html sends them.
+//
+// The review of V3.19's build added: where the line sits (off the yard, clear
+// of the scale bar), the connection coming back, a hand-over from inside
+// Leaflet's own 'load' (it threw), an outline closed by a double-click whose
+// second press lands a pixel off the first, and an outline opened from a file
+// having its first corner dragged. Any error the page throws is kept.
+//
+// Results go into document.title as JSON, read by a headless `--dump-dom` run.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;
+const YARD = [[LAT - D, LNG - D * 1.5], [LAT - D, LNG + D * 1.5],
+              [LAT + D, LNG + D * 1.5], [LAT + D, LNG - D * 1.5]];
+// Four corners, not a box, the first at the bottom and not under a scale handle.
+const QUAD = [[LAT - D, LNG], [LAT - D * 0.4, LNG + D * 1.6],
+              [LAT + D, LNG + D * 1.2], [LAT + D * 0.7, LNG - D * 1.5]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function fire(type, p) {
+  const el = w.document.elementFromPoint(p.x, p.y);
+  el.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w,
+    clientX: p.x, clientY: p.y, button: 0, buttons: type === 'mousedown' ? 1 : 0 }));
+  return el;
+}
+function click(p) { fire('mousedown', p); fire('mouseup', p); return fire('click', p); }
+function drag(a, b) {
+  fire('mousedown', a);
+  for (let i = 1; i <= 6; i++) {
+    fire('mousemove', { x: a.x + (b.x - a.x) * i / 6, y: a.y + (b.y - a.y) * i / 6 });
+  }
+  fire('mouseup', b);
+  fire('click', b);
+}
+function at(lat, lng) {
+  const p = w.map.latLngToContainerPoint([lat, lng]);
+  const r = w.map.getContainer().getBoundingClientRect();
+  return { x: r.left + p.x, y: r.top + p.y };
+}
+function notice() {
+  const el = w.document.getElementById('sp-offline');
+  if (!el || el.style.display === 'none') return null;
+  const r = el.getBoundingClientRect();
+  return { el: el, centre: { x: r.left + r.width / 2, y: r.top + r.height / 2 } };
+}
+function box(el) {
+  const r = el.getBoundingClientRect();
+  return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+}
+// An animated zoom still in flight finishes after a later setView or fitBounds
+// and puts the map back at its own zoom. About one run in ten (V3.22), the
+// double-click step below starts one (zoom 12 -> 12.2, then on), and under
+// --virtual-time-budget it ended inside the drag or the scale steps: CI's drag
+// landed beside its handle, and a scale read "5 m" at county zoom. Every step
+// that depends on the zoom waits for it first.
+async function settled() {
+  w.map.stop();
+  for (let i = 0; i < 60 && w.map._animatingZoom; i++) await wait(50);
+}
+function scaleLabel() { return w.document.querySelector('#sp-scale .sp-scale-label').textContent; }
+function sent(name) { return calls.filter(c => c[0] === name); }
+
+async function run() {
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+  out.errors = [];
+  w.addEventListener('error', e => out.errors.push(String(e.message)));
+
+  // QF-6: the line over the map, once the last base map has failed a screenful.
+  for (let i = 0; i < 200 && !notice(); i++) await wait(50);
+  const n = notice();
+  out.notice = n && { text: n.el.textContent, role: n.el.getAttribute('role'),
+    pointer: w.getComputedStyle(n.el).pointerEvents,
+    under: (w.document.elementFromPoint(n.centre.x, n.centre.y) || {}).id || 'map' };
+  out.basemap = w.osmLayer && w.osmLayer._url;
+  if (n) {
+    // A click on the line is a click on the map: a corner, while drawing.
+    w.setMode('boundary');
+    click(n.centre);
+    out.corners_after_click = w.polygonPoints.length;
+    w.setMode('none');
+    // The connection back: the base map asks again for every tile. Still
+    // offline here, so they fail again and the line stays, still true.
+    let redrawn = 0;
+    const base = w.osmLayer, redraw = base.redraw;
+    base.redraw = function () { redrawn += 1; return redraw.apply(this, arguments); };
+    w.dispatchEvent(new w.Event('online'));
+    await wait(300);
+    base.redraw = redraw;
+    out.online = { redrawn: redrawn, still_says: !!notice() };
+    w.osmLayer.fire('tileload');                    // a tile draws
+    out.after_a_tile = !!notice();
+  }
+
+  // The review: a hand-over from inside Leaflet's 'load' (a screenful with no
+  // tile drawn) removed the layer while Leaflet was still reading it, and
+  // threw. Big tiles, so fewer than eight fail and the screenful decides.
+  let handed = 0;
+  const dead = w.L.tileLayer('https://tiles.invalid/{z}/{x}/{y}.png', { tileSize: 1024 }).addTo(w.map);
+  w.watchBaseTiles(dead, () => { handed += 1; if (w.map.hasLayer(dead)) w.map.removeLayer(dead); });
+  for (let i = 0; i < 100 && !handed; i++) await wait(50);
+  await wait(100);
+  out.hand_over = { handed: handed, errors: out.errors.slice() };
+
+  // QF-14 (the review): a square closed by a double-click whose second press
+  // lands a pixel right of and above the first. One corner there, not two.
+  calls = [];
+  w.setMode('boundary');
+  const sq = [{ x: 380, y: 340 }, { x: 520, y: 340 }, { x: 520, y: 200 }, { x: 380, y: 200 }];
+  sq.forEach(p => click(p));
+  const off = { x: sq[3].x + 1, y: sq[3].y - 1 };
+  click(off);
+  fire('dblclick', off);
+  const done = sent('onBoundaryComplete');
+  out.double_click = done.length ? JSON.parse(done[0][2]) : null;
+  w.setMode('none');
+  if (done.length) w._removeBoundaryEntry(done[0][1]);
+
+  // QF-8: an outline read back from a file repeats its first corner.
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD.concat([YARD[0]]) }), false);
+  await settled();
+  // Not animated (V3.21): a zoom still in flight finished after the steps
+  // below and put the map back at its own zoom (a scale read "500 m" at
+  // zoom 9; on CI a drag landed beside its handle).
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [90, 90], animate: false });
+  await wait(200);
+  const sides = Array.from(w.boundaries[0].labelsLayer.getLayers()).map(
+    m => m.getElement() ? m.getElement().textContent : '');
+  out.side_labels = sides;
+
+  // QF-14: Python puts an edited outline back, handles and all.
+  w.enterBoundaryEditMode('b1');
+  out.opened = { corners: w.boundaries[0].points.length, handles: w.boundaryEditHandles.length };
+  w.boundaries[0].points[0] = [LAT + D * 2, LNG + D * 3];
+  w.restoreBoundary('b1', YARD);
+  out.restored = { points: w.boundaries[0].points, editing: w.boundaryEditId,
+                   handles: w.boundaryEditHandles.length };
+  w.exitBoundaryEditMode();
+
+  // QF-14 (the review): an outline opened from a file, its first corner
+  // dragged 60 px right and 40 px down. The handle on top was the repeated
+  // corner's, and the drag pulled a spur out of the outline.
+  w.loadBoundary(JSON.stringify({ id: 'b2', color: 'blue', points: QUAD.concat([QUAD[0]]) }), false);
+  const b2 = w.boundaries[w.boundaries.length - 1];
+  await settled();
+  w.map.fitBounds(b2.layer.getBounds(), { padding: [140, 140], animate: false });
+  await wait(200);
+  w.enterBoundaryEditMode('b2');
+  calls = [];
+  // Aimed at the handle as drawn, as a person aims, not at where the corner's
+  // coordinates say it is (V3.22: CI's Chromium twice pressed a bare DIV
+  // here, which no run in a session reproduced). If it misses again, the
+  // report says what was under the point and where the handle was drawn.
+  const want = at(QUAD[0][0], QUAD[0][1]);
+  const hEl = w.boundaryEditHandles[0] && w.boundaryEditHandles[0].getElement
+    ? w.boundaryEditHandles[0].getElement() : null;
+  const hr = hEl ? hEl.getBoundingClientRect() : null;
+  const c0 = hr && hr.width ? { x: hr.left + hr.width / 2, y: hr.top + hr.height / 2 } : want;
+  const name = el => el ? String(el.tagName) + '#' + (el.id || '') + '.' +
+                          String(el.getAttribute('class')) : null;
+  const target = w.document.elementFromPoint(c0.x, c0.y);
+  const under = Array.from(w.document.elementsFromPoint(c0.x, c0.y)).slice(0, 4).map(name);
+  drag(c0, { x: c0.x + 60, y: c0.y + 40 });
+  const moved = sent('onBoundaryGeomChanged');
+  const r1 = n => Math.round(n);
+  out.reopened_drag = { handles: w.boundaryEditHandles.length,
+                        target: name(target),
+                        where: 'pressed ' + r1(c0.x) + ',' + r1(c0.y) + '; corner at ' +
+                               r1(want.x) + ',' + r1(want.y) + '; handle drawn ' +
+                               (hr ? r1(hr.left) + ',' + r1(hr.top) + ' ' + r1(hr.width) +
+                                     'x' + r1(hr.height) : 'nowhere') +
+                               '; under it ' + under.join(' > '),
+                        sent: moved.length ? JSON.parse(moved[moved.length - 1][2]) : null };
+  w.exitBoundaryEditMode();
+
+  // QF-18: Automatic across a yard and across a county; a click fixes the other.
+  w.setScaleBar(true, 'auto');
+  await settled();
+  w.map.setView([LAT, LNG], 21, { animate: false });
+  await wait(100);
+  out.scale_yard = scaleLabel();
+  await settled();
+  w.map.setView([LAT, LNG], 9, { animate: false });
+  await wait(100);
+  out.scale_county = scaleLabel();
+  w.map.setView([LAT, LNG], 21, { animate: false });
+  await wait(100);
+  calls = [];
+  const bar = w.document.getElementById('sp-scale').getBoundingClientRect();
+  click({ x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 });
+  out.scale_click = { label: scaleLabel(), told: sent('onScaleUnitChanged') };
+
+  // The owner (V3.23): the double-click that closes an outline also zoomed.
+  // Counted as calls to the map's zoom, since headless Chromium runs no
+  // animation frames this late and an animated zoom never lands. On open
+  // ground: with a tool armed it must not zoom; with none it still does.
+  await settled();
+  w.map.setView([LAT, LNG], 18, { animate: false });
+  const zooms = [], zoomAround = w.map.setZoomAround;
+  w.map.setZoomAround = function () { zooms.push(w.currentMode); return zoomAround.apply(this, arguments); };
+  const open = at(LAT - D * 2, LNG + D * 5);
+  w.setMode('hedgerow');
+  click(open); click({ x: open.x + 80, y: open.y }); fire('dblclick', { x: open.x + 80, y: open.y });
+  w.setMode('none');
+  fire('dblclick', { x: open.x + 40, y: open.y + 60 });
+  w.map.setZoomAround = zoomAround;
+  out.double_click_zooms = zooms;
+  await settled();
+
+  // QF-6 (the review): where the line sits, beside the scale bar and the map.
+  w._showOffline(true);
+  out.places = { line: box(w.document.getElementById('sp-offline')),
+                 scale: box(w.document.getElementById('sp-scale')),
+                 map: box(w.map.getContainer()) };
+  // Export PDF holds it off while it grabs the map, then lets it go.
+  w.holdOfflineNotice(true);
+  out.held = { held: !!notice() };
+  w.holdOfflineNotice(false);
+  out.held.after = !!notice();
+  w._showOffline(false);
+}
+
+function report(obj) {
+  document.title = 'MEASURED ' + JSON.stringify(obj);
+  document.getElementById('out').textContent = JSON.stringify(obj, null, 1);
+}
+
+run().then(() => report(out)).catch(e => report(Object.assign(out, { error: String(e && e.stack || e) })));
+</script>
+</body></html>

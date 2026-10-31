@@ -97,6 +97,30 @@ class TestDocentLogic(unittest.TestCase):
         season = next(b for b in s2["beats"] if b["id"] == "season")
         self.assertEqual(season["season_month"], 8)
 
+    def test_a_tie_is_not_narrated_as_a_peak(self):
+        # V2.91: with one species in flower each month, every bloom month
+        # ties, and the earliest used to be named the peak ("Bloom peaks
+        # around March" for a prairie mix). The camera goes to midsummer.
+        months = [{"month": m, "count": 1 if m in (3, 4, 5, 8, 9, 10) else 0}
+                  for m in range(1, 13)]
+        forage = dict(_forage(peak=3, cov=5, gaps=[6, 7], flowering=2),
+                      months=months)
+        season = next(b for b in self._script(forage=forage)["beats"]
+                      if b["id"] == "season")
+        self.assertNotIn("peaks", season["narration"])
+        self.assertIn("Flowers open from March to October",
+                      season["narration"])
+        self.assertEqual(season["season_month"], 8)
+
+    def test_a_real_peak_is_still_named(self):
+        months = [{"month": m, "count": {6: 2, 7: 5, 8: 3}.get(m, 0)}
+                  for m in range(1, 13)]
+        forage = dict(_forage(peak=7), months=months)
+        season = next(b for b in self._script(forage=forage)["beats"]
+                      if b["id"] == "season")
+        self.assertIn("Bloom peaks around July", season["narration"])
+        self.assertEqual(season["season_month"], 7)
+
     def test_empty_design(self):
         s = build_docent_script([], [], score=None, chickadee=None, forage=None)
         ids = [b["id"] for b in s["beats"]]
@@ -122,6 +146,35 @@ class TestDocentIntegration(unittest.TestCase):
         import src.permadesign_api as api
         self.assertIn("docent_script", api.__all__)
         self.assertTrue(hasattr(api, "docent_script"))
+
+    def _placed_named(self, names):
+        from src.db.plants import get_all_plants
+        rows = {p["common_name"]: p for p in get_all_plants()}
+        return [{"plant_id": rows[n]["id"], "common_name": n} for n in names]
+
+    def test_the_season_beat_plays_from_placed_records(self):
+        # V2.91: both real callers pass placed records, which carry no bloom
+        # period, so the forage calendar saw nothing in flower and the season
+        # beat never played on any design. `test_real_db` above did not ask.
+        placed = self._placed_named(
+            ["Prairie Crocus", "Wild Bergamot", "Smooth Aster"])
+        ids = [b["id"] for b in build_docent_script(placed, [])["beats"]]
+        self.assertIn("season", ids)
+
+    def test_grass_bloom_is_not_narrated_as_forage(self):
+        # V2.91 (F182): the grasses flower in June and July, which stay a gap.
+        from src.docent import _with_catalogue
+        from src.forage_calendar import build_forage_calendar
+        placed = self._placed_named(
+            ["Prairie Crocus", "Smooth Aster", "Rough Fescue",
+             "Blue Grama Grass", "Needle and Thread Grass"])
+        cal = build_forage_calendar(_with_catalogue(placed))
+        self.assertIn(6, cal["gap_months"])
+        self.assertIn(7, cal["gap_months"])
+        season = next(b for b in build_docent_script(placed, [])["beats"]
+                      if b["id"] == "season")
+        self.assertIn("the gaps are where the next planting goes",
+                      season["narration"])
 
 
 if __name__ == "__main__":

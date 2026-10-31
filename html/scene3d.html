@@ -28,7 +28,7 @@
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
   height → +y. Every critter model faces −Z (see critterHeading).
 
-  three.js + Spark are vendored under html/vendor/ and served over a localhost
+  three.js is vendored under html/vendor/ and served over a localhost
   http:// origin (src/web_assets.py), so the 3D view loads offline and is immune
   to CDN outages. The offline notice appears only if WebGL itself is
   unavailable or the bundled assets are missing.
@@ -258,8 +258,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 {
   "imports": {
     "three": "./vendor/three/three.module.js",
-    "three/addons/": "./vendor/three/addons/",
-    "@sparkjsdev/spark": "./vendor/spark/spark.module.js"
+    "three/addons/": "./vendor/three/addons/"
   }
 }
 </script>
@@ -297,9 +296,9 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
     console.error('[scene3d] ' + detail);   // → stderr via the host's log page
     var hud = document.getElementById('hud');
     if (hud) hud.innerHTML = '3D viewer error: ' + detail.slice(0, 200);
-    if (!window.permaSetScene) {
-      window.permaFatal('<b>3D viewer error</b><br>' + detail.slice(0, 400)
-        + '<br><br>The 2D map is unaffected.');
+    if (!window.permaSetScene) {   // a boot message, if set, says it better
+      window.permaFatal(window.permaBootError || ('<b>3D viewer error</b><br>'
+        + detail.slice(0, 400) + '<br><br>The 2D map is unaffected.'));
     }
   }
   // capture = true so module/resource load failures (which don't bubble) are
@@ -339,8 +338,10 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // Surfaces + plantMaterial: before 02-plants because everything downstream
     // of it builds geometry that wants a material.
     'scene3d/01b-surface.js',
+    'scene3d/01c-leaves.js',   // V2.94: leaves let light through (F186)
     'scene3d/02-plants.js',
     'scene3d/03-herbs.js',
+    'scene3d/03b-trees.js',   // V2.92: the procedural trees, split from 03-herbs
     'scene3d/04-quality.js',
     'scene3d/05-flowers.js',
     'scene3d/06-fly.js',
@@ -373,6 +374,13 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // the bird flight attitude took it past its ceiling. Nothing here is called
     // from the animation loop — see 08-modes.js:_loopFault.
     'scene3d/21-critters.js',
+    // V2.89: vines on the tree or shrub beside them (F179). Called from
+    // buildPlants after the trees and shrubs have noted where they stand.
+    'scene3d/22-vines.js',
+    // V2.90: the pond (F175) — floating leaves on a pond's water, submerged
+    // plants showing what reaches the surface, broad leaves on stalks.
+    'scene3d/23-pond.js',
+    'scene3d/24-succulents.js',   // V2.93: cacti, yucca and roseroot (F177)
   ];
   let i = 0;
   (function next() {

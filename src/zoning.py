@@ -209,6 +209,25 @@ def preferred_zone_for_plant(plant: dict) -> str:
     return NEUTRAL
 
 
+#: Habits that stand in water (V2.90's `growth_form` vocabulary).
+WATER_HABITS = frozenset({"emergent", "floating", "submerged"})
+
+
+def needs_standing_water(plant: dict) -> bool:
+    """True for a plant that grows only in standing water or saturated ground:
+    one filed ``aquatic``, one whose habit stands in water, or one whose only
+    recorded moisture is ``high``. That is 23 species (V2.91), the pond's own.
+
+    Narrower than ``preferred_zone_for_plant``'s WET on purpose: a willow wants
+    the wet end of a yard and grows in the rest of it, a buckbean does not
+    (F183). The catalogue records no wetland indicator, so this reads what it
+    does record."""
+    ptype = (plant.get("plant_type") or "").lower()
+    form = (plant.get("growth_form") or "").lower()
+    water = set(condition_tokens(plant.get("water_needs")))
+    return ptype == "aquatic" or form in WATER_HABITS or water == {"high"}
+
+
 # Structures that belong in low / wet ground (the water-management group).
 WET_STRUCTURE_IDS = frozenset({"pond", "swale", "rain_garden", "rain_barrel"})
 

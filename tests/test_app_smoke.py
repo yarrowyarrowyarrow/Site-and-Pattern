@@ -60,6 +60,9 @@ class TestMainWindowSmoke(unittest.TestCase):
     _app = None
     _win = None
     _construct_error: Exception | None = None
+    #: Which way round the window is: the subclass below runs everything
+    #: again with Advanced tools on (V3.21, MD-2).
+    advanced = False
 
     @classmethod
     def setUpClass(cls):
@@ -89,11 +92,14 @@ class TestMainWindowSmoke(unittest.TestCase):
 
     def test_constructed(self):
         self.assertIsNotNone(self._win)
-        # Against branding.APP_TITLE (what app.py sets), not a literal: the
-        # old literal went stale at the V1.69 rebrand and nobody noticed
-        # because this module only runs on a full Qt stack (CI skips it).
-        from src.branding import APP_TITLE
-        self.assertEqual(self._win.windowTitle(), APP_TITLE)
+        # Against branding (what app.py sets), not a literal: the old literal
+        # went stale at the V1.69 rebrand and nobody noticed because this
+        # module only runs on a full Qt stack (CI skips it). Since V3.16 the
+        # title names the running release (F231), which depends on the build.
+        from src.app_version import running_version
+        from src.branding import window_title
+        self.assertEqual(self._win.windowTitle(),
+                         window_title(version=running_version()))
 
     def test_initial_project_state(self):
         self.assertEqual(self._win._project["type"], "FeatureCollection")
@@ -210,6 +216,1235 @@ class TestMainWindowSmoke(unittest.TestCase):
         self.assertTrue(hasattr(self._win, "_act_generate"))
         self.assertIsNotNone(getattr(self._win, "_generation", None))
 
+    # ── The placement bar (F193, V2.98) ──────────────────────────────────────
+
+    def test_placement_bar_sits_beside_the_map_not_inside_it(self):
+        """A child of the web view never reaches the accessibility tree."""
+        bar = self._win.placement_bar
+        self.assertIs(bar.parentWidget(), self._win.map_widget.parentWidget())
+        self.assertFalse(self._win.map_widget.isAncestorOf(bar))
+
+    def test_the_map_bridge_lives_as_long_as_the_view(self):
+        """The web channel keeps a bare pointer to the bridge. Owned only by a
+        Python attribute, it was freed under a live page (CI, V2.98)."""
+        from PyQt6 import sip
+        bridge = self._win.map_widget.bridge
+        self.assertIs(bridge.parent(), self._win.map_widget)
+        self.assertFalse(sip.ispyowned(bridge))
+
+    def test_looking_at_a_plant_leaves_the_map_alone(self):
+        """V2.99 (F191): selecting names the plant on the Place button; only a
+        Place action arms the map. Through the real window's wiring."""
+        win = self._win
+        panel = win.plant_panel
+        win._cancel_draw()
+        panel._results_list.setCurrentIndex(
+            panel._results_list.model().index(0, 0))
+        self.assertEqual(win._current_mode, "none")
+        self.assertEqual(win.placement_bar.source, "")
+        panel._place_btn.click()
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+        win._cancel_draw()
+
+    def test_choosing_a_plant_shows_its_page_and_placing_puts_it_away(self):
+        """V3.00 (F192), through the real window: the page opens over the
+        map's right edge, its Place arms the map, and placing closes it so the
+        yard is clear for the click."""
+        win = self._win
+        panel = win.plant_panel
+        fly = win.species_flyout
+        win._cancel_draw()
+        from src.plant_list_view import _PLANT_OBJ_ROLE
+        index = panel._results_list.model().index(1, 0)
+        plant = index.data(_PLANT_OBJ_ROLE)
+        panel._on_list_choose(index)
+        self.assertFalse(fly.isHidden())
+        self.assertIs(fly.parentWidget(), win.map_widget.parentWidget())
+        self.assertEqual(fly.page.shown_id(), plant["id"])
+        self.assertEqual(win._current_mode, "none")
+        fly.page.findChild(type(panel._place_btn), "placeButton").click()
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+        self.assertTrue(fly.isHidden())
+        self.assertEqual(panel._armed_plant["id"], plant["id"])
+        win._cancel_draw()
+
+    def test_closing_the_page_hands_the_keyboard_back_to_the_list(self):
+        win = self._win
+        panel = win.plant_panel
+        fly = win.species_flyout
+        win._cancel_draw()
+        panel._on_list_read(panel._results_list.model().index(2, 0))
+        self.assertFalse(fly.isHidden())
+        fly.page.close_requested.emit()
+        self.assertTrue(fly.isHidden())
+        self.assertEqual(panel.page_plant_id(), 0)
+
+    def test_the_list_knows_where_the_site_is(self):
+        """For "Recorded near this site": read from the site panel, not pushed, so a
+        loaded project's pin counts too."""
+        panel = self._win.plant_panel
+        self.assertEqual(panel._site_source,
+                         self._win.site_panel.current_coords)
+
+    def test_a_sites_soil_ph_shows_as_a_filter_you_can_remove(self):
+        """V1.67 made a fetched soil's pH filter Browse and nothing said so;
+        at pH 8.0 it hides a quarter of the catalogue (V3.01)."""
+        from src import soil_flow
+        picker = self._win.plant_panel.picker
+        every = len(picker.rows())
+        sc = (self._win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self.addCleanup(lambda: self._win.plant_panel.set_soil_ph(None))
+        soil_flow.apply_soil_site_fields(
+            self._win, {"summary": {"ph_top": 8.0}})
+        self.assertIn("Your soil: pH 8.0", picker.chip_texts())
+        self.assertLess(len(picker.rows()), every)
+        picker.remove("soil")
+        self.assertNotIn("Your soil: pH 8.0", picker.chip_texts())
+        self.assertEqual(len(picker.rows()), every)
+        picker.set_soil_on(True)
+
+    def _leave_the_window_as_found(self):
+        """The window is shared by the class. A test that changes the design
+        puts back its title (test_constructed reads it), its path, its undo
+        stack and its changed-flag: closing a changed window asks first, a
+        modal nobody answers in a test."""
+        self.addCleanup(self._win.setWindowTitle, self._win.windowTitle())
+        self.addCleanup(setattr, self._win, "_project_path", None)
+        self.addCleanup(setattr, self._win, "_modified", False)
+        self.addCleanup(self._win._clear_undo)
+
+    def test_a_pin_taken_away_takes_its_soil_filter(self):
+        """Removing the pin dropped its soil data but went on filtering Browse
+        by its pH, and kept `soil_ph` in the saved design (V3.01)."""
+        from src import soil_flow
+        picker = self._win.plant_panel.picker
+        sc = (self._win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self._leave_the_window_as_found()
+        soil_flow.apply_soil_site_fields(
+            self._win, {"summary": {"ph_top": 8.0}})
+        self.assertEqual(picker.soil_ph(), 8.0)
+        self._win._map_events._on_site_pin_removed()
+        self.assertIsNone(picker.soil_ph())
+        self.assertNotIn("soil_ph", sc)
+        self.assertFalse(any("Your soil" in c for c in picker.chip_texts()))
+
+    def test_a_design_with_no_pin_has_no_soil_filter(self):
+        """A new design, or one opened without a pin, kept the last design's
+        soil pH until V3.01, under a chip that now says "Your soil"."""
+        from unittest import mock
+        from src import project as project_io, soil_flow
+        picker = self._win.plant_panel.picker
+        self._leave_the_window_as_found()
+        for opened in ("new", "loaded"):
+            soil_flow.apply_soil_site_fields(
+                self._win, {"summary": {"ph_top": 8.0}})
+            self.assertEqual(picker.soil_ph(), 8.0, opened)
+            self._win._modified = False
+            if opened == "new":
+                self._win._on_new()
+            else:
+                path = os.path.join(tempfile.mkdtemp(), "no-pin.perma.geojson")
+                project_io.save_project(project_io.new_project("No pin"), path)
+                # Loading remembers the design in the user's settings.
+                with mock.patch("src.saves.remember_last_design"):
+                    self._win._load_from_path(path)
+            self.assertIsNone(picker.soil_ph(), opened)
+            self.assertFalse(any("Your soil" in c
+                                 for c in picker.chip_texts()), opened)
+
+    # ── The accessibility baseline (F195, V3.02) ──────────────────────────
+
+    def test_every_control_has_a_name_a_screen_reader_can_read(self):
+        """Shown or not: a control that appears only in one state is still
+        read in it. A name is an accessible name, the control's own text, or
+        a label pointing at it; a group box's title and a dropdown's current
+        value are not, since they name the group and the choice. A button
+        whose text arrives with its content says so (``namedByContent``: the
+        quiz's answers, the Site tab's community link); any other button with
+        no text needs a name, hidden or not, since a colour swatch in a closed
+        form is still read once it opens."""
+        from PyQt6.QtWidgets import (
+            QAbstractButton, QAbstractItemView, QAbstractSlider,
+            QAbstractSpinBox, QComboBox, QLabel, QLineEdit, QMenuBar,
+            QScrollBar, QTabBar, QTextEdit, QWidget,
+        )
+        controls = (QAbstractButton, QComboBox, QLineEdit, QAbstractSlider,
+                    QAbstractSpinBox, QAbstractItemView, QTextEdit)
+        parts = (QComboBox, QAbstractSpinBox, QTabBar, QLineEdit,
+                 QAbstractItemView, QMenuBar)
+
+        def part_of_another(w):
+            p = w.parentWidget()
+            while p is not None:
+                if isinstance(p, parts):
+                    return True
+                p = p.parentWidget()
+            return False
+
+        labelled = {id(lab.buddy()) for lab in self._win.findChildren(QLabel)
+                    if lab.buddy() is not None}
+        missing = []
+        for w in self._win.findChildren(QWidget):
+            if (not isinstance(w, controls) or isinstance(w, (QScrollBar, QTabBar))
+                    or part_of_another(w) or w.objectName().startswith("qt_")
+                    or w.window() is not self._win):
+                continue
+            if w.accessibleName().strip() or id(w) in labelled:
+                continue
+            if isinstance(w, QAbstractButton) and (
+                    w.text().strip() or w.property("namedByContent")):
+                continue
+            hint = (getattr(w, "placeholderText", lambda: "")() or w.toolTip()
+                    or "")[:40]
+            missing.append(f"{type(w).__name__} {hint!r}")
+        self.assertEqual(missing, [], "controls a screen reader cannot name")
+
+    def _focus_on(self, widget):
+        self._win.show()
+        self._win.activateWindow()
+        widget.setFocus()
+        self._app.processEvents()
+        if self._app.focusWidget() is not widget:
+            self.skipTest("this platform does not give the window focus")
+
+    def _press(self, key):
+        from PyQt6.QtCore import QEvent, Qt
+        from PyQt6.QtGui import QKeyEvent
+        self._win.keyPressEvent(QKeyEvent(QEvent.Type.KeyPress, key,
+                                          Qt.KeyboardModifier.NoModifier))
+
+    def test_single_letters_wait_for_the_map(self):
+        """With focus on a side-panel button, B started a boundary and A
+        switched tabs (measured on V3.01); Delete removed the map's selection."""
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QPushButton
+        self.addCleanup(self._win._cancel_draw)
+        button = next(b for b in self._win.polyculture_panel.findChildren(QPushButton)
+                      if b.text() == "New Community")
+        from src import keyboard_help
+        keyboard_help.show_panel(self._win.polyculture_panel)
+        self._focus_on(button)
+        tab = self._win._side_tabs.currentIndex()
+        self._press(Qt.Key.Key_B)
+        self._press(Qt.Key.Key_D)
+        self.assertEqual(self._win._current_mode, "none")
+        self.assertEqual(self._win._side_tabs.currentIndex(), tab)
+        with mock.patch.object(self._win.map_widget, "delete_selected") as delete:
+            self._press(Qt.Key.Key_Delete)
+        delete.assert_not_called()
+
+    def test_on_the_map_the_letters_act(self):
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from src import keyboard_help
+        self.addCleanup(self._win._cancel_draw)
+        with mock.patch.object(keyboard_help, "map_has_focus", return_value=True):
+            self._press(Qt.Key.Key_G)
+            self.assertTrue(self._win.polyculture_panel.isVisibleTo(self._win))
+            self._press(Qt.Key.Key_P)
+            self.assertTrue(self._win.plant_panel.isVisibleTo(self._win))
+            self._press(Qt.Key.Key_B)
+            self.assertEqual(self._win._current_mode, "boundary")
+            with mock.patch.object(self._win.map_widget,
+                                   "delete_selected") as delete:
+                self._press(Qt.Key.Key_Delete)
+            delete.assert_called_once()
+
+    def test_every_tool_and_view_toggle_is_reached_by_tab(self):
+        """A QToolBar makes its buttons NoFocus: no tool and no View toggle
+        could be reached from the keyboard. TabFocus, so a click on a tool
+        leaves focus on the map."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QToolBar, QToolButton
+        buttons = [b for bar in self._win.findChildren(QToolBar)
+                   for b in bar.findChildren(QToolButton)
+                   if not b.objectName().startswith("qt_")]
+        self.assertGreater(len(buttons), 10)
+        for b in buttons:
+            self.assertEqual(b.focusPolicy(), Qt.FocusPolicy.TabFocus,
+                             b.text() or b.accessibleName())
+
+    def test_every_scroll_area_and_tab_widget_says_what_it_holds(self):
+        """Both reached a screen reader as an unnamed "filler": the scroll
+        areas as Tab stops, the tab widgets as the tab bars' parents."""
+        from PyQt6.QtWidgets import QScrollArea, QTabWidget
+        unnamed = [w for w in (self._win.findChildren(QScrollArea)
+                               + self._win.findChildren(QTabWidget))
+                   if not w.accessibleName()
+                   and w.focusPolicy() != w.focusPolicy().NoFocus]
+        self.assertEqual(unnamed, [])
+        self.assertEqual(self._win._side_tabs.accessibleName(), "Side panel")
+
+    def test_f6_moves_between_the_panel_and_the_map(self):
+        from PyQt6.QtWidgets import QApplication
+        from src.keyboard_help import show_panel
+        panel_widget = self._win.plant_panel.picker.view
+        for tabs in (self._win._side_tabs, self._win._placement_tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(self._win.plant_panel)
+        self._focus_on(panel_widget)
+        self._win._panes.switch()
+        self._app.processEvents()
+        focus = QApplication.focusWidget()
+        if focus is None:
+            self.skipTest("the map's view took no focus on this platform")
+        self.assertTrue(self._win.map_widget.isAncestorOf(focus)
+                        or focus is self._win.map_widget)
+        self._win._panes.switch()
+        self._app.processEvents()
+        self.assertIs(QApplication.focusWidget(), panel_widget)
+
+    def test_the_map_and_the_widget_that_takes_its_focus_are_named(self):
+        """QtWebEngine's render widget is what Tab lands on, and it read as an
+        unnamed "filler"; a new one arrives whenever the renderer restarts."""
+        from PyQt6.QtWidgets import QWidget
+        view = self._win.map_widget
+        self.assertEqual(view.accessibleName(), "Map")
+        arriving = QWidget(view)
+        self.addCleanup(arriving.deleteLater)
+        arriving.ensurePolished()           # what showing it does
+        self.assertEqual(arriving.accessibleName(), "Map")
+
+    def test_help_lists_the_keys(self):
+        from PyQt6.QtGui import QAction
+        names = [a.text().replace("&", "") for a in self._win.findChildren(QAction)]
+        self.assertIn("Keyboard Shortcuts…", names)
+        from src import keyboard_help
+        page = keyboard_help.help_html(self._win)
+        self.assertIn("Undo", page)            # read from the menus
+        self.assertIn("<b>B</b>", page)
+
+    def test_no_key_is_bound_twice_in_the_window(self):
+        """Qt does not drop a duplicate binding: it calls the two ambiguous and
+        fires neither. Redo bound Ctrl+Shift+Z itself and again inside the
+        platform's Redo keys, so the key on its toolbar tooltip did nothing
+        ("Ambiguous shortcut overload", measured V3.02). A key bound only
+        inside one widget (WidgetShortcut) is that widget's and is skipped."""
+        from collections import defaultdict
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QAction, QShortcut
+        widget_only = Qt.ShortcutContext.WidgetShortcut
+        owners = defaultdict(list)
+        for action in self._win.findChildren(QAction):
+            if action.shortcutContext() == widget_only:
+                continue
+            for seq in action.shortcuts():
+                if not seq.isEmpty():
+                    owners[seq.toString()].append(action.text())
+        for shortcut in self._win.findChildren(QShortcut):
+            if shortcut.context() == widget_only:
+                continue
+            for seq in shortcut.keys():
+                if not seq.isEmpty():
+                    owners[seq.toString()].append(type(shortcut.parent()).__name__)
+        twice = {key: who for key, who in owners.items() if len(who) > 1}
+        self.assertEqual(twice, {})
+
+    def test_esc_with_focus_on_the_place_button_stops_placing(self):
+        """Pressing Place leaves keyboard focus in the panel, not the map; Esc
+        must still stand everything down (MainWindow.keyPressEvent)."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtTest import QTest
+        win = self._win
+        panel = win.plant_panel
+        panel._results_list.setCurrentIndex(
+            panel._results_list.model().index(0, 0))
+        panel._place_btn.click()
+        self.assertEqual(win._current_mode, "plant")
+        QTest.keyClick(panel._place_btn, Qt.Key.Key_Escape)
+        self.assertEqual(win._current_mode, "none")
+        self.assertEqual(win.placement_bar.source, "")
+        self.assertFalse(panel._armed)
+
+    def test_the_map_leaving_placing_stands_everything_down(self):
+        """Esc in the map: the real bridge signal, through the real wiring."""
+        from src.db.plants import search_plants
+        win = self._win
+        panel = win.plant_panel
+        panel._place_plant(search_plants(query="bergamot")[0])
+        self.assertEqual(win._current_mode, "plant")
+        self.assertEqual(win.placement_bar.source, "plants")
+
+        win.map_widget.bridge.onModeChanged("none", win.map_widget.mode_seq)
+
+        self.assertEqual(win._current_mode, "none")
+        self.assertFalse(panel._armed)
+        self.assertEqual(win.placement_bar.source, "")
+        self.assertEqual(win._sb_mode.text(), "Mode: Ready")
+
+    def test_a_community_pattern_steps_at_community_spacing(self):
+        """It stepped at its preview member's own spacing: a 4.65 m row laid 16
+        two-metre communities 0.3 m apart."""
+        from src.db import polycultures
+        win = self._win
+        pc = next(p for p in (polycultures.get_polyculture_by_id(r["id"])
+                              for r in polycultures.get_all_polycultures())
+                  if p and p.get("members"))
+        pc = dict(pc, pattern={"kind": "row", "spacing_m": 3.5, "params": {}})
+        sent = []
+        original = win.map_widget.set_mode
+        win.map_widget.set_mode = lambda *a, **k: sent.append((a, k))
+        try:
+            win._enter_polyculture_mode(pc)
+        finally:
+            win.map_widget.set_mode = original
+            win._cancel_draw()
+        args, _kwargs = sent[-1]
+        self.assertEqual(args[0], "plant")
+        self.assertAlmostEqual(args[3], 3.5)
+
+    # ── What can be seen (F195, V3.03), on every side tab ────────────────────
+
+    def _every_tab(self):
+        """The window at a laptop's size, each side tab and sub-tab in turn,
+        put back as found: later tests expect Browse to be the Plants page."""
+        from PyQt6.QtWidgets import QTabWidget
+        from tests import _visual
+        win = self._win
+        win.resize(1366, 768)
+        win.show()
+        self._app.processEvents()
+        for tabs in [win._side_tabs] + win._side_tabs.findChildren(QTabWidget):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        return _visual.every_tab(win, win._side_tabs)
+
+    def _shown(self):
+        """Widgets actually on screen: shown, and not scrolled out of view."""
+        from PyQt6.QtWidgets import QWidget
+        return [w for w in self._win._side_tabs.findChildren(QWidget)
+                if w.isVisible() and not w.visibleRegion().isEmpty()]
+
+    def test_no_text_under_12px_on_any_tab(self):
+        """Plant Communities drew 19 of its 21 pieces of text under 12 px and
+        Field Notes 21 of 23 (V3.02); rich text's own sizes count too."""
+        from tests import _visual
+        small = []
+        for tab in self._every_tab():
+            for w in self._shown():
+                words = _visual.plain(_visual.text_of(w))
+                if words and _visual.smallest_px(w) < 12:
+                    small.append(f"{tab}: {words[:30]!r} {_visual.smallest_px(w)}px")
+        self.assertEqual(small, [])
+
+    def test_enabled_text_holds_its_contrast_on_every_tab(self):
+        """4.5:1 for text and 3:1 for a graphic (a swatch, a progress dot),
+        against the ground read from the window as drawn. Disabled controls
+        are exempt (WCAG 1.4.3) and meant to recede."""
+        from tests import _visual
+        low = []
+        for tab in self._every_tab():
+            image = self._win.grab().toImage()
+            for w in self._shown():
+                text = _visual.text_of(w)
+                if not w.isEnabled() or not _visual.plain(text):
+                    continue
+                ground = _visual.ground(image, self._win, w)
+                if ground is None:
+                    continue
+                for colour, graphic in _visual.colours(w):
+                    ratio = _visual.contrast(colour, ground)
+                    if ratio < (3.0 if graphic else 4.5):
+                        low.append(f"{tab}: {_visual.plain(text)[:28]!r} "
+                                   f"{colour.name()} on {ground.name()} {ratio:.2f}")
+        self.assertEqual(low, [])
+
+    def test_every_checkbox_can_be_seen_on_every_tab(self):
+        """An unchecked box's edge was 1.11:1 under Fusion (V3.03): nothing
+        said there was a box until it was ticked. 3:1 (WCAG 1.4.11), enabled
+        ones; a disabled control is exempt."""
+        from PyQt6.QtWidgets import QCheckBox, QRadioButton
+        from tests import _visual
+        faint = []
+        for tab in self._every_tab():
+            image = self._win.grab().toImage()
+            for w in self._shown():
+                if isinstance(w, (QCheckBox, QRadioButton)) and w.isEnabled():
+                    seen = _visual.indicator(image, self._win, w)
+                    if seen is None:
+                        continue
+                    edge, ground, _inside = seen
+                    ratio = _visual.contrast(edge, ground)
+                    if ratio < 3.0:
+                        faint.append(f"{tab}: {(w.text() or w.accessibleName())[:28]!r} "
+                                     f"{edge.name()} on {ground.name()} {ratio:.2f}")
+        self.assertEqual(faint, [])
+
+    def test_every_control_is_24px_on_every_tab(self):
+        from PyQt6.QtWidgets import QTabBar
+        from src import target_size
+        small = []
+        for tab in self._every_tab():
+            for w in self._shown():
+                if (isinstance(w, QTabBar) or target_size.counts(w)) \
+                        and min(w.width(), w.height()) < target_size.MIN_TARGET:
+                    small.append(f"{tab}: {type(w).__name__} "
+                                 f"{(getattr(w, 'text', lambda: '')() or w.accessibleName())[:20]!r} "
+                                 f"{w.width()}x{w.height()}")
+        self.assertEqual(small, [])
+
+    def test_no_tab_scrolls_sideways(self):
+        """At 12 px Plant Communities' row of five buttons needed 444 px and
+        Bees' dropdown 441, in a panel 424 wide (first build of V3.03).
+
+        It depends on the font, so it is only as strict as the font the run
+        draws in. CI's runner draws in DejaVu Sans, about 12% wider than the
+        Arial-metric fonts of Windows: the second build passed under Arial
+        metrics and, in DejaVu, Field Notes' questions needed 424 px of 402
+        and Plant Communities' title row 470 of 424."""
+        from PyQt6.QtWidgets import QScrollArea
+        wide = []
+        for tab in self._every_tab():
+            self.assertGreaterEqual(self._win._side_tabs.width(), 380, tab)
+            for area in self._win._side_tabs.findChildren(QScrollArea):
+                if area.isVisible() and area.widget() is not None:
+                    need = area.widget().minimumSizeHint().width()
+                    if need > area.viewport().width():
+                        wide.append(f"{tab}: needs {need}, has {area.viewport().width()}")
+        self.assertEqual(wide, [])
+
+    def test_site_info_does_not_scroll_sideways_with_a_pin(self):
+        """R8 (V3.19, QF-5): with a pin, Site Info needed 458 px of 402 under
+        Arial metrics and 510 in DejaVu Sans, and the test above only ever saw
+        the empty page. The pin brings a long address, the region's name and,
+        since V3.14, the link to its communities, a button whose words cannot
+        wrap. A pin set as a person sets one, the page filled from the offline
+        fallbacks and then with the widest a site near a boundary gives."""
+        from unittest import mock
+        from PyQt6.QtWidgets import QScrollArea, QTabWidget
+        from src.keyboard_help import show_panel
+        from src.site_panel import _SiteFetchWorker
+        win, sp = self._win, self._win.site_panel
+        sc = (win._project.setdefault("properties", {})
+              .setdefault("site_config", {}))
+        before = dict(sc)
+        self.addCleanup(lambda: (sc.clear(), sc.update(before)))
+        self._leave_the_window_as_found()
+        self.addCleanup(sp.clear_pin)
+        self.addCleanup(sp._on_ecoregion, None)     # the picker's region too
+        for tabs in [win._side_tabs] + win._side_tabs.findChildren(QTabWidget):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        win.resize(1366, 768)
+        win.show()
+        lat, lng = 53.5232, -113.4935
+        address = ("10423 Saskatchewan Drive Northwest, Strathcona, Edmonton, "
+                   "Alberta, T6E 4R7, Canada")
+        with mock.patch.object(sp, "_start_fetch"):   # run below, in this thread
+            win._map_events._on_site_pin_placed(lat, lng, address)
+        worker = _SiteFetchWorker(lat, lng)
+        for name, slot in (("hardiness", sp._on_hardiness),
+                           ("elevation", sp._on_elevation),
+                           ("rainfall", sp._on_rainfall), ("soil", sp._on_soil),
+                           ("climate", sp._on_climate), ("winter", sp._on_winter),
+                           ("ecoregion", sp._on_ecoregion), ("wind", sp.show_wind)):
+            getattr(worker, name).connect(slot)
+        worker.run()
+        show_panel(sp.info_page)
+        self._app.processEvents()
+        area = sp.info_page
+        self.assertIsInstance(area, QScrollArea)
+        self.assertEqual(sp._lbl_label.text(), address)
+        # The communities link is under Details and advanced-only since
+        # V3.30 (WD-2): open Details, and the link shows with the switch on.
+        sp._details_btn.setChecked(True)
+        self.addCleanup(sp._details_btn.setChecked, False)
+        self._app.processEvents()
+        from src import advanced_tools
+        self.assertEqual(sp._btn_browse_comms.isVisibleTo(area),
+                         advanced_tools.is_on())
+        widths = [("filled", area.widget().minimumSizeHint().width())]
+        sp._on_ecoregion({"keys": ["aspen_parkland", "boreal_transition"],
+                          "label": "Aspen Parkland (central AB / SK) + "
+                                   "Boreal Transition (north of the parkland)"})
+        sp.show_wind({"annual": {"prevailing_label": "WNW", "mean_speed": 17.0},
+                      "approximate": True})
+        self._app.processEvents()
+        widths.append(("widest", area.widget().minimumSizeHint().width()))
+        has = area.viewport().width()
+        self.assertEqual([w for w in widths if w[1] > has], [], f"has {has}")
+
+    def test_community_members_are_coloured_as_a_reload_draws_them(self):
+        """By layer until the design was reopened, when the loader drew them by
+        type (persistence.py). Placing now passes what the loader passes."""
+        from src.db import plants as plants_db
+        win = self._win
+        rows = plants_db.get_all_plants()[:2]
+        community = {"name": "Test community", "members": [
+            {"plant_id": r["id"], "common_name": r["common_name"],
+             "offset_x": i * 1.0, "offset_y": 0.0, "layer": "overstory"}
+            for i, r in enumerate(rows)]}
+        drawn = []
+        win.map_widget.place_plant_marker = (
+            lambda pid, *a, **k: drawn.append((pid, k.get("color"))))
+        self.addCleanup(delattr, win.map_widget, "place_plant_marker")
+        self._leave_the_window_as_found()
+        self.addCleanup(win._store.remove_polyculture, "Test community", 53.5, -113.5)
+        win._pending_polyculture = community
+        win._current_mode = "polyculture"
+        self.addCleanup(setattr, win, "_current_mode", "none")
+        win._map_events._on_polyculture_click(53.5, -113.5)
+        self.assertEqual(len(drawn), 2)
+        for pid, colour in drawn:
+            self.assertEqual(colour, win._plant_info(pid)[2])
+            self.assertNotEqual(colour, "#1b5e20")     # the old overstory green
+
+    def test_the_map_says_whether_it_has_loaded(self):
+        """F197 (V3.04): a start-screen choice made after the map loaded had
+        waited for a map_ready that had already fired. The choice now asks
+        first; the answer must follow a reload too."""
+        w = self._win.map_widget
+        self.addCleanup(setattr, w, "is_ready", w.is_ready)
+        w._on_load_started()
+        self.assertFalse(w.is_ready)
+        w._on_map_ready()
+        self.assertTrue(w.is_ready)
+        self.assertGreater(w.receivers(w.loadStarted), 0)
+
+    def test_export_pdf_carries_the_presentation_still(self):
+        """F123 (V3.05): the PDF has drawn a full-page still since F69, and
+        Export PDF never passed one, so the page was unreachable. The 3D
+        window now keeps the last still it rendered on the main window."""
+        import tempfile
+        from unittest import mock
+        from PyQt6.QtGui import QColor, QPixmap
+        from src.scene3d_window import keep_still
+        win = self._win
+        self.addCleanup(setattr, win, "_presentation_still", (None, ""))
+        png = os.path.join(tempfile.mkdtemp(), "still.png")
+        pm = QPixmap(64, 48)
+        pm.fill(QColor("#4c7a3a"))
+        pm.save(png)
+        self.assertTrue(keep_still(win, png, {"caption": "Year 5, June",
+                                              "title": "Five years on"}))
+        out = os.path.join(tempfile.mkdtemp(), "design.pdf")
+        seen = {}
+        with mock.patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+                        return_value=(out, "")), \
+                mock.patch("src.pdf_export.export_pdf",
+                           side_effect=lambda *a, **k: seen.update(k)):
+            win._on_export_pdf()
+        self.assertIsNotNone(seen.get("still_pixmap"))
+        self.assertEqual(seen["still_pixmap"].width(), 64)
+        self.assertEqual(seen.get("still_caption"), "Year 5, June")
+
+    def test_export_pdf_grabs_the_map_without_the_offline_line(self):
+        """V3.19 (QF-6, the review): offline, the map page's line "The map
+        needs an internet connection to load. Your design is safe." was
+        printed on the plan, since Export PDF's map page is a grab of the
+        map. The page holds it off from before the save box (which gives it
+        time to redraw) until after the grab; a cancelled export lets go too."""
+        import tempfile
+        from unittest import mock
+        from PyQt6.QtGui import QPixmap
+        win = self._win
+        mw = win.map_widget
+        self.addCleanup(setattr, mw, "is_ready", mw.is_ready)
+        mw.is_ready = True                 # a page not loaded is told nothing
+        out = os.path.join(tempfile.mkdtemp(), "design.pdf")
+        for answer in (out, ""):
+            steps = []
+            run_js = mw.run_js
+
+            def record(js, run_js=run_js, steps=steps):
+                if "holdOfflineNotice" not in js:
+                    return run_js(js)
+                steps.append(js)
+
+            def ask(*a, steps=steps, answer=answer, **k):
+                steps.append("save box")
+                return answer, ""
+
+            def grab(steps=steps):
+                steps.append("grab")
+                return QPixmap(8, 8)
+
+            with mock.patch.object(mw, "run_js", side_effect=record), \
+                    mock.patch.object(mw, "grab", side_effect=grab), \
+                    mock.patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+                               side_effect=ask), \
+                    mock.patch("src.pdf_export.export_pdf"):
+                win._on_export_pdf()
+            middle = ["save box", "grab"] if answer else ["save box"]
+            with self.subTest(saved=bool(answer)):
+                self.assertEqual(steps, ["holdOfflineNotice(true);", *middle,
+                                         "holdOfflineNotice(false);"])
+
+    def test_the_bar_says_where_a_placement_landed(self):
+        """F198 (V3.05): a row of shrubs came down half outside the yard and on
+        top of other plants, and nothing said so. The bar now says, with Undo;
+        it never refuses. An undo clears it."""
+        from src import placement_bar_flow as flow
+        from src.db.plants import search_plants
+        win = self._win
+        bar = win.placement_bar
+        lat0, lng0 = 53.5, -113.5
+        ring = [[lng0, lat0], [lng0 + 0.0001, lat0], [lng0 + 0.0001, lat0 + 0.0001],
+                [lng0, lat0 + 0.0001], [lng0, lat0]]
+        win._project["features"].append({
+            "type": "Feature", "geometry": {"type": "Polygon",
+                                            "coordinates": [ring]},
+            "properties": {"element_type": "property_boundary"}})
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        shrub = next(p for p in search_plants() if p.get("plant_type") == "shrub")
+        flow.on_armed(win, "plants", {"armed": True, "kind": "single",
+                                      "what": shrub["common_name"]})
+        self.addCleanup(flow.stand_down, win)
+        self.assertEqual(bar.note_text(), "")
+        # Well outside the 7 m square drawn above.
+        win._map_events._on_plant_placed(shrub["id"], shrub["common_name"],
+                                         lat0 + 0.001, lng0 + 0.001)
+        self.assertEqual(bar.note_text(), "It landed outside the boundary.")
+        self.assertTrue(bar._undo.isVisibleTo(bar))
+        bar._undo.click()                                  # the real undo
+        self.assertEqual(len(win._placed_plants), 0)
+        self.assertEqual(bar.note_text(), "")
+
+    def test_a_plant_on_the_map_opens_its_page_with_why_here(self):
+        """F19 (V3.05): clicking a placed plant showed nothing about it. It
+        opens the plant's page now, led by why the generator put it there;
+        not while placing, when the list is a palette (V2.99)."""
+        from PyQt6.QtWidgets import QLabel
+        from src.db.plants import search_plants
+        from src.project_store import store_for
+        win = self._win
+        fly = win.species_flyout
+        self.addCleanup(fly.hide)
+        self.addCleanup(lambda: win._project["features"].clear())
+        self.addCleanup(lambda: win._placed_plants.clear())
+        self.addCleanup(setattr, win, "_modified", False)
+        row = search_plants()[0]
+        store_for(win).add_plant(row["id"], row["common_name"], 53.5, -113.5,
+                                 why_here=["Full sun, as it likes"])
+
+        def page_says():
+            return " ".join(l.text() for l in fly.page.findChildren(QLabel))
+
+        win._current_mode = "plant"
+        self.addCleanup(setattr, win, "_current_mode", "none")
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertNotIn("Why here", page_says())
+        win._current_mode = "none"
+        win._plant_moved_at = -9.0
+        win.map_widget.bridge.plant_marker_clicked.emit(
+            "m1", row["id"], 53.5, -113.5)
+        self.assertIn("Why here", page_says())
+        self.assertIn("Full sun, as it likes.", page_says())
+
+    def test_a_new_design_drops_the_old_designs_renders(self):
+        """A still or before/after of the last design must not land in the
+        next one's PDF (V3.05)."""
+        win = self._win
+        from unittest import mock
+        win._presentation_still = ("a pixmap", "old")
+        win._before_after = (["panels"], "old")
+        win._modified = False
+        # The window is the class's: give the next test its title back.
+        self.addCleanup(win.setWindowTitle, win.windowTitle())
+        win._on_new()
+        self.assertEqual(win._presentation_still, (None, ""))
+        self.assertEqual(win._before_after, (None, ""))
+
+    def test_a_new_designs_title_names_the_running_release(self):
+        """The title says which version is running, design or no design: the
+        quickest check that an update arrived whole (F231, V3.16). Patched,
+        so it holds on CI's detached checkout, which names no release."""
+        win = self._win
+        from unittest import mock
+        win._modified = False
+        self.addCleanup(win.setWindowTitle, win.windowTitle())
+        with mock.patch("src.app.running_version", return_value="V9.99"):
+            win._on_new()
+        # No name is asked for any more (V3.23, ST-6): the address gives one.
+        self.assertEqual(win.windowTitle(),
+                         "Site & Pattern V9.99 — Untitled Design")
+
+    def test_the_version_picker_is_gone_and_updates_stay(self):
+        """V3.18 (RM-1): Help › Switch to a specific version… was a
+        developer's tool in a gardener's menu; an older installer stays on
+        the releases page."""
+        words = [a.text().replace("&", "")
+                 for menu in self._win.menuBar().actions()
+                 if menu.menu() is not None
+                 for a in menu.menu().actions()]
+        self.assertNotIn("Switch to a specific version…", words)
+        self.assertIn("Check for Updates…", words)
+        self.assertFalse(hasattr(self._win, "_on_pick_version"))
+
+    def test_the_help_menu_and_the_title_name_the_same_version(self):
+        from src.app_version import running_version
+        about = [a.text() for menu in self._win.menuBar().actions()
+                 if menu.menu() is not None
+                 for a in menu.menu().actions()
+                 if a.text().startswith("&About / Version: ")]
+        self.assertEqual(about,
+                         [f"&About / Version: {running_version() or 'dev'}"])
+        if running_version():
+            self.assertIn(f" {running_version()} — ", self._win.windowTitle())
+
+    # ── The side panel, as the owner answered the surface audit (V3.07-08) ───
+
+    def _labels(self, tabs):
+        return [tabs.tabText(i).replace("&&", "&") for i in range(tabs.count())]
+
+    def test_sun_and_shade_picks_what_casts_the_shade(self):
+        """V3.37, the owner's ask: Sun & Shade lists the existing features,
+        closed when the app opens, and a tick taken off is one undo step the
+        shade model honours."""
+        from PyQt6.QtCore import Qt
+        from src import shade
+        win = self._win
+        section = win.analysis_panel.shade_features
+        self.assertTrue(win.analysis_panel._sun_page.isAncestorOf(section))
+        self.assertFalse(section.toggle.isChecked())
+        self.assertTrue(section.body.isHidden())
+        d = 0.00005
+        ring = [[-113.5 - d, 53.5 - d], [-113.5 + d, 53.5 - d],
+                [-113.5 + d, 53.5 + d], [-113.5 - d, 53.5 - d]]
+        win._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"element_type": "canopy_footprint",
+                           "height_m": 6.0, "cast_shade": True,
+                           "label": "Building (OSM)", "source": "osm"}})
+        self.addCleanup(win._clear_undo)
+        self.addCleanup(setattr, win, "_modified", False)
+        self.addCleanup(lambda: (win._project["features"].clear(),
+                                 win._sync_planning_panel()))
+        win._sync_planning_panel()
+        self.assertEqual(section.toggle.text(), "Existing features (1) ▸")
+        section.toggle.setChecked(True)
+        self.addCleanup(section.toggle.setChecked, False)
+        section.list.item(0).setCheckState(Qt.CheckState.Unchecked)
+        self.assertTrue(win._project["features"][0]["properties"].get(
+            shade.SHADE_OFF))
+        self.assertEqual(win._undo_stack[-1]["label"], "stop casting shade")
+        self.assertEqual(shade.casters_from_project(win._project), [])
+        self.assertIn("switched off", win.analysis_panel._caster_summary.text())
+        win._do_undo()
+        self.assertNotIn(shade.SHADE_OFF,
+                         win._project["features"][0]["properties"])
+        self.assertEqual(section.list.item(0).checkState(),
+                         Qt.CheckState.Checked)
+        # Drawing by hand stays an advanced tool, here as on Site › Features.
+        self.assertEqual(section.by_hand_box.isHidden(), not self.advanced)
+
+    def test_the_side_panel_follows_the_owners_answers(self):
+        from src import side_panel_layout
+        win = self._win
+        self.assertEqual(self._labels(win._side_tabs),
+                         list(side_panel_layout.TOP_TABS))
+        self.assertEqual(self._labels(win.site_panel._tabs),
+                         ["Site Info", "Slope", "Sun & Shade", "Wind",
+                          "Features", "Notes"])
+        self.assertEqual(self._labels(win._placement_tabs),
+                         ["Plants", "Communities", "Structures"])
+        self.assertEqual(self._labels(win.analysis_panel._tabs),
+                         ["Overview", "Report card", "Planted", "Habitat", "Food",
+                          "Over time", "Water"])
+        self.assertEqual(self._labels(win.on_this_design._tabs),
+                         ["Species", "Communities"])
+        self.assertEqual(self._labels(win.share_panel._tabs),
+                         ["Present", "Export"])
+        self.assertEqual(self._labels(win.learn_panel._tabs),
+                         ["Field Study", "Lessons"])
+        # Moved, not rebuilt: the pages are the panels' own.
+        self.assertIs(win.site_panel._tabs.widget(2),
+                      win.analysis_panel._sun_page)
+        self.assertIs(win.analysis_panel._tabs.widget(0),
+                      win.overview_page)                       # V3.27, OV-2
+        self.assertIs(win.analysis_panel._tabs.widget(1),
+                      win.on_this_design._stats_page)
+        self.assertIs(win.analysis_panel._tabs.widget(6),
+                      win.planning_panel._water_page)
+        self.assertIs(win.share_panel._tabs.widget(0),
+                      win.learn_panel._present_page)
+        # Every page of Planning went, and its empty strip; the panel stays,
+        # unseen, for their state and signals.
+        self.assertIsNone(win.planning_panel._tabs)
+        self.assertFalse(win.planning_panel.isVisibleTo(win))
+
+    def test_over_time_reads_this_month_then_the_years_then_the_hours(self):
+        from src.side_panel_layout import OVER_TIME
+        win = self._win
+        page = win.analysis_panel._over_time_page
+        self.assertEqual(tuple(page.sections), OVER_TIME)
+        self.assertEqual(list(page.sections.values()),
+                         [win.analysis_panel._phenology,
+                          win.planning_panel._timeline_page,
+                          win.planning_panel._maint_page])
+        lay = page.widget().layout()
+        at = [lay.indexOf(w) for w in page.sections.values()]
+        self.assertEqual(at, sorted(at), "the sections are out of order")
+        # Shown, not only placed: a strip hides the page it gives up, and the
+        # first build drew two headings over nothing.
+        from src.keyboard_help import show_panel
+        win.show()
+        for tabs in (win._side_tabs, win.analysis_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(page)
+        self._app.processEvents()
+        for heading, part in page.sections.items():
+            self.assertTrue(part.isVisible(), f"{heading} is not shown")
+            self.assertGreater(part.height(), 40, heading)
+
+    def test_the_hours_and_water_fill_themselves_in_design(self):
+        """Planning's two live pages (V3.05) are Design's now: their refills
+        follow the Design strip, or they open empty for good."""
+        from src.keyboard_help import show_panel
+        win = self._win
+        planning, design = win.planning_panel, win.analysis_panel
+        win.show()
+        for tabs in (win._side_tabs, design._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        for page, label in ((design._over_time_page, planning._maint_results),
+                            (planning._water_page, planning._water_results)):
+            with self.subTest(page=design._tabs.tabText(
+                    design._tabs.indexOf(page))):
+                label.setText("")
+                show_panel(page)
+                self.assertTrue(planning._live.fill_now())
+                self.assertTrue(label.text(), "the page stayed empty")
+        show_panel(design._habitat_page)
+        self.assertFalse(planning._live.fill_now(),
+                         "a page that is not Planning's was filled by it")
+
+    def test_notes_holds_the_walk_the_journal_and_the_maps_notes(self):
+        from PyQt6.QtCore import QPoint
+        from src.keyboard_help import show_panel
+        win = self._win
+        page = win.site_panel.notes_page
+        win.show()
+        for tabs in (win._side_tabs, win.site_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(page)                    # laid out, so positions mean it
+        self._app.processEvents()
+        body = page.widget()
+        walk = win.site_panel._fn_free
+        journal = win.planning_panel._notes_edit
+        pins = win.planning_panel._map_notes_header
+        for w in (walk, journal, pins):
+            self.assertTrue(page.isAncestorOf(w))
+            self.assertTrue(w.isVisible(), type(w).__name__)
+        y = [w.mapTo(body, QPoint(0, 0)).y() for w in (walk, journal, pins)]
+        self.assertEqual(y, sorted(y), "the site walk comes first")
+
+    def test_share_holds_present_the_exports_and_where_to_buy(self):
+        from unittest import mock
+        win = self._win
+        share = win.share_panel
+        self.assertTrue(share.export_page.isAncestorOf(
+            win.site_panel._nursery_box))
+        self.assertFalse(win.site_panel.info_page.isAncestorOf(
+            win.site_panel._nursery_box))
+        with mock.patch.object(win, "_on_export_pdf") as pdf:
+            share.buttons["Export PDF…"].click()
+        pdf.assert_called_once()
+
+    def test_a_community_opens_its_page_and_placing_closes_it(self):
+        """F206 (V3.09): a community chosen in Placement › Communities opens
+        its page in the plant page's frame; arming the map closes it."""
+        from src.db import polycultures
+        win = self._win
+        fly = win.species_flyout
+        self.addCleanup(fly.hide)
+        cid = polycultures.get_all_polycultures(top_level_only=True)[0]["id"]
+        win.polyculture_panel.page_requested.emit(cid)
+        self.assertTrue(fly.showing_community())
+        self.assertEqual(fly.community.shown_id(), cid)
+        win.polyculture_panel.armedChanged.emit({"armed": True})
+        self.assertTrue(fly.isHidden())
+
+    def test_no_community_name_is_cut_at_a_laptops_width(self):
+        """V3.19 (QF-10, R21): at 1366 px Placement › Communities cut every
+        name to about twelve characters ("Boreal Conifer…", "Boreal
+        Peavin…"); names and facts now fold onto a second line instead."""
+        from src.keyboard_help import show_panel
+        from tests._cell_fit import cut_cells
+        win = self._win
+        self.addCleanup(win._side_tabs.setCurrentIndex,
+                        win._side_tabs.currentIndex())
+        win.resize(1366, 768)
+        win.show()
+        show_panel(win.polyculture_panel)
+        for _ in range(6):
+            self._app.processEvents()
+        tree = win.polyculture_panel.polyculture_tree
+        self.assertTrue(tree.isVisible())
+        self.assertGreater(tree.topLevelItemCount(), 20)
+        self.assertEqual(cut_cells(tree, columns=(0, 1)), [])
+
+    def test_the_cost_link_opens_where_the_buy_list_is(self):
+        from PyQt6.QtCore import QUrl
+        win = self._win
+        self.addCleanup(win._side_tabs.setCurrentIndex,
+                        win._side_tabs.currentIndex())
+        win.on_this_design._on_stats_anchor(QUrl("sap:buy"))
+        self.assertIs(win._side_tabs.currentWidget(), win.share_panel)
+        self.assertIs(win.share_panel._tabs.currentWidget(),
+                      win.share_panel.export_page)
+
+    def test_a_jump_opens_its_page_from_anywhere(self):
+        """Every jump goes by the page, through every level it is in: three
+        lookups that went by a page's index would have opened the wrong one."""
+        from src.keyboard_help import show_panel
+        win = self._win
+        for tabs in (win._side_tabs, win.site_panel._tabs,
+                     win.analysis_panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(win.analysis_panel._wind_page)          # Site › Wind
+        self.assertIs(win._side_tabs.currentWidget(), win.site_panel)
+        win.analysis_panel.show_habitat_tab()               # the report card's link
+        self.assertIs(win._side_tabs.currentWidget(), win.analysis_panel)
+        self.assertIs(win.analysis_panel._tabs.currentWidget(),
+                      win.analysis_panel._habitat_page)
+        win.site_panel.focus_address_search()               # the pin step
+        self.assertIs(win._side_tabs.currentWidget(), win.site_panel)
+        self.assertIs(win.site_panel._tabs.currentWidget(),
+                      win.site_panel.info_page)
+
+    def test_food_follows_the_design_where_it_sits(self):
+        from src.keyboard_help import show_panel
+        win = self._win
+        panel, food = win.analysis_panel, win.analysis_panel._food
+        win.show()
+        for tabs in (win._side_tabs, panel._tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        show_panel(food)
+        food._summary_line.setText("")
+        panel.set_placed_plants([])
+        panel._live.fill_now()
+        self.assertEqual(food._summary_line.text(),
+                         "Place plants to see who they feed.")
+        show_panel(panel._habitat_page)
+        food._summary_line.setText("")
+        panel.set_placed_plants([])
+        panel._live.fill_now()
+        self.assertEqual(food._summary_line.text(), "",
+                         "Food was worked out while nobody could see it")
+
+    def test_d_goes_to_design(self):
+        from unittest import mock
+        from PyQt6.QtCore import Qt
+        from src import keyboard_help
+        # Both strips put back: later tests expect Plants in front.
+        for tabs in (self._win._side_tabs, self._win._placement_tabs):
+            self.addCleanup(tabs.setCurrentIndex, tabs.currentIndex())
+        with mock.patch.object(keyboard_help, "map_has_focus", return_value=True):
+            self._press(Qt.Key.Key_D)
+            self.assertIs(self._win._side_tabs.currentWidget(),
+                          self._win.analysis_panel)
+            self._press(Qt.Key.Key_S)
+            self.assertTrue(self._win.structure_panel.isVisibleTo(self._win))
+
+    def test_shape_on_the_draw_row_arms_the_map(self):
+        """The Structures tab's Shapes and Hedgerow pages, from the Draw row,
+        to the same handlers."""
+        win = self._win
+        sent = []
+        original = (win.map_widget.set_shape_mode,
+                    win.map_widget.set_hedgerow_mode)
+        win.map_widget.set_shape_mode = lambda cfg: sent.append(("shape", cfg))
+        win.map_widget.set_hedgerow_mode = lambda cfg: sent.append(("line", cfg))
+        self.addCleanup(setattr, win.map_widget, "set_shape_mode", original[0])
+        self.addCleanup(setattr, win.map_widget, "set_hedgerow_mode", original[1])
+        self.addCleanup(win._cancel_draw)
+        tool = win.toolbar.shape_tool
+        tool.set_type("Garden Bed")
+        tool._draw.click()
+        self.assertEqual(win._current_mode, "shape")
+        self.assertEqual(sent[-1][0], "shape")
+        self.assertTrue(win.toolbar._shape_btn.isChecked())
+        tool.set_type("Hedge")
+        tool._draw.click()
+        self.assertEqual(win._current_mode, "hedgerow")
+        self.assertEqual(sent[-1], ("line", tool.line_payload()))
+        win._cancel_draw()
+        self.assertFalse(win.toolbar._shape_btn.isChecked())
+
+    def test_the_pins_wind_reaches_the_wind_page(self):
+        win = self._win
+        # Keeping the wind marks the design changed; put that back, or the
+        # class's teardown waits on "Exit anyway?" for ever.
+        self.addCleanup(setattr, win, "_modified", win._modified)
+        sc = win._project["properties"].setdefault("site_config", {})
+        self.addCleanup(lambda: [sc.pop(k, None) for k in
+                                 ("wind_prevailing_deg", "wind_mean_kmh",
+                                  "wind_exposure")])
+        win.site_panel.wind_rose_ready.emit(
+            {"annual": {"prevailing_deg": 315.0, "prevailing_label": "NW",
+                        "mean_speed": 16.0, "calm_pct": 2.0},
+             "source": "test"})
+        self.assertEqual(win.analysis_panel._wind_dial.value(), 315)
+        self.assertIn("Prevailing NW", win.analysis_panel._wind_status_lbl.text())
+        self.assertEqual(sc.get("wind_prevailing_deg"), 315.0)
+
+    def test_the_sprite_gallery_left_the_view_menu(self):
+        words = [a.text().replace("&", "")
+                 for a in self._win.menuBar().actions() if a.menu()
+                 for a in a.menu().actions()]
+        self.assertFalse([w for w in words if "Sprite" in w])
+        self.assertIn("Walk a Wild Landscape…", words)
+
+    def test_every_pointer_in_the_words_leads_somewhere(self):
+        """With Advanced tools on, every pointer must lead somewhere."""
+        broken, seen = self._broken_pointers(simple=False)
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places that are not there")
+
+    def test_in_the_simple_app_a_pointer_says_when_it_needs_advanced(self):
+        """V3.21, MD-5: in the simple app a pointer at a hidden page must say
+        so ("with Advanced tools on", or "(advanced)") rather than send a
+        person looking for a tab that is not there."""
+        broken, seen = self._broken_pointers(simple=True)
+        self.assertGreater(seen, 10, "found too few pointers to trust the scan")
+        self.assertEqual(broken, [], "pointers to places hidden in the "
+                                     "simple app that do not say so")
+
+    def _broken_pointers(self, *, simple: bool):
+        """V3.05: the app tells people where to go in its own words, "Analysis
+        → Habitat", and two of those directions had rotted. The worked
+        example's notes sent a new user to "Planning → Planting Plan", which
+        is File → Export Planting Plan…, and the score's tips said "filter
+        Plants → Use → Keystone" two releases after Use became Role (the
+        surface audit found both). Every "A → B" written in the source whose
+        A is a side tab, a menu or a toolbar row must have a B beneath it in
+        this window. Docstrings are left out: they talk about the code."""
+        import ast
+        import re
+        from pathlib import Path
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QTabWidget, QToolBar, QToolButton
+
+        def norm(text):
+            text = (text or "").replace("&&", "\0").replace("&", "")
+            text = re.sub(r"[^\w\0' ]+", " ", text.replace("\0", "&&"))
+            return re.sub(r"\s+", " ", text.replace("&&", "&")).strip().lower()
+
+        from src import advanced_tools_flow
+        win = self._win
+        advanced_tools_flow.apply(win, not simple)
+        self.addCleanup(lambda: advanced_tools_flow.apply(win, self.advanced))
+
+        def shown_tab(strip, i):
+            return not simple or strip.isTabVisible(i)
+
+        def shown_act(act):
+            return not simple or act.isVisible()
+
+        places: dict = {}
+        tabs = win._side_tabs
+        for i in range(tabs.count()):
+            kids = places.setdefault(norm(tabs.tabText(i)), set())
+            if not shown_tab(tabs, i):
+                continue
+            page = tabs.widget(i)
+            # A tab whose page is itself a strip (Placement, V3.07) holds
+            # its pages in that strip, which findChildren does not return.
+            inners = ([page] if isinstance(page, QTabWidget) else []) \
+                + page.findChildren(QTabWidget)
+            for inner in inners:
+                kids.update(norm(inner.tabText(j)) for j in range(inner.count())
+                            if shown_tab(inner, j))
+        for a in win.menuBar().actions():
+            if a.menu() is not None:
+                places.setdefault(norm(a.text()), set()).update(
+                    norm(b.text()) for b in a.menu().actions()
+                    if b.text() and shown_act(b))
+        for bar in win.findChildren(QToolBar):
+            places.setdefault(norm(bar.windowTitle()), set()).update(
+                norm(a.text()) for a in bar.actions()
+                if a.text() and shown_act(a))
+            # A row's own buttons count too: Draw › Shape is a button the row
+            # holds, not an action with text (V3.19, QF-11, the plan's pointer).
+            places[norm(bar.windowTitle())].update(
+                norm(b.text()) for b in bar.findChildren(
+                    QToolButton, options=Qt.FindChildOption.FindDirectChildrenOnly)
+                if b.text())
+        places = {k: {c for c in v if len(c) >= 3} for k, v in places.items()
+                  if k}
+        # Tabs that were and are not (V3.07): a pointer at one leads nowhere.
+        # The heads are read off the window, so without these a pointer at a
+        # removed tab would not be looked at at all.
+        for gone in ("analysis", "structures", "plants", "planning"):
+            places.setdefault(gone, set())
+        # Case-sensitive, as the labels are written: "keystone plants →
+        # closing the food web" (a lesson's subtitle) is a sentence, not a
+        # pointer at the Plants tab.
+        heads = "|".join(re.escape(h.title()) for h in sorted(
+            places, key=len, reverse=True))
+        pointer = re.compile(rf"(?<![\w])({heads})\s*(?:→|›)\s*([^→›\n]+)")
+
+        root = Path(__file__).resolve().parent.parent / "src"
+        broken, seen = [], 0
+        # Modules a person reaches only with Advanced tools on: their words
+        # are read in advanced mode, never in the simple app (V3.21).
+        advanced_only = {"scene3d_window.py", "snow_microsite_flow.py"}
+        for path in sorted(root.rglob("*.py")):
+            if simple and path.name in advanced_only:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            docs = set()
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                     ast.AsyncFunctionDef)) and node.body:
+                    first = node.body[0]
+                    if isinstance(first, ast.Expr) and isinstance(
+                            getattr(first, "value", None), ast.Constant):
+                        docs.add(id(first.value))
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Constant)
+                        and isinstance(node.value, str)) or id(node) in docs:
+                    continue
+                said = ("advanced tools" in node.value.lower()
+                        or "(advanced)" in node.value.lower())
+                for m in pointer.finditer(node.value):
+                    seen += 1
+                    if simple and said:
+                        continue
+                    head, rest = norm(m.group(1)), norm(m.group(2))
+                    if not any(rest.startswith(c) or (len(rest) >= 3
+                                                      and c.startswith(rest))
+                               for c in places[head]):
+                        broken.append(f"{path.relative_to(root.parent)}:"
+                                      f"{node.lineno}: {m.group(0).strip()!r}")
+        return broken, seen
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestMainWindowSmokeAdvanced(TestMainWindowSmoke):
+    """V3.21, MD-2: every test above again with View → Advanced tools on, so
+    the walks (every tab, the names, the keyboard, the visual floors) cover
+    the advanced pages as well as the simple app the class above sees."""
+
+    advanced = True
+
+    @classmethod
+    def setUpClass(cls):
+        # The remembered switch reads on too, for what asks it rather than
+        # the window (the map's letters, the right-click menus), without
+        # writing a setting the tests after this one would inherit.
+        from unittest import mock
+        from src import advanced_tools
+        cls._switch = mock.patch.object(advanced_tools, "is_on",
+                                        return_value=True)
+        cls._switch.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls._switch.stop()
+
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
 class TestGenerateDesignDialog(unittest.TestCase):
@@ -221,26 +1456,37 @@ class TestGenerateDesignDialog(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_one_checkbox_per_goal_and_getters(self):
+        """With the Advanced tools on, one box per goal that plant data backs
+        (a must-have or a More goal): the two "guidance only — needs data"
+        goals are not offered (the owner's V3.07 answer)."""
         from src.generate_design_dialog import GenerateDesignDialog
         from src.design_goals import GOALS
-        dlg = GenerateDesignDialog(has_boundary=True, has_pin=False,
-                                   preselected=["native_only"])
+        dlg = GenerateDesignDialog(has_boundary=True, has_pin=True,
+                                   advanced=True,
+                                   preselected=["native_only",
+                                                "flowers_all_season"])
         try:
-            self.assertEqual(len(dlg._checks), len(GOALS))
-            self.assertTrue(dlg._checks["native_only"].isChecked())
+            self.assertEqual(set(dlg._musts) | set(dlg._more),
+                             {g.key for g in GOALS if g.backed})
+            self.assertNotIn("flowers_all_season", dlg.selected_goals())
+            self.assertTrue(dlg._more["native_only"].isChecked())
             self.assertIn("native_only", dlg.selected_goals())
-            self.assertFalse(dlg.offline())
+            self.assertFalse(hasattr(dlg, "offline"))   # RM-3
+            self.assertFalse(hasattr(dlg, "brief"))
         finally:
             dlg.deleteLater()
 
-    def test_ok_disabled_without_location(self):
+    def test_no_plan_button_without_location(self):
+        """§4.2 (V3.28): no pin, no questions and no plan button, only what
+        to do first."""
         from src.generate_design_dialog import GenerateDesignDialog
         from PyQt6.QtWidgets import QDialogButtonBox
         dlg = GenerateDesignDialog(has_boundary=False, has_pin=False)
         try:
             box = dlg.findChild(QDialogButtonBox)
-            ok = box.button(QDialogButtonBox.StandardButton.Ok)
-            self.assertFalse(ok.isEnabled())
+            self.assertIsNone(box.button(QDialogButtonBox.StandardButton.Ok))
+            self.assertEqual([b.text() for b in dlg._step_buttons],
+                             ["Find my yard"])
         finally:
             dlg.deleteLater()
 

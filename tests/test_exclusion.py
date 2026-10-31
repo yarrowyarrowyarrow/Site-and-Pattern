@@ -163,13 +163,17 @@ class TestZoneSteering(unittest.TestCase):
         )
         self.assertEqual(len(X.keepout_circles(proj)), 3)
 
-    def test_plantable_shapes_are_not_keepout(self):
-        # Garden bed / lawn / mulch shapes stay plantable (not avoided).
-        proj = _project(
-            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Garden Bed"),
-            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Lawn Area"),
-        )
-        self.assertEqual(X.keepout_circles(proj), [])
+    def test_a_bed_is_planted_and_a_lawn_is_kept_out(self):
+        # V3.28 (PY-2): a Garden Bed is a fill target, a Lawn Area is not
+        # planted, as the overview's planting area has them.
+        bed = _project(_poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                                     shape_type="Garden Bed"))
+        self.assertEqual(X.keepout_circles(bed), [])
+        self.assertEqual(len(X.fill_regions(bed)), 1)
+        lawn = _project(_poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                                      shape_type="Lawn Area"))
+        self.assertEqual(len(X.keepout_circles(lawn)), 1)
+        self.assertEqual(X.fill_regions(lawn), [])
 
     def test_fill_regions_returns_only_restoration_zones(self):
         proj = _project(
@@ -186,6 +190,81 @@ class TestZoneSteering(unittest.TestCase):
 
     def test_fill_regions_empty_when_none(self):
         self.assertEqual(X.fill_regions(_project()), [])
+
+
+def _rect_feature(shape_type, east0, north0, east1, north1):
+    """A drawn rectangle, metres east/north of (_LAT, _LNG)."""
+    kx = 111320.0 * math.cos(math.radians(_LAT))
+    ring = [[_LNG + e / kx, _LAT + n / 111320.0]
+            for e, n in ((east0, north0), (east1, north0), (east1, north1),
+                         (east0, north1), (east0, north0))]
+    return {"geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"element_type": "custom_shape",
+                           "shape_type": shape_type}}
+
+
+def _at(east, north):
+    kx = 111320.0 * math.cos(math.radians(_LAT))
+    return _LAT + north / 111320.0, _LNG + east / kx
+
+
+class TestKeepOutIsTheShapeDrawn(unittest.TestCase):
+    """V3.18 (PY-3): a drawn path was kept out as one circle about its centre
+    reaching its far corner, 5 m across either side of a 1 m path."""
+
+    def setUp(self):
+        self.path = _project(_rect_feature("Pathway", 7, 0, 8, 10))
+        self.keep = X.keepout_areas(self.path)
+
+    def test_a_drawn_path_is_a_shape_not_a_circle(self):
+        self.assertEqual(len(self.keep.shapes), 1)
+        self.assertEqual(self.keep.circles, [])
+
+    def test_on_the_path_is_kept_out(self):
+        self.assertFalse(X.is_clear(*_at(7.5, 5.0), self.keep))
+        self.assertFalse(X.is_clear(*_at(7.1, 0.2), self.keep))
+
+    def test_beside_the_path_is_clear_though_the_old_circle_covered_it(self):
+        lat, lng = _at(5.0, 5.0)                        # 2 m west of it
+        self.assertFalse(X.is_clear(lat, lng, X.keepout_circles(self.path)))
+        self.assertTrue(X.is_clear(lat, lng, self.keep))
+        self.assertTrue(X.is_clear(*_at(9.0, 9.0), self.keep))
+
+    def test_a_margin_keeps_a_plant_body_off_the_edge(self):
+        lat, lng = _at(6.6, 5.0)                        # 0.4 m from its edge
+        self.assertTrue(X.is_clear(lat, lng, self.keep))
+        self.assertFalse(X.is_clear(lat, lng, self.keep, extra_margin_m=0.5))
+        self.assertTrue(X.is_clear(lat, lng, self.keep, extra_margin_m=0.3))
+
+    def test_a_building_footprint_is_its_outline(self):
+        building = _poly_feature("canopy_footprint", _LAT, _LNG, 5.0,
+                                 canopy_radius_m=7.1)
+        keep = X.keepout_areas(_project(building))
+        self.assertEqual(len(keep.shapes), 1)
+        self.assertFalse(X.is_clear(_LAT, _LNG, keep))
+        self.assertTrue(X.is_clear(*_at(6.0, 0.0), keep))   # past the wall
+
+    def test_points_stay_circles(self):
+        keep = X.keepout_areas(_project(
+            _pt_feature("existing_tree", _LAT, _LNG, canopy_radius_m=4.0)))
+        self.assertEqual(keep.circles, [(_LAT, _LNG, 4.0)])
+        self.assertEqual(keep.shapes, [])
+
+    def test_keep_outs_add_up_and_empty_is_nothing(self):
+        tree = X.keepout_areas(_project(
+            _pt_feature("existing_tree", _LAT, _LNG, canopy_radius_m=4.0)))
+        both = self.keep + tree
+        self.assertEqual((len(both.circles), len(both.shapes)), (1, 1))
+        mixed = [(_LAT, _LNG, 1.0)] + self.keep
+        self.assertEqual((len(mixed.circles), len(mixed.shapes)), (1, 1))
+        self.assertFalse(X.keepout_areas(_project()))
+        self.assertTrue(X.is_clear(_LAT, _LNG, X.keepout_areas(_project())))
+
+    def test_the_coarse_view_still_has_every_keep_out(self):
+        proj = _project(_rect_feature("Pathway", 7, 0, 8, 10),
+                        _pt_feature("existing_tree", _LAT, _LNG,
+                                    canopy_radius_m=4.0))
+        self.assertEqual(len(X.keepout_circles(proj)), 2)
 
 
 if __name__ == "__main__":

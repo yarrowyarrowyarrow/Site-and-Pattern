@@ -331,7 +331,9 @@ function buildFlowers(plants, month, terrain) {
     const names = [], ids = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
-      const h = Math.max(0.1, p.height_m);
+      // The height the body is DRAWN at (04-quality.js), so a bloom sits on
+      // a capped groundcover rather than above it (V2.88).
+      const h = Math.max(0.05, bodyHeightOf(p));
       const top = gy + h * (isCattail ? 0.96 : 0.9);
       const rad = Math.max(0.12, p.canopy_m * 0.5);
       // How big this species' heads are relative to the form's maximum.
@@ -347,6 +349,9 @@ function buildFlowers(plants, month, terrain) {
               : qn(p.plant_type === 'tree' ? 10
                  : p.plant_type === 'shrub' ? 8
                  : p.plant_type === 'grass' ? 5 : 7);
+      // A vine's blooms are on its leaves, wherever it climbed (V2.89).
+      const va = (window.vineAnchorsFor && vineAnchorsFor(p))
+        || (window.succulentAnchorsFor && succulentAnchorsFor(p));   // V2.93
       for (let k = 0; k < n; k++) {
         const j1 = ((seed + k * 97) % 997) / 997;
         const j2 = ((seed + k * 53) % 991) / 991;
@@ -355,13 +360,21 @@ function buildFlowers(plants, month, terrain) {
         const rr = isCattail ? rad * 0.22 * j2
                              : rad * (0.12 + 0.9 * Math.sqrt(j2));  // even areal spread
         const dy = isCattail ? 0 : (j3 - 0.5) * Math.max(0.14, h * 0.3);
-        pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
-        col.push(_fc.r, _fc.g, _fc.b);
-        siz.push(isCattail ? 1
-                 : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100)));
+        const q = va && va[(k * 7 + (seed >>> 0)) % va.length];
+        const sz = isCattail ? 1
+                 : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100));
         // Attitude, jittered per bloom so a plant is not a rank of clones.
         const j4 = ((seed + k * 41) % 977) / 977;
-        tilts.push(att0.tilt + (j4 - 0.5) * 2 * att0.jitter);
+        const tilt = att0.tilt + (j4 - 0.5) * 2 * att0.jitter;
+        // A succulent's anchor is where the bloom's top is (V2.93): a card held
+        // upright hangs below it, one lying face-up sits on it.
+        const qy = q && (q.top ? q.y - 0.5 * sz * (_FLOWER_SIZE[form] || 0.24)
+                                     * Math.abs(Math.sin(tilt)) : q.y);
+        if (q) pos.push(q.x + q.nx * 0.03, qy, q.z + q.nz * 0.03);
+        else pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
+        col.push(_fc.r, _fc.g, _fc.b);
+        siz.push(sz);
+        tilts.push(tilt);
         // `spin: true` forms are read from the side, so face them AWAY from the
         // plant's centre — `a` is the bloom's own bearing from that centre, and
         // +π aligns the card's outward normal with it. The rest get a free spin.
@@ -419,27 +432,9 @@ function buildFlowers(plants, month, terrain) {
   }
 }
 
-function buildScanPoints(group, pts) {
-  // The imported yard scan as a height-tinted point layer — ground truth
-  // behind the proposed design. Sampled host-side (≤ ~120k points).
-  if (!pts || !pts.length) return;
-  const pos = new Float32Array(pts.length * 3);
-  const col = new Float32Array(pts.length * 3);
-  const lo = new THREE.Color(0x4e5d52), hi = new THREE.Color(0xe8f0d8);
-  const c = new THREE.Color();
-  for (let i = 0; i < pts.length; i++) {
-    const [x, y, z] = pts[i];
-    pos[i * 3] = x; pos[i * 3 + 1] = z; pos[i * 3 + 2] = -y;
-    c.copy(lo).lerp(hi, Math.max(0, Math.min(1, z / 6)));
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  group.add(new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.08, vertexColors: true })));
-}
-
+// The placed structures: bee hotel, brush pile, pond, rain barrel. V3.22 took
+// this out with the splat code it sat between, and every scene push threw here,
+// after the plants and before the sun, the shadows and the camera (V3.37).
 function buildStructures(group, structures) {
   for (const s of structures || []) {
     // Blender GLB structure first (09-models.js), box as the fallback.
@@ -453,96 +448,11 @@ function buildStructures(group, structures) {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size, h, size),
       new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 }));
-    mesh.position.set(s.x, h / 2, -s.y);
+    mesh.position.set(s.x, terrainHeightAt(s.x, s.y, lastTerrain) + h / 2, -s.y);
     mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
   }
 }
-
-// ── Gaussian-splat backdrop (Spark) ─────────────────────────────────────────
-// The splat lives OUTSIDE designGroup so a year-slider scene rebuild never
-// reloads it (a yard splat is tens of MB). It is keyed by URL: ensureSplat
-// only re-fetches when the file changes, otherwise just refreshes its world
-// matrix + opacity from the latest scene push.
-
-let splatMesh = null;
-let splatUrl = null;
-
-function applySplatMatrix(mesh, mat16) {
-  // mat16 is column-major (three.js order) from src/splat_backdrop.world_matrix.
-  mesh.matrixAutoUpdate = false;
-  mesh.matrix.fromArray(mat16);
-}
-
-function ensureSplat(spec) {
-  if (!spec || !spec.url) { removeSplat(); return; }
-  if (!SplatMesh) return;          // Spark not loaded (yet) — skip silently
-  ensureSparkRenderer();
-  if (spec.url !== splatUrl) {
-    removeSplat();
-    try {
-      splatMesh = new SplatMesh({ url: spec.url });
-    } catch (e) {
-      splatMesh = null; splatUrl = null;
-      return;   // bad splat — design still renders
-    }
-    splatUrl = spec.url;
-    scene.add(splatMesh);
-  }
-  if (splatMesh) {
-    applySplatMatrix(splatMesh, spec.matrix);
-    if (typeof spec.opacity === 'number' && 'opacity' in splatMesh) {
-      splatMesh.opacity = spec.opacity;
-    }
-  }
-}
-
-function removeSplat() {
-  if (splatMesh) { scene.remove(splatMesh); }
-  splatMesh = null; splatUrl = null;
-}
-
-window.permaClearSplat = function () { removeSplat(); };
-
-// Bake a north-up orthographic photo of the splat for the 2D "yard photo"
-// map layer. Returns a PNG data URL synchronously (the host calls this once
-// the splat has streamed in) — opts frames an exact scene-metre rectangle so
-// the image maps 1:1 onto the splat's lat/lng bbox. Returns '' if not ready.
-window.permaCaptureOrtho = function (opts) {
-  if (!splatMesh || !opts) return '';
-  const wx = Math.max(1e-3, opts.max_x - opts.min_x);
-  const dz = Math.max(1e-3, opts.max_y - opts.min_y);   // north span
-  const cx = (opts.min_x + opts.max_x) / 2;
-  const cz = -(opts.min_y + opts.max_y) / 2;            // north → −z centre
-  const cam = new THREE.OrthographicCamera(-wx / 2, wx / 2, dz / 2, -dz / 2,
-                                           0.1, 2000);
-  cam.position.set(cx, 800, cz);
-  cam.up.set(0, 0, -1);          // north (−z) points up in the image
-  cam.lookAt(cx, 0, cz);
-
-  // Splat-only frame: hide the design + sky so the layer is just the yard.
-  const designVis = designGroup ? designGroup.visible : false;
-  if (designGroup) designGroup.visible = false;
-  const bg = scene.background; scene.background = null;
-  const skyVis = skyDome.visible; skyDome.visible = false;
-
-  const longest = Math.round(Math.max(1, Math.min(4096, opts.width || 2048)));
-  const px = wx >= dz ? longest : Math.round(longest * (wx / dz));
-  const py = wx >= dz ? Math.round(longest * (dz / wx)) : longest;
-  const prev = new THREE.Vector2(); renderer.getSize(prev);
-  renderer.setSize(px, py, false);
-  renderer.render(scene, cam);
-  let url = '';
-  try { url = renderer.domElement.toDataURL('image/png'); } catch (e) { url = ''; }
-
-  // Restore the live view.
-  renderer.setSize(prev.x, prev.y, false);
-  scene.background = bg;
-  skyDome.visible = skyVis;
-  if (designGroup) designGroup.visible = designVis;
-  renderer.render(scene, camera);
-  return url;
-};
 
 // Render the CURRENT scene from the CURRENT camera into an off-size frame and
 // hand back a data URL. This is what lets the sprite gallery build a contact
@@ -671,15 +581,14 @@ window.permaSetScene = function (sc) {
   if (window.applySceneWind) applySceneWind(sc.wind);
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
+  const groundWas = groundKey(lastTerrain);
   lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
-  buildBoundary(designGroup, sc.boundary);
-  buildBuildings(designGroup, sc.buildings);
+  buildBoundary(designGroup, sc.boundary, sc.terrain);
+  buildBuildings(designGroup, sc.buildings, sc.terrain);
   buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);
   buildStructures(designGroup, sc.structures);
-  buildScanPoints(designGroup, sc.scan_points);
-  ensureSplat(sc.splat);
   if (sc.is_night) setNight();
   else { setDay(); if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg); }
   fitShadow(sc.bounds);
@@ -696,6 +605,8 @@ window.permaSetScene = function (sc) {
     // cinematic flyover — those modes own the camera.
     if (!beeMode && !walkMode && !cinematic) frameCamera(sc.bounds);
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
+  } else if (groundKey(lastTerrain) !== groundWas && !beeMode && !walkMode && !cinematic) {
+    settleOrbitOnGround();   // the terrain came after the first push (V3.04)
   }
   // Re-place the bee's flower beacons against the freshly-built scene.
   if (beeMode) rebuildBeacons();

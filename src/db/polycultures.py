@@ -175,28 +175,24 @@ def _community_structure(members) -> str:
     return "Unsorted"
 
 
-def _community_habitat(members) -> list:
-    """Every ecoregion this community's members are documented from.
+def _community_habitat(members, ranges=None) -> list:
+    """The labels of the regions this community is filed under.
 
-    Multi-valued, like `_community_functions` and unlike sun/moisture: a plant's
-    `ecoregion` column is a comma-separated list because a species genuinely
-    grows in several, and collapsing that to the single most common token filed
-    a mixed community under one habitat and hid it from the others. Both
-    consumers already handle a list — `filter_library` intersects, and the
-    panel's group-by clones the tree item into each bucket — so the community
-    now appears under every ecoregion it actually belongs to.
+    Multi-valued, like `_community_functions` and unlike sun/moisture: a
+    community can belong in several ecoregions, and collapsing that to one
+    filed it under one habitat and hid it from the others (V2.37). Both
+    consumers handle a list: `filter_library` intersects, and the panel's
+    group-by clones the tree item into each bucket.
 
-    Ordered by how many members carry the tag (strongest association first) so
-    the primary habitat still leads where a caller shows only one.
+    Since V3.14 the regions are the ones *every* member has been recorded in,
+    from the occurrence ranges (`src/community_regions.py`, which says why);
+    before, any member's unsourced column tag, which named Aspen Parkland on no
+    plant at all. Strongest first, so the primary habitat still leads where a
+    caller shows only one. ``ranges`` is ``community_regions.ranges_by_plant``.
     """
-    counts = collections.Counter(
-        token for m in members for token in _csv_tokens(m.get("eco")))
-    labels: list = []
-    for token, _n in counts.most_common():
-        label = _GROUP_ECOREGION.get(token)
-        if label and label not in labels:
-            labels.append(label)
-    return labels or ["Generalist"]
+    from src.community_regions import FALLBACK_LABELS, community_regions
+    return [_GROUP_ECOREGION.get(key) or FALLBACK_LABELS.get(key) or key
+            for key in community_regions(members, ranges or {})]
 
 
 def _community_sun(members) -> str:
@@ -207,6 +203,13 @@ def _community_sun(members) -> str:
     return _GROUP_SUN.get(dom, "Mixed") if dom else "Unknown"
 
 
+#: The middle of the moisture scale, in a homeowner's words: neither dry nor
+#: wet (V3.37). It said "Mesic", the ecologist's word, which the owner found
+#: many people do not understand; the plant list's Water filter already says
+#: Medium for the same value.
+MEDIUM_MOISTURE = "Medium moisture"
+
+
 def _community_moisture(members) -> str:
     waters = []
     for m in members:
@@ -215,7 +218,7 @@ def _community_moisture(members) -> str:
     if dom == "low":
         return "Dry"
     if dom in ("medium", "moderate"):
-        return "Mesic"
+        return MEDIUM_MOISTURE
     if dom == "high":
         return "Wet"
     return "Unknown"
@@ -276,6 +279,7 @@ def get_community_facets() -> dict:
         rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
             "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
+            "gm.plant_id AS plant_id, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "GROUP_CONCAT(u.key) AS use_keys "
             "FROM polyculture_members gm "
@@ -286,6 +290,8 @@ def get_community_facets() -> dict:
             "WHERE g.parent_id IS NULL "
             "GROUP BY gm.id"
         ).fetchall()
+        from src.community_regions import ranges_by_plant
+        ranges = ranges_by_plant(conn)
     finally:
         conn.close()
     by_cid: dict = {}
@@ -294,7 +300,7 @@ def get_community_facets() -> dict:
     return {
         cid: {
             "structure": _community_structure(members),
-            "habitat":   _community_habitat(members),
+            "habitat":   _community_habitat(members, ranges),
             "sun":       _community_sun(members),
             "moisture":  _community_moisture(members),
             "function":  _community_functions(members),
@@ -312,7 +318,8 @@ def get_community_facets() -> dict:
 # Public alias for the site→library cross-link: ecoregion key → habitat label.
 ECOREGION_LABELS = dict(_GROUP_ECOREGION)
 
-LIBRARY_SORT_KEYS = ("name", "members", "wildlife", "native", "modified")
+LIBRARY_SORT_KEYS = ("name", "members", "wildlife", "native", "modified",
+                     "easiest")
 
 
 def facet_filter_choices() -> dict:
@@ -325,11 +332,13 @@ def facet_filter_choices() -> dict:
     for _key, label in _GROUP_FUNCTION:
         if label not in functions:
             functions.append(label)
+    from src.community_regions import FALLBACK_LABELS
     return {
         "sun":       list(_GROUP_SUN.values()),
-        "moisture":  ["Dry", "Mesic", "Wet"],
+        "moisture":  ["Dry", MEDIUM_MOISTURE, "Wet"],
         "structure": [label for _key, label in _GROUP_LAYER_ORDER],
-        "habitat":   list(dict.fromkeys(_GROUP_ECOREGION.values())) + ["Generalist"],
+        "habitat":   (list(dict.fromkeys(_GROUP_ECOREGION.values()))
+                      + list(FALLBACK_LABELS.values())),
         "function":  functions + ["Generalist"],
     }
 
@@ -345,8 +354,12 @@ def get_library_index() -> dict:
       fauna_count (distinct fauna supported by any member),
       members_brief ([(common_name, role), …] for tooltips),
       search_blob (lowercased name + description + member common & scientific
-      names), and facets — the same labels get_community_facets() produces.
+      names), facets — the same labels get_community_facets() produces — and
+      not_around ({place: [common names of members not native around it]},
+      F220: a community is native around a place when every member is).
     """
+    from src.community_regions import FALLBACK_LABELS, community_regions
+    from src.native_here import native_names, places as local_places
     conn = get_connection()
     try:
         comms = conn.execute(
@@ -355,9 +368,10 @@ def get_library_index() -> dict:
         member_rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
             "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
+            "gm.plant_id AS plant_id, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "p.common_name AS common_name, p.scientific_name AS scientific_name, "
-            "p.native_to_alberta AS native, "
+            "p.native_to_alberta AS native, p.availability_class AS avail, "
             "GROUP_CONCAT(u.key) AS use_keys "
             "FROM polyculture_members gm "
             "JOIN plants p ON gm.plant_id = p.id "
@@ -371,6 +385,8 @@ def get_library_index() -> dict:
             "JOIN plant_fauna pf ON pf.plant_id = gm.plant_id "
             "GROUP BY gm.polyculture_id"
         ).fetchall()
+        from src.community_regions import ranges_by_plant
+        ranges = ranges_by_plant(conn)
     finally:
         conn.close()
 
@@ -378,6 +394,7 @@ def get_library_index() -> dict:
     for r in member_rows:
         members_by_cid.setdefault(r["cid"], []).append(dict(r))
     fauna_by_cid = {r["cid"]: r["n"] for r in fauna_rows}
+    local = {key: native_names(key) for key in local_places()}
 
     index: dict = {}
     for c in comms:
@@ -390,6 +407,7 @@ def get_library_index() -> dict:
         for m in ms:
             blob.append(m.get("common_name") or "")
             blob.append(m.get("scientific_name") or "")
+        regions = community_regions(ms, ranges)
         index[cid] = {
             "id":            cid,
             "name":          c["name"] or "",
@@ -398,15 +416,28 @@ def get_library_index() -> dict:
             "modified":      c["modified"] or "",
             "children":      [],
             "member_count":  len(ms),
+            "member_ids":    [m.get("plant_id") for m in ms],
             "native_pct":    native_pct,
             "fauna_count":   fauna_by_cid.get(cid, 0),
             "members_brief": [(m.get("common_name") or "",
                                _normalize_role(m.get("role")) or "")
                               for m in ms],
             "search_blob":   " ".join(blob).lower(),
+            "not_around":    {key: sorted({m.get("common_name") or ""
+                                           for m in ms
+                                           if (m.get("scientific_name") or "")
+                                           .strip() not in names})
+                              for key, names in local.items()},
+            # The keys behind facets["habitat"], for a filter on the ecoregion
+            # tree (V3.14): the ecoregions every member is recorded in.
+            "regions":       regions,
+            # Members rarely sold at all (V3.14, scripts/rank_availability.py).
+            "hard_to_find":  sorted({m.get("common_name") or "" for m in ms
+                                     if m.get("avail") == "rare"}),
             "facets": {
                 "structure": _community_structure(ms),
-                "habitat":   _community_habitat(ms),
+                "habitat":   [_GROUP_ECOREGION.get(k) or FALLBACK_LABELS.get(k)
+                              or k for k in regions],
                 "sun":       _community_sun(ms),
                 "moisture":  _community_moisture(ms),
                 "function":  _community_functions(ms),
@@ -421,8 +452,21 @@ def get_library_index() -> dict:
     return index
 
 
-def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
+def filter_library(index: dict, *, search: str = "", facets=None,
+                   native_near: str = "", regions=None) -> dict:
     """Apply search + facet filters over a ``get_library_index()`` result.
+
+    ``regions`` (V3.14) filters on the ecoregion tree's keys, as the plant
+    filter does: a ticked ecozone finds a community in any of its ecoregions,
+    a subregion one in the ecoregions it lies in (``community_regions.matches``).
+
+    ``native_near`` (F220) keeps only communities whose every member is native
+    around that place ("edmonton"): one member from the mountains or the dry
+    south and the community is hidden, as the owner asked. An empty community
+    has no member to fail and passes. A parent that fails it is not listed even
+    as the heading of a variation that passes (it would be selectable and
+    placeable there); each passing variation is listed in its own right,
+    as ``{"self": True, "children": []}`` under its own id (V3.13).
 
     Returns ``{top_level_id: {"self": bool, "children": [child_id, …]}}``
     holding only the top-level communities that pass. ``self`` says the parent
@@ -436,11 +480,24 @@ def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
     (the same semantics as search_plants). The multi-valued "function" facet
     passes on any overlap.
     """
+    from src.community_regions import matches
     needle = (search or "").strip().lower()
     active = {k: set(v) for k, v in (facets or {}).items() if v}
+    if native_near:
+        from src.native_here import places as local_places
+        if native_near not in local_places():
+            raise ValueError(f"no local list for {native_near!r}")
+
+    def _native(entry) -> bool:
+        return not (native_near
+                    and (entry.get("not_around") or {}).get(native_near))
 
     def _passes(entry) -> bool:
         if needle and needle not in entry["search_blob"]:
+            return False
+        if not _native(entry):
+            return False
+        if regions and not matches(entry.get("regions"), regions):
             return False
         for name, accepted in active.items():
             val = entry["facets"].get(name)
@@ -457,19 +514,56 @@ def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
             continue
         self_ok = _passes(entry)
         kids_ok = [k for k in entry["children"] if _passes(index[k])]
-        if self_ok or kids_ok:
+        if not _native(entry):
+            for kid in kids_ok:
+                out[kid] = {"self": True, "children": []}
+        elif self_ok or kids_ok:
             out[cid] = {"self": self_ok, "children": kids_ok}
     return out
 
 
-def sort_community_ids(index: dict, ids, key: str = "name") -> list:
-    """Order ``ids`` by a library sort key: ``name`` (A–Z, default) ·
+def hard_to_find_share() -> dict:
+    """``{community_id: share of its members rarely sold at all}`` (V3.14),
+    for the offline generator's pick. One query."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT gm.polyculture_id AS cid, COUNT(*) AS n, "
+            "SUM(p.availability_class = 'rare') AS rare "
+            "FROM polyculture_members gm JOIN plants p ON p.id = gm.plant_id "
+            "GROUP BY gm.polyculture_id").fetchall()
+    finally:
+        conn.close()
+    return {r["cid"]: (r["rare"] or 0) / r["n"] for r in rows if r["n"]}
+
+
+def sort_community_ids(index: dict, ids, key: str = "name",
+                       place: str = "") -> list:
+    """Order ``ids`` by a library sort key: ``best`` (Best picks first, PR-9:
+    the members' mean Impact from ``src.plant_priority``, a community with a
+    member off ``place``'s local list after every one without) · ``name`` ·
     ``members`` (most members first) · ``wildlife`` (most distinct fauna
-    supported) · ``native`` (highest native %) · ``modified`` (most recent).
+    supported) · ``native`` (highest native %) · ``modified`` (most recent) ·
+    ``easiest`` (smallest share of members rarely sold, V3.14).
     Numeric sorts tie-break alphabetically; unknown keys fall back to name."""
     def _name(i):
         return index[i]["name"].lower()
 
+    if key == "best":
+        from src.plant_priority import impact_by_id          # noqa: PLC0415
+        impact = impact_by_id()
+
+        def mean(i):
+            vals = [impact.get(int(p), 0) for p in
+                    index[i].get("member_ids") or () if p is not None]
+            return sum(vals) / len(vals) if vals else 0.0
+        return sorted(ids, key=lambda i: (
+            bool(place and (index[i].get("not_around") or {}).get(place)),
+            -mean(i), _name(i)))
+    if key == "easiest":
+        return sorted(ids, key=lambda i: (
+            len(index[i].get("hard_to_find") or ())
+            / max(1, index[i]["member_count"]), _name(i)))
     if key == "members":
         return sorted(ids, key=lambda i: (-index[i]["member_count"], _name(i)))
     if key == "wildlife":
@@ -515,7 +609,7 @@ def get_polyculture_by_id(polyculture_id):
             return None
         polyculture = dict(row)
         members = conn.execute(
-            "SELECT gm.*, p.common_name, p.plant_type "
+            "SELECT gm.*, p.common_name, p.plant_type, p.scientific_name "
             "FROM polyculture_members gm JOIN plants p ON gm.plant_id = p.id "
             "WHERE gm.polyculture_id = ? ORDER BY gm.id",
             (polyculture_id,),
@@ -872,7 +966,7 @@ def import_polyculture(data):
 #   solution — the instruction ("Therefore: …")
 _PATTERN_TEXT = {
     # ── Fruit & nut tree guilds ──────────────────────────────────────────────
-    "Apple Tree Community": {
+    "Chokecherry Community": {
         "problem": "A lone fruit tree on mown grass competes with turf for water "
                    "and nutrients, feeds little wildlife, and leans on you for "
                    "fertiliser and pest control.",
@@ -883,7 +977,7 @@ _PATTERN_TEXT = {
                   "low maintenance and a harvest. Bare ground under a tree invites "
                   "weeds, while the right companions feed the soil and the bees "
                   "instead.",
-        "solution": "Therefore: plant the apple at the centre and ring it with a "
+        "solution": "Therefore: plant the chokecherry at the centre and ring it with a "
                     "working guild. Add a nutrient accumulator and nitrogen fixer to "
                     "feed the soil, alliums and aromatic herbs to deter pests, a "
                     "pollinator magnet for fruit set, and a living groundcover to "
@@ -892,12 +986,12 @@ _PATTERN_TEXT = {
     "Shade-Tolerant": {
         "problem": "North-facing or partly shaded yards still want a fruit guild, "
                    "but sun-loving prairie companions sulk and fail there.",
-        "context": "The same apple guild, sited where buildings, fences, or taller "
+        "context": "The same chokecherry guild, sited where buildings, fences, or taller "
                    "trees cast shade for part of the day.",
         "forces": "Fruit trees tolerate some shade, but most understory companions "
                   "need full sun; choosing shade-adapted natives keeps the guild "
                   "functioning where light is limited.",
-        "solution": "Therefore: keep the apple but swap the understory for "
+        "solution": "Therefore: keep the chokecherry but swap the understory for "
                     "shade-tolerant natives: woodland-edge shrubs, shade-happy mint, "
                     "and a creeping evergreen groundcover that thrives out of full sun.",
     },
@@ -927,7 +1021,7 @@ _PATTERN_TEXT = {
                     "the rest with extra berry shrubs (gooseberry, currant) for a "
                     "layered, fruit-forward planting.",
     },
-    "Evans Cherry Community": {
+    "Pin Cherry Community": {
         "problem": "Sour cherries set heavily on the prairies but draw aphids and "
                    "borers, and a cherry in turf competes for everything it needs.",
         "context": "A Zone 3–4 yard with room for a small fruit tree, where you want "
@@ -943,7 +1037,7 @@ _PATTERN_TEXT = {
     "Native Understory": {
         "problem": "Gardeners who want a strictly native planting need a cherry guild "
                    "with no introduced companions.",
-        "context": "An Evans cherry guild for purists restoring local biodiversity, "
+        "context": "A pin cherry guild for purists restoring local biodiversity, "
                    "or sites where only Alberta natives are wanted.",
         "forces": "Native-only narrows the palette, but Alberta's prairie flora "
                   "covers every guild role: nutrient accumulation, pest deterrence, "
@@ -1242,6 +1336,160 @@ _PATTERN_TEXT = {
                     "saskatoon, raspberry, pin and chokecherry, highbush cranberry, "
                     "and hazelnut, most of which feed birds too.",
     },
+    # ── Communities of the Edmonton region (F221, V3.12) ─────────────────────
+    "Edmonton Aspen Grove": {
+        "problem": "A lone aspen on a lawn is a tree, not a woods: nothing nests "
+                   "under it and the ground beneath it is mown bare.",
+        "context": "A yard corner or back lot in the Edmonton region with room for "
+                   "a clump of aspen, in sun to part shade.",
+        "forces": "Aspen suckers into a grove, and the grove's understory is where "
+                  "the parkland's birds and bumble bees live; that layer needs "
+                  "shade-tolerant natives, not the sun perennials a bed is "
+                  "usually planted with.",
+        "solution": "Therefore: let aspen make the canopy and fill the shade under "
+                    "it as the region's own groves do: hazelnut and low-bush "
+                    "cranberry for the shrub layer, prickly rose at the sunny "
+                    "edge, sarsaparilla, lungwort and peavine through the herb "
+                    "layer, and wild lily-of-the-valley to close the ground.",
+    },
+    "Edmonton River Valley Spruce": {
+        "problem": "The shady north side of a house or a ravine lot defeats sun "
+                   "plants and is usually left to a lawn that thins out.",
+        "context": "A shaded, moist corner of an Edmonton-region yard, or a lot "
+                   "backing onto a ravine or the river valley, with room for one "
+                   "conifer.",
+        "forces": "Spruce shade and needle litter suit few garden plants, but the "
+                  "river valley's north-facing slopes carry a whole community "
+                  "made for cool, damp ground under evergreen cover.",
+        "solution": "Therefore: plant the valley's north slope: a white spruce with "
+                    "a birch beside it, dogwood, honeysuckle and currant for "
+                    "berries and cover, and coltsfoot, bishop's cap and "
+                    "twinflower on the shaded floor.",
+    },
+    "Edmonton Fescue Slope": {
+        "problem": "A hot, dry, south-facing slope or boulevard browns out every "
+                   "summer as lawn and takes watering to keep green.",
+        "context": "A sunny, well-drained slope, boulevard or front yard in the "
+                   "Edmonton region where you want to stop watering.",
+        "forces": "Bunchgrasses root deep and leave gaps between their clumps, "
+                  "and those gaps are where the slope's wildflowers and "
+                  "ground-nesting bees live; a sod-forming lawn grass closes "
+                  "them.",
+        "solution": "Therefore: plant rough fescue as the matrix with porcupine "
+                    "grass and June grass, and set crocus, sagewort, harebell, "
+                    "prairie goldenrod and blanketflower in the gaps for bloom "
+                    "from early spring to September.",
+    },
+    "Edmonton Slough Margin": {
+        "problem": "A low corner where water sits after rain kills lawn and stays "
+                   "muddy, so it gets drained or filled.",
+        "context": "A damp low spot, rain garden or downspout outlet in the "
+                   "Edmonton region: wet in spring and moist through summer, but "
+                   "not standing water.",
+        "forces": "Wet ground is the richest habitat in the parkland when it is "
+                  "planted with what grows around its sloughs; draining it loses "
+                  "that, and dry-ground plants rot in it.",
+        "solution": "Therefore: plant the slough's own margin: a basket willow for "
+                    "early catkins, bluejoint and water sedge to hold the soil, "
+                    "and aster, skullcap, mint, goldenrod and hedge nettle for "
+                    "bloom from June to the first frost.",
+    },
+    "Edmonton Berry Thicket": {
+        "problem": "A property line of lawn or a single-species hedge gives birds "
+                   "nowhere to nest and nothing to eat.",
+        "context": "A sunny or part-shade edge in the Edmonton region where a band "
+                   "of shrubs three to five metres deep can grow.",
+        "forces": "A thicket needs several shrubs that fruit at different times "
+                  "and a tangle dense enough to nest in; one species gives a week "
+                  "of fruit and a gap underneath.",
+        "solution": "Therefore: mix saskatoon and chokecherry for summer fruit, "
+                    "rose hips and snowberries that hang into winter, buffaloberry "
+                    "to fix nitrogen, honeysuckle to knit them together, and aster "
+                    "and strawberry along the sunny edge.",
+    },
+    "Edmonton Pollinator Meadow": {
+        "problem": "A front lawn feeds nothing, and a pollinator bed built from "
+                   "nursery perennials often flowers for a month and is done.",
+        "context": "A sunny front yard or boulevard in the Edmonton region being "
+                   "converted from lawn.",
+        "forces": "Bees need flowers from spring to frost without a gap, and the "
+                  "plants that fill this region's late-summer gap are its own "
+                  "blazingstars, hyssops, goldenrods and asters.",
+        "solution": "Therefore: plant a June grass matrix with something in bloom "
+                    "every month: crocus, then golden alexanders, oval-leaf milkweed "
+                    "(a recorded monarch host), giant hyssop, meadow blazingstar "
+                    "and stiff goldenrod, and smooth aster to finish.",
+    },
+    "Edmonton Marsh Edge": {
+        "problem": "A backyard pond with lawn to its edge has no shallows and no "
+                   "cover, so frogs, dragonflies and birds have nowhere to use "
+                   "it.",
+        "context": "The edge of a pond or wetland in the Edmonton region, with a "
+                   "shallow shelf along part of the shore.",
+        "forces": "Most of a pond's life is at its edge, in water shallow enough "
+                  "for emergent plants; a steep or bare edge removes it.",
+        "solution": "Therefore: plant the shallows with the region's emergents "
+                    "(cattail, bur-reed, arrowhead, water parsnip, horsetail), "
+                    "bulrush and water arum at the waterline, and marsh marigold "
+                    "on the wet shore.",
+    },
+    # ── Communities of plants people can buy (V3.14) ─────────────────────────
+    "Easy Pollinator Border": {
+        "problem": "A pollinator garden planned from a native-plant list can "
+                   "stall at the nursery: half the list is not for sale.",
+        "context": "A sunny bed or boulevard where the plants will be bought this "
+                   "spring, from the garden centre down the road.",
+        "forces": "Bees need flowers from spring to frost; a garden centre's "
+                  "natives are few, so each one has to cover part of the season.",
+        "solution": "Therefore: build the border from the natives garden centres "
+                    "actually sell, chosen so one is in flower every month: "
+                    "crocus, flax, harebell, blanketflower, bergamot, hyssop, "
+                    "aster, and a potentilla flowering through all of it.",
+    },
+    "Easy Berry Hedge": {
+        "problem": "A hedge of one cultivar gives birds one week of fruit and "
+                   "nowhere to nest.",
+        "context": "A property line or a windbreak in sun or part shade, planted "
+                   "from stock any garden centre carries.",
+        "forces": "The shrubs that are easiest to buy are also the region's best "
+                  "bird shrubs; mixing them spreads the fruit from June into "
+                  "winter.",
+        "solution": "Therefore: alternate saskatoon, chokecherry, highbush "
+                    "cranberry, dogwood and snowberry, with silverberry and "
+                    "buffaloberry to feed the soil.",
+    },
+    "Easy Shady Corner": {
+        "problem": "The shady side of a house grows nothing but moss and a lawn "
+                   "that will not fill in.",
+        "context": "A north or east side, or under a neighbour's tree, with soil "
+                   "that stays moist.",
+        "forces": "Shade-tolerant natives are scarce in garden centres; the few "
+                  "that are sold have to carry the whole planting.",
+        "solution": "Therefore: a paper birch for light shade, dogwood and "
+                    "cranberry under it, fern and lungwort beneath, and two "
+                    "spreading groundcovers to close the soil.",
+    },
+    "Easy Dry Slope": {
+        "problem": "A hot, dry bank burns out every summer and is hard to mow.",
+        "context": "A south-facing slope or the strip along a south wall, with "
+                   "no water to spare.",
+        "forces": "The prairie's dry-ground plants need no watering once rooted, "
+                  "and several are sold as ordinary garden plants.",
+        "solution": "Therefore: knit the bank with creeping juniper and "
+                    "bearberry, and fill between with crocus, prairie smoke, "
+                    "yarrow, harebell, everlasting and sagewort.",
+    },
+    "Easy Rain Garden": {
+        "problem": "Runoff from a roof or a driveway pools on the lawn, or runs "
+                   "straight to the storm drain.",
+        "context": "A low spot or a dug basin that is wet after rain and dry a "
+                   "few days later.",
+        "forces": "Plants for a rain garden must take both flooding and drought; "
+                  "the region's wet-meadow natives do.",
+        "solution": "Therefore: plant dogwood at the back, Joe-Pye weed and "
+                    "aster for late flowers, mint and loosestrife between, and "
+                    "marsh marigold where the water stands longest.",
+    },
 }
 
 
@@ -1249,25 +1497,29 @@ _PATTERN_TEXT = {
 
 EXAMPLE_POLYCULTURES = [
     {
-        "name": "Apple Tree Community",
-        "description": "Classic native habitat fruit tree community for Zone 3-4. "
-                       "Apple at centre with support plants filling understory and ground layer.",
+        # Centred on an apple until V2.80, when the fruit cultivars left the
+        # catalogue with the nativity work. Chokecherry is the native fruit
+        # tree at the same scale and keeps the guild's shape: a small tree at
+        # the centre with support plants filling the layers under it.
+        "name": "Chokecherry Community",
+        "description": "Native fruit tree community for Zone 3-4. Chokecherry at centre "
+                       "with support plants filling understory and ground layer.",
         "members": [
             # (common_name, role, offset_x, offset_y)
-            ("Goodland Apple",        "overstory",       0,    0),
+            ("Chokecherry",           "overstory",       0,    0),
             ("Stinging Nettle",       "soil_builder",    1.5,  0.8),
             ("Wild Chives",           "pest_deterrent", -1.2,  1.0),
             ("Purple Prairie Clover", "nitrogen_fixer",  0,    1.5),
-            ("Yarrow",                "pollinator",      1.0, -1.2),
+            ("Boreal Yarrow",                "pollinator",      1.0, -1.2),
             ("Wild Strawberry",       "groundcover",    -0.8, -1.0),
         ],
         "variations": [
             {
                 "name": "Shade-Tolerant",
-                "description": "Apple community variant using shade-tolerant understory plants. "
+                "description": "Chokecherry community variant using shade-tolerant understory plants. "
                                "Better for north-facing or partially shaded sites.",
                 "members": [
-                    ("Goodland Apple",           "overstory",       0,    0),
+                    ("Chokecherry",              "overstory",       0,    0),
                     ("Stinging Nettle",          "soil_builder",    1.5,  0.8),
                     ("Wild Mint",                "pest_deterrent", -1.2,  1.0),
                     ("Canada Milk Vetch",        "nitrogen_fixer",  0,    1.5),
@@ -1284,10 +1536,10 @@ EXAMPLE_POLYCULTURES = [
         "members": [
             ("Saskatoon Berry",          "overstory",       0,    0),
             ("Silvery Lupine",           "nitrogen_fixer",  1.0,  0.5),
-            ("Yarrow",                   "soil_builder",   -0.8,  0.8),
+            ("Boreal Yarrow",                   "soil_builder",   -0.8,  0.8),
             ("Wild Strawberry",          "groundcover",     0.5, -0.8),
             ("Wild Chives",              "pest_deterrent", -0.5, -0.6),
-            ("Bee Balm (Wild Bergamot)", "pollinator",      0.8, -0.5),
+            ("Wild Bergamot", "pollinator",      0.8, -0.5),
         ],
         "variations": [
             {
@@ -1300,7 +1552,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Wild Gooseberry",   "understory",     -0.8,  0.8),
                     ("Wild Strawberry",   "groundcover",     0.5, -0.8),
                     ("Wild Red Currant",  "understory",     -0.5, -0.6),
-                    ("Yarrow",            "pollinator",      0.8, -0.5),
+                    ("Boreal Yarrow",            "pollinator",      0.8, -0.5),
                 ],
             },
         ],
@@ -1331,35 +1583,38 @@ EXAMPLE_POLYCULTURES = [
     },
     # ── Edmonton-specific polycultures designed for Zone 3-4 ──────────────────────
     {
-        "name": "Evans Cherry Community",
-        "description": "Fruit tree polyculture centred on Evans Cherry, a hardy sour cherry bred for "
-                       "prairie climates. Stinging nettle accumulates deep nutrients and provides "
+        # Named for a cultivated sour cherry until V2.80. Pin cherry is the
+        # native cherry of this ground, so the community keeps both its
+        # identity and its shape.
+        "name": "Pin Cherry Community",
+        "description": "Fruit tree polyculture centred on pin cherry, the native cherry of the "
+                       "prairies and parkland. Stinging nettle accumulates deep nutrients and provides "
                        "chop-and-drop mulch. Wild chives and prairie sage repel aphids and borers "
                        "common on cherries. Purple prairie clover fixes nitrogen as a native ground "
                        "layer, while bee balm attracts native pollinators for improved fruit set. "
                        "Wild strawberry suppresses weeds and yields an additional ground-level harvest.",
         "members": [
-            ("Evans Cherry",              "overstory",       0,    0),
+            ("Pin Cherry",                "overstory",       0,    0),
             ("Stinging Nettle",           "soil_builder",    1.8,  0),
             ("Wild Chives",               "pest_deterrent", -1.0,  1.2),
             ("Purple Prairie Clover",     "nitrogen_fixer",  0,    2.0),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+            ("Wild Bergamot",  "pollinator",     -1.5, -1.0),
             ("Wild Strawberry",           "groundcover",     1.0, -1.5),
             ("Prairie Sage",              "pest_deterrent",  0,   -1.3),
         ],
         "variations": [
             {
                 "name": "Native Understory",
-                "description": "Evans Cherry community variant using exclusively native prairie plants. "
+                "description": "Pin cherry community variant using exclusively native prairie plants. "
                                "Yarrow is a native nutrient accumulator and pollinator attractor; "
                                "nodding onion provides allium-family pest deterrence; silvery lupine "
                                "fixes nitrogen in dappled light; wild bergamot draws native bumble bees.",
                 "members": [
-                    ("Evans Cherry",              "overstory",       0,    0),
-                    ("Yarrow",                    "soil_builder",    1.8,  0),
+                    ("Pin Cherry",                "overstory",       0,    0),
+                    ("Boreal Yarrow",                    "soil_builder",    1.8,  0),
                     ("Nodding Onion",             "pest_deterrent", -1.0,  1.2),
                     ("Silvery Lupine",            "nitrogen_fixer",  0,    2.0),
-                    ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+                    ("Wild Bergamot",  "pollinator",     -1.5, -1.0),
                     ("Wild Strawberry",           "groundcover",     1.0, -1.5),
                     ("Wild Bergamot",             "pollinator",      0,   -1.3),
                 ],
@@ -1396,7 +1651,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Saskatoon Berry",           "understory",      3.0,  1.5),
                     ("Wild Gooseberry",           "understory",     -2.5,  1.0),
                     ("Silvery Lupine",            "nitrogen_fixer", -2.0,  2.5),
-                    ("Yarrow",                    "soil_builder",    2.5, -1.5),
+                    ("Boreal Yarrow",                    "soil_builder",    2.5, -1.5),
                     ("Canada Goldenrod",          "pollinator",     -2.5, -2.0),
                     ("Wild Strawberry",           "groundcover",     1.5, -2.5),
                 ],
@@ -1414,7 +1669,7 @@ EXAMPLE_POLYCULTURES = [
                        "native bees. Group plants in clumps of 3-8 as recommended by pollinator "
                        "habitat guides.",
         "members": [
-            ("Bee Balm (Wild Bergamot)",  "pollinator",          0,    0),
+            ("Wild Bergamot",  "pollinator",          0,    0),
             ("Blanketflower",             "pollinator",          0.8,  0.5),
             ("Purple Prairie Clover",     "nitrogen_fixer",     -0.7,  0.6),
             ("Canada Goldenrod",          "pollinator",          0.5, -0.8),
@@ -1425,15 +1680,25 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Tall Prairie Meadow",
+                # V2.75: "Giant Sunflower" (Helianthus giganteus) anchored the
+                # centre and is an eastern species that was never native here
+                # (data/excluded_taxa.json). The centre of this variation is
+                # the tallest plant in it, so Maximilian moves in from (0.8,
+                # 0.5) — at 2.5 m it is now the tallest — and Nuttall's
+                # Sunflower, the prairie's own tall sunflower, takes the slot
+                # it left. The description is edited too: a community whose
+                # prose names a plant its member list no longer contains is
+                # the drift V2.74 went looking for.
                 "description": "Taller prairie pollinator variant featuring sunflowers and "
-                               "penstemons. Giant sunflower anchors the centre, providing seeds "
-                               "for birds. Maximilian sunflower, black-eyed Susan, and smooth "
-                               "blue beardtongue create a dramatic mid-to-late summer display. "
+                               "penstemons. Maximilian sunflower anchors the centre, providing "
+                               "seeds for birds well into autumn. Nuttall's sunflower, meadow "
+                               "blazingstar, and smooth blue beardtongue create a dramatic "
+                               "mid-to-late summer display. "
                                "Wild blue flax adds early blue blooms that attract mason bees.",
                 "members": [
-                    ("Giant Sunflower",           "pollinator",          0,    0),
-                    ("Maximilian Sunflower",      "pollinator",          0.8,  0.5),
-                    ("Black-eyed Susan",          "pollinator",         -0.7,  0.6),
+                    ("Maximilian Sunflower",      "pollinator",          0,    0),
+                    ("Nuttall's Sunflower",       "pollinator",          0.8,  0.5),
+                    ("Meadow Blazingstar",        "pollinator",         -0.7,  0.6),
                     ("Smooth Blue Beardtongue",   "pollinator",          0.5, -0.8),
                     ("Wild Blue Flax",            "pollinator",         -0.8, -0.5),
                     ("Purple Prairie Clover",     "nitrogen_fixer",      0,    0.9),
@@ -1482,19 +1747,23 @@ EXAMPLE_POLYCULTURES = [
     },
     {
         "name": "Aromatic Herb Circle",
-        "description": "A circle of seven hardy native perennials with strong aromatics and "
+        # Six, not seven. The seventh member was "Bee Balm (Wild Bergamot)",
+        # the garden file's duplicate row for Monarda fistulosa, so the circle
+        # had always been six species with one of them planted twice under two
+        # names. V2.80 consolidated the rows, which made the duplication
+        # visible.
+        "description": "A circle of six hardy native perennials with strong aromatics and "
                        "pollinator value. Wild bergamot anchors the centre as a magnet for native "
                        "bumble bees; yarrow, wild mint, giant hyssop, valerian, and self-heal fill "
                        "the surround. All species are Zone 3 proven in Alberta gardens and tolerate "
                        "dry summers once established.",
         "members": [
             ("Wild Bergamot",             "pollinator",      0,    0),
-            ("Yarrow",                    "soil_builder",    0.8,  0.5),
+            ("Boreal Yarrow",             "soil_builder",    0.8,  0.5),
             ("Wild Mint",                 "pest_deterrent", -0.7,  0.7),
             ("Giant Hyssop",              "pollinator",      0.5, -0.8),
-            ("Sitka Valerian",             "other",          -0.8, -0.3),
+            ("Sitka Valerian",            "other",          -0.8, -0.3),
             ("Self-heal",                 "other",           0.3,  0.9),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",     -0.4, -0.8),
         ],
         "variations": [
             {
@@ -1518,7 +1787,7 @@ EXAMPLE_POLYCULTURES = [
                     ("Rat Root",                  "other",           0.5, -0.8),
                     ("Wild Licorice",             "other",          -0.8, -0.3),
                     ("Seneca Snakeroot",          "other",           0.3,  0.9),
-                    ("Yarrow",                    "soil_builder",   -0.4, -0.8),
+                    ("Boreal Yarrow",                    "soil_builder",   -0.4, -0.8),
                 ],
             },
         ],
@@ -1556,8 +1825,8 @@ EXAMPLE_POLYCULTURES = [
                     ("Silver Buffaloberry",       "nitrogen_fixer",      0,    1.5),
                     ("Western Snowberry",         "understory",          0.8,  0.8),
                     ("Silverberry",               "windbreak",           0.8,  2.2),
-                    ("Nanking Cherry",            "understory",         -0.5,  3.8),
-                    ("Bee Balm (Wild Bergamot)",  "pollinator",         -0.5,  1.0),
+                    ("Beaked Hazelnut",           "understory",         -0.5,  3.8),
+                    ("Wild Bergamot",  "pollinator",         -0.5,  1.0),
                 ],
             },
         ],
@@ -1592,7 +1861,7 @@ EXAMPLE_POLYCULTURES = [
             ("Pussy Willow",               "shrub_layer",     0,     0),
             ("Sandbar Willow",             "shrub_layer",     2.5,   1.5),
             ("Showy Milkweed",             "herbaceous",     -2.0,   1.0),
-            ("Green Milkweed",             "herbaceous",      1.5,  -1.5),
+            ("Oval-leaf Milkweed",         "herbaceous",      1.5,  -1.5),
             ("Smooth Aster",               "herbaceous",     -1.5,  -1.0),
             ("Eastern Red Columbine",      "herbaceous",      1.0,   1.8),
             ("Early Blue Violet",          "groundcover",    -1.0,  -2.0),
@@ -1629,7 +1898,7 @@ EXAMPLE_POLYCULTURES = [
             ("Prairie Crocus",             "herbaceous",      1.5,   1.0),
             ("Wild Strawberry",            "groundcover",    -1.0,   1.2),
             ("Golden Bean",                "nitrogen_fixer",  1.8,  -1.0),
-            ("Bee Balm (Wild Bergamot)",   "pollinator",     -1.5,  -0.5),
+            ("Wild Bergamot",   "pollinator",     -1.5,  -0.5),
             ("Dotted Blazingstar",         "pollinator",      0.5,  -1.8),
             ("Canada Goldenrod",           "pollinator",     -2.0,   0.5),
             ("Smooth Aster",               "pollinator",      2.0,   1.8),
@@ -1683,7 +1952,7 @@ EXAMPLE_POLYCULTURES = [
             ("Prairie Crocus",             "herbaceous",      0.8,  -1.0),
             ("Dotted Blazingstar",         "pollinator",     -1.0,  -1.2),
             ("Purple Prairie Clover",      "nitrogen_fixer",  1.2,  -1.8),
-            ("Yarrow",                     "soil_builder",   -1.5,  -0.5),
+            ("Boreal Yarrow",                     "soil_builder",   -1.5,  -0.5),
         ],
     },
     {
@@ -1746,13 +2015,13 @@ EXAMPLE_POLYCULTURES = [
         "description": "A tough, low-growing nectar strip for hellstrips and "
                        "boulevards — sun-baked, salt- and drought-tolerant natives "
                        "kept short for sightlines. Blue grama forms a fine "
-                       "warm-season matrix; blanketflower, black-eyed Susan and wild "
+                       "warm-season matrix; blanketflower, prairie coneflower and wild "
                        "bergamot carry summer bloom; purple prairie clover fixes "
                        "nitrogen and prairie goldenrod extends nectar into fall.",
         "members": [
             ("Wild Bergamot",          "pollinator",      0,    0),
             ("Blanketflower",          "pollinator",      1.0,  0.6),
-            ("Black-eyed Susan",       "pollinator",     -1.0,  0.6),
+            ("Prairie Coneflower",     "pollinator",     -1.0,  0.6),
             ("Purple Prairie Clover",  "nitrogen_fixer",  0.0, -0.8),
             ("Blue Grama Grass",       "groundcover",     1.2, -0.6),
             ("Prairie Goldenrod",      "pollinator",     -1.2, -0.5),
@@ -1767,7 +2036,7 @@ EXAMPLE_POLYCULTURES = [
                        "knits the ground layer.",
         "members": [
             ("Little Bluestem",    "matrix_grass",    0,    0),
-            ("Sheep Fescue",       "matrix_grass",    1.2,  0.8),
+            ("Rocky Mountain Fescue", "matrix_grass",    1.2,  0.8),
             ("Prairie Coneflower", "pollinator",     -1.0,  0.8),
             ("Blanketflower",      "pollinator",      1.0, -0.8),
             ("Silvery Lupine",     "nitrogen_fixer", -1.1, -0.7),
@@ -1823,6 +2092,8 @@ EXAMPLE_POLYCULTURES = [
             ('White Geranium', 'pollinator', -2.1, 0.0),
             ('Sweet-scented Bedstraw', 'groundcover', -0.8, -1.3),
             ('Wild Vetch', 'vine', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Tall Anemone (Thimbleweed)', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -1833,7 +2104,7 @@ EXAMPLE_POLYCULTURES = [
                        'Tallamy keystone genera.',
         "members": [
             ('Late Goldenrod', 'pollinator', 0.0, 0.0),
-            ('Gray Goldenrod', 'pollinator', 1.5, 0.0),
+            ('Prairie Goldenrod', 'pollinator', 1.5, 0.0),
             ('Stiff Goldenrod', 'pollinator', 1.3, 1.6),
             ('Showy Aster', 'pollinator', -0.3, 1.5),
             ('Arctic Aster', 'pollinator', -1.9, 0.9),
@@ -1849,7 +2120,7 @@ EXAMPLE_POLYCULTURES = [
                        'height and bird seed; paintbrush, evening primrose, harebell and '
                        'golden alexanders carry colour and pollen across the season.',
         "members": [
-            ('Common Sunflower', 'pollinator', 0.0, 0.0),
+            ('Maximilian Sunflower', 'pollinator', 0.0, 0.0),
             ('Jerusalem Artichoke', 'pollinator', 1.5, 0.0),
             ('Common Paintbrush', 'pollinator', 1.5, 1.5),
             ('Evening Primrose', 'pollinator', 0.0, 1.5),
@@ -1885,7 +2156,7 @@ EXAMPLE_POLYCULTURES = [
         "members": [
             ('Balsam Poplar', 'overstory', 0.0, 0.0),
             ('Joe-Pye Weed', 'pollinator', 1.5, 0.0),
-            ('Shooting Star', 'pollinator', 1.1, 1.8),
+            ('Saline Shooting Star', 'pollinator', 1.1, 1.8),
             ('Showy Fleabane', 'pollinator', -0.7, 1.3),
             ('Blue Columbine', 'pollinator', -2.1, 0.0),
             ('Spring Beauty', 'herbaceous', -0.8, -1.3),
@@ -2020,6 +2291,8 @@ EXAMPLE_POLYCULTURES = [
             ('Many-flowered Aster (Tufted White Prairie Aster)', 'pollinator', -2.1, 0.0),
             ('Western Meadow Aster', 'pollinator', -0.8, -1.3),
             ('Prairie Thistle', 'pollinator', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Stiff Sunflower (Rhombic-leaved Sunflower)', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2031,11 +2304,11 @@ EXAMPLE_POLYCULTURES = [
         "members": [
             ('Prairie Buttercup', 'pollinator', 0.0, 0.0),
             ('Cut-leaved Anemone', 'pollinator', 1.5, 0.0),
-            ('Yellow Pucoon', 'pollinator', 1.1, 1.8),
+            ('Yellow Puccoon', 'pollinator', 1.1, 1.8),
             ('Long-fruited Anemone', 'pollinator', -0.7, 1.3),
             ('Crowfoot Violet', 'pollinator', -2.1, 0.0),
             ('Prairie Onion (Textile Onion)', 'pollinator', -0.8, -1.3),
-            ('Short-beaked Agoseris', 'pollinator', 1.1, -1.8),
+            ('Pale Agoseris', 'pollinator', 1.1, -1.8),
         ],
     },
     {
@@ -2079,7 +2352,7 @@ EXAMPLE_POLYCULTURES = [
             ('Western Blue Iris', 'pollinator', 0.0, 0.0),
             ('Balsamroot', 'pollinator', 1.5, 0.0),
             ('Woolly Cinquefoil', 'pollinator', 1.5, 1.5),
-            ('Prairie Cinquefoil (Tall Cinquefoil)', 'pollinator', 0.0, 1.5),
+            ('Tall Cinquefoil', 'pollinator', 0.0, 1.5),
             ('Field Pussytoes', 'groundcover', -1.5, 1.5),
             ('Small-leaved Everlasting (Small-leaved Pussytoes)', 'groundcover', -1.5, 0.0),
             ('Veiny Meadow-Rue', 'pollinator', -1.5, -1.5),
@@ -2128,9 +2401,9 @@ EXAMPLE_POLYCULTURES = [
         "members": [
             ('Alpine Aster', 'pollinator', 0.0, 0.0),
             ('Alaska Harebell', 'pollinator', 1.5, 0.0),
-            ('Lyalls Penstemon', 'pollinator', 1.3, 1.6),
+            ("Lyall's Penstemon", 'pollinator', 1.3, 1.6),
             ('Alberta Penstemon', 'pollinator', -0.3, 1.5),
-            ('White Camas', 'pollinator', -1.9, 0.9),
+            ('Mountain Death Camas (White Camas)', 'pollinator', -1.9, 0.9),
             ('Scorpion Weed', 'pollinator', -1.4, -0.7),
             ('Rocky Mountain Beeplant', 'nitrogen_fixer', -0.5, -2.0),
             ('Sticky Goldenrod', 'pollinator', 0.9, -1.2),
@@ -2146,11 +2419,10 @@ EXAMPLE_POLYCULTURES = [
             ('Silky Lupine', 'nitrogen_fixer', 0.0, 0.0),
             ('Late Yellow Oxytropis', 'nitrogen_fixer', 1.5, 0.0),
             ('Alpine Hedysarum (Bear Root)', 'nitrogen_fixer', 1.3, 1.6),
-            ('Sweet Broom (Alpine Sweetvetch)', 'nitrogen_fixer', -0.3, 1.5),
             ('White Mountain Avens', 'groundcover', -1.9, 0.9),
             ('Yellow Mountain Avens', 'groundcover', -1.4, -0.7),
             ("MacKenzie's Hedysarum", 'nitrogen_fixer', -0.5, -2.0),
-            ('Boreale Oxytropis', 'nitrogen_fixer', 0.9, -1.2),
+            ('Boreal Oxytropis', 'nitrogen_fixer', 0.9, -1.2),
         ],
     },
     {
@@ -2183,7 +2455,7 @@ EXAMPLE_POLYCULTURES = [
             ('Early Yellow Oxytropis', 'nitrogen_fixer', 0.0, 1.5),
             ('Yellow-flowered Locoweed', 'nitrogen_fixer', -1.5, 1.5),
             ('Common Twinpod', 'pollinator', -1.5, 0.0),
-            ('Sticky Goldenrod (Mount Albert Goldenrod)', 'pollinator', -1.5, -1.5),
+            ('Sticky Goldenrod', 'pollinator', -1.5, -1.5),
             ('Moss Phlox', 'groundcover', -0.0, -1.5),
             ('Butte Primrose', 'pollinator', 1.5, -1.5),
         ],
@@ -2202,6 +2474,8 @@ EXAMPLE_POLYCULTURES = [
             ('Little-leaved Alumroot', 'pollinator', -2.1, 0.0),
             ('Showy Pussytoes', 'pollinator', -0.8, -1.3),
             ('Roseroot', 'herbaceous', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Round-leaved Alumroot', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2220,6 +2494,8 @@ EXAMPLE_POLYCULTURES = [
             ('Hairy Arnica', 'pollinator', -1.5, -1.5),
             ('Desert Shooting Star', 'pollinator', -0.0, -1.5),
             ('Western Mountain Ash', 'shrub_layer', 1.5, -1.5),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('False Box (Mountain Boxwood)', 'shrub_layer', 0.6, -2.9),
         ],
     },
     {
@@ -2233,7 +2509,7 @@ EXAMPLE_POLYCULTURES = [
             ('Alpine Bistort', 'herbaceous', 1.5, 0.0),
             ('Wood Betony (Bracted Lousewort)', 'pollinator', 1.5, 1.5),
             ('Pink Pussytoes', 'groundcover', 0.0, 1.5),
-            ('Rosy Pussytoes (Littleleaf Pussytoes)', 'groundcover', -1.5, 1.5),
+            ('Littleleaf Pussytoes', 'groundcover', -1.5, 1.5),
             ('Boreal Yarrow', 'pollinator', -1.5, 0.0),
             ('Woodland Strawberry', 'groundcover', -1.5, -1.5),
             ('Sitka Valerian', 'pollinator', -0.0, -1.5),
@@ -2271,7 +2547,7 @@ EXAMPLE_POLYCULTURES = [
             ('Palmate-leaved Coltsfoot', 'soil_builder', -1.5, 0.0),
             ('Trailing Raspberry', 'groundcover', -1.5, -1.5),
             ('Ostrich Fern', 'other', -0.0, -1.5),
-            ('Slender Nettle', 'nitrogen_fixer', 1.5, -1.5),
+            ('Stinging Nettle', 'nitrogen_fixer', 1.5, -1.5),
         ],
     },
     {
@@ -2288,6 +2564,8 @@ EXAMPLE_POLYCULTURES = [
             ('Greater Northern Aster', 'pollinator', -2.1, 0.0),
             ('Yellow Monkey Flower', 'pollinator', -0.8, -1.3),
             ('Square-stem Monkeyflower', 'pollinator', 1.1, -1.8),
+            # V3.05 (F199): native by VASCAN, and in no community until now.
+            ('Flat-topped White Aster', 'pollinator', -2.2, 1.5),
         ],
     },
     {
@@ -2304,7 +2582,7 @@ EXAMPLE_POLYCULTURES = [
             ('Fringed Loosestrife', 'pollinator', -1.9, 0.9),
             ('False Dragonhead (Western Obedient Plant)', 'pollinator', -1.4, -0.7),
             ('Marsh Violet', 'groundcover', -0.5, -2.0),
-            ('False Dragonhead', 'pollinator', 0.9, -1.2),
+            ("Ledingham's False Dragonhead", 'pollinator', 0.9, -1.2),
         ],
     },
     {
@@ -2345,11 +2623,11 @@ EXAMPLE_POLYCULTURES = [
     {
         "name": 'Subalpine Streamside',
         "description": 'A cool mountain streamside of spirea, larkspur and mimulus for '
-                       'moist, bright banks. Pink spirea and mountain hollyhock feed '
+                       'moist, bright banks. Meadowsweet and mountain hollyhock feed '
                        'bumble bees; river beauty and sneezeweed carry late bloom; a '
                        'clematis vine scrambles the edge.',
         "members": [
-            ('Pink Spirea', 'shrub_layer', 0.0, 0.0),
+            ('Meadowsweet', 'shrub_layer', 0.0, 0.0),
             ('Tall Larkspur', 'pollinator', 1.5, 0.0),
             ('Mountain Hollyhock', 'pollinator', 1.7, 1.2),
             ('River Beauty', 'pollinator', 0.5, 1.4),
@@ -2374,7 +2652,7 @@ EXAMPLE_POLYCULTURES = [
             ('Leafy Arnica', 'pollinator', 0.6, 2.0),
             ('Smooth Fleabane (Streamside Fleabane)', 'pollinator', -1.2, 0.9),
             ('Tall Meadow Rue', 'pollinator', -1.7, -1.2),
-            ('Marsh Hedge Nettle (Marsh Woundwort)', 'pollinator', 0.5, -1.4),
+            ('Marsh Hedge Nettle', 'pollinator', 0.5, -1.4),
         ],
     },
     {
@@ -2390,6 +2668,342 @@ EXAMPLE_POLYCULTURES = [
             ('Round-leaved Yellow Violet', 'pollinator', -1.2, 0.9),
             ('Marsh Violet', 'groundcover', -1.7, -1.2),
             ('Woodland Strawberry', 'groundcover', 0.5, -1.4),
+        ],
+    },
+    # ── The trees promoted in V2.87 (F161) ───────────────────────────────────
+    # Every retail native belongs to a seeded community (TestCommunityCoverage),
+    # and these three give the new trees theirs. The juniper slope carries no
+    # saskatoon, hawthorn or mountain-ash, and the hawthorn thicket no juniper:
+    # juniper is the alternate host of the Gymnosporangium rusts that spot
+    # their fruit (F169).
+    {
+        "name": 'Prairie River Cottonwood Grove',
+        "description": 'The floodplain woodland of southern prairie rivers: plains '
+                       'cottonwood over peach-leaved willow and Manitoba maple, with '
+                       'dogwood and snowberry in the shrub layer and wild licorice '
+                       'fixing nitrogen on the sandbar edge. Poplars and willows are '
+                       'keystone hosts for caterpillars. It needs a water table the '
+                       'trees can reach, and room: plant it on acreage or a riverside '
+                       'lot, well away from buildings and sewer lines.',
+        "members": [
+            ('Plains Cottonwood', 'overstory', 0.0, 0.0),
+            ('Peach-leaved Willow', 'understory', 4.0, 2.0),
+            ('Manitoba Maple (Box Elder)', 'understory', -4.0, 2.0),
+            ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+            ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+            ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+            ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+        ],
+        "variations": [
+            {
+                "name": 'Southwest Alberta River Grove',
+                "description": 'The Oldman River version: narrowleaf cottonwood '
+                               'over peach-leaved willow and water birch, the '
+                               'cottonwood of the southwestern Alberta foothills '
+                               'rivers.',
+                "members": [
+                    ('Narrowleaf Cottonwood', 'overstory', 0.0, 0.0),
+                    ('Peach-leaved Willow', 'understory', 4.0, 2.0),
+                    ('Water Birch', 'understory', -4.0, 2.0),
+                    ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+                    ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+                    ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+                    ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+                ],
+            },
+            {
+                "name": 'Saskatchewan Valley Elm Grove',
+                "description": 'The elm and maple woodland of southeastern '
+                               'Saskatchewan river valleys. American elm is '
+                               'native only in Saskatchewan here, so this '
+                               'version is offered only there. Dutch elm '
+                               'disease is present, and Saskatchewan bans elm '
+                               'pruning from April through August.',
+                "members": [
+                    ('American Elm', 'overstory', 0.0, 0.0),
+                    ('Manitoba Maple (Box Elder)', 'understory', 4.0, 2.0),
+                    ('Peach-leaved Willow', 'understory', -4.0, 2.0),
+                    ('Red Osier Dogwood', 'shrub_layer', 2.5, -2.5),
+                    ('Western Snowberry', 'shrub_layer', -2.5, -2.5),
+                    ('Wild Licorice', 'nitrogen_fixer', 0.0, 3.5),
+                    ('Canada Wild Rye', 'herbaceous', 0.0, -4.0),
+                ],
+            },
+        ],
+    },
+    {
+        "name": 'Coulee Hawthorn Thicket',
+        "description": 'The thorny shrub thicket of prairie coulees and aspen '
+                       'edges. Round-leaved hawthorn and chokecherry flower for bees '
+                       'in late spring and fruit for birds into winter, and the '
+                       'thorns give songbirds nesting cover. Keep junipers well '
+                       'away: they carry the rust that spots hawthorn fruit.',
+        "members": [
+            ('Round-leaved Hawthorn', 'overstory', 0.0, 0.0),
+            ('Chokecherry', 'shrub_layer', 2.5, 1.0),
+            ('Prairie Rose', 'shrub_layer', -2.5, 1.0),
+            ('Western Snowberry', 'shrub_layer', 0.0, -2.5),
+            ('Silver Buffaloberry', 'nitrogen_fixer', 3.0, -1.5),
+            ('Golden Bean', 'pollinator', -2.0, -1.5),
+            ('Smooth Aster', 'pollinator', 1.0, 2.5),
+        ],
+    },
+    {
+        "name": 'Dry Foothills Juniper Slope',
+        "description": 'An evergreen dry slope from the southwestern Alberta '
+                       'foothills: Rocky Mountain juniper over silverberry and '
+                       'shrubby cinquefoil, with rough fescue and prairie smoke '
+                       'between. Waxwings and thrushes take the juniper\'s blue '
+                       'cones through winter. It deliberately has no saskatoon, '
+                       'hawthorn or mountain-ash: juniper carries the rusts that '
+                       'spot their fruit.',
+        "members": [
+            ('Rocky Mountain Juniper', 'overstory', 0.0, 0.0),
+            ('Silverberry', 'nitrogen_fixer', 2.5, 1.0),
+            ('Shrubby Cinquefoil', 'shrub_layer', -2.5, 1.0),
+            ('Creeping Juniper', 'groundcover', 1.5, -2.0),
+            ('Rough Fescue', 'herbaceous', -1.5, -2.0),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
+             'pollinator', 0.0, 2.5),
+        ],
+    },
+    # ── Communities of the Edmonton region (F221, V3.12) ─────────────────────
+    # The owner's ask: "generate some more local to edmonton plant communities".
+    # Of the 71 communities before these, one had every member on the Edmonton
+    # list. Each of these is built only from DOCUMENTED species (three or more
+    # herbarium collections within 50 km, src/local_flora.py), so a review that
+    # settles the borderline species cannot take one off the list;
+    # tests/test_edmonton_communities.py holds them to it.
+    {
+        "name": "Edmonton Aspen Grove",
+        "description": "The aspen woods of the Edmonton region's uplands: "
+                       "trembling aspen over beaked hazelnut, low-bush "
+                       "cranberry and prickly rose, with wild sarsaparilla, tall "
+                       "lungwort and cream-coloured peavine beneath and wild "
+                       "lily-of-the-valley on the ground. Every member is native "
+                       "around Edmonton.",
+        "members": [
+            ("Trembling Aspen", "overstory", 0.0, 0.0),
+            ("Beaked Hazelnut", "understory", 2.5, 1.0),
+            ("Low-bush Cranberry", "shrub_layer", -2.0, 1.5),
+            ("Prickly Wild Rose", "shrub_layer", 1.0, -2.5),
+            ("Wild Sarsaparilla", "herbaceous", -1.5, -1.0),
+            ("Tall Lungwort (Blue Bells)", "pollinator", 1.5, 1.8),
+            ("Cream-Coloured Peavine", "nitrogen_fixer", -0.8, 2.2),
+            ("Wild Lily-of-the-valley", "groundcover", 0.5, -1.2),
+        ],
+    },
+    {
+        "name": "Edmonton River Valley Spruce",
+        "description": "The cool north-facing woods of the North Saskatchewan "
+                       "valley: white spruce and paper birch over red osier "
+                       "dogwood, bracted honeysuckle and wild red currant, with "
+                       "palmate-leaved coltsfoot, bishop's cap and twinflower in "
+                       "the shade. For the shady, moist side of a yard. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("White Spruce", "overstory", 0.0, 0.0),
+            ("Paper Birch", "understory", 3.0, 1.0),
+            ("Red Osier Dogwood", "shrub_layer", -2.5, 1.5),
+            ("Bracted Honeysuckle", "shrub_layer", 1.5, -2.5),
+            ("Wild Red Currant", "shrub_layer", -1.5, -2.0),
+            ("Palmate-leaved Coltsfoot", "herbaceous", 2.0, 2.2),
+            ("Bishop's Cap", "groundcover", -0.8, 1.2),
+            ("Twinflower", "groundcover", 1.0, -1.0),
+        ],
+    },
+    {
+        "name": "Edmonton Fescue Slope",
+        "description": "The rough fescue grassland of the region's dry, "
+                       "south-facing slopes: rough fescue, western porcupine "
+                       "grass and June grass with prairie crocus, prairie "
+                       "sagewort, harebell, prairie goldenrod and blanketflower. "
+                       "Full sun, dry, no watering once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Rough Fescue", "herbaceous", 0.0, 0.0),
+            ("Western Porcupine Grass", "herbaceous", 1.0, 0.6),
+            ("June Grass", "herbaceous", -0.9, 0.8),
+            ("Prairie Crocus", "pollinator", 0.4, -0.9),
+            ("Prairie Sagewort", "groundcover", -1.1, -0.5),
+            ("Harebell", "pollinator", 0.9, -0.4),
+            ("Prairie Goldenrod", "pollinator", -0.4, 1.3),
+            ("Blanketflower", "pollinator", 1.3, 1.1),
+        ],
+    },
+    {
+        "name": "Edmonton Slough Margin",
+        "description": "The wet meadow around a prairie slough: basket willow "
+                       "over bluejoint and water sedge, with purple-stemmed "
+                       "aster, marsh skullcap, wild mint, flat-topped goldenrod "
+                       "and marsh hedge nettle. For ground that stays damp but is "
+                       "not under water. Every member is native around Edmonton.",
+        "members": [
+            ("Basket Willow", "shrub_layer", 0.0, 0.0),
+            ("Bluejoint Reed Grass", "herbaceous", 1.8, 0.8),
+            ("Water Sedge", "herbaceous", -1.6, 1.0),
+            ("Purple-stemmed Tall Aster (Swamp Aster)", "pollinator", 1.2, -1.5),
+            ("Marsh Skullcap", "herbaceous", -0.8, -1.4),
+            ("Wild Mint", "groundcover", 0.4, 1.6),
+            ("Flat-topped Goldenrod", "pollinator", -1.8, -0.6),
+            ("Marsh Hedge Nettle", "herbaceous", 2.0, -0.4),
+        ],
+    },
+    {
+        "name": "Edmonton Berry Thicket",
+        "description": "The shrub thickets of the parkland's edges and ravines: "
+                       "saskatoon and chokecherry with western snowberry, Woods' "
+                       "rose and Canada buffaloberry, twining honeysuckle through "
+                       "them, and smooth aster and wild strawberry at their feet. "
+                       "Fruit from June into winter for people and birds. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Saskatoon Berry", "shrub_layer", 0.0, 0.0),
+            ("Chokecherry", "understory", 2.5, 1.2),
+            ("Western Snowberry", "shrub_layer", -1.8, 1.4),
+            ("Woods' Rose", "shrub_layer", 1.2, -1.9),
+            ("Canada Buffaloberry", "nitrogen_fixer", -2.2, -1.0),
+            ("Twining Honeysuckle (Limber Honeysuckle)", "vine", 0.6, 1.8),
+            ("Smooth Aster", "pollinator", -0.5, -1.6),
+            ("Wild Strawberry", "groundcover", 1.6, 0.2),
+        ],
+    },
+    {
+        "name": "Edmonton Pollinator Meadow",
+        "description": "A lawn-conversion meadow that flowers from prairie crocus "
+                       "in early spring to smooth aster at the first frost: "
+                       "meadow blazingstar, giant hyssop, stiff goldenrod, golden "
+                       "alexanders and oval-leaf milkweed, with June grass as the "
+                       "matrix. Full sun, little water once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Meadow Blazingstar", "pollinator", 0.0, 0.0),
+            ("Giant Hyssop", "pollinator", 1.0, 0.6),
+            ("Smooth Aster", "pollinator", -1.0, 0.7),
+            ("Stiff Goldenrod", "pollinator", 0.5, -1.0),
+            ("Prairie Crocus", "pollinator", -0.6, -0.9),
+            ("Heart-leaved Alexanders (Golden Alexanders)", "herbaceous",
+             1.3, -0.5),
+            ("Oval-leaf Milkweed", "pollinator", -1.4, -0.2),
+            ("June Grass", "herbaceous", 0.2, 1.3),
+        ],
+    },
+    {
+        "name": "Edmonton Marsh Edge",
+        "description": "The emergent edge of a pond: cattail, giant bur-reed, "
+                       "arum-leaved arrowhead, water parsnip and swamp horsetail "
+                       "in the shallows, small-fruited bulrush and water arum at "
+                       "the waterline, and marsh marigold on the wet shore. A pond "
+                       "community, placed in a pond rather than on dry ground. "
+                       "Every member is native around Edmonton.",
+        "members": [
+            ("Cattail", "herbaceous", 0.0, 0.0),
+            ("Giant Bur-reed", "herbaceous", 1.5, 0.8),
+            ("Arum-leaved Arrowhead", "herbaceous", -1.2, 1.0),
+            ("Water Parsnip", "herbaceous", 0.8, -1.4),
+            ("Swamp Horsetail", "herbaceous", -1.5, -0.6),
+            ("Small-fruited Bulrush", "herbaceous", 1.9, -0.3),
+            ("Water Arum (Wild Calla)", "groundcover", -0.4, -1.6),
+            ("Marsh Marigold", "groundcover", 0.3, 1.7),
+        ],
+    },
+    # ── Communities of plants people can buy (V3.14) ─────────────────────────
+    # The owner: "focus the plant communities on some popular plants". Each
+    # member is sold by garden centres or native nurseries (none is rare in the
+    # trade, scripts/rank_availability.py), native around Edmonton, and
+    # recorded in Aspen Parkland. The "Easy" in each name is what the
+    # Budget-friendly goal's community hint matches (src/design_goals.py).
+    {
+        "name": "Easy Pollinator Border",
+        "description": "A sunny border of plants garden centres sell, in flower "
+                       "from April to the first frost: prairie crocus, then wild "
+                       "blue flax, harebell, blanketflower, wild bergamot and "
+                       "giant hyssop, with smooth aster to finish, around a "
+                       "potentilla that flowers all summer. Full sun, little water "
+                       "once established. Every member is native around Edmonton.",
+        "members": [
+            ("Shrubby Cinquefoil", "shrub_layer", 0.0, 0.0),
+            ("Wild Bergamot", "pollinator", 1.2, 0.6),
+            ("Giant Hyssop", "pollinator", -1.1, 0.8),
+            ("Blanketflower", "pollinator", 0.8, -1.1),
+            ("Smooth Aster", "pollinator", -0.9, -1.0),
+            ("Harebell", "herbaceous", 1.6, -0.3),
+            ("Prairie Crocus", "pollinator", -1.6, 0.0),
+            ("Wild Blue Flax", "herbaceous", 0.2, 1.5),
+        ],
+    },
+    {
+        "name": "Easy Berry Hedge",
+        "description": "A bird hedge from shrubs garden centres and big-box stores "
+                       "carry: saskatoon and chokecherry for summer fruit, "
+                       "highbush cranberry and snowberry that hang into winter, "
+                       "red osier dogwood for red winter stems, and silverberry "
+                       "and silver buffaloberry to fix nitrogen. Sun to part "
+                       "shade. Every member is native around Edmonton.",
+        "members": [
+            ("Saskatoon Berry", "shrub_layer", 0.0, 0.0),
+            ("Chokecherry", "understory", 2.6, 0.8),
+            ("Highbush Cranberry", "shrub_layer", -2.4, 0.9),
+            ("Red Osier Dogwood", "shrub_layer", 1.4, -2.0),
+            ("Common Snowberry", "shrub_layer", -1.2, -1.8),
+            ("Silverberry", "nitrogen_fixer", 3.0, -1.2),
+            ("Silver Buffaloberry", "nitrogen_fixer", -3.0, -0.8),
+        ],
+    },
+    {
+        "name": "Easy Shady Corner",
+        "description": "For the shady, moist side of a house or fence: paper birch "
+                       "over red osier dogwood and highbush cranberry, ostrich fern "
+                       "and tall lungwort beneath, woodland strawberry and wild "
+                       "lily-of-the-valley on the ground. Garden centres sell most "
+                       "of it; the lungwort and the lily-of-the-valley come from "
+                       "native nurseries. Every member is native around Edmonton.",
+        "members": [
+            ("Paper Birch", "overstory", 0.0, 0.0),
+            ("Red Osier Dogwood", "shrub_layer", 2.2, 1.0),
+            ("Highbush Cranberry", "shrub_layer", -2.0, 1.2),
+            ("Ostrich Fern", "herbaceous", 1.0, -1.6),
+            ("Tall Lungwort (Blue Bells)", "pollinator", -1.2, -1.4),
+            ("Woodland Strawberry", "groundcover", 1.8, -0.4),
+            ("Wild Lily-of-the-valley", "groundcover", -0.4, 1.9),
+        ],
+    },
+    {
+        "name": "Easy Dry Slope",
+        "description": "A hot, dry bank or the strip along a south wall: creeping "
+                       "juniper and bearberry as evergreen cover, prairie crocus "
+                       "and prairie smoke in spring, yarrow, harebell and pearly "
+                       "everlasting through summer, and prairie sagewort's silver "
+                       "all year. Full sun, no watering once established. Every "
+                       "member is native around Edmonton.",
+        "members": [
+            ("Creeping Juniper", "groundcover", 0.0, 0.0),
+            ("Bearberry", "groundcover", 1.8, 0.6),
+            ("Prairie Crocus", "pollinator", -1.2, 0.9),
+            ("Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",
+             "pollinator", 0.9, -1.1),
+            ("Boreal Yarrow", "pollinator", -0.8, -1.2),
+            ("Harebell", "herbaceous", 1.4, 1.5),
+            ("Pearly Everlasting", "herbaceous", -1.8, -0.2),
+            ("Prairie Sagewort", "herbaceous", 0.3, 1.8),
+        ],
+    },
+    {
+        "name": "Easy Rain Garden",
+        "description": "A shallow dip that catches roof or driveway runoff and "
+                       "dries out between storms: red osier dogwood at the back, "
+                       "Joe-Pye weed and purple-stemmed aster for late bees and "
+                       "butterflies, wild mint and fringed loosestrife between, "
+                       "and marsh marigold in the wettest spot. The dogwood and "
+                       "Joe-Pye weed are garden-centre plants; the rest come from "
+                       "native nurseries. Every member is native around Edmonton.",
+        "members": [
+            ("Red Osier Dogwood", "shrub_layer", 0.0, 0.0),
+            ("Joe-Pye Weed", "pollinator", 1.5, 0.6),
+            ("Purple-stemmed Tall Aster (Swamp Aster)", "pollinator", -1.4, 0.8),
+            ("Wild Mint", "herbaceous", 0.8, -1.2),
+            ("Fringed Loosestrife", "herbaceous", -0.9, -1.1),
+            ("Marsh Marigold", "groundcover", 0.1, 1.6),
         ],
     },
 ]

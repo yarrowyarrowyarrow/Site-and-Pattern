@@ -2,8 +2,8 @@
 building_flow.py — orchestration for the offline building pack (V1.66).
 
 Free functions taking ``main``, kept off ``MapEventRouter`` so the controller
-stays under its line ceiling (mirrors ``scan_import_dialog.start_scan_import``
-and ``splat_flow``). Two entry points:
+stays under its line ceiling (as ``site_photo_flow`` and ``wind_flow`` are).
+Two entry points:
 
   * :func:`import_buildings_offline` — the per-design "Import from OpenStreetMap"
     fast path: if this area's pack is downloaded, place its buildings straight
@@ -63,7 +63,7 @@ def start_building_download(main) -> None:
     boundary = main._map_events._project_boundary_latlng()
     base = bbox_from_boundary_or_pin(boundary, sc, radius_m=2500.0)
     if base is None:
-        main.site_panel.set_osm_status("Drop a pin or draw a boundary first.")
+        main.site_panel.set_osm_status("Find your yard or outline it first.")
         main.site_panel.reset_buildings_download()
         return
     region = _pad_bbox(base, 2000.0)
@@ -81,7 +81,7 @@ def start_building_download(main) -> None:
         main.site_panel.reset_buildings_download()
         main.site_panel.set_osm_status(
             f"Building pack ready — {total:,} footprint(s) cached offline. "
-            "Use 'Import from OpenStreetMap' to place them.")
+            "Scan this area places them from it.")
         main.statusBar().showMessage(
             f"Building download complete — {total:,} footprints cached offline.",
             8000)

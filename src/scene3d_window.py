@@ -7,7 +7,8 @@ the 3D view useful for lawn-to-habitat persuasion:
   * a growth-timeline year slider ("watch your yard at year 1 / 5 / 15"),
   * month + hour sliders driving the shadow-casting sun (same
     ``src/solar`` path as the 2D shade engine, so the two always agree),
-  * a Refresh button that re-reads the live project.
+  * since V3.08 no Refresh button: the window follows the design, rebuilding
+    once edits pause (``src/follow_design.py``, F89).
 
 The scene itself comes from :func:`src.scene_contract.build_scene` — the
 window owns no geometry. Terrain is fetched cache-first on a worker
@@ -21,15 +22,16 @@ the architecture guard's method ceiling stays meaningful).
 
 from __future__ import annotations
 
-import threading
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QSettings
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
 from src.map3d_widget import Map3DWidget
+from src.scene3d_workers import (PhotoWarmWorker as _PhotoWarmWorker,
+                                 TerrainWorker as _TerrainWorker)
 from src.scene_contract import build_scene
 from src.branding import APP_NAME
 
@@ -62,65 +64,6 @@ _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
 
 
-class _TerrainWorker(QObject):
-    """Cache-first elevation fetch off the UI thread."""
-    done = pyqtSignal(object)   # elevation dict or None
-
-    def __init__(self, boundary, site_config):
-        super().__init__()
-        self._boundary = boundary
-        self._site_config = site_config
-
-    def run(self):
-        elev = None
-        try:
-            from src.zoning import site_elevation_grid
-            elev = site_elevation_grid(self._boundary, self._site_config)
-        except Exception:
-            elev = None
-        self.done.emit(elev)
-
-
-class _PhotoWarmWorker(QObject):
-    """Fill the species-photo cache off the UI thread (src/photo_warm.py).
-
-    Emits ``batch`` every so often rather than per photo: the only thing the
-    window does with it is re-push the dossier so newly-cached photos appear, and
-    doing that ~380 times would rebuild the whole dossier for each one.
-    """
-    batch = pyqtSignal()
-    done = pyqtSignal()
-    _BATCH = 12
-
-    def __init__(self):
-        super().__init__()
-        # Owned here, not by the warmer: closeEvent can fire before run() has
-        # built one (the catalogue query happens first), and a cancel that landed
-        # in that window would be lost.
-        self._cancel = threading.Event()
-
-    def run(self):
-        try:
-            from src.photo_warm import PhotoWarmer, catalogue_photo_rows
-            rows = catalogue_photo_rows()
-            PhotoWarmer(rows, on_progress=self._progress,
-                        cancel_event=self._cancel).run()
-        except Exception:      # noqa: BLE001 — photos are a nicety, never a dep
-            pass
-        self.done.emit()
-
-    def _progress(self, done, _total, newly_cached):
-        if newly_cached and done % self._BATCH == 0:
-            self.batch.emit()
-
-    def cancel(self):
-        self._cancel.set()
-
-
-_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
-           "August", "September", "October", "November", "December")
-
-
 def _save_data_url(url: str, path: str) -> bool:
     """Write a ``data:image/...;base64,`` URL to disk. False if there isn't one."""
     import base64
@@ -132,6 +75,18 @@ def _save_data_url(url: str, path: str) -> bool:
         return True
     except (OSError, ValueError):
         return False
+
+
+def keep_still(main, path: str, spec: dict) -> bool:
+    """Hold the last presentation still on the main window, as ``(pixmap,
+    caption)``, for the PDF export (F123). False when the file will not load."""
+    from PyQt6.QtGui import QPixmap
+    pixmap = QPixmap(path)
+    if pixmap.isNull():
+        return False
+    caption = (spec.get("caption") or spec.get("title") or "").strip()
+    main._presentation_still = (pixmap, caption)
+    return True
 
 
 class Scene3DWindow(QWidget):
@@ -147,6 +102,10 @@ class Scene3DWindow(QWidget):
         self._photo_worker = None
         self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
+        # The app's dark surface (F209, V3.08): a top-level window inherits
+        # nothing from the main window's stylesheet.
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
 
         self.viewer = Map3DWidget(self)
 
@@ -189,25 +148,12 @@ class Scene3DWindow(QWidget):
             max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
         self._detail.currentIndexChanged.connect(self._on_detail)
 
-        refresh = QPushButton("Refresh from design")
-        refresh.setToolTip("Re-read the live project and rebuild the scene")
-        refresh.clicked.connect(self.refresh)
-
         # The camera now stays put while the sliders move; this re-centers it.
         reset_view = QPushButton("Reset view")
         reset_view.setToolTip("Re-center the camera on the design")
         reset_view.clicked.connect(
             lambda: self.viewer.run_js(
                 "window.permaResetView && window.permaResetView();"))
-
-        # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
-        # for the 2D map (V1.65). Enabled only when the project has a splat.
-        self._bake_btn = QPushButton("📷 Add yard photo to map")
-        self._bake_btn.setToolTip(
-            "Render the photoreal scan straight down and add it to the 2D map "
-            "as a personal satellite layer")
-        self._bake_btn.setEnabled(False)
-        self._bake_btn.clicked.connect(self._on_bake_yard_photo)
 
         # A render you can put in a proposal (F69). The docent's beats have
         # carried a camera, a year and a season since V2.13 and nothing read
@@ -320,11 +266,13 @@ class Scene3DWindow(QWidget):
         bar.addSpacing(16)
         bar.addWidget(QLabel("Detail:"))
         bar.addWidget(self._detail)
-        bar.addWidget(reset_view)
-        bar.addWidget(refresh)
-        bar.addWidget(self._bake_btn)
-        bar.addWidget(self._still_btn)
-        bar.addWidget(self._ba_btn)
+        # V3.05: this row is *when*, and only that. It also held Reset view,
+        # Refresh and the three outputs, and at the 1148 px the window opens at
+        # on a 1366 x 768 screen those squeezed Year, Time of year and Time of
+        # day to 15 px each: a handle that looked like a checkbox, on the
+        # controls that watch the design grow (the surface audit measured it).
+        for slider in (self._year, self._month, self._hour):
+            slider.setMinimumWidth(110)
 
         # Row 2 — how you move through the scene first, then whose eyes you
         # borrow. The old order led with "Creature: [combo]", so the strip
@@ -358,6 +306,8 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
+        for btn in (reset_view, self._still_btn, self._ba_btn):
+            bar3.addWidget(btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -404,12 +354,9 @@ class Scene3DWindow(QWidget):
             year=self._year.value(),
             elevation=self._elevation,
             when=self._when(),
-            # Set by the scan-import flow for this session (not persisted —
-            # the scan's footprints are; the raw points are a preview aid).
-            scan=getattr(self._main, "_scan_scene_sample", None),
         )
-        # Remember the origin so a yard-photo bake frames the splat correctly,
-        # and keep the built scene for the "show its plants" spotlight.
+        # Keep the origin and the built scene for the "show its plants"
+        # spotlight.
         self._last_origin = scene.get("origin")
         self._scene = scene
         self.viewer.apply_scene(scene)
@@ -437,30 +384,6 @@ class Scene3DWindow(QWidget):
         if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
             self._push_spotlight()
 
-    def _on_bake_yard_photo(self):
-        """Render the loaded splat top-down and hand the PNG to the map layer."""
-        from src import splat_backdrop, splat_flow
-        feat = splat_backdrop.feature_from_project(self._main._project)
-        if feat is None or not self._last_origin:
-            self._main.statusBar().showMessage(
-                "No yard scan to bake — import one via File → Import Yard Scan.",
-                5000)
-            return
-        rect = splat_backdrop.scene_rect(
-            feat, self._last_origin["lat"], self._last_origin["lng"])
-
-        def _done(url):
-            if splat_flow.apply_baked_ortho(self._main, feat, url):
-                self._main.statusBar().showMessage(
-                    "Yard photo baked onto the map — toggle it under "
-                    "View → Yard photo.", 6000)
-            else:
-                self._main.statusBar().showMessage(
-                    "Bake produced no image — let the splat finish loading in "
-                    "3D, then try again.", 6000)
-
-        self.viewer.capture_ortho(rect, _done)
-
     # ── the presentation still (F69) ────────────────────────────────────────
 
     def _on_presentation_still(self):
@@ -478,7 +401,7 @@ class Scene3DWindow(QWidget):
         options, specs = [], []
         for st in ([cover] if cover else []) + stills:
             label = (f"{st['title']} — year {st['year']}, "
-                     f"{_MONTHS[st['month'] - 1]}, {st['camera']}")
+                     f"{_MONTH_FULL[st['month'] - 1]}, {st['camera']}")
             if label in options:
                 continue
             options.append(label)
@@ -527,8 +450,13 @@ class Scene3DWindow(QWidget):
         def _capture():
             def _done(url):
                 if _save_data_url(url, path):
+                    # Kept for File → Export PDF (F123, V3.05): the PDF has
+                    # drawn a still page since F69, and nothing ever handed
+                    # it one. Kept the way before_after_flow keeps F76's.
+                    keep_still(self._main, path, spec)
                     self._main.statusBar().showMessage(
-                        f"Presentation still saved to {path}", 6000)
+                        f"Presentation still saved to {path}; Export PDF "
+                        "will include it", 6000)
                 else:
                     self._main.statusBar().showMessage(
                         "Could not render the still — let the 3D view finish "
@@ -813,6 +741,14 @@ class Scene3DWindow(QWidget):
         self.viewer.set_cinematic_caption(big, sub)
         self._push_scene()
 
+    def follow_design(self):
+        """The design changed (``src/follow_design.py``): rebuild the scene,
+        as the retired Refresh button did, without warming the photo cache
+        again for every edit."""
+        self._push_scene()
+        if self._elevation is None and self._thread is None:
+            self._start_terrain_fetch()
+
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't
         have a grid yet)."""
@@ -820,9 +756,6 @@ class Scene3DWindow(QWidget):
         # initial build honours it (queued until the viewer's JS is ready).
         self.viewer.set_quality(self._detail.currentIndex())
         self._push_scene()
-        from src.splat_backdrop import feature_from_project
-        self._bake_btn.setEnabled(
-            feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
         self._start_photo_warm()

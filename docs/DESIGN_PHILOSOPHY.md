@@ -158,13 +158,18 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > design's food web on the real map, and F15's pollinator-pathway idea was merged into it as a month
 > filter rather than shipped as a third overlay saying the same thing.
 > Since V2.41 the catalogue itself is a place you can stand in: the **plant directory**
-> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90) opens *before any
+> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90; its page is
+> `src/species_page.py`, which since V3.00 also opens beside the Browse list) opens *before any
 > design exists* and gives every species a page — photograph and credit, conditions, season,
 > morphology in plain English, the sourced range **with its occurrence counts and confidence
 > band**, every documented animal with the specialists flagged, companions, sourcing. It is the
 > first surface in the app that treats the data as something to *read* rather than something to
 > place, and it made thirteen filters pressable that had worked for years with no control
 > attached to them.
+> Since V3.05 a generated design explains itself: a click on a placed plant opens its page, led by
+> why the generator put it there, in the terms of the score that chose the spot or the rule that
+> placed it (`src/why_here.py`, roadmap F19). Until then the generator's reasoning was computed
+> for every cell and thrown away.
 > **State: strong** — site forces, seasonality, the real site, winter snow microsites, a single
 > bee's world, the food web itself, active recall, a guided course, a presentable tour and now the
 > catalogue as a reference work are all made visible. What is *not* yet visible is the thing the
@@ -258,9 +263,17 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > `flower_colour_source` (schema v64) now separates a colour checkable against the species' own
 > name or Latin epithet from the genus default, the species page and the website print
 > **not verified** on the 359 that are still a guess, and
-> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band
-> while captioning that the region outlines themselves are hand-drawn boxes rather than surveyed
-> boundaries.
+> [`ecoregion_map.py`](../src/ecoregion_map.py) shades a range by its occurrence-confidence band.
+> **V2.75 corrected this sentence, which had gone false and is worth leaving the scar on**: it
+> said the outlines were "hand-drawn boxes rather than surveyed boundaries", which stopped being
+> true in V2.67 when the National Ecological Framework polygons were adopted. Understating
+> confidence is still a false claim about the evidence, and it is the harder one to notice
+> because it sounds humble. `CAVEAT` now discloses the ~900 m simplification and nothing more.
+> The same release found the sharper version of the same fault: an outside botanical review read
+> the published catalogue and asked what a shaded region *claims*, and the honest answers -- the
+> retrieval date, the three-record floor, that unshaded means uncollected rather than absent --
+> all existed in the repo and reached no page. They are on `/method/` now, computed rather than
+> written down.
 > V2.65 added the other half of the same discipline — *not claiming less than the evidence
 > supports*. The Habitat Value Score read use tags while the citations lived in edges, so the app
 > held a sourced larval-host record for Chokecherry and told the user their chokecherry planting
@@ -268,7 +281,26 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > verb when the observations file could name the life stage on 44 of them (F131). Both fixes are
 > bounded the same way: a taxon has to be right at the far end, an unrecorded stage stays
 > unrecorded, and **additive only** — absence of an edge is absence of evidence, never evidence of
-> absence. **State: strong** (language, provenance, and now in both directions).
+> absence. **V3.01 met the V2.48 lesson again, in the soil.** Since V1.67 a pin's soil pH, an
+> estimate for the area, had been compared with each plant's pH range, a reference value nothing
+> marks as such, and the plants that missed were hidden from Browse with nothing on screen:
+> 105 of 424 at pH 8.0, ordinary on calcareous prairie. It is now a filter like any other, a chip
+> that says "Your soil: pH 8.0", a tooltip that says what it rests on and how many it is hiding,
+> and a × (`src/plant_picker.py`, `src/filter_status.py`). The ranges' provenance is F201.
+> **V3.12 made the third tier explicit, in nativity.** *Native around Edmonton*
+> (`src/local_flora.py`) has three answers, not two. A species is native when VASCAN records it in
+> the province and three herbarium collections lie within 50 km. It is *not native* when VASCAN does
+> not record it there, or the owner rules it out. Below
+> the floor it is **not settled**, and every surface says that in those words, because pin
+> cherry has one collection and 189 observations and is about as Edmonton as a shrub gets. A
+> person settles it with a yes or a no, on a page that shows the evidence beside a read labelled
+> as opinion, and every page that prints the answer says it rests on review.
+> **V3.37 asked when absence is evidence, for animals** (`src/fauna_fit.py`). None near
+> Edmonton means *not here* for a bird, among 778,488 bird records in the circle; for a bee
+> with forty Alberta records it means nothing. The rule asks how many records the province
+> predicts near the place, from the animal's own group, and calls an absence telling only past
+> ten, so 464 of 1,144 animals read *unknown* and are still drawn, and the ptarmigans are not.
+> **State: strong** (language, provenance, and now in both directions).
 
 ### 10. Design for relationships, not objects
 
@@ -314,8 +346,11 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > the maintenance cadence — assembled in the order the work happens
 > (`src/planting_plan_export.py`). The drawing is deliberately *not* the satellite capture: a
 > screenshot is unusable in a yard with a tape measure, and a keyed plan at a stated scale is what
-> you can lay out from. The remaining reach: pinning individual observations to map points and
-> feeding them back into generation as soft constraints (the "pinned" slice of F6).
+> you can lay out from. V3.05 printed the walk itself: Field Notes' ten questions on one page with
+> room to write (`src/field_sheet_flow.py`, roadmap F32), alone or as the design PDF's first job,
+> so the questions only the ground can answer no longer need a laptop carried into the yard. The
+> remaining reach: pinning individual observations to map points and feeding them back into
+> generation as soft constraints (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 
@@ -359,7 +394,10 @@ Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.m
 > presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the
 > first artefact the user can actually hand to the person whose agreement they need — including
 > a sidewalk camera at eye height, which is the view that decides whether a planting gets a
-> complaint or a question about where to buy the seeds. **Flower colour became a filter** in
+> complaint or a question about where to buy the seeds. **Until V2.94 that eye-height view drew
+> every tree crown more than half near-black** (F186): leaves now let light through
+> ([`01c-leaves.js`](../html/scene3d/01c-leaves.js)), because a crown seen from a path is
+> its undersides. **Flower colour became a filter** in
 > V2.47 ([`flower_colour.py`](../src/flower_colour.py), F108) — the hex had been in the schema
 > since v31 driving the 3D florets, and none of the thirty search parameters could ask about
 > it, which meant the catalogue could answer every ecological question and not the one a

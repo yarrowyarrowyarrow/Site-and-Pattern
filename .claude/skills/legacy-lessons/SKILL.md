@@ -192,7 +192,6 @@ or someone when "fixed" naively):
 | DB filename `permadesign.db` | Renaming it orphans every existing install's data. |
 | `src/permadesign_api.py`, CLI prog, MCP server name | Frozen public contract — renaming breaks every agent/script (see `agent-api`). |
 | QSettings org/app name | Renaming silently resets all user preferences. |
-| HTTP User-Agent (`src/http_utils.py`) | Stable identity for API providers' allow/rate lists. |
 | `~/.permadesign_config.json` | Existing users' LLM endpoint config. |
 
 The data *folder* did migrate (`PermaDesign` → `Site & Pattern`, once,
@@ -339,6 +338,292 @@ opaque to alpha — every material applied to it is now unreviewed. And
 before trusting a proposed guard, measure what it would actually have
 reported on the real bug; a guard that would have passed is worse than
 none, because it will be believed.
+
+## 19. The cp1252 crash, twice (V1.95, then V2.78)
+
+The author ran the full suite on Windows and got **seven errors, all the
+same**:
+
+```
+records = json.loads((self.tmp / "plants_master.json").read_text())
+...
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 899031
+```
+
+`Path.read_text()` and the builtin `open()` decode with the **locale**
+codec, not UTF-8. On Linux that is UTF-8 and everything works; on Windows
+it is cp1252, and `data/plants_master.json` carries 966 non-ASCII bytes
+(en dashes, accented names) that cp1252 cannot decode at all.
+
+**This project had already learned this.** V1.95 hit it in
+`src/sprite_gallery.py`, fixed it, left an explanatory comment beside the
+fix, and wrote a guard — `test_seed_reads_pin_utf8_encoding` — which reads
+**exactly one file**. So when V2.75's data-quality tests read the same seed
+JSON the same bare way, nothing objected. Two releases shipped a suite that
+was green on every Linux machine and had seven errors on the only machine
+whose owner reads the output.
+
+Chasing the fix surfaced a second dress of the same bug.
+`PYTHONWARNDEFAULTENCODING=1` with `-W error::EncodingWarning` turned up
+**17 `subprocess(text=True)` calls** with no encoding — including
+`scripts/retag_releases.py` reading `git log --format=%s`, i.e. this
+repo's own commit subjects, which are full of em dashes. It would have
+died on the first one.
+
+**Scars:** 37 text-file call sites and 17 subprocess calls pinned to
+`encoding="utf-8"`; `TestEveryTextFileReadPinsItsEncoding` in
+`tests/test_architecture_guard.py` covering `src/`, `scripts/`, `tests/`
+and `tools/`.
+
+**Rules:**
+
+1. **Never open a text file or a text-mode subprocess without an explicit
+   encoding.** There is no case in this repo where the locale codec is the
+   right answer.
+2. **A guard scoped to the file where the bug was found does not stop the
+   bug — it stops that instance of it.** The V1.95 guard was correct, tested,
+   green, and useless, because the second occurrence was in a different file.
+   When writing a guard, ask what *class* of thing is wrong and scope it to
+   the tree.
+3. **Scope a tree-wide guard precisely or it gets switched off.** An earlier
+   draft flagged `rasterio.open`, `Image.open`, `fiona.open` and
+   `webbrowser.open` — eleven false positives that have nothing to do with
+   text encoding. It checks pathlib's `read_text`/`write_text` and the
+   *builtin* `open` in text mode, and nothing else.
+4. **A green suite on one OS is evidence about one OS.** Both the tests and
+   `PYTHONWARNDEFAULTENCODING=1` are cheap; the author's machine was the only
+   instrument that could see this.
+
+## 20. A failure is not an absence, the third time (V2.79)
+
+The VASCAN nativity fetch ran clean -- 434 species, zero failures -- and
+reported **182 species not recorded from Alberta or Saskatchewan**. Forty-two
+per cent of a native plant catalogue, including *Amelanchier alnifolia*, the
+defining parkland shrub the whole range pipeline was started over.
+
+Two probes found the cause, and it was not about the flora:
+
+| query | rank | distribution |
+|---|---|---|
+| `Amelanchier alnifolia` | species | **absent** |
+| `Amelanchier alnifolia var. alnifolia` | variety | AB, SK, MB native |
+
+**VASCAN attaches distribution to the lowest accepted taxon.** A species with
+recognised varieties carries none on its own record. The parser was reading the
+right key all along; `assess()` let a **missing** block fall through to
+`origin: absent, verdict: not_here`, with a `why` reading *"VASCAN records no
+Alberta or Saskatchewan distribution."* A sentence the data did not support,
+about 173 species.
+
+**Scars:** `lookup()` records `has_distribution` and `taxon_rank`; `assess()`
+has a fourth origin, `undetermined`, that can never reach `not_here`; the
+ingest gives it its own bucket; `--reassess` re-runs verdicts over an
+already-fetched file with no network, so a parser fix costs a re-read rather
+than 434 requests.
+
+**Rules:**
+
+1. **Every external field is three states, not two.** Present-and-says-yes,
+   present-and-says-no, and *not present*. Code that models two will publish
+   the third as whichever of the other two it falls through to. This is now the
+   third instance: V2.75's rate limit logged 208 throttled species as growing
+   nowhere; V2.78's harvest cap made a truncated fetch indistinguishable from a
+   complete one; this one turned a missing field into an absence.
+2. **Cache the raw answer and make re-parsing cheap.** `--reassess` and the
+   occurrence point cache are the same idea. Without it every parser bug costs
+   a re-fetch on somebody's laptop, which is why V2.75 could diagnose a bug it
+   could not fix.
+3. **A result that is plausible in shape is not verified.** 182 absences looked
+   like a finding and read like one in a report. What caught it was checking a
+   single species whose answer was known in advance.
+
+## 21. A picture with no test and no caller (V2.80)
+
+**What happened.** V2.79 shipped `src/range_map.py`, a new species range map,
+with three palettes for the author to choose between. The verdict was *"all
+look identical."* The handover explained it with arithmetic — 10-30 record
+marks land in each grid square, so the range wash underneath is buried — and
+recommended shading the squares by record count instead.
+
+The arithmetic was right and it was not the cause. The renderer draws the
+subject provinces, then the range squares, then the province outlines **again**
+so a border stays legible where the wash sits against it. That second pass
+reused `.subj`, whose fill is opaque white. Every build drew all 361 squares and
+then painted a white province over the top of them.
+
+The wash had never been on the page. Three palettes that differ only in the
+wash rendered byte-identically apart from the hex in their stylesheet, and a
+fourth would have too.
+
+Rendering the SVG standalone found a second one immediately: `water_svg` and
+`cities_svg` are shared with the ecoregion maps and emit `ecomap-*` classes,
+styled in `html/site/site.css`. The range map's inline `<style>` did not carry
+them, so every lake drew **black** (SVG's default fill) and every river drew
+nothing (`<polyline fill="none">` with no stroke rule) — in a module whose
+docstring calls its output *"one self-contained ``<svg>`` string"*. The `water`,
+`river` and `city` entries in all three palettes had never been applied to
+anything. They were prose in a table.
+
+**The scar.** Both are pure *paint order and applied colour*. Nothing raises,
+nothing parses wrong, the SVG is well-formed, and the module was well
+documented. `range_map.py` shipped with **no test file and no caller** — it
+existed to produce PNGs to email to the author — so the only check it ever got
+was somebody looking at the picture, and V2.79 recorded that looking at the
+picture was the one thing it could not do.
+
+The fix was one CSS class. It cost an increment because the wrong cause was
+written down confidently, in a plan, twice.
+
+**Rules:**
+
+1. **A renderer with no test asserts nothing.** `tests/test_range_map.py` now
+   checks byte offsets: no filled province polygon may appear after the last
+   range cell, and the palettes must produce distinct output. Both fail against
+   the old renderer. A test that only proves the SVG parses would have passed
+   through every version of this bug.
+2. **Render it and look at it, in the session.** The container's headless
+   Chromium screenshots an SVG in one command
+   (`chrome --headless --no-sandbox --screenshot=out.png file://…`), and Claude
+   can read the PNG. Three renders found both faults in about a minute. "Could
+   not be verified here — renders were sent to the author" was true of the
+   whole V2.75-V2.79 line of work and was never quite true.
+3. **A palette entry nothing applies is not a decision, it is a comment.**
+   Assert that every key in a palette table reaches the output. Three releases
+   of colour choices were being made about water that was rendering black.
+4. **Suspect the confident diagnosis in a handover.** It is the part a fresh
+   session is likeliest to adopt without re-deriving, and correct-looking
+   arithmetic about the wrong layer is indistinguishable from a root cause
+   until you look.
+
+## 22. The fixture agreed with the parser (V2.80)
+
+**What happened.** V2.79 built a Darwin Core Archive reader for VASCAN and,
+unable to reach `data.canadensys.net`, verified it against a **synthetic
+archive it also wrote**. The plan said so honestly: *"tested against a synthetic
+archive and has never met the real one."*
+
+The author downloaded the real archive and it was refused outright:
+
+```
+the distribution file has no taxonID column; header was
+['id', 'locationID', 'locality', 'countryCode', ...]
+```
+
+`distribution.txt` is a Darwin Core *extension*, and an extension joins on the
+column `meta.xml` declares as `<coreid>` — `id` — rather than repeating
+`taxonID`. The synthetic archive had written `taxonID` in both files. **The
+fixture and the parser shared one assumption, so the tests could only ever
+confirm it.** Nine tests passed against a reader that could not open the file
+it exists to read.
+
+A second bug survived the same way. `_canonical` reduces a name to its first
+two words, and VASCAN files a hybrid formula at rank *species* — so
+`Chamaenerion angustifolium` and `C. angustifolium subsp. angustifolium ×
+C. latifolium` scored identically, and the winner was **dict iteration order**.
+The hybrid won, the roll-up began at a nothotaxon with no children, and
+fireweed was published as unrecorded in Alberta while two AB/SK/MB-native
+subspecies hung off the real species, unvisited. No synthetic fixture contained
+a hybrid, because nobody writing one thinks to.
+
+**The scar.** Both bugs were invisible to a green suite, and the second was
+invisible even to the *real* run — it produced a plausible answer, not an
+error. What found it was a diagnostic (`--explain`) that printed the archive's
+own rows, and the person who knew fireweed grows in Alberta.
+
+Then the fix's own regression test **passed without the fix**: the plant's name
+happened to be shorter than the hybrid's, so an unrelated length tiebreak
+carried it and the new rule was doing nothing.
+
+**Rules:**
+
+1. **A fixture you wrote cannot test an assumption you made.** When the real
+   input is unreachable, the fixture's *shape* is the thing least likely to be
+   right, and it is the thing under test. Build fixtures from a real header,
+   real names and real ids the moment any arrive — the tests here now carry
+   VASCAN's eight-column header verbatim, trailing columns included.
+2. **Always break the fix and watch the test fail.** Twice in this increment a
+   new test passed against the unfixed code, for an incidental reason. A test
+   written after a fix is a hypothesis until it has been seen to fail.
+3. **Ship the diagnostic, not just the fix.** `--explain` cost twenty minutes,
+   found the cause in one run, and is what the next unexplainable species will
+   be pointed at. Where the failure is a *plausible answer* rather than an
+   error, a way to print the intermediate state is the only tool that works.
+4. **Sort keys need a total order.** Ties broken by dict iteration are a bug
+   that changes between runs, between Python versions, and between the machine
+   that reproduces it and the one that does not.
+5. **An empty result should say which kind of empty it is.** "No descendants
+   found" and "descendants found, none carrying a row" have different fixes,
+   and a diagnostic that cannot tell them apart sends the reader looking in the
+   wrong place.
+
+## 23. `cd` and then `rm -rf .git` (V2.81)
+
+**What happened.** The publish recipe in `docs/PUBLISHING_THE_SITE.md` read
+`cd public`, then `rm -rf .git`, `git init -b gh-pages`, `git push -f origin
+gh-pages`. Run as a sequence of separate shell invocations, the working
+directory returned to the repository root between two of them. The `rm -rf
+.git` then **destroyed the repository's entire history**, `git init` replaced
+it with an empty `gh-pages` branch containing the source tree, and the
+force-push **published 887 source files as the website**.
+
+**Why it was recoverable, and what that turned on.** Every commit had already
+been pushed to `origin/V2.80`, so `git fetch` + `git checkout -B V2.80
+origin/V2.80` restored the history exactly, and the site was rebuilt from the
+committed catalogue in ten minutes. **Push before you do anything destructive**
+is what made a catastrophe into twenty minutes; nothing else in the recovery
+was clever.
+
+**The trap is not `rm -rf`.** It is a command whose blast radius depends on a
+`cd` that ran in a different invocation. `rm -rf .git` is harmless in
+`public/` and unrecoverable one directory up, and nothing about the command
+says which one it is in.
+
+**The fix.** Never let a destructive command inherit its directory. Name the
+directory on the command itself:
+
+```bash
+git -C public init -b gh-pages      # not: cd public && git init -b gh-pages
+rm -rf /abs/path/public             # not: rm -rf public
+```
+
+And check the target is what you think before publishing it:
+
+```bash
+ls public/index.html public/CNAME && ! test -d public/src && echo "this is a site"
+```
+
+**The related near-miss in the same incident.** The fresh `git init` had no
+`remote.origin.tagOpt = --no-tags`, so the recovery fetch dragged in all ~102
+release tags and recreated the V-branch/tag collision CLAUDE.md warns about.
+Cleared with the documented `git tag -d $(git tag)`, but a clone that starts
+from scratch starts with that trap re-armed.
+
+## 24. Two right layering choices that hid the boundary (V2.37 → V3.11)
+
+**What happened.** The plants are drawn by one Leaflet canvas renderer
+(`canvasRenderer`, 04-tools.js), chosen because SVG plants starved the
+satellite tiles. V2.37 put the property boundary in its own pane under the
+overlay pane, so it is the ground everything is drawn on. Both were right.
+But a canvas renderer is one `<canvas>` **the size of the whole map**, kept for
+the session once anything is drawn on it, so from the first plant on it lay over
+the boundary everywhere and took every click, right-click and drag meant for
+it. From V2.37 to V3.10 the boundary could not be pressed in any design with a
+plant in it, and nobody noticed, because **a design with no plants still
+worked**: drawing a boundary and clicking it, the obvious check, passed. The
+owner reported it as a regression in V3.11.
+
+**The scar.** The fix found an older one: letting go of a dragged corner
+clicked on the handle, the click reached the map, and the map's "background
+click ends the edit" took it, so a boundary was reshaped one corner per press.
+
+**The rule.** The boundary takes no events itself; the map decides when an
+event is on it (`boundaryClicked` and its neighbours in `02-boundary.js`),
+treating anything `leaflet-interactive` as a layer on top. **Anything in a
+pane below the overlay pane cannot take a click once a plant exists** (the
+relationship web still sits there, F214). Test what the user sees in the state
+the user is in: `tests/test_boundary_press.py` presses the real page in
+headless Chromium **with a plant on the map**, sending each event to whatever
+the browser finds under that pixel.
 
 ## The meta-lessons
 

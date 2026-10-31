@@ -8,7 +8,9 @@ Groups the three teaching surfaces that used to crowd the Analysis tab:
   F52: Present — docent/presentation mode narrating the live design
 
 Analysis answers "what is this site/design doing?"; these tabs teach it and
-help you tell its story. All three are design-aware: they read the live
+help you tell its story. **Present has been Share › Present since V3.08**
+(``src/side_panel_layout.py`` moves the page); this panel still builds and
+drives it. All three are design-aware: they read the live
 placed-plant/structure lists pushed by app.py's ``_sync_planning_panel``.
 
 Design principle P5 — see docs/DESIGN_PHILOSOPHY.md (perception is
@@ -87,7 +89,10 @@ class LearnPanel(QWidget):
         self._docent = DocentWidget(
             plants_provider=lambda: self._placed_plants,
             structures_provider=lambda: self._structures)
-        self._tabs.addTab(self._scroll_page(self._docent), "Present")
+        # Share › Present since V3.08 (src/side_panel_layout.py): presenting a
+        # design is an output, in the owner's words.
+        self._present_page = self._scroll_page(self._docent)
+        self._tabs.addTab(self._present_page, "Present")
 
     # ── Live-design sync (pushed from app.py's _sync_planning_panel) ─────────
 

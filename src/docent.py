@@ -57,7 +57,7 @@ def build_docent_script(placed_plants: Optional[list[dict]],
     if forage is None:
         try:
             from src.forage_calendar import build_forage_calendar
-            forage = build_forage_calendar(placed)
+            forage = build_forage_calendar(_with_catalogue(placed, get_plant))
         except Exception:      # noqa: BLE001
             forage = None
 
@@ -82,6 +82,31 @@ def build_docent_script(placed_plants: Optional[list[dict]],
         "beats": beats,
         "n_beats": len(beats),
     }
+
+
+def _with_catalogue(placed: list[dict],
+                    get_plant: Optional[Callable] = None) -> list[dict]:
+    """Each placed plant with its catalogue row behind it, for the forage
+    calendar, which reads ``bloom_period``, ``flower_form`` and ``plant_type``.
+
+    **Until V2.91 the season beat never played** (found with F182): both
+    callers pass placed-plant records (position, name, at most the type and
+    water needs), which carry no bloom period, so the calendar counted nothing
+    in flower and ``_beat_season`` returned None on every design. The placed
+    record's own keys win; the row only fills what it lacks."""
+    if get_plant is None:
+        from src.db.plants import get_plant
+    rows: dict = {}
+    out = []
+    for p in placed:
+        pid = p.get("plant_id")
+        if pid not in rows:
+            try:
+                rows[pid] = get_plant(pid) or {}
+            except Exception:      # noqa: BLE001 — a missing row narrates less
+                rows[pid] = {}
+        out.append({**rows[pid], **p})
+    return out
 
 
 def _distinct_count(placed: list[dict]) -> int:
@@ -179,6 +204,20 @@ def _beat_season(forage: Optional[dict]) -> Optional[dict]:
         return None
     peak = forage.get("peak_month", 0)
     peak_name = _MONTHS[peak] if 1 <= peak <= 12 else "midsummer"
+    month = peak if 1 <= peak <= 12 else 7
+    opener = f"Bloom peaks around {peak_name}"
+    # No month outblooms the rest (V2.91): with a few flowering species every
+    # bloom month can tie, and the first of them read as a peak -- a prairie
+    # mix of six grasses, a crocus and an aster "peaked around March".
+    counts = {m.get("month"): m.get("count", 0)
+              for m in forage.get("months") or []}
+    top = max(counts.values(), default=0)
+    tied = sorted(m for m, c in counts.items() if top and c == top)
+    if len(tied) > 1:
+        open_months = sorted(m for m, c in counts.items() if c)
+        opener = (f"Flowers open from {_MONTHS[open_months[0]]} to "
+                  f"{_MONTHS[open_months[-1]]}")
+        month = min(tied, key=lambda m: (abs(m - 7), m))
     cov = forage.get("covered_growing", 0)
     total = forage.get("growing_total", 7)
     gaps = forage.get("gap_months", [])
@@ -190,8 +229,8 @@ def _beat_season(forage: Optional[dict]) -> Optional[dict]:
                 f"gaps are where the next planting goes.")
     return _beat(
         "season", "Through the year",
-        f"Watch it move through the seasons. Bloom peaks around {peak_name}, {tail}",
-        year=8, season_month=(peak if 1 <= peak <= 12 else 7), camera="orbit")
+        f"Watch it move through the seasons. {opener}, {tail}",
+        year=8, season_month=month, camera="orbit")
 
 
 def _beat_brood(chickadee: Optional[dict]) -> Optional[dict]:

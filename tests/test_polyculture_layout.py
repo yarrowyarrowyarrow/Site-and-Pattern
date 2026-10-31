@@ -72,17 +72,16 @@ class PolycultureColumnBudgetTest(unittest.TestCase):
                 for i in range(panel._MIX_COMMUNITY_MAX)
             ]
             panel._refresh_community_mix()
-            panel._placement_panel.set_expanded(True, persist=False)
             self.app.processEvents()
-            panel._refit_placement_pane()
+            panel._refit_mix_pane()
             self.app.processEvents()
 
             row_h = max(1, panel.polyculture_tree.sizeHintForRow(0) or 19)
             floor = row_h * P._TREE_MIN_ROWS
             self.assertGreaterEqual(
                 panel.polyculture_tree.minimumHeight(), floor,
-                "the community list has no effective floor, so the placement "
-                "pane can squeeze it to nothing again")
+                "the community list has no effective floor, so the mix "
+                "strip can squeeze it to nothing again")
         finally:
             panel.close()
             panel.deleteLater()
@@ -111,16 +110,18 @@ class PolycultureColumnBudgetTest(unittest.TestCase):
             panel.close()
             panel.deleteLater()
 
-    def test_the_placement_pane_will_not_out_compete_the_list(self):
+    def test_the_mix_strip_will_not_out_compete_the_list(self):
         """`Minimum` vertical policy is the specific call this panel lacked —
-        it tells the layout the pane accepts its sizeHint and no more."""
+        it tells the layout the strip accepts its sizeHint and no more. (The
+        placement pane it was set on moved to the bar over the map in V2.98;
+        the mix stayed, and carries the policy.)"""
         from PyQt6.QtWidgets import QSizePolicy
         panel = self._panel()
         try:
             self.assertEqual(
-                panel._placement_body.sizePolicy().verticalPolicy(),
+                panel._mix_community_box.sizePolicy().verticalPolicy(),
                 QSizePolicy.Policy.Minimum,
-                "the placement body has no Minimum vertical policy, so it "
+                "the mix strip has no Minimum vertical policy, so it "
                 "takes its full sizeHint out of the stretch children")
         finally:
             panel.close()

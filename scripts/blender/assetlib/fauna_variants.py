@@ -23,5 +23,7 @@ BEE_VARIANTS = ("round", "stout", "slender", "leafcutter")
 # are the one further silhouette worth naming, because the tail is unmistakable.
 LEP_VARIANTS = ("butterfly", "moth", "skipper", "swallowtail")
 
-# A chickadee on a twig, a woodpecker propped against a trunk, a hummingbird.
-BIRD_VARIANTS = ("passerine", "woodpecker", "hummer")
+# The bird builds and their proportions live in bird_builds.py (V2.97, F174):
+# a chickadee, a woodpecker, a hummingbird, and since V2.97 a hawk, an owl, a
+# grouse, a duck, a goose and a crane.
+from .bird_builds import BIRD_VARIANTS  # noqa: E402,F401

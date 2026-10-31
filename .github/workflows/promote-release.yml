@@ -1,0 +1,71 @@
+name: Promote a release
+
+# The one step that offers a version to everyone who has the app installed
+# (V3.18, FN-7, decision D5; docs/homeowner/10-finishing.md section 5).
+#
+# Since V3.18 every push to a V<major>.<minor> branch builds the installers and
+# publishes them as a PRERELEASE (release-windows.yml, release-macos.yml), which
+# Help > Check for Updates skips (src/github_releases.py: list_releases). Run
+# this workflow to turn one of those prereleases into a full release marked
+# "Latest"; from then on installed copies are offered it.
+#
+# How: GitHub > Actions > "Promote a release" > Run workflow, and type the
+# version, for example V3.18. It refuses a version whose release is missing
+# either installer, because a copy would be offered an update it cannot find.
+#
+# GITHUB LISTS THIS ONLY ONCE THIS FILE IS ON THE DEFAULT BRANCH. A workflow
+# that runs by hand must exist on the repository's default branch (GitHub's
+# "Manually running a workflow"), which here is `main`, unmoved since V2.20.
+# Until the owner puts this one file there, promote on the release page
+# instead: Releases > the version > Edit > untick "Set as a pre-release",
+# tick "Set as the latest release" > Update release. Same effect; check the
+# .exe and the .dmg are both attached first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to offer to installed copies, for example V3.18"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the release exists with both installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^V[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' is not a version like V3.18"
+            exit 1
+          fi
+          TAG="release-$VERSION"
+          assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+                   --json assets --jq '.assets[].name')
+          echo "Assets on $TAG:"
+          echo "$assets"
+          if ! grep -q -- '-Setup\.exe$' <<< "$assets"; then
+            echo "::error::$TAG has no Windows installer yet; wait for its build"
+            exit 1
+          fi
+          if ! grep -q -- '\.dmg$' <<< "$assets"; then
+            echo "::error::$TAG has no macOS disk image yet; wait for its build"
+            exit 1
+          fi
+
+      - name: Make it a full release, marked Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh release edit "release-$VERSION" --repo "$GITHUB_REPOSITORY" \
+             --prerelease=false --latest
+          echo "release-$VERSION is now offered by Help > Check for Updates."

@@ -24,7 +24,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
-    QInputDialog, QTabWidget, QDialog,
+    QTabWidget, QDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QAction, QKeySequence, QShortcut
@@ -49,45 +49,22 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
-from src import data_sources_flow, feedback_flow, onboarding_flow
-from src.scan_import_dialog import start_scan_import as _start_scan_import
+from src import accessible_names, data_sources_flow, feedback_flow, keyboard_help
+from src import indicator_style, target_size
+from src import month_tasks, onboarding_flow, start_flow
+from src.yard_overview import bed_area_m2
+from src.elided_label import ElidedLabel
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.ui_style import APP_STYLE as _APP_STYLE
 from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
     open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
-from src.plant_directory_window import (
-    open_plant_directory as _open_plant_directory)
-from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
-from src.branding import APP_NAME, APP_TITLE
+from src.app_version import running_version
+from src.branding import window_title
 from src.log import get_logger
 
 _log = get_logger(__name__)
-
-
-# Marker colour tables for plant-community members — moved to the Qt-free
-# src.member_colors so placement controllers can colour members without
-# importing this (QtWebEngine-bound) module. Re-exported under the old names
-# for existing importers.
-from src.member_colors import (
-    LAYER_COLORS as _LAYER_COLORS,
-    FUNCTION_COLORS as _FUNCTION_COLORS,
-    OTHER_COLOR as _OTHER_COLOR,
-    member_color as _member_color,
-)
-
-
-# Back-compat shim — older code paths still reference _ROLE_COLORS by
-# name. Kept as a flat lookup that covers the union of layer + function
-# colours plus the legacy aliases.
-_ROLE_COLORS = {
-    **_LAYER_COLORS,
-    **_FUNCTION_COLORS,
-    'canopy':              _LAYER_COLORS['overstory'],
-    'dynamic_accumulator': _FUNCTION_COLORS['soil_builder'],
-    'pest_repellent':      _FUNCTION_COLORS['pest_deterrent'],
-    'other':               _OTHER_COLOR,
-}
 
 
 def _init_database():
@@ -123,8 +100,13 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        # Every control at least 24 px across, and every checkbox's box
+        # visible, however the window was started (main.py installs both
+        # first, for the start screen). F195, V3.03.
+        target_size.install()
+        indicator_style.install()
         _init_database()
-        self.setWindowTitle(APP_TITLE)
+        self.setWindowTitle(window_title(version=running_version()))
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
@@ -175,12 +157,22 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
+        # Every panel is built: name the scroll areas and tab widgets after
+        # their tabs, and let the F6 key move between the map and the side
+        # panel (F195, V3.02).
+        accessible_names.name_containers(self)
+        self._panes = keyboard_help.PaneSwitch(self, self.map_widget,
+                                               self._side_tabs)
+        # Simple by default (V3.21, MD-1): hide what the Advanced tools
+        # switch holds, now that everything it names is built.
+        from src import advanced_tools_flow
+        advanced_tools_flow.apply(self)
 
         # Cold start (F44): paint the three-step strip for the empty project.
         # The start menu is NOT opened here any more — main.py runs it before
         # this window exists (V2.40), so the first thing a user sees is the
         # choice rather than a modal over an already-painted map. Help →
-        # "Welcome / Getting Started" reopens it; see src/onboarding_flow.py.
+        # Help › Start Screen reopens it; see src/onboarding_flow.py.
         onboarding_flow.refresh(self)
 
     # ── UI construction ───────────────────────────────────────────────────────
@@ -202,40 +194,35 @@ class MainWindow(QMainWindow):
         self.site_panel.attach_map_widget(self.map_widget)
         self.plant_panel     = PlantPanel(self)
         self.polyculture_panel     = PolyculturePanel(self)
-        # Third sibling inner tab — displays Plants / Communities / Stats
-        # for the current design. Driven by _sync_planning_panel + a
-        # placed_counts_changed signal from PlantPanel.
+        # What is on the design: Species / Communities / Stats, driven by
+        # _sync_planning_panel + PlantPanel's placed_counts_changed. Its pages
+        # sit in the Design tab since V3.07 (src/side_panel_layout.py).
         self.on_this_design = OnThisDesignPanel()
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
         self.learn_panel     = LearnPanel(self)
 
-        # Tabbed side panel — six top-level tabs (Site, Plants, Structures,
-        # Analysis, Planning, Learn). The Polyculture library lives under an
-        # inner tab inside "Plants".
-        self._plant_poly_tab = self._build_plants_polycultures_tab()
-
+        # Tabbed side panel — five top-level tabs (Site, Placement, Design,
+        # Share, Learn since V3.08), by the question a person brings (F94,
+        # the owner's answers to the V3.05 surface audit). The panels build
+        # their pages; side_panel_layout moves them into place, and makes the
+        # Share panel (self.share_panel). Planning's pages all moved: the
+        # panel stays, hidden, as the owner of their state and signals.
         from src.fill_tab_widget import FillTabWidget
-        # allow_shrink + elide as a safety net: with six labels the strip can
-        # overflow the panel minimum on wide-font systems (macOS); eliding a
-        # label beats clipping the first tab off-screen entirely.
+        from src import side_panel_layout
+        # allow_shrink + elide as a safety net: a strip can overflow the panel
+        # minimum on wide-font systems (macOS); eliding a label beats clipping
+        # the first tab off-screen entirely.
         self._side_tabs = FillTabWidget(allow_shrink=True)
+        self._side_tabs.setAccessibleName("Side panel")
         # Document mode lets the tab bar span the full width, which is what lets
         # FillTabWidget stretch the tabs edge-to-edge (no gap after "Learn").
         self._side_tabs.setDocumentMode(True)
-        self._side_tabs.addTab(self.site_panel, "Site")
-        self._side_tabs.addTab(self._plant_poly_tab, "Plants")
-        self._side_tabs.addTab(self.structure_panel, "Structures")
-        self._side_tabs.addTab(self.analysis_panel, "Analysis")
-        self._side_tabs.addTab(self.planning_panel, "Planning")
-        self._side_tabs.addTab(self.learn_panel, "Learn")
-        # Side panel width. The old comment here claimed 300px was the point
-        # below which labels elide; measuring it (V2.37) showed that was never
-        # true — FillTabWidget(allow_shrink=True) gives every tab an equal
-        # share, so full labels need widest×6 ≈ 456px and the strip elided at
-        # 300px before and after. 320px is a modest floor that fits four of the
-        # six labels whole; drag the splitter (max 480) to see all six.
+        for page, label in side_panel_layout.arrange(self):
+            self._side_tabs.addTab(page, label)
+        # Side panel width. 320 px is a modest floor (the five labels need
+        # about 270 in DejaVu Sans); drag the splitter (max 480) for more.
         self._side_tabs.setMinimumWidth(320)
         self._side_tabs.setMaximumWidth(480)
         # Stretch the tabs to fill the whole tab strip (no empty gap to the
@@ -279,6 +266,12 @@ class MainWindow(QMainWindow):
         from src.first_step_bar import FirstStepBar
         self.first_step_bar = FirstStepBar(self)
         left_layout.addWidget(self.first_step_bar)
+        # "This design uses advanced tools." (V3.21, MD-3), simple mode only.
+        from src import advanced_tools_flow
+        left_layout.addWidget(advanced_tools_flow.make_bar(self))
+        # After a plan lands: Try another, About this plan, Undo (V3.29).
+        from src import plan_bar
+        left_layout.addWidget(plan_bar.make(self))
         left_layout.addWidget(self.map_widget, 1)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -300,9 +293,12 @@ class MainWindow(QMainWindow):
         self._sb_coords.setMinimumWidth(220)
         self._sb_zone.setMinimumWidth(100)
 
-        self._sb_tasks = QLabel("")
-        self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-        self._load_seasonal_tasks()
+        # This month's jobs for the design's own plants, or nothing (V3.19,
+        # QF-12): src/month_tasks.py, refreshed wherever the plants change.
+        # Cut to fit rather than widening the window (src/elided_label.py).
+        self._sb_tasks = ElidedLabel("")
+        self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 12px;")
+        month_tasks.refresh(self)
 
         sb = QStatusBar(self)
         sb.addWidget(self._sb_coords)
@@ -327,52 +323,10 @@ class MainWindow(QMainWindow):
         # Window style
         self.setStyleSheet(_APP_STYLE)
 
-    def _build_plants_polycultures_tab(self) -> QWidget:
-        """Build the 'Plants' tab.
-
-        Houses the plant browser/placer and the saved-polyculture library
-        under a compact inner tab strip so users can move between the two
-        without leaving this outer tab.
-
-        The PlantPanel already owns the inline polyculture-mix builder
-        used to place mixes on the map; the PolyculturePanel is for
-        editing the saved library of multi-plant templates.
-        """
-        wrap = QWidget()
-        v = QVBoxLayout(wrap)
-        v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(0)
-
-        from src.ui_style import inner_tab_stylesheet
-        from src.fill_tab_widget import FillTabWidget
-        inner = FillTabWidget(wrap)
-        inner.setDocumentMode(True)
-        inner.tabBar().setUsesScrollButtons(False)
-        inner.tabBar().setExpanding(True)
-        inner.setStyleSheet(inner_tab_stylesheet())
-        # "Browse", not "Plants": this sits under the top-level Plants tab and
-        # above On This Design's own Species tab, and having the same word at
-        # three nesting levels at once is what made the strips unreadable
-        # (V2.37 user feedback). Each label now says what its level does.
-        inner.addTab(self.plant_panel, "Browse")
-        inner.addTab(self.polyculture_panel, "Plant Communities")
-        inner.addTab(self.on_this_design, "On This Design")
-        v.addWidget(inner)
-        # Kept for programmatic tab jumps (Site tab's ecoregion → community
-        # library cross-link, V2.13).
-        self._plants_inner_tabs = inner
-        return wrap
-
     def _on_map_settings(self):
-        """View → Map Settings — configure optional map tokens."""
-        from src.preferences_dialog import MapPreferencesDialog
-        from src.settings import get_mapbox_token, set_mapbox_token
-        dlg = MapPreferencesDialog(current_token=get_mapbox_token() or "", parent=self)
-        if dlg.exec() == MapPreferencesDialog.DialogCode.Accepted:
-            token = dlg.token()
-            set_mapbox_token(token)
-            if token:
-                self.map_widget.set_mapbox_token(token)
+        """View → Map Settings: the satellite token and the zoom step."""
+        from src import map_settings_flow
+        map_settings_flow.open_dialog(self)
 
     def _on_toggle_sidebar(self, checked: bool):
         """View → Show Side Panel (Ctrl+\\). Mirrors the chevron click."""
@@ -410,9 +364,6 @@ class MainWindow(QMainWindow):
     def _on_about(self):
         return self._update_flow._on_about()
 
-    def _on_pick_version(self):
-        return self._update_flow._on_pick_version()
-
     def _on_check_for_updates(self):
         return self._update_flow._on_check_for_updates()
 
@@ -432,12 +383,12 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         mb = self.menuBar()
 
-        # Undo/redo live on the Draw toolbar (the visible buttons); the menu
-        # bar stays File / View / Help (V2.25 — the Edit menu duplicated the
-        # toolbar and was dropped). The QActions still exist, parented to the
-        # window, so the keyboard shortcuts keep working and
-        # PersistenceController._sync_undo_actions can grey them out in step
-        # with the toolbar buttons.
+        # Undo/redo are on the Draw toolbar and, since V3.19, in Edit (QF-15,
+        # src/edit_menu_flow.py; V2.25 had dropped an Edit menu that only
+        # repeated the toolbar). These two QActions, parented to the window,
+        # carry the keys: Edit shows these same objects, so a key is bound
+        # once, and PersistenceController._sync_undo_actions greys them out in
+        # step with the toolbar buttons.
         self._act_undo = QAction("Undo", self)
         self._act_undo.setShortcut(QKeySequence.StandardKey.Undo)
         self._act_undo.setEnabled(False)
@@ -446,10 +397,12 @@ class MainWindow(QMainWindow):
 
         self._act_redo = QAction("Redo", self)
         # Both conventions: Ctrl+Shift+Z (shown on the toolbar) and the
-        # platform-standard binding (Ctrl+Y on Windows). Qt drops duplicates.
-        self._act_redo.setShortcuts(
+        # platform-standard binding (Ctrl+Y on Windows). Qt does NOT drop a
+        # key bound twice: it calls the pair ambiguous and fires neither, which
+        # is how Ctrl+Shift+Z never redid anything (V3.02).
+        self._act_redo.setShortcuts(keyboard_help.distinct_keys(
             [QKeySequence("Ctrl+Shift+Z"), QKeySequence("Ctrl+Y")]
-            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo))
+            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo)))
         self._act_redo.setEnabled(False)
         self._act_redo.triggered.connect(self._do_redo)
         self.addAction(self._act_redo)
@@ -459,7 +412,9 @@ class MainWindow(QMainWindow):
 
         act_new  = file_menu.addAction("&New")
         act_new.setShortcut("Ctrl+N")
-        act_new.triggered.connect(self._on_new)
+        act_new.setStatusTip("Plan a new yard: start from its address")
+        # One way to start a yard (V3.23, ST-6), shared with the start screen.
+        act_new.triggered.connect(lambda: start_flow.start_new_yard(self))
 
         act_open = file_menu.addAction("&Open…")
         act_open.setShortcut("Ctrl+O")
@@ -475,24 +430,19 @@ class MainWindow(QMainWindow):
         act_save_as.setShortcut("Ctrl+Shift+S")
         act_save_as.triggered.connect(self._on_save_as)
 
+        act_rename = file_menu.addAction("&Rename Design…")
+        act_rename.setObjectName("file_rename_design")
+        act_rename.setStatusTip("Give this design a new name")
+        act_rename.triggered.connect(lambda: start_flow.rename_open_design(self))
+
         file_menu.addSeparator()
 
-        act_generate = file_menu.addAction("&Generate Design…")
+        act_generate = file_menu.addAction("&Plan My Yard…")
         act_generate.setShortcut("Ctrl+G")
         act_generate.setStatusTip(
-            "Auto-generate a starting design from your goals "
-            "(local AI, with an offline fallback)")
+            "Plan your yard with native plants, from a few questions")
         act_generate.triggered.connect(self._on_generate_design)
         self._act_generate = act_generate
-
-        act_scan = file_menu.addAction("Import &Yard Scan…")
-        act_scan.setStatusTip(
-            "Import a phone scan (Polycam/Scaniverse PLY, XYZ, LAS) — "
-            "match 2+ points to the map and the scanned structures cast "
-            "shade and appear in 3D")
-        # Lambda, not a MainWindow method — the flow lives in
-        # src/scan_import_dialog.py (architecture-guard method ceiling).
-        act_scan.triggered.connect(lambda: _start_scan_import(self))
 
         file_menu.addSeparator()
 
@@ -530,6 +480,11 @@ class MainWindow(QMainWindow):
         act_exit.setShortcut("Alt+F4")
         act_exit.triggered.connect(self.close)
 
+        # Edit: Undo, Redo, Delete, Select All (V3.19, QF-15), between File
+        # and View.
+        from src import edit_menu_flow
+        edit_menu_flow.install(self)
+
         # View menu — recovery hatch for users who accidentally collapse the
         # sidebar (the chevron strip on the right edge can be easy to miss).
         view_menu = mb.addMenu("&View")
@@ -550,7 +505,7 @@ class MainWindow(QMainWindow):
         self._act_step_bar.setCheckable(True)
         self._act_step_bar.setChecked(True)
         self._act_step_bar.setStatusTip(
-            "Show the three-step strip above the map (pin → boundary → plants)")
+            "Show the getting-started steps above the map")
         # Lambda → flow function: the behaviour is in src/onboarding_flow.py,
         # off MainWindow's method ledger.
         self._act_step_bar.triggered.connect(
@@ -564,6 +519,7 @@ class MainWindow(QMainWindow):
         # meant losing sight of the other. Lambda → controller shim, so this
         # costs MainWindow no methods (src/controllers/split_view.py).
         self._act_split = view_menu.addAction("S&plit view (map + 3D)")
+        self._act_split.setObjectName("view_split")
         self._act_split.setCheckable(True)
         self._act_split.setShortcut("Ctrl+Shift+3")
         self._act_split.setStatusTip(
@@ -573,6 +529,8 @@ class MainWindow(QMainWindow):
             lambda checked: _split_view.toggle(self, checked))
 
         act_3d = view_menu.addAction("&3D Preview…")
+
+        act_3d.setObjectName("view_3d_preview")
         act_3d.setStatusTip(
             "Open the 3D view of this design — growth timeline, sun "
             "shadows, terrain"
@@ -582,17 +540,9 @@ class MainWindow(QMainWindow):
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
 
-        act_directory = view_menu.addAction("&Plant Directory…")
-        act_directory.setStatusTip(
-            "Every species in the catalogue — what it looks like, where it "
-            "grows, and which animals depend on it (F90)"
-        )
-        # Lambda for the same reason as the others: the window manages itself
-        # in src/plant_directory_window.py and takes `main` optionally, because
-        # the start screen opens it before any MainWindow exists.
-        act_directory.triggered.connect(lambda: _open_plant_directory(self))
+        act_reference = view_menu.addAction("Walk a &Wild Landscape…")
 
-        act_reference = view_menu.addAction("Walk a &Reference Ecosystem…")
+        act_reference.setObjectName("view_wild_landscape")
         act_reference.setStatusTip(
             "Walk the natural community your ecoregion is reaching toward — "
             "the reference target for this design (F50)"
@@ -603,29 +553,36 @@ class MainWindow(QMainWindow):
             lambda: _open_reference_ecosystem(self))
 
         act_snapshots = view_menu.addAction("&Growth Snapshots…")
+
+        act_snapshots.setObjectName("view_growth_snapshots")
         act_snapshots.setStatusTip(
-            "See this design at years 1 / 5 / 15 / 30 side by side — watch "
-            "the plants grow and fill in over time"
+            "See this design side by side as it grows, from year 1 on — "
+            "watch the plants grow and fill in over time"
         )
         # Lambda for the same reason as 3D Preview: the window lives in
         # src/snapshot_window.py, off MainWindow's method ledger.
         act_snapshots.triggered.connect(lambda: _open_snapshot_view(self))
 
-        act_gallery = view_menu.addAction("3D &Sprite Gallery…")
-        act_gallery.setStatusTip(
-            "Browse every 3D plant archetype + flower sprite — compare species "
-            "(spruce vs pine vs fir, etc.) and pick a detail level"
-        )
-        # Lambda for the same reason: the window self-manages in
-        # src/sprite_gallery_window.py, off MainWindow's method ledger.
-        act_gallery.triggered.connect(lambda: _open_sprite_gallery(self))
+        # The 3D Sprite Gallery left this menu in V3.07 (the owner retired it
+        # on the surface audit): `python -m src.sprite_gallery_window`.
 
         view_menu.addSeparator()
+        # F205 (V3.06): a north arrow and a scale bar on the map, and so in
+        # Export PDF's picture of it; the switches live in a flow module.
+        from src import map_furniture_flow
+        map_furniture_flow.install(self, view_menu)
         act_map_settings = view_menu.addAction("&Map Settings…")
+        act_map_settings.setObjectName("view_map_settings")
         act_map_settings.setStatusTip(
-            "Configure optional map provider tokens (e.g. Mapbox high-res satellite)"
+            "How far the mouse wheel zooms, and an optional Mapbox token "
+            "for high-resolution satellite imagery"
         )
         act_map_settings.triggered.connect(self._on_map_settings)
+        # The switch (V3.21, MD-1): simple by default, the tools above and
+        # the advanced pages one remembered click away.
+        view_menu.addSeparator()
+        from src import advanced_tools_flow
+        advanced_tools_flow.install(self, view_menu)
 
         # Help menu
         help_menu = mb.addMenu("&Help")
@@ -634,18 +591,20 @@ class MainWindow(QMainWindow):
         # so the user can read it without opening a dialog. The handler
         # opens an About dialog with more detail (commit hash, schema
         # version, etc).
-        from src.version_branch import parse_version_branch
-        from src.app_version import build_version
-        # Frozen builds have no git; the version is baked in at build time.
-        current_branch = build_version() or self._current_branch_name() or ""
-        version_disp = current_branch if parse_version_branch(current_branch) else "dev"
+        # The same reader as the title bar, so the two cannot disagree (F231).
+        version_disp = running_version() or "dev"
         # F44: the welcome shows once, so it needs a way back — both for
         # someone who dismissed it and for anyone looking for the example
         # design later.
-        act_welcome = help_menu.addAction("&Welcome / Getting Started…")
+        # FN-11 (V3.31): the one-page guide, in the README.
+        act_guide = help_menu.addAction("&How to Plan Your Yard")
+        act_guide.setStatusTip("Five steps from your address to a printed "
+                               "plan, in your browser")
+        act_guide.triggered.connect(lambda: feedback_flow.open_guide(self))
+
+        act_welcome = help_menu.addAction("&Start Screen…")
         act_welcome.setStatusTip(
-            "Re-open the welcome: generate a design, start from your yard, "
-            "or open the worked example")
+            "Your designs, a new yard, or the example yard")
         # Lambda → flow function; see the 3D Preview note above.
         act_welcome.triggered.connect(
             lambda: onboarding_flow.show_welcome(self))
@@ -656,6 +615,12 @@ class MainWindow(QMainWindow):
             "score, walk in 3D, and take apart")
         act_example.triggered.connect(
             lambda: onboarding_flow.open_example(self))
+
+        # F195 (V3.02): every key the app answers to, from the table the key
+        # handler reads; the single letters had been listed nowhere.
+        act_keys = help_menu.addAction("&Keyboard Shortcuts…")
+        act_keys.setStatusTip("Every key, and where it works")
+        act_keys.triggered.connect(lambda: keyboard_help.show_shortcuts(self))
 
         help_menu.addSeparator()
 
@@ -695,14 +660,6 @@ class MainWindow(QMainWindow):
                                 "the newest release on packaged (.dmg/.exe) "
                                 "installs")
         act_update.triggered.connect(self._on_check_for_updates)
-
-        act_pick = help_menu.addAction("&Switch to a specific version…")
-        act_pick.setStatusTip(
-            "Pick any published V<major>.<minor> version. Source installs "
-            "check out that branch; packaged installs download and install "
-            "that version's installer."
-        )
-        act_pick.triggered.connect(self._on_pick_version)
 
     # ── Signal wiring ─────────────────────────────────────────────────────────
 
@@ -749,8 +706,6 @@ class MainWindow(QMainWindow):
         )
         self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
         self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
-        self.toolbar.yard_photo_toggled.connect(
-            self.map_widget.set_splat_ortho_visible)
         self.toolbar.grid_settings_changed.connect(self._on_grid_settings_changed)
 
         # Plant panel → map (plant placement + colour). Pattern mode info
@@ -780,6 +735,18 @@ class MainWindow(QMainWindow):
         self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
         self.polyculture_panel.fillCommunityMixRequested.connect(self._on_community_mix_fill_requested)
         self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
+        # The placement bar over the map (F193, V2.98): both panels' pattern
+        # settings, shown while placing, gone when the map stops — Esc in the
+        # map included, which Python could not see before. See the module.
+        from src import placement_bar_flow
+        placement_bar_flow.install(self)
+        # A plant's page beside the side panel (F192, V3.00): opened by
+        # choosing a plant in Browse, closed by placing. See the module.
+        from src import species_flyout
+        species_flyout.install(self)
+        # Where the site is, for the plant list's "Recorded near this site"
+        # order.
+        self.plant_panel.set_site_source(self.site_panel.current_coords)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
         self.plant_panel.communityCreated.connect(
@@ -798,8 +765,10 @@ class MainWindow(QMainWindow):
 
         # Structure panel → map
         self.structure_panel.place_structure_requested.connect(self._enter_structure_mode)
-        self.structure_panel.place_hedgerow_requested.connect(self._enter_hedgerow_mode)
-        self.structure_panel.place_shape_requested.connect(self._enter_shape_mode)
+        # Draw › Shape (V3.07): what the Structures tab's Hedgerow and Shapes
+        # pages emitted, now from the Draw row, to the same handlers.
+        self.toolbar.place_hedgerow_requested.connect(self._enter_hedgerow_mode)
+        self.toolbar.place_shape_requested.connect(self._enter_shape_mode)
 
         # Map → structures/hedgerows/shapes
         b.structure_placed.connect(self._on_structure_placed)
@@ -869,6 +838,12 @@ class MainWindow(QMainWindow):
         from src import tree_detect_flow
         self.site_panel.tree_detect_requested.connect(
             lambda: tree_detect_flow.detect_trees_for_site(self))
+        from src import features_scan_flow
+        self.site_panel.features_scan_requested.connect(
+            lambda: features_scan_flow.scan_area(self))
+        # Sun & Shade › Existing features: which of them cast (V3.37).
+        from src import shade_features_flow
+        shade_features_flow.wire(self)
         # Wired straight to the controller (MainWindow is at its method ceiling,
         # so no shim) — the building-pack download lives in MapEventRouter.
         self.site_panel.download_buildings_requested.connect(
@@ -883,6 +858,11 @@ class MainWindow(QMainWindow):
         # Satellite imagery alignment nudge → shift the basemap tiles (cosmetic).
         self.site_panel.satellite_offset_changed.connect(
             self.map_widget.set_satellite_offset)
+        # The wind comes with the pin (V3.07): the rose the pin's fetch read
+        # fills the Wind page too, rather than waiting for its own fetch.
+        from src import wind_flow
+        self.site_panel.wind_rose_ready.connect(
+            lambda rose: wind_flow.on_site_wind(self, rose))
 
         # Site-walk field notes (F6) — store on the project + mark modified.
         # Two thin lambdas (MainWindow is at its method ceiling).
@@ -891,9 +871,12 @@ class MainWindow(QMainWindow):
             lambda notes: _field_notes.set_field_notes(self._project, notes))
         self.site_panel.field_notes_changed.connect(
             lambda _notes: self._mark_modified())
+        from src import field_sheet_flow
+        self.site_panel.print_field_sheet_requested.connect(
+            lambda: field_sheet_flow.export(self))
 
         # Site photo overlay (F24) — wired straight to the flow module (free
-        # functions taking ``main``, mirroring splat_flow; MainWindow is full).
+        # functions taking ``main``, mirroring building_flow; MainWindow is full).
         from src import site_photo_flow
         self.site_panel.site_photo_import_requested.connect(
             lambda path: site_photo_flow.import_site_photo(self, path))
@@ -908,6 +891,11 @@ class MainWindow(QMainWindow):
 
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+        # The sun path's, the wind overlay's and the relationship web's
+        # switches are offered only while their overlay is drawn (V3.19,
+        # QF-19; MainWindow is at its method ceiling).
+        from src import overlay_switches
+        overlay_switches.install(self)
         # Straight to the controller (MainWindow is at its method ceiling).
         self.analysis_panel.wind_data_requested.connect(
             self._map_events._on_fetch_wind_requested)
@@ -965,19 +953,34 @@ class MainWindow(QMainWindow):
         b.boundary_geom_changed.connect(self._on_boundary_geom_changed)
         b.boundary_props_changed.connect(self._on_boundary_props_changed)
         b.boundary_removed.connect(self._on_boundary_removed)
+        b.boundary_name_requested.connect(
+            self._map_events._on_boundary_name_requested)
+
+        # Map → measurements, part of the design since V3.11 (F215), and
+        # one Delete as one undo step
+        b.measurement_added.connect(self._map_events._on_measurement_added)
+        b.measurements_removed.connect(
+            self._map_events._on_measurements_removed)
+        b.selection_deleted.connect(self._map_events._on_selection_deleted)
+
+        # The legend's switches, remembered and sent on every load (F217)
+        from src import legend_flow
+        legend_flow.install(self)
 
         # Map → sun path anchor & removal
         b.sun_anchor_placed.connect(self._on_sun_anchor_placed)
         b.sun_path_removed.connect(self._on_sun_path_removed)
         b.anchor_cancelled.connect(self._on_anchor_cancelled)
 
-        # Toolbar → zoom sensitivity
-        self.toolbar.zoom_step_changed.connect(self.map_widget.set_zoom_sensitivity)
+        # The scroll-wheel zoom step, from View › Map Settings… (V3.07),
+        # sent each time the map's page loads.
+        from src import map_settings_flow
+        map_settings_flow.install(self)
 
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
-        # Planning → Notes lists the map's 📝 Note pins; clicking one frames
+        # Site › Notes lists the map's 📝 Note pins; clicking one frames
         # it on the map (~40 m box around the pin).
         self.planning_panel.map_note_focus_requested.connect(
             lambda lat, lng: self.map_widget.fit_bounds(
@@ -1019,11 +1022,12 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.substitute_species(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
-        # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
+        # Report card deep-links: habitat value → Design › Habitat, cost →
+        # Share › Export, where the buy list is (V2.13; V3.08).
         self.on_this_design.open_habitat_analysis_requested.connect(
             lambda: _drf.open_habitat_analysis(self))
-        self.on_this_design.open_planning_requested.connect(
-            lambda: _drf.open_planning(self))
+        self.on_this_design.open_buying_requested.connect(
+            lambda: _drf.open_buying(self))
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
@@ -1081,32 +1085,6 @@ class MainWindow(QMainWindow):
         # Shim → PersistenceController; see src/controllers/persistence.py.
         return self._persistence._mark_modified()
 
-    # ── Seasonal tasks ────────────────────────────────────────────────────────
-
-    def _load_seasonal_tasks(self):
-        """Show current month's planting tasks in the status bar."""
-        try:
-            from src.db.plants import get_current_month_tasks
-            from datetime import datetime
-            month_name = datetime.now().strftime("%B")
-            tasks = get_current_month_tasks()
-            if tasks:
-                # Group by status
-                by_status = {}
-                for t in tasks[:8]:  # Limit to avoid overflow
-                    s = t["status"].replace("_", " ").title()
-                    by_status.setdefault(s, []).append(t["common_name"])
-                parts = []
-                for status, names in by_status.items():
-                    parts.append(f"{status}: {', '.join(names[:3])}")
-                    if len(names) > 3:
-                        parts[-1] += f" +{len(names)-3}"
-                self._sb_tasks.setText(f"{month_name}: {' | '.join(parts)}")
-            else:
-                self._sb_tasks.setText(f"{month_name}: No active tasks")
-        except Exception:
-            pass
-
     # ── Drawing modes ─────────────────────────────────────────────────────────
 
     def _enter_boundary_mode(self):
@@ -1131,6 +1109,12 @@ class MainWindow(QMainWindow):
         poly = ((pattern or {}).get("params") or {}).get("polyculture")
         if poly and poly.get("effective_spacing_m"):
             spacing_m = float(poly["effective_spacing_m"])
+        # A row/grid/circle of whole communities steps at Community spacing,
+        # not at its preview member's own spacing. Until V2.98 it did the
+        # latter: a 4.65 m row laid 16 two-metre communities 0.3 m apart.
+        community = ((pattern or {}).get("params") or {}).get("community")
+        if community and community.get("spacing_m"):
+            spacing_m = float(community["spacing_m"])
 
         try:
             from src.db.plants import get_plant
@@ -1147,7 +1131,9 @@ class MainWindow(QMainWindow):
 
         kind = (pattern or {}).get("kind", "single")
         species_n = len(poly["species"]) if poly else 0
-        poly_tag = f" · Mix ({species_n} species)" if species_n else ""
+        if species_n:
+            # Name the mix, not the species that previews it (V2.98).
+            common_name = f"your {species_n}-plant mix"
         # When a polyculture is armed, the recipe persists until Esc, so
         # advertise that the user can drop multiple identical patterns.
         tail = " (Esc to finish)" if poly else " — Esc to cancel"
@@ -1155,11 +1141,11 @@ class MainWindow(QMainWindow):
             qty_str = f" ×{quantity}" if quantity > 1 else ""
             label = f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
         elif kind == "row":
-            label = f"Row of {common_name}{poly_tag} — click start point, then end point{tail}"
+            label = f"Row of {common_name} — click start point, then end point{tail}"
         elif kind == "grid":
-            label = f"Grid of {common_name}{poly_tag} — click two opposite corners{tail}"
+            label = f"Grid of {common_name} — click two opposite corners{tail}"
         elif kind == "circle":
-            label = f"Circle of {common_name}{poly_tag} — click centre, then radius point{tail}"
+            label = f"Circle of {common_name} — click centre, then radius point{tail}"
         else:
             label = f"Placing: {common_name}"
         self._set_mode_label(label)
@@ -1525,8 +1511,10 @@ class MainWindow(QMainWindow):
         # clears any still-armed "Mark tree" structure mode (so a community
         # click doesn't ALSO drop a tree), while being a real placement mode —
         # NOT 'none' — so a click on a visible boundary/shape forwards to
-        # onMapClick → bridge map_clicked → _on_polyculture_click.
-        self.map_widget.set_mode('polyculture')
+        # onMapClick → bridge map_clicked → _on_polyculture_click. It carries
+        # the community's footprint, drawn under the cursor (V2.99).
+        from src.placement_footprint import community_footprint
+        self.map_widget.set_polyculture_mode(community_footprint(polyculture_data))
         self._set_mode_label(
             f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )
@@ -1661,9 +1649,10 @@ class MainWindow(QMainWindow):
         return self._map_events._on_boundary_geom_changed(bid, coords)
 
     def _on_boundary_props_changed(self, bid: str, color: str,
-                                    show_lengths: bool, show_area: bool):
+                                    show_lengths: bool, show_area: bool,
+                                    show_handles: bool = True):
         return self._map_events._on_boundary_props_changed(
-            bid, color, show_lengths, show_area,
+            bid, color, show_lengths, show_area, show_handles,
         )
 
     def _on_boundary_removed(self, bid: str):
@@ -1837,22 +1826,21 @@ class MainWindow(QMainWindow):
 
     # ── File operations ───────────────────────────────────────────────────────
 
-    def _on_new(self):
-        if self._modified:
-            r = QMessageBox.question(
-                self, "New Design",
-                "Current design has unsaved changes. Discard and start new?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-            )
-            if r != QMessageBox.StandardButton.Yes:
-                return
+    def _on_new(self) -> bool:
+        """Start an empty design; ``False`` if the person kept the old one.
 
-        name, ok = QInputDialog.getText(
-            self, "New Design", "Project name:", text="My Food Forest"
-        )
-        if not ok:
-            return
-        name = name.strip() or "Untitled Design"
+        No name is asked for (V3.23, ST-6): the address names the design
+        (ST-5), and saving asks once if nothing has. The start screen's *Plan
+        a new yard* and File › New both go through
+        ``start_flow.start_new_yard``, which also puts the cursor in the
+        address search."""
+        if self._modified:
+            from src import plain_messages
+            if not plain_messages.ask_discard_for_new(
+                    self, self._project.get("properties", {})
+                    .get("project_name", "")):
+                return False
+        name = project_io.new_project()["properties"]["project_name"]
 
         # Assigning _project routes through ProjectStore.set_project, which
         # also resets the placed-plants index.
@@ -1860,14 +1848,21 @@ class MainWindow(QMainWindow):
         self._project_path = None
         self._modified     = False
         self._clear_undo()
+        # Renders of the old design must not reach the new one's PDF (V3.05).
+        self._presentation_still = self._before_after = (None, "")
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
+        # clearAll leaves the map's notes and measurements, and until V3.11
+        # a new design kept the last one's on the map.
+        self.map_widget.clear_annotations()
+        self.map_widget.clear_measure()
         self.map_widget.clear_site_pin()
         self.site_panel.clear_pin()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
         self.plant_panel.set_autodetected_ecoregion("")   # drop the pin's region
+        self.plant_panel.set_soil_ph(None)                # and its soil (V3.01)
         self.planning_panel.set_notes("")
         self.planning_panel.set_placed_plants([])
         self.planning_panel.set_structures([])
@@ -1877,10 +1872,15 @@ class MainWindow(QMainWindow):
         self.site_panel.set_field_notes({})
         from src import site_photo_flow
         site_photo_flow.restore_site_photo(self)
-        self.setWindowTitle(f"{APP_NAME} — {name}")
+        self.setWindowTitle(window_title(name, version=running_version()))
         self._set_mode_label("Ready")
-        # Back to an empty project — step 1 again (F44).
+        # Back to an empty project — step 1 again (F44), no jobs (QF-12) and
+        # no advanced work to mention (MD-3).
         onboarding_flow.refresh(self)
+        month_tasks.refresh(self)
+        from src import advanced_tools_flow
+        advanced_tools_flow.refresh_bar(self)
+        return True
 
     def _on_open(self):
         """Open a design — from the in-app list first (F87, V2.39).
@@ -1903,17 +1903,15 @@ class MainWindow(QMainWindow):
             return
         try:
             self._load_from_path(path)
-        except Exception as exc:
-            QMessageBox.critical(self, "Open failed", str(exc))
+        except Exception:
+            from src import plain_messages
+            plain_messages.tell_open_failed(self, path)
 
     def _ask_for_design_file(self) -> str:
         """The OS file dialog, for a design that lives outside the saves
-        folder."""
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Design", "",
-            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
-        )
-        return path or ""
+        folder (shared with the start screen's Open a file…, V3.37)."""
+        from src import start_flow
+        return start_flow.ask_for_design_file(self)
 
     def _load_from_path(self, path: str):
         proj = project_io.load_project(path)
@@ -1921,13 +1919,14 @@ class MainWindow(QMainWindow):
         self._project_path = path
         self._modified     = False
         self._clear_undo()
+        self._presentation_still = self._before_after = (None, "")
         # So the start menu can offer "Continue" next launch (F87/V2.40).
         from src import saves
         saves.remember_last_design(path)
 
         # Redraw the whole map from the project's features (boundaries,
         # plants, structures, hedgerows, shapes, contours, annotations,
-        # auto-terrain, site pin, splat backdrop). Shared with undo/redo's
+        # auto-terrain, site pin). Shared with undo/redo's
         # snapshot restore — see PersistenceController.render_project_to_map.
         self._persistence.render_project_to_map(fit_view=True)
 
@@ -1949,9 +1948,13 @@ class MainWindow(QMainWindow):
             ):
                 if sc.get(key):
                     slot(sc[key])
-            # Restore the soil-pH plant-matching constraint from cached site data.
-            if sc.get("soil_ph") is not None:
-                self.plant_panel.set_soil_ph(sc.get("soil_ph"))
+            if has_cache:       # the wind too, from its cache (V3.07)
+                from src import wind_flow
+                wind_flow.show_cached(self, plat, plng)
+        # The soil-pH constraint from cached site data, or none: a design with no
+        # pin kept the last design's until V3.01, and its chip said "Your soil".
+        self.plant_panel.set_soil_ph(sc.get("soil_ph") if plat is not None
+                                     and plng is not None else None)
 
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")
@@ -1963,7 +1966,7 @@ class MainWindow(QMainWindow):
         self.site_panel.set_field_notes(_field_notes.get_field_notes(proj))
 
         name = proj.get("properties", {}).get("project_name", "Design")
-        self.setWindowTitle(f"{APP_NAME} — {name}")
+        self.setWindowTitle(window_title(name, version=running_version()))
 
         self._sync_planning_panel()
         # A load bypasses _mark_modified (the project is clean), so the
@@ -2012,13 +2015,10 @@ class MainWindow(QMainWindow):
             if f.get("properties", {}).get("element_type") == "structure"
             and f.get("properties", {}).get("struct_def")
         ]
-        bed_area = sum(
-            float(f.get("properties", {}).get("area_m2") or 0.0)
-            for f in self._project.get("features", [])
-            if f.get("properties", {}).get("element_type") == "custom_shape"
-        )
-        plan = build_planting_plan(self._placed_plants, structures=structs,
-                                   bed_area_m2=bed_area)
+        bed_area = bed_area_m2(self._project)
+        plan = build_planting_plan(
+            self._placed_plants, structures=structs, bed_area_m2=bed_area,
+            site_config=self._project.get("properties", {}).get("site_config"))
 
         # The document reads in the order the work happens: prep the ground
         # (F43) → buy it (F40) → dig it in the right places (F41) → phase it
@@ -2052,10 +2052,15 @@ class MainWindow(QMainWindow):
         return order_file_flow.on_export_order_file(self)
 
     def _on_export_pdf(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Export PDF", "design.pdf",
-            "PDF Files (*.pdf);;All Files (*)"
-        )
+        from src import map_furniture_flow
+        # The map picture leaves out the line that says the map needs a
+        # connection; the save box gives the page time to redraw (V3.19, QF-6).
+        with map_furniture_flow.offline_notice_held(self):
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Export PDF", "design.pdf",
+                "PDF Files (*.pdf);;All Files (*)"
+            )
+            pixmap = self.map_widget.grab() if path else None
         if not path:
             return
         if not path.endswith(".pdf"):
@@ -2077,9 +2082,6 @@ class MainWindow(QMainWindow):
                     pass
                 enriched.append(entry)
 
-            # Capture map screenshot
-            pixmap = self.map_widget.grab()
-
             # Gather structures from project
             structs = [
                 f["properties"].get("struct_def", {})
@@ -2093,8 +2095,13 @@ class MainWindow(QMainWindow):
             # rendered it. Passed through rather than re-rendered here: export
             # is synchronous and the viewer's capture is a chain of callbacks.
             ba_panels, ba_caption = getattr(self, "_before_after", (None, ""))
+            # F69's still, which never reached the PDF until F123 (V3.05):
+            # kept by the 3D window when one is rendered.
+            still, still_caption = getattr(self, "_presentation_still",
+                                           (None, ""))
 
             export_pdf(path, self._project, enriched, structs, notes, pixmap,
+                       still_pixmap=still, still_caption=still_caption,
                        before_after=ba_panels,
                        before_after_caption=ba_caption)
             self.statusBar().showMessage(f"PDF exported: {path}", 3000)
@@ -2126,6 +2133,10 @@ class MainWindow(QMainWindow):
         self.analysis_panel.set_site_location(sc.get("latitude"),
                                               sc.get("longitude"))
         enriched = []
+        # "native" for this design (V3.25, ED-9): the region's list inside a
+        # pack, the pin's province elsewhere; every page reads this stamp.
+        from src import design_native
+        counts_native = design_native.rule(sc)
         for p in self._placed_plants:
             entry = dict(p)
             try:
@@ -2135,6 +2146,7 @@ class MainWindow(QMainWindow):
                     entry["plant_type"] = plant_data.get("plant_type", "herb")
                     entry["water_needs"] = plant_data.get("water_needs", "medium")
                     entry["native_to_alberta"] = bool(plant_data.get("native_to_alberta"))
+                    entry["native"] = counts_native(plant_data)
             except Exception:
                 pass
             enriched.append(entry)
@@ -2147,8 +2159,13 @@ class MainWindow(QMainWindow):
                 sd = props.get("struct_def", {})
                 structs.append(sd)
         self.planning_panel.set_structures(structs)
+        from src.design_inputs import boundary_area_m2
+        self.planning_panel.set_site_area(boundary_area_m2(self._project))
+        self.plant_panel.set_site_area(boundary_area_m2(self._project))
+        self.planning_panel.set_site_config(
+            self._project.get("properties", {}).get("site_config") or {})
 
-        # Map notes (Draw → 📝 Note) mirrored into Planning → Notes so the
+        # Map notes (Draw → 📝 Note) mirrored into Site › Notes so the
         # journal and the on-map observations read as one record (V2.25).
         map_notes = []
         for f in self._project.get("features", []):
@@ -2170,14 +2187,6 @@ class MainWindow(QMainWindow):
         self.learn_panel.set_placed_plants(enriched)
         self.learn_panel.set_structures(structs)
 
-        # Read-only shade-mix breakdown from the cached tags (if classified).
-        try:
-            from src.db import shade_zones
-            pk = shade_zones.project_key_for(getattr(self, "_project_path", None))
-            self.analysis_panel.set_shade_breakdown(shade_zones.tag_counts(pk))
-        except Exception:  # noqa: BLE001
-            pass
-
         # "On This Design" sibling inner tab. Push both: Communities + Stats
         # sub-tabs read from the enriched list; the Plants sub-tab reads
         # from `_placed_counts` (this catches load-project / new-project
@@ -2188,11 +2197,7 @@ class MainWindow(QMainWindow):
             # Whole-design cost (C1): plants + structure install + bed mulch,
             # with the plant total broken down by type (F2).
             from src.sourcing import design_cost, cost_by_type
-            bed_area = sum(
-                float(f.get("properties", {}).get("area_m2") or 0.0)
-                for f in self._project.get("features", [])
-                if f.get("properties", {}).get("element_type") == "custom_shape"
-            )
+            bed_area = bed_area_m2(self._project)
             _cost = design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
             _cost["type_costs"] = cost_by_type(enriched)
             self.on_this_design.set_cost_breakdown(_cost)
@@ -2225,14 +2230,25 @@ class MainWindow(QMainWindow):
             # Habitat value on the Stats tab (F11) — what the design is worth,
             # shown beside the cost. Computed here so it stays live with edits.
             try:
-                from src.habitat_score import compute_habitat_score
+                # Against the pin's ecoregion, as Habitat scores it (OV-4).
+                from src.habitat_score import score_for_project, site_pin
+                lat, lng = site_pin(self._project)
                 self.on_this_design.set_habitat_value(
-                    compute_habitat_score(enriched, structs)
+                    score_for_project(enriched, structs, lat=lat, lng=lng)
                 )
             except Exception:  # noqa: BLE001 — value is a nicety, never break sync
                 self.on_this_design.set_habitat_value(None)
         except Exception:
             pass
+        # A design opened or undone reaches the open 3D preview and Growth
+        # Snapshots here; an edit, through _mark_modified (V3.08, F89).
+        from src import follow_design
+        follow_design.request_sync(self)
+        # And the status bar's jobs for this month (V3.19, QF-12), and
+        # whether the design holds advanced work (V3.21, MD-3).
+        month_tasks.refresh(self)
+        from src import advanced_tools_flow
+        advanced_tools_flow.refresh_bar(self)
 
     def _push_undo(self, entry: dict):
         # Shim → PersistenceController; see src/controllers/persistence.py.
@@ -2296,20 +2312,28 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self._modified:
-            r = QMessageBox.question(
-                self, "Exit",
-                "You have unsaved changes. Exit anyway?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-            )
-            if r != QMessageBox.StandardButton.Yes:
-                event.ignore()
+            # V3.18 (WD-4): Save · Don't save · Cancel. It offered only
+            # "Exit anyway?", so saving meant cancelling and finding Save.
+            from src import plain_messages
+            choice = plain_messages.ask_save_before_closing(
+                self, self._project.get("properties", {})
+                .get("project_name", ""))
+            if choice == "save":
+                self._on_save()
+            if choice == "cancel" or (choice == "save" and self._modified):
+                event.ignore()        # cancelled, or the save did not happen
                 return
         # Clean exit (saved, or the user explicitly discarded unsaved work):
         # the crash-recovery autosave would only nag next launch. A crash
         # never reaches this line — which is exactly the point. Guarded on
         # the recovery check having run so a window that never got a live
-        # map (offscreen tests) can't delete a real session's recovery file.
-        if getattr(self._persistence, "_recovery_checked", False):
+        # map (offscreen tests) can't delete a real session's recovery file,
+        # or on the file being this session's own: the check stands aside
+        # while the start screen is up, and passing over its Restore row
+        # left it unanswered all session, so every Don't save came back as
+        # one more "(unsaved changes from …)" design (V3.37).
+        if (getattr(self._persistence, "_recovery_checked", False)
+                or getattr(self._persistence, "_wrote_autosave", False)):
             self._persistence.clear_autosave()
         # The 3D preview is a *top-level* window (Scene3DWindow.__init__ passes
         # parent None), so stop_threads below cannot see it — findChildren only
@@ -2335,37 +2359,36 @@ class MainWindow(QMainWindow):
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
 
     def keyPressEvent(self, event):
+        """Esc anywhere; the rest only while the map has focus (F195, V3.02).
+
+        Until V3.02 the single letters and Delete acted from any control that
+        let the key through: B on a side-panel button started a boundary, and
+        Delete removed the map's selection. The letters are
+        ``keyboard_help.MAP_LETTERS``, which Help → Keyboard Shortcuts lists."""
         key = event.key()
         if key == Qt.Key.Key_Escape:
             self._cancel_draw()
             self.map_widget.clear_selection()
-        elif key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
-            # Delete every currently-selected map item (across types).
+            return
+        if not keyboard_help.map_has_focus(self.map_widget):
+            super().keyPressEvent(event)
+            return
+        if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             self.map_widget.delete_selected()
-        elif key == Qt.Key.Key_B and not event.modifiers():
-            self._enter_boundary_mode()
-        elif key == Qt.Key.Key_P and not event.modifiers():
-            # Switch to Plants tab
-            self._side_tabs.setCurrentWidget(self.plant_panel)
-        elif key == Qt.Key.Key_G and not event.modifiers():
-            # Switch to Polycultures tab
-            self._side_tabs.setCurrentWidget(self.polyculture_panel)
-        elif key == Qt.Key.Key_S and not event.modifiers():
-            # Switch to Structures tab
-            self._side_tabs.setCurrentWidget(self.structure_panel)
-        elif key == Qt.Key.Key_A and not event.modifiers():
-            # Switch to Analysis tab
-            self._side_tabs.setCurrentWidget(self.analysis_panel)
-        elif key == Qt.Key.Key_T and not event.modifiers():
-            # Switch to Planning tab
-            self._side_tabs.setCurrentWidget(self.planning_panel)
-        elif key == Qt.Key.Key_M and not event.modifiers():
-            self._enter_measure_mode()
-        elif key == Qt.Key.Key_N and not event.modifiers():
-            self._enter_annotate_mode()
-        elif key == Qt.Key.Key_L and not event.modifiers():
-            # Toggle map legend
-            self.map_widget.toggle_legend()
+            return
+        show = keyboard_help.show_panel
+        act = {
+            "boundary": self._enter_boundary_mode,
+            "measure": self._enter_measure_mode,
+            "note": self._enter_annotate_mode,
+            "legend": self.map_widget.toggle_legend,
+            "plants": lambda: show(self.plant_panel),
+            "communities": lambda: show(self.polyculture_panel),
+            "structures": lambda: show(self.structure_panel),
+            "design": lambda: show(self.analysis_panel),
+        }.get(keyboard_help.letter_action(event))
+        if act is not None:
+            act()
         else:
             super().keyPressEvent(event)
 
@@ -2393,76 +2416,3 @@ def _vsep() -> QWidget:
     w.setFixedWidth(1)
     w.setStyleSheet("background: #37474f;")
     return w
-
-
-# ── Application-wide stylesheet ───────────────────────────────────────────────
-
-_APP_STYLE = """
-QMainWindow, QWidget {
-    background-color: #1a2a1a;
-    color: #c8e6c9;
-    font-family: 'Segoe UI', 'Arial', sans-serif;
-    font-size: 13px;
-}
-
-QMenuBar {
-    background-color: #1b2b1b;
-    color: #c8e6c9;
-    border-bottom: 1px solid #2e4a2e;
-}
-QMenuBar::item:selected {
-    background-color: #2e4a2e;
-}
-QMenu {
-    background-color: #1e2e1e;
-    color: #c8e6c9;
-    border: 1px solid #2e4a2e;
-}
-QMenu::item:selected {
-    background-color: #2e4a2e;
-}
-
-QToolBar {
-    background-color: #1b2b1b;
-    border-bottom: 1px solid #2e4a2e;
-    spacing: 4px;
-    padding: 2px 4px;
-}
-QToolButton {
-    color: #c8e6c9;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 3px 8px;
-}
-QToolButton:hover {
-    background: #2e4a2e;
-    border-color: #4a7a4a;
-}
-QToolButton:checked {
-    background: #2e5a2e;
-    border-color: #66bb6a;
-    color: #a5d6a7;
-}
-
-QStatusBar {
-    background-color: #152015;
-    color: #78909c;
-    border-top: 1px solid #2e4a2e;
-    font-size: 12px;
-}
-
-QSplitter::handle {
-    background-color: #2e4a2e;
-    width: 2px;
-}
-
-QScrollBar:vertical {
-    background: #1a2a1a;
-    width: 10px;
-}
-QScrollBar::handle:vertical {
-    background: #2e4a2e;
-    border-radius: 5px;
-}
-"""

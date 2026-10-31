@@ -37,6 +37,8 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+from src.nativity import SOURCE_FIELD as _NATIVITY_SOURCE
+
 # Relationship → how it reads on the card, from the plant's side and the
 # animal's side. Same vocabulary as the hover tooltip (01-core.js _REL_WORDS)
 # and src/scene_wildlife.py.
@@ -230,6 +232,11 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "plant_type": plant.get("plant_type") or "",
         "badges": ecological_role_summary(plant, fauna_rows=edges),
         "native": plant.get("native_provinces") or plant.get("native_region") or "",
+        # Same reason as `plant_directory.species_entry`: this dict is
+        # what the inspect card renders, and dropping the key here makes
+        # every plant read "not checked against a published flora"
+        # however well sourced the row behind it is.
+        _NATIVITY_SOURCE: plant.get(_NATIVITY_SOURCE) or "",
         "ecoregion": plant.get("ecoregion") or "",
         "sun": (plant.get("sun_requirement") or "").replace("_", " "),
         "water": plant.get("water_needs") or "",

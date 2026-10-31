@@ -10,6 +10,24 @@ Qt is imported lazily so the module stays importable headless.
 
 from __future__ import annotations
 
+#: Help › How to Plan Your Yard (FN-11, V3.31): the one-page guide, which
+#: lives in the README (no website for now, decision G5). The anchor is
+#: GitHub's for the heading "Your first yard, in five steps".
+GUIDE_URL = ("https://github.com/yarrowyarrowyarrow/Site-and-Pattern"
+             "#your-first-yard-in-five-steps")
+
+
+def open_guide(main) -> None:
+    """Open the guide in the browser; say so in the status bar."""
+    try:
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+        QDesktopServices.openUrl(QUrl(GUIDE_URL))
+        main.statusBar().showMessage(
+            "Opened the guide in your browser.", 4000)
+    except Exception:                               # noqa: BLE001
+        pass
+
 
 def _app_version(main) -> str:
     """Whatever the build knows about itself — baked version, else the branch."""
@@ -44,16 +62,20 @@ def send_feedback(main) -> None:
         from PyQt6.QtCore import QUrl
         from PyQt6.QtGui import QDesktopServices
         from PyQt6.QtWidgets import QMessageBox
-        from src.feedback import diagnostics, issue_url
-        from src.feedback_dialog import FeedbackDialog
+        from src.feedback import diagnostics, issue_url, mailto_url
+        from src.feedback_dialog import EMAIL, FeedbackDialog
 
         diag = diagnostics(_app_version(main), _schema_version())
         dialog = FeedbackDialog(diag, main)
         if dialog.exec() != dialog.DialogCode.Accepted:
             return
 
-        url = issue_url(dialog.category_key(), dialog.message(),
-                        diag if dialog.wants_diagnostics() else None)
+        attached = diag if dialog.wants_diagnostics() else None
+        if dialog.way() == EMAIL:
+            url = mailto_url(dialog.address(), dialog.category_key(),
+                             dialog.message(), attached)
+        else:
+            url = issue_url(dialog.category_key(), dialog.message(), attached)
         if not url:
             QMessageBox.information(
                 main, "Send Feedback",
@@ -63,6 +85,8 @@ def send_feedback(main) -> None:
         QDesktopServices.openUrl(QUrl(url))
         try:
             main.statusBar().showMessage(
+                "Opened your email with the message filled in."
+                if dialog.way() == EMAIL else
                 "Opened a prefilled report in your browser.", 4000)
         except Exception:                           # noqa: BLE001
             pass

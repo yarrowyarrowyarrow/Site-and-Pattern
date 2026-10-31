@@ -185,6 +185,11 @@ p { margin: .7rem 0; }
 .mapfig { margin: 0; background: var(--bg-sunk); border: 1px solid var(--line);
           border-radius: var(--radius); padding: .7rem; }
 .mapfig.inline { max-width: 24rem; }
+/* A figure used as an illustration inside prose, not as the
+   subject of the page: capped so it reads as an example. */
+.methodfig { max-width: 30rem; margin: .8rem 0 1.2rem; }
+.methodfig svg { display: block; width: 100%; height: auto; }
+.methodfig figcaption { margin-top: .5rem; }
 .wide-map { padding: 1.2rem; }
 .ecomap { display: block; width: 100%; height: auto; }
 /* Alberta and Saskatchewan are nearly square, so a map that fills a wide page
@@ -261,8 +266,60 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
 /* The map keeps its own light palette in both themes: it is a printed figure,
    and a dark-mode map of a light-mode place reads as a different diagram. */
 .mapfig { background: #f6f5f0; }
-.ecowrap { display: grid; gap: 1.2rem;
-           grid-template-columns: minmax(14rem, 20rem) 1fr; align-items: start; }
+.ecowrap { display: grid; gap: 1.2rem; align-items: start;
+           grid-template-columns: minmax(14rem, 20rem) 1fr; }
+@media (max-width: 44rem) { .ecowrap { grid-template-columns: 1fr; } }
+
+/* ── The range map and its record toggle (V2.80) ────────────────────────── */
+/* Like .mapfig, this keeps a light ground in both themes: the wash encodes
+   record density across five steps, and re-mixing five near-neighbours against
+   a dark background stops them reading as a ramp. */
+.rangefig { margin: 0 0 1rem; background: #f6f5f0; border: 1px solid var(--line);
+            border-radius: var(--radius); padding: .7rem; }
+.rangemapwrap { max-width: 36rem; margin: 0 auto; }
+.rangefig .rangemap { display: block; width: 100%; height: auto; }
+/* Sized here, not by a height="auto" attribute, which is not a valid SVG
+   length and logged an error on every map page until V2.84. */
+.phenobar { display: block; width: 100%; height: auto; }
+.rangefig figcaption { margin-top: .6rem; }
+
+/* Radios, not buttons, and :checked sibling selectors, not JavaScript -- so
+   the control still works with scripting off, saved to a file, or printed. */
+.ranketoggle { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+.rangefig .rk { position: absolute; opacity: 0; pointer-events: none; }
+.ranketoggle label { font: 600 .78rem/1 ui-sans-serif, system-ui, sans-serif;
+                     padding: .38rem .7rem; border-radius: 999px;
+                     border: 1px solid #cfcbbc; color: #4a4a42;
+                     background: #fdfcf9; cursor: pointer; }
+.ranketoggle label:hover { border-color: #8f897a; }
+.rk-all:checked ~ .ranketoggle .lbl-all,
+.rk-s:checked   ~ .ranketoggle .lbl-s,
+.rk-o:checked   ~ .ranketoggle .lbl-o { background: #4a4a42;
+                                        border-color: #4a4a42; color: #fdfcf9; }
+/* Keyboard users must be able to see where they are; the input itself is
+   visually hidden, so the ring goes on its label. */
+.rk-all:focus-visible ~ .ranketoggle .lbl-all,
+.rk-s:focus-visible   ~ .ranketoggle .lbl-s,
+.rk-o:focus-visible   ~ .ranketoggle .lbl-o { outline: 2px solid #4a4a42;
+                                              outline-offset: 2px; }
+/* The layer classes live inside the SVG (src/range_map.py) so a standalone
+   file toggles too; these only drive them from the radios. The inputs are
+   siblings of .rangemapwrap on purpose -- ~ cannot climb out of a wrapper,
+   and nesting them made a control that highlighted correctly and hid
+   nothing. */
+.rk-s:checked ~ .rangemapwrap .rangemap .layer-obs { display: none; }
+.rk-o:checked ~ .rangemapwrap .rangemap .layer-spec { display: none; }
+
+/* ── Phenology bar ──────────────────────────────────────────────────────── */
+/* Like .mapfig above, this keeps its own light ground in both themes. The
+   fills mean something specific -- bloom, fruit, growing season, nothing
+   recorded -- and four colours re-mixed against a dark background stop
+   reading as the same four. */
+.phenology { display: block; max-width: 17rem; }
+.phenology svg { display: block; background: #f6f5f0; border-radius: 3px; }
+.phenology-alt {
+  display: block; color: var(--muted); font-size: .78rem; margin-top: .2rem;
+}
 
 /* ── Chips ──────────────────────────────────────────────────────────────── */
 
@@ -336,6 +393,15 @@ a.ecokey-item:hover { background: rgba(0,0,0,.06); }
   border-radius: var(--radius); display: block; box-shadow: var(--shadow);
 }
 .hero-photo .credit { margin: .45rem 0 0; }
+/* A plant's other photographs (V3.35): thumbnails linked to the larger copy,
+   then their credits, numbered from 2 because the lead is 1. */
+.photo-strip { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none;
+  padding: 0; margin: -.6rem 0 .3rem; }
+.photo-strip a { display: block; border-radius: var(--radius); }
+.photo-strip img { width: 6.5rem; height: 6.5rem; object-fit: cover;
+  border-radius: var(--radius); display: block; box-shadow: var(--shadow); }
+.photo-credits { margin: 0 0 1.3rem; padding-left: 1.6rem; }
+.photo-credits li { margin: .1rem 0; }
 /* Wildlife pages are a wide layout, and an insect photographed close up looks
    absurd at 60rem across. */
 .hero-photo.narrow { max-width: 32rem; }
@@ -353,6 +419,9 @@ table.facts th {
 table.facts .chip { padding: .16rem .6rem; font-size: .86rem; }
 
 ul.animals, ul.ranges { margin: .4rem 0; padding-left: 1.1rem; }
+/* Citations carry bare URLs and DOIs with no break opportunity; on a phone
+   they pushed /about/ to 821px wide in a 390px viewport (V2.84). */
+ul.sources li { overflow-wrap: anywhere; }
 ul.animals li, ul.ranges li { margin: .22rem 0; }
 ul.ranges { list-style: none; padding-left: 0; }
 ul.ranges li { padding-left: .9rem; position: relative; }
@@ -408,6 +477,9 @@ ul.cols { columns: 2; column-gap: 2rem; }
   padding-bottom: .4rem; border-bottom: 1px solid var(--line);
 }
 .fscroll { overflow-y: auto; padding-top: .5rem; }
+/* The facet list is a <details> so a phone can fold it (V2.84); on a wide
+   screen it is always open and the toggle is not drawn. */
+.ftoggle { display: none; }
 .fbar { display: flex; gap: .4rem; }
 .filters input[type=search] {
   flex: 1; padding: .55rem .7rem; border: 1px solid var(--line-firm);
@@ -485,6 +557,10 @@ img { max-width: 100%; }
   .searchlayout, .split, .ecowrap { grid-template-columns: 1fr; }
   .filters { position: static; max-height: none; }
   .fscroll { overflow: visible; }
+  .ftoggle {
+    display: list-item; cursor: pointer; padding: .55rem 0;
+    font: 600 .92rem/1.2 ui-sans-serif, system-ui, sans-serif;
+  }
   .facets { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
   .facet .opts { max-height: none; }
   ul.cols { columns: 1; }
@@ -497,4 +573,31 @@ img { max-width: 100%; }
   main { padding: 1.25rem 1rem 3rem; }
   .top { padding: .7rem 1rem; }
   .brand-sub { display: none; }
+  /* Label above value, so a value gets the whole width: the flowering bar
+     was squeezed into the ~170px a 12rem label column left it (V2.84). */
+  table.facts, table.facts tbody, table.facts tr,
+  table.facts th, table.facts td { display: block; width: auto; }
+  table.facts th { border-bottom: 0; padding-bottom: 0; }
 }
+
+/* ── The feedback form ──────────────────────────────────────────────────── */
+.feedback { display: grid; gap: .35rem; max-width: 34rem; margin: 1.4rem 0; }
+.feedback label { font: 600 .85rem/1.3 ui-sans-serif, system-ui, sans-serif;
+                  margin-top: .7rem; }
+.feedback .opt { font-weight: 400; color: var(--muted); }
+.feedback textarea, .feedback input[type="text"], .feedback input[type="email"] {
+  font: inherit; padding: .55rem .7rem; border: 1px solid var(--line-firm);
+  border-radius: var(--radius); background: var(--card); color: var(--fg);
+  width: 100%; }
+.feedback textarea:focus, .feedback input:focus { outline: 2px solid
+  var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.feedback textarea { resize: vertical; min-height: 8rem; }
+.feedback button { justify-self: start; margin-top: 1rem; font: 600 .9rem/1
+  ui-sans-serif, system-ui, sans-serif; padding: .7rem 1.6rem;
+  border: 1px solid var(--accent); border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+.feedback button:hover { opacity: .88; }
+/* The honeypot. Off-screen rather than display:none, because some bots skip
+   hidden inputs and this one is meant to be filled. Never focusable. */
+.feedback .hp { position: absolute; left: -9999px; width: 1px; height: 1px;
+                overflow: hidden; }

@@ -262,7 +262,7 @@ class TestCommittedDiagrams(unittest.TestCase):
             proc = subprocess.run(
                 ["node", os.path.join(staged, "scripts",
                                       "render_botany_diagrams.js")],
-                capture_output=True, text=True, timeout=60)
+                capture_output=True, text=True, timeout=60, encoding="utf-8")
             self.assertEqual(proc.returncode, 0, proc.stderr)
             fresh = os.path.join(staged, "docs", "img", "fauna")
             stale = []

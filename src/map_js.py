@@ -71,6 +71,12 @@ def cancel_draw() -> str:
     return "cancelDraw();"
 
 
+def stamp_mode(seq: int) -> str:
+    """Prefix for a mode change: the stamp the map echoes back with its mode
+    report, so Python can ignore a report that crossed a newer change (V2.98)."""
+    return f"_pyModeSeq = {int(seq)}; "
+
+
 # ── Layer visibility toggles ────────────────────────────────────────────────
 
 def set_satellite_visible(visible: bool) -> str:
@@ -133,6 +139,13 @@ def clear_measure() -> str:
     return "clearMeasure();"
 
 
+def load_measurement(measure_id: str, points: list) -> str:
+    """Draw a measurement from the design without telling Python about it
+    (open, undo's redraw; F215, V3.11). ``points`` is two ``[lat, lng]``."""
+    pts = [[float(p[0]), float(p[1])] for p in points]
+    return f"loadMeasurement({_jsstr(measure_id)}, {_jsobj(pts)});"
+
+
 def clear_all() -> str:
     return "clearAll();"
 
@@ -150,8 +163,24 @@ def delete_selected() -> str:
     return "deleteSelected();"
 
 
+def select_all() -> str:
+    """Edit › Select all (V3.19, QF-15): everything shown on the map that the
+    selection box can catch (``selectAll``, 04-tools.js)."""
+    return "selectAll();"
+
+
 def toggle_legend() -> str:
     return "toggleLegend();"
+
+
+def set_legend_detail(plants: str, boundaries: str) -> str:
+    """How far down the legend goes (F217, V3.11): plants by ``'type'`` or
+    ``'species'``, boundaries ``'simple'`` or ``'named'``."""
+    return f"setLegendDetail({_jsstr(plants)}, {_jsstr(boundaries)});"
+
+
+def focus_by_keyboard() -> str:
+    return "focusMapByKeyboard();"
 
 
 # ── Map view ────────────────────────────────────────────────────────────────
@@ -196,6 +225,13 @@ def load_boundary(boundary_data: dict, fit: bool = True) -> str:
     return f"loadBoundary({_jslit(json.dumps(boundary_data))}, {fit_lit});"
 
 
+def set_boundary_names(boundary_ids: list, name: str) -> str:
+    """Give these boundaries the name the legend shows (F217, V3.11); an
+    empty name takes it away, and they read "Boundary" again."""
+    return (f"setBoundaryNames({_jsobj([str(b) for b in boundary_ids])}, "
+            f"{_jsstr(name or '')});")
+
+
 def undo_boundary(boundary_id: str) -> str:
     """Remove a boundary from the map by id. Wrapped in a typeof guard
     because ``_removeBoundaryEntry`` is an internal helper that may not
@@ -207,6 +243,14 @@ def undo_boundary(boundary_id: str) -> str:
         f"  }}"
         "})()"
     )
+
+
+def restore_boundary(boundary_id: str, points: list) -> str:
+    """Put a boundary's corners (``[[lat, lng], ...]``) back as the design
+    holds them, after an edit that would make it cross itself is refused
+    (V3.19, QF-14)."""
+    return (f"restoreBoundary({_jsstr(boundary_id)}, "
+            f"{_jsobj([[float(p[0]), float(p[1])] for p in points])});")
 
 
 # ── Plant markers ───────────────────────────────────────────────────────────
@@ -340,6 +384,12 @@ def place_site_pin(lat: float, lng: float, label: str = "") -> str:
 
 def clear_site_pin() -> str:
     return "clearSitePin(false);"
+
+
+def zoom_to_site_pin(lat: float, lng: float, zoom: int) -> str:
+    """Bring a pin a person just set into view at ``zoom``, never zooming
+    out (V3.19, QF-2)."""
+    return f"zoomToSitePin({float(lat)}, {float(lng)}, {int(zoom)});"
 
 
 def set_site_pin_drop_mode(active: bool) -> str:
@@ -577,32 +627,10 @@ def clear_wind_shadow() -> str:
     return "clearWindShadow();"
 
 
-def draw_splat_ortho_overlay(png_data_url: str, bbox: dict,
-                             opacity: float) -> str:
-    """Render the baked top-down splat photo as its own image overlay (V1.65)
-    — a personal, fresher "satellite" layer of the user's yard. Separate from
-    the slope/shade overlays so all can show at once; mirrors
-    ``draw_shade_overlay``."""
-    payload = {"image": png_data_url, "bbox": bbox, "opacity": float(opacity)}
-    return f"drawSplatOrthoOverlay({_jsobj(payload)});"
-
-
-def set_splat_ortho_visible(visible: bool) -> str:
-    return f"setSplatOrthoVisible({_jsbool(visible)});"
-
-
-def set_splat_ortho_opacity(opacity: float) -> str:
-    return f"setSplatOrthoOpacity({float(opacity)});"
-
-
-def clear_splat_ortho() -> str:
-    return "clearSplatOrtho();"
-
-
 def draw_site_photo_overlay(image_data_url: str, bbox: dict,
                             opacity: float) -> str:
     """Render a user yard/drone photo as a georeferenced map underlay (F24) —
-    its own image layer (like the splat ortho / shade overlays) so it composes
+    its own image layer (like the shade overlay) so it composes
     with everything else."""
     payload = {"image": image_data_url, "bbox": bbox, "opacity": float(opacity)}
     return f"drawSitePhotoOverlay({_jsobj(payload)});"
@@ -655,6 +683,29 @@ def clear_shadow_polygons() -> str:
 
 def clear_auto_terrain() -> str:
     return "clearAutoTerrain();"
+
+
+# ── North arrow and scale bar (F205, V3.06) ─────────────────────────────────
+
+#: The scale bar's units: automatic by default (metres below 1 km, kilometres
+#: from 1 km; V3.19, QF-18, the owner's K1), or kilometres or metres fixed.
+#: Anything else is read as automatic, in the page too.
+SCALE_UNITS = ("auto", "km", "m")
+
+
+def set_north_arrow(visible: bool) -> str:
+    return f"setNorthArrow({_jsbool(visible)});"
+
+
+def set_scale_bar(visible: bool, unit: str = "auto") -> str:
+    unit = unit if unit in SCALE_UNITS else "auto"
+    return f"setScaleBar({_jsbool(visible)}, {_jsstr(unit)});"
+
+
+def hold_offline_notice(held: bool) -> str:
+    """Keep the line that says the map needs a connection off the map while
+    Export PDF takes its picture (V3.19, QF-6), and put it back after."""
+    return f"holdOfflineNotice({_jsbool(held)});"
 
 
 # ── Resize / invalidate (load-bearing — see map_widget.py block comment) ────

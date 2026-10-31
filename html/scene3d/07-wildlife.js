@@ -226,8 +226,9 @@ function _sizeLine(size) {
   if (!size) return '';
   const trueM = Number(size.true_m || size.m || 0);
   if (!(trueM > 0)) return '';
-  const measure = trueM < 0.1 ? Math.round(trueM * 1000) + ' mm'
-                              : Math.round(trueM * 100) + ' cm';
+  let measure = trueM < 0.1 ? Math.round(trueM * 1000) + ' mm'
+                            : Math.round(trueM * 100) + ' cm';
+  if (size.what) measure = size.what + ' ' + measure;     // "wingspan 198 cm"
   const boost = Number(size.boost || 1);
   return boost >= 1.15
     ? measure + ' — shown ' + Math.round(boost) + '× life size so you can see it'
@@ -251,6 +252,11 @@ function rebuildWildlife() {
     if (!obj) continue;
     // Life size, before anything measures or positions it (V2.46).
     scaleCritterToLife(obj, spec.size);
+    if (app.perch_pitch != null) obj.userData.perchPitch = app.perch_pitch;
+    // Yaw, then pitch about the bird's OWN wing axis. The default order pitched
+    // about the world's x, so a bird that turned to look around rolled over
+    // instead of sitting up; at a hawk's 1.0 rad that is a bird on its side.
+    obj.rotation.order = 'YXZ';
     // At night, lift each critter's self-illumination so the moths & bats read
     // against the dark instead of disappearing.
     if (sceneNight) obj.traverse(o => {
@@ -259,7 +265,7 @@ function rebuildWildlife() {
     });
     const gy = terrainHeightAt(spec.x, spec.y, lastTerrain);
     const anchor = new THREE.Vector3(spec.x, gy, -spec.y);
-    obj.position.set(anchor.x, gy + (spec.h || 0.3), anchor.z);
+    obj.position.set(anchor.x, gy + (spec.h ?? 0.3), anchor.z);   // `??`: a bird's feet ARE at 0 (V2.97)
     // Backref so hover can name the creature + the plant it's using.
     obj.userData.critterInfo = { name: spec.name || '', on: spec.on || '',
                                  rel: spec.rel || '', kind: spec.kind,
@@ -293,18 +299,18 @@ function rebuildWildlife() {
     // Route: the plants this species uses, as world targets (x, ground+perchH, z).
     // The animal travels between them (V2.13) instead of orbiting one plant.
     const route = (spec.route && spec.route.length ? spec.route
-                   : [[spec.x, spec.y, spec.h || 0.3]]).map(w => {
+                   : [[spec.x, spec.y, spec.h ?? 0.3]]).map(w => {
       const wgy = terrainHeightAt(w[0], w[1], lastTerrain);
-      return new THREE.Vector3(w[0], wgy + (w[2] || 0.3), -w[1]);
+      return new THREE.Vector3(w[0], wgy + (w[2] ?? 0.3), -w[1]);
     });
     wildlifeCritters.push({
-      obj, shadow, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
+      obj, shadow, anchor, h: spec.h ?? 0.3, seed: (spec.seed || 0) % 1000,
       anim: obj.userData.anim, route, ri: 0, dwell: 0,
       pos: obj.position.clone(),
       // Collision radius (V2.46). Half the animal, floored — a bee is 11 mm and
       // a sub-centimetre radius makes the obstacle test worthless numerically
       // without making it visibly wrong.
-      bodyR: Math.max(0.04, drawn * 0.5),
+      bodyR: Math.max(0.04, drawn * (obj.userData.anim === 'walk' ? 0.2 : 0.5)),
       speed: (0.7 + ((spec.seed || 0) % 50) / 45),   // m/s scale per animal
       wanderPh: ((spec.seed || 0) % 628) / 100,
     });
@@ -333,6 +339,11 @@ const _WILD_MOVE = {
   // second. Halved so a bird can actually be watched.
   perch:  { spd: 2.2, dwell: 3.2, bob: 0.02 },   // birds: fly, then a long sit
   ground: { spd: 2.2, dwell: 1.4, bob: 0.0 },    // mammals: scurry then freeze
+  // V2.97 (F174): a grouse, a crane or a goose walks, a duck swims (the same
+  // motion at the waterline), and a hawk with no tree circles without landing,
+  // one turn of a 8-18 m circle in 10-30 s rather than a frantic 6.
+  walk:   { spd: 0.45, dwell: 5.0, bob: 0.0 },
+  soar:   { spd: 3.0, dwell: 0, bob: 0.0 },
   crawl:  { spd: 0.25, dwell: 2.5, bob: 0.0 },   // beetles: slow amble
 };
 const _WV = new THREE.Vector3();
@@ -411,8 +422,19 @@ function critterHeading(dx, dz) {
 const _PERCH_PITCH = 0.45;         // nose-up, the way a passerine sits on a twig
 const _MAX_DIVE = 0.55;            // rad; a songbird does not stoop like a falcon
 
+// Long wings cannot stay spread on a perch (V2.97): a build with folded wings
+// (FoldL/FoldR) shows them at rest and its spread, beating pair in the air.
+function _wingState(o, flying) {
+  const f = o.userData.folds;
+  if (!f || o.userData._flying === flying) return;
+  o.userData._flying = flying;
+  for (const w of o.userData.wings || []) w.pivot.visible = flying;
+  for (const n of f) n.visible = !flying;
+}
+
 function _birdAttitude(c, o, flying, dt) {
-  let want = _PERCH_PITCH;
+  // A hawk or owl sits upright (app.perch_pitch, V2.97); a songbird at 0.45.
+  let want = o.userData.perchPitch != null ? o.userData.perchPitch : _PERCH_PITCH;
   if (flying) {
     const vy = c._prevY == null ? 0 : (o.position.y - c._prevY) / Math.max(1e-4, dt);
     const vh = Math.max(0.2, c._vh || 1.0);
@@ -446,8 +468,9 @@ function animateWildlife(tRaw) {
       _WV.subVectors(tgt, c.pos); _WV.y = 0;
       const flat = _WV.length();
       if (flat < 0.25) {                          // arrived → dwell
-        c.dwell = mv.dwell * (0.6 + (c.seed % 40) / 50);
-      } else if (c.anim === 'perch') {
+        if (c.anim === 'soar') c.ri = (c.ri + 1) % c.route.length;
+        else c.dwell = mv.dwell * (0.6 + (c.seed % 40) / 50);
+      } else if (c.anim === 'perch' || c.anim === 'soar') {
         // Birds fly between perches: a direct flight, then a long sit.
         //
         // V2.45b — CONSTANT SPEED, not a lerp. `c.pos.lerp(tgt, dt * 3.0)` is
@@ -525,6 +548,7 @@ function animateWildlife(tRaw) {
     }
     // Height + local idle motion by kind.
     if (c.anim === 'flier' || c.anim === 'hover') {
+      _wingState(o, true);                        // a hovering hummingbird's wings
       const wob = single ? 0.18 : 0.0;            // lone fliers wander in place
       o.position.x = c.pos.x + Math.sin(t * 0.0016 + ph) * wob;
       o.position.z = c.pos.z + Math.cos(t * 0.0019 + ph) * wob;
@@ -550,8 +574,9 @@ function animateWildlife(tRaw) {
       // does not sit on the flower tilted over.
       if (c.dwell > 0) o.rotation.z += (0 - o.rotation.z) * Math.min(1, dt * 3);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
-    } else if (c.anim === 'perch') {
-      const flying = c.dwell <= 0;
+    } else if (c.anim === 'perch' || c.anim === 'soar') {
+      const flying = c.anim === 'soar' || c.dwell <= 0;
+      _wingState(o, flying);
       // **The height came from the DESTINATION, not from the flight** (V2.46d).
       // The travel branch above climbs `c.pos.y` toward the next perch, and
       // this line then threw that away and used `tgt.y` — so a bird was drawn
@@ -580,6 +605,11 @@ function animateWildlife(tRaw) {
         o.position.y += boundOffset(c, t);
       }
       _birdAttitude(c, o, flying, dt);
+      if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
+    } else if (c.anim === 'walk') {
+      o.position.y = c.pos.y;          // the waypoint's own height: 0, or afloat
+      o.rotation.x = 0;
+      _wingState(o, false);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'ground') {
       const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;

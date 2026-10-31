@@ -180,6 +180,39 @@ def clear_cache() -> None:
     _cache.clear()
 
 
+def your_designs(directory: Optional[str] = None, *,
+                 include_last: bool = True) -> list[dict]:
+    """The designs a person has, newest first: the saves folder, plus the
+    design they were last in when it is kept somewhere else (a file opened
+    with Browse), marked ``elsewhere``. Never raises.
+
+    One list for the start screen and the saves list (V3.37), so "All 5
+    designs…" opens on five."""
+    entries = list_saves(directory)
+    if include_last:
+        last = last_design()
+        if last and not any(os.path.abspath(e["path"]) == os.path.abspath(last)
+                            for e in entries):
+            entries.append(dict(describe(last), elsewhere=True))
+            entries.sort(key=lambda d: d.get("modified") or 0, reverse=True)
+    return entries
+
+
+def short_place(entry: dict) -> str:
+    """Where the design is, short: "8103 95A Street NW", not the address
+    search's whole "8103, 95A Street NW, Ritchie, Mill Creek South, Edmonton,
+    Alberta, …" (V3.37: it ran off the saves list behind a sideways scroll
+    bar). ``""`` when there is no place, or the name already says it."""
+    site = (entry.get("site") or "").strip()
+    if not site:
+        return ""
+    from src.design_name import from_address
+    short = from_address(site) or site
+    if (entry.get("name") or "").lower().startswith(short.lower()):
+        return ""
+    return short
+
+
 def summary_line(entry: dict) -> str:
     """The second line under a save's name, in a person's words.
 
@@ -197,8 +230,9 @@ def summary_line(entry: dict) -> str:
             bits.append(f"{species} species")
     else:
         bits.append("no plants yet")
-    if entry.get("site"):
-        bits.append(entry["site"])
+    place = short_place(entry)
+    if place:
+        bits.append(place)
     return " · ".join(bits)
 
 
@@ -221,6 +255,75 @@ def when(entry: dict, now: Optional[float] = None) -> str:
         n = int(delta // 86400)
         return f"{n} day{'s' if n != 1 else ''} ago"
     return time.strftime("%d %b %Y", time.localtime(stamp))
+
+
+# ── Renaming, and keeping unsaved work (V3.23, ST-7 and ST-8) ───────────────
+
+def rename_save(path: str, new_name: str) -> str:
+    """Give a saved design a new name, inside the file and on it; return its
+    new path.
+
+    Save As was the only way before, and it left the name inside the file
+    unchanged. The new file goes beside the old one under
+    :func:`unique_save_path`, so nothing is overwritten; the old file (and its
+    one-save backup, moved along) is removed only once the new one is written.
+    The last-design memory follows the file. Raises on an unreadable file or a
+    blank name, so the caller can say so."""
+    from src import project as project_io           # noqa: PLC0415
+    new_name = " ".join((new_name or "").split())
+    if not new_name:
+        raise ValueError("a design needs a name")
+    data = project_io.load_project(path)
+    data.setdefault("properties", {})["project_name"] = new_name
+    old = os.path.abspath(path)
+    was_last = os.path.abspath(last_design() or "") == old
+    target = unique_save_path(new_name, os.path.dirname(old))
+    project_io.save_project(data, target)
+    if os.path.exists(old + ".bak"):
+        try:
+            os.replace(old + ".bak", target + ".bak")
+        except OSError:
+            pass
+    os.remove(old)
+    _cache.pop(old, None)
+    _cache.pop(path, None)
+    if was_last:
+        remember_last_design(target)
+    return target
+
+
+#: The date :func:`keep_unsaved` puts on a name, however many times it was put.
+_KEPT = re.compile(r"(?:\s*\(unsaved changes from [^()]*\))+\s*$")
+
+
+def keep_unsaved(autosave: str, now: Optional[float] = None,
+                 directory: Optional[str] = None) -> str:
+    """Move a crash's autosave into the saves folder as its own design,
+    "<name> (unsaved changes from 12 Oct)", and delete the autosave; return the
+    new path, or ``""`` when there was nothing readable to keep.
+
+    The start screen offers Restore; picking anything else used to leave the
+    autosave where the next session's first autosave overwrote it five minutes
+    later (S13: keep it automatically).
+
+    A design that was itself kept this way loses its old date rather than
+    growing a second one: "Yard (unsaved changes from 17 Oct) (unsaved changes
+    from 24 Oct)" was on the owner's list in V3.37."""
+    from src import project as project_io           # noqa: PLC0415
+    try:
+        data = project_io.load_project(autosave)
+    except (OSError, ValueError):
+        return ""
+    props = data.setdefault("properties", {})
+    stamp = time.localtime(now if now is not None else os.path.getmtime(autosave))
+    name = _KEPT.sub("", props.get("project_name") or "") or "Untitled Design"
+    props["project_name"] = (f"{name} (unsaved changes from "
+                             f"{stamp.tm_mday} {time.strftime('%b', stamp)})")
+    target = unique_save_path(props["project_name"],
+                              directory or ensure_saves_dir())
+    project_io.save_project(data, target)
+    os.remove(autosave)
+    return target
 
 
 # ── Which design you were last in ───────────────────────────────────────────

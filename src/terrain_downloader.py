@@ -21,10 +21,10 @@ import urllib.request
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from src.http_utils import _USER_AGENT
 from src.resources import resource_path
 from src.terrain import (
     _EDM_RESOURCE,
-    _USER_AGENT,
     _edm_detect_fields,
     _coerce_float,
     _flatten_geojson_lines,

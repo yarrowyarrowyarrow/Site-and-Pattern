@@ -44,7 +44,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Optional
 
-from src.db.plants import PHOTO_SLOTS, get_connection
+from src.db.plants import PHOTO_SLOTS, get_connection, photo_order
 
 # Re-exported so callers have one import for the vocabulary.
 SLOTS = PHOTO_SLOTS
@@ -61,16 +61,10 @@ SLOT_PURPOSE = {
     "seedling": "the first true leaves — what NOT to weed in May",
 }
 
-_SLOT_ORDER = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
-
-
-def _rank(row: dict) -> tuple:
-    """Sort key: preferred slot first, a person's own photo before a shipped one
-    in the same slot, then the authored rank."""
-    return (_SLOT_ORDER.get(row.get("slot"), 99),
-            0 if row.get("origin") == "user" else 1,
-            row.get("rank") or 0,
-            row.get("id") or 0)
+#: Sort key, best first: ``src.db.plants.photo_order`` (a person's own photo,
+#: then the owner's picked order, then the slot), so this list and the one
+#: photo every other screen shows cannot disagree.
+_rank = photo_order
 
 
 def photos_for(scientific_name: str, slot: str = "") -> list[dict]:
@@ -94,7 +88,8 @@ def photos_for(scientific_name: str, slot: str = "") -> list[dict]:
 
 
 def best_photo(scientific_name: str) -> Optional[dict]:
-    """The one photo to show when there is room for one. See the slot order."""
+    """The one photo to show when there is room for one: the first by
+    ``photo_order``."""
     shots = photos_for(scientific_name)
     return shots[0] if shots else None
 

@@ -1,0 +1,106 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">measuring…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// Edit › Select all and the selection count behind Edit › Delete (dev page +
+// the harness behind tests/test_edit_menu.py, V3.19, QF-15). Drives the real
+// map.html in a frame, as measure_probe.html does, and records every call the
+// page makes to Python instead of sending it.
+//
+// Results go into document.title as JSON, read by a headless `--dump-dom` run.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;
+const YARD = [[LAT - D, LNG - D * 1.5], [LAT - D, LNG + D * 1.5],
+              [LAT + D, LNG + D * 1.5], [LAT + D, LNG - D * 1.5]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function called(name) { return calls.filter(c => c[0] === name); }
+function lastCount() { const c = called('onSelectionCount'); return c.length ? c[c.length - 1][1] : null; }
+function kinds() { return w.selectedItems.map(s => s.kind).sort(); }
+
+async function design() {
+  w.clearAll();
+  w.clearMeasure();
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD }), false);
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D, 2, 'wildflower', null);
+  w.placePlantMarker(43, 'Saskatoon', LAT - D * 0.5, LNG - D, 2, 'shrub', null);
+  w.loadMeasurement('m1', [[LAT - D * 0.6, LNG - D * 0.8], [LAT - D * 0.6, LNG + D * 0.4]]);
+  await wait(50);
+}
+
+async function run() {
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+  await design();
+  w.map.fitBounds(w.boundaries[0].layer.getBounds(), { padding: [80, 80] });
+  await wait(300);
+
+  // ── Everything shown, and the count Python is told ──────────────────────
+  w.clearSelection();
+  out.cleared_count = lastCount();
+  calls = [];
+  w.selectAll();
+  out.all = { kinds: kinds(), count: lastCount() };
+  w.selectAll();                                          // again: the same
+  out.again = kinds().length;
+
+  // ── Off the map's edge too: the whole world, not the view ───────────────
+  w.map.setView([LAT + 0.05, LNG + 0.05], 18);
+  await wait(100);
+  w.selectAll();
+  out.out_of_view = kinds();
+
+  // ── One Delete takes the lot, in one call, and the count goes to 0 ──────
+  calls = [];
+  w.deleteSelected();
+  const del = called('onSelectionDeleted');
+  const payload = del.length ? JSON.parse(del[0][1]) : {};
+  out.delete = { calls: del.length, plants: (payload.plants || []).length,
+                 boundaries: payload.boundaries || [], measurements: payload.measurements || [],
+                 count: lastCount() };
+
+  // ── What a View switch hides is not selected ────────────────────────────
+  await design();
+  w.setPlantsVisible(false);
+  w.selectAll();
+  out.plants_hidden = kinds();
+  w.setPlantsVisible(true);
+  w.setBoundaryVisible(false);
+  w.setMeasureVisible(false);
+  w.selectAll();
+  out.boundary_and_measure_hidden = kinds();
+  w.setBoundaryVisible(true);
+  w.setMeasureVisible(true);
+
+  // ── A redraw (an open, an undo, File › New) leaves nothing selected ─────
+  // clearAll empties the map; a selection left behind kept its badge on an
+  // empty map and Edit › Delete offered.
+  await design();
+  w.selectAll();
+  calls = [];
+  w.clearAll();
+  out.after_redraw = { kinds: kinds(), count: lastCount(),
+                       badge: !!w.document.getElementById('_pd_sel_badge') };
+
+  // ── Nothing on the map: nothing selected, and Python is told 0 ──────────
+  w.clearAll();
+  w.clearMeasure();
+  calls = [];
+  w.selectAll();
+  out.empty = { kinds: kinds(), count: lastCount() };
+}
+
+run().then(
+  () => { document.title = 'MEASURED ' + JSON.stringify(out); },
+  e => { out.error = String(e && e.stack || e); document.title = 'MEASURED ' + JSON.stringify(out); }
+).finally(() => { document.getElementById('out').textContent = JSON.stringify(out, null, 1); });
+</script>
+</body></html>

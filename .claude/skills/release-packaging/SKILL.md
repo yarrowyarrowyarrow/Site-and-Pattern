@@ -30,11 +30,18 @@ push to a V<major>.<minor> branch
                builds the NSIS EXE → publishes to the SAME GitHub Release
       │
       ▼
-GitHub Release  (tag e.g. V2.19, assets: SiteAndPattern-V2.19.dmg + ...-Setup.exe)
-      │
+GitHub PRERELEASE  (tag release-V3.18, assets: SiteAndPattern-V3.18.dmg + ...-Setup.exe)
+      │   since V3.18 (FN-7): the updater skips prereleases, so nobody is offered it yet
+      ▼
+the owner PROMOTES it: release page → Edit → untick "Set as a pre-release"
+      │   (or Actions → "Promote a release", promote-release.yml, which checks both
+      │   installers first; runnable only once that file is on the default branch, main)
       ▼
 in-app updater  src/github_releases.py  (list_releases / latest_release by tag)
                 + src/controllers/update_flow.py  →  Help → Check for Updates downloads it
+      │   Windows (V3.15): app starts the installer with `/UPDATE /D=<its folder>` and closes;
+      ▼   installer.nsi waits for its files, replaces the program, reopens it as the user
+installed copy updated in place
 ```
 
 Key facts (from `.github/workflows/release-macos.yml`):
@@ -44,14 +51,18 @@ Key facts (from `.github/workflows/release-macos.yml`):
   ONE DMG runs on both Intel and Apple Silicon (Big Sur 11+).
 - `APP_BUILD_VERSION: ${{ github.ref_name }}` is baked into `version.txt`;
   `PYI_TARGET_ARCH: x86_64` drives the spec's `EXE(target_arch=…)`.
-- Publishes with `softprops/action-gh-release@v2`, `tag_name = ref_name`,
-  `fail_on_unmatched_files: true`. The macOS and Windows workflows publish to
+- Publishes with `softprops/action-gh-release@v2`, `tag_name =
+  release-<ref_name>`, `prerelease: true` (V3.18), `fail_on_unmatched_files:
+  true`. A later push to a promoted version makes it a prerelease again until
+  it is promoted again. The macOS and Windows workflows publish to
   the **same release** with an identical body, so whichever finishes last
   sets correct combined notes.
 
-So: **pushing your V-branch is the release action.** There's no separate tag
-step. Merge/label conventions aside, the branch push is what the workflows key
-on. Only push when the branch is release-ready.
+So: **pushing your V-branch builds and publishes a prerelease; promoting it is
+the release action** (V3.18, FN-7, the owner's decision D5). Before V3.18 every
+push was a full release offered to every installed copy, five in one day on 8
+October 2026. Only the owner promotes: never run `promote-release.yml` from a
+session unless they ask for that version by name.
 
 ## Local builds (not run here — this container can't build installers)
 
@@ -85,7 +96,7 @@ pyinstaller scripts/packaging/permadesign.spec      # from the repo root
 | `permadesign.spec` | PyInstaller one-dir spec. Bundles `data/`, `html/`, `src/db/schema.sql` (and `version.txt` when present) via `datas`; artifact base name `SiteAndPattern` (no spaces), display name "Site & Pattern". |
 | `build_installer.sh` | macOS/Linux build: clean, write `version.txt`, run PyInstaller, package DMG/archive. Called by `release-macos.yml`. |
 | `build_installer.bat` | Windows equivalent; runs PyInstaller then NSIS. Called by `release-windows.yml`. |
-| `installer.nsi` | NSIS script for the Windows 1-click installer (shortcuts, Start-Menu). |
+| `installer.nsi` | NSIS script for the Windows installer: shortcuts, Start menu, an uninstaller listed in Settings → Apps, and the `/UPDATE` mode the in-app updater runs (V3.15, F228: skip the pages, wait for the app to let go of its files, replace `_internal`, reopen through Explorer). `AllowSkipFiles off`: a locked file is never skipped. `tests/test_installer_script.py` pins the contract with `update_flow` and compiles it with `-WX`. |
 
 ## How a frozen build knows its version
 
@@ -94,6 +105,14 @@ a one-line `version.txt` holding the `V<major>.<minor>` tag. The spec bundles
 it **only when present** (absent in a plain checkout). `src/app_version.py`
 `build_version()` reads it via `resource_path("version.txt")`; a source
 checkout returns `None` and the updater falls back to the live git branch.
+`running_version()` (V3.16) is what a person sees: the main window's title
+(`Site & Pattern V3.16 — …`, through `branding.window_title`) and Help →
+About / Version, from `version.txt` or a source checkout's `.git/HEAD`, only
+when it is a `V<major>.<minor>`.
+
+## The app's icon (V3.17)
+
+`assets/icon/` holds it, made from a photograph by `scripts/packaging/make_app_icon.py` (run it again after changing `SOURCE` or the crops). The spec gives the `.ico` to `EXE` and the `.icns` to `BUNDLE` and bundles the PNGs at `assets/icon` for the window icon (`src/app_icon.py`); `installer.nsi` uses the `.ico` as `MUI_ICON`/`MUI_UNICON` and calls `SHChangeNotify` so Windows redraws shortcuts after an update. **Never set `icon=None` again**: PyInstaller then embeds its own snake-on-a-floppy icon, which malware commonly carries. `tests/test_app_icon.py` guards all of it.
 
 ## Resource bundling (why installs don't crash with "no such file")
 
@@ -134,7 +153,12 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 2. Launch from the shortcut / Applications folder.
 3. Confirm the plant browser and community panels are populated, the Leaflet
    map loads, and no error dialogs appear.
-4. Without a spare machine, `python3 -m unittest discover -s tests -t .` includes a
+4. **Read the title bar** (V3.16): `Site & Pattern V<x.y> — …` names the build.
+   After an in-app update, a title with no number while Help reads the new
+   version means the old program is running beside the new `version.txt`
+   (the program is inside the `.exe`, `version.txt` in `_internal`): an update
+   that half-arrived.
+5. Without a spare machine, `python3 -m unittest discover -s tests -t .` includes a
    frozen-build resource-resolution simulation (`tests/test_resource_path.py`).
 
 ## Troubleshooting build/release failures
@@ -145,15 +169,29 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | Installed app: empty panels / "no such table" | A data file missing from `datas` or not read via `resource_path` (see `debugging` §1). |
 | Installed app: "Missing module" | Add to `hiddenimports` in the spec. |
 | "NSIS makensis not found" (Windows) | Falls back to ZIP; install NSIS and rebuild for the 1-click installer. |
+| CI, Windows job: *SiteAndPattern-Installer.exe was not produced*, after "NSIS not found" in the build step | `choco install nsis` failed on the runner (a 504 from community.chocolatey.org, V3.18) and the script fell back to a zip. Not the code: re-run the failed job once. |
 | Network features dead in the frozen app | Certs — `src/ssl_bootstrap.py` / `certifi`; see `debugging` §6. |
-| Updater doesn't see a new version | Branch/tag not `V<major>.<minor>`, or no Release published — check the workflow run. |
+| Updater doesn't see a new version | Not promoted yet: it is a prerelease until promoted on the release page or by "Promote a release" (V3.18). Otherwise the branch/tag is not `V<major>.<minor>`, or no Release was published — check the workflow run. |
+| Windows: *Error opening file for writing: …SiteAndPattern.exe* | The app was still running; Windows will not let a running program's files be written. Copies before V3.15 started the installer and stayed open. From V3.15 the app closes and the installer waits for it (`/UPDATE`); if something else holds a file, close it and Retry. There is no Ignore any more: it left the old program carrying the new `version.txt`, which the updater then read as up to date. |
 
 ## Pitfalls
 
+- **Never end a push on a commit that changes `.github/workflows/`** (V3.18).
+  The release is tagged on the push's last commit, and GitHub refuses a
+  workflow token creating a tag on a commit that changes a workflow file:
+  the publish step fails with *403 Resource not accessible by integration*
+  even though the token has `Contents: write`, after both installers have
+  built. Follow a workflow change with any other commit in the same push.
+- **A commit message that spells out the skip marker skips the run, whatever
+  the sentence around it says** (V3.18). GitHub looks for the bracketed
+  `skip ci` text anywhere in the message: "this commit carries no [skip ci]"
+  skipped every workflow. Never write the marker in a message that must run.
+
 - **Pushing a V-branch triggers a real public release build.** Don't push a
   half-finished branch expecting it to be private — the workflows fire on the
-  push. Confirm the branch is release-ready (see `start-work` definition of
-  done).
+  push, and the prerelease is downloadable from the releases page even though
+  the updater does not offer it. Confirm the branch is release-ready (see
+  `start-work` definition of done).
 - **Never add a heavy native dep to `requirements.txt` casually** — see the
   optional-deps lesson.
 - **Keep the two release-workflow bodies identical** — they publish to the
@@ -171,6 +209,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 | `INSTALL.md` | End-user install instructions. |
 | `.github/workflows/release-macos.yml` | Cloud-Mac x86_64 DMG build + Release publish. |
 | `.github/workflows/release-windows.yml` | Windows NSIS EXE build + Release publish. |
+| `.github/workflows/promote-release.yml` | Makes one prerelease a full release (V3.18); run by hand, and only once the file is on the default branch. |
 | `scripts/packaging/permadesign.spec` | PyInstaller spec (`datas`, `hiddenimports`). |
 | `scripts/packaging/build_installer.sh` | macOS/Linux build script. |
 | `scripts/packaging/build_installer.bat` | Windows build script. |

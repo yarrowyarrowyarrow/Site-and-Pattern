@@ -163,9 +163,10 @@ def _step_succession(rows: list[dict]) -> dict:
             role = "mid"
         roles.get(role, roles["mid"]).append(r.get("common_name") or "a plant")
     lesson = (
-        "A landscape is a process, not a product. Pioneers — fast, sun-loving, "
-        "short-lived — stabilise bare ground and then give way to the longer-lived "
-        "climax species that rise up through them. Designing for a single moment is "
+        "A landscape is a process, not a product. Quick starters — fast, "
+        "sun-loving, short-lived — fill in bare ground first and then give way "
+        "to the longer-lived climax species that rise up through them. "
+        "Designing for a single moment is "
         "why so many plantings look right on install day and wrong five years on. "
         "Design the trajectory: some plants for now, some for the canopy to come.")
     np, nm, nc = len(roles["pioneer"]), len(roles["mid"]), len(roles["climax"])
@@ -173,16 +174,18 @@ def _step_succession(rows: list[dict]) -> dict:
         return _mk("succession", "Succession over time", lesson,
                    "No plants placed yet — plan for both now and later.", "empty")
     if np and nc:
-        readout = (f"Good spread across time: {np} pioneer, {nm} mid, {nc} climax "
-                   f"species. Pioneers cover the ground now; the climax layer takes "
-                   f"over as they fade.")
+        # "Quick starter", never "pioneer", where a person reads it (V3.19,
+        # WD-6); the role's key stays "pioneer".
+        readout = (f"Good spread across time: {np} quick-starting, {nm} mid "
+                   f"and {nc} climax species. The quick starters cover the ground "
+                   f"now; the climax layer takes over as they give way.")
         status = "good"
     else:
-        have = ("all pioneers/early species" if np and not nc else
+        have = ("all quick starters" if np and not nc else
                 "all climax/long-lived species" if nc and not np else
                 "all mid-succession species")
         readout = (f"Your design is {have}. A trajectory needs both — add "
-                   f"{'a long-lived climax anchor' if not nc else 'fast pioneers to cover the ground now'} "
+                   f"{'a long-lived climax anchor' if not nc else 'quick starters to cover the ground now'} "
                    f"so year 1 and year 15 both read well.")
         status = "attention"
     return _mk("succession", "Succession over time", lesson, readout, status)

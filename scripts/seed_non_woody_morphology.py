@@ -178,7 +178,6 @@ GENUS = {
     "Monarda":        ("lanceolate", 8.0, "opposite", "clump"),
     "Phacelia":       ("pinnatifid", 8.0, "alternate", "clump"),
     "Prosartes":      ("ovate", 8.0, "alternate", "clump"),
-    "Rudbeckia":      ("lanceolate", 12.0, "alternate", "clump"),
     "Sphaeralcea":    ("lobed", 5.0, "alternate", "clump"),
     "Symphyotrichum": ("lanceolate", 8.0, "alternate", "clump"),
     "Valeriana":      ("compound_pinnate", 15.0, "opposite", "clump"),
@@ -203,8 +202,10 @@ GENUS = {
     "Prunella":       ("ovate", 5.0, "opposite", "mat"),
     "Silene":         ("linear", 1.0, "opposite", "cushion"),
     "Phlox":          ("linear", 1.5, "opposite", "cushion"),
-    "Escobaria":      ("scale", 0.5, "alternate", "succulent"),
-    "Opuntia":        ("scale", 0.3, "alternate", "succulent"),
+    # V2.93: the cacti's bodies are their stems, a spiny ball and chains of
+    # flat pads (src/succulent_habit.py); the leaves are the scales.
+    "Escobaria":      ("scale", 0.5, "alternate", "globose"),
+    "Opuntia":        ("scale", 0.3, "alternate", "pads"),
     "Rhodiola":       ("spatulate", 3.0, "alternate", "succulent"),
     "Sedum":          ("lanceolate", 2.0, "alternate", "succulent"),
 
@@ -235,19 +236,21 @@ GENUS = {
     # ── aquatics / emergents / floating ─────────────────────────────────────
     "Acorus":         ("linear", 60.0, "basal", "emergent"),
     "Alisma":         ("ovate", 15.0, "basal", "emergent"),
-    "Elodea":         ("linear", 1.5, "whorled", "floating"),
-    "Equisetum":      ("scale", 1.0, "whorled", "emergent"),
+    "Elodea":         ("linear", 1.5, "whorled", "submerged"),
+    # Every horsetail is jointed stems, whatever water it stands in (V2.89).
+    "Equisetum":      ("scale", 1.0, "whorled", "jointed"),
     "Hippuris":       ("linear", 3.0, "whorled", "emergent"),
     "Lemna":          ("orbicular", 0.5, "basal", "floating"),
     "Menyanthes":     ("trifoliate", 8.0, "basal", "emergent"),
-    "Myriophyllum":   ("pinnatifid", 3.0, "whorled", "floating"),
+    "Myriophyllum":   ("pinnatifid", 3.0, "whorled", "submerged"),
     "Nuphar":         ("cordate", 30.0, "basal", "floating"),
     "Sagittaria":     ("sagittate", 20.0, "basal", "emergent"),
-    "Sium":           ("compound_pinnate", 20.0, "alternate", "emergent"),
+    # V2.90: an erect leafy umbellifer; "emergent" said where it grows.
+    "Sium":           ("compound_pinnate", 20.0, "alternate", "erect"),
     "Sparganium":     ("linear", 60.0, "alternate", "emergent"),
-    "Stuckenia":      ("linear", 10.0, "alternate", "floating"),
+    "Stuckenia":      ("linear", 10.0, "alternate", "submerged"),
     "Typha":          ("linear", 100.0, "basal", "emergent"),
-    "Utricularia":    ("linear", 2.0, "alternate", "floating"),
+    "Utricularia":    ("linear", 2.0, "alternate", "submerged"),
 
     # ── graminoids: grasses, sedges, rushes ─────────────────────────────────
     # All linear-bladed basal tussocks; only blade length distinguishes them at
@@ -295,8 +298,8 @@ GENUS = {
 
 # Species that genuinely depart from their genus's typical form.
 SPECIES_OVERRIDE = {
-    # A shrubby cactus-like succulent, not the mat its relatives make.
-    "Escobaria vivipara":     ("scale", 0.5, "alternate", "succulent"),
+    # A spiny ball, solitary or a few together, not a mat (V2.93).
+    "Escobaria vivipara":     ("scale", 0.5, "alternate", "globose"),
     # Floating-leaved, unlike the marsh-marigold rosette.
     "Caltha natans":          ("reniform", 5.0, "basal", "floating"),
     # A creeping stoloniferous mat, unlike the upright cinquefoils.

@@ -1,0 +1,195 @@
+{
+  "_comment": "Species deliberately kept OUT of the native-plant catalogue, with the reason and the authority for each. src/data_quality.py:validate_excluded_taxa fails the build if one reappears in data/plants_master.json, data/garden_plants.json or as the `plant` of an edge in data/plant_fauna_master.json.",
+  "_why_this_file_exists": "A plant is removed once and can come back many times. Rudbeckia hirta shipped flagged `native_to_alberta = 1` and noted 'Classic prairie wildflower', so nothing in the app disagreed with it — and data/fetched/fauna_edges_candidates.json still holds 389 GloBI records naming it, ready to be re-proposed by the next sourcing pass. A deletion with no record of the decision is an invitation to redo it.",
+  "_scope": "This is NOT a nativity gate. It is a list of specific calls that were made, each with its evidence. A species absent from the catalogue and absent from here has simply never been considered.",
+  "_p9": "`authority` names who says so. Where the authorities disagree the entry says so rather than picking one silently — see docs/DESIGN_PHILOSOPHY.md P9.",
+  "taxa": [
+    {
+      "scientific_name": "Rudbeckia hirta",
+      "common_names": [
+        "Black-eyed Susan"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN (Database of Vascular Plants of Canada) records Rudbeckia hirta as introduced in AB, SK, MB and BC, and native from Ontario eastward. Moss, Flora of Alberta, agrees: introduced. It is a garden and wildflower-mix escape here, not a member of any Alberta plant community.",
+      "disagreement": "Occurrence data does not settle this and should not be read as if it did — the plant_ecoregions entry removed with this row carried 215 georeferenced GBIF records across eight prairie ecoregions, 102 of them in Aspen Parkland. That is what a widely-planted self-seeder looks like. Presence is not nativity; see src/establishment.py.",
+      "removed_in": "V2.74",
+      "removed_on": "2026-08-21",
+      "took_with_it": "150 documented plant-fauna edges, 1 plant_ecoregions entry, 2 seeded polyculture memberships and 1 worked-example fallback.",
+      "substitute": "Ratibida columnifera (Prairie Coneflower) — the native yellow-rayed, dark-coned composite it was standing in for, at a similar height and bloom window."
+    },
+    {
+      "scientific_name": "Helianthus giganteus",
+      "common_names": [
+        "Giant Sunflower"
+      ],
+      "reason": "not_native_to_alberta_or_saskatchewan",
+      "authority": "VASCAN (Database of Vascular Plants of Canada) records Helianthus giganteus from eastern Canada — Ontario eastward through Quebec and the Maritimes — and not from Alberta or Saskatchewan. Moss, Flora of Alberta, does not treat it. The prairies' tall native sunflowers are H. nuttallii and H. maximiliani, both already in the catalogue; the seed row's own note ('Tall perennial sunflower... major late-season pollinator and bird food') describes those equally well, which is how the wrong binomial went unquestioned.",
+      "disagreement": "The internal evidence is CONSISTENT with this but does not settle it, and the difference from Rudbeckia hirta is worth keeping. That removal was made against 215 georeferenced records: occurrence disagreed and lost, because presence is not nativity. Here there is no entry in data/plant_ecoregions.json at all — and the derived file records only species WITH rows, so an absence there means either no records inside the polygons or a fetch GBIF refused, and the file cannot tell them apart after the fact (see seed_ecoregion_ranges.FetchFailed). So the call rests on the authority, with the internal silence noted as agreeing rather than as proving.",
+      "not_machine_verified": "This container's egress policy answers 403 to CONNECT for data.canadensys.net, so VASCAN was cited here and not queried. From a machine with open egress, https://data.canadensys.net/vascan/api/0.1/search.json?q=Helianthus+giganteus returns the record in one request — and scripts/fetch_flora_nativity.py (F137) asks it for the whole catalogue at once, which is the point.",
+      "removed_in": "V2.75",
+      "removed_on": "2026-08-21",
+      "took_with_it": "11 documented plant-fauna edges (10 nectar, 1 seed_food; 8 from iNaturalist via GloBI, 2 Bumble Bee Watch, 1 Cornell Birds of the World) and 1 seeded polyculture membership. No animal was left without an edge, unlike V2.74, which orphaned six.",
+      "substitute": "Nuttall's Sunflower (Helianthus nuttallii) — the native tall sunflower of prairie wet meadows and sloughs, same August-September bloom, same bird_food / keystone_species / pollinator uses."
+    },
+    {
+      "scientific_name": "Festuca ovina",
+      "common_names": [
+        "Sheep Fescue"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "0 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Agoseris parviflora",
+      "common_names": [
+        "Short-beaked Agoseris"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "2 documented plant-fauna edges deleted"
+    },
+    {
+      "scientific_name": "Solidago simplex",
+      "common_names": [
+        "Sticky Goldenrod (Mount Albert Goldenrod)"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "2 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Helianthus annuus",
+      "common_names": [
+        "Common Sunflower"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip) records this species as introduced in Alberta and Saskatchewan; a catalogue of native plants should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "113 documented plant-fauna edges deleted, 9 animals left with no edge, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Achillea millefolium",
+      "common_names": [
+        "Yarrow"
+      ],
+      "reason": "merged_into_achillea_borealis",
+      "authority": "VASCAN v37.17 records Achillea millefolium as introduced in AB/SK; the native race recorded here is Achillea borealis, which this catalogue already carries. Edges keep their original source and gain renamed_from.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "332 documented plant-fauna edges re-pointed to Boreal Yarrow, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Achillea borealis (Boreal Yarrow)"
+    },
+    {
+      "scientific_name": "Oligoneuron rigidum",
+      "common_names": [],
+      "reason": "duplicate_of_solidago_rigida",
+      "authority": "VASCAN v37.17 treats Oligoneuron as a synonym of Solidago; Solidago rigida was already in the catalogue under the same common name, sourced. The two rows were one plant.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "no edges: the 78 'Stiff Goldenrod' edges key on the common name and stay with Solidago rigida",
+      "substitute": "Solidago rigida (Stiff Goldenrod)",
+      "note": "The common name 'Stiff Goldenrod' is deliberately NOT listed: it continues on Solidago rigida, and listing it here makes the exclusion guard flag the survivor."
+    },
+    {
+      "scientific_name": "Monarda fistulosa (duplicate row)",
+      "common_names": [
+        "Bee Balm (Wild Bergamot)"
+      ],
+      "reason": "duplicate_of_plants_master_row",
+      "authority": "The same species was listed in both plants_master.json and garden_plants.json. The plants_master row is richer and carries a flora-sourced nativity; the garden copy did not.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-27",
+      "took_with_it": "nothing; the surviving row keeps the common name",
+      "substitute": "Monarda fistulosa (Wild Bergamot)"
+    },
+    {
+      "scientific_name": "Solidago nemoralis",
+      "common_names": [
+        "Gray Goldenrod"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 records Solidago nemoralis from Manitoba only, not from Alberta or Saskatchewan. A catalogue of AB/SK natives should not list it.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-28",
+      "took_with_it": "39 documented plant-fauna edges deleted, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Spiraea douglasii",
+      "common_names": [
+        "Pink Spirea"
+      ],
+      "reason": "introduced_to_alberta",
+      "authority": "VASCAN v37.17 carries the name but publishes no distribution for these provinces; Spiraea douglasii is a British Columbia coastal species. The pink-flowered spirea native here is Spiraea splendens var. rosea, which is a substitution rather than a rename, so it is not made automatically.",
+      "removed_in": "V2.80",
+      "removed_on": "2026-08-28",
+      "took_with_it": "31 documented plant-fauna edges deleted, 1 animals left with no edge, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json"
+    },
+    {
+      "scientific_name": "Stachys pilosa var. pilosa",
+      "common_names": [
+        "Marsh Hedge Nettle (Marsh Woundwort)"
+      ],
+      "reason": "merged_into_stachys_pilosa",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the checklist accepts this name at species rank only, so the two rows are one taxon.",
+      "removed_in": "V2.82",
+      "removed_on": "2026-09-12",
+      "took_with_it": "11 documented plant-fauna edges re-pointed to Marsh Hedge Nettle, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Stachys pilosa (Marsh Hedge Nettle)"
+    },
+    {
+      "scientific_name": "Urtica gracilis subsp. gracilis",
+      "common_names": [],
+      "reason": "merged_into_urtica_gracilis",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the checklist accepts this name at species rank only, so the two rows are one taxon.",
+      "removed_in": "V2.82",
+      "removed_on": "2026-09-12",
+      "took_with_it": "7 documented plant-fauna edges re-pointed to Slender Nettle, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Urtica gracilis (Slender Nettle)",
+      "note": "the common name 'Stinging Nettle' is not listed above because it continues on the surviving row (Urtica gracilis) — V2.80 renamed Urtica dioica onto this invalid subspecies and gave it that name, and listing it here would make validate_excluded_taxa report the survivor as a re-added exclusion"
+    },
+    {
+      "scientific_name": "Spiraea alba var. latifolia",
+      "common_names": [
+        "Pink Spirea (Rose Meadowsweet)"
+      ],
+      "reason": "merged_into_spiraea_alba",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): the checklist accepts this name at species rank only, so the two rows are one taxon.",
+      "removed_in": "V2.82",
+      "removed_on": "2026-09-12",
+      "took_with_it": "7 documented plant-fauna edges re-pointed to Meadowsweet",
+      "substitute": "Spiraea alba (Meadowsweet)"
+    },
+    {
+      "scientific_name": "Dodecatheon pulchellum",
+      "common_names": [
+        "Shooting Star"
+      ],
+      "reason": "merged_into_primula_pauciflora",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): a synonym of the accepted name already carried here; the two rows are one taxon.",
+      "removed_in": "V2.82",
+      "removed_on": "2026-09-12",
+      "took_with_it": "11 documented plant-fauna edges re-pointed to Saline Shooting Star, 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Primula pauciflora (Saline Shooting Star)"
+    },
+    {
+      "scientific_name": "Hedysarum alpinum",
+      "common_names": [
+        "Sweet Broom (Alpine Sweetvetch)"
+      ],
+      "reason": "merged_into_hedysarum_americanum",
+      "authority": "VASCAN v37.17 (dwca-vascan-v37.17.zip): a synonym of the accepted name already carried here; the two rows are one taxon.",
+      "removed_in": "V2.82",
+      "removed_on": "2026-09-12",
+      "took_with_it": "10 documented plant-fauna edges re-pointed to Alpine Hedysarum (Bear Root), 1 entry in data/plant_ecoregions.json, 1 entry in data/plant_ranges.json, 1 entry in data/plant_occurrence_points.json",
+      "substitute": "Hedysarum americanum (Alpine Hedysarum (Bear Root))"
+    }
+  ]
+}

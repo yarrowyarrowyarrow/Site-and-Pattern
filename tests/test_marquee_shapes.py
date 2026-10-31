@@ -58,9 +58,16 @@ class TestMarqueeShapeJsContract(unittest.TestCase):
         self.assertIn("shapeLayers", body)
 
     def test_delete_selected_dispatches_shapes(self):
+        # V3.11: one Delete tells Python once, with every kind it removed, so
+        # it is one undo step; Python hands shapes to _on_shape_removed.
         body = _function_body(_js("01-core.js"), "deleteSelected")
         self.assertIn("item.kind === 'shape'", body)
-        self.assertIn("bridge.onShapeRemoved", body)
+        self.assertIn("gone.shapes.push(item.shapeId)", body)
+        self.assertIn("bridge.onSelectionDeleted", body)
+        from src.controllers import map_events
+        src = Path(map_events.__file__).read_text(encoding="utf-8")
+        handler = src[src.index("def _on_selection_deleted"):]
+        self.assertIn("self._on_shape_removed(shape_id)", handler)
 
     def test_modifier_click_toggles_shape_selection(self):
         self.assertIn("toggleSelection({ kind: 'shape', shapeId: id })",

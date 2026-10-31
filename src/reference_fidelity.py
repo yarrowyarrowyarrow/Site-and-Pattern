@@ -71,8 +71,9 @@ def _layer_of(plant: dict) -> str:
     return ""
 
 
-def _tokens(name: str) -> set:
-    """Comparable forms of one plant name: the whole name and its first word.
+def _tokens(name: str, *, scientific: Optional[bool] = None) -> set:
+    """Comparable forms of one plant name: the whole name, and its genus when
+    the name is a scientific one.
 
     **This is not cosmetic.** ``resolve_reference_community`` returns whichever
     of common or scientific name a resolved row carries — in practice the
@@ -83,11 +84,24 @@ def _tokens(name: str) -> set:
     test because the test's fixture used scientific names on both sides, which
     is the failure mode a fixture that encodes the author's assumption always
     has. An end-to-end probe against the real seeded catalogue caught it.
+
+    **And never a common name's first word (V3.20, OV-11, R5).** The first
+    word of "Prairie Crocus" is "prairie", which then matched every Prairie
+    this and Purple that: the worked example claimed nine characteristic
+    species, six of them real, and printed "Prairie, Purple, Wild" as species.
+    A common name matches whole. ``scientific`` says which a name is; ``None``
+    decides by its shape ("Amelanchier alnifolia": a capitalised word, then a
+    lower-case one), which is how a reference row's fallback name is told.
     """
-    n = (name or "").strip().lower()
+    raw = (name or "").strip()
+    n = raw.lower()
     if not n:
         return set()
-    return {n, n.split(" ")[0]}
+    if scientific is None:
+        words = raw.split()
+        scientific = (len(words) >= 2 and words[0][:1].isupper()
+                      and words[1][:1].islower())
+    return {n, n.split(" ")[0]} if scientific else {n}
 
 
 def fidelity(placed_plants: list, ecoregion: Optional[str] = None, *,
@@ -123,8 +137,8 @@ def fidelity(placed_plants: list, ecoregion: Optional[str] = None, *,
         if not layer:
             continue
         have[layer] = have.get(layer, 0) + 1
-        mine = _tokens(p.get("scientific_name") or "") | _tokens(
-            p.get("common_name") or "")
+        mine = (_tokens(p.get("scientific_name") or "", scientific=True)
+                | _tokens(p.get("common_name") or "", scientific=False))
         hit = mine & ref_tokens.get(layer, set())
         if hit:
             # Report the longest form we matched on, so the sentence reads

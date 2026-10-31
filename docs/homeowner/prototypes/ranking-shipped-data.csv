@@ -1,0 +1,251 @@
+rank,common_name,scientific_name,type,lead,impact,feasibility,cat,n_lep,n_lep_regional,keystone,specialist,birds,n_birds,bees,n_bees,shoulders,buy,availability,dry,fits,height_m,behave,spread_habit,branching,photo,perennial,tox_pets,locality,tier,ruling,animals_documented
+1,Chokecherry,Prunus virginiana,shrub,90,10,9,4,15,5,True,0,2,14,3,52,1,3,big_box,2,2,5.0,0,,multi_stem,1,0,high,here,documented,,131
+2,Joe-Pye Weed,Eutrochium maculatum,wildflower,64,8,8,4,19,0,False,0,1,2,2,16,1,3,garden_centre,2,2,1.5,0,,,1,0,,here,observed,native,96
+3,Smooth Aster,Symphyotrichum laeve,wildflower,63,7,9,3,2,2,True,0,1,1,2,33,1,3,garden_centre,2,2,1.0,0,,,1,0,,here,documented,,79
+4,Pussy Willow,Salix discolor,shrub,56,8,7,4,15,9,True,1,1,2,1,14,1,2,native_specialist,2,2,6.0,0,,multi_stem,1,0,,here,documented,,40
+5,Fireweed,Chamaenerion angustifolium,wildflower,56,7,8,3,6,0,False,0,1,1,3,89,0,2,native_specialist,2,2,1.5,0,,,1,0,,here,documented,,142
+6,Late Goldenrod,Solidago gigantea,wildflower,56,7,8,3,0,0,True,0,1,1,2,36,1,2,native_specialist,2,2,1.5,0,,,1,0,,here,documented,,71
+7,Pin Cherry,Prunus pensylvanica,tree,56,7,8,4,4,4,True,0,1,3,1,11,1,2,native_specialist,2,2,8.0,0,,decurrent,1,0,high,here,thin,native,30
+8,Red Osier Dogwood,Cornus sericea,shrub,56,7,8,2,3,1,False,1,2,5,2,26,0,3,big_box,2,2,3.0,0,slow_spreader,multi_stem,1,0,,here,documented,,49
+9,Stiff Goldenrod,Solidago rigida,wildflower,56,7,8,3,0,0,True,0,1,1,2,17,1,2,native_specialist,2,2,1.0,0,,,1,0,,here,documented,,71
+10,Common Snowberry,Symphoricarpos albus,shrub,54,6,9,1,2,2,False,1,1,3,3,51,0,3,garden_centre,2,2,1.5,0,,multi_stem,1,0,low,here,documented,,69
+11,Many-flowered Aster (Tufted White Prairie Aster),Symphyotrichum ericoides,wildflower,49,7,7,3,0,0,True,0,1,0,2,20,1,2,native_specialist,2,2,0.8,0,,,0,0,,here,documented,,64
+12,Purple-stemmed Tall Aster (Swamp Aster),Symphyotrichum puniceum,wildflower,49,7,7,3,0,0,True,0,1,0,2,18,1,2,native_specialist,2,2,1.8,0,,,1,0,,here,documented,,55
+13,Lindley's Aster,Symphyotrichum ciliolatum,wildflower,48,6,8,3,1,1,True,0,1,0,1,5,1,2,native_specialist,2,2,0.8,0,,,1,0,,here,documented,,18
+14,Tall Goldenrod,Solidago altissima,wildflower,48,6,8,3,0,0,True,0,1,1,1,9,1,2,native_specialist,2,2,1.5,0,,,1,0,,here,documented,,45
+15,Wild Raspberry,Rubus idaeus,shrub,48,6,8,2,3,0,False,0,1,0,3,45,0,3,big_box,2,2,1.5,0,,arching,1,0,,here,documented,,71
+16,Elegant Goldenrod,Solidago lepida,wildflower,42,6,7,3,0,0,True,0,1,0,1,11,1,2,native_specialist,2,2,0.9,0,,,0,0,,here,thin,native,16
+17,Marsh Aster,Symphyotrichum boreale,wildflower,42,6,7,3,0,0,True,0,1,0,1,5,1,2,native_specialist,2,2,0.6,0,,,1,0,,near,documented,,15
+18,Nuttall's Sunflower,Helianthus nuttallii,wildflower,42,6,7,3,0,0,True,0,1,1,1,6,1,2,native_specialist,2,2,2.0,0,,,1,0,,here,documented,,10
+19,Prairie Goldenrod,Solidago missouriensis,wildflower,42,6,7,3,0,0,True,0,1,1,2,30,0,2,native_specialist,2,2,0.6,0,,,0,0,,here,documented,,41
+20,Stiff Sunflower (Rhombic-leaved Sunflower),Helianthus pauciflorus,wildflower,42,6,7,3,0,0,True,0,1,1,1,5,1,2,native_specialist,2,2,1.5,0,,,0,0,,here,documented,,10
+21,Water Birch,Betula occidentalis,tree,42,6,7,4,4,4,True,0,1,2,0,0,1,2,native_specialist,2,2,8.0,0,,multi_stem,1,0,,here,thin,native,6
+22,Willow Aster,Symphyotrichum lanceolatum,wildflower,42,6,7,3,0,0,True,0,1,0,1,11,1,2,native_specialist,2,2,1.2,0,,,1,0,,here,documented,,54
+23,Bebb's Willow,Salix bebbiana,tree,48,8,6,4,3,3,True,1,1,1,1,5,1,2,native_specialist,2,2,8.0,0,,multi_stem,0,0,,here,documented,,11
+24,Sandbar Willow,Salix interior,shrub,48,8,6,4,9,8,True,1,1,2,1,11,1,2,native_specialist,2,2,3.0,-1,,suckering,1,0,,here,thin,native,30
+25,Bearberry,Arctostaphylos uva-ursi,groundcover,45,5,9,1,1,0,False,0,1,2,2,23,1,3,garden_centre,2,2,0.15,0,,,1,0,,here,documented,,44
+26,Saskatoon Berry,Amelanchier alnifolia,shrub,45,5,9,1,1,1,False,0,2,5,1,13,1,3,big_box,2,2,4.0,0,,multi_stem,1,0,,here,documented,,25
+27,Highbush Cranberry,Viburnum opulus,shrub,40,5,8,2,5,1,False,0,2,5,0,3,1,3,big_box,2,2,3.5,0,,multi_stem,1,0,,here,thin,native,19
+28,Pearly Everlasting,Anaphalis margaritacea,wildflower,40,5,8,1,1,0,False,0,0,0,3,50,1,2,native_specialist,2,2,0.6,0,,,1,0,,near,observed,native,121
+29,Giant Hyssop,Agastache foeniculum,wildflower,36,4,9,0,0,0,False,0,1,1,2,25,1,3,garden_centre,2,2,0.8,0,,,1,0,,here,documented,,80
+30,Wild Bergamot,Monarda fistulosa,wildflower,36,4,9,0,0,0,False,0,1,3,3,42,0,3,garden_centre,2,2,0.8,0,slow_spreader,,1,0,,here,thin,native,124
+31,Woodland Strawberry,Fragaria vesca,groundcover,36,4,9,0,0,0,False,0,1,1,2,22,1,3,garden_centre,2,2,0.15,0,slow_spreader,,1,0,,here,thin,native,34
+32,Basket Willow,Salix petiolaris,shrub,35,5,7,4,5,1,True,0,0,0,0,0,1,2,native_specialist,2,2,3.0,0,,multi_stem,1,0,,here,documented,,7
+33,Evening Primrose,Oenothera biennis,wildflower,35,5,7,2,3,0,False,0,1,2,1,8,1,2,native_specialist,2,2,1.5,0,,,1,-1,,here,thin,native,25
+34,Sticky Goldenrod,Solidago glutinosa,wildflower,35,5,7,3,0,0,True,0,1,0,0,0,1,2,native_specialist,2,2,0.4,0,,,0,0,,here,observed,native,0
+35,Western Snowberry,Symphoricarpos occidentalis,shrub,35,5,7,1,2,2,False,1,1,1,2,20,0,2,native_specialist,2,2,1.0,-1,,suckering,1,0,low,here,documented,,41
+36,White Prairie Aster,Symphyotrichum falcatum,wildflower,35,5,7,3,0,0,True,0,0,0,1,8,1,2,native_specialist,2,2,0.35,0,,,0,0,,here,documented,,19
+37,Canada Milk Vetch,Astragalus canadensis,wildflower,32,4,8,2,4,4,False,0,0,0,2,19,0,2,native_specialist,2,2,0.8,0,,,1,0,low,here,observed,native,30
+38,Flat-topped Goldenrod,Euthamia graminifolia,wildflower,32,4,8,0,0,0,False,0,1,0,2,29,1,2,native_specialist,2,2,1.0,0,,,1,0,,here,documented,,150
+39,Hairy Golden Aster,Heterotheca villosa,wildflower,32,4,8,0,0,0,False,0,1,0,2,33,1,2,native_specialist,2,2,0.5,0,,,1,0,,here,documented,,51
+40,Meadowsweet,Spiraea alba,shrub,32,4,8,1,1,0,False,0,1,1,2,20,0,2,native_specialist,2,2,1.5,0,,multi_stem,1,0,,here,observed,native,120
+41,Shrubby Cinquefoil,Dasiphora fruticosa,shrub,32,4,8,1,1,0,False,0,0,0,2,32,1,3,big_box,2,2,1.0,0,,decurrent,0,0,,here,thin,native,80
+42,Spreading Dogbane,Apocynum androsaemifolium,wildflower,32,4,8,1,1,0,False,0,0,0,3,49,0,2,native_specialist,2,2,0.6,0,,,1,0,high,here,documented,,131
+43,Wild Strawberry,Fragaria virginiana,groundcover,32,4,8,0,0,0,False,0,1,0,2,39,1,2,native_specialist,2,2,0.15,0,slow_spreader,,1,0,,here,documented,,94
+44,Wild Vetch,Vicia americana,vine,32,4,8,2,4,4,False,0,0,0,2,18,0,2,native_specialist,2,2,0.8,0,,,1,0,low,here,documented,,31
+45,Narrow-leaf Willow,Salix exigua,shrub,30,5,6,4,3,1,True,0,0,0,0,3,1,2,native_specialist,2,2,4.0,-1,,suckering,1,0,,here,documented,,9
+46,Western Willow Aster,Symphyotrichum hesperium,wildflower,30,5,6,3,0,0,True,0,1,0,0,0,1,2,native_specialist,2,2,1.2,0,,,0,0,,here,documented,,0
+47,Blanketflower,Gaillardia aristata,wildflower,28,4,7,0,0,0,False,0,0,0,3,58,1,3,garden_centre,2,2,0.6,-1,self_seeding,,0,0,,here,documented,,88
+48,Prairie Thistle,Cirsium flodmanii,wildflower,28,4,7,1,1,1,False,1,1,1,1,10,0,2,native_specialist,2,2,1.0,0,,,0,0,,here,documented,,21
+49,Woods' Rose,Rosa woodsii,shrub,28,4,7,0,0,0,False,0,1,0,3,44,0,2,native_specialist,2,2,1.5,-1,,suckering,1,0,,here,documented,,51
+50,Boreal Yarrow,Achillea borealis,wildflower,27,3,9,0,0,0,False,0,0,0,3,95,0,3,garden_centre,2,2,0.5,0,,,1,0,low,here,thin,native,282
+51,Prairie Crocus,Pulsatilla nuttalliana,wildflower,27,3,9,0,0,0,False,0,0,0,2,15,1,3,garden_centre,2,2,0.2,0,,,1,0,low,here,documented,,31
+52,Wild Blue Flax,Linum lewisii,wildflower,27,3,9,1,1,1,False,0,0,0,2,29,0,3,garden_centre,2,2,0.5,0,,,1,0,,here,thin,native,43
+53,Gumweed,Grindelia squarrosa,wildflower,24,4,6,0,0,0,False,0,0,0,3,41,1,2,native_specialist,2,2,0.7,0,,,0,-1,,here,documented,,59
+54,Ascending Milkvetch,Astragalus laxmannii,wildflower,24,3,8,2,3,3,False,0,0,0,1,8,0,2,native_specialist,2,2,0.4,0,,,1,0,low,here,observed,native,13
+55,Early Blue Violet,Viola adunca,groundcover,24,3,8,1,2,2,False,1,0,0,0,2,1,2,native_specialist,2,2,0.1,0,,,1,0,,here,documented,,7
+56,Field Chickweed,Cerastium arvense,groundcover,24,3,8,0,0,0,False,0,0,0,2,19,1,2,native_specialist,2,2,0.2,0,,,1,0,,here,thin,native,28
+57,Golden Bean,Thermopsis rhombifolia,wildflower,24,3,8,0,0,0,False,0,0,0,2,15,1,2,native_specialist,2,2,0.4,0,,,1,0,high,here,thin,native,19
+58,Lilac Penstemon,Penstemon gracilis,wildflower,24,3,8,0,0,0,False,0,1,2,2,19,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,observed,native,28
+59,Meadow Blazingstar,Liatris ligulistylis,wildflower,24,3,8,0,0,0,False,0,1,0,1,11,1,2,native_specialist,2,2,1.2,0,,,1,0,,here,documented,,19
+60,Nodding Onion,Allium cernuum,wildflower,24,3,8,0,0,0,False,0,1,1,2,39,0,2,native_specialist,2,2,0.4,0,,,1,0,low,here,documented,,53
+61,Plains Wormwood,Artemisia campestris,wildflower,24,3,8,1,2,1,False,1,0,0,0,2,1,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,6
+62,Prairie Rose,Rosa arkansana,shrub,24,3,8,0,0,0,False,0,1,0,2,17,0,2,native_specialist,2,2,0.5,0,,multi_stem,1,0,,here,thin,native,21
+63,Prairie Sage,Artemisia ludoviciana,herb,24,3,8,1,1,1,False,1,0,0,0,0,1,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,1
+64,Prickly Wild Rose,Rosa acicularis,shrub,24,3,8,0,0,0,False,0,1,3,2,28,0,2,native_specialist,2,2,1.5,0,,multi_stem,1,0,,here,documented,,51
+65,Slender Cinquefoil (Graceful Cinquefoil),Potentilla gracilis,wildflower,24,3,8,0,0,0,False,0,0,0,3,88,0,2,native_specialist,2,2,0.6,0,,,1,0,,here,thin,native,112
+66,Velvet-leaf Blueberry,Vaccinium myrtilloides,shrub,24,3,8,0,0,0,False,0,1,0,1,7,1,2,native_specialist,2,2,0.5,0,,decurrent,1,0,,here,documented,,11
+67,Western Canada Violet,Viola rugulosa,wildflower,24,3,8,1,2,2,False,1,0,0,0,1,1,2,native_specialist,2,2,0.3,0,,,1,0,,here,documented,,5
+68,Bracted Honeysuckle,Lonicera involucrata,shrub,21,3,7,1,2,2,False,0,1,3,1,12,0,2,native_specialist,2,2,2.0,0,,multi_stem,1,0,,here,documented,,19
+69,Flat-topped White Aster,Doellingeria umbellata,wildflower,21,3,7,0,0,0,False,0,1,0,1,11,1,2,native_specialist,2,2,1.5,0,,,1,0,,here,documented,,82
+70,Northern Black Currant,Ribes hudsonianum,shrub,21,3,7,0,0,0,False,0,1,0,1,12,1,2,native_specialist,2,2,1.5,0,,multi_stem,0,0,,here,documented,,20
+71,Showy Aster,Eurybia conspicua,wildflower,21,3,7,0,0,0,False,0,1,1,1,13,1,2,native_specialist,2,2,0.6,0,,,0,0,,here,documented,,14
+72,Thinleaf Alder,Alnus incana,shrub,21,3,7,1,1,0,False,0,1,2,0,0,1,2,native_specialist,2,2,6.0,0,,multi_stem,1,0,,here,documented,,4
+73,Wild Gooseberry,Ribes oxyacanthoides,shrub,21,3,7,0,0,0,False,0,1,0,1,5,1,2,native_specialist,2,2,1.0,0,,arching,0,0,,here,documented,,5
+74,Wild Red Currant,Ribes triste,shrub,21,3,7,0,0,0,False,0,1,0,1,5,1,2,native_specialist,2,2,0.8,0,,arching,1,0,,here,documented,,5
+75,Greater Northern Aster,Canadanthus modestus,wildflower,18,3,6,0,0,0,False,0,1,0,1,12,1,2,native_specialist,2,2,1.0,0,,,0,0,,here,documented,,15
+76,Marsh Violet,Viola palustris,groundcover,18,3,6,1,2,2,False,1,0,0,0,3,1,2,native_specialist,2,2,0.15,0,,,0,0,,here,documented,,9
+77,Sneezeweed,Helenium autumnale,wildflower,18,3,6,0,0,0,False,0,0,0,2,16,1,2,native_specialist,2,2,1.2,0,,,0,0,,here,documented,,53
+78,Common Juniper,Juniperus communis,shrub,18,2,9,0,0,0,False,0,1,1,0,0,1,3,garden_centre,2,2,1.5,0,,prostrate,1,0,,here,thin,native,1
+79,Prairie Coneflower,Ratibida columnifera,wildflower,18,2,9,0,0,0,False,0,1,0,1,13,0,3,garden_centre,2,2,0.5,0,,,1,0,,here,observed,native,26
+80,Silver Buffaloberry,Shepherdia argentea,shrub,18,2,9,0,0,0,False,0,1,0,0,1,1,3,garden_centre,2,2,4.0,0,,multi_stem,1,0,,here,thin,native,1
+81,"Three Flowered Avens (Prairie Smoke, Old Man's Whiskers)",Geum triflorum,wildflower,18,2,9,0,0,0,False,0,0,0,1,12,1,3,garden_centre,2,2,0.3,0,,,1,0,,here,thin,native,14
+82,Wild Chives,Allium schoenoprasum,wildflower,18,2,9,0,0,0,False,0,0,0,2,32,0,3,big_box,2,2,0.3,0,,,1,0,low,here,documented,,70
+83,Canada Anemone,Anemonastrum canadense,groundcover,16,2,8,0,0,0,False,0,0,0,1,11,1,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,27
+84,Canada Buffaloberry,Shepherdia canadensis,shrub,16,2,8,0,0,0,False,0,1,1,0,1,1,2,native_specialist,2,2,2.5,0,,decurrent,1,0,,here,documented,,5
+85,Field Pussytoes,Antennaria neglecta,groundcover,16,2,8,0,0,0,False,0,0,0,1,8,1,2,native_specialist,2,2,0.15,0,,,1,0,,here,documented,,17
+86,Green Milkweed,Asclepias ovalifolia,wildflower,16,2,8,1,1,1,False,1,0,0,0,0,0,2,native_specialist,2,2,0.5,0,,,1,0,high,here,documented,,2
+87,Northern Hedysarum,Hedysarum boreale,wildflower,16,2,8,0,0,0,False,0,0,0,2,15,0,2,native_specialist,2,2,0.6,0,,,1,0,,here,observed,native,18
+88,Pale Agoseris,Agoseris glauca,wildflower,16,2,8,0,0,0,False,0,0,0,2,25,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,documented,,29
+89,Pink Pussytoes,Antennaria rosea,groundcover,16,2,8,0,0,0,False,0,0,0,1,6,1,2,native_specialist,2,2,0.2,0,,,1,0,,here,thin,native,10
+90,Slender Blue Beardtongue,Penstemon procerus,wildflower,16,2,8,0,0,0,False,0,0,0,2,22,0,2,native_specialist,2,2,0.3,0,,,1,0,,here,thin,native,23
+91,Tall Cinquefoil,Drymocallis arguta,wildflower,16,2,8,0,0,0,False,0,0,0,2,15,0,2,native_specialist,2,2,0.8,0,,,1,0,,here,thin,native,18
+92,Twining Honeysuckle (Limber Honeysuckle),Lonicera dioica,vine,16,2,8,1,2,2,False,0,1,2,0,1,0,2,native_specialist,2,2,2.5,0,,,1,0,,here,documented,,6
+93,White Geranium,Geranium richardsonii,wildflower,16,2,8,0,0,0,False,0,0,0,2,19,0,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,20
+94,Yellow Avens,Geum aleppicum,wildflower,16,2,8,0,0,0,False,0,1,1,1,6,0,2,native_specialist,2,2,0.9,0,,,1,0,,here,documented,,13
+95,Yellow-flowered Locoweed,Oxytropis campestris,wildflower,16,2,8,0,0,0,False,0,0,0,2,18,0,2,native_specialist,2,2,0.3,0,,,1,0,low,here,observed,native,25
+96,Alpine Hedysarum (Bear Root),Hedysarum americanum,wildflower,14,2,7,1,2,2,False,0,0,0,1,5,0,2,native_specialist,2,2,0.5,0,,,0,0,,here,documented,,8
+97,Dewberry,Rubus pubescens,groundcover,14,2,7,0,0,0,False,0,1,0,1,5,0,2,native_specialist,2,2,0.2,0,,,1,0,,here,documented,,25
+98,Golden Tickseed,Coreopsis tinctoria,wildflower,14,2,7,0,0,0,False,0,0,0,1,5,1,2,native_specialist,2,2,0.9,0,,,1,-1,,here,observed,native,15
+99,Marsh Marigold,Caltha palustris,wildflower,14,2,7,0,0,0,False,0,0,0,1,6,1,2,native_specialist,2,2,0.3,0,,,1,0,low,here,documented,,18
+100,Narrow-leaved Hawkweed,Hieracium umbellatum,wildflower,14,2,7,0,0,0,False,0,0,0,1,10,1,2,native_specialist,2,2,0.8,0,,,0,0,,here,documented,,18
+101,Philadelphia Fleabane,Erigeron philadelphicus,wildflower,14,2,7,0,0,0,False,0,0,0,1,14,1,2,native_specialist,2,2,0.6,0,,,1,-1,,here,documented,,57
+102,Prairie Sagewort,Artemisia frigida,wildflower,14,2,7,1,1,1,False,1,0,0,0,0,0,2,native_specialist,2,2,0.3,0,,,0,0,,here,documented,,1
+103,Purple Avens (Water Avens),Geum rivale,wildflower,14,2,7,0,0,0,False,0,0,0,1,6,1,2,native_specialist,2,2,0.5,0,,,1,0,,here,thin,native,8
+104,Purple Prairie Clover,Dalea purpurea,wildflower,14,2,7,0,0,0,False,0,0,0,2,27,0,2,native_specialist,2,2,0.5,0,,,0,0,,here,thin,native,37
+105,Red Baneberry,Actaea rubra,wildflower,14,2,7,0,0,0,False,0,1,0,0,4,1,2,native_specialist,2,2,0.9,0,,,1,0,high,here,documented,,9
+106,Round-leaved Hawthorn,Crataegus chrysocarpa,shrub,14,2,7,0,0,0,False,0,1,0,0,0,1,2,native_specialist,2,2,5.0,0,,multi_stem,0,0,,here,documented,,0
+107,Saline Shooting Star,Primula pauciflora,wildflower,14,2,7,0,0,0,False,0,0,0,1,10,1,2,native_specialist,2,2,0.2,0,,,1,0,,here,thin,native,10
+108,Skunk Currant,Ribes glandulosum,shrub,14,2,7,0,0,0,False,0,1,0,0,0,1,2,native_specialist,2,2,0.6,0,,arching,0,0,,here,documented,,0
+109,Green Alder,Alnus alnobetula,shrub,12,2,6,1,2,1,False,0,0,0,0,0,1,2,native_specialist,2,2,4.0,0,,multi_stem,0,0,,here,documented,,2
+110,Wild Black Currant,Ribes americanum,shrub,12,2,6,0,0,0,False,0,1,0,0,3,1,2,native_specialist,2,2,1.2,0,,multi_stem,0,0,,here,documented,,6
+111,Creeping Juniper,Juniperus horizontalis,groundcover,9,1,9,0,0,0,False,0,0,0,0,3,1,3,big_box,2,2,0.3,0,,,1,0,,here,thin,native,3
+112,Beaked Hazelnut,Corylus cornuta,shrub,8,1,8,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,2,3.0,0,,multi_stem,1,0,,here,documented,,0
+113,Brittle Prickly-pear,Opuntia fragilis,groundcover,8,1,8,0,0,0,False,0,0,0,1,11,0,2,native_specialist,2,2,0.15,0,,,1,0,,here,thin,native,11
+114,Dwarf Raspberry,Rubus arcticus,groundcover,8,1,8,0,0,0,False,0,1,0,0,2,0,2,native_specialist,2,2,0.2,0,,,1,0,,here,documented,,3
+115,False Solomon's Seal,Maianthemum amplexicaule,wildflower,8,1,8,0,0,0,False,0,0,0,0,3,1,2,native_specialist,2,2,0.8,0,,,1,0,low,here,thin,native,7
+116,Heart-leaved Alexanders (Golden Alexanders),Zizia aptera,wildflower,8,1,8,0,0,0,False,0,0,0,0,2,1,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,4
+117,Littleleaf Pussytoes,Antennaria microphylla,groundcover,8,1,8,0,0,0,False,0,0,0,0,1,1,2,native_specialist,2,2,0.15,0,,,1,0,,here,documented,,1
+118,Meadow Arnica,Arnica fulgens,wildflower,8,1,8,0,0,0,False,0,0,0,0,3,1,2,native_specialist,2,2,0.5,0,,,1,0,,here,thin,native,3
+119,Prairie Buttercup,Ranunculus rhomboideus,wildflower,8,1,8,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,2,0.25,0,,,1,0,low,here,documented,,0
+120,Rough-fruited Fairy Bells,Prosartes trachycarpa,herb,8,1,8,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,0
+121,Scarlet Butterfly Plant,Oenothera suffrutescens,wildflower,8,1,8,1,1,0,False,0,0,0,0,2,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,observed,native,7
+122,Silverberry,Elaeagnus commutata,shrub,8,1,8,0,0,0,False,0,1,1,0,4,0,3,garden_centre,2,2,3.0,-1,,suckering,1,0,,here,documented,,20
+123,Smooth Sweet Cicely,Osmorhiza longistylis,wildflower,8,1,8,0,0,0,False,0,0,0,0,4,1,2,native_specialist,2,2,0.9,0,,,1,0,,here,documented,,6
+124,Star-flowered Solomon's Seal,Maianthemum stellatum,herb,8,1,8,0,0,0,False,0,0,0,0,2,1,2,native_specialist,2,2,0.4,0,,,1,0,low,here,documented,,13
+125,Western Meadowrue,Thalictrum occidentale,wildflower,8,1,8,0,0,0,False,0,0,0,0,2,1,2,native_specialist,2,2,1.2,0,,,1,0,,here,thin,native,2
+126,Wild Sarsaparilla,Aralia nudicaulis,herb,8,1,8,0,0,0,False,0,0,0,1,8,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,documented,,11
+127,Bishop's Cap,Mitella nuda,groundcover,7,1,7,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,2,0.15,0,,,1,0,,here,documented,,0
+128,Leafy Arnica,Arnica chamissonis,wildflower,7,1,7,0,0,0,False,0,0,0,1,9,0,2,native_specialist,2,2,0.7,0,,,1,0,,here,thin,native,12
+129,Low-bush Cranberry,Viburnum edule,shrub,7,1,7,0,0,0,False,0,1,1,0,1,0,2,native_specialist,2,2,2.0,0,,multi_stem,1,0,,here,documented,,7
+130,Marsh Hedge Nettle,Stachys pilosa,wildflower,7,1,7,0,0,0,False,0,0,0,1,6,0,2,native_specialist,2,2,0.7,0,,,1,0,,here,documented,,9
+131,Purple Peavine,Lathyrus venosus,vine,7,1,7,0,0,0,False,0,0,0,1,5,0,2,native_specialist,2,2,1.2,0,,,0,0,low,here,documented,,9
+132,Silverweed,Potentilla anserina,groundcover,7,1,7,1,1,0,False,0,0,0,0,4,0,2,native_specialist,2,2,0.1,0,,,0,0,,near,documented,,10
+133,Small-leaved Everlasting (Small-leaved Pussytoes),Antennaria parvifolia,groundcover,7,1,7,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,2,0.15,0,,,0,0,,here,documented,,0
+134,Strawberry Spinach,Blitum capitatum,herb,7,1,7,0,0,0,False,0,1,0,0,0,0,2,native_specialist,2,2,0.6,0,,,1,-1,,here,thin,native,0
+135,Tall Lungwort (Blue Bells),Mertensia paniculata,wildflower,7,1,7,0,0,0,False,0,0,0,1,5,0,2,native_specialist,2,2,0.8,0,,,1,0,,here,documented,,6
+136,Blue Clematis,Clematis occidentalis,vine,6,1,6,0,0,0,False,0,0,0,0,2,1,2,native_specialist,2,2,3.0,0,,,0,0,,here,documented,,2
+137,Blue Columbine,Aquilegia brevistyla,wildflower,6,1,6,0,0,0,False,0,1,2,0,4,0,2,native_specialist,2,2,0.5,0,,,0,0,low,here,documented,,7
+138,Creeping Spikerush,Eleocharis palustris,sedge,6,1,6,1,1,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,1,0,,here,documented,,5
+139,Rough Fescue,Festuca hallii,grass,6,1,6,1,1,1,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,0,0,,here,documented,,2
+140,Showy Pussytoes,Antennaria pulcherrima,wildflower,6,1,6,0,0,0,False,0,0,0,0,0,1,0,rare,2,2,0.4,0,,,1,0,,here,documented,,0
+141,Wild Licorice,Glycyrrhiza lepidota,wildflower,6,1,6,0,0,0,False,0,0,0,1,13,0,2,native_specialist,2,2,0.8,-2,aggressive_rhizomatous,,1,0,,here,thin,native,15
+142,Blue-eyed Grass,Sisyrinchium montanum,wildflower,0,0,8,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.2,0,,,1,0,,here,documented,,2
+143,Common Alumroot,Heuchera richardsonii,wildflower,0,0,8,0,0,0,False,0,0,0,0,4,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,documented,,11
+144,Cream-Coloured Peavine,Lathyrus ochroleucus,vine,0,0,8,0,0,0,False,0,0,0,0,4,0,2,native_specialist,2,2,1.0,0,,,1,0,low,here,documented,,8
+145,Harebell,Campanula rotundifolia,wildflower,0,0,8,0,0,0,False,0,0,0,0,1,0,3,garden_centre,2,2,0.4,0,,,0,0,,here,documented,,3
+146,Large-leaved Avens,Geum macrophyllum,wildflower,0,0,8,0,0,0,False,0,0,0,0,3,0,2,native_specialist,2,2,0.8,0,,,1,0,,here,documented,,5
+147,Long-fruited Anemone,Anemone cylindrica,wildflower,0,0,8,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.6,0,,,1,0,low,here,documented,,0
+148,Northern Bedstraw,Galium boreale,wildflower,0,0,8,0,0,0,False,0,0,0,0,2,0,2,native_specialist,2,2,0.5,0,,,1,0,,here,documented,,13
+149,Ostrich Fern,Matteuccia struthiopteris,fern,0,0,8,0,0,0,False,0,0,0,0,0,0,3,garden_centre,2,2,1.5,0,,,1,0,,here,thin,native,1
+150,Roadside Agrimony (Woodland Agrimony),Agrimonia striata,wildflower,0,0,8,0,0,0,False,0,0,0,0,4,0,2,native_specialist,2,2,1.0,0,,,1,0,,here,documented,,6
+151,Sweet-scented Bedstraw,Galium triflorum,groundcover,0,0,8,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.4,0,,,1,0,,here,documented,,0
+152,Tall Anemone (Thimbleweed),Anemone virginiana,wildflower,0,0,8,0,0,0,False,0,0,0,0,2,0,2,native_specialist,2,2,0.8,0,,,1,0,low,here,documented,,4
+153,Tall Showy Yarrow,Achillea alpina,wildflower,0,0,8,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.6,0,,,1,0,low,here,documented,,0
+154,Veiny Meadow-Rue,Thalictrum venulosum,wildflower,0,0,8,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.6,0,,,1,0,,here,documented,,0
+155,American Brooklime,Veronica americana,herb,0,0,7,0,0,0,False,0,0,0,0,2,0,2,native_specialist,2,2,0.5,0,,,1,0,,here,thin,native,2
+156,Blue Grama Grass,Bouteloua gracilis,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.3,0,,,1,0,,here,documented,,1
+157,Canada Wild Rye,Elymus canadensis,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,0,,,1,0,,here,documented,,0
+158,Cut-leaved Anemone,Anemone multifida,wildflower,0,0,7,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.4,0,,,0,0,low,here,documented,,0
+159,Fringed Brome,Bromus ciliatus,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,0,,,1,0,,here,documented,,0
+160,Fringed Loosestrife,Lysimachia ciliata,wildflower,0,0,7,0,0,0,False,0,0,0,0,4,0,2,native_specialist,2,2,1.0,0,,,1,0,,here,documented,,13
+161,Green Needle Grass,Nassella viridula,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.8,0,,,1,0,,here,documented,,0
+162,Hairy Wild Rye,Leymus innovatus,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,0,,here,documented,,0
+163,June Grass,Koeleria macrantha,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,1,0,,here,documented,,0
+164,Marsh Cinquefoil,Comarum palustre,wildflower,0,0,7,0,0,0,False,0,0,0,0,2,0,2,native_specialist,2,2,0.5,0,,,1,0,,here,thin,native,3
+165,Marsh Skullcap,Scutellaria galericulata,wildflower,0,0,7,0,0,0,False,0,0,0,0,1,0,2,native_specialist,2,2,0.5,0,,,1,0,,here,documented,,1
+166,Meadow Sedge,Carex praticola,sedge,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,1,0,,here,documented,,0
+167,Needle and Thread Grass,Hesperostipa comata,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.7,0,,,1,0,,here,documented,,0
+168,Plains Muhly,Muhlenbergia cuspidata,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,1,0,,here,thin,native,0
+169,Porcupine Grass,Hesperostipa spartea,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,0,,here,observed,native,0
+170,Rocky Mountain Fescue,Festuca saximontana,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.3,0,,,1,0,,here,documented,,0
+171,Seneca Snakeroot,Polygala senega,herb,0,0,7,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.3,0,,,0,0,,here,documented,,0
+172,Slender Wheatgrass,Elymus trachycaulus,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.8,0,,,1,0,,here,documented,,0
+173,Sprengel's Sedge,Carex sprengelii,sedge,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,1,0,,here,documented,,0
+174,Tall Meadow Rue,Thalictrum dasycarpum,wildflower,0,0,7,0,0,0,False,0,0,0,0,3,0,2,native_specialist,2,2,1.8,0,,,1,0,,here,documented,,7
+175,Ticklegrass,Agrostis scabra,grass,0,0,7,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,1,0,,here,documented,,0
+176,Awned Sedge,Carex atherodes,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,0,,,1,0,,here,documented,,0
+177,Beaked Sedge,Carex rostrata,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,0,,here,thin,native,2
+178,Big-head Rush,Juncus vaseyi,rush,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,1,0,,here,documented,,0
+179,Bluejoint Reed Grass,Calamagrostis canadensis,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.5,0,,,1,0,,here,documented,,0
+180,Common Tall Manna Grass,Glyceria grandis,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.8,0,,,1,0,,here,documented,,0
+181,Drooping Wood-reed,Cinna latifolia,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,0,,,1,0,,here,documented,,0
+182,Fowl Manna Grass,Glyceria striata,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.0,0,,,1,0,,here,documented,,0
+183,Golden Sedge,Carex aurea,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.25,0,,,1,0,,here,documented,,0
+184,Ledingham's False Dragonhead,Physostegia ledinghamii,wildflower,0,0,6,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.6,0,,,0,0,,here,thin,native,0
+185,Pink Pyrola,Pyrola asarifolia,groundcover,0,0,6,0,0,0,False,0,0,0,0,2,0,0,rare,2,2,0.25,0,,,1,0,,here,documented,,2
+186,Purple Oat Grass,Schizachne purpurascens,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,0,0,,here,documented,,0
+187,Small-fruited Bulrush,Scirpus microcarpus,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,0,,,1,0,,here,documented,,0
+188,Smooth Fleabane (Streamside Fleabane),Erigeron glabellus,wildflower,0,0,6,0,0,0,False,0,0,0,0,4,0,2,native_specialist,2,2,0.5,0,,,0,0,,here,documented,,25
+189,Sweetgrass,Anthoxanthum hirtum,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,0,,here,documented,,0
+190,Water Sedge,Carex aquatilis,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,0,,here,documented,,2
+191,Western Porcupine Grass,Hesperostipa curtiseta,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.7,0,,,0,0,,here,documented,,0
+192,Western Wheatgrass,Pascopyrum smithii,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.8,0,,,0,0,,here,documented,,0
+193,White-grained Mountain Rice Grass,Oryzopsis asperifolia,grass,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,0,0,,here,documented,,0
+194,Wire Rush,Juncus balticus,rush,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.7,0,,,1,0,,here,documented,,0
+195,Woolly Sedge,Carex pellita,sedge,0,0,6,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.75,0,,,1,0,,here,thin,native,0
+196,Paper Birch,Betula papyrifera,tree,21,7,3,4,9,7,True,0,2,7,0,0,1,3,garden_centre,2,0,20.0,0,,excurrent,1,0,,here,documented,,19
+197,Trembling Aspen,Populus tremuloides,tree,21,7,3,4,13,8,True,0,2,5,0,4,1,3,garden_centre,2,0,20.0,0,,excurrent,1,0,,here,documented,,29
+198,Balsam Poplar,Populus balsamifera,tree,18,6,3,4,9,1,True,0,1,1,0,0,1,2,native_specialist,2,0,25.0,0,,excurrent,0,0,,here,documented,,17
+199,Bunchberry,Cornus canadensis,groundcover,16,4,4,1,1,1,False,0,1,1,2,16,0,0,rare,2,2,0.15,0,,,0,0,,here,documented,,47
+200,Arctic Aster,Eurybia sibirica,wildflower,15,3,5,0,0,0,False,0,1,0,1,11,1,0,rare,2,2,0.4,0,,,0,0,,here,documented,,14
+201,Stinging Nettle,Urtica gracilis,herb,15,3,5,2,3,2,False,1,0,0,0,0,0,2,native_specialist,2,2,1.5,-2,aggressive_rhizomatous,,1,0,,here,documented,,8
+202,Jack Pine,Pinus banksiana,tree,12,4,3,3,10,0,False,0,0,0,0,0,1,2,native_specialist,2,0,15.0,0,,decurrent,1,0,,here,documented,,11
+203,White Spruce,Picea glauca,tree,9,3,3,0,0,0,False,0,2,8,0,0,1,3,big_box,2,0,25.0,0,,excurrent,1,0,,here,documented,,9
+204,Bastard Toadflax,Comandra umbellata,wildflower,10,2,5,0,0,0,False,0,0,0,1,6,1,0,rare,2,2,0.2,0,,,0,0,,here,documented,,15
+205,Bog Cranberry,Vaccinium oxycoccos,groundcover,10,2,5,1,1,0,False,0,1,0,0,1,0,0,rare,2,2,0.1,0,,,1,0,,near,thin,native,2
+206,Bristly Black Currant,Ribes lacustre,shrub,10,2,5,0,0,0,False,0,1,0,0,0,1,0,rare,2,2,1.5,0,,multi_stem,1,0,,here,observed,native,0
+207,Water Smartweed,Persicaria amphibia,wildflower,10,2,5,0,0,0,False,0,0,0,1,8,1,0,rare,2,2,0.5,0,,,1,0,,here,documented,,20
+208,Wild Lily-of-the-valley,Maianthemum canadense,groundcover,10,2,5,0,0,0,False,0,0,0,1,8,1,2,native_specialist,2,2,0.15,-2,aggressive_rhizomatous,,1,0,low,here,documented,,18
+209,Labrador Tea,Ledum groenlandicum,shrub,8,2,4,1,1,0,False,0,0,0,0,0,1,0,rare,2,2,1.0,0,,decurrent,0,0,,here,documented,,1
+210,Northern Gentian,Gentianella amarella,wildflower,8,2,4,0,0,0,False,0,0,0,1,6,1,0,rare,2,2,0.3,0,,,1,-1,,here,documented,,11
+211,Tamarack,Larix laricina,tree,6,2,3,0,0,0,False,0,1,1,0,0,1,3,garden_centre,2,0,20.0,0,,excurrent,1,0,,here,documented,,1
+212,Palmate-leaved Coltsfoot,Petasites frigidus,herb,5,1,5,0,0,0,False,0,0,0,0,3,1,2,native_specialist,2,2,0.5,-2,aggressive_rhizomatous,,1,0,,here,documented,,9
+213,Twinflower,Linnaea borealis,groundcover,5,1,5,0,0,0,False,0,0,0,1,13,0,0,rare,2,2,0.1,0,,,1,0,,here,documented,,17
+214,Yellow Lady's Slipper,Cypripedium parviflorum,wildflower,5,1,5,0,0,0,False,0,0,0,0,2,1,0,rare,2,2,0.5,0,,,1,0,,here,documented,,7
+215,Yellow Owl Clover,Orthocarpus luteus,wildflower,5,1,5,0,0,0,False,0,0,0,0,1,1,0,rare,2,2,0.3,0,,,1,-1,,here,documented,,1
+216,Buckbean,Menyanthes trifoliata,aquatic,4,2,2,1,1,0,False,0,0,0,0,2,1,2,native_specialist,0,2,0.3,0,,,1,0,,here,thin,native,7
+217,Wild Mint,Mentha canadensis,wildflower,4,1,4,0,0,0,False,0,0,0,1,13,0,2,native_specialist,2,2,0.5,-2,aggressive_rhizomatous,,0,0,,here,documented,,29
+218,Black Spruce,Picea mariana,tree,3,1,3,0,0,0,False,0,0,0,0,0,1,2,native_specialist,2,0,15.0,0,,excurrent,1,0,,here,documented,,1
+219,Cattail,Typha latifolia,aquatic,2,1,2,0,0,0,False,0,0,0,0,0,1,1,seed_or_plug,0,2,2.5,0,,,1,0,,here,documented,,0
+220,Three-square Rush,Schoenoplectus pungens,sedge,2,1,2,0,0,0,False,0,1,1,0,0,0,1,seed_or_plug,0,2,1.0,0,,,1,0,,here,documented,,1
+221,Water Parsnip,Sium suave,aquatic,2,1,2,0,0,0,False,0,0,0,1,9,0,2,native_specialist,0,2,1.2,0,,,0,0,,here,documented,,19
+222,Bebb's Sedge,Carex bebbii,sedge,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.6,0,,,0,0,,here,documented,,0
+223,Common Horsetail,Equisetum arvense,herb,0,0,5,0,0,0,False,0,0,0,0,0,0,2,native_specialist,2,2,0.4,-2,aggressive_rhizomatous,,1,0,,here,documented,,0
+224,Cyperus-like Sedge,Carex pseudocyperus,sedge,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,0,0,,here,documented,,0
+225,Hooded Ladies' Tresses,Spiranthes romanzoffiana,wildflower,0,0,5,0,0,0,False,0,0,0,0,3,0,0,rare,2,2,0.4,0,,,1,0,,here,documented,,3
+226,Knotted Rush,Juncus nodosus,rush,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,0,0,,here,documented,,0
+227,Narrowleaf Cotton-grass,Eriophorum angustifolium,sedge,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.5,0,,,0,0,,here,documented,,0
+228,Needle Spike-rush,Eleocharis acicularis,rush,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.15,0,,,0,0,,here,documented,,0
+229,Round-leaved Sundew,Drosera rotundifolia,herb,0,0,5,0,0,0,False,0,0,0,0,0,0,0,rare,2,2,0.1,0,,,1,0,,here,documented,,0
+230,Sartwell's Sedge,Carex sartwellii,sedge,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.7,0,,,0,0,,here,documented,,0
+231,Slough Grass,Beckmannia syzigachne,grass,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.9,0,,,1,-1,,here,documented,,0
+232,Turned Sedge,Carex retrorsa,sedge,0,0,5,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.8,0,,,0,0,,here,documented,,0
+233,Western Wood Lily,Lilium philadelphicum,wildflower,0,0,5,0,0,0,False,0,0,0,0,0,0,0,rare,2,2,0.5,0,,,0,0,,here,documented,,7
+234,Variegated Horsetail,Equisetum variegatum,rush,0,0,4,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,0.35,-2,aggressive_rhizomatous,,1,0,,here,thin,native,0
+235,Common Scouring-rush,Equisetum hyemale,rush,0,0,3,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,2,2,1.2,-2,aggressive_rhizomatous,,0,0,,here,thin,native,0
+236,Arum-leaved Arrowhead,Sagittaria cuneata,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,2,native_specialist,0,2,0.6,0,,,1,0,,here,documented,,0
+237,Broad-leaved Water-plantain,Alisma triviale,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,2,native_specialist,0,2,0.9,0,,,0,0,,here,thin,native,2
+238,Common Bladderwort,Utricularia vulgaris,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.1,0,,,1,0,,here,documented,,0
+239,Common Mare's-tail,Hippuris vulgaris,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.6,0,,,0,0,,here,documented,,0
+240,Floating Marsh-marigold,Caltha natans,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.05,0,,,1,0,low,here,documented,,0
+241,Giant Bur-reed,Sparganium eurycarpum,aquatic,0,0,2,0,0,0,False,0,0,0,0,1,0,2,native_specialist,0,2,1.5,0,,,0,0,,here,documented,,2
+242,Great Bulrush,Schoenoplectus acutus,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,0,2,2.5,0,,,1,0,,here,documented,,0
+243,Ivy-leaved Duckweed,Lemna trisulca,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.02,0,,,0,0,,here,documented,,0
+244,Rat Root,Acorus americanus,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,2,native_specialist,0,2,0.8,0,,,1,0,,here,documented,,0
+245,Sago Pondweed,Stuckenia pectinata,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.5,0,,,1,0,,here,documented,,0
+246,Small Bottle Sedge,Carex utriculata,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,1,seed_or_plug,0,2,1.0,0,,,0,0,,here,documented,,0
+247,Spiked Water-milfoil,Myriophyllum sibiricum,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.3,0,,,1,0,,here,documented,,0
+248,Swamp Horsetail,Equisetum fluviatile,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,2,native_specialist,0,2,1.0,-2,aggressive_rhizomatous,,1,0,,here,documented,,0
+249,Water Arum (Wild Calla),Calla palustris,wildflower,0,0,2,0,0,0,False,0,0,0,0,0,0,2,native_specialist,0,2,0.3,0,,,1,0,,here,documented,,0
+250,Yellow Pond-lily,Nuphar variegata,aquatic,0,0,2,0,0,0,False,0,0,0,0,0,0,0,rare,0,2,0.2,0,,,1,0,,here,thin,native,1

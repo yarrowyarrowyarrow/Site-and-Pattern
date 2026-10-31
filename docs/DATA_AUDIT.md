@@ -17,6 +17,9 @@ licence and copyright position), `docs/DATA_GAPS.md` (the morphology debt),
 
 ## The short version
 
+> **Catalogue size, V2.75: 430 species.** The `/434` denominators below are as-measured at V2.42 and are left as they were written — this repo corrects its ledger in place rather than rewriting history, and a table describing a past measurement is not a stale reference. Two species have been removed since (*Rudbeckia hirta* V2.74, *Helianthus giganteus* V2.75, both introduced or eastern) and two garden rows reclassified. **The live figures are printed by `python scripts/check_plant_data.py`**, which counts rather than remembers.
+
+
 **The flora↔fauna relationships are better sourced than they look.** All 361
 of them carry a real bibliographic citation naming a real work — Acorn &
 Sheldon, Pohl et al., Cornell's *Birds of the World*, Wilson & Carril, Packer,

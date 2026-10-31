@@ -26,6 +26,7 @@ import re
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,6 +40,8 @@ _plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
 
 from src import static_site                                # noqa: E402
 from src import static_site_render as render               # noqa: E402
+from src import static_site_method as method              # noqa: E402
+from src import static_site_range as rangemod             # noqa: E402
 
 _LINK = re.compile(r'(?:href|src)="([^"]+)"')
 
@@ -204,7 +207,10 @@ class TestTheModelNeedsNoDatabase(unittest.TestCase):
         """A hub axis that generated nothing is a facet whose derivation is
         broken, which looks identical to "the data has none of that"."""
         got = {h["key"] for h in self.model["hubs"]}
-        self.assertEqual(got, {"type", "colour", "bloom", "ecoregion", "role"})
+        # "around" since V3.12 (F220): the fixture's plants include species on
+        # the shipped Edmonton list, which is read off data/local_flora.json.
+        self.assertEqual(got, {"type", "colour", "bloom", "ecoregion", "role",
+                               "around"})
 
     def test_a_photo_without_attribution_is_not_offered(self):
         by_name = {e["name"]: e for e in self.model["species"]}
@@ -316,16 +322,166 @@ class TestTheRenderedSite(unittest.TestCase):
 
     def test_the_about_page_publishes_the_bibliography(self):
         """A citation the reader cannot look up is decoration. The works are
-        listed, and `citations.disclaimer()` travels with them because these
-        details were transcribed from source records rather than checked
-        against the works themselves."""
+        listed, and the disclaimer travels with them because these details were
+        transcribed from source records rather than checked against the works
+        themselves.
+
+        V2.80 restated that disclaimer in the author's first person for this
+        page, so the assertion moved with it. What is being guarded is the
+        *substance*, not the sentence: the reader is told the details were not
+        checked against the works, and that a citation says where a claim came
+        from rather than that anyone confirmed it.
+        """
         from src import citations
         page = (self.out / "about" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("Where this data came from", page)
-        self.assertIn("not been checked", page)
+        self.assertIn("Where the data came from", page)
+        self.assertIn("without opening the works themselves", page)
+        self.assertIn("where a claim came from", page)
         for key in ("acorn_sheldon_butterflies_ab", "globi"):
             head = citations.format_citation(key).split(".")[0]
             self.assertIn(head, page, key)
+
+    def test_every_page_carries_a_share_card(self):
+        """V2.80. A link pasted into Facebook, Reddit, Slack or a text message
+        used to unfold into a grey box with a URL under it, on a site whose
+        whole argument is that the plants are worth looking at.
+
+        Checked on every page rather than one, because the tags are emitted by
+        the shell and a page that renders its own head would silently opt out.
+        """
+        missing = [rel for rel in sorted(self.files)
+                   if rel.endswith(".html")
+                   and 'property="og:title"' not in
+                   (self.out / rel).read_text(encoding="utf-8")]
+        self.assertEqual(missing[:5], [],
+                         f"{len(missing)} pages share as a bare URL")
+
+    def test_the_build_reports_what_a_shared_link_will_show(self):
+        """The one thing about a build that **cannot be checked by looking at
+        the site**: whether a pasted link shows a picture lives in somebody
+        else's scraper, so a wrong answer is invisible to the person publishing
+        and obvious to everybody else. It goes in the summary, next to the
+        analytics providers, for the same reason those do."""
+        self.assertTrue(self.summary["share_image"].startswith("https://"),
+                        self.summary["share_image"])
+        self.assertIn("share_hotlinked", self.summary)
+
+    def test_a_build_with_no_base_url_reports_a_text_only_card(self):
+        """Rather than reporting a path that will 404 in a scraper."""
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_nobase_"))
+        summary = render.write_site(self.model, str(out), copy_photos=False)
+        # The fixture's photos are hotlinks, which stay absolute and shareable
+        # with or without a base URL. What must not happen is a *relative* path
+        # being reported as if a scraper could fetch it.
+        self.assertFalse(summary["share_image"].startswith("assets/"))
+
+    def test_the_share_image_is_absolute(self):
+        """The failure with no symptom on the page it is on: a scraper fetches
+        `og:image` from its own servers, with no page to resolve a relative
+        path against, so a relative one produces no card and no error."""
+        found = 0
+        for rel in sorted(self.files):
+            if not rel.endswith(".html"):
+                continue
+            for src in re.findall(r'property="og:image" content="([^"]+)"',
+                                  (self.out / rel).read_text(encoding="utf-8")):
+                found += 1
+                self.assertTrue(src.startswith(("http://", "https://")),
+                                f"{rel}: {src}")
+        self.assertTrue(found, "no page offered an image at all")
+
+    def test_the_maps_come_before_the_animal_list_on_every_species_page(self):
+        """V2.80, the author's call after reading a well-recorded species.
+
+        The animal list is not a sidebar: a plant with a hundred documented
+        relationships pushed both maps below a hundred list items, and *does it
+        grow here* and *what grows with it* are the questions somebody asks
+        before deciding to grow a plant, not after. Nobody scrolls past a
+        hundred bees to reach a map, so the maps were in practice unreachable
+        on exactly the species carrying the most evidence.
+
+        Checked on every page rather than one, because the order lives in a
+        single f-string that a later edit can reorder with nothing complaining.
+        """
+        headings = ("Where it has been recorded",          # the range map
+                    "Which ecoregions the records fall in")  # the region list
+        wrong, checked = [], 0
+        for page in sorted((self.out / "plants").rglob("index.html")):
+            body = page.read_text(encoding="utf-8")
+            animals = body.find("Documented animals")
+            if animals < 0:
+                continue
+            for heading in headings:
+                at = body.find(heading)
+                if at < 0:
+                    continue          # nothing recorded draws nothing (P9)
+                checked += 1
+                if animals < at:
+                    wrong.append(f"{page.parent.name}: {heading}")
+        self.assertEqual(wrong[:5], [],
+                         f"{len(wrong)} pages bury a map under the animals")
+        # Not vacuous: a build where no page had a map at all would otherwise
+        # pass this by finding nothing to compare.
+        self.assertTrue(checked, "no species page carried either block")
+
+    def test_no_species_page_prints_a_dict_key_at_the_reader(self):
+        """V2.80. All 422 published species pages read:
+
+            price: about $8-$16 per plant (estimate); availability: garden
+            centre; notes: Estimate (herb default); AB retail as of 2026
+
+        The extras renderer had a generic "a dict becomes `k: v` pairs" branch
+        and the sourcing field is a dict. The desktop had rendered the same
+        dict as prose since the field existed; only the public surface leaked
+        the schema. Formatting now lives in `sourcing.describe`, beside the
+        numbers, so a third surface cannot invent a fourth wording.
+        """
+        leaked = []
+        for page in (self.out / "plants").rglob("index.html"):
+            body = page.read_text(encoding="utf-8")
+            for key in ("price:", "availability:", "notes:"):
+                if key in body:
+                    leaked.append(f"{page.parent.name}: {key}")
+        self.assertEqual(leaked[:5], [], f"{len(leaked)} raw field names shown")
+
+    def test_the_price_still_says_it_is_an_estimate(self):
+        """The disclaimer `src/sourcing.py` requires is not what got cut: it is
+        a plant-type default, not a quote from a nursery."""
+        from src.sourcing import describe
+        text, note = describe({"price": "about $8-$16 per plant (estimate)",
+                               "availability": "garden centre",
+                               "notes": "Estimate (herb default)"})
+        self.assertEqual(text,
+                         "About $8-$16 per plant (estimate), often sold by "
+                         "native-plant nurseries.")
+        self.assertEqual(note, "Estimate (herb default)")
+
+    def test_the_availability_class_is_not_dropped_into_a_frame(self):
+        """`availability_class` is *how you get it*, not always a kind of shop,
+        and one frame does not fit all five: "usually from a seed or plug" (82
+        species) and "usually from a big box" (15) are what a single sentence
+        template produces, and neither is English. A class with no clause falls
+        back to the token, which is what the desktop has always shown."""
+        from src.sourcing import describe
+        self.assertEqual(describe({"availability": "seed_or_plug"})[0],
+                         "Usually sold as seed or plugs.")
+        self.assertEqual(describe({"availability": "big box"})[0],
+                         "One of the most widely sold natives.")
+        self.assertEqual(describe({"availability": "mail_order_only"})[0],
+                         "Mail order only.")
+
+    def test_a_species_page_shares_its_own_species(self):
+        """Sharing a plant should show that plant, not the site default."""
+        entry = next(e for e in self.model["species"]
+                     if static_site._first_photo(e))
+        page = (self.out / "plants" / entry["slug"]
+                / "index.html").read_text(encoding="utf-8")
+        want = static_site._first_photo(entry)["url"]
+        self.assertIn(f'property="og:image" content="{want}"', page)
+        # And the credit travels with it: inside somebody else's app the page
+        # carrying the attribution is reduced to a link.
+        alt = re.search(r'property="og:image:alt" content="([^"]+)"', page)
+        self.assertIn(entry["brief"]["name"], alt.group(1))
 
     def test_the_file_index_is_url_shaped_not_os_shaped(self):
         """Guards the `.as_posix()` in setUpClass, which is invisible on Linux.
@@ -429,6 +585,19 @@ class TestTheRenderedSite(unittest.TestCase):
         for row in rows:
             self.assertIn(f"../plants/{row['s']}/", hrefs)
 
+    def test_the_search_index_carries_spelling_variants(self):
+        """V2.86: "Burr Oak" found nothing on the site. The box matches by
+        substring over each row's `n`, so the variant has to be in it."""
+        import src.name_variants as nv
+        with mock.patch.dict(nv.SPELLINGS, {"gramma": "grama"}):
+            html = render.render_browse(self.model, {})
+        rows = json.loads(re.search(
+            r'<script id="catalogue" type="application/json">(.*?)</script>',
+            html, re.S).group(1))
+        names = [r["n"] for r in rows]
+        self.assertTrue(any("blue gramma grass" in n for n in names), names)
+        self.assertTrue(any("bouteloua gracilis" in n for n in names), names)
+
     def test_the_embedded_json_cannot_close_its_own_script_block(self):
         """The index is built from free-text database columns. A `</script>` in
         one of them would spill JSON into the document."""
@@ -453,6 +622,53 @@ class TestTheRenderedSite(unittest.TestCase):
                     offenders.append(f"{page.relative_to(self.out)}: "
                                      f"...{text[max(0, where - 40):where + 40]}...")
         self.assertEqual(offenders, [])
+
+    def _pages(self):
+        for page in sorted(self.out.rglob("*.html")):
+            yield (page.relative_to(self.out).as_posix(),
+                   page.read_text(encoding="utf-8"))
+
+    def test_every_page_declares_its_own_url_as_canonical(self):
+        """V2.84. Added where the file is written, which is the one place that
+        knows each page's path, so no page can be missed and none can carry
+        another page's URL."""
+        for rel, text in self._pages():
+            want = ("https://example.org/"
+                    + (rel[:-len("index.html")] if rel.endswith("index.html")
+                       else rel))
+            self.assertIn(f'<link rel="canonical" href="{want}">', text, rel)
+            self.assertIn(f'<meta property="og:url" content="{want}">', text, rel)
+
+    def test_every_title_names_the_site(self):
+        """A search result for a species page never said whose page it was."""
+        for rel, text in self._pages():
+            title = re.search(r"<title>(.*?)</title>", text, re.S).group(1)
+            self.assertIn(render.SITE_NAME, title, rel)
+            self.assertEqual(title.count(render.SITE_NAME), 1, rel)
+
+    def test_no_svg_claims_an_invalid_height(self):
+        """`height="auto"` is not an SVG length; every map page logged an error
+        for it until V2.84. The stylesheet sizes the maps instead."""
+        for rel, text in self._pages():
+            self.assertNotIn('height="auto"', text, rel)
+
+    def test_the_facet_list_folds_on_a_phone(self):
+        """A <details> rendered open, which browse.js shuts on a narrow screen:
+        with no script the filters are still there (V2.84)."""
+        for rel in ("plants/index.html", "wildlife/index.html"):
+            text = (self.out / rel).read_text(encoding="utf-8")
+            self.assertIn('<details class="fscroll" open>'
+                          '<summary class="ftoggle">Filters</summary>', text, rel)
+
+    def test_a_species_description_reads_as_prose(self):
+        """It printed the raw column, `full sun,partial shade`, and never said
+        where the plant is native (V2.84)."""
+        for rel, text in self._pages():
+            if not re.match(r"plants/[^/]+/index\.html$", rel):
+                continue
+            desc = re.search(r'<meta name="description" content="([^"]*)"',
+                             text).group(1)
+            self.assertIsNone(re.search(r"[a-z],[a-z]", desc), f"{rel}: {desc}")
 
     def test_the_dash_normaliser_leaves_ranges_alone(self):
         """An en dash joining a range is a different mark doing a different
@@ -501,12 +717,15 @@ class TestTheRenderedSite(unittest.TestCase):
         `CAVEAT` itself means the wording can be corrected in one place and
         the test still guards the thing it cares about, which is that no map
         reaches a reader without its provenance."""
-        from src.ecoregion_map import CAVEAT
-
         page = (self.out / "plants" / "wild-bergamot" / "index.html").read_text(
             encoding="utf-8")
         self.assertIn("<svg", page)
-        self.assertIn(render._esc(CAVEAT), page)
+        # V2.80: the map on a species page is the occurrence range map, not
+        # the ecoregion map. `species_range.caption` is its provenance, and
+        # this pins the caption rather than a literal string for the reason
+        # the docstring above gives.
+        self.assertIn(render._esc("unrecorded rather than empty"), page)
+        self.assertIn("records per square", page)
 
     def test_the_map_page_exists_and_is_linked_from_every_header(self):
         self.assertIn("map/index.html", self.files)
@@ -530,11 +749,42 @@ class TestTheRenderedSite(unittest.TestCase):
         stages them into ``assets/photos/``. V2.71 added an opt-in analytics
         beacon, which this build does not ask for and therefore must not have
         — `TestAnalyticsIsOptInAndDisclosed` covers both states.
+
+        **The allowlist is a list of destinations, not of requests.** Every
+        entry is an `<a href>` a reader may choose to follow; none is fetched
+        while the page loads, which is the promise this test exists to keep.
+
+        GBIF and iNaturalist joined it in V2.75 (F135). A species page's range
+        is a snapshot of a database that changes daily, and an outside review
+        asked how current it was; linking out is the honest answer.
+
+        VASCAN joined in V2.80, when the nativity claim stopped being an
+        inference and started citing a published checklist. A claim with a
+        source the reader cannot reach is barely better than one without.
+
+        That V2.75 docstring also said the coordinates were "not ours to
+        republish". **That is no longer true and the note is corrected rather
+        than left standing**: the licence rule was reconsidered per record kind
+        (a coordinate is a fact about a place, a photograph is a work), and
+        171,896 marks are now drawn on the species pages themselves. The rare
+        taxa the old note worried about were raised explicitly and published
+        on the author's decision.
+
+        Three named hosts, still no third-party script, still nothing loaded.
+
+        V2.84 added one exception, exactly one URL per page: the page naming
+        itself in `<link rel="canonical">`, which loads nothing.
         """
         allowed = ("https://github.com/", "https://example.org/p.jpg",
-                   "https://example.org/monarch.jpg")
+                   "https://example.org/monarch.jpg",
+                   "https://www.gbif.org/", "https://www.inaturalist.org/",
+                   "https://data.canadensys.net/")
         for page in self.out.rglob("*.html"):
-            for link in _LINK.findall(page.read_text(encoding="utf-8")):
+            text = page.read_text(encoding="utf-8")
+            own = re.search(r'<link rel="canonical" href="([^"]+)">', text)
+            for link in _LINK.findall(text):
+                if own and link == own.group(1):
+                    continue          # the page naming itself (V2.84)
                 if link.startswith(("http://", "https://")):
                     self.assertTrue(link.startswith(allowed), link)
 
@@ -595,13 +845,32 @@ class TestTheWildlifeIndexIsSearchable(unittest.TestCase):
                                  r'value="([^"]+)"', self.html))
         self.assertEqual(offered, {"lepidoptera", "bee"})
 
-    def test_an_animal_with_no_photograph_answers_no_photo_filter(self):
-        """P9 as the filter sees it: absent is absent, not a weak yes. Ticking
-        "has a photograph" must drop it rather than keep it as an unknown."""
+    def test_both_halves_of_the_photograph_question_are_askable(self):
+        """P9 as the filter sees it: ticking "has a photograph" must drop the
+        animal we have no picture of, rather than keeping it as an unknown.
+
+        Until V2.80 that was the *only* half you could ask. Photograph and
+        specialist shared one facet called "Also" with a tick each, so "show me
+        the animals still missing a photograph" — the question somebody looking
+        for work to do would ask — could not be put. Every animal now answers
+        both facets with a yes or a no."""
         from src.static_site_wildlife import facets_for
 
-        self.assertIn("photo", facets_for(self._animal("Monarch"))["has"])
-        self.assertNotIn("has", facets_for(self._animal("Prairie Bee")))
+        monarch = facets_for(self._animal("Monarch"))
+        bee = facets_for(self._animal("Prairie Bee"))
+        self.assertEqual(monarch["photo"], ["yes"])
+        self.assertEqual(bee["photo"], ["no"])
+        self.assertEqual(monarch["specialist"], ["yes"])
+        self.assertEqual(bee["specialist"], ["no"])
+        self.assertNotIn("has", monarch)
+
+    def test_the_negative_labels_do_not_overclaim(self):
+        """A missing photograph is a fact about the catalogue and says "yet".
+        A missing specialist record is not proof the animal is a generalist,
+        so the box says "not recorded as" rather than asserting it is not."""
+        self.assertIn("No photograph yet", self.html)
+        self.assertIn("Not recorded as a specialist", self.html)
+        self.assertNotIn(">Also<", self.html)
 
     def test_the_uncredited_animal_photo_is_absent_entirely(self):
         """The licences oblige attribution. An animal photograph with no
@@ -655,7 +924,14 @@ class TestTheWildlifeIndexIsSearchable(unittest.TestCase):
 class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
     """V2.71. The site made no external request of any kind; a beacon is a real
     change to that promise, so it is off by default, refuses a malformed token
-    rather than pasting it into every page, and says so where a reader looks."""
+    rather than pasting it into every page, and says so where a reader looks.
+
+    V2.73 adds a second provider on the same terms. What is checked here is
+    that both reach *every page* and that neither can leak into a later build;
+    the validation table itself is in `tests/test_site_analytics.py`, where it
+    does not cost a site render per case."""
+
+    _UID = "0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8"
 
     @classmethod
     def setUpClass(cls):
@@ -667,21 +943,63 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
                                     **kw)
         return out, summary
 
+    def _assert_clean(self, out):
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertNotIn("cloudflareinsights", text, str(page))
+            self.assertNotIn("umami", text.lower(), str(page))
+
     def test_no_beacon_unless_asked_for(self):
         out, summary = self._build()
         self.assertFalse(summary["analytics"])
-        for page in out.rglob("*.html"):
-            self.assertNotIn("cloudflareinsights",
-                             page.read_text(encoding="utf-8"))
+        self.assertEqual(summary["analytics_providers"], ())
+        self._assert_clean(out)
 
     def test_the_beacon_and_its_disclosure_land_on_every_page(self):
         token = "a" * 32
         out, summary = self._build(analytics_token=token)
         self.assertTrue(summary["analytics"])
+        self.assertEqual(summary["analytics_providers"],
+                         ("Cloudflare Web Analytics",))
         for page in out.rglob("*.html"):
             text = page.read_text(encoding="utf-8")
             self.assertIn(token, text, str(page))
             self.assertIn("sets no cookies", text, str(page))
+
+    def test_umami_and_its_disclosure_land_on_every_page(self):
+        """V2.73. Cloudflare's free tier answers "is anyone reading this" and
+        keeps a short window; Umami is the one that keeps history."""
+        out, summary = self._build(umami_website_id=self._UID)
+        self.assertEqual(summary["analytics_providers"], ("Umami",))
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(f'data-website-id="{self._UID}"', text, str(page))
+            self.assertIn("cloud.umami.is/script.js", text, str(page))
+            self.assertIn("sets no cookies", text, str(page))
+            self.assertNotIn("cloudflareinsights", text, str(page))
+
+    def test_both_providers_can_run_together(self):
+        """The switchover case: the old numbers and the new ones side by side
+        is how you find out the new one is recording before dropping the old."""
+        token = "c" * 32
+        out, summary = self._build(analytics_token=token,
+                                   umami_website_id=self._UID)
+        self.assertEqual(summary["analytics_providers"],
+                         ("Cloudflare Web Analytics", "Umami"))
+        for page in out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertIn(token, text, str(page))
+            self.assertIn(self._UID, text, str(page))
+            self.assertIn("sets no cookies", text, str(page))
+
+    def test_a_self_hosted_umami_url_is_what_gets_published(self):
+        """`cloud.umami.is` is on the common blocklists, so serving the script
+        from the site's own domain is a real migration, not a preference."""
+        src = "https://grownativeplants.ca/u.js"
+        out, _ = self._build(umami_website_id=self._UID, umami_src=src)
+        text = (out / "index.html").read_text(encoding="utf-8")
+        self.assertIn(f'src="{src}"', text)
+        self.assertNotIn("cloud.umami.is", text)
 
     def test_a_malformed_token_is_refused(self):
         """It lands inside a quoted JSON attribute on 2,000 pages. A loose
@@ -690,20 +1008,411 @@ class TestAnalyticsIsOptInAndDisclosed(unittest.TestCase):
                     "tok'en"):
             with self.assertRaises(ValueError, msg=bad):
                 self._build(analytics_token=bad)
+        for bad in ("not-a-uuid", 'x" onload="alert(1)'):
+            with self.assertRaises(ValueError, msg=bad):
+                self._build(umami_website_id=bad)
 
     def test_a_build_cannot_inherit_the_previous_one_s_token(self):
-        """The token is module state for the length of one build, so the seam
-        that matters is what a *later* build sees. It is assigned on the way in
-        rather than restored on the way out, so neither a rejected token nor a
-        build that raised half way can put a beacon on the next one's pages."""
+        """The configuration is module state for the length of one build, so
+        the seam that matters is what a *later* build sees. It is assigned on
+        the way in rather than restored on the way out, so neither a rejected
+        value nor a build that raised half way can put a beacon on the next
+        one's pages."""
         with self.assertRaises(ValueError):
             self._build(analytics_token="nope")
         self._build(analytics_token="b" * 32)
+        self._build(umami_website_id=self._UID)
         out, summary = self._build()
         self.assertFalse(summary["analytics"])
-        for page in out.rglob("*.html"):
-            self.assertNotIn("cloudflareinsights",
-                             page.read_text(encoding="utf-8"), str(page))
+        self._assert_clean(out)
+
+
+class TestThePagesClaimTheGroundTheyActuallyCover(unittest.TestCase):
+    """The site said "prairie" and covers more and less than that (V2.76).
+
+    Two errors in one word, and the author caught both by reading the site.
+
+    **Geographically it claimed too much.** "Alberta and the Canadian prairies"
+    reads as including Manitoba, and the layer stops at the Saskatchewan
+    border -- `tools/ecoregions/common.py` sets `SUBJECT_PROVINCES =
+    ("Alberta", "Saskatchewan")`. V2.75 removed the Manitoba filter chip for
+    exactly this reason and left the prose saying it anyway.
+
+    **Biologically it claimed the wrong thing.** Of 420 species with ranges,
+    381 are in the Prairies ecozone -- but 341 are in Boreal Plains and 339 in
+    Montane Cordillera. A third of the catalogue is boreal or montane ground.
+    Worst of all, the map page called all 24 regions "the prairie ecoregions"
+    when roughly four of them are; the rest are boreal, taiga and cordilleran.
+
+    `Prairies` as the ecozone's own name is a proper noun from the National
+    Ecological Framework and stays.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = pathlib.Path(tempfile.mkdtemp(prefix="site_scope_"))
+        render.write_site(_model(), str(cls.out), copy_photos=False)
+
+    #: The phrases that make the false claim. Banning the *word* is wrong and
+    #: the first draft of this test did it: "Grande Prairie" is a city on the
+    #: map, "Prairie Bee" is an animal's name, and the About page's own
+    #: correction contains "not all prairie". What is forbidden is describing
+    #: the CATALOGUE or the LAYER as prairie, which is the claim that is false.
+    FALSE_CLAIMS = (
+        "canadian prairies",
+        "prairie ecoregion",
+        "prairie natives",
+        "prairie plants",
+        "prairie animals",
+        "prairie habitat",
+        "and the prairies",
+    )
+
+    def _prose(self, text):
+        return " ".join(re.sub(r"<[^>]+>", " ", text).split()).lower()
+
+    def test_no_page_describes_the_catalogue_as_prairie(self):
+        offenders = []
+        for page in sorted(self.out.rglob("*.html")):
+            prose = self._prose(page.read_text(encoding="utf-8"))
+            for claim in self.FALSE_CLAIMS:
+                if claim in prose:
+                    offenders.append(
+                        f"{page.relative_to(self.out).as_posix()}: {claim!r}")
+        self.assertEqual(offenders, [], f"false scope claim: {offenders}")
+
+    def test_the_word_itself_is_allowed_where_it_is_true(self):
+        """Grande Prairie is a real city and Prairies is a real ecozone. A
+        guard that banned the word would have to be worked around, and a guard
+        people work around stops being read."""
+        for legitimate in ("Grande Prairie", "Prairies"):
+            self.assertNotIn(legitimate.lower(),
+                             [c for c in self.FALSE_CLAIMS])
+
+    def test_the_tagline_names_both_provinces_and_only_those(self):
+        self.assertIn("Alberta and Saskatchewan", render.TAGLINE)
+        self.assertNotIn("prairies", render.TAGLINE.lower())
+
+    def test_the_about_page_states_the_limit_rather_than_implying_it(self):
+        from src.static_site_about import render_about
+        # `_prose` lowercases, so the needles must too.
+        flat = self._prose(render_about(_model()))
+        self.assertIn("stop at the saskatchewan border", flat)
+        self.assertIn("boreal or montane ground", flat)
+
+
+class TestNoEmDashReachesAPage(unittest.TestCase):
+    """The rule CLAUDE.md said was guarded, and was not (V2.75).
+
+    `_esc` normalises em dashes, and every string that passes through it is
+    safe. What nothing checked is the *templates*: a dash written straight into
+    an f-string in one of the six page modules never meets `_esc` and lands on
+    the page. That is not hypothetical -- it is how this test came to exist,
+    after the V2.75 range copy shipped an `&mdash;` in exactly that position and
+    the suite stayed green.
+
+    Both spellings, because the HTML entity is the one a normaliser looking for
+    U+2014 will miss.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = pathlib.Path(tempfile.mkdtemp(prefix="site_dashes_"))
+        render.write_site(_model(), str(cls.out), copy_photos=False)
+
+    def test_no_page_carries_one(self):
+        offenders = []
+        for page in sorted(self.out.rglob("*.html")):
+            text = page.read_text(encoding="utf-8")
+            if "\u2014" in text or "&mdash;" in text or "&#8212;" in text:
+                offenders.append(page.relative_to(self.out).as_posix())
+        self.assertEqual(offenders, [], f"em dash on: {offenders}")
+
+    def test_the_normaliser_still_does_its_half(self):
+        self.assertNotIn("\u2014", render._esc("a \u2014 b"))
+
+
+class TestTheMethodPage(unittest.TestCase):
+    """What a shaded region claims, in the reader's words (F135, V2.75).
+
+    An outside botanical review asked five things the site could not answer
+    from any page on it -- what a record is, as of when, where in the region,
+    why a region with two records is missing, and what the shading means. Each
+    answer already existed in the repo and reached no reader.
+
+    The numbers here are computed, never written down. A page about honesty
+    that had gone stale would be the worst one on the site to hand-type.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _model()
+        cls.html = method.render_method(cls.model)
+
+    def test_it_states_the_floor_from_the_module_that_owns_it(self):
+        from src.ecoregion_ranges import MIN_RECORDS
+        self.assertIn(f"{MIN_RECORDS} records", self.html)
+
+    def test_the_bands_come_from_the_module_that_owns_them(self):
+        from src.ecoregion_ranges import CONFIDENCE_BANDS
+        for floor, label in CONFIDENCE_BANDS:
+            self.assertIn(label, self.html)
+            self.assertIn(str(floor), self.html)
+
+    def test_it_says_unshaded_is_not_absent(self):
+        self.assertIn("not absent", self.html.replace("\n", " "))
+
+    # V2.80, second copy pass: `test_it_says_recorded_is_not_native` was
+    # REMOVED here, and this note is the record.
+    #
+    # It required the map section to carry a third bullet, "Recorded is not
+    # native: a garden escape can accumulate hundreds of records." The author's
+    # rewrite cut it to two, and the argument is the one directly below: the
+    # page is read by people, and three warnings under one map is where a
+    # reader stops reading warnings.
+    #
+    # The claim itself did not lapse, which is the test the deletion had to
+    # pass. Nativity is now sourced to VASCAN for every species that publishes
+    # one (F137/F144), a species VASCAN cannot settle prints no province list
+    # at all, and the section immediately below this one says so. The warning
+    # existed because the site could not tell a garden escape from a native;
+    # it now can, and says which.
+
+    # V2.80: two tests were REMOVED here, and this note is the record.
+    #
+    # They required this page to explain the V2.76 buffer correction and name
+    # the sliver region that caused most of it -- 135 species to 15. Their
+    # argument was good: a reader comparing this site against an earlier copy
+    # sees the numbers move and is owed an explanation.
+    #
+    # The author's instruction after reading the page was the other way:
+    # *"you don't have to explain all process getting from past iterations of
+    # the site to this one."* At 1,743 words the page had become a changelog,
+    # and a caveat nobody finishes reading protects nobody.
+    #
+    # What did NOT lapse: the corrections section still links the public
+    # repository, where every derivation, its plan and its numbers live. Move
+    # the disclosure, do not delete it -- that rule is why these tests existed
+    # and it is still the rule. If a future correction moves the numbers
+    # visibly again, it needs a line here, not a section.
+
+    def test_it_does_not_claim_the_buffer_is_still_present(self):
+        """The specific false sentence, pinned so it cannot come back by a
+        copy-paste from an older draft."""
+        flat = " ".join(self.html.split())
+        self.assertNotIn("which has not happened yet in this build", flat)
+
+    def test_it_names_what_is_not_filtered(self):
+        self.assertIn("identification-verified", self.html)
+
+    def test_the_retrieval_date_is_still_read_off_the_rows(self):
+        """V2.80 cut the "Retrieved on:" label the date used to hang from, so
+        it has to read as prose on its own. The re-punctuation is a partition
+        on what the row already says, never a typed date, and a source not in
+        that shape prints verbatim rather than being forced into it."""
+        from src.static_site_method import _sentence
+        self.assertEqual(
+            _sentence("GBIF occurrence search, retrieved 2026-08-25"),
+            "The <strong>GBIF occurrence search</strong> was retrieved "
+            "2026-08-25.")
+        self.assertEqual(_sentence("Somebody's field notebook"),
+                         "<strong>Somebody&#x27;s field notebook</strong>.")
+
+    def test_the_nativity_paragraph_matches_its_own_count(self):
+        """V2.80. This page shipped reading *"The other 0 read Not
+        established"*, followed by a paragraph explaining why those zero
+        species are unresolved.
+
+        The count was computed and correct; the prose around it was written
+        when 20 species were withheld and did not move when the renames took
+        that to none. So the *shape* of the sentence follows the count too.
+        """
+        from src.static_site_method import _nativity_claim
+        flat = " ".join(self.html.split())
+        self.assertNotIn("The other 0 ", flat)
+        self.assertIn("all 3 species carry an answer",
+                      _nativity_claim({"claimed": 3, "sourced": 3,
+                                       "withheld": 0}))
+        withheld = _nativity_claim({"claimed": 3, "sourced": 1, "withheld": 2})
+        self.assertIn("1 of 3", withheld)
+        self.assertIn("The other 2", withheld)
+
+    def test_it_is_reachable_from_the_nav(self):
+        from src.static_site_about import render_about
+        self.assertIn('href="../method/"', render_about(self.model))
+
+    def test_the_build_emits_it(self):
+        out = pathlib.Path(tempfile.mkdtemp(prefix="site_method_"))
+        render.write_site(self.model, str(out), copy_photos=False)
+        self.assertTrue((out / "method" / "index.html").exists())
+
+
+    def test_it_discloses_what_happens_at_a_shared_border(self):
+        """V2.78 disclosed a double count: 0.81% of in-region records fell in
+        the sliver where two separately simplified polygons overlap, and were
+        counted for both. The author's call then was to leave it and say so.
+
+        V2.81 replaced it rather than continuing to apologise for it, on the
+        author's *"I'd prefer no overlap"*: a record now has to be further
+        inside a region than the outline's own accuracy to count for it, which
+        makes a double count structurally impossible and sets aside the
+        records too near a line to place. The disclosure changes shape --
+        what is disclosed is now a discard, not an inflation -- and it still
+        has to be on the page, because a count with something taken out of it
+        must say so."""
+        # Flattened: the sentence wraps in the source, and a disclosure that
+        # a test can only find when it happens to fit on one line is a test
+        # about line width.
+        flat = " ".join(self.html.split())
+        self.assertIn("don't get counted", flat)
+        self.assertIn("stops a record being counted twice", flat)
+        self.assertIn("Calgary", flat)
+        for gone in ("eight records in a thousand", "eight records per thousand"):
+            self.assertNotIn(gone, flat,
+                             "the old double count is gone, not merely smaller")
+
+    def test_the_border_margin_is_not_typed_here_either(self):
+        """Same rule as the simplification distance below it. The margin comes
+        out of the shipped file's own envelope, which the seeder writes with
+        the value it actually derived under, so a page cannot go on quoting a
+        rule the data was not built to."""
+        from src.static_site_method import _border_margin
+        margin, discarded = _border_margin()
+        flat = " ".join(self.html.split())
+        self.assertIn(margin, flat)
+        self.assertIn("900", margin)
+        # The discard clause is optional -- a file from before V2.81 carries no
+        # tally -- so it brings its own space and full stop rather than the
+        # sentence supplying one. Written the other way, a build against such a
+        # file publishes "for that region.. It also". Checked on the sentence
+        # rather than the page: every relative href on it is "..".
+        self.assertNotIn("for that region..", flat)
+        self.assertIn("for that region.", flat)
+        if discarded:
+            self.assertTrue(discarded.startswith(" ")
+                            and discarded.endswith("."),
+                            "the optional clause must punctuate itself")
+            self.assertIn(discarded.strip(), flat)
+
+    def test_the_simplification_distance_is_not_typed_here(self):
+        """It comes out of `ecoregion_map.CAVEAT`, which is itself checked
+        against the polygon file's provenance. V2.69 shipped a caveat that had
+        become false and left it on 432 pages for a whole increment."""
+        from src.ecoregion_map import CAVEAT
+        from src.static_site_method import _simplification
+        self.assertIn(_simplification(), CAVEAT)
+        self.assertIn(_simplification(), self.html)
+
+class TestTheRangeSectionSaysWhatItClaims(unittest.TestCase):
+    """The copy an outside review quoted back (F135, V2.75)."""
+
+    def _section(self, **over):
+        entry = {"name": "Test Plant", "scientific_name": "Testus plantus",
+                 "ranges": [{"key": "aspen_parkland", "name": "Aspen Parkland",
+                             "where": "central AB / SK", "occurrences": 312,
+                             "confidence": "high",
+                             "source": "GBIF occurrence search, "
+                                       "retrieved 2026-08-18"}]}
+        entry.update(over)
+        return rangemod.range_section(entry, {"hubs": []}, 2)
+
+    def test_it_no_longer_calls_one_region_a_range(self):
+        """"A range seen three times" used *range* to mean one region entry,
+        where a range is the area a species is documented to occupy. The
+        review quoted this line and asked for terms to be defined."""
+        self.assertNotIn("A range seen", self._section())
+
+    def test_it_prints_the_retrieval_date(self):
+        """On the row since schema v59, printed by the desktop, dropped by the
+        website -- against a source that changes daily."""
+        self.assertIn("retrieved 2026-08-18", self._section())
+
+    def test_a_range_with_no_source_says_nothing_rather_than_guessing(self):
+        section = self._section(ranges=[{"key": "aspen_parkland",
+                                         "name": "Aspen Parkland",
+                                         "where": "central AB / SK",
+                                         "occurrences": 5,
+                                         "confidence": "low"}])
+        self.assertNotIn("Source:", section)
+
+    def test_it_says_a_count_is_for_the_whole_region(self):
+        """V2.80 removed the ecoregion MAP from the species page -- shading a
+        whole region because records fall somewhere inside it is the
+        overstatement the review objected to -- and kept the counts, which are
+        facts. So the sentence is no longer about shading."""
+        self.assertIn("somewhere</em> in the region", self._section())
+
+    def test_it_says_unshaded_is_not_absent(self):
+        self.assertIn("not the same as the plant being absent",
+                      " ".join(self._section().split()))
+
+    def test_it_links_out_to_the_live_maps(self):
+        """The review's own suggestion: our snapshot is one day old the day
+        after it is taken, and these are always current."""
+        section = self._section()
+        self.assertIn("gbif.org/species/search", section)
+        self.assertIn("inaturalist.org/taxa/search", section)
+        self.assertIn("Testus+plantus", section)
+
+    def test_a_species_with_no_name_gets_no_broken_links(self):
+        self.assertNotIn("gbif.org",
+                         self._section(scientific_name="", row={}))
+
+
+class TestTheRecordToggle(unittest.TestCase):
+    """F147, V2.80. The author asked for the range picture with a way to
+    switch between the two kinds of record. It is three radios and CSS: no
+    script, so it survives scripting being off, the page being saved to a
+    file, and being printed."""
+
+    def _fig(self):
+        """No database: `occurrence_map` looks the species up in the two
+        shipped files by scientific name, so an entry dict is enough."""
+        from src.static_site_points import occurrence_map
+        return occurrence_map({"scientific_name": "Opuntia polyacantha",
+                               "name": "Plains Prickly Pear Cactus"}, 2)
+
+    def test_it_offers_both_specimens_and_observations(self):
+        fig = self._fig()
+        for label in (">Both<", ">Specimens<", ">Observations<"):
+            self.assertIn(label, fig)
+
+    def test_both_is_the_default(self):
+        self.assertRegex(self._fig(), r'class="rk rk-all"[^>]*checked')
+        self.assertNotRegex(self._fig(), r'class="rk rk-s"[^>]*checked')
+
+    def test_the_inputs_are_siblings_of_the_map_not_nested_in_the_labels(self):
+        """A general-sibling combinator cannot climb out of a wrapper. With the
+        inputs inside `.ranketoggle` the buttons highlighted correctly and hid
+        nothing -- a control that looks like it works and does not."""
+        fig = self._fig()
+        self.assertLess(fig.index('class="rk rk-o"'),
+                        fig.index('class="ranketoggle"'))
+        self.assertLess(fig.index('class="ranketoggle"'),
+                        fig.index('class="rangemapwrap"'))
+
+    def test_the_radio_group_is_named_per_species(self):
+        """Two maps in one document sharing one group name are one group, so
+        checking either unchecks the other."""
+        self.assertIn('name="rk-opuntia-polyacantha"', self._fig())
+
+    def test_the_stylesheet_can_actually_reach_the_layers(self):
+        """The rule and the markup have to agree; they are in different files
+        and nothing else checks that they do."""
+        css = (pathlib.Path(__file__).parent.parent / "html" / "site"
+               / "site.css").read_text(encoding="utf-8")
+        self.assertIn(".rk-s:checked ~ .rangemapwrap .rangemap .layer-obs",
+                      css)
+        self.assertIn(".rk-o:checked ~ .rangemapwrap .rangemap .layer-spec",
+                      css)
+
+    def test_a_species_with_no_records_draws_no_map_and_no_toggle(self):
+        """Nothing recorded draws nothing (P9). An empty frame with a working
+        toggle would assert we looked everywhere."""
+        from src.static_site_points import occurrence_map
+        self.assertEqual(occurrence_map({"scientific_name": "Nothing sp."}, 2),
+                         "")
+
 
 
 if __name__ == "__main__":

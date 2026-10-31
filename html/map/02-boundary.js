@@ -1,4 +1,5 @@
-// html/map/02-boundary.js — boundary drawing/editing, length labels, multi-boundary helpers, footprint outline editing.
+// html/map/02-boundary.js — boundary drawing/editing, length labels, multi-boundary helpers, the corner-handle switch and names.
+// (A shape's outline editing moved to 02b-shape-edit.js in V3.11.)
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -8,18 +9,27 @@
 // through the shared global scope. The Python↔JS contract over these
 // globals is pinned by tests/test_map_js.py + tests/test_bridge_contract.py.
     // ── Boundary drawing (manual polygon) ────────────────────────────────────
+    // A click this close to the last corner adds none (V3.19, QF-14): both
+    // presses of the double-click that closes an outline reach here, and the
+    // second, a pixel or two off the first, left a sliver of a side that runs
+    // back across the one before it, so a square clicked in order was refused
+    // as crossing itself. In pixels, because a fixed distance in metres is a
+    // different gesture at every zoom.
+    var _SAME_CORNER_PX = 5;
+
+    function _pxApart(a, b) {
+      return map.latLngToContainerPoint(L.latLng(a))
+        .distanceTo(map.latLngToContainerPoint(L.latLng(b)));
+    }
+
     function handleBoundaryClick(lat, lng) {
       // If clicking near the first point, close the polygon
-      if (polygonPoints.length >= 3) {
-        var first = polygonPoints[0];
-        var firstPx = map.latLngToContainerPoint(L.latLng(first));
-        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
-        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
-        if (dist < 12) {
-          finishBoundaryPolygon();
-          return;
-        }
+      if (polygonPoints.length >= 3 && _pxApart(polygonPoints[0], [lat, lng]) < 12) {
+        finishBoundaryPolygon();
+        return;
       }
+      var last = polygonPoints[polygonPoints.length - 1];
+      if (last && _pxApart(last, [lat, lng]) < _SAME_CORNER_PX) return;
 
       polygonPoints.push([lat, lng]);
       drawingPolygon = true;
@@ -61,11 +71,6 @@
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
 
-    function addBoundaryLengthLabels(points) {
-      // Legacy stub — used only during loadBoundary; real implementation is _makeBoundaryLengthLabels
-      return _makeBoundaryLengthLabels(points, BOUNDARY_COLORS['green'].stroke);
-    }
-
     function calcPolygonAreaM2(points) {
       // Shoelace on projected metre coords relative to centroid
       var n = points.length;
@@ -96,11 +101,6 @@
       if (unit === 2) return (m2 / 4046.86).toFixed(3) + ' ac';
       if (unit === 3) return (m2 / 1e6).toFixed(4) + ' km²';
       return (m2 >= 10 ? Math.round(m2) : m2.toFixed(1)) + ' m²';
-    }
-
-    function addBoundaryAreaLabel(points) {
-      // Legacy stub — used only during loadBoundary
-      return _makeBoundaryAreaLabel(points);
     }
 
     function _makeBoundaryId() {
@@ -144,12 +144,61 @@
       return null;
     }
 
-    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea) {
+    // ── Framing a design the map cannot see yet (V3.04) ──────────────────────
+    // The start screen opens a design into a map still hidden behind it. Its
+    // page is 0 x 0 there, then Qt's 100 x 30 for a moment as the window shows,
+    // and Leaflet frames to the size it has: the example yard opened at zoom
+    // 18.4 where a laid-out map frames it at 22.8, a dot in an empty map. A fit
+    // made while the map is hidden or that small is made again, once, when the
+    // map is first given a real size.
+    var _fitOnShow = null, _fitOnShowHooked = false;
+    function _tooSmallToFit() {
+      var s = map.getSize();
+      return document.visibilityState === 'hidden' || s.x < 200 || s.y < 150;
+    }
+    function fitWhenShown(bounds, options) {
+      map.fitBounds(bounds, options);
+      _fitOnShow = _tooSmallToFit() ? [bounds, options] : null;
+      if (!_fitOnShow || _fitOnShowHooked) return;
+      _fitOnShowHooked = true;
+      map.on('resize', function () {
+        if (!_fitOnShow || _tooSmallToFit()) return;
+        var f = _fitOnShow; _fitOnShow = null;
+        map.fitBounds(f[0], f[1]);
+      });
+    }
+
+    // An outline's corners as the map keeps them (V3.19, QF-14): a corner
+    // repeated straight after itself, and the first repeated at the end, are
+    // dropped, as src/outline_check.corners drops them. A saved ring is
+    // closed, so an outline opened from a file or redrawn by undo repeated its
+    // first corner: two handles on one spot, the top one dragging a spur out
+    // of the outline that Python refused as a crossing, and a "0.0 m" side
+    // (QF-8). Pure, so node runs it.
+    function boundaryCorners(pts) {
+      var out = [];
+      (pts || []).forEach(function(p) {
+        var q = out[out.length - 1];
+        if (!q || q[0] !== p[0] || q[1] !== p[1]) out.push([p[0], p[1]]);
+      });
+      var a = out[0], z = out[out.length - 1];
+      if (out.length > 1 && a[0] === z[0] && a[1] === z[1]) out.pop();
+      return out;
+    }
+
+    // showHandles (V3.11, F216): whether a press shows the corner handles;
+    // name (F217): what the legend calls it when its boundaries are Named.
+    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea,
+                               showHandles, name) {
+      pts = boundaryCorners(pts);
       var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
       var layer = L.polygon(pts, {
         color: c.stroke, weight: 2,
         fillColor: c.fill, fillOpacity: 0.18,
-        interactive: true,
+        // Not a click target itself: the map decides when a click is on it
+        // (boundaryClicked below, V3.11), because the plants' canvas covers
+        // this pane and caught every click meant for the polygon.
+        interactive: false,
         // Bottom of the stack — see the pane table in 01-core.js. The boundary
         // is a filled polygon covering the whole property, so without an
         // explicit pane it competes with every feature drawn inside it for
@@ -162,41 +211,106 @@
 
       var entry = {
         id: id, layer: layer, labelsLayer: labelsLayer, areaLabel: areaLabel,
-        points: pts, color: colorName, showLengths: showLengths, showArea: showArea
+        points: pts, color: colorName, showLengths: showLengths, showArea: showArea,
+        showHandles: showHandles !== false, name: name || ''
       };
       boundaries.push(entry);
-
-      // Click → enter edit mode (or toggle selection on shift/cmd+click).
-      // In a placement mode, forward to onMapClick so the user can place on
-      // top of a visible boundary: Leaflet makes the polygon the event target,
-      // so we run onMapClick ourselves (the layer event carries e.latlng).
-      //
-      // ALWAYS stop the event first. Whether Leaflet also dispatches to the map
-      // depends on how the target chain resolves, and if it ever does, one
-      // physical click becomes two anchors — a row whose start and end are the
-      // same point, which is every plant on one spot. Stopping makes the
-      // dispatch deterministic instead of dependent on that.
-      layer.on('click', function(e) {
-        var oe = e.originalEvent;
-        L.DomEvent.stop(e);
-        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
-          toggleSelection({ kind: 'boundary', boundaryId: id });
-          return;
-        }
-        if (currentMode === 'none') {
-          enterBoundaryEditMode(id);
-          return;
-        }
-        onMapClick(e);   // placement/draw mode → place on top of the boundary
-      });
-
-      // Right-click → context menu
-      layer.on('contextmenu', function(e) {
-        L.DomEvent.stop(e);
-        _showBoundaryContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, id);
-      });
-
       return entry;
+    }
+
+    // ── Pressing the boundary (V3.11, F213) ──────────────────────────────────
+    // The plants are drawn on one canvas the size of the whole map, in the
+    // pane above the boundary's (01-core.js), so from the first plant on no
+    // click, right-click or drag reached the polygon: the canvas found no plant
+    // and handed the event to the map. So the map decides. An event that
+    // reaches it inside a shown boundary, or within _BOUNDARY_EDGE_PX of its
+    // line, and that landed on nothing else taking clicks, is on the boundary.
+    // One path with or without the canvas. Plants and shapes stop their own
+    // clicks; structures, hedgerows, notes and the sun path stop only
+    // right-clicks, so their left clicks are told apart by their target.
+    var _BOUNDARY_EDGE_PX = 6;
+
+    function _landedOnAFeature(e) {
+      var t = e && e.originalEvent && e.originalEvent.target;
+      // The canvas hands the map only the events that missed its plants.
+      if (!t || t.tagName === 'CANVAS' || !t.closest) return false;
+      return !!t.closest('.leaflet-interactive');
+    }
+
+    function _boundaryUnder(b, p) {
+      if (!map.hasLayer(b.layer) || b.points.length < 3) return false;
+      var ring = b.points.map(function(q) { return map.latLngToContainerPoint(q); });
+      var inside = false;
+      for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        var a = ring[i], c = ring[j];
+        if (L.LineUtil.pointToSegmentDistance(p, a, c) <= _BOUNDARY_EDGE_PX) return true;
+        if ((a.y > p.y) !== (c.y > p.y) &&
+            p.x < (c.x - a.x) * (p.y - a.y) / (c.y - a.y) + a.x) inside = !inside;
+      }
+      return inside;
+    }
+
+    // The topmost shown boundary under a map point (the last drawn), or null.
+    function boundaryAt(latlng) {
+      var p = map.latLngToContainerPoint(latlng);
+      for (var i = boundaries.length - 1; i >= 0; i--) {
+        if (_boundaryUnder(boundaries[i], p)) return boundaries[i];
+      }
+      return null;
+    }
+
+    // The boundary being edited, when the point is on it: where two overlap,
+    // a press goes on with the one already being edited.
+    function _editedAt(latlng) {
+      var b = boundaryEditId === null ? null : _getBoundaryEntry(boundaryEditId);
+      return b && _boundaryUnder(b, map.latLngToContainerPoint(latlng)) ? b : null;
+    }
+
+    // A click while idle (the map's click handler asks first): edit the
+    // boundary, or shift/ctrl/cmd toggles its selection. True when it was one.
+    // Not during the site pin drop, which leaves the mode at 'none'.
+    function boundaryClicked(e) {
+      if (currentMode !== 'none' || _sitePinDropArmed) return false;
+      var oe = e.originalEvent, t = oe && oe.target;
+      // Letting go of a dragged corner clicks on its handle, and until V3.11
+      // that ended the edit after every corner: the handles are the boundary.
+      if (t && t.closest && t.closest('.sp-boundary-handle')) return true;
+      if (_landedOnAFeature(e)) return false;
+      var b = _editedAt(e.latlng) || boundaryAt(e.latlng);
+      if (!b) return false;
+      if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+        toggleSelection({ kind: 'boundary', boundaryId: b.id });
+      } else if (!b.showHandles) {
+        return false;     // its handles are off (V3.11): ground, like outside it
+      } else if (boundaryEditId !== b.id) {
+        enterBoundaryEditMode(b.id);     // already editing it: keep the handles
+      }
+      return true;
+    }
+
+    // A right-click the mode did not use (the map's contextmenu handler).
+    function boundaryContextMenu(e) {
+      if (_landedOnAFeature(e)) return false;
+      var b = boundaryAt(e.latlng);
+      if (!b) return false;
+      L.DomEvent.stop(e);
+      _showBoundaryContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, b.id);
+      return true;
+    }
+
+    // Map mousedown in edit mode: a press inside the edited boundary drags it.
+    function boundaryPressed(e) {
+      var oe = e.originalEvent;
+      if (currentMode !== 'none' || _sitePinDropArmed || !oe || oe.button !== 0
+          || oe.shiftKey || oe.ctrlKey || oe.metaKey || _landedOnAFeature(e)) return;
+      if (_editedAt(e.latlng)) _onBoundaryPolyMousedown(e);
+    }
+
+    // A pointer over a boundary while idle says it can be pressed, the cue an
+    // interactive polygon gave by itself.
+    function boundaryHover(e) {
+      var b = currentMode === 'none' && !_landedOnAFeature(e) && boundaryAt(e.latlng);
+      map.getContainer().classList.toggle('sp-over-boundary', !!b && b.showHandles);
     }
 
     function _removeBoundaryEntry(id) {
@@ -225,42 +339,64 @@
     function _showBoundaryContextMenu(x, y, id) {
       var b = _getBoundaryEntry(id);
       if (!b) return;
+      function toggle(label, key, then) {
+        return { label: label, checked: b[key], action: function() {
+          b[key] = !b[key];
+          then();
+          _sendBoundaryProps(b);
+        } };
+      }
+      function relabel() { _refreshBoundaryLabels(id); }
       var items = [
-        {
-          label: 'Edge Labels',
-          checked: b.showLengths,
-          action: function() {
-            b.showLengths = !b.showLengths;
-            _refreshBoundaryLabels(id);
-            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
-          }
-        },
-        {
-          label: 'Area Label',
-          checked: b.showArea,
-          action: function() {
-            b.showArea = !b.showArea;
-            _refreshBoundaryLabels(id);
-            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
-          }
-        },
+        toggle('Edge Labels', 'showLengths', relabel),
+        toggle('Area Label', 'showArea', relabel),
+        // V3.11 (F216): off, a press shows no handles, so it cannot be dragged
+        // out of shape by accident; on, they show now, as a label would.
+        toggle('Corner Handles', 'showHandles', function() {
+          if (b.showHandles) enterBoundaryEditMode(id);
+          else if (boundaryEditId === id) exitBoundaryEditMode();
+        }),
+        { label: 'Name…', action: function() { askBoundaryName([id], b.name); } },
         'sep',
+        { label: 'Remove Boundary', action: function() {
+          if (boundaryEditId === id) exitBoundaryEditMode();
+          _removeBoundaryEntry(id);
+          if (bridge) bridge.onBoundaryRemoved(id);
+        } },
+        'sep',
+        // Last: showContextMenu adds the swatches after the final item, and
+        // until V3.11 they sat under Remove Boundary, away from this label.
         { label: 'Color:', action: function() {} }
       ];
       items._colorTarget = b.color;
       items._colorAction = function(newColor) {
         _setBoundaryColor(id, newColor);
       };
-      items.push('sep');
-      items.push({
-        label: 'Remove Boundary',
-        action: function() {
-          if (boundaryEditId === id) exitBoundaryEditMode();
-          _removeBoundaryEntry(id);
-          if (bridge) bridge.onBoundaryRemoved(id);
-        }
-      });
       showContextMenu(x, y, items);
+    }
+
+    // The colour and every switch, in one call (V3.11).
+    function _sendBoundaryProps(b) {
+      if (bridge) bridge.onBoundaryPropsChanged(b.id, b.color, b.showLengths,
+                                                b.showArea, b.showHandles);
+      scheduleLegend();                                   // 12-legend.js
+    }
+
+    // Name boundaries for the legend (V3.11, F217), from this menu or a line of
+    // the legend: Python asks, with a dialog of its own, as it does for a note,
+    // and answers through setBoundaryNames.
+    function askBoundaryName(ids, current) {
+      if (bridge && bridge.onBoundaryNameRequested) {
+        bridge.onBoundaryNameRequested(JSON.stringify(ids), current || '');
+      }
+    }
+
+    function setBoundaryNames(ids, name) {
+      ids.forEach(function(id) {
+        var b = _getBoundaryEntry(id);
+        if (b) b.name = name || '';
+      });
+      scheduleLegend();
     }
 
     function _setBoundaryColor(id, newColor) {
@@ -270,24 +406,34 @@
       var c = BOUNDARY_COLORS[newColor] || BOUNDARY_COLORS['green'];
       b.layer.setStyle({ color: c.stroke, fillColor: c.fill });
       _refreshBoundaryLabels(id);
-      if (bridge) bridge.onBoundaryPropsChanged(id, newColor, b.showLengths, b.showArea);
+      _sendBoundaryProps(b);
     }
 
     // ── Boundary label factories (use fresh layer groups each time) ───────────
+    // A side's length label, or '' for a side under 5 cm (V3.19, QF-8, R19).
+    // A design opened from a file repeated its first corner at the end (the
+    // saved ring is closed), and that closing "side" was labelled "0.0 m".
+    // boundaryCorners now drops that corner; this keeps any side too short to
+    // read unlabelled. Pure, so node runs it.
+    function boundarySideLabel(metres) {
+      if (!(metres >= 0.05)) return '';
+      return metres >= 10 ? Math.round(metres) + ' m' : metres.toFixed(1) + ' m';
+    }
+
     function _makeBoundaryLengthLabels(points, strokeColor) {
       var lg = L.layerGroup().addTo(map);
       var n = points.length;
       for (var i = 0; i < n; i++) {
         var a = points[i];
         var b = points[(i + 1) % n];
+        var label = boundarySideLabel(haversineMeters(a, b));
+        if (!label) continue;
         var midLat = (a[0] + b[0]) / 2;
         var midLng = (a[1] + b[1]) / 2;
-        var dist = haversineMeters(a, b);
-        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
         L.marker([midLat, midLng], {
           icon: L.divIcon({
             className: '',
-            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
+            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:12px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
             iconSize: null, iconAnchor: null
           }),
           interactive: false
@@ -309,7 +455,10 @@
         html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
         iconSize: null, iconAnchor: null
       });
-      var marker = L.marker([clat, clng], { icon: icon, interactive: true }).addTo(map);
+      // Enter cycles the units, as a click does (V3.02: markers are not
+      // tab stops unless they say so, 09-keyboard.js).
+      var marker = L.marker([clat, clng], { icon: icon, interactive: true,
+                                            keyboard: true }).addTo(map);
       marker.on('click', function(e) {
         // This label sits at the polygon CENTROID — the middle of the yard, and
         // exactly where you start dragging a row across it. Cycling units there
@@ -353,7 +502,8 @@
       b.points.forEach(function(pt, idx) {
         var h = L.circleMarker([pt[0], pt[1]], {
           radius: 7, color: '#fff', fillColor: '#1565c0', fillOpacity: 1,
-          weight: 2, interactive: true, draggable: false
+          weight: 2, interactive: true, draggable: false,
+          className: 'sp-boundary-handle'    // boundaryClicked: still the boundary
         }).addTo(map);
         _makeVertexDraggable(h, id, idx);
         boundaryEditHandles.push(h);
@@ -362,8 +512,8 @@
       // Bounding-box corner handles for uniform scale
       _refreshBboxHandles(id);
 
-      // Drag on polygon interior → translate whole polygon
-      b.layer.on('mousedown', _onBoundaryPolyMousedown);
+      // A drag on the interior translates the whole polygon: boundaryPressed,
+      // from the map's mousedown (the polygon itself takes no events).
     }
 
     function _makeVertexDraggable(marker, bid, idx) {
@@ -418,7 +568,7 @@
       corners.forEach(function(corner, ci) {
         var h = L.circleMarker(corner, {
           radius: 6, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
-          weight: 2, interactive: true
+          weight: 2, interactive: true, className: 'sp-boundary-handle'
         }).addTo(map);
         _makeScaleDraggable(h, id, ci, cLat, cLng, minLat, maxLat, minLng, maxLng);
         boundaryBboxHandles.push(h);
@@ -472,6 +622,7 @@
       var b = _getBoundaryEntry(bid);
       if (!b) return;
       var origPts = b.points.map(function(p) { return [p[0], p[1]]; });
+      var moved = false;
       map.dragging.disable();
 
       function onMove(ev) {
@@ -480,6 +631,7 @@
         var dLng = ll.lng - startLL.lng;
         var b2 = _getBoundaryEntry(bid);
         if (!b2) return;
+        moved = true;
         b2.points = origPts.map(function(p) { return [p[0] + dLat, p[1] + dLng]; });
         b2.layer.setLatLngs(b2.points);
         _refreshBoundaryLabels(bid);
@@ -493,16 +645,30 @@
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         var b3 = _getBoundaryEntry(bid);
-        if (b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
+        // A press that never moved changed nothing; saying so would mark the
+        // design modified for a click.
+        if (moved && b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
       }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     }
 
+    // Python → JS: put a boundary's corners back as the design holds them
+    // (V3.19, QF-14): a corner dragged across another side would make the
+    // outline cross itself, and Python refuses the edit. Its handles follow.
+    function restoreBoundary(id, points) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var editing = boundaryEditId === id;
+      if (editing) exitBoundaryEditMode();
+      b.points = points.map(function(p) { return [p[0], p[1]]; });
+      b.layer.setLatLngs(b.points);
+      _refreshBoundaryLabels(id);
+      if (editing) enterBoundaryEditMode(id);
+    }
+
     function exitBoundaryEditMode() {
       if (boundaryEditId === null) return;
-      var b = _getBoundaryEntry(boundaryEditId);
-      if (b) b.layer.off('mousedown', _onBoundaryPolyMousedown);
       boundaryEditHandles.forEach(function(h) { map.removeLayer(h); });
       boundaryEditHandles = [];
       boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
@@ -510,139 +676,3 @@
       boundaryEditId = null;
       map.getContainer().style.cursor = '';
     }
-
-
-    // ── Shape (footprint) outline edit mode ───────────────────────────────────
-    // Reuses the boundary vertex-drag pattern so imported OSM building outlines
-    // (and any drawn canopy footprint) can be resized/reshaped to match reality.
-    // Drag a vertex → the polygon updates and Python is told the new ring.
-    var shapeEditId      = null;       // shape_id currently in outline-edit mode
-    var shapeEditHandles = [];         // draggable vertex handle markers
-
-    function _getShapePolygon(id) {
-      var group = shapeLayers[id];
-      if (!group) return null;
-      var found = null;
-      group.eachLayer(function(layer) {
-        if (!found && layer instanceof L.Polygon) found = layer;
-      });
-      return found;
-    }
-
-    function enterShapeEditMode(id) {
-      if (boundaryEditId !== null) exitBoundaryEditMode();
-      if (shapeEditId !== null) exitShapeEditMode();
-      var poly = _getShapePolygon(id);
-      if (!poly || !poly._shape) return;
-      shapeEditId = id;
-      map.getContainer().style.cursor = 'move';
-      poly._shape.points.forEach(function(pt, idx) {
-        var h = L.circleMarker([pt[0], pt[1]], {
-          radius: 7, color: '#fff', fillColor: '#5d4037', fillOpacity: 1,
-          weight: 2, interactive: true
-        }).addTo(map);
-        _makeShapeVertexDraggable(h, id, idx);
-        shapeEditHandles.push(h);
-      });
-      // Drag on the polygon interior → translate the whole outline (mirrors the
-      // boundary edit). Vertex handles sit on top, so a grab on one still wins.
-      poly.on('mousedown', _onShapePolyMousedown);
-    }
-
-    // Refresh a shape's stored area + on-map tooltip after its outline changes.
-    function _refreshShapeReadout(poly) {
-      if (!poly || !poly._shape) return;
-      var sh = poly._shape;
-      sh.areaM2 = _polygonArea(sh.points);
-      if (!poly.getTooltip()) return;
-      var cast = sh.heightM > 0;
-      var aStr = sh.areaM2 < 10000 ? sh.areaM2.toFixed(1) + ' m²'
-        : (sh.areaM2 / 10000).toFixed(2) + ' ha';
-      var line = cast
-        ? '<br>Casts shade — ' + escH(String(sh.heightM)) + ' m tall'
-          + '<br>Click to edit outline · right-click for height/remove'
-        : '<br>Click to edit outline · right-click to remove';
-      poly.setTooltipContent(
-        '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + escH(aStr)
-          + line + '</span>');
-    }
-
-    function _makeShapeVertexDraggable(marker, sid, idx) {
-      marker.on('mousedown', function(e) {
-        L.DomEvent.stop(e);
-        map.dragging.disable();
-        function onMove(ev) {
-          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
-          marker.setLatLng(ll);
-          var poly = _getShapePolygon(sid);
-          if (!poly || !poly._shape) return;
-          poly._shape.points[idx] = [ll.lat, ll.lng];
-          poly.setLatLngs(poly._shape.points);
-        }
-        function onUp() {
-          map.dragging.enable();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          var poly = _getShapePolygon(sid);
-          if (poly && poly._shape) {
-            _refreshShapeReadout(poly);
-            if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(poly._shape.points));
-          }
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
-
-    // Drag the whole outline (every vertex together), keyed on the shape in edit
-    // mode. Mirrors _onBoundaryPolyMousedown.
-    function _onShapePolyMousedown(e) {
-      if (e.originalEvent.button !== 0) return;     // left-drag only
-      if (shapeEditId === null) return;
-      L.DomEvent.stop(e);
-      var sid = shapeEditId;
-      var startLL = e.latlng;
-      var poly = _getShapePolygon(sid);
-      if (!poly || !poly._shape) return;
-      var origPts = poly._shape.points.map(function(p) { return [p[0], p[1]]; });
-      map.dragging.disable();
-      function onMove(ev) {
-        var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
-        var dLat = ll.lat - startLL.lat;
-        var dLng = ll.lng - startLL.lng;
-        var p2 = _getShapePolygon(sid);
-        if (!p2 || !p2._shape) return;
-        p2._shape.points = origPts.map(function(p) {
-          return [p[0] + dLat, p[1] + dLng];
-        });
-        p2.setLatLngs(p2._shape.points);
-        shapeEditHandles.forEach(function(vh, vi) {
-          if (p2._shape.points[vi]) vh.setLatLng(p2._shape.points[vi]);
-        });
-      }
-      function onUp() {
-        map.dragging.enable();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        var p3 = _getShapePolygon(sid);
-        if (p3 && p3._shape) {
-          _refreshShapeReadout(p3);
-          if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(p3._shape.points));
-        }
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    }
-
-    function exitShapeEditMode() {
-      if (shapeEditId === null) return;
-      var poly = _getShapePolygon(shapeEditId);
-      if (poly) poly.off('mousedown', _onShapePolyMousedown);
-      shapeEditHandles.forEach(function(h) { map.removeLayer(h); });
-      shapeEditHandles = [];
-      shapeEditId = null;
-      map.getContainer().style.cursor = '';
-    }
-
-

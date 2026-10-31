@@ -42,9 +42,23 @@ from typing import Callable, List, Optional, Sequence, Tuple
 DEFAULT_REPO = "yarrowyarrowyarrow/Site-and-Pattern"
 
 _API_BASE = "https://api.github.com"
+#: Pages of 100 releases :func:`list_releases` reads at most.
+_MAX_PAGES = 5
 _USER_AGENT = "SiteAndPattern-Updater"
 
-_TAG_RE = re.compile(r"^[vV]?(\d+)\.(\d+)$")
+#: A release tag, in both spellings this repo has used.
+#:
+#: `V2.79` is the historical form, and it names the branch too -- which is a
+#: trap git cannot resolve for you. `git push -u origin V2.79` fails with *"src
+#: refspec matches more than one"*, `git pull origin V2.79` silently takes the
+#: TAG and rewinds you to whatever commit it points at, and both have now cost
+#: this project real time more than once. From V2.80 the workflows tag
+#: `release-V2.80` instead, which collides with nothing.
+#:
+#: **The old spelling stays accepted forever.** Around 102 remote tags use it,
+#: each anchoring a GitHub Release the in-app updater reads by `tag_name`, and
+#: deleting one would break updates for anybody sitting on that version.
+_TAG_RE = re.compile(r"^(?:release[-_])?[vV]?(\d+)\.(\d+)$")
 
 
 class DownloadCancelled(Exception):
@@ -55,13 +69,22 @@ class DownloadCancelled(Exception):
 def parse_release_version(tag: str) -> Optional[Tuple[int, int]]:
     """Return ``(major, minor)`` for a release tag, else ``None``.
 
-    Accepts ``V1.72``, ``v1.64`` and bare ``1.5`` — anything else (``main``,
-    ``V1``, ``1.2.3``) is rejected so non-release tags never sort into the
-    version list."""
+    Accepts ``release-V2.80`` (the current form), ``V1.72``, ``v1.64`` and
+    bare ``1.5`` — anything else (``main``, ``V1``, ``1.2.3``) is rejected so
+    non-release tags never sort into the version list. See :data:`_TAG_RE` for
+    why there are two forms and why the old one can never be retired."""
     if not tag:
         return None
     m = _TAG_RE.match(tag.strip())
     return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def version_label(tag: str) -> str:
+    """A release tag as a person reads it: ``release-V3.15`` -> ``V3.15``.
+    The prefix exists for git's sake (see :data:`_TAG_RE`), not a reader's.
+    A tag that is not a version comes back unchanged."""
+    version = parse_release_version(tag)
+    return f"V{version[0]}.{version[1]}" if version else (tag or "")
 
 
 @dataclass(frozen=True)
@@ -105,6 +128,25 @@ def platform_asset_extensions(platform: Optional[str] = None) -> Tuple[str, ...]
     return (".appimage", ".zip", ".tar.gz")
 
 
+#: The switch that tells the Windows installer the app started it to update
+#: itself in place (V3.15, F228). With it the installer skips its folder and
+#: finish pages, waits for the running copy to close, replaces it, and opens
+#: Site & Pattern again. ``scripts/packaging/installer.nsi`` reads it;
+#: ``tests/test_installer_script.py`` keeps the two spellings equal.
+UPDATE_SWITCH = "/UPDATE"
+
+
+def installer_update_arguments(install_dir: str) -> str:
+    """The Windows installer's arguments for updating the copy in
+    ``install_dir`` (the folder the running app was started from).
+
+    NSIS reads ``/D=`` only as the LAST argument and takes the rest of the
+    line as the folder, spaces included and never quoted, so it goes last and
+    bare. Passing it means a copy installed somewhere other than the default
+    is updated where it is, instead of a second copy appearing beside it."""
+    return f"{UPDATE_SWITCH} /D={install_dir}"
+
+
 def _default_fetch_json(url: str, timeout: float = 15.0) -> object:
     req = urllib.request.Request(
         url,
@@ -124,11 +166,23 @@ def list_releases(
     """Published releases whose tag parses as a version, newest first.
 
     Drafts are always skipped; prereleases are skipped unless
-    ``include_prereleases``. ``fetch_json`` is injectable for tests."""
-    url = f"{_API_BASE}/repos/{repo}/releases?per_page=100"
-    data = fetch_json(url)
-    if not isinstance(data, list):
-        return []
+    ``include_prereleases``. ``fetch_json`` is injectable for tests.
+
+    Reads up to ``_MAX_PAGES`` pages (V3.18). Every push publishes a
+    prerelease since FN-7, so the last release the owner promoted can sit
+    more than a page back; reading one page would then find no full release
+    at all and tell the person nothing was published."""
+    data: list = []
+    for page in range(1, _MAX_PAGES + 1):
+        url = f"{_API_BASE}/repos/{repo}/releases?per_page=100&page={page}"
+        chunk = fetch_json(url)
+        if not isinstance(chunk, list):
+            if page == 1:
+                return []
+            break
+        data.extend(chunk)
+        if len(chunk) < 100:
+            break
     releases: List[Release] = []
     for item in data:
         if not isinstance(item, dict) or item.get("draft"):

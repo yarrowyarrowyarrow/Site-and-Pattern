@@ -16,12 +16,10 @@ woody-stock nurseries (Bow Point) + garden centres (Blue Grass / Salisbury /
 Greengate): shrubs ~$25–60, trees ~$60–200+; TreeTime.ca reforestation
 plugs/bare-root ~$2–6 (the seed_or_plug tier).
 
-AVAILABILITY (`availability_class`) is a best-effort channel estimate:
-  big_box < garden_centre < native_specialist < seed_or_plug < rare
-Most AB natives are sold by native specialists (ALCLA, Wild About Flowers,
-Bow Point); cultivated/non-native stock leans big_box/garden_centre; a curated
-set of orchids/specialists is `rare`. The `common_only` search filter only drops
-`seed_or_plug` + `rare`, so native specialists still count as "easy to find".
+AVAILABILITY (`availability_class`) is no longer set here (V3.14). It was set
+from name keywords, which called Alpine Aster and Skunk Currant garden-centre
+stock; `scripts/rank_availability.py` owns it now, with its reasons. This
+script leaves the field as it finds it: run that one after it.
 
 Run from the project root:  python scripts/apply_sourcing_data.py
 """
@@ -59,16 +57,6 @@ _RARE_KEYWORDS = (
 )
 _RARE_RANGE = (18.0, 40.0)  # forb specialists: more than a common forb
 
-# Common, widely-stocked natives → garden_centre (sold beyond native specialists).
-_COMMON_KEYWORDS = (
-    "saskatoon", "chokecherry", "pin cherry", "dogwood", "wild rose",
-    "prickly rose", "yarrow", "bergamot", "blanketflower", "gaillardia",
-    "black-eyed susan", "harebell", "columbine", "goldenrod", "fireweed",
-    "blue grama", "snowberry", "potentilla", "cinquefoil", "raspberry",
-    "hawthorn", "buffaloberry", "currant", "gooseberry", "aster",
-    "coneflower", "echinacea", "lungwort", "bearberry", "kinnikinnick",
-)
-
 
 def _has(text: str, keywords) -> bool:
     t = (text or "").lower()
@@ -80,9 +68,8 @@ def _classify(record: dict) -> dict:
     name = record.get("common_name", "")
     sci = record.get("scientific_name", "")
     hay = f"{name} {sci}"
-    native = str(record.get("native_to_alberta", 0)).strip() in ("1", "1?")
 
-    # ── price ──
+    # ── price ── (availability is scripts/rank_availability.py's, V3.14)
     low, high = TYPE_PRICE_DEFAULTS.get(ptype, (8.0, 16.0))
     tier = f"{ptype} default"
     if ptype == "tree" and _has(hay, _LARGE_TREE_KEYWORDS):
@@ -92,20 +79,9 @@ def _classify(record: dict) -> dict:
         low, high = _RARE_RANGE
         tier = "specialist / rare"
 
-    # ── availability ──
-    if _has(hay, _RARE_KEYWORDS):
-        avail = "rare"
-    elif _has(hay, _COMMON_KEYWORDS):
-        avail = "garden_centre"
-    elif not native:
-        avail = "big_box"            # cultivated / introduced garden stock
-    else:
-        avail = "native_specialist"  # the honest default for AB natives
-
     return {
         "price_low_cad": int(low) if low == int(low) else low,
         "price_high_cad": int(high) if high == int(high) else high,
-        "availability_class": avail,
         "sourcing_notes": f"Estimate ({tier}); AB retail as of {AS_OF_YEAR}",
     }
 
@@ -130,7 +106,9 @@ def main() -> int:
         n = apply_to_file(path)
         total += n
         print(f"  {os.path.basename(path)}: priced {n} records")
-    print(f"Done — {total} records given a price range + availability class.")
+    print(f"Done — {total} records given a price range. Now run "
+          "scripts/rank_availability.py --apply, which adds its sentence "
+          "back to each note.")
     return 0
 
 

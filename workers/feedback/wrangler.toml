@@ -1,0 +1,16 @@
+# Cloudflare Worker config for the site's feedback endpoint.
+# See README.md beside this file; step 2 fills in the KV id below.
+
+name = "feedback"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Where the Worker sends people after it takes a report, and the only origin
+# it answers CORS for. Must match the --base-url the site was built with.
+[vars]
+SITE_URL = "https://grownativeplants.ca"
+
+# Created by:  wrangler kv namespace create FEEDBACK
+[[kv_namespaces]]
+binding = "FEEDBACK"
+id = "PUT_YOUR_KV_ID_HERE"

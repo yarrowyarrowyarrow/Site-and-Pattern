@@ -101,68 +101,18 @@ class TestMap3DWidget(unittest.TestCase):
         self.assertTrue(all(c is None for c in captured))
         w.deleteLater()
 
-    def test_apply_scene_injects_splat_localhost_url(self):
-        # A splat field with an existing file → its path becomes a localhost
-        # http URL Spark fetches same-origin from the viewer page (V1.77; was a
-        # file:// URL through V1.76).
-        import tempfile
+    def test_apply_scene_pushes_the_scene_as_given(self):
+        # V3.22 (RM-2): the yard scan's splat field and its localhost file
+        # route are gone; a scene goes to the page unchanged.
+        from src import map3d_js
         from src.map3d_widget import Map3DWidget
         w = Map3DWidget()
         captured = []
         w.run_js = lambda js: captured.append(js)
-        d = tempfile.mkdtemp()
-        p = os.path.join(d, "yard.ply")
-        with open(p, "wb") as f:
-            f.write(b"ply\n")
-        scene = {"version": 1, "bounds": {},
-                 "splat": {"path": p, "matrix": [0.0] * 16, "opacity": 1.0}}
+        scene = {"version": 1, "bounds": {}, "plants": []}
         w.apply_scene(scene)
-        self.assertEqual(len(captured), 1)
-        self.assertIn("http://127.0.0.1", captured[0])
-        self.assertIn("/__localfile", captured[0])
-        self.assertIn('"url"', captured[0])
-        # Original scene dict is not mutated (a copy is pushed).
-        self.assertNotIn("url", scene["splat"])
-        w.deleteLater()
-
-    def test_apply_scene_drops_missing_splat_file(self):
-        from src.map3d_widget import Map3DWidget
-        w = Map3DWidget()
-        captured = []
-        w.run_js = lambda js: captured.append(js)
-        scene = {"version": 1, "bounds": {},
-                 "splat": {"path": "/no/such/yard.ply",
-                           "matrix": [0.0] * 16, "opacity": 1.0}}
-        w.apply_scene(scene)
-        # Missing file → splat nulled so the design still renders.
-        self.assertIn('"splat": null', captured[0])
-        w.deleteLater()
-
-    def test_capture_ortho_runs_guarded_hook(self):
-        from src.map3d_widget import Map3DWidget
-        w = Map3DWidget()
-        calls = []
-
-        class _FakePage:
-            def runJavaScript(self, js, cb=None):
-                calls.append((js, cb))
-
-        w.page = lambda: _FakePage()
-        w._loaded = True
-        w.capture_ortho({"min_x": -5, "max_x": 5, "min_y": -5, "max_y": 5},
-                        lambda u: None)
-        self.assertEqual(len(calls), 1)
-        self.assertIn("permaCaptureOrtho", calls[0][0])
-        w.deleteLater()
-
-    def test_capture_ortho_before_load_calls_back_empty(self):
-        from src.map3d_widget import Map3DWidget
-        w = Map3DWidget()
-        w._loaded = False
-        out = []
-        w.capture_ortho({"min_x": 0, "max_x": 1, "min_y": 0, "max_y": 1},
-                        out.append)
-        self.assertEqual(out, [""])
+        self.assertEqual(captured, [map3d_js.set_scene(scene)])
+        self.assertFalse(hasattr(w, "capture_ortho"))
         w.deleteLater()
 
 

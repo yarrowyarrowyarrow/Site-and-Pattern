@@ -41,12 +41,16 @@ def _basis(normal):
 
 
 def bake_ao(objs, samples=32, strength=0.85, max_dist=0.6, gradient=False,
-            floor=True, seed_key="ao"):
+            floor=True, seed_key="ao", floor_z=None, gradient_floor=0.55):
     """Bake AO for all `objs` jointly (each occludes the others).
 
     strength : how dark full occlusion gets (0 = no effect).
     max_dist : ray reach in the asset's local units (unit frame ≈ 1 tall).
-    floor    : treat the ground plane z=0 as an occluder (assets sit on it).
+    floor    : treat the ground plane as an occluder (assets sit on it).
+    floor_z  : where that ground is. None is the lowest vertex baked, which is
+               the ground for anything baked whole; a crown baked on its own
+               must pass 0, or its lowest leaf is taken for the soil (V2.94).
+    gradient_floor : the vertical gradient's value at the bottom (1 at the top).
     """
     objs = [o for o in objs if o is not None]
     if not objs:
@@ -68,6 +72,7 @@ def bake_ao(objs, samples=32, strength=0.85, max_dist=0.6, gradient=False,
     lo_z = min(v.z for v in verts)
     hi_z = max(v.z for v in verts)
     span = max(1e-6, hi_z - lo_z)
+    ground = lo_z if floor_z is None else floor_z
 
     for obj in objs:
         me = obj.data
@@ -85,13 +90,13 @@ def bake_ao(objs, samples=32, strength=0.85, max_dist=0.6, gradient=False,
                     hits += 1
                 elif floor and w.z < -1e-4:
                     # Would the escaping ray hit the ground plane instead?
-                    if (origin.z - lo_z) / -w.z <= max_dist:
+                    if (origin.z - ground) / -w.z <= max_dist:
                         hits += 1
             ao = 1.0 - strength * (hits / samples)
             val = ao
             if gradient:
                 tt = min(1.0, max(0.0, (origin.z - lo_z) / span))
                 tt = tt * tt * (3 - 2 * tt)          # smoothstep
-                val = ao * (0.55 + 0.45 * tt)
+                val = ao * (gradient_floor + (1.0 - gradient_floor) * tt)
             val = min(1.0, max(0.05, val))
             attr.data[i].color = (val, val, val, 1.0)

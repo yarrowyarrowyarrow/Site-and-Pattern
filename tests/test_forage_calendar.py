@@ -118,6 +118,44 @@ class TestForageCalendar(unittest.TestCase):
                   _p("Goldenrod", "Aug-Oct")]
         self.assertEqual(gap_filling_suggestions(design, [_p("X", "Jul-Jul")]), [])
 
+    def test_a_grass_sedge_or_rush_is_never_forage(self):
+        # V2.91 (F182): all 78 carry a bloom period, and a bloom period used
+        # to count before anything else was looked at. The owner's rule: they
+        # flower, but not for bees, whatever the period says.
+        for kind, name in (("grass", "Rough Fescue"), ("sedge", "Beaked Sedge"),
+                           ("rush", "Wire Rush")):
+            with self.subTest(kind):
+                cal = build_forage_calendar([
+                    _p(name, "June-July", form="plume", plant_type=kind)])
+                self.assertEqual(cal["flowering_plants"], 0)
+                self.assertEqual(cal["months"][5]["count"], 0)     # June
+
+    def test_grass_bloom_does_not_hide_a_forage_gap(self):
+        # A prairie mix: crocus in spring, aster in late summer, and grasses
+        # flowering between them. June and July are a gap for a bee.
+        design = [
+            _p("Prairie Crocus", "Apr-May"),
+            _p("Smooth Aster", "Aug-Oct"),
+            _p("Rough Fescue", "June-July", form="plume", plant_type="grass"),
+            _p("Blue Grama Grass", "July-August", form="plume",
+               plant_type="grass"),
+            _p("Needle and Thread Grass", "May-Jun", form="plume",
+               plant_type="grass"),
+        ]
+        cal = build_forage_calendar(design)
+        self.assertEqual(cal["gap_months"], [6, 7])
+        self.assertEqual(cal["flowering_plants"], 2)
+        self.assertNotIn("every growing-season month", cal["note"])
+
+    def test_a_grass_is_never_suggested_for_a_gap(self):
+        design = [_p("Crocus", "Apr-May"), _p("Goldenrod", "Aug-Oct")]
+        cands = [_p("Rough Fescue", "June-July", form="plume",
+                    plant_type="grass"),
+                 _p("Wild Bergamot", "Jul-Aug")]
+        names = [s["common_name"]
+                 for s in gap_filling_suggestions(design, cands)]
+        self.assertEqual(names, ["Wild Bergamot"])
+
     def test_agrees_with_score_bloom_months(self):
         # The calendar's covered growing months == the score's bloom_months set.
         from src.habitat_score import parse_month_range
@@ -131,6 +169,70 @@ class TestForageCalendar(unittest.TestCase):
                 if m in GROWING_SEASON_MONTHS:
                     score_like.add(m)
         self.assertEqual(covered, score_like)
+
+
+def _qt_available():
+    try:
+        from PyQt6.QtWidgets import QApplication  # noqa: F401
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestFoodMonthByMonth(unittest.TestCase):
+    """Design › Food's month by month (Planning › Wildlife until V3.08) is a
+    second forage calendar, reading ``bloom_period`` straight from the
+    database. It listed every grass under "Pollinator blooms" and let grasses
+    close a "nectar gap" (V2.91, F182)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        import tempfile
+        import src.db.plants as plants_mod
+        import src.permadesign_api as api
+        tmp = tempfile.mkdtemp(prefix="permadesign_forage_panel_")
+        plants_mod._DATA_DIR = tmp
+        plants_mod._DB_PATH = os.path.join(tmp, "permadesign_test.db")
+        plants_mod.init_db()
+        api._DB_READY = True
+        from PyQt6.QtWidgets import QApplication
+        cls._app = (QApplication.instance()
+                    or QApplication(["test_forage_calendar"]))
+        cls.rows = {r["common_name"]: r for r in api.query_plants()}
+
+    def _june_and_july(self, names):
+        """Design › Food's month by month (V3.08; Planning › Wildlife until
+        then): the pollinators' blooms in June and July, and the gap line."""
+        from src.food_page import FoodPage
+        from src.what_it_feeds import month_by_month
+        ids = [self.rows[n]["id"] for n in names]
+        year = month_by_month(ids)
+        out = {m: year["months"][m - 1]["pollinators"] for m in (6, 7)}
+        page = FoodPage()
+        try:
+            page.set_placed_plants([{"plant_id": i} for i in ids])
+            page.refresh()
+            for m in (6, 7):
+                blooms = page._tree.topLevelItem(m - 1).child(0)
+                self.assertEqual([blooms.child(i).text(1)
+                                  for i in range(blooms.childCount())],
+                                 out[m] or ["—"])
+            return out, page._gap_label.text()
+        finally:
+            page.close()
+
+    def test_no_grass_is_listed_as_a_pollinator_bloom(self):
+        months, gaps = self._june_and_july(
+            ["Prairie Crocus", "Smooth Aster", "Rough Fescue",
+             "Blue Grama Grass"])
+        for m, names in months.items():
+            with self.subTest(month=m):
+                self.assertNotIn("Rough Fescue", names)
+                self.assertNotIn("Blue Grama Grass", names)
+        # So June and July show as the gap they are for a bee.
+        self.assertIn("Nectar gaps in the growing season: Jun, Jul.", gaps)
 
 
 if __name__ == "__main__":

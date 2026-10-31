@@ -25,6 +25,15 @@
   var data = JSON.parse(node.textContent);
 
   var form = document.getElementById('filters');
+  // On a phone the facet list is a screen and a half before the first result
+  // (V2.84: /plants/ was 44,900 px tall at 390 px wide). It is a <details>
+  // rendered open, so with no script it stays usable; here it starts shut
+  // below the width where the sidebar stacks above the results.
+  var facetList = form && form.querySelector('details.fscroll');
+  if (facetList && window.matchMedia &&
+      window.matchMedia('(max-width: 62rem)').matches) {
+    facetList.open = false;
+  }
   var results = document.getElementById('results');
   var noresults = document.getElementById('noresults');
   var count = document.getElementById('count');

@@ -50,6 +50,18 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
 # Alberta and the Edmonton–Red Deer–Calgary corridor; beyond it we fall back
 # to live ERA5-Land rather than snapping to a distant station.
 _NORMAL_MAX_KM = 150.0
+#: How far a bundled regional fallback (rainfall, soil, wind) may be from the
+#: pin before it stops standing for it (V3.25, ED-6).
+FALLBACK_MAX_KM = _NORMAL_MAX_KM
+
+
+def fallback_within(lat: float, lng: float, centroid) -> bool:
+    """Whether a bundled regional value at ``centroid`` may stand for the pin."""
+    try:
+        d2 = _dist2((float(lat), float(lng)), tuple(centroid))
+    except (TypeError, ValueError):
+        return False
+    return math.sqrt(d2) * 111.0 <= FALLBACK_MAX_KM
 # Within this radius the pin is effectively "in" the station's locality, so
 # the source line names the normal without a "nearest station" caveat.
 _NORMAL_LOCAL_KM = 60.0
@@ -102,9 +114,10 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
         parsed["source"] = "Open-Meteo ERA5-Land (10-yr reanalysis mean)"
         return parsed
 
-    # 3. Last resort — nearest EC normal regardless of distance, so an
-    #    offline session out of coverage still shows an approximation.
-    return _climate_normal_rainfall(lat, lng, max_km=None)
+    # 3. Nothing. Until V3.25 the last resort was the nearest bundled normal
+    #    at any distance, so an offline Toronto pin was given Regina's rain
+    #    (R32, ED-6): a fallback is only a fallback within FALLBACK_MAX_KM.
+    return None
 
 
 def _dist2(p, q) -> float:
@@ -292,6 +305,8 @@ def _prairie_soil_fallback(lat: float, lng: float) -> Optional[dict]:
         return dlat * dlat + dlng * dlng
 
     best = min(entries, key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))))
+    if not fallback_within(lat, lng, best.get("centroid") or (0, 0)):
+        return None
     ph    = best.get("ph_top")
     sand  = best.get("sand_pct_top")
     silt  = best.get("silt_pct_top")
@@ -623,14 +638,27 @@ _SEARCH_PROVINCES = {"Alberta", "Saskatchewan"}
 _SEARCH_ISO = {"CA-AB", "CA-SK"}
 
 
+#: Address searches answered this run, by request (FN-6): ``{url: reply}``.
+_GEOCODE_CACHE: dict = {}
+_GEOCODE_CACHE_SIZE = 64
+
+
+def clear_geocode_cache() -> None:
+    _GEOCODE_CACHE.clear()
+
+
 def geocode_address(query: str, limit: int = 6,
                     *, near: "tuple[float, float] | None" = None,
-                    radius_km: float = 50.0) -> list[dict]:
+                    radius_km: float = 50.0) -> "list[dict] | None":
     """Forward-geocode an address or place name across the prairie provinces
     (Alberta + Saskatchewan).
 
-    Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
-    failure / no match. Uses OSM Nominatim.
+    Returns a list of ``{"label", "lat", "lng"}`` dicts, ``[]`` when nothing
+    matches, and ``None`` when the search could not be made: no connection,
+    an HTTP error, a timeout, or a reply that is not a list of places. Uses
+    OSM Nominatim. The two used to be one ``[]``, so the Site panel told a
+    person with no connection that their correct address had "No Alberta
+    results" (V3.19, QF-3, R6).
 
     Results are re-ranked client-side so that hits whose street-number
     starts with a numeric token in the query (e.g. typing "4916" should
@@ -700,9 +728,17 @@ def geocode_address(query: str, limit: int = 6,
         **extra_params,
     })
     url = "https://nominatim.openstreetmap.org/search?" + params
-    data = _http_get_json(url)
+    # One request per query (V3.31, FN-6): Nominatim's usage policy asks for
+    # no repeated or autocomplete queries, so an answer is kept for the run.
+    data = _GEOCODE_CACHE.get(url)
+    if data is None:
+        data = _http_get_json(url)
+        if isinstance(data, list) and _GEOCODE_CACHE_SIZE:
+            if len(_GEOCODE_CACHE) >= _GEOCODE_CACHE_SIZE:
+                _GEOCODE_CACHE.pop(next(iter(_GEOCODE_CACHE)))
+            _GEOCODE_CACHE[url] = data
     if not isinstance(data, list):
-        return []
+        return None             # not reached, or not an answer (QF-3)
 
     numeric_tokens = re.findall(r"\d+", q)
     word_tokens = [w.lower() for w in re.findall(r"[A-Za-z]{2,}", q)]

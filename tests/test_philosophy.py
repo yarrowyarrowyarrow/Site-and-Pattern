@@ -75,9 +75,21 @@ class TestBranding(unittest.TestCase):
         self.assertTrue(APP_TITLE.startswith(APP_NAME))
 
     def test_window_title_flows_from_branding(self):
+        # Through branding.window_title since V3.16 (F231), which adds the
+        # running version; with none it is still APP_TITLE.
+        from src.branding import APP_TITLE, window_title
+        self.assertEqual(window_title(version=None), APP_TITLE)
         app_src = (_SRC / "app.py").read_text(encoding="utf-8")
-        self.assertIn("setWindowTitle(APP_TITLE)", app_src,
-                      "MainWindow should set its title from branding.APP_TITLE")
+        self.assertIn("setWindowTitle(window_title(", app_src,
+                      "MainWindow should set its title from branding.window_title")
+        # A title built by hand drops the version without a sound.
+        for path in (_SRC / "app.py", _SRC / "controllers" / "persistence.py"):
+            text = path.read_text(encoding="utf-8")
+            for by_hand in ('setWindowTitle(f"{APP_NAME}', "setWindowTitle(APP_TITLE)"):
+                # assertFalse, not assertNotIn, which prints the whole file.
+                self.assertFalse(by_hand in text,
+                                 f"{path.name} builds the main window's title by "
+                                 f"hand ({by_hand}…); use branding.window_title")
         self.assertNotIn(
             '"PermaDesign — Native Habitat Designer"', app_src,
             "the old hard-coded window title should be gone")

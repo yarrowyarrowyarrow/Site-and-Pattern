@@ -32,14 +32,25 @@ _HERE        = os.path.dirname(os.path.abspath(__file__))
 # bundle (where a module's __file__ is unreliable), not just in a source tree.
 _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
-# The photo slots (schema v55, F70), in the order `_attach_photos` prefers them
-# when it synthesizes `image_url`. `habit` leads deliberately: the whole plant
-# with something for scale is what someone deciding whether they want it — or
-# trying to find it in their own yard in May — actually needs, and it is the
-# frame iNaturalist's leading photo almost never is.
-PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+# The photo slots (schema v55, F70), in the order `photo_order` falls back to
+# when nothing else decides. `habit` led from V2.35, for someone deciding
+# whether they want the plant; since V3.35 the flower leads, the owner's
+# decision D2: at a list row's size a whole plant is a green smudge and a
+# flower is why somebody stops, and the whole plant comes second.
+PHOTO_SLOTS = ("flower", "habit", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
+_SLOT_INDEX = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
 _PLANT_PHOTOS_JSON_PATH = resource_path("data", "plant_photos.json")
+
+
+def photo_order(row) -> tuple:
+    """Sort key for one species' photographs, best first (V3.35): a person's
+    own photograph (``origin='user'``) before a shipped one, because they
+    added it on purpose; then the order the owner picked the shipped ones in
+    (``rank``, so the one they starred leads, ``src.photo_picks``); then the
+    slot order above; then age."""
+    return (0 if row["origin"] == "user" else 1, int(row["rank"] or 0),
+            _SLOT_INDEX.get(row["slot"], 99), int(row["id"] or 0))
 
 
 def _user_data_dir() -> pathlib.Path:
@@ -321,7 +332,210 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # Mixedwood is 31% of Mid-Boreal Uplands across nine. Without the shares the
 # app has to pick a parent, and every place that picked one picked it
 # alphabetically and was wrong about Montane.
-_SCHEMA_VERSION = 74
+# v75 (V2.74): no DDL — the first time a species has ever been REMOVED from the
+# catalogue. *Rudbeckia hirta* (Black-eyed Susan) is introduced in Alberta, not
+# native: VASCAN records it as introduced in AB (native ON and eastward), and
+# Moss's *Flora of Alberta* says the same. It was seeded flagged
+# `native_to_alberta = 1` and noted "Classic prairie wildflower", which is how
+# it reached the public native-plant website. Removing the row takes 150
+# documented plant↔fauna edges and one `plant_ecoregions` entry with it, and
+# without this bump every existing install keeps serving all of them.
+#
+# Six animals go too (fauna 1,156 → 1,150; two `lepidoptera_attributes` rows
+# with them). Each held exactly one documented edge and it was to this plant,
+# so leaving them would have left six rows in `fauna` connected to nothing —
+# the state V2.64 stopped writing rather than tolerating, and the state
+# `test_derived_edges`' orphan ceiling exists to catch. It caught it.
+#
+# The reseed's own machinery covers the fallout that could not be edited in the
+# seed files: `_remap_user_polyculture_plants` drops user community members
+# whose plant no longer ships, audibly. That branch has existed since v46 and
+# this is the first release to exercise it. What it does NOT cover is a saved
+# `.perma.geojson` that placed one — the feature stores a plant id, ids shift on
+# every reseed, and `_plant_info` resolves by id. That hazard predates this
+# change and applies to every bump; it is merely visible now.
+# v76 (V2.75): no DDL — a second removal, and a different evidence shape from
+# the first. *Helianthus giganteus* (Giant Sunflower) is an eastern species:
+# VASCAN records it from Ontario eastward and Moss's *Flora of Alberta* does
+# not treat it. It shipped `native_provinces = "AB,SK"`.
+#
+# Where v75 removed a species the occurrence data actively defended — 215
+# georeferenced records, because presence is not nativity — this one had no
+# entry in `plant_ecoregions` at all. That is weaker evidence than it looks and
+# `data/excluded_taxa.json` says so: the derived file records only species WITH
+# rows, so an absence there means either no records inside the polygons or a
+# fetch GBIF refused, and it cannot tell them apart afterwards.
+#
+# Takes 11 documented edges with it. No animal is orphaned this time — every
+# one of the 11 has other records — so `fauna` is untouched. The seeded "Tall
+# Prairie Meadow" loses its centre plant: Maximilian Sunflower moves in (at
+# 2.5 m it is the tallest member, which is what the centre of that variation
+# means) and Nuttall's Sunflower, the prairie's own tall sunflower, takes the
+# slot it left. The community's *description* is edited too, not only its
+# member list.
+#
+# Also in this release, and the reason a bump is needed even where the data is
+# unchanged: species ranges are now derived by containment rather than by a 5
+# km proximity buffer (`ecoregion.lookup_ecoregions(near_m=)`). The shipped
+# `plant_ecoregions.json` still carries buffered counts and can only be
+# corrected by a re-fetch with egress — which is stated on the website's
+# Method page rather than left for a reader to discover.
+# v77 (V2.76): no DDL — a reseed to carry the **re-derived** species ranges,
+# and the first time this catalogue has corrected a number rather than added
+# one. Without the bump nobody who already has the app installed would ever
+# receive them.
+#
+# V2.75 fixed the derivation: `ranges_for_species` had inherited
+# `ecoregion._NEAR_BOUNDARY_M`, a 5 km proximity buffer written for *which
+# ecoregion is this yard in*, and credited every record to every region within
+# five kilometres of it. The data could only be corrected by re-fetching from
+# GBIF, which happened on 2026-08-21. Measured against the old file:
+#
+#     species with rows   422 -> 420
+#     region rows        4215 -> 3643
+#     records          489,546 -> 361,447      (-26%)
+#
+# **The error was concentrated, not scattered, and that is the finding.** Of
+# 4,218 region claims in the old file, 493 (11.7%) had fewer than the floor of
+# records actually inside the region. Nearly all of them were one region:
+# `western_continental_ranges` is the BC interior ranges, and only a hairline of
+# it falls inside Alberta — 0.02% of the layer, 36x smaller than Northern
+# Continental Divide. A sliver that thin has an enormous buffer-to-area ratio,
+# so every montane record near the BC border was swept into it. It was claimed
+# by **135 species and is now claimed by 15**.
+#
+# Two species lost every row: *Panicum virgatum* (3 records) and
+# *Symphyotrichum campestre* (6). Both sat at the floor and both now band as
+# `unknown` rather than `unlikely` — under-collected and absent are
+# indistinguishable from here, and `establishment.py` refuses to guess between
+# them. They keep their heuristic ecozone tag, so they are still findable.
+#
+# The interior regions barely moved (Cypress Upland 231 -> 228, Selwyn Lake
+# Upland 10 -> 8), which is the signature a boundary fix should have: it bites
+# at edges, not in the middle.
+# ── v78 (V2.78): the specimen pass, and what the harvest cap was hiding ─────
+#
+# No DDL. A reseed, because `data/plant_ecoregions.json` changed again — and
+# this time it is a gain rather than a correction.
+#
+# `MAX_RECORDS_PER_SPECIES = 6000` bounds the GBIF harvest per species, and
+# GBIF orders newest-first, so for a common plant that window was the last few
+# years of phone observations and nothing before them. Sixteen species sat at
+# the cap holding 89,964 records dated 2021-2026 and **thirty-one herbarium
+# specimens between them**. `--specimen-pass` asks for PRESERVED_SPECIMEN as
+# its own query, which is the only way to reach what the cap cut:
+#
+#     Amelanchier alnifolia      2 specimens ->  246   (oldest now 1898)
+#     Achillea millefolium       ? specimens ->  531
+#     Populus tremuloides        ? specimens ->  158   (oldest now 1820)
+#     cache total          56,124 specimens -> 62,770
+#
+# Measured against v77:
+#
+#     species with rows    420 -> 420        (unchanged)
+#     region rows         3643 -> 3658       (+15, none dropped)
+#     records          361,447 -> 363,302
+#     confidence bands      13 up, 0 down
+#
+# **Purely additive, and the shape of it is the finding.** Every one of the 15
+# new rows belongs to a capped species, and every new region is northern:
+# hay_river_lowland, athabasca_plain, tazin_lake_upland, churchill_river_upland,
+# wabasca_lowland, slave_river_lowland, northern_alberta_uplands,
+# mid_boreal_uplands. That is not a coincidence — it is a sampling bias made
+# visible. Specimen share of in-region records, by region:
+#
+#     athabasca_plain        35 obs / 423 spec   92.4% specimen
+#     tazin_lake_upland      61 obs / 579 spec   90.5%
+#     hay_river_lowland      94 obs / 259 spec   73.4%
+#     aspen_parkland     80,129 obs / 4,134 spec  4.9%
+#     fescue_grassland   43,635 obs / 1,203 spec  2.7%
+#
+# The observation layer maps where people live. In the remote north the
+# herbarium record is very nearly the *only* record, so a newest-first cap did
+# not merely drop old material — it dropped the north. Until this bump, the
+# catalogue systematically under-reported northern occurrence for its sixteen
+# most-recorded species, and nothing could see it, because a truncated harvest
+# and a complete one look identical once cached.
+# v84 (V2.81): the ecoregion counts were re-derived under a border margin.
+#
+# A record now has to lie more than 900 m -- the outlines' own stated accuracy
+# -- inside a region to count for it. Reported from the published site: a
+# mountain penstemon and a mountain forget-me-not each carrying Aspen Parkland
+# records, from one hillside population sitting 25 to 202 m inside a line drawn
+# to a kilometre. 108 region rows left 95 of 434 species and none arrived; 5.7%
+# of credited records were set aside. No column changed, so this bump exists
+# purely to push the re-derived `plant_ranges` rows into existing installs --
+# without it the desktop keeps recommending on the old counts while the website
+# publishes the new ones.
+# v85 (V2.82): five duplicate species merged (one plant filed under two names),
+# three binomials renamed and eight common names corrected. Recorded here in
+# V2.84; that bump shipped without a line.
+# v86 (V2.84): 43 apoid wasps moved from `taxon = 'bee'` to `other_insect`.
+#
+# The GloBI fetch mapped the superfamily Apoidea, which holds the wasps as well
+# as the bees, so beewolves, sand wasps, mud daubers and crabronids were counted
+# as bees in the app and labelled "native bee" on the website. 174 edges move
+# with them and 51 plants report fewer bees (Boreal Yarrow 151 -> 129); none
+# drops to zero, and the Habitat Value Score headline does not count bees.
+# v87 (V2.86): `keystone_species` added to the three birches and Bur Oak.
+#
+# The tag was always applied by genus and `data_quality.KEYSTONE_GENERA` now says
+# which; Betula and Quercus, two of Tallamy & Shropshire's top five woody
+# genera, were the only gaps. Designs holding a birch or the oak gain keystone
+# credit in the Habitat Value Score (15 of its 100 points, 3 per keystone
+# species up to five).
+# v88 (V2.87): the seven trees staged in V2.86 promoted by the author's VASCAN
+# run, each with VASCAN's provinces (Rocky Mountain Juniper and Narrowleaf
+# Cottonwood came back AB,SK where the rows had said AB), plus their GBIF
+# ecoregion rows, range cells and occurrence marks. Without this bump no
+# existing install would ever see them.
+# v89 (V2.89): the four horsetails recorded `growth_form: jointed` with their
+# `stem_branching`, and the grass plume taken off the two that carried one (a
+# horsetail makes spores in a cone and has no inflorescence at all).
+# v90 (V2.90): waterweed, milfoil, sago pondweed and bladderwort recorded
+# `growth_form: submerged` (they had been `floating` with the pond-lily), and
+# Water Parsnip `erect`, so the pond draws each by its own body.
+# v91 (V2.93): the two prickly pears recorded `growth_form: pads` and the ball
+# cactus `globose` (all three had been `succulent`, which drew them as a mat
+# and a grass-like star), so the viewer draws each by its own body.
+# v92 (V3.05): the last five `native_to_alberta: '1?'` rows (False Box,
+# Flat-topped White Aster, Round-leaved Alumroot, Stiff Sunflower, Tall
+# Anemone) set to 1, as VASCAN records every one in Alberta (F199). The
+# generator's native-only filter reads the flag, so it had left them out.
+# Each also joins the seeded community its habitat matches (False Box under
+# Montane Woodland Beauty's fir, the aster in Wet Meadow Aster & Monkeyflower,
+# the alumroot on Montane Scree, the sunflower in Mixedgrass Late Aster &
+# Goldenrod, the anemone at Parkland Woodland Wildflowers' edge): counted as
+# natives now, they were the retail natives no community held.
+# v93 (V3.12): no DDL. Seven seeded communities of the Edmonton region (F221),
+# built only from species on the Edmonton list, and five notes that
+# contradicted VASCAN corrected (F222): Eastern Red Columbine's "true
+# Alberta-native populations", Purple Coneflower "appropriate for Alberta
+# grassland restoration" (VASCAN: introduced in Alberta), Prairie Dropseed's
+# "Alberta's mixed-grass prairie", Big Bluestem's Alberta recommendation and
+# Bur Oak "of the aspen parkland" (introduced in Alberta). The Edmonton list
+# itself, data/local_flora.json, is read from the file and needs no reseed.
+# v94 (V3.14): no DDL. `availability_class` re-ranked by
+# scripts/rank_availability.py, which replaced name keywords ("aster",
+# "currant": Alpine Aster read garden-centre stock): garden centre 66 -> 35,
+# big box 15 -> 9, rare 6 -> 84, each rare species' note saying why. And five
+# seeded "Easy" communities built from plants people can buy.
+# v95 (V3.18): no DDL. "Green Milkweed" renamed Oval-leaf Milkweed: the row is
+# *Asclepias ovalifolia* and Green Milkweed is *A. viridiflora* (F171). Its
+# flower colour had come from the wrong name and is white now, and its note
+# no longer calls it critical to the Monarch. The common name is the edges'
+# key, so the three edges moved with it; user communities re-point by
+# scientific name and are unaffected.
+# v96 (V3.26): no DDL. The nursery directory's "Edmonton Native Plant Group"
+# is the Edmonton Native Plant Society, renamed so the plant pages and the
+# order file name it as people know it; one plant note follows.
+# v97 (V3.34): no DDL. The owner's flower colour review folded in (F172,
+# data/flower_colour_checks.json): all 343 plants on the list looked at in
+# photographs of them in flower, each now `photo`. 156 stand as they were;
+# the main colour changed on 70 and the second on 67; 25 of the 49 blanks
+# have a colour, 24 have no showy flower, and duckweed's guess is cleared.
+# Blue 28 -> 16, most of the rest purple.
+_SCHEMA_VERSION = 97
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -696,6 +910,60 @@ def _migrate_to_v64(conn: sqlite3.Connection):
     try:
         conn.execute(
             "ALTER TABLE plants ADD COLUMN flower_colour_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
+    conn.commit()
+
+
+def _migrate_to_v79(conn: sqlite3.Connection):
+    """Where the province list came from (V2.80).
+
+    `native_provinces` was the one claim on a species page with no source
+    column, while flower colour and safety both had one -- and it is the claim
+    the outside botanical review actually objected to. F144 shipped the reader
+    side of this (`src.nativity.SOURCE_FIELD`) and left the column for the day
+    VASCAN could be read; that day is now.
+
+    Additive and idempotent, like every migration in this chain. The column
+    exists here rather than only in `schema.sql` so an *existing* install picks
+    it up without a rebuild, and it defaults to blank because blank is the
+    honest answer for a row nobody has checked -- `nativity.provenance` reads
+    a missing source as "inferred" and names the heuristic, which is right.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants "
+            "ADD COLUMN native_provinces_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass                              # column already present
+    conn.commit()
+
+
+def _migrate_to_v81(conn: sqlite3.Connection):
+    """Every colour a flower blooms in, not just one (V2.80).
+
+    Reading Budd's Flora produced 146 sourced colours and **76 of them named
+    more than one**: *"Heads numerous, in a flattopped inflorescence, white to
+    pinkish"*, *"Flowers showy, yellow to pinkish orange"*. One hex could not
+    hold that, so the tool asked a person to arbitrate 76 rows -- and
+    arbitrating them discards exactly what the flora was consulted for. The
+    prickly pear is the case in miniature: it had a yellow hex and a magenta
+    photograph above it, and both were right.
+
+    ``flower_color`` stays the primary hex, so the 3D viewer, the swatches and
+    every screen that draws one colour are untouched. This column is the full
+    list, comma-separated, primary first, and blank for any row no flora has
+    been read for -- which is the honest state and the one every row starts in.
+
+    Additive and idempotent, like the rest of the chain. It pairs with the
+    ``search_plants(flower_colours=...)`` filter that has existed since V2.47:
+    that argument names the colours a reader is looking for, this column names
+    the colours a plant has, and a species that is white to pink now answers
+    both queries because it is both.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_colours TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass                              # column already present
     conn.commit()
@@ -1739,6 +2007,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("availability_class", ""),
             p.get("sourcing_notes", ""),
             p.get("flower_color", ""),
+            p.get("flower_colours", ""),
             p.get("flower_form", "none"),
             p.get("fruit_color", ""),
             p.get("fruit_form", ""),
@@ -1771,6 +2040,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("leaf_data_source", ""),
             p.get("leaf_data_citation", ""),
             p.get("flower_colour_source", ""),
+            p.get("native_provinces_source", ""),
         ))
 
     conn.executemany(
@@ -1788,7 +2058,8 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes, flower_color, flower_form, fruit_color, fruit_form,
+            sourcing_notes, flower_color, flower_colours, flower_form,
+            fruit_color, fruit_form,
             image_url, image_attribution, image_license,
             leaf_shape, leaf_size_cm, leaf_arrangement,
             bark_color, fall_color, branching, growth_form,
@@ -1797,10 +2068,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
             flowering_stems, flower_data_source, flower_data_citation,
-            leaf_data_source, leaf_data_citation, flower_colour_source)
+            leaf_data_source, leaf_data_citation, flower_colour_source,
+            native_provinces_source)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1938,6 +2210,12 @@ def init_db() -> None:
         if current_version < 64:
             _migrate_to_v64(conn)
 
+        if current_version < 79:
+            _migrate_to_v79(conn)
+
+        if current_version < 81:
+            _migrate_to_v81(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -2032,7 +2310,7 @@ def init_db() -> None:
             # Seed the uses lookup first so _seed_from_json_file can populate
             # plant_uses for each freshly inserted plant in the same pass.
             _seed_uses_lookup(conn)
-            _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 433 native plants
+            _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 431 native plants
             _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
@@ -2077,15 +2355,6 @@ def init_db() -> None:
         # Non-critical; polycultures can be created manually — but a broken
         # seed used to ship silently, so leave the evidence in the log.
         _log.exception("seeding example polycultures failed")
-
-    # One-time import of any pre-existing recipes that lived in
-    # ~/.permadesign_config.json. Subsequent runs are no-ops thanks to
-    # the `polyculture_recipes_migrated` flag.
-    try:
-        from src.db.recipes import migrate_qsettings_recipes
-        migrate_qsettings_recipes()
-    except Exception:
-        _log.exception("legacy recipe migration failed")  # user can recreate them
 
     # Any init may have reseeded/migrated the catalogue — drop the cache.
     invalidate_plant_cache()
@@ -2225,11 +2494,12 @@ def _attach_photos(plants: list[dict]) -> None:
     ``photo_warm`` all get better photographs here without one line of change at
     the call site.
 
-    Preference order is ``PHOTO_SLOTS`` — **habit first** — and a person's own
-    photograph (``origin='user'``) beats a shipped one in the same slot, because
-    a picture of the plant in THEIR yard is more use than a stranger's. Where the
-    table has nothing, the row keeps whatever ``plants.image_url`` already held,
-    so a species the photo set doesn't cover renders exactly as it did before.
+    Preference order is :func:`photo_order`: a person's own photograph first,
+    because a picture of the plant in THEIR yard is more use than a
+    stranger's, then the owner's picked order, then the slot (the flower
+    first since V3.35). Where the table has nothing, the row keeps whatever
+    ``plants.image_url`` already held, so a species the photo set doesn't
+    cover renders exactly as it did before.
     """
     names = [(p.get("scientific_name") or "").strip() for p in plants]
     wanted = {n for n in names if n}
@@ -2241,10 +2511,10 @@ def _attach_photos(plants: list[dict]) -> None:
         # 434 rows and render_project_to_map is called on every File→Open.
         marks = ",".join("?" * len(wanted))
         rows = conn.execute(
-            f"SELECT scientific_name, slot, url, attribution, license, source,"
-            f"       origin, taken_on, rank"
-            f"  FROM plant_photos WHERE scientific_name IN ({marks})"
-            f" ORDER BY rank, id", tuple(wanted)).fetchall()
+            f"SELECT id, scientific_name, slot, url, attribution, license,"
+            f"       source, origin, taken_on, rank"
+            f"  FROM plant_photos WHERE scientific_name IN ({marks})",
+            tuple(wanted)).fetchall()
     except sqlite3.OperationalError:
         return          # pre-v55 DB mid-migration; the column keeps working
     finally:
@@ -2254,16 +2524,13 @@ def _attach_photos(plants: list[dict]) -> None:
     for r in rows:
         by_name.setdefault(r["scientific_name"], []).append(dict(r))
 
-    order = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
     for p in plants:
         shots = by_name.get((p.get("scientific_name") or "").strip())
         if not shots:
             p.setdefault("photos", [])
             continue
-        p["photos"] = shots
-        best = min(shots, key=lambda s: (order.get(s["slot"], 99),
-                                         0 if s["origin"] == "user" else 1,
-                                         s["rank"]))
+        p["photos"] = shots = sorted(shots, key=photo_order)
+        best = shots[0]
         p["image_url"] = best["url"]
         p["image_attribution"] = best["attribution"]
         p["image_license"] = best["license"]
@@ -2452,10 +2719,25 @@ def search_plants(
     bloom_months: Optional[list] = None,
     fruit_months: Optional[list] = None,
     flower_colours: Optional[list] = None,
+    native_near: str = "",
+    stock_in: Optional[list] = None,
+    stock_region: str = "",
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
     Empty string / None values for a filter means "no restriction".
+
+    ``native_near`` is a place with a local list ("edmonton", F220): only the
+    species native around it, by ``src.native_here``. Applied in Python, after
+    the query, because the list is shipped data keyed by scientific name rather
+    than a column; an unknown place raises ``ValueError`` rather than filtering
+    to nothing.
+
+    ``stock_in`` keeps the plants at any of the given ``src.local_stock`` tiers
+    around ``stock_region`` (the default pack when empty), and ``common_only``
+    keeps those ``local_stock.easy_to_find`` passes (V3.25: from the region's
+    nurseries' stock, not the catalogue's old tier). Both in Python, like
+    ``native_near``.
 
     ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
     matches if its recorded window covers ANY of them. See ``_month_filter``
@@ -2479,12 +2761,18 @@ def search_plants(
         return [str(x) for x in v if x]
 
     if query:
-        sql += (" AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
-                " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
-                " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
-                " AND LOWER(u.key) LIKE ?))")
-        q = f"%{query.lower()}%"
-        params += [q, q, q]
+        # Each spelling of the query (V2.86: "Burr Oak" found nothing, and the
+        # catalogue calls it Bur Oak); see src/name_variants.py.
+        from src.name_variants import query_forms            # noqa: PLC0415
+        one = ("LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
+               " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
+               " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
+               " AND LOWER(u.key) LIKE ?)")
+        forms = query_forms(query)
+        sql += " AND (" + " OR ".join(f"({one})" for _ in forms) + ")"
+        for form in forms:
+            q = f"%{form}%"
+            params += [q, q, q]
 
     # Type is a single column value; a multi-select matches ANY chosen type.
     types = _as_filter_list(plant_type)
@@ -2645,13 +2933,6 @@ def search_plants(
         sql += " AND (price_low_cad IS NULL OR price_low_cad <= ?)"
         params.append(float(max_unit_price))
 
-    if common_only:
-        # Denylist: drop only plants that are genuinely hard to buy (seed/plug
-        # only or rare). Native specialists are the normal channel for AB
-        # natives, so they pass — as does unassessed availability.
-        sql += (" AND COALESCE(availability_class,'') NOT IN "
-                "('seed_or_plug','rare')")
-
     # Allowlist (V1.84): keep only the chosen sourcing tiers. Drives the plant
     # browser's multi-select rarity dropdown — empty/None means "no restriction".
     if availability_in:
@@ -2724,6 +3005,20 @@ def search_plants(
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
         result = _colour_filter(result, flower_colours)
+        if common_only or stock_in:
+            from src import local_stock                   # noqa: PLC0415
+            if common_only:
+                result = [p for p in result
+                          if local_stock.easy_to_find(p, stock_region)]
+            if stock_in:
+                keep = {str(v) for v in stock_in}
+                result = [p for p in result
+                          if local_stock.tier(p, stock_region) in keep]
+        if native_near:
+            from src.native_here import native_names     # noqa: PLC0415
+            local = native_names(native_near)
+            result = [p for p in result
+                      if (p.get("scientific_name") or "").strip() in local]
         return result
     finally:
         conn.close()
@@ -2747,12 +3042,17 @@ def _colour_filter(plants: list[dict], colours) -> list[dict]:
     A plant with no recorded colour is excluded rather than assumed, matching
     ``_month_filter``: "we don't know what colour this flowers" is not the claim
     "it flowers white" (P9).
+
+    Since V2.80 it asks ``matches`` rather than ``classify``, so a species a
+    flora describes as *white to pinkish* answers a white query **and** a pink
+    one. It is both, and picking one to file it under was the thing reading a
+    flora was supposed to stop.
     """
     wanted = {str(c) for c in (colours or []) if str(c).strip()}
     if not wanted:
         return plants
-    from src.flower_colour import classify
-    return [p for p in plants if classify(p) in wanted]
+    from src.flower_colour import matches
+    return [p for p in plants if matches(p, wanted)]
 
 
 def _month_filter(plants: list[dict], column: str, months) -> list[dict]:
@@ -2921,24 +3221,31 @@ def get_calendar(plant_id: int) -> list[dict]:
             for m in range(1, 13)]
 
 
-def get_current_month_tasks() -> list[dict]:
+def get_month_tasks(plant_ids, month: int) -> list[dict]:
     """
-    Return plants with active tasks for the current month.
-    Each dict: {plant_id, common_name, plant_type, status, notes}.
-    Excludes dormant and growing (those aren't actionable).
+    The planting-calendar rows of ``month`` for these plants only, as
+    ``{plant_id, common_name, status, edible_parts}``, dormant and growing
+    left out (they are not jobs). No ids, no rows.
+
+    Until V3.19 this was ``get_current_month_tasks()``, which took no plants
+    and so answered for the whole catalogue: the status bar named "the first
+    eight tasks in the whole catalogue, not the user's design" (QF-12, R26).
     """
-    from datetime import datetime
-    month = datetime.now().month
+    ids = sorted({int(i) for i in plant_ids or () if i is not None})
+    if not ids:
+        return []
+    marks = ",".join("?" * len(ids))
     conn = get_connection()
     try:
         rows = conn.execute(
-            """SELECT p.id AS plant_id, p.common_name, p.plant_type,
-                      c.status, c.notes
-               FROM planting_calendar c
-               JOIN plants p ON p.id = c.plant_id
-               WHERE c.month = ? AND c.status NOT IN ('dormant', 'growing')
-               ORDER BY c.status, p.common_name""",
-            (month,)
+            f"""SELECT p.id AS plant_id, p.common_name, p.edible_parts,
+                       c.status
+                FROM planting_calendar c
+                JOIN plants p ON p.id = c.plant_id
+                WHERE c.month = ? AND c.plant_id IN ({marks})
+                  AND c.status NOT IN ('dormant', 'growing')
+                ORDER BY c.status, p.common_name""",
+            (int(month), *ids)
         ).fetchall()
         return [dict(r) for r in rows]
     finally:

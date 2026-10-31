@@ -35,6 +35,74 @@ The column (`flower_colour_source`), the seeder
 (`data_quality.validate_flower_colour`) and the "not verified" marker on both
 the species page and the website are all in place.
 
+### The source question, settled (V2.80)
+
+**USDA PLANTS was tried and rejected.** It has a structured *Flower Color*
+field, which is far cheaper than parsing prose, so it was the obvious first
+stop. Two problems, in order of discovery:
+
+1. Its Characteristics Search **downloads the result rows, not the
+   characteristics you filtered on**, so a plain export is a name list. The
+   way round it is one download per colour, letting the filter be the label —
+   `--colour-sets` still implements this.
+2. The data itself is wrong here. Checked at the binomial, not the common
+   name, so it is not the *Achillea filipendulina* confusion it could have
+   been: *"They say yarrow is yellow, the giant hyssop is red"*.
+   *A. millefolium* is white and *Agastache foeniculum* is blue.
+
+So the source is **Budd's Flora of the Canadian Prairie Provinces**
+(Agriculture Canada 1662), which is the right authority for this ground and is
+a scanned book with no colour column at all. `src/budds_colour.py` reads the
+colour out of its sentences.
+
+**The point of that module is not extraction, it is making 348 species
+checkable in an evening.** OCR of a 1979 scan will be wrong sometimes and a
+parser reading English will be wrong sometimes, so nothing is written unseen.
+Instead every proposal carries **the book's own sentence**, and the workflow is
+three commands:
+
+```bash
+python scripts/fetch_flower_colour.py --peek budds.txt        # is there text?
+python scripts/fetch_flower_colour.py --from-budds budds.txt  # review sheet
+python scripts/fetch_flower_colour.py --from-review data/fetched/flower_colour_review.tsv --apply
+```
+
+The middle one writes a spreadsheet with one editable column and the quote
+beside it, uncertain rows sorted to the top. Checking a row costs reading a
+sentence rather than looking a species up. A colour outside the catalogue's
+eleven buckets is refused before anything is written.
+
+Two things the parser deliberately will not do: pick between "white or
+pinkish" (real variation, and the catalogue stores one hex, so a person
+chooses), and read a colour from a sentence with no flower word in it — *red
+osier dogwood* is named for its winter stems and has white flowers.
+
+### Where Budd's ran out (V2.80)
+
+**146 species sourced, and that is what this book has.** The genus reading was
+built on the reasonable premise that a flora states the colour once at the
+genus and then notes only departures. Budd's does not: it is a
+key-plus-species-treatments flora with no genus paragraph. Measured, not
+assumed -- **0 genus headings found for the 80 genera** that would have needed
+them, and what the book carries under those names instead is identification
+key couplets (`7. Flowers purplish blue, to 2 cm long Cassia`), figure
+captions, index entries and tribe headings.
+
+That makes the 23 readings it did produce a liability rather than a gain: a
+species heading whose authority the OCR dropped matches the genus-heading
+shape exactly and would lend one species' colour to all its siblings. So
+`--genus` is off by default and `src/budds_genus.py` records why. The code is
+sound; the source does not support it, and a flora that carries genus
+descriptions would work unchanged.
+
+**The remaining gap is smaller than it looks.** Of the 197 species still
+carrying a genus default, **74 are wind-pollinated** -- grasses, sedges and
+rushes, which already classify as `straw` from their type, for a botanical
+reason no flora reading improves. The real number is **123**, and the next
+source has to be something other than Budd's: Flora of North America is
+published as text and its descriptions carry colour, at the cost of being
+continental rather than prairie.
+
 ### How to move this along (V2.51)
 
 The paragraph above used to end at "what this needs is a flora and a network",
@@ -80,6 +148,8 @@ of its species. That is the right trade for a warning.
 ---
 
 ## Photographs and provenance (V2.35)
+
+> **Catalogue size, V2.75: 430 species.** The `/434` denominators below are as-measured at V2.42 and are left as they were written — this repo corrects its ledger in place rather than rewriting history, and a table describing a past measurement is not a stale reference. Two species have been removed since (*Rudbeckia hirta* V2.74, *Helianthus giganteus* V2.75, both introduced or eastern) and two garden rows reclassified. **The live figures are printed by `python scripts/check_plant_data.py`**, which counts rather than remembers.
 
 **Photo coverage.** `src/data_quality.py:validate_photo_coverage` counts this on
 every run of the gate, so the numbers below are live rather than a snapshot:
@@ -333,3 +403,248 @@ allowlist mode is ever wanted.
   matching — the single biggest lever for making the no-LLM path precise.
 - Optional: a canonical `edible` / `food` use-key in the `plant_uses` junction
   to distinguish human-edible from merely bird-food, refining `food_producing`.
+
+---
+
+## Two regions can claim the same record, at their shared border (V2.78, closed V2.81)
+
+The surveyed polygons are simplified to about 900 m **independently of each
+other**, so along a boundary two neighbours overlap by a sliver, and a record
+inside that sliver satisfies containment for both. **0.81% of in-region points
+do**, measured over the twenty largest species (692 of 85,311).
+
+It is concentrated the way the V2.76 buffer error was, and in the same shape:
+
+| pair | points |
+|---|---|
+| `aspen_parkland` + `fescue_grassland` | 587 |
+| `northern_continental_divide` + `western_alberta_upland` | 51 |
+| `eastern_continental_ranges` + `northern_continental_divide` | 38 |
+| five other pairs | 16 |
+
+**Eighty-five per cent of it is Calgary**, where the parkland meets the fescue
+grassland.
+
+**Left in place deliberately** at the time, on the author's call, and disclosed
+on `/method/` rather than corrected. Deciding which of the two a record belongs
+to would mean asserting a side of a line we know we drew imprecisely, which is
+the mistake V2.76 was about at five kilometres. Eight records in a thousand is
+well inside the accuracy the outlines themselves claim.
+
+### CLOSED in V2.81, and the reasoning above is why
+
+That last sentence is the fix, read the other way. If eight in a thousand is
+inside the accuracy the outlines claim, then so is *every* record that near a
+border — overlapping or not. The overlap was a visible symptom of a rule that
+was wrong for a much larger set: **containment answers to the metre against an
+outline good to 900 m.**
+
+What made it undeniable was not the overlap at all. *Penstemon albertinus*
+published 17 Aspen Parkland records beside 284 montane ones, and exactly one of
+its 547 points is in two regions. The seventeen were one hillside population,
+663 m across, sitting 25 to 202 m inside the parkland line.
+
+So a record now counts only where it lies more than `ecoregion.SIMPLIFICATION_M`
+(900 m) inside a region, measured to the nearest *different* region. A doubly
+contained point is by construction inside that margin, so the double count is
+structurally impossible rather than disclosed. See
+[`V2.81-a-border-read-closer-than-it-is-drawn`](plans/V2.81-a-border-read-closer-than-it-is-drawn.md).
+
+**What remains true:** `sum(occurrences)` over a species' rows is now a count of
+records, because a record contributes to at most one region. What is still a
+gap is a different one — **a record is not a place**. Seventeen collections from
+one roadside are seventeen records, and in the middle of a region nothing
+removes them. The occupancy grid on the species page answers that question
+properly; the ecoregion counts do not.
+
+## VASCAN publishes distribution on the lowest accepted taxon (V2.79)
+
+The nativity fetch ran on 2026-08-24: 434 species, zero failures. **173 of them
+came back with no distribution at all**, because VASCAN records distribution on
+the lowest accepted taxon and those species have accepted varieties or
+subspecies:
+
+| query | rank | distribution |
+|---|---|---|
+| `Amelanchier alnifolia` | species | **none** |
+| `Amelanchier alnifolia var. alnifolia` | variety | AB, SK, MB native |
+| `Alnus incana` | species | **none** |
+| `Alnus incana subsp. tenuifolia` | subspecies | AB, SK native, MB excluded |
+
+Those 173 are **undetermined, not absent**, and the report says so.
+
+**The API cannot resolve them and the route is the bulk checklist (V2.79).**
+`search.json` is exact-name only -- `Amelanchier alnifolia var` returns
+`numMatches: 0` -- and `parentNameUsageID` points the wrong way, so a taxon's
+children cannot be enumerated from it.
+
+**The autonym shortcut was considered and rejected.** Guessing
+`<species> var. <epithet>` resolves *Amelanchier alnifolia var. alnifolia* and
+misses *Alnus incana* entirely, whose Alberta taxon is `subsp. tenuifolia`
+rather than the autonym `subsp. incana`. A rule that answers some species and
+silently skips others produces a result that looks complete and is not.
+
+`scripts/vascan_archive.py` reads the published Darwin Core Archive instead,
+rolling each species up over its accepted descendants. It needs the archive
+downloaded by hand -- the project's sessions cannot reach
+`data.canadensys.net`, so `--from-archive` with no path prints what to fetch
+and refuses, following the rule `tools/ecoregions/fetch.py` already sets for
+unreachable sources: never substitute a different dataset, never write a
+placeholder.
+
+### Resolved: the archive ran (V2.80)
+
+The author downloaded VASCAN v37.17 and it took two more fixes to read, both
+invisible to the synthetic archive V2.79 tested against:
+
+- **`distribution.txt` joins on `id`, not `taxonID`.** It is a Darwin Core
+  *extension*, and an extension references the core row through the column
+  `meta.xml` declares as `<coreid>`. The synthetic archive wrote `taxonID` in
+  both files, so the fixture and the parser shared the assumption under test.
+- **A hybrid formula is filed at rank species.** `_canonical` reduces a name to
+  its first two words, so *Chamaenerion angustifolium* tied with
+  *C. angustifolium* subsp. *angustifolium* x *C. latifolium* and the winner was
+  **dict iteration order**. The hybrid won and fireweed was published as
+  unrecorded in Alberta, while two AB/SK/MB-native subspecies hung off the real
+  species unvisited.
+
+`--explain "<species>"` prints the archive's own rows for one name -- the taxa
+it matched, what hangs beneath the chosen one, and the distribution each
+carries. It is what found the second bug, and it is what the remaining
+`undetermined` species should be pointed at.
+
+**Final tally over 434 catalogue species:**
+
+| bucket | count | |
+|---|---|---|
+| `confirm` | **380** | VASCAN agrees |
+| `narrow` | **34** | we claim more provinces than VASCAN records |
+| `not_here` | **11** | recorded introduced, or from neither province |
+| `undetermined` | **6** | matched, no distribution the roll-up could reach |
+| `name` | **3** | not in the checklist at all |
+
+The 34 narrowings and 414 source stamps are applied (schema v79). The other
+three buckets are **not**, each by its own route -- see
+[`plans/V2.80-the-inference-gets-a-source.md`](plans/V2.80-the-inference-gets-a-source.md).
+
+**What the first, API-only fetch had settled** (superseded by the table above,
+kept because the numbers are quoted elsewhere):
+
+| | count |
+|---|---|
+| VASCAN agrees the species is native in AB/SK | **243** |
+| VASCAN records it introduced/excluded, or from neither province | **9** |
+| VASCAN could not match the name | **9** |
+
+The nine `not_here` include *Achillea millefolium*, *Helianthus annuus*,
+*Prunus tomentosa*, *Maianthemum racemosum*, *Solidago nemoralis* and *Stachys
+palustris*. **None has been acted on.** *Achillea millefolium* in particular is
+not a simple removal: the catalogue also carries *Achillea borealis*, and
+whether North America's native yarrow races belong to the same species is a
+live taxonomic dispute.
+
+The nine unmatched are two `Malus domestica` cultivars and `Prunus cerasus
+'Evans'` (expected, cultivars are not in a wild flora) plus *Andropogon
+gerardii*, *Deschampsia caespitosa*, *Hedysarum alpinum*, *Matteuccia
+struthiopteris*, *Oenothera caespitosa* and *Spiraea betulifolia*, which are
+real taxa and probably superseded binomials.
+
+## The occurrence harvest is capped, and the cap is not neutral (V2.77)
+
+`scripts/seed_ecoregion_ranges.py` stops asking GBIF after
+`MAX_RECORDS_PER_SPECIES = 6000` records per species. That was written as a
+politeness bound, and it is: the first run got rate-limited and this is part of
+why the second did not. What nobody checked is **what falls outside the
+window**.
+
+GBIF's default result order is newest-first. So for a plant with tens of
+thousands of records, six thousand is the last few years and nothing before
+them. Measured on the cache:
+
+| | records | specimens | year range |
+|---|---|---|---|
+| the 16 species at the cap | 89,964 | **31** | **2021-2026** |
+| the other 418 | 401,877 | 54,238 | full historical record |
+
+*Amelanchier alnifolia* holds 6,000 records, **two** of them herbarium
+specimens, none dated before 2024. Saskatoon Berry has been collected in this
+province for a century; the harvest simply never reached any of it.
+
+**The species affected**, by cached count at or above 5,998: *Achillea
+millefolium, Amelanchier alnifolia, Arctostaphylos uva-ursi, Chamaenerion
+angustifolium, Cornus canadensis, Cornus sericea, Elaeagnus commutata, Fragaria
+virginiana, Gaillardia aristata, Geum triflorum, Maianthemum stellatum, Populus
+tremuloides, Prunus virginiana, Pulsatilla nuttalliana, Shepherdia canadensis,
+Thermopsis rhombifolia.* Every one is a common, widely photographed plant,
+which is exactly why it hit the cap.
+
+**Checked, and the prediction was wrong (V2.78).** The guess here was that
+~5,600 records per species is far past the three-record floor everywhere they
+grow, so the shipped ranges would not move. The author ran the pass; they moved,
+**purely additively**: 15 new region rows, none dropped, 13 confidence bands up
+and none down. `Amelanchier alnifolia` went from 2 specimens to 246, its oldest
+now 1898; `Populus tremuloides` reaches back to 1820.
+
+**And the shape of the gain is a finding in itself.** Every new region is
+northern. Specimen share of in-region records:
+
+| region | observations | specimens | specimen share |
+|---|---|---|---|
+| `athabasca_plain` | 35 | 423 | **92.4%** |
+| `tazin_lake_upland` | 61 | 579 | **90.5%** |
+| `hay_river_lowland` | 94 | 259 | **73.4%** |
+| `aspen_parkland` | 80,129 | 4,134 | 4.9% |
+| `fescue_grassland` | 43,635 | 1,203 | **2.7%** |
+
+The observation layer maps where people live. In the remote north the herbarium
+record is very nearly the only record, so a newest-first cap was not merely
+dropping old material — **it was dropping the north**, and the catalogue
+under-reported northern occurrence for its sixteen most-recorded species until
+schema v78. What it
+plainly does affect is any map drawn from specimens: sixteen of the catalogue's
+best-known plants would render blank, and blank for our reason rather than the
+herbaria's.
+
+**Two things changed rather than one.** `--specimen-pass` asks GBIF for
+`PRESERVED_SPECIMEN` records as their own query, which is the only way to reach
+records the cap cut; and `fetch_occurrences(truncated=...)` now reports when a
+harvest stopped because *we* stopped asking rather than because GBIF ran out.
+The second is the more important: a truncated harvest and a complete one looked
+identical once cached, which is how this went unnoticed through two increments
+of work on exactly this data.
+
+## Taxonomy: no backbone, and the names that show it (V2.75)
+
+**Status: the catalogue has no authority field, no synonym list and no taxon
+key of any kind.** A `scientific_name` is a free string checked by one regex
+(`data_quality._SCI_NAME_RE`). There is no mechanism by which the app could
+know that two rows are one taxon, or that a binomial has been superseded.
+
+An outside botanical review named this directly: *"A lot of species are listed
+using out-of-date names (e.g.: the Old World species, instead of the separate
+North American species)."* Checked, and true. The confirmed cases:
+
+| Shipped as | The problem |
+|---|---|
+| `Achillea millefolium` | Ships **beside its own segregate**, `Achillea borealis` ("Boreal Yarrow"), and a third row `Achillea alpina` — all three claiming AB,SK. The North American plant is usually treated as `var. occidentalis` / formerly `A. lanulosa`; the bare Eurasian binomial standing next to its own segregate is the clearest case in the catalogue |
+| `Fragaria vesca` | No infraspecific rank. North American material is `subsp. americana` / `bracteata`; the bare name is the European type |
+| `Prunella vulgaris` | No infraspecific rank. The native North American plant is `ssp. lanceolata`; the type is European and introduced here |
+| `Juniperus communis` | No infraspecific rank. North American material is `var. depressa`. Circumboreal, so the species-level claim is defensible; the rank is still missing |
+| `Aster alpinus` | *Aster* s.str. is legitimately retained, but this is a widely sold Eurasian rock-garden plant, and it carries **72 Aspen Parkland occurrence records** — a montane species with parkland records, which is exactly the pattern a garden escape makes |
+| `Deschampsia caespitosa` | An orthographic variant. FNA and POWO use `cespitosa`, and the accepted spelling appears **nowhere in this repo**, so any lookup keyed on it misses silently |
+| `Solidago rigida` / `Oligoneuron rigidum` | One taxon, two published species pages, **disagreeing about nativity**. See the Backlog |
+
+**What the catalogue got right, and it is most of the work.** The genus-level
+segregations are done: Aster → *Symphyotrichum* (10 rows) with *Eurybia*,
+*Doellingeria* and *Canadanthus* split out correctly; Polygonum →
+*Persicaria*; Zigadenus → *Anticlea*; Disporum → *Prosartes*; Potentilla →
+*Comarum*. `Pulsatilla nuttalliana` is the correct North American name, not
+`Anemone patens` or `Pulsatilla patens`. No `Agropyron`, no `Elytrigia`, no
+`Bromus inermis` and no `Poa pratensis` anywhere. This is a species-level
+residue on a genus-level job that was done properly.
+
+**Next step:** `scripts/fetch_flora_nativity.py` (V2.75). VASCAN returns the
+accepted name and synonym status in the same request that answers nativity, so
+one ~430-request run produces the whole list. **Renaming is not a data job** —
+it moves plant ids, the `plant_fauna_master.json` keys that name a plant by
+common name, and public URLs people may have linked to. Its own increment.

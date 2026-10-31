@@ -28,6 +28,7 @@ same thing the render gate does: what ends up on the screen, as opposed to what
 ends up in the geometry.
 """
 
+import html
 import json
 import os
 import re
@@ -59,14 +60,37 @@ def _find_chromium():
     pw = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
     if os.path.isdir(pw):
         for entry in sorted(os.listdir(pw)):
-            cand = os.path.join(pw, entry, "chrome-linux", "chrome")
-            if os.path.isfile(cand):
-                return cand
+            # Playwright's folder was chrome-linux and is chrome-linux64 now
+            # (V3.37): the old name alone skipped every gate in a session.
+            for folder in ("chrome-linux", "chrome-linux64"):
+                cand = os.path.join(pw, entry, folder, "chrome")
+                if os.path.isfile(cand):
+                    return cand
     for name in ("chromium", "chromium-browser", "google-chrome", "chrome"):
         found = shutil.which(name)
         if found:
             return found
     return None
+
+
+def viewer_errors(dom):
+    """What ``html/probe_watch.js`` caught the probe page or the viewer throwing,
+    from a ``--dump-dom`` of the probe page, or "" (V3.37).
+
+    A probe whose viewer throws never writes its title, and the render gates
+    read an unwritten title as "no WebGL in this environment" and skipped: from
+    V3.22 to V3.37 three of them skipped on every CI run while every scene push
+    threw, because ``buildStructures`` had been deleted. Call this before
+    looking for the result, and fail on anything it returns."""
+    match = re.search(r'<pre id="probe-errors"[^>]*>(.*?)</pre>', dom, re.S)
+    return html.unescape(match.group(1)).strip() if match else ""
+
+
+def fail_on_viewer_errors(dom):
+    errors = viewer_errors(dom)
+    if errors:
+        raise AssertionError("the 3D viewer threw, so the probe could not "
+                             "finish:\n" + errors)
 
 
 class _Server:
@@ -108,11 +132,12 @@ class Scene3DRenderTest(unittest.TestCase):
                 [chrome, "--headless", "--no-sandbox", "--disable-gpu-sandbox",
                  "--enable-unsafe-swiftshader", "--use-angle=swiftshader",
                  "--virtual-time-budget=45000", "--dump-dom", url],
-                capture_output=True, text=True, timeout=240)
+                capture_output=True, text=True, timeout=240, encoding="utf-8")
         except (OSError, subprocess.TimeoutExpired) as exc:
             server.stop()
             raise unittest.SkipTest(f"Chromium would not run headlessly: {exc}")
         server.stop()
+        fail_on_viewer_errors(proc.stdout)
         match = re.search(r"MEASURED (\[.*?\])</title>", proc.stdout, re.S)
         if not match:
             raise unittest.SkipTest(
@@ -213,6 +238,91 @@ class FlatLeafMaterialsTest(unittest.TestCase):
             src,
             r"side:\s*opts\.doubleSide\s*\?\s*THREE\.DoubleSide\s*:\s*THREE\.FrontSide",
             "plantMaterial no longer maps opts.doubleSide onto THREE.DoubleSide")
+
+
+def _call_args(src, start):
+    """The top-level arguments of the call whose '(' ends just before `start`,
+    as stripped source strings. Skips nested brackets and string literals."""
+    args, depth, cur, i, quote = [], 0, [], start, None
+    while i < len(src):
+        ch = src[i]
+        if quote:
+            cur.append(ch)
+            if ch == "\\":
+                cur.append(src[i + 1])
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "'\"`":
+            quote = ch
+            cur.append(ch)
+        elif ch in "([{":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}" and depth:
+            depth -= 1
+            cur.append(ch)
+        elif ch == ")":
+            break
+        elif ch == "," and not depth:
+            args.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    last = "".join(cur).strip()
+    return args + [last] if last else args
+
+
+class VertexColourFlagTest(unittest.TestCase):
+    """Every surface material says whether its geometry carries colours (V2.96).
+
+    ``surfaceMaterial(preset, cls, vc)`` reads ``vc`` as "this geometry has a
+    colour attribute", and a missing argument as no, overriding the preset's own
+    ``vertexColors: true``. It has to be the caller's word, because procedural
+    bark has no colour attribute and would render black. The shrub layer's call
+    passed two arguments, so no shrub drew the shade baked into its model, nor
+    Stylised's gradient, and nothing failed (F188): the geometry carried the
+    colours and the material ignored them. A call that states nothing is the bug.
+    """
+
+    def _calls(self):
+        """(file, line, args) for every surfaceMaterial( call in the viewer."""
+        out = []
+        folder = os.path.join(_HTML, "scene3d")
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith(".js"):
+                continue
+            src = _read_js(name)
+            for m in re.finditer(r"\bsurfaceMaterial\(", src):
+                before = src[src.rfind("\n", 0, m.start()) + 1:m.start()]
+                if "//" in before or before.rstrip().endswith("function"):
+                    continue
+                out.append((name, src.count("\n", 0, m.start()) + 1,
+                            _call_args(src, m.end())))
+        return out
+
+    def test_every_call_says_whether_its_geometry_has_colours(self):
+        calls = self._calls()
+        self.assertGreaterEqual(len(calls), 15, "the surfaceMaterial calls moved")
+        for name, line, args in calls:
+            with self.subTest(f"{name}:{line}"):
+                self.assertEqual(
+                    len(args), 3,
+                    f"{name}:{line} calls surfaceMaterial({', '.join(args)}) "
+                    f"without saying whether the geometry carries colours, so "
+                    f"any it carries are silently not drawn")
+
+    def test_the_shrub_leaves_ask_for_their_colours(self):
+        """Both shrub paths carry them: a baked model's shade (09-models.js
+        _glbBakedGeo adds white where a part has none) and the procedural
+        gradient (03-herbs.js applyFoliageGradient)."""
+        shrub = [(n, ln, a) for n, ln, a in self._calls()
+                 if a and a[0] == "MAT_PRESETS.shrubLeaf"]
+        self.assertTrue(shrub, "the shrub layer no longer asks for MAT_PRESETS.shrubLeaf")
+        for name, line, args in shrub:
+            with self.subTest(f"{name}:{line}"):
+                self.assertEqual(args[2:], ["true"])
 
 
 class StylisedModeTest(unittest.TestCase):

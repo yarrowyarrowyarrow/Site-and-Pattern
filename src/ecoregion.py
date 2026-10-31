@@ -196,24 +196,55 @@ def _distance_to_ring_m(lat: float, lng: float, ring, per_lat, per_lng) -> float
     return best ** 0.5
 
 
-def lookup_ecoregions(lat: float, lng: float) -> list[str]:
+def lookup_ecoregions(lat: float, lng: float, *,
+                      near_m: float | None = None) -> list[str]:
     """Every geographic ecoregion key at (lat, lng), containing ones first.
 
-    A region whose boundary passes within :data:`_NEAR_BOUNDARY_M` is included
-    too — see that constant for why. De-duplicated, and containing regions
-    always sort ahead of merely-near ones so ``lookup_ecoregion`` still answers
-    with the region the site is actually in.
+    A region whose boundary passes within ``near_m`` is included too — see
+    :data:`_NEAR_BOUNDARY_M` for why that is the right answer for a *site*.
+    De-duplicated, and containing regions always sort ahead of merely-near ones
+    so ``lookup_ecoregion`` still answers with the region the site is in.
 
     Empty when the point is outside every polygon and near none, which is the
     honest answer for a site the data does not cover and is what the caller
     should say rather than guessing the nearest.
+
+    **``near_m=0`` asks a different question, and V2.75 is where that became
+    two questions.** This function has two kinds of caller and they want
+    opposite things:
+
+    * *Where is this yard?* — a buffer is correct. The outlines are accurate to
+      about a kilometre and a garden near an edge genuinely belongs to both
+      lists. That is the case :data:`_NEAR_BOUNDARY_M` was written for.
+    * *Which region is this record evidence for?* — a buffer is a **bug**. A
+      herbarium sheet is one observation of one place; crediting it to every
+      region within 5 km manufactures range.
+
+    ``src.ecoregion_ranges`` inherited the buffer silently when V2.67
+    introduced it, and the shipped occurrence counts were derived with it live:
+    over 4,000 random points inside the layer, **16.4% are credited to two or
+    more ecoregions**. That is a montane species acquiring parkland records,
+    which is exactly what an outside review noticed on the published site and
+    attributed to the ~900 m simplification. The simplification was the smaller
+    half.
+
+    The default is unchanged on purpose. Every existing caller is asking the
+    first question, and changing the default would break the thing V2.67 built
+    the buffer for while fixing something none of them do.
     """
     if lat is None or lng is None:
         return []
     from src.projection import metres_per_deg                    # noqa: PLC0415
 
+    near_m = _NEAR_BOUNDARY_M if near_m is None else max(0.0, float(near_m))
     per_lat, per_lng = metres_per_deg(lat)
-    pad_deg = _NEAR_BOUNDARY_M / max(per_lat, per_lng, 1.0)
+    # The SMALLER of the two, so the pad covers `near_m` metres on both axes.
+    # It was `max`, which under-padded longitude: a degree of longitude is
+    # 70 km at 51 N against 111 km of latitude, so a 5 km buffer padded the box
+    # by 3.1 km east-west and a region whose edge ran 4 km away was rejected by
+    # the pre-filter before its distance was ever measured. A box test is
+    # allowed to be generous and is not allowed to be tight.
+    pad_deg = near_m / max(min(per_lat, per_lng), 1.0)
     inside: list[str] = []
     near: list[str] = []
     for key, rings, box in _feature_index():
@@ -224,13 +255,96 @@ def lookup_ecoregions(lat: float, lng: float) -> list[str]:
         if _point_in_polygon(lat, lng, rings):
             inside.append(key)
             continue
-        if key in near:
+        if not near_m or key in near:
             continue
         gap = min(_distance_to_ring_m(lat, lng, ring, per_lat, per_lng)
                   for ring in rings)
-        if gap <= _NEAR_BOUNDARY_M:
+        if gap <= near_m:
             near.append(key)
     return inside + [key for key in near if key not in inside]
+
+
+#: How far these outlines may sit from the survey they were digitised from.
+#:
+#: The same number ``ecoregion_map.CAVEAT`` states in words on every drawing of
+#: this file — "simplified to about 900 m for display" — kept here as a number
+#: so the sentence and the arithmetic cannot drift apart. A drawing that
+#: discloses its error and a calculation that ignores it are the same bug twice.
+SIMPLIFICATION_M = 900.0
+
+
+def confident_ecoregion(lat: float, lng: float, *,
+                        margin: float | None = None) -> list[str]:
+    """The one region a *record* is evidence for: ``[key]``, or ``[]``.
+
+    Design principle P9 — see docs/DESIGN_PHILOSOPHY.md.
+
+    A third question about the same geometry, after *where is this yard*
+    (:func:`lookup_ecoregions`, buffered) and *which polygon contains this
+    point* (``near_m=0``). V2.75 split the first two and pinned range
+    derivation to the second. This is what the second one was missing.
+
+    **Containment is a false answer within the layer's own error.** These
+    outlines are accurate to about :data:`SIMPLIFICATION_M`. Asking which side
+    of such a line a point 100 m away falls on is a question the data cannot
+    answer, and answering it anyway is exactly the false precision P9 forbids.
+    Reported from the published site by the author:
+
+        "Aspen parkland cannot be absorbing these mountain native species,
+         such as mountain forgetmenot and alberta penstemmon."
+
+    *Penstemon albertinus* published 284 Northern Continental Divide records
+    and **17 Aspen Parkland** ones. Those 17 were not scattered across the
+    parkland: they were **one population**, 663 m by 291 m of hillside, sitting
+    **25 to 202 metres** inside a boundary good to 900. Read as a region list it
+    says a montane penstemon reaches the parkland. It says one plant grows near
+    a line we cannot draw that finely.
+
+    So a record counts only where it is more than ``margin`` inside a region,
+    measured to the nearest boundary **with a different region on the far
+    side** — same-key parts share internal seams, because the layer splits each
+    ecoregion by Alberta natural subregion, and a seam is not a boundary.
+
+    Two things fall out of that, and the second is why this replaces rather
+    than supplements the old rule:
+
+    * A record can no longer count for two regions. Overlapping polygons
+      overlap *because* their shared border was simplified twice, so a doubly
+      contained point is by construction near a boundary. The 0.8-in-1,000
+      double count the Method page disclosed is now structurally impossible
+      rather than measured and apologised for.
+    * A record too near any border counts for **nothing**. That is the honest
+      answer and it is not a large loss: 3.6% of records sit inside the margin,
+      and no region gained or lost its place in a species list except by
+      shedding records it could not support.
+
+    ``margin=0`` restores plain containment, which is what the tests that
+    characterise the old behaviour ask for.
+    """
+    if lat is None or lng is None:
+        return []
+    margin = SIMPLIFICATION_M if margin is None else max(0.0, float(margin))
+    keys = lookup_ecoregions(lat, lng, near_m=0.0)
+    if len(keys) != 1:
+        # Zero: outside the layer. Two or more: inside an overlap, which is a
+        # simplified border seen twice and never a real answer.
+        return []
+    if not margin:
+        return keys
+
+    from src.projection import metres_per_deg                    # noqa: PLC0415
+    mine = keys[0]
+    per_lat, per_lng = metres_per_deg(lat)
+    pad_deg = margin / max(min(per_lat, per_lng), 1.0)
+    for key, rings, box in _feature_index():
+        if key == mine:
+            continue
+        if not _within_box(lat, lng, box, pad_deg):
+            continue
+        for ring in rings:
+            if _distance_to_ring_m(lat, lng, ring, per_lat, per_lng) <= margin:
+                return []
+    return keys
 
 
 def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:

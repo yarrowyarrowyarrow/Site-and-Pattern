@@ -38,15 +38,27 @@ class _FillTabBar(QTabBar):
         bar_w = self.width()
         if n <= 0 or bar_w <= 0:
             return hint
-        base = bar_w // n
-        # Give the remainder to the last tab so the row fills exactly.
-        want = (bar_w - base * (n - 1)) if index == n - 1 else base
-        nat_sum = sum(sup.tabSizeHint(i).width() for i in range(n))
+        nat = [sup.tabSizeHint(i).width() for i in range(n)]
+        nat_sum = sum(nat)
         if nat_sum <= bar_w:
-            if want > hint.width():      # room to spare: widen to fill the strip
-                hint.setWidth(want)
-        elif self._allow_shrink:         # crowded + opted in: shrink to share
-            hint.setWidth(want)
+            # Room to spare: every tab keeps its label's width and takes an
+            # equal part of what is left, the last tab the remainder, so the
+            # row fills exactly. Until V3.05 each tab was widened to an equal
+            # share of the whole bar, which took from a tab wider than its
+            # share the room its label needed: Analysis' "Sun & Shade" and
+            # Planning's "Timeline" were cut off on a 1366-wide screen with
+            # 100 px of strip to spare (the surface audit found them).
+            extra = bar_w - nat_sum
+            share = extra // n
+            last = extra - share * n if index == n - 1 else 0
+            hint.setWidth(nat[index] + share + last)
+        elif self._allow_shrink:
+            # Crowded + opted in: shrink in proportion to the labels, so a
+            # short one gives up as much as a long one rather than keeping an
+            # equal share it does not need.
+            widths = [w * bar_w // nat_sum for w in nat]
+            last = bar_w - sum(widths) if index == n - 1 else 0
+            hint.setWidth(widths[index] + last)
         # else: crowded but shrink not allowed → keep natural width (widen-only),
         # which is the safe default for short/nested strips.
         return hint

@@ -18,50 +18,30 @@ from PyQt6.QtWidgets import (
     QTabWidget, QTextEdit, QFrame, QScrollArea, QFormLayout,
     QDoubleSpinBox, QSpinBox, QGroupBox, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QTreeWidget, QTreeWidgetItem,
     QSlider,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QFont
 
-from src.plant_conditions import condition_tokens
 
 
-# ── Maintenance hours estimates for plant types ──────────────────────────────
-# The numbers now live in the Qt-free src/maintenance_calendar.py (F42), which
-# needs them too; imported here under the historical name so the Effort tab and
-# the year-by-year calendar can never quote different hours for the same design.
-from src.maintenance_calendar import PLANT_MAINTENANCE_HOURS as _PLANT_MAINTENANCE_HOURS
+# The Effort and Water pages' numbers live in the Qt-free
+# src/maintenance_calendar.py and src/water_budget.py (V3.20, OV-6 and OV-7).
 
-# Month names
-_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-# Edmonton climate data (approximate)
-_EDMONTON_MONTHLY_RAINFALL_MM = [
-    15, 10, 15, 25, 45, 75, 90, 65, 40, 20, 15, 12
-]
-_EDMONTON_ANNUAL_RAINFALL_MM = sum(_EDMONTON_MONTHLY_RAINFALL_MM)
-
-# Water needs per plant type (litres/week during growing season)
-_PLANT_WATER_NEEDS_L_WEEK: dict[str, float] = {
-    "tree":        40.0,
-    "shrub":       15.0,
-    "herb":        8.0,
-    "groundcover": 3.0,
-    "vine":        12.0,
-    "root":        6.0,
+#: A plant type, as the effort table's rows name it.
+_TYPE_PLURAL = {
+    "tree": "Trees", "shrub": "Shrubs", "wildflower": "Wildflowers",
+    "herb": "Herbs", "groundcover": "Groundcovers", "grass": "Grasses",
+    "sedge": "Sedges", "rush": "Rushes", "vine": "Vines", "fern": "Ferns",
+    "aquatic": "Water plants", "root": "Roots and bulbs",
 }
-
-_WATER_MULTIPLIER: dict[str, float] = {
-    "low":    0.5,
-    "medium": 1.0,
-    "high":   1.5,
-}
-
 
 class PlanningPanel(QWidget):
-    """Panel housing maintenance estimator, wildlife/human forage calendars, water budget, and notes."""
+    """The pages that were the Planning tab, until V3.08 moved each where its
+    question is asked: Effort and Timeline to Design › Over time, Water to
+    Design › Water, Notes to Site › Notes (src/side_panel_layout.py). The
+    wildlife and harvest calendars became Design › Food. This class still
+    builds and runs the four pages it kept."""
 
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
@@ -97,16 +77,36 @@ class PlanningPanel(QWidget):
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
         self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        self._tabs.setStyleSheet(inner_tab_stylesheet())
+        # The Analysis strip's tighter padding: at 4px 10px six labels need
+        # more than the panel's width and "Timeline" was cut off (V3.05).
+        self._tabs.setStyleSheet(inner_tab_stylesheet()
+                                 + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_maintenance_tab()
-        self._build_wildlife_forage_tab()
-        self._build_human_forage_tab()
+        # Wildlife and Harvest became Design › Food in V3.08 (src/food_page.py),
+        # one calendar with people's food kept apart from the animals'.
         self._build_water_tab()
         self._build_timeline_tab()
         self._build_notes_tab()
 
         layout.addWidget(self._tabs)
+
+        # V3.05: these four pages fill themselves from the design, on screen,
+        # where each used to open on a Calculate button over an empty box whose
+        # result then went stale with the next edit (src/live_refresh.py).
+        # Since V3.08 these pages sit in the Design tab, and
+        # src/side_panel_layout.py points ``_live`` at its strip.
+        from src.live_refresh import LiveRefresh
+        self._live = LiveRefresh(self, self._tabs, {
+            self._maint_page: self._calc_maintenance,
+            self._water_page: self._calc_water,
+        })
+
+    def _poke(self, *_args) -> None:
+        """An input of a live page changed: refill whichever is on screen."""
+        live = getattr(self, "_live", None)
+        if live is not None:
+            live.poke()
 
     # ═════════════════════════════════════════════════════════════════════════
     #  P2 — Maintenance / Labour Estimator
@@ -119,32 +119,25 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment vs. stewardship effort. Year 1 front-loads "
-            "watering-in, weeding, and mulching; established native "
-            "plantings settle into a much lower maintenance floor by Year 3+."
+            "Year 1 is the most work: watering in, weeding, mulching. By year "
+            "3 an established native planting needs far less."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Available hours input
         hours_row = QHBoxLayout()
-        hours_row.addWidget(QLabel("Your available hrs/week:"))
+        hours_label = QLabel("Your available hrs/week:")
+        hours_row.addWidget(hours_label)
         self._avail_hours = QDoubleSpinBox()
+        hours_label.setBuddy(self._avail_hours)
         self._avail_hours.setRange(0, 100)
         self._avail_hours.setValue(10)
         self._avail_hours.setSingleStep(1)
+        self._avail_hours.valueChanged.connect(self._poke)
         hours_row.addWidget(self._avail_hours)
         layout.addLayout(hours_row)
-
-        btn = QPushButton("Calculate Establishment Effort")
-        btn.setStyleSheet(
-            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #388e3c; }"
-        )
-        btn.clicked.connect(self._calc_maintenance)
-        layout.addWidget(btn)
 
         # Results
         self._maint_results = QLabel("")
@@ -159,161 +152,101 @@ class PlanningPanel(QWidget):
         layout.addWidget(self._maint_results, 1)
 
         layout.addStretch()
+        self._maint_page = tab
         self._tabs.addTab(tab, "Effort")
 
-    # Year-1 establishment + Year-3+ stewardship multipliers, applied to the
-    # per-plant-type base hours. Native plantings ramp down dramatically once
-    # established (deep roots, locally-adapted, weather-resilient); cultivated
-    # / non-native plants stay closer to a steady annual cost.
-    _Y1_MULT_NATIVE      = 2.0
-    _Y1_MULT_CULTIVATED  = 1.5
-    _Y3_MULT_NATIVE      = 0.3
-    _Y3_MULT_CULTIVATED  = 1.0
-
     def _calc_maintenance(self):
+        """The care calendar's hours, as the PDF prints them (V3.20, OV-6).
+        This page had its own arithmetic: "Year 3+" used the year-10
+        multiplier and a single figure, where the calendar gives Years 2–4 a
+        band of its own and every band a ±35% range, so the example read 9 h
+        here and 18–38 h in the PDF for the same years (OVF-2)."""
         if not self._placed_plants and not self._structures:
             self._maint_results.setText("No plants or structures placed yet.")
             return
+        from src.maintenance_calendar import (
+            GROWING_WEEKS, build_maintenance_calendar, year1_by_type,
+        )
+        from src.member_colors import TYPE_COLORS
+        cal = build_maintenance_calendar(self._placed_plants, self._structures)
+        by_type = year1_by_type(self._placed_plants)
 
-        # Per-type per-establishment-phase totals
-        type_totals: dict[str, dict[str, float]] = {}
-        for p in self._placed_plants:
-            ptype  = p.get("plant_type", "herb")
-            native = bool(p.get("native_to_alberta"))
-            base   = _PLANT_MAINTENANCE_HOURS.get(ptype, 1.5)
-            y1_mult = self._Y1_MULT_NATIVE if native else self._Y1_MULT_CULTIVATED
-            y3_mult = self._Y3_MULT_NATIVE if native else self._Y3_MULT_CULTIVATED
-            slot = type_totals.setdefault(
-                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
-            )
-            slot["count"]   += 1
-            slot["native"]  += 1 if native else 0
-            slot["y1"]      += base * y1_mult
-            slot["y3"]      += base * y3_mult
+        def hours(lo, hi):
+            return f"{lo:.0f}–{hi:.0f} h"
 
-        plant_y1 = sum(s["y1"] for s in type_totals.values())
-        plant_y3 = sum(s["y3"] for s in type_totals.values())
+        def weekly(lo, hi):
+            return f"{lo / GROWING_WEEKS:.1f}–{hi / GROWING_WEEKS:.1f} h"
 
-        # Structures: existing maintenance_hours_year is steady-state, applies to
-        # both Y1 and Y3+. (Initial install cost varies wildly and is one-time —
-        # explicitly excluded from the recurring estimate.)
-        total_struct = 0.0
-        struct_lines = []
-        for s in self._structures:
-            hrs = s.get("maintenance_hours_year", 0)
-            if hrs:
-                total_struct += hrs
-                struct_lines.append(f"  {s.get('name', '?')}: {hrs} hrs")
-
-        total_y1 = plant_y1 + total_struct
-        total_y3 = plant_y3 + total_struct
-        avail    = self._avail_hours.value() * 52
-
-        # ── Build the HTML output ───────────────────────────────────────
+        # Year 1, by type: a row for every type in the design (V3.08), in
+        # the catalogue's order.
         rows: list[str] = []
-        # Plant rows
-        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            if ptype not in type_totals:
-                continue
-            slot = type_totals[ptype]
-            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+        order = ([t for t in TYPE_COLORS if t in by_type]
+                 + sorted(t for t in by_type if t not in TYPE_COLORS))
+        for ptype in order:
+            slot = by_type[ptype]
+            label = _TYPE_PLURAL.get(ptype) or str(ptype).replace("_", " ").title()
             native_tag = (
-                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
-                if slot["native"] else ""
-            )
-            rows.append(self._row(
-                f"{label}",
-                f"{slot['count']}{native_tag}",
-                f"{slot['y1']:.0f} h",
-                f"{slot['y3']:.0f} h",
-            ))
-        if type_totals:
-            rows.append(self._row(
-                "Plants subtotal", "",
-                f"{plant_y1:.0f} h", f"{plant_y3:.0f} h",
-                subtotal=True,
-            ))
+                f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
+                if slot["native"] else "")
+            rows.append(self._row(label, f"{slot['count']}{native_tag}",
+                                  hours(slot["low"], slot["high"]), ""))
+        for item in cal.structure_detail:
+            qty = f" × {item['qty']}" if item["qty"] > 1 else ""
+            rows.append(self._row(f"{item['name']}{qty}", "",
+                                  f"{item['hours_total']:.0f} h", ""))
 
-        if struct_lines:
-            for s in self._structures:
-                hrs = s.get("maintenance_hours_year", 0)
-                if hrs:
-                    rows.append(self._row(
-                        s.get("name", "?"), "",
-                        f"{hrs} h", f"{hrs} h",
-                    ))
-            rows.append(self._row(
-                "Structures subtotal", "",
-                f"{total_struct:.0f} h", f"{total_struct:.0f} h",
-                subtotal=True,
-            ))
-
-        # Final TOTAL row
-        rows.append(self._row(
-            "TOTAL", "",
-            f"{total_y1:.0f} h", f"{total_y3:.0f} h",
-            total=True,
-        ))
-        rows.append(self._row(
-            "per week", "",
-            f"{total_y1/52:.1f} h", f"{total_y3/52:.1f} h",
-            footnote=True,
-        ))
-
+        # The calendar's four bands, as ranges, and a week of the season.
+        band_rows = [self._row(band.label, "",
+                               hours(band.hours_low, band.hours_high),
+                               weekly(band.hours_low, band.hours_high),
+                               total=band.key == "establish")
+                     for band in cal.bands]
+        # One table, two header rows, so the columns line up.
+        head = "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
         table_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%;'>"
-            "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left'>Type</th>"
-            "<th align='right'>Plants</th>"
-            "<th align='right'>Year&nbsp;1</th>"
-            "<th align='right'>Year&nbsp;3+</th>"
-            "</tr>"
-            + "".join(rows) + "</table>"
-        )
+            + head + "<th align='left'>Year 1, by type</th>"
+            "<th align='right'>Plants</th><th align='right'>A year</th>"
+            "<th></th></tr>" + "".join(rows)
+            + head + "<th align='left'>When</th><th></th>"
+            "<th align='right'>A year</th>"
+            "<th align='right'>A week, May–Sep</th></tr>"
+            + "".join(band_rows) + "</table>")
 
-        # Footer note
+        avail = self._avail_hours.value()
         cap_text = (
-            f"<p style='color:#90a4ae; font-size:11px; margin:6px 0 4px 0;'>"
-            f"Your capacity: <b>{self._avail_hours.value():.0f}&nbsp;h/week</b> "
-            f"({avail:.0f}&nbsp;h/year). Structures show steady-state recurring "
-            f"hours; one-time install labour is not included."
-            f"</p>"
-        )
+            f"<p style='color:#90a4ae; font-size:12px; margin:6px 0 4px 0;'>"
+            f"Your time: <b>{avail:.0f}&nbsp;h a week</b> through the season. "
+            f"Structures show their yearly upkeep; building them is not "
+            f"included. Ranges, because the weather, the weeds and the "
+            f"gardener move them more than the plant list does.</p>")
 
-        # Callouts
         callouts: list[str] = []
-        if total_y1 <= avail:
-            pct = (total_y1 / avail * 100) if avail > 0 else 0
-            callouts.append(self._callout(
-                "good",
-                f"Year&nbsp;1 within capacity "
-                f"(<b>{pct:.0f}%</b> utilized).",
-            ))
-        else:
-            over = total_y1 - avail
-            callouts.append(self._callout(
-                "warn",
-                f"Year&nbsp;1 over capacity by <b>{over:.0f}&nbsp;h</b>. "
-                f"Stagger planting across seasons or reduce by "
-                f"{over/52:.1f}&nbsp;h/week.",
-            ))
-        if plant_y1 > 0 and plant_y3 < plant_y1:
-            drop = (1 - plant_y3 / plant_y1) * 100
-            callouts.append(self._callout(
-                "good",
-                f"Stewardship effort drops <b>{drop:.0f}%</b> "
-                f"from Y1 → Y3+ as natives establish.",
-            ))
+        first = cal.bands[0] if cal.bands else None
+        if first is not None and first.hours_high:
+            top_week = first.hours_high / GROWING_WEEKS
+            if top_week <= avail:
+                callouts.append(self._callout(
+                    "good", f"Year&nbsp;1 fits your time: at most "
+                            f"<b>{top_week:.1f}&nbsp;h</b> a week."))
+            else:
+                callouts.append(self._callout(
+                    "warn", f"Year&nbsp;1 may need up to "
+                            f"<b>{top_week:.1f}&nbsp;h</b> a week, more than "
+                            f"you have. Plant in stages over two seasons, or "
+                            f"start smaller."))
+            last = cal.bands[-1]
+            if last.hours_high < first.hours_high:
+                drop = (1 - last.hours_high / first.hours_high) * 100
+                callouts.append(self._callout(
+                    "good", f"The work falls by about <b>{drop:.0f}%</b> "
+                            f"from Year&nbsp;1 to {last.label} as the "
+                            f"natives establish."))
 
-        html = (
-            "<div style='font-size:12px;'>"
-            + table_html
-            + cap_text
-            + "".join(callouts)
-            + "</div>"
-        )
-        self._maint_results.setText(html)
+        self._maint_results.setText(
+            "<div style='font-size:12px;'>" + table_html
+            + cap_text + "".join(callouts) + "</div>")
 
     # ── HTML helpers shared by Effort + Water result tables ──────────────────
     @staticmethod
@@ -333,7 +266,7 @@ class PlanningPanel(QWidget):
             text_style = "color:#a5d6a7; font-weight:bold;"
         elif footnote:
             bg = ""
-            text_style = "color:#78909c; font-size:11px; font-style:italic;"
+            text_style = "color:#90a4ae; font-size:12px; font-style:italic;"
         else:
             bg = ""
             text_style = "color:#c8e6c9;"
@@ -363,372 +296,6 @@ class PlanningPanel(QWidget):
         )
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  P3a — Wildlife Forage Calendar (pollinator nectar + bird food)
-    # ═════════════════════════════════════════════════════════════════════════
-
-    _TREE_STYLE = (
-        "QTreeWidget { background: #1a2a1a; border: 1px solid #2e4a2e; "
-        "color: #c8e6c9; }"
-        "QTreeWidget::item { padding: 2px 4px; }"
-        "QTreeWidget::item:has-children { color: #a5d6a7; }"
-        "QHeaderView::section { background: #1e2e1e; color: #a5d6a7; "
-        "border: 1px solid #2e4a2e; padding: 4px; }"
-    )
-
-    def _build_wildlife_forage_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
-
-        info = QLabel(
-            "When pollinators feed (blooms) and when birds feed "
-            "(berries/seeds). Expand a month to see the individual plants "
-            "providing forage. Apr–Oct months with no bloom source are "
-            "flagged as nectar gaps."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
-
-        btn_row = QHBoxLayout()
-        btn = QPushButton("Show Wildlife Forage")
-        btn.setStyleSheet(
-            "QPushButton { background: #6a1b9a; color: #f3e5f5; border: 1px solid #8e24aa; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #8e24aa; }"
-        )
-        btn.clicked.connect(self._calc_wildlife_forage)
-        btn_row.addWidget(btn, 1)
-
-        btn_expand = QPushButton("Expand all")
-        btn_expand.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_expand.clicked.connect(lambda: self._wildlife_tree.expandAll())
-        btn_row.addWidget(btn_expand)
-
-        btn_collapse = QPushButton("Collapse all")
-        btn_collapse.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_collapse.clicked.connect(lambda: self._wildlife_tree.collapseAll())
-        btn_row.addWidget(btn_collapse)
-        layout.addLayout(btn_row)
-
-        self._wildlife_gap_label = QLabel("")
-        self._wildlife_gap_label.setWordWrap(True)
-        self._wildlife_gap_label.setStyleSheet("color: #ef9a9a; font-size: 11px; padding: 2px;")
-        layout.addWidget(self._wildlife_gap_label)
-
-        self._wildlife_tree = QTreeWidget()
-        self._wildlife_tree.setColumnCount(2)
-        self._wildlife_tree.setHeaderLabels(["When", "Forage"])
-        self._wildlife_tree.setStyleSheet(self._TREE_STYLE)
-        self._wildlife_tree.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self._wildlife_tree.header().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        self._wildlife_tree.setRootIsDecorated(True)
-        layout.addWidget(self._wildlife_tree, 1)
-
-        self._tabs.addTab(tab, "Wildlife")
-
-    def _calc_wildlife_forage(self):
-        self._wildlife_tree.clear()
-
-        if not self._placed_plants:
-            self._wildlife_gap_label.setText("")
-            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
-            self._wildlife_tree.addTopLevelItem(placeholder)
-            return
-
-        try:
-            from src.db.plants import get_connection
-        except Exception:
-            return
-
-        plant_ids = list({p["plant_id"] for p in self._placed_plants})
-        bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-        berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-
-        conn = get_connection()
-        try:
-            for pid in plant_ids:
-                row = conn.execute(
-                    "SELECT common_name, bloom_period, fruit_period "
-                    "FROM plants WHERE id = ?",
-                    (pid,)
-                ).fetchone()
-                if not row:
-                    continue
-                name = row["common_name"]
-                if row["bloom_period"]:
-                    for m in self._parse_month_range(row["bloom_period"]):
-                        if name not in bloom_by_month[m]:
-                            bloom_by_month[m].append(name)
-                if row["fruit_period"]:
-                    for m in self._parse_month_range(row["fruit_period"]):
-                        if name not in berry_by_month[m]:
-                            berry_by_month[m].append(name)
-        finally:
-            conn.close()
-
-        # Build tree: Month → [Pollinator Blooms, Bird Food] → plant names
-        growing = set(range(4, 11))
-        gap_months = sorted(
-            m for m in growing if not bloom_by_month.get(m)
-        )
-        bloom_color  = QColor("#ce93d8")
-        berry_color  = QColor("#ffcc80")
-        muted_color  = QColor("#546e7a")
-        gap_color    = QColor("#ef5350")
-
-        for i in range(12):
-            month_num = i + 1
-            blooms  = sorted(bloom_by_month.get(month_num, []))
-            berries = sorted(berry_by_month.get(month_num, []))
-            summary_bits = []
-            if blooms:
-                summary_bits.append(f"{len(blooms)} blooms")
-            if berries:
-                summary_bits.append(f"{len(berries)} fruits")
-            if not summary_bits:
-                if month_num in growing:
-                    summary = "— nectar gap"
-                else:
-                    summary = "—"
-            else:
-                summary = " · ".join(summary_bits)
-
-            month_item = QTreeWidgetItem([_MONTHS[i], summary])
-            if not summary_bits and month_num in growing:
-                month_item.setForeground(0, gap_color)
-                month_item.setForeground(1, gap_color)
-            elif not summary_bits:
-                month_item.setForeground(0, muted_color)
-                month_item.setForeground(1, muted_color)
-
-            # Pollinator blooms sub-tree
-            bloom_node = QTreeWidgetItem(
-                [f"Pollinator blooms", f"({len(blooms)})"]
-            )
-            bloom_node.setForeground(0, bloom_color)
-            if blooms:
-                for n in blooms:
-                    bloom_node.addChild(QTreeWidgetItem(["", n]))
-            else:
-                bloom_node.addChild(QTreeWidgetItem(["", "—"]))
-            month_item.addChild(bloom_node)
-
-            # Bird food sub-tree
-            berry_node = QTreeWidgetItem(
-                [f"Bird food", f"({len(berries)})"]
-            )
-            berry_node.setForeground(0, berry_color)
-            if berries:
-                for n in berries:
-                    berry_node.addChild(QTreeWidgetItem(["", n]))
-            else:
-                berry_node.addChild(QTreeWidgetItem(["", "—"]))
-            month_item.addChild(berry_node)
-
-            self._wildlife_tree.addTopLevelItem(month_item)
-
-        # Gap label
-        if gap_months:
-            names = ", ".join(_MONTHS[m - 1] for m in gap_months)
-            self._wildlife_gap_label.setText(
-                f"⚠ Nectar gaps in growing season: {names}. "
-                f"Add a species blooming in these months to support pollinators."
-            )
-            self._wildlife_gap_label.setStyleSheet(
-                "color: #ef9a9a; font-size: 11px; padding: 2px;"
-            )
-        else:
-            self._wildlife_gap_label.setText(
-                "✓ Continuous bloom across the growing season (Apr–Oct)."
-            )
-            self._wildlife_gap_label.setStyleSheet(
-                "color: #a5d6a7; font-size: 11px; padding: 2px;"
-            )
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  P3b — Human Forage Calendar (edible plants by harvest window)
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_human_forage_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
-
-        info = QLabel(
-            "What you can harvest from your design, by month. Includes only "
-            "plants with an edible part recorded in the database — berries, "
-            "fruits, edible leaves / roots / shoots."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
-
-        btn_row = QHBoxLayout()
-        btn = QPushButton("Show Human Forage")
-        btn.setStyleSheet(
-            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #ff6d00; }"
-        )
-        btn.clicked.connect(self._calc_human_forage)
-        btn_row.addWidget(btn, 1)
-
-        btn_expand = QPushButton("Expand all")
-        btn_expand.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_expand.clicked.connect(lambda: self._human_tree.expandAll())
-        btn_row.addWidget(btn_expand)
-
-        btn_collapse = QPushButton("Collapse all")
-        btn_collapse.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
-        btn_collapse.clicked.connect(lambda: self._human_tree.collapseAll())
-        btn_row.addWidget(btn_collapse)
-        layout.addLayout(btn_row)
-
-        self._human_tree = QTreeWidget()
-        self._human_tree.setColumnCount(2)
-        self._human_tree.setHeaderLabels(["When", "Edible plant — part"])
-        self._human_tree.setStyleSheet(self._TREE_STYLE)
-        self._human_tree.header().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self._human_tree.header().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        layout.addWidget(self._human_tree, 1)
-
-        self._tabs.addTab(tab, "Harvest")
-
-    def _calc_human_forage(self):
-        self._human_tree.clear()
-
-        if not self._placed_plants:
-            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
-            self._human_tree.addTopLevelItem(placeholder)
-            return
-
-        try:
-            from src.db.plants import get_connection
-        except Exception:
-            return
-
-        plant_ids = list({p["plant_id"] for p in self._placed_plants})
-
-        # entry per plant: (name, edible_parts) by month
-        edible_by_month: dict[int, list[tuple[str, str]]] = {m: [] for m in range(1, 13)}
-
-        conn = get_connection()
-        try:
-            for pid in plant_ids:
-                row = conn.execute(
-                    "SELECT common_name, edible_parts, fruit_period "
-                    "FROM plants WHERE id = ?",
-                    (pid,)
-                ).fetchone()
-                if not row:
-                    continue
-                edible = (row["edible_parts"] or "").strip()
-                if not edible:
-                    continue
-                name = row["common_name"]
-
-                # Prefer planting_calendar harvest months when present (curated),
-                # else parse fruit_period (covers berries, nuts, fruit).
-                cal_rows = conn.execute(
-                    "SELECT month FROM planting_calendar "
-                    "WHERE plant_id = ? AND status = 'harvest'",
-                    (pid,)
-                ).fetchall()
-                months: list[int] = []
-                if cal_rows:
-                    months = sorted({cr["month"] for cr in cal_rows})
-                elif row["fruit_period"]:
-                    months = self._parse_month_range(row["fruit_period"])
-
-                for m in months:
-                    pair = (name, edible)
-                    if pair not in edible_by_month[m]:
-                        edible_by_month[m].append(pair)
-        finally:
-            conn.close()
-
-        muted_color = QColor("#546e7a")
-        warm_color  = QColor("#ffcc80")
-        total_count = 0
-        for i in range(12):
-            month_num = i + 1
-            items = sorted(edible_by_month.get(month_num, []), key=lambda x: x[0].lower())
-            summary = f"{len(items)} plants" if items else "—"
-            month_item = QTreeWidgetItem([_MONTHS[i], summary])
-            if not items:
-                month_item.setForeground(0, muted_color)
-                month_item.setForeground(1, muted_color)
-            else:
-                month_item.setForeground(1, warm_color)
-                for name, parts in items:
-                    child = QTreeWidgetItem(["", f"{name} — {parts}"])
-                    month_item.addChild(child)
-                total_count += len(items)
-            self._human_tree.addTopLevelItem(month_item)
-
-        if total_count == 0:
-            note = QTreeWidgetItem(
-                ["", "None of your placed plants have edible parts recorded. "
-                     "Try Saskatoon, raspberry, chokecherry, or wild strawberry."]
-            )
-            note.setForeground(1, muted_color)
-            self._human_tree.addTopLevelItem(note)
-
-    @staticmethod
-    def _parse_month_range(text: str) -> list[int]:
-        """Parse a period string like 'August-September' or 'May' into month numbers."""
-        month_map = {
-            "jan": 1, "january": 1, "feb": 2, "february": 2,
-            "mar": 3, "march": 3, "apr": 4, "april": 4,
-            "may": 5, "jun": 6, "june": 6,
-            "jul": 7, "july": 7, "aug": 8, "august": 8,
-            "sep": 9, "september": 9, "oct": 10, "october": 10,
-            "nov": 11, "november": 11, "dec": 12, "december": 12,
-        }
-        text = text.lower().strip()
-        parts = text.replace("–", "-").replace("—", "-").split("-")
-        months = []
-        for part in parts:
-            part = part.strip()
-            for key, num in month_map.items():
-                if part.startswith(key):
-                    months.append(num)
-                    break
-        if len(months) == 2:
-            start, end = months
-            if start <= end:
-                return list(range(start, end + 1))
-            return list(range(start, 13)) + list(range(1, end + 1))
-        return months
-
-    # ═════════════════════════════════════════════════════════════════════════
     #  P6 — Water Budget Calculator
     # ═════════════════════════════════════════════════════════════════════════
 
@@ -739,12 +306,13 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment water (Year 1, heavy hand-watering) vs. "
-            "stewardship water (Year 3+, mostly natives at 0.2× base demand). "
-            "Compared against growing-season rainfall and catchment capacity."
+            "What the plants drink in their first summer, when everything is "
+            "watered in, and from year 3, when natives need a fifth as much. "
+            "A new bed is lost in a dry week, not a dry season, so the rule "
+            "below is weekly."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         form = QFormLayout()
@@ -780,15 +348,9 @@ class PlanningPanel(QWidget):
         form.addRow("Ponds:", self._has_pond)
 
         layout.addLayout(form)
-
-        btn = QPushButton("Calculate Establishment Water Budget")
-        btn.setStyleSheet(
-            "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0288d1; }"
-        )
-        btn.clicked.connect(self._calc_water)
-        layout.addWidget(btn)
+        for box in (self._garden_area, self._rain_barrels, self._roof_area,
+                    self._has_swale, self._has_pond):
+            box.valueChanged.connect(self._poke)
 
         self._water_results = QLabel("")
         self._water_results.setWordWrap(True)
@@ -802,208 +364,84 @@ class PlanningPanel(QWidget):
         layout.addWidget(self._water_results, 1)
 
         layout.addStretch()
+        self._water_page = tab
         self._tabs.addTab(tab, "Water")
 
-    # Year-1 establishment / Year-3+ stewardship water multipliers, applied
-    # to the per-plant base × needs-level demand. Native plantings drop hard
-    # once established (deep roots, locally-adapted); cultivars stay near
-    # their full demand.
-    _WATER_Y1_MULT             = 1.5   # establishment irrigation for everything
-    _WATER_Y3_MULT_NATIVE      = 0.2   # established natives are nearly rain-fed
-    _WATER_Y3_MULT_CULTIVATED  = 1.0   # cultivars need ongoing water
-
     def _calc_water(self):
+        """The design's water, by ``src/water_budget.py`` (V3.20, OV-7): a row
+        for every type, the site's own rainfall when fetched, and the weekly
+        rule where a seasonal "surplus" was (R4, R38)."""
         if not self._placed_plants:
             self._water_results.setText("No plants placed yet.")
             return
+        from src import water_budget as wb
 
-        # Growing season = May-Sep (5 months, ~22 weeks)
-        growing_weeks = 22
-
-        # Per-type Y1 / Y3+ demand (seasonal litres). All needed fields
-        # (plant_type, water_needs, native_to_alberta) are pre-populated by
-        # _sync_planning_panel in app.py, so we don't need DB lookups here.
-        type_demands: dict[str, dict[str, float]] = {}
-        total_y1_L = 0.0
-        total_y3_L = 0.0
-        for p in self._placed_plants:
-            ptype       = p.get("plant_type", "herb")
-            native      = bool(p.get("native_to_alberta"))
-            # water_needs may list several tolerances (V1.84); the first/primary
-            # value drives the irrigation estimate.
-            water_tokens = condition_tokens(p.get("water_needs"))
-            water_needs = water_tokens[0] if water_tokens else "medium"
-            base = _PLANT_WATER_NEEDS_L_WEEK.get(ptype, 8.0)
-            mult = _WATER_MULTIPLIER.get(water_needs, 1.0)
-            weekly = base * mult
-            seasonal_baseline = weekly * growing_weeks
-
-            y1 = seasonal_baseline * self._WATER_Y1_MULT
-            y3 = seasonal_baseline * (
-                self._WATER_Y3_MULT_NATIVE if native
-                else self._WATER_Y3_MULT_CULTIVATED
-            )
-
-            slot = type_demands.setdefault(
-                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
-            )
-            slot["count"]  += 1
-            slot["native"] += 1 if native else 0
-            slot["y1"]     += y1
-            slot["y3"]     += y3
-            total_y1_L     += y1
-            total_y3_L     += y3
-
-        # Rainfall on garden area (growing season May–Sep)
-        garden_m2 = self._garden_area.value()
-        growing_rain_mm = sum(_EDMONTON_MONTHLY_RAINFALL_MM[4:9])
-        rainfall_L = growing_rain_mm * garden_m2
-
-        # Catchment
-        roof_m2 = self._roof_area.value()
-        roof_catchment_L = growing_rain_mm * roof_m2 * 0.8
-        barrel_capacity_L = self._rain_barrels.value() * 200
-        captured_L = min(roof_catchment_L, barrel_capacity_L)
-        swale_L = self._has_swale.value() * 2000
-        pond_L  = self._has_pond.value()  * 5000
-        total_supply = rainfall_L + captured_L + swale_L + pond_L
-
-        bal_y1 = total_supply - total_y1_L
-        bal_y3 = total_supply - total_y3_L
-
-        # ── Build the HTML output ───────────────────────────────────────
-        # Demand rows (plants by type, then total)
         rows: list[str] = []
-        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            if ptype not in type_demands:
-                continue
-            slot = type_demands[ptype]
-            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+        demand = wb.demand_by_type(self._placed_plants)
+        for ptype, slot in demand.items():
+            label = _TYPE_PLURAL.get(ptype) or str(ptype).replace("_", " ").title()
             native_tag = (
-                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
-                if slot["native"] else ""
-            )
-            rows.append(self._row(
-                f"{label}",
-                f"{slot['count']}{native_tag}",
-                f"{slot['y1']:.0f} L",
-                f"{slot['y3']:.0f} L",
-            ))
+                f"<span style='color:#90a4ae;'> ({slot['native']} native)</span>"
+                if slot["native"] else "")
+            rows.append(self._row(label, f"{slot['count']}{native_tag}",
+                                  f"{slot['y1']:,.0f} L", f"{slot['y3']:,.0f} L"))
+        total_y1 = sum(s["y1"] for s in demand.values())
+        total_y3 = sum(s["y3"] for s in demand.values())
+        rows.append(self._row("A season", "", f"{total_y1:,.0f} L",
+                              f"{total_y3:,.0f} L", total=True))
         rows.append(self._row(
-            "Demand total", "",
-            f"{total_y1_L:.0f} L", f"{total_y3_L:.0f} L",
-            total=True,
-        ))
-        rows.append(self._row(
-            "(m³)", "",
-            f"{total_y1_L/1000:.1f}", f"{total_y3_L/1000:.1f}",
-            footnote=True,
-        ))
-
+            "A week, May–Sep", "", f"{total_y1 / wb.GROWING_WEEKS:,.0f} L",
+            f"{total_y3 / wb.GROWING_WEEKS:,.0f} L", footnote=True))
         demand_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
             "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left'>Type</th>"
-            "<th align='right'>Plants</th>"
-            "<th align='right'>Year&nbsp;1</th>"
-            "<th align='right'>Year&nbsp;3+</th>"
-            "</tr>"
-            + "".join(rows) + "</table>"
-        )
+            "<th align='left'>Type</th><th align='right'>Plants</th>"
+            "<th align='right'>First summer</th>"
+            "<th align='right'>From year&nbsp;3</th></tr>"
+            + "".join(rows) + "</table>")
 
-        # Supply rows
-        supply_rows: list[str] = []
-
-        def _supply_row(label: str, val_L: float) -> str:
-            return (
-                "<tr>"
-                f"<td style='color:#c8e6c9; padding:3px 6px;'>{label}</td>"
-                f"<td align='right' style='color:#c8e6c9; padding:3px 6px;'>"
-                f"{val_L:.0f} L</td>"
-                "</tr>"
-            )
-
-        supply_rows.append(_supply_row(
-            f"Rainfall on garden ({garden_m2:.0f} m²)", rainfall_L
-        ))
-        if captured_L > 0:
-            supply_rows.append(_supply_row(
-                f"Rain barrels ({self._rain_barrels.value()} × 200 L, roof-fed)",
-                captured_L,
-            ))
-        if swale_L > 0:
-            supply_rows.append(_supply_row(
-                f"Bioswales ({self._has_swale.value()})", swale_L,
-            ))
-        if pond_L > 0:
-            supply_rows.append(_supply_row(
-                f"Ponds ({self._has_pond.value()})", pond_L,
-            ))
-        supply_rows.append(
-            "<tr style='background:#1e3a1e; color:#e8f5e9;'>"
-            "<td style='padding:3px 6px; font-weight:bold;'>Total supply</td>"
-            f"<td align='right' style='padding:3px 6px; font-weight:bold;'>"
-            f"{total_supply:.0f} L</td>"
-            "</tr>"
-        )
-
+        # What falls and what is caught: information, not a balance. A season
+        # can total more rain than the plants use and still hold the two dry
+        # weeks that kill a new planting (R38).
+        months, source = wb.rainfall(getattr(self, "_site_config", None))
+        season_mm = sum(months[4:9])
+        garden_m2 = self._garden_area.value()
+        captured = min(season_mm * self._roof_area.value() * 0.8,
+                       self._rain_barrels.value() * 200)
+        supply = [(f"Rain on the garden ({garden_m2:.0f} m², "
+                   f"{season_mm:.0f} mm May–Sep, {source})",
+                   season_mm * garden_m2)]
+        if captured > 0:
+            supply.append((f"Rain barrels ({self._rain_barrels.value()} × "
+                           f"200 L, roof-fed)", captured))
+        if self._has_swale.value():
+            supply.append((f"Swales ({self._has_swale.value()})",
+                           self._has_swale.value() * 2000))
+        if self._has_pond.value():
+            supply.append((f"Ponds ({self._has_pond.value()})",
+                           self._has_pond.value() * 5000))
         supply_html = (
             "<table cellpadding='4' cellspacing='0' "
             "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
             "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
-            "<th align='left' colspan='2'>Supply (seasonal)</th>"
-            "</tr>"
-            + "".join(supply_rows) + "</table>"
-        )
+            "<th align='left' colspan='2'>What falls and what you catch, "
+            "May–Sep</th></tr>"
+            + "".join(
+                f"<tr><td style='color:#c8e6c9; padding:3px 6px;'>{label}</td>"
+                f"<td align='right' style='color:#c8e6c9; padding:3px 6px;'>"
+                f"{litres:,.0f} L</td></tr>" for label, litres in supply)
+            + "</table>")
 
-        # Balance callouts (one per phase)
-        def _balance_callout(label: str, bal: float) -> str:
-            if bal >= 0:
-                return self._callout(
-                    "good",
-                    f"<b>{label}</b>: surplus <b>{bal:.0f} L</b> "
-                    f"({bal/1000:.1f} m³).",
-                )
-            v = -bal
-            return self._callout(
-                "bad",
-                f"<b>{label}</b>: deficit <b>{v:.0f} L</b> "
-                f"({v/1000:.1f} m³).",
-            )
+        self._water_results.setText(
+            "<div style='font-size:12px;'>" + demand_html + supply_html
+            + self._callout("good", wb.weekly_rule(self._placed_plants))
+            + "</div>")
 
-        callouts: list[str] = []
-        callouts.append(_balance_callout("Year 1",   bal_y1))
-        callouts.append(_balance_callout("Year 3+",  bal_y3))
-
-        # Year-1 deficit hint (the hard year)
-        if bal_y1 < 0:
-            deficit = -bal_y1
-            extra_barrels = int(deficit / 200) + 1
-            callouts.append(self._callout(
-                "warn",
-                f"Year&nbsp;1 needs ≈ <b>{extra_barrels} more rain "
-                f"barrels</b>, or <b>{deficit/growing_weeks:.0f} L/week</b> "
-                f"of supplemental hand-watering during establishment.",
-            ))
-
-        # Highlight the native-rooted payoff
-        if total_y1_L > 0 and total_y3_L < total_y1_L:
-            drop = (1 - total_y3_L / total_y1_L) * 100
-            callouts.append(self._callout(
-                "good",
-                f"Demand drops <b>{drop:.0f}%</b> from Y1 → Y3+ as "
-                f"natives root in.",
-            ))
-
-        html = (
-            "<div style='font-size:12px;'>"
-            + demand_html
-            + supply_html
-            + "".join(callouts)
-            + "</div>"
-        )
-        self._water_results.setText(html)
+    def set_site_config(self, site_config: dict) -> None:
+        """The site's fetched data, for the Water page's rainfall (V3.20)."""
+        self._site_config = dict(site_config or {})
+        self._poke()
 
     # ═════════════════════════════════════════════════════════════════════════
     #  V4 — Design Notes / Journal
@@ -1012,16 +450,16 @@ class PlanningPanel(QWidget):
     def _build_notes_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
+        # Below the site walk on Site › Notes since V3.08, whose page has the
+        # margins already.
+        layout.setContentsMargins(0, 4, 0, 0)
         layout.setSpacing(6)
 
-        info = QLabel(
-            "Record observations, soil test results, and design rationale "
-            "for this project."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
+        heading = QLabel("Design journal")
+        heading.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 4px 0 2px 0;")
+        layout.addWidget(heading)
 
         # Timestamp button
         btn_row = QHBoxLayout()
@@ -1047,6 +485,7 @@ class PlanningPanel(QWidget):
 
         # Text editor
         self._notes_edit = QTextEdit()
+        self._notes_edit.setAccessibleName("Design notes")
         self._notes_edit.setPlaceholderText(
             "Write your design notes here...\n\n"
             "Suggestions:\n"
@@ -1062,11 +501,14 @@ class PlanningPanel(QWidget):
             "border-radius: 4px; padding: 6px; font-size: 12px; font-family: 'Consolas', 'Courier New', monospace; }"
         )
         self._notes_edit.textChanged.connect(self._on_notes_changed)
+        heading.setBuddy(self._notes_edit)
+        # In a scrolling page, so it holds a height rather than taking one.
+        self._notes_edit.setMinimumHeight(180)
         layout.addWidget(self._notes_edit, 1)
 
         # Word count
         self._notes_count = QLabel("0 words")
-        self._notes_count.setStyleSheet("color: #546e7a; font-size: 10px;")
+        self._notes_count.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(self._notes_count)
 
         # ── Notes pinned on the map (Draw → 📝 Note) ─────────────────────────
@@ -1082,7 +524,7 @@ class PlanningPanel(QWidget):
             "None yet — use Draw → 📝 Note to pin an observation to a spot "
             "on the map. It will show up here; click it to jump there.")
         self._map_notes_hint.setWordWrap(True)
-        self._map_notes_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._map_notes_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(self._map_notes_hint)
 
         map_notes_box = QWidget()
@@ -1091,6 +533,8 @@ class PlanningPanel(QWidget):
         self._map_notes_list.setSpacing(2)
         layout.addWidget(map_notes_box)
 
+        # Site › Notes since V3.08, beside the site walk's questions.
+        self._notes_page = tab
         self._tabs.addTab(tab, "Notes")
 
     def set_map_notes(self, notes: list[dict]):
@@ -1152,20 +596,20 @@ class PlanningPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Watch the planting move through ecological succession. Drag the "
-            "slider from planting day toward maturity: pioneer forbs fill in "
-            "first and fade as shrubs and climax trees take over. The slider "
-            "reaches the slowest species' mature age."
+            "Drag from planting day to maturity: the first wildflowers fill "
+            "in, then give way as shrubs and trees take over."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # Year slider — range extends to the slowest plant's maturity once a
         # design is loaded (see _update_timeline_horizon); 20 yr until then.
         slider_row = QHBoxLayout()
-        slider_row.addWidget(QLabel("Year:"))
+        year_label = QLabel("Year:")
+        slider_row.addWidget(year_label)
         self._year_slider = QSlider(Qt.Orientation.Horizontal)
+        year_label.setBuddy(self._year_slider)
         self._year_slider.setRange(0, 20)
         self._year_slider.setValue(0)
         self._year_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
@@ -1189,7 +633,7 @@ class PlanningPanel(QWidget):
         # Summary display
         self._timeline_summary = QLabel("")
         self._timeline_summary.setWordWrap(True)
-        self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 8px;")
+        self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 12px; padding: 8px;")
         layout.addWidget(self._timeline_summary)
 
         # Year-by-year conversion schedule (F17, P8/P4): turn the drawn lawn
@@ -1202,11 +646,12 @@ class PlanningPanel(QWidget):
         layout.addWidget(sched_label)
 
         self._conversion_schedule = QTextEdit()
+        sched_label.setBuddy(self._conversion_schedule)
         self._conversion_schedule.setReadOnly(True)
         self._conversion_schedule.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }")
+            "font-size: 12px; }")
         self._conversion_schedule.setMinimumHeight(180)
         self._conversion_schedule.setPlainText(
             "Place plants (and draw lawn-conversion zones) to see a "
@@ -1222,6 +667,8 @@ class PlanningPanel(QWidget):
         layout.addLayout(btn_row)
 
         layout.addStretch()
+        # Design › Over time since V3.08 (src/side_panel_layout.py).
+        self._timeline_page = tab
         self._tabs.addTab(tab, "Timeline")
 
     def _on_year_slider_changed(self, value: int):
@@ -1259,6 +706,7 @@ class PlanningPanel(QWidget):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
         self._update_timeline_horizon()
+        self._poke()
 
     def _update_timeline_horizon(self):
         """Extend the timeline slider to the slowest placed plant's maturity so
@@ -1281,8 +729,27 @@ class PlanningPanel(QWidget):
             slider.setValue(max_year)
 
     def set_structures(self, structures: list[dict]):
-        """Update the list of placed structures (from app.py)."""
+        """Update the list of placed structures (from app.py). The Water page's
+        barrels, ponds and swales start from what is placed (V3.05)."""
         self._structures = structures
+        from src.design_inputs import water_features
+        found = water_features(structures)
+        for box, key in ((self._rain_barrels, "rain_barrels"),
+                         (self._has_pond, "ponds"),
+                         (self._has_swale, "swales")):
+            box.blockSignals(True)
+            box.setValue(found[key])
+            box.blockSignals(False)
+        self._poke()
+
+    def set_site_area(self, area_m2: float) -> None:
+        """The Water page's garden area starts from the drawn boundary (V3.05);
+        with no boundary it keeps whatever it held."""
+        if area_m2 and area_m2 > 0:
+            self._garden_area.blockSignals(True)
+            self._garden_area.setValue(round(float(area_m2), 1))
+            self._garden_area.blockSignals(False)
+            self._poke()
 
     def set_notes(self, text: str):
         """Load notes from project (called on project open)."""
@@ -1290,6 +757,9 @@ class PlanningPanel(QWidget):
         self._notes_edit.setPlainText(text)
         self._notes_edit.blockSignals(False)
         self._project_notes = text
+        # The counter listens to edits, which the block above silences: count
+        # what was loaded, or a page of notes reads "0 words" (V3.05 audit).
+        self._notes_count.setText(f"{len(text.split()) if text.strip() else 0} words")
 
     def get_notes(self) -> str:
         """Return current notes text."""

@@ -182,6 +182,24 @@ class TestExampleResolution(unittest.TestCase):
             missing, [],
             f"example species not in the shipped catalogue: {missing}")
 
+    def test_every_species_it_can_place_is_native_around_edmonton(self):
+        """V3.18 (QF-4): the example lands in Edmonton and planted two species
+        the Edmonton list leaves off, Canada Goldenrod and Showy Milkweed.
+        Every name it can resolve to is checked, fallbacks included, so a
+        fallback cannot bring one back."""
+        import json
+        import pathlib
+        from src import native_here
+        path = (pathlib.Path(__file__).resolve().parent.parent
+                / "data" / "plants_master.json")
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        sci = {r["common_name"]: r["scientific_name"] for r in rows}
+        native = native_here.native_names()
+        off = sorted({n for names, _ in onboarding.EXAMPLE_PLANTING
+                      for n in names if sci.get(n) not in native})
+        self.assertEqual(off, [], "not native around Edmonton, or not a "
+                                  "catalogue native at all")
+
 
 class TestExampleProject(unittest.TestCase):
 
@@ -273,7 +291,7 @@ class TestFirstStepBar(unittest.TestCase):
     def test_chips_show_short_labels_and_mark_the_live_step(self):
         bar = self._bar()
         self._render(bar, _project())
-        self.assertIn("Drop a pin", bar._chips[0].text())
+        self.assertIn("Find your yard", bar._chips[0].text())
         self.assertIn("1.", bar._chips[0].text())
 
     def test_done_steps_are_ticked(self):
@@ -296,9 +314,14 @@ class TestFirstStepBar(unittest.TestCase):
     def test_detail_is_elided_not_clipped(self):
         bar = self._bar()
         bar.resize(300, 30)
-        self._render(bar, _project())
+        # Any detail too long for its room (V3.30's are short enough to fit).
+        current = dict(onboarding.first_step(_project()),
+                       detail="Type your address, or click your yard on the "
+                              "map, and the climate and soil fill in below "
+                              "once the fetch has finished.")
+        bar.set_progress(onboarding.steps_progress(_project()), current)
         shown = bar._detail.text()
-        full = onboarding.first_step(_project())["detail"]
+        full = current["detail"]
         self.assertNotEqual(shown, full)
         self.assertEqual(bar._detail.toolTip(), full,
                          "the full sentence must survive as a tooltip")
@@ -314,18 +337,20 @@ class TestStartScreen(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication(["tests"])
 
-    def test_offers_the_three_doors(self):
-        from src.start_screen import DESIGN, LEARN, OPEN, _DOORS
-        # V2.43: Learn leads, then Design, then the design you already have.
-        # The plant directory moved behind the Learn door.
-        self.assertEqual([d[0] for d in _DOORS], [LEARN, DESIGN, OPEN])
+    def test_the_three_doors_are_gone(self):
+        """V3.23 (ST-4): Learn, Design and Open a design said the same thing
+        three ways (the owner: "very similar"). One way to start a yard, then
+        your designs."""
+        from src import start_screen
+        for name in ("DESIGN", "OPEN", "_DOORS"):
+            self.assertFalse(hasattr(start_screen, name), name)
 
     def test_choice_is_empty_until_picked(self):
-        from src.start_screen import DIRECTORY, StartScreen
+        from src.start_screen import REFERENCE, StartScreen
         screen = StartScreen()
         self.assertEqual(screen.choice(), "")
-        screen._pick(DIRECTORY)
-        self.assertEqual(screen.choice(), DIRECTORY)
+        screen._pick(REFERENCE)
+        self.assertEqual(screen.choice(), REFERENCE)
 
 
 class TestWiringContract(unittest.TestCase):

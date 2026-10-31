@@ -25,7 +25,15 @@ Scene schema (``SCENE_VERSION`` = 1)::
                   growth_curve, color, opacity, health, health_state,
                   common_name, bark_color, fall_color, leaf_size_cm,
                   leaf_shape, leaf_arrangement, growth_form,
-                  existing?, recruit?}, ...],
+                  existing?, recruit?, drawn?}, ...],
+                                       # drawn: where and how the plant is DRAWN
+                                       #   when that is not its own x/y/height,
+                                       #   decided once for the viewer and the
+                                       #   wildlife alike. A vine's habit and
+                                       #   host (src/vine_habit.py, V2.89); a
+                                       #   wetland plant's body and the water
+                                       #   under it (src/pond_habit.py, V2.90).
+                                       #   Both carry x, y, height_m, canopy_m
                                        # bark_color / fall_color / leaf_size_cm:
                                        #   botanical morphology (schema v47) —
                                        #   the species' real trunk colour, its
@@ -60,8 +68,8 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
-      "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
-      "splat": {path, matrix, opacity} | None,  # Gaussian-splat backdrop (V1.65)
+      # (scan_points and splat, the yard scan's, went with it in V3.22, RM-2:
+      # the viewer reads neither, so an older scene carrying them is harmless)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
       "is_night": bool,                # sun below horizon → moonlit 3D + nocturnal wildlife
     }
@@ -138,6 +146,9 @@ _GENUS_FOLIAGE = {
     "quercus":     "#46702f",   # oak — deep
     "salix":       "#8aa46a",   # willow — pale grey-green
     "cornus":      "#5a8246",   # dogwood
+    # Soapweed yucca's leaves are glaucous blue-grey, which is its name (V2.93);
+    # as the shrub default it was drawn the green of a dogwood.
+    "yucca":       "#6e8c7d",
 }
 
 
@@ -319,21 +330,12 @@ def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
-                scan: Optional[dict] = None,
-                splat: Optional[dict] = None,
                 wind: Optional[bool] = True) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
     ``elevation`` is an optional ``fetch_openmeteo_grid`` result;
     ``when`` is the local-solar moment for the sun (default summer noon);
-    ``scan`` is an optional ``scan_import.sample_for_scene`` result —
-    its points are re-framed from the scan's projection origin into this
-    scene's and exposed as ``scene["scan_points"]``.
-    ``splat`` optionally overrides the project's ``splat_backdrop`` feature
-    (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
-    from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
-    opacity}) so the 3D viewer can place it behind the design.
     ``wind`` set False skips the site's wind block (:mod:`src.wind_scene`),
     which is the one part of the scene that can touch the DB cache — tests and
     headless callers that want a pure function pass False.
@@ -646,26 +648,22 @@ def build_scene(project: dict, *, year: int = 0,
         "max_y": round(max(max(ys) + pad, 25.0), 2),
     }
 
-    scan_points = None
-    if scan and scan.get("points"):
-        # Re-frame from the scan's projection origin into this scene's:
-        # both are local cosLat frames, so the shift is a constant offset.
-        from src.projection import metres_per_deg
-        so = scan.get("origin") or {}
-        m_lat, m_lng = metres_per_deg(lat0)
-        dx = ((so.get("lng") or lng0) - lng0) * m_lng
-        dy = ((so.get("lat") or lat0) - lat0) * m_lat
-        scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
-                       for p in scan["points"]]
-
-    splat_feature = splat
-    if splat_feature is None:
-        from src.splat_backdrop import feature_from_project
-        splat_feature = feature_from_project(project)
-    splat_field = None
-    if splat_feature:
-        from src.splat_backdrop import scene_field
-        splat_field = scene_field(splat_feature, lat0, lng0)
+    # What each vine holds onto (V2.89, F179): the tree or shrub beside it, or
+    # nothing, in which case it lies on the ground. Decided here, once, after
+    # every plant (existing trees and recruits included) is in the list, so the
+    # viewer and the wildlife read the same answer. Additive — no SCENE_VERSION
+    # bump; a viewer that ignores `drawn` keeps drawing the old column.
+    from src.vine_habit import apply_vine_habits
+    apply_vine_habits(plants)
+    # Each wetland plant's body, and the water it stands in (V2.90, F175): a
+    # pond-lily's pads lie on a pond's surface, a pondweed shows only what
+    # reaches it. Additive too; an older viewer draws the reed tuft it always did.
+    from src.pond_habit import apply_pond_habits
+    apply_pond_habits(plants, structures)
+    # A cactus's pads or ball, a yucca's swords, roseroot's fleshy stems
+    # (V2.93, F177). Additive; an older viewer draws the mat or bush it did.
+    from src.succulent_habit import apply_succulent_habits
+    apply_succulent_habits(plants)
 
     return {
         "version": SCENE_VERSION,
@@ -678,8 +676,6 @@ def build_scene(project: dict, *, year: int = 0,
         "buildings": buildings,
         "structures": structures,
         "terrain": _terrain_block(elevation, proj),
-        "scan_points": scan_points,
-        "splat": splat_field,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
         # Night when the sun is down (V2.12): the 3D view renders a moonlit
         # scene and swaps day pollinators for nocturnal moths & bats.

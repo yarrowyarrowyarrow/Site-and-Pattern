@@ -119,5 +119,103 @@ class TestPrivateConstantsResolve(unittest.TestCase):
             self.fail("\n".join(lines))
 
 
+def _top_level_names(tree: ast.Module) -> set[str]:
+    """What ``from <this module> import X`` can find: names bound at module
+    level, including inside module-level ``if`` / ``try`` / ``with`` blocks
+    (``try: import x except ImportError: x = None`` is common here)."""
+    names: set[str] = set()
+
+    def bind(target):
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for elt in target.elts:
+                bind(elt)
+
+    def visit(body):
+        for node in body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                 ast.ClassDef)):
+                names.add(node.name)
+            elif isinstance(node, ast.Assign):
+                for t in node.targets:
+                    bind(t)
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                bind(node.target)
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    names.add(alias.asname or alias.name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    names.add(alias.asname or alias.name.split(".", 1)[0])
+            elif isinstance(node, (ast.If, ast.With, ast.For, ast.While)):
+                visit(node.body)
+                visit(getattr(node, "orelse", []) or [])
+            elif isinstance(node, ast.Try):
+                visit(node.body)
+                visit(node.orelse)
+                visit(node.finalbody)
+                for handler in node.handlers:
+                    visit(handler.body)
+
+    visit(tree.body)
+    return names
+
+
+class TestFromImportsResolve(unittest.TestCase):
+    """Every ``from src.x import name`` names something ``src/x.py`` defines.
+
+    The check above passes as long as a name is *bound* in the module that
+    uses it, and an import statement binds its name even when the module it
+    imports from no longer has it. That is how ``terrain_downloader`` went on
+    importing ``_USER_AGENT`` from ``src.terrain`` after the constant moved to
+    ``src.http_utils``: the import sits at the top of a module that loads only
+    when *Download Edmonton Data* is pressed, so the first anyone heard of it
+    was every press of that button aborting the app (found by the V3.05 surface
+    audit's click pass). Function-level imports are common in this codebase,
+    to keep start-up light, which is exactly what hides this class from a
+    plain ``import src.foo``.
+    """
+
+    def test_every_imported_name_exists(self):
+        root = _SRC_DIR.parent
+        cache: dict = {}
+        offenders: list[str] = []
+        for path in sorted(_SRC_DIR.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.ImportFrom) and node.level == 0
+                        and node.module and (node.module == "src"
+                                             or node.module.startswith("src."))):
+                    continue
+                parts = node.module.split(".")
+                module_file = root.joinpath(*parts).with_suffix(".py")
+                package_init = root.joinpath(*parts, "__init__.py")
+                target = (module_file if module_file.exists()
+                          else package_init if package_init.exists() else None)
+                where = f"{path.relative_to(root)}:{node.lineno}"
+                if target is None:
+                    offenders.append(f"{where}: no module {node.module}")
+                    continue
+                if target not in cache:
+                    cache[target] = _top_level_names(
+                        ast.parse(target.read_text(encoding="utf-8")))
+                defined = cache[target]
+                if "__getattr__" in defined:
+                    continue        # a module that answers any name it is asked
+                for alias in node.names:
+                    if alias.name == "*" or alias.name in defined:
+                        continue
+                    submodule = root.joinpath(*parts, alias.name)
+                    if (submodule.with_suffix(".py").exists()
+                            or (submodule / "__init__.py").exists()):
+                        continue
+                    offenders.append(
+                        f"{where}: {node.module} has no {alias.name}")
+        if offenders:
+            self.fail("Imports of names their module does not define:\n  "
+                      + "\n  ".join(offenders))
+
+
 if __name__ == "__main__":
     unittest.main()

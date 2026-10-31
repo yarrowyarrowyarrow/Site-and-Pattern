@@ -64,7 +64,7 @@ inventory: [reference.md](reference.md).
 | `src/db/plants.py` | Connection, `_SCHEMA_VERSION` (currently 70), migration/reseed logic, `search_plants`, climate/wind caches. |
 | `src/db/schema.sql` | Authoritative DDL, loaded on every `init_db`. |
 | `src/db/seed_data.py` | Seeds the catalogue from `data/*.json`. |
-| `src/db/polycultures.py`, `src/db/recipes.py` | Spatial plant communities + ratio-only recipes. |
+| `src/db/polycultures.py` | Spatial plant communities (the recipe table's reader, `recipes.py`, went in V3.22; the table stays). |
 | `src/db/fauna.py`, `src/db/nurseries.py`, `src/db/calendar_data.py`, `src/db/shade_zones.py`, `src/db/structures.py`, `src/db/import_usda.py` | Fauna registry, nursery directory, planting calendar, shade-tag cache, hard-coded structures, USDA import. |
 
 ### Map frontend (Leaflet in QWebEngineView)
@@ -75,24 +75,37 @@ inventory: [reference.md](reference.md).
 | `src/map_js.py` | Typed Python→JS builders for every JS entry point (never hand-format JS strings). |
 | `html/map.html` | Thin shell; loads the six split scripts **in order**. |
 | `html/map/01-core.js` … `html/map/06-overlays.js` | Shared-global classic scripts, NOT ES modules: core/bridge, boundary, plants, tools, features, overlays. Each has a guard line ceiling. |
-| `src/member_colors.py` | Qt-free marker colour tables. |
+| `src/member_colors.py` | Qt-free: the one plant colour table, by type, and `plant_color` (V3.03; was by layer for community members). |
 
 ### Side panels & Qt widgets
 
 `src/plant_panel.py` (+ `src/plant_list_view.py`, `src/on_this_design_panel.py`,
 `src/placement_controls.py`), `src/polyculture_panel.py`,
+the one plant picker and species page every plant list shares since V3.00
+(`src/plant_picker.py` over the Qt-free `src/plant_filters.py`, with its chips
+and empty state in `src/filter_status.py` since V3.01;
+`src/species_page.py`, shown beside the Browse list by `src/species_flyout.py`;
+the Plant Directory window was retired in V3.22, `src/plant_directory.py` stays),
 `src/structure_panel.py`, `src/site_panel.py`, `src/analysis_panel.py`,
 `src/planning_panel.py`, `src/learn_panel.py` (Field Study / Lessons /
 Present, V2.25), plus small QPainter widgets
 (`src/wind_rose_widget.py`,
 `src/phenology_widget.py`, `src/docent_widget.py`, `src/field_study_widget.py`,
 `src/lesson_track_widget.py`). Widgets draw; they never compute — the maths
-lives in a Qt-free sibling module.
+lives in a Qt-free sibling module. Keyboard and screen reader across all of them
+(V3.02): `src/focus_ring.py` (the one focus ring), `src/keyboard_help.py` (the
+key table, F6, Help → Keyboard Shortcuts), `src/accessible_names.py` (names for
+the containers no panel builds). What can be seen (V3.03): `src/target_size.py`
+(every control at least 24 px, raised and never lowered), `src/indicator_style.py`
+(a checkbox's box you can see); the 12 px and 4.5:1
+floors are tests (`tests/test_visual_floor.py`, `tests/test_app_smoke.py`), with
+the measuring helpers in `tests/_visual.py`.
 
 ### Generation & placement scoring (Qt-free)
 
 `src/design_api.py` (programmatic `DesignGenerator` — also the backbone of the
-agent API), `src/llm_design.py` (prompt → LLM spec → deterministic placement),
+agent API), `src/llm_design.py` (deterministic placement; the GUI always calls
+`generate_design_offline`, the LLM `generate_design` is CLI/MCP only since V3.22),
 `src/design_critic.py` (evaluate→revise→repair), `src/placement_score.py`
 (per-cell scoring), `src/layout.py`, `src/exclusion.py` (keep-out),
 `src/area_fill.py`, `src/zoning.py`, `src/design_goals.py`,
@@ -136,15 +149,15 @@ Offline packs (terrain/buildings/soil) follow one pattern: SQLite/GeoTIFF store
 `src/scene_contract.py` (versioned Scene JSON — the project→3D contract),
 `src/scene3d.py`, `src/scene3d_window.py`, `src/map3d_widget.py`,
 `src/map3d_js.py`, `src/scene_wildlife.py`, `src/sprite_gallery.py` +
-`src/sprite_gallery_window.py`, `src/splat_backdrop.py` + `src/splat_flow.py`
-(Gaussian-splat backdrop), `src/web_assets.py` (localhost server for the
+`src/sprite_gallery_window.py`, `src/web_assets.py` (localhost server for the
 viewer). HTML: `html/scene3d.html`, `html/sprite_gallery.html`; vendored
-three.js/Spark in `html/vendor/`; optional map3d fork build in `web3d/`.
+three.js in `html/vendor/`; optional map3d fork build in `web3d/`. (The
+Gaussian-splat backdrop went in V3.22; see `scene-3d`.)
 
 ### Import pipelines
 
-`src/scan_import.py` + `src/scan_import_dialog.py` (phone scan → nDSM →
-footprints), `src/footprint_extract.py`, `src/footprint_ndsm.py`,
+`src/footprint_extract.py`, `src/footprint_ndsm.py` (raster → footprints; the
+phone-scan import went in V3.22),
 `src/site_photo.py` + `src/site_photo_flow.py` (photo underlay),
 `src/pdf_export.py` (GUI-only export).
 
@@ -237,7 +250,7 @@ scripts), `.github/workflows/release-macos.yml` and
 ## Deeper dives (skills in .claude/skills/)
 
 - **add-feature** — end-to-end feature playbook (triad pattern, ceilings, wiring, docs).
-- **generate-design** — the LLM spec → deterministic placement → critic pipeline + Habitat Score.
+- **generate-design** — spec → deterministic placement → critic pipeline + Habitat Score (rule-based in the GUI; LLM spec in CLI/MCP only).
 - **placed-plants** — the ProjectStore single-write-path rule.
 - **agent-api** — scripting facade / CLI / MCP and the frozen contract.
 - **schema-change**, **seed-data** — DB schema and shipped JSON changes.

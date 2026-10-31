@@ -17,7 +17,9 @@ Casters are:
   * user-drawn canopy / structure perimeters (``canopy_footprint``, or a
     ``custom_shape`` tagged ``cast_shade``) with a height attribute,
   * the design's own trees & shrubs (mature height + canopy), and
-  * already-placed plants/structures.
+  * already-placed plants/structures,
+
+less any existing feature switched off in Sun & Shade (``SHADE_OFF``, V3.37).
 
 The model is deliberately simple and **Qt-free**, reusing ``src/solar.py``:
 for a handful of representative dates/times we get the sun's altitude/azimuth
@@ -76,6 +78,12 @@ _MAX_SHADOW_M = 60.0                        # clamp absurd low-sun shadows
 _LEAF_OFF_MONTHS = {10, 11, 12, 1, 2, 3, 4}
 _LEAF_OFF_WEIGHT = 0.3
 
+#: A feature's property: unticked in Sun & Shade › Existing features (V3.37).
+#: It stays in the design (drawn, kept out of, shown in 3D) but casts no shade
+#: here, so the shade map, the planting zones, Plan My Yard and the over-time
+#: model all leave it out alike. Absent means it casts.
+SHADE_OFF = "shade_off"
+
 
 def _caster(lat: float, lng: float, height_m: float, radius_m: float,
             footprint: Optional[list] = None, kind: str = "building",
@@ -122,7 +130,7 @@ def casters_from_project(project_dict: dict) -> list[dict]:
         et = props.get("element_type")
         geom = f.get("geometry", {}) or {}
         coords = geom.get("coordinates")
-        if not coords:
+        if not coords or (et != "plant" and props.get(SHADE_OFF)):
             continue
         # Point geometry → (lng, lat); polygon → centroid proxy + keep the ring
         # so the shapely path can cast the true footprint.

@@ -42,8 +42,12 @@ tests can monkeypatch `<module>._http_get_json`* — the real logic stays in one
 place. Mirror that: add a `_http_get_json` alias in your module and call it, so
 your tests have a seam.
 
-The User-Agent deliberately keeps the pre-rebrand string
-(`"PermaDesign/1.0 ..."`) — see CLAUDE.md; don't "fix" it to Site & Pattern.
+The User-Agent is one string, `http_utils.user_agent()`
+(`SiteAndPattern/<version> (+repo URL)`), sent by every Python request and by
+the map's tiles (V3.31, FN-6). It kept the pre-rebrand `PermaDesign/1.0` until
+then "for providers' allow-lists", but no provider has an entry for it. Import
+`_USER_AGENT` from `http_utils`; never write a copy. A new host goes in
+`src/services.py` with its credit, or `tests/test_services.py` fails.
 
 ### Timeout discipline
 
@@ -190,7 +194,8 @@ Every test in this repo runs offline. Patterns:
 | `src/climate.py` | Hardiness bbox lookup + GDD/frost (DB-cached in `climate_cache`). |
 | `src/wind.py` | Wind rose fetch + pure aggregation + `wind_cache` DB cache. |
 | `src/wind_flow.py` | Off-thread wind fetch worker + regional fallback (`wind_fallback_prairie.json`). |
-| `src/osm_features.py` | Overpass buildings/trees import (retry + mirror; graceful `[]`). |
+| `src/osm_features.py` | Overpass buildings/trees import: three servers in turn, a certifi second opinion on a certificate, and each failure kept as an `Unanswered` kind, logged and said by `failure_words` with each server's answer (V3.37) — the pattern for a fetch the person asked for. |
+| `src/vector_tiles.py` | The buildings off OpenFreeMap's OpenStreetMap map tiles when no Overpass server answers (V3.37): a plain-Python vector-tile decoder for the `building` layer, tile arithmetic, `fetch_buildings` with an injectable `_get`. |
 | `src/hrdem.py` | NRCan HRDEM elevation (STAC + COG windowed reads; injectable seams). |
 | `src/image_cache.py` | Open-licensed photo cache + attribution sidecar. |
 | `data/rainfall_fallback_prairie.json` / `soil_fallback_prairie.json` / `wind_fallback_prairie.json` / `hardiness_zones.json` | Bundled regional fallbacks / lookups. |

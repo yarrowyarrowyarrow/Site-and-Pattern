@@ -130,8 +130,13 @@ DECID_GENERA = {
     # against paper birch's 20 m single-leadered white spire. One genus, two
     # trees — the same call the poplar/aspen split made in V2.30, and the reason
     # `branching` was seeded in the first place.
+    # V2.92: and the clump is now drawn as one — four to six slender stems
+    # leaving the ground and leaning apart, where the archetype used to be a
+    # single trunk like every other (the audit's finding).
     "birch_water":   {"form": "spreading", "droop_outer": 0.35,
-                      "foliage_scale": 0.86, "trunk_r": 0.022},
+                      "foliage_scale": 0.86, "trunk_r": 0.022,
+                      "stems": (4, 6), "stem_lean": 0.34, "bole": 0.36,
+                      "angle": 0.45, "rise": 0.30, "twig_r": 1.3},
     # Evans cherry: a 4 m orchard tree, low and broad, against pin cherry's
     # 8 m slender wild form.
     "cherry_orchard": {"form": "spreading", "foliage_scale": 1.0,
@@ -144,14 +149,57 @@ DECID_GENERA = {
                       "trunk_r": 0.013},
     "oak":           {"form": "spreading", "foliage_scale": 1.06,
                       "trunk_r": 0.035},
-    "willow":        {"form": "slender", "droop_outer": 0.70,
-                      "foliage_scale": 0.85, "trunk_r": 0.020},
+    # Bebb's willow, recorded multi_stem: three to five stems from the base
+    # under a rounded crown (V2.92; it was one trunk).
+    "willow":        {"form": "oval", "droop_outer": 0.70,
+                      "foliage_scale": 0.85, "trunk_r": 0.020,
+                      "stems": (3, 5), "stem_lean": 0.32, "bole": 0.30,
+                      "angle": 0.50, "rise": 0.30},
     "cherry":        {"form": "oval", "trunk_r": 0.018},
     "apple":         {"form": "spreading", "trunk_r": 0.026},
     "def_slender":   {"form": "slender"},
     "def_oval":      {"form": "oval"},
     "def_spreading": {"form": "spreading"},
+    # ── V2.92 (F178): the trees the audit found drawn as something else ──
+    # American Elm: the vase. A short trunk forks low into four or five steep
+    # leaders that curve out, so the crown is widest near the top, and the
+    # outer twigs hang. It was the generic oval default.
+    "elm":           {"form": "oval", "trunk_r": 0.024, "bole": 0.20,
+                      "leaders": {"n": (4, 5), "angle": 0.55, "length": 0.46,
+                                  "area": 1.3},
+                      "angle": 0.80, "rise": 0.80, "twig_r": 0.6,
+                      "droop_outer": 0.75, "clear_bole": 0.46,
+                      "foliage_scale": 0.95},
+    # Manitoba Maple (box elder): two or three trunks from near the ground,
+    # leaning apart, under a broad irregular crown of compound leaves. It was
+    # the generic spreading default, one trunk and simple leaves.
+    "boxelder":      {"form": "spreading", "trunk_r": 0.026, "bole": 0.36,
+                      "stems": (2, 3), "stem_lean": 0.40, "split_bias": 0.40,
+                      "twig_r": 1.6, "leaflet_pairs": 1, "leaflet_len": 0.5},
+    # Plains Cottonwood: a massive trunk dividing into three or four heavy
+    # ascending limbs, a broad open crown with sky in it, coarse leaves. It
+    # borrowed the trembling aspen, stretched 1.6x sideways.
+    "cottonwood":    {"form": "oval", "trunk_r": 0.032, "bole": 0.26,
+                      "leaders": {"n": (3, 4), "angle": 0.50, "length": 0.30,
+                                  "area": 1.4},
+                      "angle": 0.80, "rise": 0.35, "clumps": 0.95,
+                      "foliage_scale": 1.05},
+    # Narrowleaf Cottonwood: a slender tree with upright branches and a
+    # willow's leaf. It borrowed the aspen too.
+    "cottonwood_narrow": {"form": "oval", "trunk_r": 0.018, "bole": 0.22,
+                          "leaders": {"n": (3, 3), "angle": 0.32,
+                                      "length": 0.30, "area": 1.3},
+                          "angle": 0.50, "rise": 0.40, "foliage_scale": 0.90},
+    # Peach-leaved Willow: one or two leaning trunks and a broad irregular
+    # crown with a drooping fringe. It borrowed Bebb's willow, 1.35x wider.
+    "willow_peach":  {"form": "spreading", "trunk_r": 0.024, "bole": 0.32,
+                      "stems": (1, 2), "stem_lean": 0.22,
+                      "droop_outer": 0.65, "foliage_scale": 0.90},
 }
+
+# Skeleton figures an archetype in DECID_GENERA may set for itself, over its
+# form's (V2.92).
+_FORM_OVERRIDES = ("angle", "len_scale", "clear_bole", "split_bias", "bole")
 
 DECID_DEPTH = (3, 5, 6)                  # skeleton depth by maturity tier
 # Minimum branch radius before a limb is called terminal, as a FRACTION of the
@@ -194,10 +242,13 @@ FOLIAGE_SUBDIV = 0
 # catalogue, a variant axis would need a new manifest schema and four changed
 # code paths to express what one more flat key already does, for +3 units.
 TREE_ARCHETYPES = ("spruce", "fir", "douglas", "pine", "pine_jack", "larch",
-                   "def_conifer",
+                   "def_conifer", "juniper",
                    "aspen", "poplar", "birch", "birch_water", "oak", "willow",
                    "cherry", "cherry_orchard", "apple",
-                   "def_slender", "def_oval", "def_spreading")
+                   "def_slender", "def_oval", "def_spreading",
+                   # V2.92 (F178)
+                   "elm", "boxelder", "cottonwood", "cottonwood_narrow",
+                   "willow_peach")
 
 
 # ── conifers ─────────────────────────────────────────────────────────────────
@@ -281,68 +332,191 @@ def _build_conifer(kind, tier, rng, aspect):
 
 
 # Both pines are built by _build_pine; the kind decides how ORDERLY it is.
-# Lodgepole is the fire-regenerated pole — a dense narrow spire, almost a mast.
-# Jack pine is the scraggly one: a short, irregular, open crown with tufts at
-# odd angles and gaps between them, which is most of how it is recognised
-# (`decurrent` in the seed data, against lodgepole's `excurrent`).
-# `clumps` rose sharply in V2.33 with the tier budgets: a tuft is 72 triangles
-# (18 needle ribbons at 4 each), so tier2's old 23 tufts spent 1,656 of a 3,500
-# budget and the new 6,000 buys a crown that is actually opaque. A pine crown
-# being SEE-THROUGH was the last of the "bottle brush on a pole" look left after
-# V2.30 rebuilt the fascicles.
+# Lodgepole is the fire-regenerated pole: a long clear bole under a narrow crown
+# of short upswept limbs with a rounded top. Jack pine is the scraggly one: a
+# slightly crooked trunk, irregular spreading limbs, gaps between its clumps of
+# foliage, a flat top and dead stubs kept low down (`decurrent` in the seed
+# data, against lodgepole's `excurrent`).
+#
+# V2.92 (F178): rebuilt, not retuned. The builder it replaces spread 11 to 44
+# needle tufts evenly from mid-height to the top on short stubs all round the
+# trunk, so seen from a yard both pines were a cylinder of bristles on a pole,
+# the audit's "bottle brush", and at yard distance each other. A pine is read by
+# its LIMBS: foliage hangs in clusters at their ends, with sky between the
+# clusters, and the crown has a top of a particular shape.
+#
+#   crown_base  where the live crown starts, by tier (young trees lower)
+#   whorls      limb whorls in the live crown, by tier
+#   per_whorl   limbs in one whorl (lo, hi)
+#   tilt        a limb's angle off the vertical (lo, hi): upswept below 1.57
+#   reach       limb length profile: the bottom whorl's, and how much the top
+#               one keeps (1 flat-topped, 0 a point)
+#   crook       sideways wander of the trunk, per segment
+#   cluster     tufts along a limb's outer end, by tier
+#   stubs       dead branch stubs on the bole
+#   top_tufts   tufts closing the crown's top (a lodgepole's is rounded)
+#   limb_crook  how far a limb kinks once, up or down (jack pine)
+#   trunk_r     trunk radius at the ground, as a fraction of the height: a
+#               25 m lodgepole's trunk is about 0.5 m across, a jack pine's a
+#               little stouter for its height
 PINE_KINDS = {
-    "pine":      {"clumps": (14, 26, 44), "z_base": 0.52, "reach": (0.16, 0.10),
-                  "jitter": 0.04, "taper": 0.45, "pad": 1.0},
-    "pine_jack": {"clumps": (11, 20, 32), "z_base": 0.42, "reach": (0.20, 0.20),
-                  "jitter": 0.11, "taper": 0.20, "pad": 1.35},
+    "pine":      {"crown_base": (0.26, 0.36, 0.42), "whorls": (6, 8, 9),
+                  "per_whorl": (4, 6), "tilt": (1.30, 1.52),
+                  "reach": (1.0, 0.35), "crook": 0.0, "cluster": (2, 2, 2),
+                  "stubs": 5, "top_tufts": 3, "limb_crook": 0.0,
+                  "trunk_r": 0.014},
+    "pine_jack": {"crown_base": (0.20, 0.28, 0.32), "whorls": (4, 6, 8),
+                  "per_whorl": (2, 4), "tilt": (1.10, 1.45),
+                  "reach": (1.0, 0.75), "crook": 0.022, "cluster": (2, 3, 4),
+                  "stubs": 8, "top_tufts": 1, "limb_crook": 0.35,
+                  "trunk_r": 0.019},
 }
 
 
+def _cone_tris(segments):
+    """What one capped add_cone costs: sides and two triangle-fan caps."""
+    return 4 * segments
+
+
+def _trunk_line(rng, crook, n=6, top=0.97):
+    """The trunk as a polyline: straight, or wandering by ``crook`` a segment."""
+    pts = [Vector((0.0, 0.0, 0.0))]
+    for i in range(1, n + 1):
+        z = top * i / n
+        dx = (rng.random() - 0.5) * 2 * crook if crook else 0.0
+        dy = (rng.random() - 0.5) * 2 * crook if crook else 0.0
+        pts.append(Vector((pts[-1].x + dx, pts[-1].y + dy, z)))
+    return pts
+
+
+def _on_line(pts, z):
+    """The point of polyline ``pts`` at height ``z``."""
+    for a, b in zip(pts, pts[1:]):
+        if a.z <= z <= b.z:
+            t = (z - a.z) / max(1e-9, b.z - a.z)
+            return a.lerp(b, t)
+    return pts[-1].copy()
+
+
+def _trunk_xy(pts, z):
+    """How far a crooked trunk stands off the axis at height ``z``.
+
+    The crown is laid out round a STRAIGHT axis and each limb is carried out to
+    the trunk afterwards by this offset. Laid out on the crooked trunk itself,
+    the aspect solve (which narrows everything toward the axis and not toward
+    the trunk) pulled every limb's base off the wood it grows from, and shrank
+    a jack pine's dead stubs to 15 cm nubs.
+    """
+    p = _on_line(pts, z)
+    return Vector((p.x, p.y, 0.0))
+
+
 def _build_pine(kind, tier, rng, aspect, grain):
-    """Pinus: clear lower trunk, tufted open upper crown, flattish top."""
+    """Pinus: a bole, then whorls of limbs each ending in a cluster of tufts."""
+    from . import conventions as C
     K = PINE_KINDS.get(kind, PINE_KINDS["pine"])
     bark = bmesh.new()
     fol = bmesh.new()
-    H = 1.0
-    # Pine crowns are narrow (Pinus contorta runs 4:1), so the needle pads are
-    # sized off the crown width like the deciduous leaf masses — and there are
-    # more of them on a bigger tree.
     crown_half = 0.5 / aspect
-    pad_r = crown_half * (0.62, 0.5, 0.42)[tier] * grain * K.get("pad", 1.0)
-    # Fourteen needle tufts at tier2 left daylight between them and the crown
-    # read as sparse; a tuft is 72 triangles, so the 3500 budget affords more
-    # than twice that and the crown can actually be a crown.
-    clumps = K["clumps"][tier]
-    z_base = K["z_base"]
-    tufts, pts = [], []
-    for i in range(clumps):
-        f = i / max(1, clumps - 1)
-        z = z_base + (0.88 - z_base) * f + (rng.random() - 0.5) * K["jitter"]
+    pad_r = crown_half * (0.44, 0.36, 0.30)[tier] * grain
+    trunk = _trunk_line(rng, K["crook"])
+    z0, z1 = K["crown_base"][tier], 0.90
+    whorls = K["whorls"][tier]
+    r_bottom, r_top = K["reach"]
+    limbs, groups, pts = [], [], []
+    for i in range(whorls):
+        f = i / max(1, whorls - 1)
+        gap = (z1 - z0) / max(1, whorls - 1)
+        z = z0 + (z1 - z0) * f + (rng.random() - 0.5) * gap * 0.5
+        lo, hi = K["per_whorl"]
+        n = lo + int(rng.random() * (hi - lo + 1))
+        az0 = rng.random() * math.tau
+        reach = (r_bottom + (r_top - r_bottom) * f) * crown_half * 2.2
+        for b in range(n):
+            az = az0 + b * math.tau / n + (rng.random() - 0.5) * 0.9
+            tilt = K["tilt"][0] + rng.random() * (K["tilt"][1] - K["tilt"][0])
+            length = reach * (0.7 + rng.random() * 0.5)
+            origin = Vector((0.0, 0.0, z))       # on the axis; see _trunk_xy
+            shift = _trunk_xy(trunk, z)
+            d = Vector((math.sin(tilt) * math.cos(az),
+                        math.sin(tilt) * math.sin(az), math.cos(tilt)))
+            tip = origin + d * length
+            mid = None
+            if K["limb_crook"]:
+                # A jack pine limb kinks once: out, then up or down.
+                mid = origin + d * length * 0.55
+                tip = tip + Vector((0, 0, (rng.random() - 0.4)
+                                    * K["limb_crook"] * length))
+            limbs.append([origin, mid, tip, shift])
+            pts.extend(p for p in (origin, mid, tip) if p is not None)
+            cluster = []
+            for k in range(K["cluster"][tier]):
+                t = 1.0 - k * 0.22
+                base = mid if (mid is not None and t < 0.8) else origin
+                at = base.lerp(tip, t if base is origin else (t - 0.55) / 0.45)
+                at = at + Vector(((rng.random() - 0.5) * pad_r * 0.6,
+                                  (rng.random() - 0.5) * pad_r * 0.6,
+                                  pad_r * (0.2 + rng.random() * 0.3)))
+                cluster.append([at, pad_r * (0.85 + rng.random() * 0.3), az,
+                                shift])
+            groups.append(cluster)
+    top = []
+    for k in range(K["top_tufts"]):
         az = rng.random() * math.tau
-        reach = (K["reach"][0] + rng.random() * K["reach"][1]) \
-            * (1 - f * K["taper"])
-        base = Vector((0, 0, z - 0.02))
-        tip = Vector((math.cos(az) * reach, math.sin(az) * reach, z))
-        r = pad_r * (0.8 + rng.random() * 0.4) * (1 - f * 0.20)
-        tufts.append((base, tip, r))
-        pts.extend((base, tip))
-    # A tuft's real horizontal reach is what its NEEDLES span, not what the pad
-    # it replaced did. The 1.5x figure here was inherited from the flat elliptic
-    # pads and never updated when V2.30 turned them into needle fascicles that
-    # overshoot the pad radius (`ln = r * 2.4` in _needle_tuft) — so the solve
-    # was told the crown was 40% narrower than it is and let it grow wider than
-    # the species' aspect. Invisible at a 3.7 target, a failure at lodgepole's
-    # 4.2. leaf_extent is the same reach model add_leaf is built from.
-    reach = leaf_extent(pad_r * NEEDLE_LEN_GAIN, 1.1, "needle")[0] / max(
-        1e-6, pad_r)
-    shape_to_aspect(pts, aspect, height=H,
-                    radii=[v for _b, _t, r in tufts for v in (0.0, r * reach)])
-    add_cone(bark, 0.034, 0.010, H * 0.96, 6, Matrix())
-    for base, tip, r in tufts:
-        # Visible branch out to the tuft (also the winter skeleton).
-        add_cone_between(bark, base, tip, 0.014, 0.006, 4)
-        _needle_tuft(fol, rng, tip, r)
-    _needle_tuft(fol, rng, Vector((0, 0, 0.93)), pad_r)
+        top.append([Vector((
+            math.cos(az) * pad_r * 0.5 * (k > 0), math.sin(az) * pad_r * 0.5
+            * (k > 0), 0.93 - 0.03 * k)), pad_r * 0.9, None,
+            _trunk_xy(trunk, 0.93)])
+    if top:
+        groups.append(top)
+    # Dead stubs on the bole: most on a jack pine, which keeps them. They stay
+    # out of the aspect solve, so they keep their authored length: a stub is
+    # not crown, and narrowing it with the crown drew it as a nub.
+    stubs = []
+    for _ in range(K["stubs"]):
+        z = 0.08 + rng.random() * max(0.02, z0 - 0.12)
+        az = rng.random() * math.tau
+        o = Vector((0.0, 0.0, z))
+        L = crown_half * (0.25 + rng.random() * 0.35)
+        stubs.append([o, o + Vector((math.cos(az) * L, math.sin(az) * L,
+                                     -0.25 * L * rng.random())),
+                      _trunk_xy(trunk, z)])
+    limb_segs = sum(1 if mid is None else 2 for _o, mid, _t, _s in limbs)
+    bark_tris = (_cone_tris(5) * (len(trunk) - 1)
+                 + _cone_tris(4) * (limb_segs + len(stubs)))
+    groups = thin_groups_to_budget(groups, _tuft_tris(),
+                                   C.TRI_BUDGETS[f"tree_tier{tier}"], bark_tris)
+    tufts = [t for g in groups for t in g]
+    reach = (leaf_extent(pad_r * NEEDLE_LEN_GAIN, 1.1, "needle")[0]
+             / max(1e-6, pad_r) + TUFT_CORE * 0.8)
+    pts.extend(t[0] for t in tufts)
+    rads = ([0.0] * (len(pts) - len(tufts))
+            + [t[1] * reach for t in tufts])
+    shape_to_aspect(pts, aspect, height=1.0, radii=rads)
+    # Now carry every limb, tuft and stub out to where the trunk really is.
+    for origin, mid, tip, shift in limbs:
+        for p in (origin, mid, tip):
+            if p is not None:
+                p += shift
+    for t in tufts:
+        t[0] += t[3]
+    for o, e, shift in stubs:
+        o += shift
+        e += shift
+    tr = K["trunk_r"]
+    for a, b in zip(trunk, trunk[1:]):
+        add_cone_between(bark, a, b, max(0.005, tr * (1 - a.z * 0.72)),
+                         max(0.004, tr * (1 - b.z * 0.72)), 5)
+    for origin, mid, tip, _shift in limbs:
+        if mid is None:
+            add_cone_between(bark, origin, tip, 0.008, 0.004, 4)
+        else:
+            add_cone_between(bark, origin, mid, 0.008, 0.006, 4)
+            add_cone_between(bark, mid, tip, 0.006, 0.004, 4)
+    for o, e, _shift in stubs:
+        add_cone_between(bark, o, e, 0.005, 0.002, 4)
+    for at, r, aim, _shift in tufts:
+        _needle_tuft(fol, rng, at, r, aim)
     return bark, fol
 
 
@@ -352,55 +526,264 @@ def _build_pine(kind, tier, rng, aspect, grain):
 # stack of smooth hexagonal plates on a bare pole, which the sprite audit scored
 # 4/10 and called a pagoda.
 #
-# It was also spending almost nothing: tier2 came in at 548 triangles against a
-# 3500 budget. A needle at two ribbon segments is 4 triangles, so a tuft of
-# eighteen is 72, and twenty-odd tufts still leave the tier inside its
-# allowance.
-NEEDLES_PER_TUFT = 18
+# A needle at two ribbon segments is 4 triangles.
+#
+# V2.92 (F178): each tuft is a MASS with a fringe. Needles alone, however many,
+# made a tuft a ball of spikes around nothing, and at yard distance a crown of
+# them read as bristles. A small faceted core stands for the dense inner shoot
+# the eye actually reads, and its faces catch the light where a needle ribbon,
+# edge-on to most views, renders as a dark line; the sprays radiating out of it
+# are the texture.
+NEEDLES_PER_TUFT = 10
 NEEDLE_SEGMENTS = 2
+TUFT_CORE = 0.55                  # core radius / tuft radius
+TUFT_CORE_SQUASH = 0.75           # its height / width: a shoot splays outward
 
 # One ribbon here stands for a SHOOT'S SPRAY of needles, not a single needle.
 # Drawn at true proportion (leaf_width_for('needle') is 3% of length) a jack
 # pine's needle is a few millimetres on a 15 m tree — far under a pixel at any
 # distance the viewer is ever at, so it aliases to a dark wire and the crown
-# renders as a bottle brush on a pole. That is exactly what the first cut of
-# this builder did, and it was worse than the flat pads it replaced. Widening
-# the ribbon is what makes a mass of needles read AS a mass.
-NEEDLE_FASCICLE_GAIN = 4.0
+# renders as a bottle brush on a pole. Widening the ribbon is what makes a mass
+# of needles read AS a mass. (V2.92: 4.0 -> 5.5, with the core.)
+NEEDLE_FASCICLE_GAIN = 5.5
 
 
 # How far a needle spray overshoots the pad radius it is stamped at. Named
 # because the aspect solve has to declare the same reach the stamp produces.
-NEEDLE_LEN_GAIN = 2.4
+# V2.92: 2.4 -> 1.7. At 2.4 each tuft was a ball of long spikes and a crown of
+# them read as bristles; shorter sprays make each cluster a rounded mass.
+NEEDLE_LEN_GAIN = 1.7
 
 
-def _needle_tuft(fol, rng, at, r):
-    """A bunch of needle sprays radiating from one shoot end."""
+def _off_core(at, tilt, az, core_r):
+    """Where a spray leaves its core: on the core's surface, not at its centre.
+
+    A spray rooted at the centre buries its base inside a closed mesh, where
+    every ray of the occlusion bake hits the core from within: a tuft baked on
+    its own came out at 0.22 of full brightness rooted inside, 0.66 rooted on
+    the surface.
+    """
+    k = core_r * 0.8
+    return at + Vector((math.sin(tilt) * math.cos(az) * k,
+                        math.sin(tilt) * math.sin(az) * k, math.cos(tilt) * k))
+
+
+def _tuft_tris():
+    """What one :func:`_needle_tuft` costs: the core and its sprays."""
+    return ICO_TRIS + leaf_tris("needle", NEEDLE_SEGMENTS) * NEEDLES_PER_TUFT
+
+
+def _needle_tuft(fol, rng, at, r, aim=None):
+    """A shoot end: a dense core with needle sprays radiating out of it.
+
+    ``aim`` is the bearing of the limb the tuft ends: its sprays splay about
+    that bearing, near level, the way a shoot's needles point along it. With
+    none (the leader's top) they point up all round.
+    """
+    add_ellipsoid(fol, r * TUFT_CORE, (1.0, 1.0, TUFT_CORE_SQUASH),
+                  place(at.x, at.y, at.z, rot_z=rng.random() * math.tau),
+                  subdiv=0)
     ln = r * NEEDLE_LEN_GAIN         # needles overshoot the old pad's radius
     wd = leaf_width_for("needle", ln) * NEEDLE_FASCICLE_GAIN
     az0 = rng.random() * math.tau
     for i in range(NEEDLES_PER_TUFT):
-        # Golden-angle spiral out from the shoot, splayed from nearly along the
-        # branch to nearly perpendicular — a fascicle sprays, it does not sit
-        # flat like the disc this replaces.
-        add_blade_or_leaf(
-            fol, rng, ln, wd,
-            0.45 + (i / NEEDLES_PER_TUFT) * 1.25 + rng.random() * 0.25,
-            az0 + i * 2.39996 + rng.random() * 0.3,
-            at, "needle", NEEDLE_SEGMENTS)
+        u = i / NEEDLES_PER_TUFT
+        if aim is None:
+            # Golden-angle spiral up and out from the leader's tip.
+            tilt = 0.30 + u * 0.9 + rng.random() * 0.25
+            az = az0 + i * 2.39996 + rng.random() * 0.3
+        else:
+            # Fanned about the limb's bearing and close to level, so a whorl
+            # of tufts reads as a tier with sky between tiers, not as one
+            # continuous sleeve of bristles (the ball of spikes this replaces
+            # pointed every way, a third of it straight up).
+            tilt = 1.05 + rng.random() * 0.45
+            az = aim + (u - 0.5) * 2.6 + (rng.random() - 0.5) * 0.3
+        add_blade_or_leaf(fol, rng, ln, wd, tilt, az,
+                          _off_core(at, tilt, az, r * TUFT_CORE), "needle",
+                          NEEDLE_SEGMENTS)
+
+
+# ── juniper (V2.92, F178) ────────────────────────────────────────────────────
+#
+# Rocky Mountain Juniper was drawn as the default conifer: a spruce's stacked
+# tiers, widened 1.7x to a juniper's footprint. A juniper has no tiers. It is a
+# short trunk under a dense, irregular cone of scale-leaved sprays, foliated
+# nearly to the ground, its surface a mass of small tufts rather than shelves.
+#
+# Built on one leader with many short branches at irregular heights and
+# bearings (never whorls), more of them low down where a cone's surface is,
+# spreading at the bottom and ascending at the top, long below and short above,
+# each carrying spray tufts along its OUTER part. The inside of the cone is left
+# empty: a first build that also filled the core with tufts came out as a black
+# column, every spray shading every other. Many small branches rather than a
+# few long ones, because the triangle budget drops whole branches when it
+# thins, and dropping a few big ones left the cone lopsided.
+#
+# A tuft is the pine's, a faceted core with sprays out of it, and for the same
+# reason: it reads as a mass. The sprays are short, so the surface is a lumpy
+# fuzz; long ones stood out from it as dark planks.
+JUNIPER = {
+    "branches": (26, 42, 60),        # by tier
+    "tilt": (0.55, 1.50),            # off the vertical: top, bottom
+    "crown_base": (0.02, 0.04, 0.05),
+    "tufts": (2, 2, 2),              # along each branch's outer part
+    "outer": 0.55,                   # ... that part, as a fraction of it
+    "core": 0.85,                    # core radius / tuft radius
+    "sprays": 5,                     # ribbons in one tuft
+    "spray_gain": 0.8,               # spray length / tuft radius
+    "spray_width": 2.4,              # x the scale leaf's own width ratio
+    "apex_tufts": 3,                 # on the leader's last stretch
+}
+
+
+def _spray_tuft_tris():
+    return ICO_TRIS + leaf_tris("scale", NEEDLE_SEGMENTS) * JUNIPER["sprays"]
+
+
+def _spray_tuft(fol, rng, at, r, aim=None):
+    """A tuft of flattened scale-leaf sprays round a core, up and out along
+    the branch's bearing ``aim`` (all round at the apex, where it is None)."""
+    J = JUNIPER
+    add_ellipsoid(fol, r * J["core"], (1.0, 1.0, 0.8),
+                  place(at.x, at.y, at.z, rot_z=rng.random() * math.tau),
+                  subdiv=0)
+    ln = r * J["spray_gain"]
+    wd = leaf_width_for("scale", ln) * J["spray_width"]
+    az0 = rng.random() * math.tau
+    for i in range(J["sprays"]):
+        u = i / J["sprays"]
+        if aim is None:
+            tilt = 0.20 + u * 0.8 + rng.random() * 0.3
+            az = az0 + i * 2.39996 + rng.random() * 0.4
+        else:
+            tilt = 0.60 + rng.random() * 0.70
+            az = aim + (u - 0.5) * 2.6 + (rng.random() - 0.5) * 0.4
+        add_blade_or_leaf(fol, rng, ln, wd, tilt, az,
+                          _off_core(at, tilt, az, r * J["core"]), "scale",
+                          NEEDLE_SEGMENTS)
+
+
+def _build_juniper(tier, rng, aspect, grain):
+    from . import conventions as C
+    J = JUNIPER
+    bark = bmesh.new()
+    fol = bmesh.new()
+    crown_half = 0.5 / aspect
+    tuft_r = crown_half * (0.30, 0.24, 0.20)[tier]
+    trunk = _trunk_line(rng, 0.010, n=5, top=0.95)
+    z0 = J["crown_base"][tier]
+    branches, groups, pts = [], [], []
+    nb = J["branches"][tier]
+    for i in range(nb):
+        # Irregular heights, more of them low down, where a cone's surface is.
+        f = 1.0 - math.sqrt(1.0 - (i + rng.random()) / nb)
+        z = z0 + (0.88 - z0) * f
+        az = rng.random() * math.tau
+        # Spreading at the bottom of the cone, ascending at the top.
+        tilt = (J["tilt"][1] - (J["tilt"][1] - J["tilt"][0]) * f
+                + (rng.random() - 0.5) * 0.25)
+        # A cone: long below, short above, ragged throughout.
+        length = crown_half * 2.2 * ((1 - f) ** 0.7 * 0.85 + 0.12) \
+            * (0.8 + rng.random() * 0.4)
+        o = Vector((0.0, 0.0, z))            # on the axis; see _trunk_xy
+        shift = _trunk_xy(trunk, z)
+        d = Vector((math.sin(tilt) * math.cos(az),
+                    math.sin(tilt) * math.sin(az), math.cos(tilt)))
+        tip = o + d * length
+        branches.append([o, tip, shift])
+        pts.extend((o, tip))
+        g = []
+        n = J["tufts"][tier]
+        for k in range(n):
+            t = 1.0 - J["outer"] * k / max(1, n - 1)
+            at = o.lerp(tip, t) + Vector(((rng.random() - 0.5) * tuft_r,
+                                          (rng.random() - 0.5) * tuft_r,
+                                          (rng.random() - 0.3) * tuft_r * 0.5))
+            # Finer toward the top, or a young tree's big tufts square off
+            # the apex and the cone reads as a column.
+            r = tuft_r * (0.8 + rng.random() * 0.4) * (1.0 - 0.45 * f)
+            # Never below the ground: a core reaching under z=0 made the unit
+            # frame lift the whole tree, and the youngest juniper's trunk
+            # stood on its own foliage, clear of the ground.
+            at.z = max(at.z, r * J["core"] * 0.8)
+            g.append([at, r, az, shift])
+        groups.append(g)
+    # The apex: a few tufts on the leader's last stretch, so the cone closes.
+    apex = []
+    for k in range(J["apex_tufts"]):
+        z = 0.95 - 0.07 * k
+        az = rng.random() * math.tau
+        apex.append([Vector((
+            math.cos(az) * tuft_r * 0.3 * (k > 0),
+            math.sin(az) * tuft_r * 0.3 * (k > 0), z)), tuft_r * 0.55, None,
+            _trunk_xy(trunk, z)])
+    groups.append(apex)
+    bark_tris = (_cone_tris(5) * (len(trunk) - 1)
+                 + _cone_tris(4) * len(branches))
+    groups = thin_groups_to_budget(groups, _spray_tuft_tris(),
+                                   C.TRI_BUDGETS[f"tree_tier{tier}"], bark_tris)
+    tufts = [t for g in groups for t in g]
+    reach = (leaf_extent(tuft_r * J["spray_gain"], 1.0, "scale")[0]
+             / max(1e-6, tuft_r) + J["core"] * 0.8)
+    pts.extend(t[0] for t in tufts)
+    rads = [0.0] * (len(pts) - len(tufts)) + [t[1] * reach for t in tufts]
+    shape_to_aspect(pts, aspect, height=1.0, radii=rads)
+    for o, tip, shift in branches:
+        o += shift
+        tip += shift
+    for t in tufts:
+        t[0] += t[3]
+    for a, b in zip(trunk, trunk[1:]):
+        add_cone_between(bark, a, b, max(0.006, 0.022 * (1 - a.z * 0.7)),
+                         max(0.005, 0.022 * (1 - b.z * 0.7)), 5)
+    for o, tip, _shift in branches:
+        add_cone_between(bark, o, tip, 0.008, 0.003, 4)
+    for at, r, aim, _shift in tufts:
+        _spray_tuft(fol, rng, at, r, aim)
+    return bark, fol
 
 
 # ── deciduous ────────────────────────────────────────────────────────────────
 
-def _decid_skeleton(rng, form, max_depth, min_r, trunk_r, bole):
+def _decid_skeleton(rng, form, max_depth, min_r, trunk_r, bole, arch=None):
     """Recursive da Vinci skeleton as explicit segments:
     [[start, end, r_bot, r_top, depth, terminal]] — radius² conserved across
     splits, child length scaling. Endpoints (not matrices) so the crown can be
     narrowed to the species' aspect by moving points, then each branch
-    re-stamped between its corrected ends (mesh_ops.add_cone_between)."""
+    re-stamped between its corrected ends (mesh_ops.add_cone_between).
+
+    ``arch`` is the archetype's architecture (V2.92, F178), both parts optional:
+
+    * ``stems`` (lo, hi) and ``stem_lean``: how many trunks leave the ground,
+      each leaning out, sharing the trunk's cross-section between them. Water
+      birch and Bebb's willow are recorded ``multi_stem`` and until V2.92 no
+      archetype could draw a second stem.
+    * ``leaders``: the trunk's FIRST fork, ``{"n": (lo, hi), "angle": rad,
+      "length": unit, "area": x}``, where the rest of the tree forks in twos
+      and threes. An elm's vase is four or five steep leaders; a cottonwood's
+      three or four heavy limbs.
+    * ``rise``: how strongly every later branch turns back toward the vertical.
+      The walk has no sense of up, so after three forks a branch points
+      anywhere and the crown is a ball on each limb; with ``rise`` the limbs
+      keep climbing, and a crown whose leaders diverge comes out widest at the
+      top, which is what a vase is.
+    """
+    arch = arch or {}
+    lead = arch.get("leaders")
+    rise = arch.get("rise", 0.0)
     segs = []
 
-    def walk(mat, radius, length, depth):
+    def climb(mat):
+        """``mat`` with its growth axis turned toward +Z by ``rise``."""
+        d = (mat.to_3x3() @ Vector((0, 0, 1))).normalized()
+        want = (d + Vector((0, 0, rise))).normalized()
+        turn = d.rotation_difference(want).to_matrix().to_4x4()
+        pos = mat.to_translation()
+        return (Matrix.Translation(pos) @ turn
+                @ Matrix.Translation(-pos) @ mat)
+
+    def walk(mat, radius, length, depth, first=False):
         r_top = radius * 0.65
         terminal = depth >= max_depth or radius < min_r
         tip_mat = mat @ Matrix.Translation((0, 0, length))
@@ -408,6 +791,23 @@ def _decid_skeleton(rng, form, max_depth, min_r, trunk_r, bole):
         end = tip_mat @ Vector((0, 0, 0))
         segs.append([start, end, radius, r_top, depth, terminal])
         if terminal:
+            return
+        if first and lead:
+            lo, hi = lead["n"]
+            n = lo + int(rng.random() * (hi - lo + 1))
+            shares = [0.85 + rng.random() * 0.3 for _ in range(n)]
+            total = sum(shares)
+            base_rot = rng.random() * math.tau
+            for i in range(n):
+                # The leaders share the trunk's cross-section (area x`area`),
+                # so five of them are each half the trunk, not five trunks.
+                r_child = r_top * math.sqrt(shares[i] / total * lead["area"])
+                l_child = lead["length"] * (0.85 + rng.random() * 0.3)
+                spread = lead["angle"] * (0.8 + rng.random() * 0.4)
+                rot = (Matrix.Rotation(base_rot + i * math.tau / n
+                                       + (rng.random() - 0.5) * 0.4, 4, "Z")
+                       @ Matrix.Rotation(spread, 4, "X"))
+                walk(tip_mat @ rot, r_child, l_child, depth + 1)
             return
         n = 3 if rng.random() < form["split_bias"] else 2
         # Split the parent's cross-section area among children.
@@ -421,9 +821,34 @@ def _decid_skeleton(rng, form, max_depth, min_r, trunk_r, bole):
             rot = (Matrix.Rotation(base_rot + i * math.tau / n
                                    + rng.random() * 0.5, 4, "Z")
                    @ Matrix.Rotation(spread, 4, "X"))
-            walk(tip_mat @ rot, r_child, l_child, depth + 1)
+            child = tip_mat @ rot
+            walk(climb(child) if rise else child, r_child, l_child, depth + 1)
 
-    walk(Matrix(), trunk_r, bole, 0)
+    stems = arch.get("stems")
+    n_stems = 1
+    if stems:
+        lo, hi = stems
+        n_stems = lo + int(rng.random() * (hi - lo + 1))
+    if n_stems <= 1:
+        lean = arch.get("stem_lean", 0.0)
+        mat = Matrix()
+        if lean:
+            mat = (Matrix.Rotation(rng.random() * math.tau, 4, "Z")
+                   @ Matrix.Rotation(lean * (0.8 + rng.random() * 0.4), 4, "X"))
+        walk(mat, trunk_r, bole, 0, first=True)
+        return segs
+    # Stems rise from one clump, leaning apart; each carries the share of the
+    # trunk's cross-section that keeps the whole clump's girth honest.
+    r_each = trunk_r / math.sqrt(n_stems) * 1.15
+    lean = arch.get("stem_lean", 0.2)
+    base_rot = rng.random() * math.tau
+    for i in range(n_stems):
+        az = base_rot + i * math.tau / n_stems + (rng.random() - 0.5) * 0.6
+        off = trunk_r * 1.2
+        mat = (Matrix.Translation((math.cos(az) * off, math.sin(az) * off, 0))
+               @ Matrix.Rotation(az + math.pi / 2, 4, "Z")
+               @ Matrix.Rotation(lean * (0.7 + rng.random() * 0.6), 4, "X"))
+        walk(mat, r_each, bole * (0.8 + rng.random() * 0.4), 0, first=True)
     return segs
 
 
@@ -431,6 +856,9 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     from . import conventions as C           # tier triangle budget
     g = DECID_GENERA[genus]
     form = dict(DECID_FORMS[g["form"]])
+    # An archetype may override its form's skeleton figures (V2.92): the elm's
+    # branches spread wider than its oval form's, the box elder forks lower.
+    form.update({k: g[k] for k in _FORM_OVERRIDES if k in g})
     f_scale = form["foliage_scale"] * g.get("foliage_scale", 1.0)
     droop_outer = g.get("droop_outer", 0.0)
     bark = bmesh.new()
@@ -444,14 +872,19 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     clump_r = crown_half * FOLIAGE_FRAC[tier] * f_scale * grain
 
     trunk_r = g.get("trunk_r", form["trunk_r"])
+    # `twig_r` scales the thinnest limb that still forks (V2.92): below 1 a
+    # crown carries more, finer ends (the elm's), above 1 fewer, coarser ones
+    # (the box elder's, whose compound leaves cost four simple ones each and
+    # cannot afford to spend a third of the tree's triangles on twigs).
     segs = _decid_skeleton(rng, form, DECID_DEPTH[tier],
-                           trunk_r * DECID_MIN_R_FRAC[tier], trunk_r,
-                           form["bole"])
+                           trunk_r * DECID_MIN_R_FRAC[tier] * g.get("twig_r", 1.0),
+                           trunk_r, form["bole"], arch=g)
     blobs = []          # [center, radius, z_of_anchor] — clear-bole gated below
+    per_tip = max(2, round(CLUMPS_PER_TIP[tier] * g.get("clumps", 1.0)))
     for start, end, r_bot, r_top, depth, terminal in segs:
         tip = end
         if terminal:
-            n = CLUMPS_PER_TIP[tier] + (1 if rng.random() < 0.6 else 0)
+            n = per_tip + (1 if rng.random() < 0.6 else 0)
             base_r = clump_r * (0.85 + 0.3 * rng.random())
             spread = clump_r * (1 + droop_outer * 0.4)
             dz = -droop_outer * 0.11
@@ -496,7 +929,16 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     # correspondingly fewer — which is also how the tree resolves the same
     # constraint.
     leaf_shape = C.DECID_LEAF_SHAPE.get(genus, "ovate")
-    one_leaf = leaf_tris(leaf_shape, CROWN_LEAF_SEGMENTS)
+    # A compound leaf's leaflet count, where the species' differs from the
+    # outline's default of three pairs (V2.92): the box elder carries three
+    # leaflets, and at seven each leaf cost eight simple ones and the crown
+    # could afford a sparse handful of long cards.
+    pairs = g.get("leaflet_pairs")
+    # ... and its leaflets' length against the leaf's: at a frond's default a
+    # three-leaflet leaf covers a fifth of what a simple one does, and the crown
+    # came out as specks on bare twigs.
+    leaflet = g.get("leaflet_len")
+    one_leaf = leaf_tris(leaf_shape, CROWN_LEAF_SEGMENTS, pairs=pairs)
     bark_tris = len(segs) * (5 * 2 + 5 * 2)
     card_len = C.crown_card_length(
         genus, crown_half=crown_half, crown_frac=CROWN_FRAC[g["form"]],
@@ -508,7 +950,7 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
         CROWN_LEAF_COVER * (clump_r / max(1e-6, card_len)) ** 2))))
     outer_cost = leaves_per * one_leaf
     card_reach = clump_r * CROWN_LEAF_SCATTER + leaf_extent(
-        card_len, 1.4, leaf_shape)[0]
+        card_len, 1.4, leaf_shape, pairs=pairs, leaflet=leaflet)[0]
 
     # Fit the crown to the tier's triangle budget before anything is stamped.
     # A branch cross-section is 5 segments capped both ends; the crown is what
@@ -561,7 +1003,8 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
                 fol, rng, card_len, wd,
                 tilt0 + (k / max(1, leaves_per - 1)) * fan + rng.random() * 0.2,
                 az0 + k * 2.39996 + rng.random() * 0.35,
-                at, leaf_shape, CROWN_LEAF_SEGMENTS)
+                at, leaf_shape, CROWN_LEAF_SEGMENTS, pairs=pairs,
+                leaflet=leaflet)
     return bark, fol
 
 
@@ -579,6 +1022,8 @@ def build_tree(archetype, tier, rng, coll, name_prefix=""):
     grain = C.grain_for(archetype)
     if archetype in PINE_KINDS:
         bark_bm, fol_bm = _build_pine(archetype, tier, rng, aspect, grain)
+    elif archetype == "juniper":
+        bark_bm, fol_bm = _build_juniper(tier, rng, aspect, grain)
     elif archetype in CONIFER_KINDS:
         bark_bm, fol_bm = _build_conifer(archetype, tier, rng, aspect)
     elif archetype in DECID_GENERA:

@@ -244,7 +244,10 @@ class TestSiteContext(unittest.TestCase):
     def test_site_filters_derived(self):
         f = llm._site_filters(self._SC)
         self.assertEqual(f["zone"], 3)
-        self.assertEqual(f["ab_ecoregion"], "aspen_parkland")
+        # Along the lineage since V2.86: the region itself and the ecozone
+        # above it, so a species known only at the ecozone is not excluded.
+        self.assertIn("aspen_parkland", f["ab_ecoregion"])
+        self.assertIn("zone_prairies", f["ab_ecoregion"])
         self.assertEqual(f["soil_ph"], 7.2)
 
     def test_conditions_line(self):

@@ -215,6 +215,9 @@ class HabitatScore:
     # plants support (schema v20 fauna expansion). Like n_lepidoptera_supported
     # this is reported alongside the score but NOT summed into the headline, so
     # existing designs' scores stay stable as the fauna dataset grows.
+    # Linked by ANY record, food or shelter: kept for the API and the critic.
+    # No page shows it since V3.20 (OV-5): they count food edges, through
+    # ``what_it_feeds.food_counts``, as "recorded as food for N kinds".
     fauna_by_taxon: dict = field(default_factory=dict)
 
     # Food-web completeness (F3) — does the design close the Tallamy chain
@@ -235,6 +238,9 @@ class HabitatScore:
     #: Per-layer ``{have, want, present}`` when scored against a reference,
     #: so a panel can say *which* of the reference's layers are thin.
     layer_detail: dict = field(default_factory=dict)
+    #: What "native" was counted as (V3.25, ED-17): "native around Edmonton"
+    #: inside a region pack, "native to Saskatchewan" for a pin elsewhere.
+    native_basis: str = ""
 
     def as_dict(self) -> dict:
         """JSON-serialisable view, used by the scripting API."""
@@ -246,6 +252,7 @@ class HabitatScore:
             "components": {
                 "native":     {"ratio": self.native_ratio,
                                "native_species": self.native_species,
+                               "basis": self.native_basis,
                                "score": round(self.score_native, 1), "max": 20},
                 "keystone":   {"species": self.keystone_species,
                                "score": round(self.score_keystone, 1), "max": 15},
@@ -328,7 +335,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
     if n:
         head = 20.0 - (getattr(score, "score_native", 0.0) or 0.0)
         if head > 0.5 and (n - nat) > 0:
-            add(head, f"{n - nat} of {n} species aren't Alberta-native — "
+            basis = getattr(score, "native_basis", "") or "native"
+            add(head, f"{n - nat} of {n} species aren't {basis} — "
                       f"swapping some for natives adds up to +{int(round(head))} "
                       "pts and more wildlife value.")
 
@@ -338,7 +346,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 15.0 - (getattr(score, "score_keystone", 0.0) or 0.0)
         add(head, f"Only {n_key} keystone species so far — these carry the most "
                   "of the food web; a few more add up to "
-                  f"+{int(round(head))} pts (filter Plants → Use → Keystone).")
+                  f"+{int(round(head))} pts (Placement → Plants → Filters → "
+                  "Role: Keystone Species).")
 
     # Larval-host plants (full at 10).
     n_host = len(getattr(score, "host_species", []) or [])
@@ -347,7 +356,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         add(head, f"{n_host} caterpillar-host plant"
                   f"{'s' if n_host != 1 else ''} — hosts make the caterpillars "
                   "most songbirds feed their young; more add up to "
-                  f"+{int(round(head))} pts (Plants → Use → Host Plant).")
+                  f"+{int(round(head))} pts (Placement → Plants → Filters → "
+                  "Role: Larval Host).")
 
     # Bird-food plants (full at 10).
     n_bird = len(getattr(score, "bird_species", []) or [])
@@ -355,7 +365,8 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         head = 10.0 - (getattr(score, "score_bird", 0.0) or 0.0)
         add(head, f"{n_bird} bird-food plant{'s' if n_bird != 1 else ''} — "
                   "seed and fruit producers extend the design into fall/winter "
-                  f"(up to +{int(round(head))} pts, Plants → Use → Bird Food).")
+                  f"(up to +{int(round(head))} pts, Placement → Plants → "
+                  "Filters → Role: Bird Food).")
 
     # Vegetation layers (3 pts each, up to 5).
     present = set(getattr(score, "layers_present", []) or [])
@@ -374,7 +385,7 @@ def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
         add(head, f"{n_struct} habitat structure type"
                   f"{'s' if n_struct != 1 else ''} — a bee hotel, brush pile or "
                   f"small pond adds up to +{int(round(head))} pts "
-                  "(Structures tab).")
+                  "(Placement → Structures).")
 
     nudges.sort(key=lambda d: -d["headroom"])
     return nudges[:limit]
@@ -443,6 +454,7 @@ def compute_habitat_score(
     connection=None,
     ecoregion: Optional[str] = None,
     resolve_reference=None,
+    site_config: Optional[dict] = None,
 ) -> Optional[HabitatScore]:
     """Compute the Habitat Value Score for a design.
 
@@ -462,6 +474,10 @@ def compute_habitat_score(
             universal forest-garden stack (F129). Omitted or unresolvable,
             the universal stack is used exactly as before — so every existing
             caller keeps the score it had.
+        site_config: the design's site (its pin). "Native" is counted by
+            :mod:`src.design_native` for it (V3.25, ED-17, the owner's E5):
+            the region pack's list inside a pack or with no pin, the pin's
+            province elsewhere. Until V3.25 it was the Alberta flag.
         resolve_reference: optional resolver, injected for tests; defaults to
             ``reference_ecosystem.resolve_reference_community``.
 
@@ -493,8 +509,9 @@ def compute_habitat_score(
         plant_ids = list({p["plant_id"] for p in placed_plants})
         for pid in plant_ids:
             row = connection.execute(
-                "SELECT id, common_name, plant_type, mature_height_meters, "
-                "       native_to_alberta, bloom_period "
+                "SELECT id, common_name, scientific_name, plant_type, "
+                "       mature_height_meters, native_to_alberta, "
+                "       native_provinces, bloom_period "
                 "FROM plants WHERE id = ?",
                 (pid,)
             ).fetchone()
@@ -560,9 +577,9 @@ def compute_habitat_score(
         return key in plant_uses_map.get(pid, set())
 
     # ── 1. % natives (20 pts) ─────────────────────────────────────────
-    native_species = sum(
-        1 for r in plant_rows.values() if r.get("native_to_alberta")
-    )
+    from src import design_native
+    counts_native = design_native.rule(site_config)
+    native_species = sum(1 for r in plant_rows.values() if counts_native(r))
     native_ratio = native_species / n_species if n_species else 0.0
     score_native = native_ratio * 20
 
@@ -730,4 +747,53 @@ def compute_habitat_score(
         food_web=food_web,
         layer_basis=layer_basis,
         layer_detail=layer_detail,
+        native_basis=design_native.words(site_config),
     )
+
+
+# ── One score per design (V3.20, OV-4) ──────────────────────────────────────
+# The Habitat page scored a design against its pin's ecoregion (the layer
+# component rebased on the reference community, V2.65) and the Report card,
+# the PDF, the design critic and the API without one, so one design read 78 on
+# Habitat and 83 on the Report card (OVF-1). The owner chose the rebased score
+# for all of them (decision O2). Every caller now goes through here.
+
+def site_pin(project) -> tuple:
+    """``(lat, lng)`` of a project's site pin, or ``(None, None)``. Takes a
+    project dict, or an object carrying one (``DesignGenerator.project``,
+    ``permadesign_api.Project.as_dict()``)."""
+    data = project if isinstance(project, dict) else None
+    if data is None:
+        data = getattr(project, "project", None)
+    if data is None and hasattr(project, "as_dict"):
+        data = project.as_dict()
+    sc = ((data or {}).get("properties") or {}).get("site_config") or {}
+    lat, lng = sc.get("latitude"), sc.get("longitude")
+    try:
+        return (float(lat), float(lng)) if lat is not None and lng is not None \
+            else (None, None)
+    except (TypeError, ValueError):
+        return (None, None)
+
+
+def ecoregion_at(lat, lng) -> Optional[str]:
+    """The ecoregion key at the pin, as the Habitat page resolves it; ``None``
+    with no pin or outside the mapped ecoregions."""
+    if lat is None or lng is None:
+        return None
+    try:
+        from src.ecoregion import lookup_ecoregion
+        return lookup_ecoregion(lat, lng)
+    except Exception:                                      # noqa: BLE001
+        return None
+
+
+def score_for_project(placed_plants, structures, *, lat=None, lng=None,
+                      connection=None) -> Optional[HabitatScore]:
+    """:func:`compute_habitat_score` against the ecoregion at ``lat``,
+    ``lng``: the one score every page shows for a design (OV-4)."""
+    return compute_habitat_score(placed_plants, structures,
+                                 connection=connection,
+                                 ecoregion=ecoregion_at(lat, lng),
+                                 site_config={"latitude": lat,
+                                              "longitude": lng})

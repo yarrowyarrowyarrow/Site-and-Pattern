@@ -27,7 +27,21 @@ fi
 
 # Install build dependencies
 echo -e "${YELLOW}Installing build dependencies...${NC}"
-pip install -q pyinstaller
+# On macOS at the versions the last good release was built with
+# (constraints-macos.txt, V3.32 FN-12); the workflow installs requirements.txt
+# against the same file.
+CONSTRAINTS=""
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    CONSTRAINTS="-c scripts/packaging/constraints-macos.txt"
+fi
+pip install -q pyinstaller $CONSTRAINTS
+
+# Record what this build was made with (V3.32, FN-12): pip runs quietly, so
+# until V3.31 no log said which PyQt6 or numpy went into an installer. The
+# file ships in the bundle and is printed into the build log.
+pip freeze > build-versions.txt
+pip --version >> build-versions.txt
+cat build-versions.txt
 
 # Bake the version into the bundle so the frozen app knows which
 # V<major>.<minor> it is for the in-app updater (src/app_version.py). CI
@@ -142,7 +156,21 @@ Trouble? It still says "damaged" or won't open:
 Re-download the .dmg (a half-finished download can corrupt it), then
 repeat Step 1 and Step 2.
 EOF
-    hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg
+    # hdiutil fails now and then on GitHub's macOS runners with "create
+    # failed - Resource busy" while a background diskimages-helper or a
+    # security scan still holds the staging folder: V3.06's DMG failed that
+    # way after the app had built and its signature verified. Wait and retry.
+    for attempt in 1 2 3 4 5; do
+        if hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg; then
+            break
+        fi
+        if [ "$attempt" -eq 5 ]; then
+            echo "hdiutil create failed five times" >&2
+            exit 1
+        fi
+        echo -e "${YELLOW}hdiutil create failed (attempt $attempt of 5); retrying in $((attempt * 10)) s...${NC}"
+        sleep $((attempt * 10))
+    done
     rm -rf "$STAGING"
     echo -e "${GREEN}✓ Created dist/SiteAndPattern.dmg${NC}"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then

@@ -59,7 +59,7 @@ GRADED_HIGH = 0.55
 GRADED_LOW = 0.45
 
 #: Shapes and structures that ARE a cue, by the vocabulary the drawer already
-#: uses (src/structure_panel.py presets + src/lawn_zones.py labels). Restated
+#: uses (src/shape_tool.py presets + src/lawn_zones.py labels). Restated
 #: nowhere: the zone labels are imported so the drawer and this cannot drift.
 _LAWN_SHAPES = ("Lawn Area",)
 _BED_SHAPES = ("Garden Bed", "Mulch Area")
@@ -152,7 +152,7 @@ def frontage_for(project: dict):
 
 def frontage_is_assumed(project: Optional[dict] = None) -> bool:
     """Whether the frontage is still a guess rather than a measurement."""
-    return not frontage_for(project or {}).measured
+    return not frontage_for(project or {}).known
 
 
 # ── The six cues ─────────────────────────────────────────────────────────────

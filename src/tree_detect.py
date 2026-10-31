@@ -76,7 +76,7 @@ from typing import Callable, Optional
 _TILE_URL = ("https://server.arcgisonline.com/ArcGIS/rest/services/"
              "World_Imagery/MapServer/tile/{z}/{y}/{x}")
 # Legacy product identifier, retained intentionally (see CLAUDE.md).
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
 _TIMEOUT = 15.0
 
 _TILE_PX = 256

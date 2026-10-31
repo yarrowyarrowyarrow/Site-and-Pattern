@@ -1,15 +1,19 @@
 """
-analysis_panel.py — Side-panel tab for site analysis overlays.
+analysis_panel.py — the Design tab's widget, and the builder of two Site pages.
 
-Contains inner tabs:
-  A1: Sun Path / Shadow overlay
-  A4: Wind / Windbreak effect
+Builds:
+  A1: Sun Path / Shadow overlay   } Site › Sun & Shade and Site › Wind since
+  A4: Wind / Windbreak effect     } V3.07 (src/side_panel_layout.py moves them)
   H1: Habitat Value Score (Tallamy-style composite scoring of native habitat quality)
-  plus the observation/design tabs: This Month (phenology) and Bees.
+  F51: This Month (phenology), the first section of Design › Over time (V3.08)
+  Food: src/food_page.py, the Bees page and the Wildlife and Harvest
+        calendars as one (V3.08)
+The Design tab's other pages (Report card, Planted, Over time, Water) are built
+by other panels and put in this strip by src/side_panel_layout.py.
 
 (The Sector, Season and Forage tabs were retired in V2.25: sun and wind cover
 the sector wedges' job, the season tile filter added no design value, and the
-forage calendar lives in Planning → Wildlife. The Field Study / Lessons /
+forage calendar is Design › Food's month by month (V3.08). The Field Study / Lessons /
 Present teaching tabs moved to the top-level Learn tab — src/learn_panel.py.)
 """
 
@@ -21,18 +25,15 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QSpinBox,
     QFormLayout, QSlider, QCheckBox,
-    QGroupBox, QFrame, QTextEdit, QDial, QScrollArea,
+    QGroupBox, QFrame, QDial, QScrollArea,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
 from PyQt6.QtGui import QPixmap
 
 
-# Quiet companion to the orange primary on the Sun & Shade tab.
-_SUN_BTN_SECONDARY = (
-    "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-    "border-radius: 4px; padding: 6px; }"
-    "QPushButton:hover { background: #455a64; }"
-)
+# One colour for the main action, the app's green, and grey for the rest
+# (F209, V3.08): Sun & Shade's primary was orange, Wind's teal and blue.
+from src.ui_style import BTN_PRIMARY, BTN_SECONDARY
 
 
 class AnalysisPanel(QWidget):
@@ -123,9 +124,16 @@ class AnalysisPanel(QWidget):
         self._build_phenology_tab()
         # Field Study / Lessons / Present moved to the top-level Learn tab
         # (src/learn_panel.py, V2.25) — teaching tools, not analysis.
-        self._build_bee_tab()
+        self._build_food_tab()
 
         layout.addWidget(self._tabs)
+        # V3.05: the score fills itself when its page is on screen and the
+        # design changes; it had a Calculate button over an empty box, and a
+        # result that went stale with the next edit (src/live_refresh.py).
+        from src.live_refresh import LiveRefresh
+        self._live = LiveRefresh(self, self._tabs,
+                                 {self._habitat_page: self._calc_habitat_score,
+                                  self._food: self._food.refresh})
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A1 — Sun Path / Shadow
@@ -145,7 +153,10 @@ class AnalysisPanel(QWidget):
         The existing-features *import* stayed on the Site tab: entering what is
         already on the ground is data capture, not analysis, and folding the
         two together is what made "Features & Shade" two things under one
-        label.
+        label. V3.37 brought the features back as a list, at the owner's ask,
+        closed until opened: which of them cast the shade, a tick each, and
+        Scan this area to bring them in (src/shade_features.py). The tools
+        for drawing them stay on Site › Features.
         """
         page = QScrollArea()
         page.setWidgetResizable(True)
@@ -157,17 +168,18 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Where the light falls, and what stands in its way. Pick a date, "
-            "drag the clock: the sun moves along its arc and the shadows sweep "
+            "Pick a date and drag the clock: the sun moves, and the shadows "
             "with it."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         self._build_sun_when_group(layout)
-        self._build_sun_arc_group(layout)
+        # The shade first (V3.14, the owner's ask): where the shadow falls is
+        # what a planting decision needs; the arc is the explanation of it.
         self._build_shade_group(layout)
+        self._build_sun_arc_group(layout)
         self._build_shade_zones_group(layout)
         # Wired last, in one place: every one of these handlers reads controls
         # from more than one group, so connecting inside a builder would make
@@ -183,10 +195,13 @@ class AnalysisPanel(QWidget):
         # Results area
         self._sun_info = QLabel("")
         self._sun_info.setWordWrap(True)
-        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
+        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 12px; padding: 4px;")
         layout.addWidget(self._sun_info)
 
         layout.addStretch()
+        # Hosted by the Site tab since V3.07 (src/side_panel_layout.py); built
+        # and run here, so nothing about how it works moved with it.
+        self._sun_page = page
         self._tabs.addTab(page, "Sun && Shade")
 
     def _build_sun_when_group(self, layout):
@@ -231,6 +246,9 @@ class AnalysisPanel(QWidget):
             "summer clock\n(daylight saving plus the distance to the "
             "time-zone meridian).")
         self._sun_time_label = QLabel("Sun time  15:00")
+        # addRow(label, field) does not link them (only addRow("text", field)
+        # does), and the label carries the time too: name the slider itself.
+        self._sun_time_slider.setAccessibleName("Sun time")
         form.addRow(self._sun_time_label, self._sun_time_slider)
         v.addLayout(form)
 
@@ -250,7 +268,7 @@ class AnalysisPanel(QWidget):
             "branches cast ~30% shade. Trees marked without a type still "
             "cast full shade.")
         self._shade_leafoff_note.setWordWrap(True)
-        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._shade_leafoff_note.setVisible(False)
         v.addWidget(self._shade_leafoff_note)
 
@@ -276,8 +294,10 @@ class AnalysisPanel(QWidget):
         form.addRow(self._sun_shadow_length)
 
         arc_row = QHBoxLayout()
-        arc_row.addWidget(QLabel("Arc radius:"))
+        arc_label = QLabel("Arc radius:")
+        arc_row.addWidget(arc_label)
         self._sun_arc_radius = QSpinBox()
+        arc_label.setBuddy(self._sun_arc_radius)
         self._sun_arc_radius.setRange(20, 500)
         self._sun_arc_radius.setValue(80)
         self._sun_arc_radius.setSuffix(" m")
@@ -300,11 +320,8 @@ class AnalysisPanel(QWidget):
         btn_show.setToolTip(
             "Draw the sun's arc centred on your property.\n"
             "Use 'Move…' to centre it somewhere specific instead.")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #ff6d00; }"
-        )
+        # Secondary since V3.14: Show shade is the page's main action.
+        btn_show.setStyleSheet(BTN_SECONDARY)
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
 
@@ -312,17 +329,19 @@ class AnalysisPanel(QWidget):
         btn_move.setToolTip(
             "Click this, then click the map to centre the arc on a "
             "particular bed or tree.")
-        btn_move.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_move.setStyleSheet(BTN_SECONDARY)
         btn_move.clicked.connect(self._on_move_sun_path)
         btn_row.addWidget(btn_move)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.setStyleSheet(BTN_SECONDARY)
         btn_clear.clicked.connect(self.sun_path_cleared.emit)
         btn_row.addWidget(btn_clear)
         v.addLayout(btn_row)
 
         layout.addWidget(box)
+        # Behind View → Advanced tools (V3.21, src/advanced_tools.py).
+        self._sun_arc_box = box
 
     def _build_shade_group(self, layout):
         """The shade the site's trees and buildings actually cast, at that hour."""
@@ -338,13 +357,19 @@ class AnalysisPanel(QWidget):
         # will be real BEFORE they click — refreshed by update_caster_summary.
         self._caster_summary = QLabel("")
         self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 12px;")
+        # V3.37, the owner's ask: the trees and buildings themselves, closed
+        # until opened, each ticked while it casts (src/shade_features.py).
+        from src.shade_features import ShadeFeatures
+        self.shade_features = ShadeFeatures()
         self.update_caster_summary(None)
         v.addWidget(self._caster_summary)
+        v.addWidget(self.shade_features)
 
         opa_row = QHBoxLayout()
         opa_row.addWidget(QLabel("Opacity:"))
         self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setAccessibleName("Shade opacity")
         self._shade_opacity.setRange(0, 100)
         self._shade_opacity.setValue(50)
         self._shade_opacity.valueChanged.connect(
@@ -354,14 +379,16 @@ class AnalysisPanel(QWidget):
 
         btn_row = QHBoxLayout()
         btn_show = QPushButton("Show shade")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #37474f; color: #eceff1; "
-            "border: 1px solid #607d8b; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; } QPushButton:hover { background: #455a64; }")
+        btn_show.setToolTip(
+            "Cast the shade of the site's trees, buildings and the design's "
+            "own canopy\nat the date and time above.")
+        # The primary button, as ui_style's tiers always said it was; it had
+        # a grey of its own beside a green Show sun path (V3.14).
+        btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_shade)
         btn_row.addWidget(btn_show)
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.setStyleSheet(BTN_SECONDARY)
         btn_clear.clicked.connect(self.shade_cleared.emit)
         btn_row.addWidget(btn_clear)
         v.addLayout(btn_row)
@@ -380,7 +407,7 @@ class AnalysisPanel(QWidget):
         # the tags (src/db/shade_zones.py) so plant matching can read them
         # without recomputing.
         btn_classify = QPushButton("Classify planting zones")
-        btn_classify.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_classify.setStyleSheet(BTN_SECONDARY)
         btn_classify.setToolTip(
             "Tag every spot full sun / partial shade / full shade from the "
             "season-average shade, and cache it for plant matching.")
@@ -398,14 +425,14 @@ class AnalysisPanel(QWidget):
             '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
             '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
             '<span style="color:#5c6bc0">■</span> Full shade')
-        legend.setStyleSheet("font-size: 11px;")
+        legend.setStyleSheet("font-size: 12px;")
         zrow.addWidget(legend)
         zrow.addStretch()
         v.addLayout(zrow)
 
         self._shade_zone_status = QLabel("")
         self._shade_zone_status.setWordWrap(True)
-        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 12px;")
         v.addWidget(self._shade_zone_status)
 
         layout.addWidget(box)
@@ -489,6 +516,14 @@ class AnalysisPanel(QWidget):
             return
         self._sun_lat, self._sun_lng = lat, lng
         self._reclamp_time_to_date()
+        # The Wind tab's empty state asked for a pin that was already down
+        # (V3.05 audit); say what is actually missing. Since V3.07 the rose
+        # comes with the pin's site data (src/wind_flow.py).
+        if not getattr(self, "_wind_fetched", False):
+            self.set_wind_status(
+                "No wind yet: it comes with the site pin (Site Info)."
+                if lat is None else "No wind for this pin yet: it arrives with "
+                "the site's data, or press Refresh wind data.")
 
     def _reclamp_time_to_date(self):
         from src import sun_shade
@@ -564,10 +599,13 @@ class AnalysisPanel(QWidget):
         from src import sun_shade
         buildings, trees = sun_shade.caster_counts(project_dict)
         text, have = sun_shade.caster_summary(
-            buildings, trees, where="Site → Features")
+            buildings, trees, where="Site → Features",
+            off=sun_shade.switched_off(project_dict), off_where="below")
         lbl.setText(text)
         lbl.setStyleSheet(
-            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
+        sc = ((project_dict or {}).get("properties") or {}).get("site_config")
+        self.shade_features.refresh(project_dict, sc)
 
     def mark_zones_shown(self):
         """Re-check the 'Show on map' box (without re-emitting) after a classify
@@ -605,28 +643,27 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Where does the wind come from — and which parts of your site are "
-            "sheltered? Fetch this site's real wind history, check the "
-            "direction, then overlay the sheltered zones on the map."
+            "Where the wind comes from, and which parts of the site it misses. "
+            "The rose comes with the site pin."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
 
         # ── Step 1: real wind data (seasonal rose + current reading) ────────
-        data_group = QGroupBox("1 · Get this site's wind")
+        data_group = QGroupBox("1 · This site's wind")
         data_group.setStyleSheet(self._GROUP_STYLE)
         dg = QVBoxLayout(data_group)
         dg.setSpacing(6)
 
-        btn_fetch = QPushButton("Fetch wind data (Open-Meteo)")
-        btn_fetch.setStyleSheet(
-            "QPushButton { background: #00695c; color: #e0f2f1; "
-            "border: 1px solid #00897b; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; } QPushButton:hover { background: #00897b; }")
+        # The rose arrives with the pin (V3.07, src/wind_flow.py); this
+        # fetches it again, with a reading of the wind now.
+        btn_fetch = QPushButton("Refresh wind data")
+        # Secondary since the pin brings the rose (V3.07).
+        btn_fetch.setStyleSheet(BTN_SECONDARY)
         btn_fetch.setToolTip(
-            "Download a seasonal wind rose + current reading for this location. "
-            "Cached for offline use after the first fetch.")
+            "Fetch this site's wind again from Open-Meteo, with a reading of "
+            "the wind right now. The rose is kept for use offline.")
         btn_fetch.clicked.connect(self.wind_data_requested.emit)
         dg.addWidget(btn_fetch)
 
@@ -643,9 +680,9 @@ class AnalysisPanel(QWidget):
         dg.addWidget(self._wind_current_lbl)
 
         self._wind_status_lbl = QLabel(
-            "No data yet — drop a site pin (Site tab), then fetch.")
+            "No wind yet: it comes with the site pin (Site Info).")
         self._wind_status_lbl.setWordWrap(True)
-        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 12px;")
         dg.addWidget(self._wind_status_lbl)
 
         layout.addWidget(data_group)
@@ -658,6 +695,7 @@ class AnalysisPanel(QWidget):
 
         dial_row = QHBoxLayout()
         self._wind_dial = QDial()
+        self._wind_dial.setAccessibleName("Wind direction")
         self._wind_dial.setRange(0, 359)
         self._wind_dial.setWrapping(True)
         self._wind_dial.setNotchesVisible(True)
@@ -680,11 +718,13 @@ class AnalysisPanel(QWidget):
         dial_text.addWidget(self._wind_dial_lbl)
         dial_hint = QLabel("Drag the dial to test other directions.")
         dial_hint.setWordWrap(True)
-        dial_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        dial_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         dial_text.addWidget(dial_hint)
         speed_row = QHBoxLayout()
-        speed_row.addWidget(QLabel("Typical strength:"))
+        speed_label = QLabel("Typical strength:")
+        speed_row.addWidget(speed_label)
         self._wind_speed = QComboBox()
+        speed_label.setBuddy(self._wind_speed)
         self._wind_speed.addItems(["Light", "Moderate", "Strong", "Very Strong"])
         self._wind_speed.setCurrentIndex(1)
         speed_row.addWidget(self._wind_speed)
@@ -697,7 +737,7 @@ class AnalysisPanel(QWidget):
         self._wind_advice_lbl = QLabel("")
         self._wind_advice_lbl.setWordWrap(True)
         self._wind_advice_lbl.setStyleSheet(
-            "color: #c5e1a5; font-size: 11px; font-style: italic;")
+            "color: #c5e1a5; font-size: 12px; font-style: italic;")
         rg.addWidget(self._wind_advice_lbl)
 
         layout.addWidget(dir_group)
@@ -744,12 +784,9 @@ class AnalysisPanel(QWidget):
         btn_show = QPushButton("Show Wind Overlay")
         btn_show.setToolTip(
             "Draw the arrows and windbreak shelter zones for the direction on "
-            "the dial. (The two checkboxes above draw live, on toggle.)")
-        btn_show.setStyleSheet(
-            "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #0288d1; }"
-        )
+            "the dial. Once it is drawn, the switches above change it at "
+            "once.")
+        btn_show.setStyleSheet(BTN_PRIMARY)
         btn_show.clicked.connect(self._on_show_wind)
         btn_row.addWidget(btn_show)
 
@@ -767,6 +804,8 @@ class AnalysisPanel(QWidget):
         layout.addWidget(overlay_group)
 
         layout.addStretch()
+        # Hosted by the Site tab since V3.07, like Sun & Shade.
+        self._wind_page = page
         self._tabs.addTab(page, "Wind")
 
     @staticmethod
@@ -807,6 +846,7 @@ class AnalysisPanel(QWidget):
             return
         annual = rose.get("annual") or {}
         self._wind_rose.set_block(annual)
+        self._wind_fetched = True
 
         from src.wind import speed_category
         prevailing = annual.get("prevailing_deg")
@@ -851,6 +891,9 @@ class AnalysisPanel(QWidget):
         self._phenology = PhenologyWidget(
             plants_provider=lambda: self._placed_plants)
         page.setWidget(self._phenology)
+        # Design › Over time takes the dashboard since V3.08
+        # (src/side_panel_layout.py), first of its three sections.
+        self._phenology_page = page
         self._tabs.addTab(page, "This Month")
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -859,7 +902,7 @@ class AnalysisPanel(QWidget):
 
     def _build_habitat_tab(self):
         # Scrollable page: this tab is tall (score, value, species gallery,
-        # breakdown, tips, shade) and used to overlap when squeezed into a fixed
+        # breakdown and its parts) and used to overlap when squeezed into a fixed
         # height. A scroll area lets it grow instead (matches site_panel).
         page = QScrollArea()
         page.setWidgetResizable(True)
@@ -871,27 +914,12 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "How much native habitat your design actually provides — scored "
-            "0–100 from native ratio, keystone species, host plants, bird "
-            "food, vegetation-layer diversity, habitat structures, and bloom "
-            "continuity."
+            "How much habitat the design provides, out of 100; what the score "
+            "is made of is below it."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
-
-        btn = QPushButton("Calculate Habitat Value")
-        btn.setToolTip(
-            "Score what this design actually provides for wildlife, out of 100,\n"
-            "and list what would raise it. Needs at least one placed plant."
-        )
-        btn.setStyleSheet(
-            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
-            "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #388e3c; }"
-        )
-        btn.clicked.connect(self._calc_habitat_score)
-        layout.addWidget(btn)
 
         # Big score readout
         self._habitat_score_label = QLabel("—")
@@ -909,7 +937,7 @@ class AnalysisPanel(QWidget):
         self._lawn_counterfactual_label.setWordWrap(True)
         self._lawn_counterfactual_label.setVisible(False)
         self._lawn_counterfactual_label.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "color: #dcedc8; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
         )
         layout.addWidget(self._lawn_counterfactual_label)
@@ -953,7 +981,7 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown = QLabel("")
         self._habitat_breakdown.setWordWrap(True)
         self._habitat_breakdown.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
@@ -974,14 +1002,14 @@ class AnalysisPanel(QWidget):
         layout.addWidget(pull_label)
 
         pull_hint = QLabel(
-            "Pick a plant to preview what removing it would cost — the wildlife "
-            "that lose all their support, whether the food-web chain snaps, and "
-            "the score change.")
+            "Pick a plant to see what removing it would cost: the animals "
+            "left with nothing, and the score.")
         pull_hint.setWordWrap(True)
-        pull_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        pull_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(pull_hint)
 
         self._pull_combo = QComboBox()
+        self._pull_combo.setAccessibleName("Plant to pull")
         self._pull_combo.setToolTip("Preview the impact of removing this plant")
         self._pull_combo.currentIndexChanged.connect(self._on_pull_plant)
         layout.addWidget(self._pull_combo)
@@ -1002,59 +1030,29 @@ class AnalysisPanel(QWidget):
 
         self._chickadee_result = QLabel(
             "One clutch of chickadees needs 6,000–9,000 caterpillars to fledge. "
-            "Calculate your Habitat Value Score to see whether your host plants "
-            "could feed a brood.")
+            "Place plants to see whether your host plants could feed a brood.")
         self._chickadee_result.setWordWrap(True)
         self._chickadee_result.setStyleSheet(
             "color: #cfe3f0; font-size: 12px; padding: 8px; "
             "background: #12202a; border: 1px solid #1e4a5a; border-radius: 4px;")
         layout.addWidget(self._chickadee_result)
 
-        # Tips for raising your score
-        tips_label = QLabel("Tips for raising your score")
-        tips_label.setStyleSheet("color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
-        layout.addWidget(tips_label)
-
-        self._habitat_tips = QTextEdit()
-        self._habitat_tips.setReadOnly(True)
-        self._habitat_tips.setStyleSheet(
-            "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
-            "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }"
-        )
-        self._habitat_tips.setMinimumHeight(160)
-        layout.addWidget(self._habitat_tips)
-
-        # Shade-zone breakdown — read-only summary of the cached shade tags
-        # (Sun & Shade → "Classify planting zones"). Shown here so the light
-        # mix is visible alongside habitat value without recomputing the grid.
-        shade_label = QLabel("Light / shade mix")
-        shade_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
-        layout.addWidget(shade_label)
-
-        self._shade_breakdown = QLabel(
-            "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
-            "the full-sun / partial-shade / full-shade mix.")
-        self._shade_breakdown.setWordWrap(True)
-        self._shade_breakdown.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 6px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
-        layout.addWidget(self._shade_breakdown)
-
         # Reference link
+        # R37 (V3.20, OV-11): the finding is about caterpillars, not
+        # every insect (it had said "of insect biodiversity").
         ref = QLabel(
-            "Based on Doug Tallamy's keystone-species framework "
-            "(homegrownnationalpark.org) — high-value native species support "
-            "90% of insect biodiversity."
+            "Based on Doug Tallamy's keystone-plant research: about 14% of "
+            "native plant genera host about 90% of caterpillar species "
+            "(Narango, Tallamy & Shropshire 2020)."
         )
         ref.setWordWrap(True)
-        ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
+        ref.setStyleSheet("color: #90a4ae; font-size: 12px; font-style: italic;")
         layout.addWidget(ref)
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
-        self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+        self._habitat_page = page
+        self._tabs.addTab(page, "Habitat")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Relationship web (F5) — P3/P5/P10
@@ -1093,19 +1091,19 @@ class AnalysisPanel(QWidget):
         layout.addWidget(head)
 
         hint = QLabel(
-            "Two questions the score itself cannot answer: has anyone actually "
-            "recorded these species growing where you are, and does the design "
-            "have the shape of the natural community for this place.")
+            "What the score cannot say: whether these species are recorded "
+            "growing near you, and whether the design has the shape of the "
+            "natural community here.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
 
         self._confidence_text = QLabel(
-            "Calculate the Habitat Value Score to fill this in.")
+            "Place plants to fill this in.")
         self._confidence_text.setWordWrap(True)
         self._confidence_text.setTextFormat(Qt.TextFormat.RichText)
         self._confidence_text.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; "
             "border-radius: 4px;")
         layout.addWidget(self._confidence_text)
@@ -1148,7 +1146,7 @@ class AnalysisPanel(QWidget):
         body = "".join(f"<br>{ln}" for ln in lines if ln)
         return (f"<b>{title}:</b> <span style='color:{colour};'>"
                 f"{band.label}</span>"
-                f"<br><span style='color:#78909c;'>{band.blurb}</span>{body}")
+                f"<br><span style='color:#90a4ae;'>{band.blurb}</span>{body}")
 
     def _build_relationship_web_block(self, layout):
         """The relationship-web controls on the Habitat tab.
@@ -1163,13 +1161,11 @@ class AnalysisPanel(QWidget):
         layout.addWidget(head)
 
         hint = QLabel(
-            "Draw the invisible half of the design on the map: which plants "
-            "feed, host and shelter which animals, and which plants are tied "
-            "to each other. Wildlife sit on a ring outside the planting — a "
-            "diagram, not a place, because an animal has no address in your "
-            "yard.")
+            "Draws on the map which plants feed, host and shelter which "
+            "animals. The animals sit on a ring outside the planting: a "
+            "diagram, not where they live.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(hint)
 
         self._web_toggle = QCheckBox("Show the relationship web on the map")
@@ -1181,8 +1177,12 @@ class AnalysisPanel(QWidget):
         for key, label, on, _kinds in self._WEB_LAYERS:
             box = QCheckBox(label)
             box.setChecked(on)
+            # Offered only while the web is drawn (src/overlay_switches.py,
+            # V3.19, QF-19), and dimmed when not: a widget's own colour holds
+            # in every state unless it names the disabled one.
             box.setStyleSheet(
-                "color: #b0bec5; font-size: 11px; padding-left: 16px;")
+                "QCheckBox { color: #b0bec5; font-size: 12px; "
+                "padding-left: 16px; } QCheckBox:disabled { color: #6b8a72; }")
             box.toggled.connect(self._on_web_layers_changed)
             layout.addWidget(box)
             self._web_layer_boxes[key] = box
@@ -1191,7 +1191,7 @@ class AnalysisPanel(QWidget):
         self._web_summary.setWordWrap(True)
         self._web_summary.setVisible(False)
         self._web_summary.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
             "background: #16221f; border: 1px solid #2e4a4a; "
             "border-radius: 4px;")
         layout.addWidget(self._web_summary)
@@ -1243,372 +1243,27 @@ class AnalysisPanel(QWidget):
         self.relationship_overlay_requested.emit(graph)
 
     def show_habitat_tab(self):
-        """Raise the Habitat Value tab (On This Design → habitat-value
-        deep-link, V2.13)."""
-        idx = getattr(self, "_habitat_tab_index", None)
-        if idx is not None:
-            self._tabs.setCurrentIndex(idx)
+        """Raise the Habitat Value page (the report card's habitat-value
+        deep-link, V2.13), by the page and not its place in the strip, which
+        V3.07 changed."""
+        from src.keyboard_help import show_panel
+        show_panel(self._habitat_page)
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  Bees — "Design for a bee" habitat builder (F37)
+    #  Food — who the design feeds (V3.08; the Bees page, F37, generalised)
     # ═════════════════════════════════════════════════════════════════════════
 
-    _FIT_CHIP = {
-        "good":      ("#1b5e20", "#a5d6a7", "good fit"),
-        "plausible": ("#33450f", "#dcedc8", "workable"),
-        "unknown":   ("#37474f", "#b0bec5", "—"),
-    }
-    _MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-    def _build_bee_tab(self):
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        tab = QWidget()
-        page.setWidget(tab)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
-
-        info = QLabel(
-            "Design habitat for a specific native bee. Pick a target — a whole "
-            "genus or a single species — to see which of your plants feed it, how "
-            "to give it a place to nest, and whether your design blooms across its "
-            "flight season."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
-
-        self._bee_selector = QComboBox()
-        self._bee_selector.setStyleSheet("QComboBox { padding: 4px; }")
-        self._populate_bee_selector()
-        self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)
-        layout.addWidget(self._bee_selector)
-
-        # "What the bee sees" — recolour the 2D map as this bee's resource map.
-        self._bee_map_btn = QPushButton("🗺  Show what this bee sees on the map")
-        self._bee_map_btn.setCheckable(True)
-        self._bee_map_btn.setToolTip(
-            "Recolour the 2D map as this bee's floral-resource map — its host "
-            "plants glow like nectar, everything else greys out")
-        self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
-        layout.addWidget(self._bee_map_btn)
-
-        # Summary: photo (+ credit) + facts
-        summ = QHBoxLayout()
-        summ.setSpacing(8)
-        photo_col = QVBoxLayout()
-        photo_col.setSpacing(2)
-        self._bee_photo = QLabel("🐝")
-        self._bee_photo.setFixedSize(96, 72)
-        self._bee_photo.setScaledContents(False)
-        self._bee_photo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._bee_photo.setStyleSheet(
-            "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "background: #14241a; font-size: 30px;")
-        photo_col.addWidget(self._bee_photo)
-        # Visible photo credit — required for CC-BY reuse (harmless for CC0).
-        self._bee_photo_credit = QLabel("")
-        self._bee_photo_credit.setFixedWidth(96)
-        self._bee_photo_credit.setWordWrap(True)
-        self._bee_photo_credit.setStyleSheet("color: #607d8b; font-size: 8px;")
-        self._bee_photo_credit.setVisible(False)
-        photo_col.addWidget(self._bee_photo_credit)
-        summ.addLayout(photo_col, 0)
-        self._bee_summary = QLabel("")
-        self._bee_summary.setWordWrap(True)
-        self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
-        self._bee_summary.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._bee_summary.setStyleSheet("color: #c8e6c9; font-size: 11px;")
-        summ.addWidget(self._bee_summary, 1)
-        layout.addLayout(summ)
-
-        def _section(title: str) -> QLabel:
-            hdr = QLabel(title)
-            hdr.setStyleSheet(
-                "color: #a5d6a7; font-size: 12px; font-weight: bold; "
-                "padding: 6px 0 2px 0;")
-            layout.addWidget(hdr)
-            body = QLabel("")
-            body.setWordWrap(True)
-            body.setTextFormat(Qt.TextFormat.RichText)
-            body.setStyleSheet(
-                "color: #c8e6c9; font-size: 11px; padding: 8px; "
-                "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
-            body.setAlignment(Qt.AlignmentFlag.AlignTop)
-            layout.addWidget(body)
-            return body
-
-        self._bee_floral = _section("Floral hosts — plants that feed this bee")
-        self._bee_nesting = _section("Nesting — give it a place to live")
-        self._bee_forage = _section("Forage across the flight season")
-
-        self._bee_footnote = QLabel("")
-        self._bee_footnote.setWordWrap(True)
-        self._bee_footnote.setStyleSheet(
-            "color: #607d8b; font-size: 10px; font-style: italic;")
-        layout.addWidget(self._bee_footnote)
-
-        # Re-render the bee photo when a warmed image lands (shared signal).
-        self.galleryImageReady.connect(self._render_bee_photo)
-
-        self._tabs.addTab(page, "Bees")
-        self._bee_tab_index = self._tabs.indexOf(page)
-        # Recompute the plan lazily when the Bees tab is opened, so "in your
-        # design" and forage coverage stay live without recomputing on every
-        # plant placement.
-        self._tabs.currentChanged.connect(self._on_tab_changed)
-        self._update_bee_plan()
-
-    def _on_tab_changed(self, idx: int):
-        if idx == getattr(self, "_bee_tab_index", -1):
-            self.refresh_bee_tab()
-
-    def _populate_bee_selector(self):
-        """Fill the target-bee combo, grouped genus-first with disabled headers."""
-        combo = self._bee_selector
-        combo.blockSignals(True)
-        combo.clear()
-        try:
-            from src.bee_habitat import list_target_bees
-            bees = list_target_bees()
-        except Exception:  # noqa: BLE001 — never let a data issue break the panel
-            bees = []
-        current_genus = None
-        for b in bees:
-            if b["genus"] != current_genus:
-                current_genus = b["genus"]
-                combo.addItem(f"── {current_genus} ──", userData=None)
-                idx = combo.count() - 1
-                item = combo.model().item(idx)
-                if item is not None:
-                    item.setEnabled(False)
-            if b["is_group"]:
-                label = f"    {b['common_name']} (any {b['genus']})"
-            else:
-                label = f"    {b['common_name']}  ·  {b['scientific_name']}"
-            combo.addItem(label, userData=b["id"])
-        combo.blockSignals(False)
-        # Select the first real (enabled) entry.
-        for i in range(combo.count()):
-            if combo.itemData(i) is not None:
-                combo.setCurrentIndex(i)
-                break
-
-    def _current_bee_id(self):
-        return self._bee_selector.itemData(self._bee_selector.currentIndex())
-
-    def _placed_plant_ids(self) -> list[int]:
-        ids: list[int] = []
-        for p in (self._placed_plants or []):
-            pid = p.get("plant_id")
-            if pid is not None:
-                try:
-                    ids.append(int(pid))
-                except (TypeError, ValueError):
-                    pass
-        return ids
-
-    def _update_bee_plan(self, *args):
-        """Build and render the habitat plan for the selected bee."""
-        fid = self._current_bee_id()
-        if fid is None:
-            return
-        try:
-            from src.bee_habitat import build_bee_habitat_plan
-            plan = build_bee_habitat_plan(fid, plant_ids=self._placed_plant_ids())
-        except Exception:  # noqa: BLE001
-            plan = None
-        if plan is None:
-            self._bee_summary.setText("<i>No data for this bee yet.</i>")
-            for lbl in (self._bee_floral, self._bee_nesting, self._bee_forage):
-                lbl.setText("—")
-            self._bee_footnote.setText("")
-            return
-        self._bee_plan = plan
-        self._render_bee_summary(plan)
-        self._render_bee_photo()
-        self._render_bee_floral(plan)
-        self._render_bee_nesting(plan)
-        self._render_bee_forage(plan)
-        src = (plan.attrs or {}).get("source") or ""
-        conf = {"documented": "well-documented", "partial": "partly documented",
-                "thin": "sparse"}.get(plan.data_confidence, plan.data_confidence)
-        self._bee_footnote.setText(
-            f"Data confidence: {conf}. Floral matches shown as documented "
-            f"(plant↔bee records) or inferred (genus-level hosts). {src}")
-        # Keep the map overlay live when the user switches bee while it's on.
-        if getattr(self, "_bee_map_btn", None) is not None and self._bee_map_btn.isChecked():
-            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
-
-    def _render_bee_summary(self, plan):
-        bee = plan.bee or {}
-        a = plan.attrs or {}
-        tongue = a.get("tongue_length")
-        nest = a.get("nesting_habit")
-        season = a.get("flight_season")
-        cons = a.get("conservation_status")
-        bits = [f"<b>{bee.get('common_name','')}</b> "
-                f"<span style='color:#90a4ae;'><i>{bee.get('scientific_name','')}</i></span>"]
-        facts = []
-        if tongue and tongue != "unknown":
-            facts.append(f"{tongue}-tongued")
-        elif tongue == "unknown":
-            facts.append("tongue not characterised")
-        if season:
-            facts.append(f"flies {season}")
-        if facts:
-            bits.append("<span style='color:#a5d6a7;'>" + " · ".join(facts) + "</span>")
-        if cons:
-            colour = "#ff8a65" if "risk" in cons.lower() else "#90a4ae"
-            bits.append(f"<span style='color:{colour};'>{cons}</span>")
-        desc = bee.get("description") or ""
-        if desc:
-            bits.append(f"<span style='color:#c8e6c9;'>{desc}</span>")
-        self._bee_summary.setText("<br>".join(bits))
-
-    def _set_bee_credit(self, on: bool):
-        """Show the bee photo's attribution credit when a real photo is on screen
-        (CC-BY compliance); hide it for the 🐝 fallback."""
-        cr = getattr(self, "_bee_photo_credit", None)
-        if cr is None:
-            return
-        from src.image_cache import credit_line
-        bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
-        txt = credit_line(bee.get("image_attribution", ""),
-                          bee.get("image_license", "")) if on else ""
-        cr.setText(txt or "")
-        cr.setVisible(bool(txt))
-
-    def _render_bee_photo(self):
-        """Show the selected bee's cached photo (warming it if needed), else 🐝."""
-        plan = getattr(self, "_bee_plan", None)
-        if plan is None:
-            return
-        url = (plan.bee or {}).get("image_url") or ""
-        if not url:
-            self._bee_photo.setText("🐝")
-            self._bee_photo.setPixmap(QPixmap())
-            self._set_bee_credit(False)
-            return
-        try:
-            from src.image_cache import get_cached_image
-            path = get_cached_image(url)
-        except Exception:  # noqa: BLE001
-            path = None
-        if path:
-            pm = QPixmap(path)
-            if not pm.isNull():
-                self._bee_photo.setText("")
-                self._bee_photo.setScaledContents(True)
-                self._bee_photo.setPixmap(pm)
-                self._set_bee_credit(True)
-                return
-        # not cached yet — keep the icon and warm it in the background
-        self._bee_photo.setText("🐝")
-        self._set_bee_credit(False)
-        if url not in self._gallery_warmed:
-            self._gallery_warmed.add(url)
-            self._warm_gallery_images([(url,
-                                        (plan.bee or {}).get("image_attribution", ""),
-                                        (plan.bee or {}).get("image_license", ""))])
-
-    def _render_bee_floral(self, plan):
-        matches = plan.floral_matches or []
-        if not matches:
-            self._bee_floral.setText(
-                "<i>No floral-host plants matched — this is often a cuckoo bee "
-                "that feeds itself by parasitising a host bee (see Nesting).</i>")
-            return
-        in_design = [m for m in matches if m.in_users_list]
-        rows = []
-        if in_design:
-            rows.append("<b>In your design:</b>")
-            rows.extend(self._bee_match_row(m) for m in in_design[:12])
-            rows.append("<br><b>Also good to add:</b>")
-            others = [m for m in matches if not m.in_users_list]
-        else:
-            rows.append("<b>Plants that feed this bee:</b>")
-            others = matches
-        rows.extend(self._bee_match_row(m) for m in others[:14])
-        self._bee_floral.setText("".join(f"<div style='padding:1px 0;'>{r}</div>"
-                                          for r in rows))
-
-    def _bee_match_row(self, m) -> str:
-        bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
-        chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
-                f"padding:0 4px; font-size:9px;'>{txt}</span>")
-        bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
-        basis = "" if m.confidence == "documented" else \
-                " <span style='color:#78909c; font-size:9px;'>(genus match)</span>"
-        star = "★ " if m.in_users_list else ""
-        return (f"{star}{m.common_name} {chip}{bloom}{basis}")
-
-    def _render_bee_nesting(self, plan):
-        g = plan.nesting
-        parts = [f"<b>{g.headline}</b>"]
-        if g.structures:
-            names = ", ".join(s.get("name", "") for s in g.structures)
-            parts.append(f"<span style='color:#a5d6a7;'>Structures: {names}</span>")
-        for a in g.actions:
-            parts.append(f"• {a}")
-        self._bee_nesting.setText("".join(f"<div style='padding:1px 0;'>{p}</div>"
-                                           for p in parts))
-
-    def _render_bee_forage(self, plan):
-        f = plan.forage
-        if not f.flight_months:
-            self._bee_forage.setText(f"<i>{f.note}</i>")
-            return
-        flight = set(f.flight_months)
-        covered = set(f.covered_months)
-        cells = []
-        for mo in range(3, 11):    # Mar–Oct strip
-            abbr = self._MONTH_ABBR[mo]
-            if mo not in flight:
-                style = "color:#4a5a4a;"
-            elif mo in covered:
-                style = "background:#1b5e20; color:#c8e6c9; border-radius:3px;"
-            else:
-                style = "background:#5d3a1a; color:#ffcc80; border-radius:3px;"
-            cells.append(f"<span style='{style} padding:2px 5px; margin:0 1px;'>{abbr}</span>")
-        strip = "".join(cells)
-        legend = ("<div style='color:#90a4ae; font-size:9px; padding-top:4px;'>"
-                  "green = a plant in bloom for it · orange = flying but no bloom "
-                  "(a gap to fill)</div>")
-        note = f"<div style='padding-top:4px;'>{f.note}</div>"
-        sug = ""
-        if f.suggestions:
-            names = ", ".join(s.common_name for s in f.suggestions[:6])
-            sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
-                   f"Fill the gap with: {names}</div>")
-        self._bee_forage.setText(strip + note + legend + sug)
-
-    def _bee_map_payload(self, plan) -> dict:
-        """Build the {bee, styles:{pid: fit}} payload the 2D map uses to recolour
-        by this bee's floral-resource value ('good'/'plausible' for graded
-        tongue-fit, else 'host')."""
-        styles = {}
-        for m in plan.floral_matches:
-            fit = m.tongue_form_fit if m.tongue_form_fit in ("good", "plausible") else "host"
-            styles[str(m.plant_id)] = fit
-        return {"bee": (plan.bee or {}).get("common_name", ""), "styles": styles}
-
-    def _on_bee_map_toggle(self, on: bool):
-        """Toggle the 'what the bee sees' recolour on the 2D map."""
-        plan = getattr(self, "_bee_plan", None)
-        if on and plan is not None:
-            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
-        else:
-            self.bee_map_overlay_cleared.emit()
-
-    def refresh_bee_tab(self):
-        """Re-render the bee plan against the current placed plants (call after
-        the design changes so 'in your design' / forage coverage stay live)."""
-        if hasattr(self, "_bee_selector"):
-            self._update_bee_plan()
+    def _build_food_tab(self):
+        """Design › Food (src/food_page.py): the owner's "what it feeds" page,
+        the Bees page and Planning's Wildlife and Harvest calendars in one. It
+        borrows this panel's photo warmer, and its map view rides the Bees
+        page's two signals, which app.py already sends to the map."""
+        from src.food_page import FoodPage
+        self._food = FoodPage(warm_images=self._warm_gallery_images)
+        self._food.map_overlay_requested.connect(self.bee_map_overlay_requested)
+        self._food.map_overlay_cleared.connect(self.bee_map_overlay_cleared)
+        self.galleryImageReady.connect(self._food.on_image_ready)
+        self._tabs.addTab(self._food, "Food")
 
     # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
 
@@ -1711,32 +1366,11 @@ class AnalysisPanel(QWidget):
         c = colors.get(r["status"], "#cfe3f0")
         body = f"<span style='color:{c}'>{r['verdict']}</span>"
         if r["host_plants"]:
-            body += (f"<br><span style='color:#9fbccf; font-size:11px'>"
+            body += (f"<br><span style='color:#9fbccf; font-size:12px'>"
                      f"Capacity ≈ {r['caterpillars_low']:,}–"
                      f"{r['caterpillars_high']:,} caterpillars from "
                      f"{r['n_host_species']} host species.</span>")
         label.setText(body)
-
-    def set_shade_breakdown(self, counts: dict | None):
-        """Render the cached shade-tag mix (``{tag: n}`` from
-        shade_zones.tag_counts), or a prompt when nothing is classified yet.
-        Called by the main window after classification / project load."""
-        if not hasattr(self, "_shade_breakdown"):
-            return
-        total = sum((counts or {}).values())
-        if not total:
-            self._shade_breakdown.setText(
-                "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
-                "the full-sun / partial-shade / full-shade mix.")
-            return
-
-        def _pct(n):
-            return f"{n} ({n * 100 // total}%)"
-        self._shade_breakdown.setText(
-            f"Across {total} classified spots:\n"
-            f"  ☀️  Full sun       {_pct(counts.get('full_sun', 0))}\n"
-            f"  ⛅  Partial shade  {_pct(counts.get('partial_shade', 0))}\n"
-            f"  🌑  Full shade     {_pct(counts.get('full_shade', 0))}")
 
     # Structure ids that contribute to habitat value — re-exported from
     # src/habitat_score.py (where the scoring maths lives now) so the
@@ -1746,10 +1380,8 @@ class AnalysisPanel(QWidget):
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
-        # Keep the bee plan live if its tab is the one on screen.
-        if (hasattr(self, "_bee_tab_index")
-                and self._tabs.currentIndex() == self._bee_tab_index):
-            self.refresh_bee_tab()
+        # Food fills itself when it is on screen (the LiveRefresh poke below).
+        self._food.set_placed_plants(plants)
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
             self._phenology.refresh()
@@ -1765,6 +1397,7 @@ class AnalysisPanel(QWidget):
         # both of these change the moment a species is added or removed.
         self._refresh_confidence(self._placed_plants or [],
                                  self._site_ecoregion())
+        self._live.poke()                  # the score follows it too (V3.05)
 
     @staticmethod
     def _layer_lines(result) -> list:
@@ -1819,6 +1452,7 @@ class AnalysisPanel(QWidget):
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
+        self._live.poke()
 
     def set_lawn_conversion(self, summary: dict | None):
         """Store the lawn-conversion summary (from ``lawn_zones.conversion_summary``)
@@ -1845,8 +1479,8 @@ class AnalysisPanel(QWidget):
             return
         head = lines[0]
         rest = lines[1:]
-        html = (f"<b>vs. lawn</b><br>{head}"
-                + ("<br><span style='color:#90a4ae;font-size:10px;'>"
+        html = (f"<b>Against the lawn it replaces</b><br>{head}"
+                + ("<br><span style='color:#90a4ae;font-size:12px;'>"
                    + "<br>".join(rest) + "</span>" if rest else ""))
         lbl.setText(html)
         lbl.setVisible(True)
@@ -1862,7 +1496,9 @@ class AnalysisPanel(QWidget):
             # marked against a forest-garden stack it was never going to fill.
             result = compute_habitat_score(
                 self._placed_plants, self._structures,
-                ecoregion=self._site_ecoregion())
+                ecoregion=self._site_ecoregion(),
+                site_config={"latitude": getattr(self, "_sun_lat", None),
+                             "longitude": getattr(self, "_sun_lng", None)})
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
@@ -1935,15 +1571,16 @@ class AnalysisPanel(QWidget):
             # across all taxa (schema v20 expansion).
             f"Lepidoptera supported  {result.n_lepidoptera_supported:4d}    (larval-host species)",
         ]
-        if getattr(result, "fauna_by_taxon", None):
-            _taxon_label = {
-                "lepidoptera": "butterflies/moths", "bird": "birds",
-                "bee": "bees", "other_insect": "other insects",
-                "mammal": "mammals",
-            }
-            parts = [f"{n} {_taxon_label.get(t, t)}"
-                     for t, n in result.fauna_by_taxon.items()]
-            lines.append("Wildlife supported   " + ", ".join(parts))
+        # Food edges only, as Design › Food and the Report card count them
+        # (V3.20, OV-5); "supported" claimed more than the records say.
+        try:
+            from src.what_it_feeds import food_counts, group_words
+            fed = food_counts({p.get("plant_id") for p in self._placed_plants})
+        except Exception:                                  # noqa: BLE001
+            fed = {}
+        if fed:
+            lines.append(f"Recorded as food for {sum(fed.values())} kinds   "
+                         + ", ".join(group_words(t, n) for t, n in fed.items()))
         # Food-web completeness (F3): does the design close the Tallamy chain
         # (host plants → caterpillars → the birds that eat them)? Informational,
         # never summed into the headline.
@@ -1988,7 +1625,7 @@ class AnalysisPanel(QWidget):
             # to find the plants that fill it was the complaint: "gap months are
             # shown for a design but there is no option to choose plants that
             # flower or fruit a particular month". There is one now.
-            lines.append("    → Plants → Browse → “Blooms in…” to fill them")
+            lines.append("    → Placement → Plants → “Blooms in…” to fill them")
         lines.append("")
         lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 
@@ -1997,28 +1634,14 @@ class AnalysisPanel(QWidget):
             from src.sourcing import estimate_cost, format_cost
             low, high = estimate_cost(self._placed_plants)
             if high > 0:
+                from src.planting_plan import price_words
                 lines.append(
-                    f"Est. plant cost    {format_cost(low, high)}   (AB retail estimate)")
+                    f"Plant cost    {format_cost(low, high)}   "
+                    f"({price_words({'latitude': self._sun_lat, 'longitude': self._sun_lng})})")
         except Exception:  # noqa: BLE001 — cost is a nicety, never break the score
             pass
 
         self._habitat_breakdown.setText("\n".join(lines))
-
-        # ── Tips: targeted suggestions for the lowest-scoring categories ──
-        # Use the DB-backed id set (matches the pre-extraction behaviour
-        # of keying off plant_rows.keys()).
-        placed_ids = set(result.scored_plant_ids)
-        tips_html = self._build_habitat_tips(
-            native_ratio=result.native_ratio,
-            n_keystone=len(result.keystone_species),
-            n_host=len(result.host_species),
-            n_bird=len(result.bird_species),
-            layers_present=set(result.layers_present),
-            habitat_struct_types=set(result.habitat_struct_types),
-            gap_months=result.gap_months,
-            placed_ids=placed_ids,
-        )
-        self._habitat_tips.setHtml(tips_html)
 
     # ── Species gallery (F11 / I1): photos of the design's high-value species ──
 
@@ -2053,8 +1676,11 @@ class AnalysisPanel(QWidget):
         for nm in priority:
             if nm in recs:
                 _add(recs[nm])
+        from src import design_native
+        native = design_native.rule({"latitude": getattr(self, "_sun_lat", None),
+                                     "longitude": getattr(self, "_sun_lng", None)})
         for r in recs.values():
-            if r.get("native_to_alberta"):
+            if native(r):
                 _add(r)
         return out[:12]
 
@@ -2081,7 +1707,7 @@ class AnalysisPanel(QWidget):
         cap = QLabel(name)
         cap.setWordWrap(True)
         cap.setFixedWidth(96)
-        cap.setStyleSheet("color: #c8e6c9; font-size: 9px;")
+        cap.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         v.addWidget(thumb)
         v.addWidget(cap)
         return card
@@ -2202,204 +1828,3 @@ class AnalysisPanel(QWidget):
         "native_lawn_patch":"Native Lawn Patch",
     }
 
-    def _build_habitat_tips(
-        self, *,
-        native_ratio: float,
-        n_keystone: int,
-        n_host: int,
-        n_bird: int,
-        layers_present: set[str],
-        habitat_struct_types: set[str],
-        gap_months: list[int],
-        placed_ids: set[int],
-    ) -> str:
-        """Return an HTML string of targeted tips for raising the habitat
-        score. Each suggestion lists concrete Alberta-native examples
-        pulled from the plant DB, excluding species already in the design."""
-        try:
-            from src.db.plants import get_connection
-            conn = get_connection()
-        except Exception:
-            return "<p style='color:#90a4ae;'>Tips unavailable — plant DB not loaded.</p>"
-
-        def examples_for_tag(tag: str, limit: int = 5) -> list[str]:
-            """Native AB plants tagged `tag`, not yet placed, alphabetical.
-
-            Schema v13: resolved via the plant_uses junction so the query
-            is index-driven instead of a full-table LIKE scan.
-            """
-            sql = (
-                "SELECT p.common_name FROM plants p "
-                "JOIN plant_uses pu ON pu.plant_id = p.id "
-                "JOIN uses u ON u.id = pu.use_id "
-                "WHERE p.native_to_alberta = 1 AND u.key = ?"
-            )
-            params: list = [tag]
-            if placed_ids:
-                sql += " AND p.id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
-                params += list(placed_ids)
-            sql += " ORDER BY p.common_name"
-            try:
-                rows = conn.execute(sql, params).fetchall()
-            except Exception:
-                return []
-            return [r["common_name"] for r in rows][:limit]
-
-        def examples_for_layer(layer: str, limit: int = 5) -> list[str]:
-            ptypes = self._LAYER_TO_PLANT_TYPES.get(layer, [])
-            if not ptypes:
-                return []
-            placeholders = ",".join("?" * len(ptypes))
-            sql = (
-                "SELECT common_name FROM plants "
-                f"WHERE native_to_alberta = 1 AND plant_type IN ({placeholders})"
-            )
-            params: list = list(ptypes)
-            if placed_ids:
-                sql += " AND id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
-                params += list(placed_ids)
-            sql += " ORDER BY common_name"
-            try:
-                rows = conn.execute(sql, params).fetchall()
-            except Exception:
-                return []
-            return [r["common_name"] for r in rows][:limit]
-
-        def examples_for_bloom_month(month_num: int, limit: int = 4) -> list[str]:
-            """Native AB plants whose bloom_period covers `month_num`."""
-            try:
-                rows = conn.execute(
-                    "SELECT common_name, bloom_period FROM plants "
-                    "WHERE native_to_alberta = 1 AND bloom_period IS NOT NULL "
-                    "  AND bloom_period <> ''"
-                ).fetchall()
-            except Exception:
-                return []
-            matches = []
-            for r in rows:
-                if month_num in self._parse_month_range(r["bloom_period"] or ""):
-                    if r["common_name"] not in matches:
-                        matches.append(r["common_name"])
-            # Cheap filter against placed names (best-effort: we don't have
-            # ids here, so we compare by name)
-            placed_names: set[str] = set()
-            if placed_ids:
-                try:
-                    qmarks = ",".join("?" * len(placed_ids))
-                    placed_rows = conn.execute(
-                        f"SELECT common_name FROM plants WHERE id IN ({qmarks})",
-                        list(placed_ids)
-                    ).fetchall()
-                    placed_names = {r["common_name"] for r in placed_rows}
-                except Exception:
-                    pass
-            matches = [m for m in matches if m not in placed_names]
-            matches.sort()
-            return matches[:limit]
-
-        try:
-            tips: list[str] = []
-            month_names = ["Jan","Feb","Mar","Apr","May","Jun",
-                           "Jul","Aug","Sep","Oct","Nov","Dec"]
-
-            if native_ratio < 0.70:
-                pct = int(round(native_ratio * 100))
-                tips.append(
-                    f"<b style='color:#a5d6a7;'>Lift the native ratio ({pct}%).</b> "
-                    f"Every cultivar you swap for an Alberta native raises this score "
-                    f"directly. Aim for 70%+ native — that's the Tallamy threshold for "
-                    f"functional habitat."
-                )
-
-            if n_keystone < 5:
-                examples = examples_for_tag("keystone_species")
-                if examples:
-                    tips.append(
-                        f"<b style='color:#a5d6a7;'>Add keystone species "
-                        f"({n_keystone} of 5).</b> Keystones support the bulk of local "
-                        f"insect biodiversity. Try: {', '.join(examples)}."
-                    )
-
-            if n_host < 10:
-                examples = examples_for_tag("host_plant")
-                if examples:
-                    tips.append(
-                        f"<b style='color:#a5d6a7;'>Add host plants "
-                        f"({n_host} of 10).</b> Specialist caterpillars need specific "
-                        f"native hosts. Try: {', '.join(examples)}."
-                    )
-
-            if n_bird < 10:
-                examples = examples_for_tag("bird_food")
-                if examples:
-                    tips.append(
-                        f"<b style='color:#a5d6a7;'>Add bird-food species "
-                        f"({n_bird} of 10).</b> Berries, seed heads, and cones feed "
-                        f"resident and migratory birds. Try: {', '.join(examples)}."
-                    )
-
-            missing_layers = {"overstory","shrub","herbaceous","groundcover","vine"} - layers_present
-            # Vine is often optional; surface it last
-            order = ["overstory","shrub","herbaceous","groundcover","vine"]
-            for layer in order:
-                if layer not in missing_layers:
-                    continue
-                examples = examples_for_layer(layer)
-                if not examples:
-                    continue
-                tips.append(
-                    f"<b style='color:#a5d6a7;'>Add a {layer} layer.</b> "
-                    f"Try: {', '.join(examples)}."
-                )
-
-            missing_structs = [
-                sid for sid in self._HABITAT_STRUCTURE_IDS
-                if sid not in habitat_struct_types
-            ]
-            if len(habitat_struct_types) < 5 and missing_structs:
-                names = [self._STRUCTURE_NAMES.get(s, s) for s in missing_structs[:5]]
-                tips.append(
-                    f"<b style='color:#a5d6a7;'>Add habitat structures "
-                    f"({len(habitat_struct_types)} of 5).</b> Structural diversity "
-                    f"shelters wildlife year-round. Try: {', '.join(names)}."
-                )
-
-            if gap_months:
-                gap_lines = []
-                for m in gap_months[:3]:  # cap at 3 most-urgent gaps
-                    examples = examples_for_bloom_month(m)
-                    if examples:
-                        gap_lines.append(
-                            f"<i>{month_names[m-1]}:</i> {', '.join(examples)}"
-                        )
-                if gap_lines:
-                    tips.append(
-                        "<b style='color:#a5d6a7;'>Fill nectar gaps.</b> "
-                        "Plants blooming in the gap months — "
-                        + "; ".join(gap_lines)
-                    )
-
-            if not tips:
-                return (
-                    "<p style='color:#a5d6a7;'>You're hitting every category. "
-                    "Keep adding species diversity and small structural elements "
-                    "(snags, brush piles, water features) as your habitat matures.</p>"
-                )
-
-            body = "<ul style='margin:0;padding-left:18px;'>"
-            for t in tips:
-                body += f"<li style='margin-bottom:6px;'>{t}</li>"
-            body += "</ul>"
-            return body
-        finally:
-            conn.close()
-
-    @staticmethod
-    def _parse_month_range(text: str) -> list[int]:
-        """Parse 'June-August' / 'May' style strings to month numbers (1-12).
-
-        Thin delegate to src.habitat_score.parse_month_range so the panel's
-        bloom-month tips and the score's bloom component use identical
-        parsing."""
-        from src.habitat_score import parse_month_range
-        return parse_month_range(text)

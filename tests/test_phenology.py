@@ -31,9 +31,9 @@ from src.phenology import build_phenology  # noqa: E402
 # Fake plant rows keyed by id, and fake planting calendars.
 _ROWS = {
     1: {"common_name": "Wild Bergamot", "bloom_period": "Jul–Aug",
-        "fruit_period": ""},
+        "fruit_period": "", "edible_parts": ""},
     2: {"common_name": "Saskatoon", "bloom_period": "May",
-        "fruit_period": "Jul–Aug"},
+        "fruit_period": "Jul–Aug", "edible_parts": "fruit"},
 }
 # Saskatoon: dormant in winter, active Apr–Oct → wakes in Apr, dormant in Nov.
 _CAL = {
@@ -91,6 +91,35 @@ class TestPhenologyLogic(unittest.TestCase):
         jul = r["months"][6]
         verbs = {t["verb"] for t in jul["tasks"]}
         self.assertIn("harvest", verbs)
+
+    def test_this_month_agrees_with_the_care_calendar(self):
+        """V3.20, OV-8: in October the page said "prune Tall Goldenrod;
+        harvest Smooth Aster" beside a care calendar saying leave the stems
+        standing. Harvest is said only of what is eaten, pruning only in
+        spring, and the first-year line is the calendar's own."""
+        rows = {1: {"common_name": "Smooth Aster", "bloom_period": "Aug–Sep",
+                    "fruit_period": "Sep–Oct", "edible_parts": ""},
+                2: {"common_name": "Saskatoon", "bloom_period": "May",
+                    "fruit_period": "Jul–Aug", "edible_parts": "fruit"}}
+        cals = {1: [{"month": 10, "status": "harvest"},
+                    {"month": 10, "status": "pruning"}],
+                2: [{"month": 3, "status": "pruning"},
+                    {"month": 8, "status": "harvest"}]}
+
+        def build(month):
+            return build_phenology(_placed(1, 2), month=month,
+                                   get_plant=rows.get, get_calendar=cals.get)
+        october = build(10)["now"]
+        self.assertEqual(october["tasks"], [])
+        self.assertIn("Water everything deeply once before freeze-up",
+                      october["first_year"])
+        november = build(11)["now"]
+        self.assertIn("LEAVE THE STEMS STANDING", november["first_year"])
+        march = [(t["verb"], t["name"]) for t in build(3)["now"]["tasks"]]
+        self.assertEqual(march, [("prune", "Saskatoon")])
+        august = [(t["verb"], t["name"]) for t in build(8)["now"]["tasks"]]
+        self.assertEqual(august, [("harvest", "Saskatoon")])
+        self.assertEqual(build_phenology([], month=11)["now"]["first_year"], "")
 
     def test_now_slice_tracks_month(self):
         r = self._build([1, 2], month=7)

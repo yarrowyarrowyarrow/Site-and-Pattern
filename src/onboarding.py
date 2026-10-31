@@ -58,32 +58,26 @@ STEPS: tuple[dict, ...] = (
         # is the sentence-shaped version the welcome and the Site panel use.
         # One source, two widths — so they can't drift into saying different
         # things about the same step.
-        "short": "Drop a pin",
-        "title": "Drop a property pin",
-        "detail": "Search your address in the Site tab, or click "
-                  "“Use Pin Drop…” and click your yard on the "
-                  "map. This is what fetches your climate, soil and frost "
-                  "dates.",
+        "short": "Find your yard",
+        "title": "Find your yard",
+        # V3.30 (WD-2): the words of 09-words.md §3.1.
+        "detail": "Type your address, or click your yard on the map.",
     },
     {
+        # V3.28 (PY-10): a bed is enough. The whole yard, or just the beds.
         "key": "boundary",
-        "short": "Draw the boundary",
-        "title": "Draw your boundary",
-        "detail": "Draw → ⬡ Boundary, then click around the area "
-                  "you want to plant. Click the first point again to close it.",
+        "short": "Outline where to plant",
+        "title": "Outline where to plant",
+        "detail": "Click around your yard, or around one bed. Click the "
+                  "first point again to finish.",
     },
     {
         "key": "plants",
-        "short": "Add plants",
-        # V2.41: the two halves swapped. The manual path leads because that is
-        # what the app is for; Generate is a shortcut offered second, not the
-        # headline. Same change of emphasis as taking Generate off the start
-        # screen — `short` has always said "Add plants", so this is the title
-        # catching up with the label beside it.
-        "title": "Add your plants — or let the app draft it",
-        "detail": "Pick plants from the Plants tab and click to place them. "
-                  "Or use ✨ Generate Design to fill the boundary from your "
-                  "goals and edit from there.",
+        "short": "Plan it, or pick plants yourself",
+        # V2.41 put the manual path first; V3.28 (PY-10) names both, the plan
+        # first, because the strip's button is the plan.
+        "title": "Plan it, or pick plants yourself",
+        "detail": "Plan my yard suggests a planting you can change.",
     },
 )
 
@@ -94,8 +88,14 @@ def _has_pin(project: dict) -> bool:
 
 
 def _has_boundary(project: dict) -> bool:
+    """An outline, or a bed (V3.28, PY-10): either is somewhere to plant."""
+    from src.yard_overview import BED_SHAPES                 # noqa: PLC0415
     for f in (project or {}).get("features") or []:
-        if (f.get("properties") or {}).get("element_type") == "property_boundary":
+        props = f.get("properties") or {}
+        if props.get("element_type") == "property_boundary":
+            return True
+        if (props.get("element_type") == "custom_shape"
+                and props.get("shape_type") in BED_SHAPES):
             return True
     return False
 
@@ -136,8 +136,8 @@ def first_step(project: dict) -> dict:
                     "detail": step["detail"]}
     return {"index": len(progress), "total": len(progress), "complete": True,
             "key": "done", "title": "Your design is under way",
-            "detail": "Analysis → Habitat scores what it provides; "
-                      "Planning → Planting Plan tells you what to buy "
+            "detail": "Design → Planted says what each plant feeds; "
+                      "File → Export Planting Plan… says what to buy "
                       "and when to plant it."}
 
 
@@ -156,57 +156,55 @@ def first_step_line(project: dict) -> str:
 # south-west corner, so the layout is real geometry rather than an accident of
 # whatever latitude it lands at.
 
-EXAMPLE_NAME = "Example — Front Yard Lawn Conversion"
-EXAMPLE_WIDTH_M = 11.0
-EXAMPLE_DEPTH_M = 8.0
+def _example() -> dict:
+    """The default region pack's worked example (V3.24, ED-1:
+    ``data/regions/<key>/region.json``, ``example``)."""
+    from src import region                                   # noqa: PLC0415
+    return region.default().example
 
-#: Where the example lands when the user has no pin of their own: central
-#: Edmonton, zone 3b/4a — the middle of this app's actual range.
-EXAMPLE_DEFAULT_LATLNG = (53.5461, -113.4938)
+
+def _example_place() -> str:
+    from src import region                                   # noqa: PLC0415
+    return region.default().short
+
+
+EXAMPLE_NAME = _example()["name"]
+EXAMPLE_WIDTH_M = float(_example()["width_m"])
+EXAMPLE_DEPTH_M = float(_example()["depth_m"])
+
+#: Where the example lands when the user has no pin of their own: the pack's
+#: centre (central Edmonton, zone 3b/4a, the middle of this app's range).
+EXAMPLE_DEFAULT_LATLNG = tuple(_example()["centre"])
 
 #: ``(preferred name, fallback names…)`` → the builder takes the first that the
 #: live catalogue actually has. Fallbacks exist because seed data changes;
 #: a species that resolves to nothing is reported, never silently skipped.
-EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
-    # Backbone — two shrubs at the back, offset so the bed never reads as a row.
-    (("Saskatoon Berry",), (2.6, 6.2)),
-    (("Chokecherry",), (7.9, 6.6)),
-    (("Red Osier Dogwood",), (5.2, 6.9)),
-    # Mid layer — the nectar relay: spring, midsummer, late summer.
-    (("Golden Bean", "Purple Prairie Clover"), (1.4, 4.4)),
-    (("Wild Bergamot",), (3.5, 4.7)),
-    (("Wild Bergamot",), (4.4, 3.9)),
-    (("Showy Milkweed",), (6.4, 4.5)),
-    (("Showy Milkweed",), (7.2, 5.1)),
-    (("Canada Goldenrod",), (9.3, 4.8)),
-    (("Blanketflower", "Black-eyed Susan"), (8.5, 3.6)),
-    (("Purple Prairie Clover", "Wild Blue Flax"), (2.2, 3.1)),
-    (("Wild Blue Flax", "Harebell"), (6.0, 3.2)),
-    # Front edge — short things you can see over, plus the grass matrix.
-    (("Prairie Crocus", "Harebell"), (1.2, 1.5)),
-    (("Blue Grama Grass", "Rough Fescue"), (3.0, 1.7)),
-    (("Blue Grama Grass", "Rough Fescue"), (5.6, 1.3)),
-    (("Blue Grama Grass", "Rough Fescue"), (8.2, 1.6)),
-    (("Wild Strawberry",), (4.2, 0.9)),
-    (("Wild Strawberry",), (7.0, 0.8)),
-    (("Yarrow",), (9.6, 2.0)),
-)
+#: Every species it can resolve to is native around the pack's place, where
+#: the example lands (V3.18; ``tests/test_onboarding.py`` and
+#: ``tests/test_region_packs.py`` hold it there): it had Canada Goldenrod and
+#: Showy Milkweed, which the Edmonton list leaves off. Read from the pack since
+#: V3.24: backbone shrubs at the back, the nectar relay in the middle, short
+#: plants and the grass matrix at the front.
+EXAMPLE_PLANTING: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = tuple(
+    (tuple(names), (float(off[0]), float(off[1])))
+    for names, off in _example()["planting"])
 
 EXAMPLE_NOTES = (
     "This is a worked example, not a recommendation for your yard.\n\n"
     "It converts about 88 m² of front lawn into one bed: three "
     "fruiting/host shrubs for structure, a nectar relay that carries from "
     "spring (Golden Bean, Prairie Crocus) through midsummer (Wild Bergamot, "
-    "Showy Milkweed) into fall (Canada Goldenrod), and a short grass matrix "
-    "along the street edge so it still reads as tended.\n\n"
-    "Things worth doing to it:\n"
-    "  • Analysis → Habitat: score it, then tick “Show the "
+    "Oval-leaf Milkweed) into fall (Stiff Goldenrod), and a short grass "
+    "matrix along the street edge so it still reads as tended. Every plant "
+    f"in it is native around {_example_place()}.\n\n"
+    "Things worth doing to it, with View → Advanced tools on:\n"
+    "  • Design → Habitat: see its score, then tick “Show the "
     "relationship web” to see which animals each plant feeds.\n"
-    "  • Analysis → Habitat → Pull-a-plant: remove the "
+    "  • Design → Habitat → Pull-a-plant: remove the "
     "milkweed and watch what it costs.\n"
     "  • View → 3D Preview: drag the year slider and watch the "
     "shrubs close over the forbs.\n"
-    "  • Planning → Planting Plan: what to buy, and when to plant it."
+    "  • File → Export Planting Plan…: what to buy, and when to plant it."
 )
 
 

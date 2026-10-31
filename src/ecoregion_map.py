@@ -39,9 +39,9 @@ import math
 from functools import lru_cache
 from typing import Optional
 
-from src.ecoregion_basemap import (SUBJECT_CLIP_ID, cities_svg, land_svg,
-                                   provinces_svg, subject_clip_defs,
-                                   water_svg)
+from src.ecoregion_basemap import (SUBJECT_CLIP_ID, _points, cities_svg,
+                                   land_svg, provinces_svg,
+                                   subject_clip_defs, water_svg)
 from src.ecoregion_palette import (ABSENT_FILL, DRAW_ORDER, HATCHED,
                                    REGION_COLOUR, hatch_defs, hatch_url,
                                    legend_html, region_fill)
@@ -49,7 +49,7 @@ from src.resources import resource_path
 
 #: Re-exported so callers keep one import for "the ecoregions, drawn".
 __all__ = ["CAVEAT", "HATCHED", "REGION_COLOUR", "frame_height", "legend_html",
-           "map_svg", "region_fill", "region_geometry"]
+           "map_svg", "projector", "region_fill", "region_geometry"]
 
 #: Lon/lat window the map draws. Slightly wider than the polygons' own bounds so
 #: nothing sits flush against the frame.
@@ -161,6 +161,18 @@ def _projector(width: float, height: float):
     return project
 
 
+def projector(width: float, height: float):
+    """``(lon, lat) -> (x, y)`` for a map drawn at this size.
+
+    Public since V2.75 so an overlay can be placed in the *same* projection the
+    shading uses. Anything drawing on top of :func:`map_svg` — occurrence
+    points, a site pin — must go through this rather than reimplementing the
+    conic, because a second projector that is 2% off produces dots that sit
+    just outside their own region and look like a data error.
+    """
+    return _projector(width, height)
+
+
 def region_geometry(level: str = "", within: str = "") -> dict:
     """``{key: [ring, ...]}`` merged across the file's duplicate entries.
 
@@ -208,12 +220,15 @@ def region_geometry(level: str = "", within: str = "") -> dict:
     return out
 
 
+
 def map_svg(highlight: Optional[dict] = None, *,
             width: int = 460, height: int = 300,
             title: str = "", labels: bool = True,
             cities: Optional[bool] = None,
             link_for=None, reference: bool = False,
-            level: str = "", within: str = "", numbered: bool = False) -> str:
+            level: str = "", within: str = "", numbered: bool = False,
+            overlay: str = "", chrome: str = "",
+            min_px: float = 0.0, present_only: bool = False) -> str:
     """The ecoregion map as inline SVG.
 
     ``level`` and ``within`` draw one level of the vocabulary, optionally
@@ -244,6 +259,20 @@ def map_svg(highlight: Optional[dict] = None, *,
     ``link_for`` is an optional ``key -> href`` callable; when given, each
     region becomes a link. Used by the standalone map page and deliberately not
     by the per-species maps, where the region is a fact rather than a control.
+
+    ``overlay`` is raw SVG emitted above every other layer, positioned with
+    :func:`projector` at the same ``width``/``height``, and **clipped to the
+    subject provinces like everything else thematic**. It is the seam for
+    drawing *records* rather than *regions* — see
+    ``scripts/plot_occurrences.py``. Deliberately a string this module does not
+    interpret: the alternative was a point-plotting API here, and where the
+    records are is not this file's concern.
+
+    ``chrome`` is emitted last and **not** clipped: a legend, a scale bar, a
+    title block. The distinction is not fussiness. Anything placed by the
+    projector is a claim about ground and must stop at the border; a key sits
+    in the corner of the *frame*, which on this projection is over British
+    Columbia, so putting one through ``overlay`` deletes it.
     """
     highlight = highlight or {}
     regions = region_geometry(level, within)
@@ -287,12 +316,20 @@ def map_svg(highlight: Optional[dict] = None, *,
     order = sorted(regions.items(),
                    key=lambda kv: (DRAW_ORDER.get(kv[0], 50),) if reference
                    else (kv[0] in highlight,))
+    if present_only:
+        # Draw only the regions this species is recorded from, over the bare
+        # province outline. On a species page the other twenty-one shapes are
+        # 846 KB of polygons per page saying "not here" -- which the caption
+        # already says in words, and which the reader cannot act on. Kept as an
+        # option rather than the default because a region page's map is ABOUT
+        # the layer and needs all of it.
+        order = [(k, v) for k, v in order if k in highlight]
 
     from src.ecoregion import ecoregion_display              # noqa: PLC0415
 
     parts = [
         f'<svg class="ecomap" viewBox="0 0 {width} {height}" '
-        f'width="100%" height="auto" role="img" '
+        f'width="100%" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" '
         f'aria-label="{html.escape(title or "Ecoregion map")}">',
         hatch_defs(),
@@ -308,9 +345,7 @@ def map_svg(highlight: Optional[dict] = None, *,
     parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">')
     for _key, rings in sorted(context.items()):
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _points(ring, project, min_px)
             parts.append(f'<polygon class="ecomap-region ecomap-outside" '
                          f'points="{points}" fill="{ABSENT_FILL[0]}" '
                          f'fill-opacity="{ABSENT_FILL[1]}"/>')
@@ -318,9 +353,7 @@ def map_svg(highlight: Optional[dict] = None, *,
         parent_fill, _op = region_fill(parent_key, "high")
         parent_name = ecoregion_display(parent_key)[0]
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _points(ring, project, min_px)
             parts.append(
                 f'<polygon class="ecomap-region ecomap-parent" '
                 f'points="{points}" fill="{parent_fill}" fill-opacity="0.45">'
@@ -340,9 +373,7 @@ def map_svg(highlight: Optional[dict] = None, *,
             tip += ", not recorded"
         hatch = hatch_url(key) if (reference or present) else ""
         for ring in rings:
-            points = " ".join(
-                f"{x:.1f},{y:.1f}" for x, y in
-                (project(float(lon), float(lat)) for lon, lat in ring))
+            points = _points(ring, project, min_px)
             shape = (f'<polygon class="ecomap-region" points="{points}" '
                      f'fill="{fill}" fill-opacity="{opacity}">'
                      f'<title>{html.escape(tip)}</title></polygon>')
@@ -370,6 +401,11 @@ def map_svg(highlight: Optional[dict] = None, *,
     if labels:
         for key, rings in regions.items():
             if not rings:
+                continue
+            # A label over ground this map no longer shades is a name with
+            # nothing under it. When only the recorded regions are drawn, only
+            # those get named.
+            if present_only and key not in highlight:
                 continue
             ring = max(rings, key=len)
             lon, lat, angle = _label_point(key, ring)
@@ -423,6 +459,17 @@ def map_svg(highlight: Optional[dict] = None, *,
                 f'text-anchor="middle" dominant-baseline="central">'
                 f'{index}</text></g>')
 
+    if overlay:
+        # Inside the subject clip, like everything else thematic. The overlay
+        # used to sit outside it, so `plot_occurrences` drew records from
+        # British Columbia and Montana over ground this layer does not speak
+        # for (F142, V2.78). The caller drops those records itself and says how
+        # many; this is the backstop for the remaining case the caller cannot
+        # settle -- a dot a few hundred metres over a simplified border, which
+        # should be trimmed by the picture rather than deleted from the data.
+        parts.append(f'<g clip-path="url(#{SUBJECT_CLIP_ID})">{overlay}</g>')
+    if chrome:
+        parts.append(chrome)
     parts.append("</svg>")
     return "".join(parts)
 

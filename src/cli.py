@@ -145,7 +145,10 @@ def _cmd_generate(args) -> int:
         print("Building design offline (no LLM) …")
         project = generate_design_offline(site_config=site_config, goals=goals,
                                           budget=budget, fauna_ids=fauna_ids,
-                                          match_site=match_site, density=density)
+                                          match_site=match_site, density=density,
+                                          variant=args.variant,
+                                          setting=args.setting or "",
+                                          street_side=args.street_side or "")
     else:
         client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
         print(f"Generating design via {client.model} at {client.endpoint} …")
@@ -199,19 +202,45 @@ def _cmd_build_site(args) -> int:
                          copy_photos=not args.no_photos,
                          include_notes=args.include_notes,
                          analytics_token=getattr(args, "analytics_token", ""),
+                         umami_website_id=getattr(args, "umami_website_id", ""),
+                         umami_src=getattr(args, "umami_src", ""),
+                         feedback_url=getattr(args, "feedback_url", ""),
                          progress=say)
     print(f"\n{summary['files']} files written to {summary['out_dir']}")
     print(f"  {summary['species']} species pages, "
           f"{summary['wildlife']} wildlife pages")
-    # Said out loud either way. "Did this build have analytics in it?" is not a
-    # question anyone should have to answer by grepping the output.
-    print("  analytics: Cloudflare beacon embedded, disclosed in the footer"
-          if summary.get("analytics") else
-          "  analytics: none (the site makes no external request)")
+    # Said out loud either way, and since V2.73 it names WHICH: "did this build
+    # have analytics in it" is not a question anyone should have to answer by
+    # grepping the output, and with two providers "yes" stopped being an answer.
+    names = summary.get("analytics_providers") or ()
+    print(f"  analytics: {' + '.join(names)} embedded, disclosed in the footer"
+          if names else "  analytics: none")
+    # Said out loud because it is the only other thing that can leave the
+    # page, and because "no external request" stopped being the whole truth
+    # the moment a form could be submitted. Loading a page still makes none.
+    fb = getattr(args, "feedback_url", "")
+    print(f"  feedback form: posts to {fb}" if fb else
+          "  feedback form: none (this build cannot receive reports)")
     if summary["photos_hotlinked"]:
         print(f"  {summary['photos_copied']} photographs copied from the local "
               f"cache; {summary['photos_hotlinked']} still point at their "
               f"original URLs (warm the cache to bundle them)")
+    # The one thing about a build that cannot be checked by looking at the site
+    # (V2.80): whether a link pasted into Facebook or Reddit shows a picture
+    # lives in somebody else's scraper, so a wrong answer is invisible here and
+    # obvious to everybody else. Said out loud, with the fix in the failing
+    # case rather than in a doc nobody has open.
+    share = summary.get("share_image") or ""
+    if not share and not args.base_url:
+        print("  share card: TEXT ONLY. Pass --base-url so a shared link can "
+              "carry a photograph (a scraper cannot resolve a relative path).")
+    elif not share:
+        print("  share card: TEXT ONLY. No species in this build has a "
+              "credited photograph to share.")
+    else:
+        where = ("hotlinked, run scripts/warm_photo_cache.py to serve your own "
+                 "copy" if summary.get("share_hotlinked") else "your own copy")
+        print(f"  share card: {share}\n              ({where})")
     return 0
 
 
@@ -313,6 +342,17 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--density", choices=("sparse", "balanced", "full"),
                     default="balanced",
                     help="how much of the boundary to fill (default: balanced)")
+    ge.add_argument("--variant", type=int, default=0,
+                    help="with --no-llm: another plan of the same quality from "
+                         "the same answers (Try another); 0 is the usual plan")
+    ge.add_argument("--setting", choices=("front", "back"), default=None,
+                    help="with --no-llm: a front yard keeps short plants along "
+                         "the street; a back yard may add a brush pile and a "
+                         "bee hotel")
+    ge.add_argument("--street-side", default=None, dest="street_side",
+                    choices=("north", "north-east", "east", "south-east",
+                             "south", "south-west", "west", "north-west"),
+                    help="with --setting front: which side the street is on")
     ge.add_argument("--lat", type=float, default=None, help="site latitude")
     ge.add_argument("--lng", type=float, default=None, help="site longitude")
     ge.add_argument("--budget", type=float, default=None,
@@ -338,6 +378,13 @@ def _build_parser() -> argparse.ArgumentParser:
     bs.add_argument("--no-photos", action="store_true", dest="no_photos",
                     help="do not copy cached photographs into the output; "
                          "reference their original URLs instead")
+    bs.add_argument("--feedback-url", default="", dest="feedback_url",
+                    help="the endpoint the feedback form posts to, normally a "
+                         "Cloudflare Worker on your own domain (see "
+                         "workers/feedback/). OFF by default: without it the "
+                         "Feedback page explains that this build cannot "
+                         "receive reports and points at the repository, rather "
+                         "than showing a button that goes nowhere")
     bs.add_argument("--include-notes", action="store_true", dest="include_notes",
                     help="publish the free-text notes field. OFF by default: "
                          "~43 rows describe traditional medicinal and plant-use "
@@ -345,11 +392,31 @@ def _build_parser() -> argparse.ArgumentParser:
                          "free, prior and informed consent (see CLAUDE.md)")
     bs.add_argument("--analytics-token", default="", dest="analytics_token",
                     help="Cloudflare Web Analytics site token. OFF by default: "
-                         "with no token the site makes no external request at "
-                         "all. With one, every page loads Cloudflare's beacon "
-                         "(no cookies, no per-visitor identifier) and says so "
-                         "in its footer. Get the token from the Cloudflare "
-                         "dashboard under Analytics & Logs > Web Analytics")
+                         "with no analytics argument the site makes no external "
+                         "request at all. With one, every page loads "
+                         "Cloudflare's beacon (no cookies, no per-visitor "
+                         "identifier) and says so in its footer. Get the token "
+                         "from the Cloudflare dashboard under Analytics & Logs "
+                         "> Web Analytics. Answers 'is anyone reading this'; "
+                         "the free tier keeps a short window, so for history "
+                         "use --umami-website-id as well or instead")
+    bs.add_argument("--umami-website-id", default="", dest="umami_website_id",
+                    help="Umami website ID (a UUID, from the website's "
+                         "Settings page in Umami). OFF by default, same terms "
+                         "as --analytics-token: no cookies, no per-visitor "
+                         "identifier, disclosed in the footer. Unlike "
+                         "Cloudflare it keeps history, so it is the one that "
+                         "answers 'which pages, and is this growing'. Both "
+                         "flags together is fine and is how you check a "
+                         "switchover before dropping the old one")
+    bs.add_argument("--umami-src", default="", dest="umami_src",
+                    help="URL of Umami's script.js. Defaults to Umami Cloud "
+                         "(https://cloud.umami.is/script.js); use "
+                         "https://eu.umami.is/script.js for their EU region, "
+                         "or your own host if you self-host. Worth doing "
+                         "eventually: cloud.umami.is is on the common "
+                         "blocklists, so some visitors go uncounted. Ignored "
+                         "without --umami-website-id")
     bs.set_defaults(func=_cmd_build_site)
 
     # validate-data

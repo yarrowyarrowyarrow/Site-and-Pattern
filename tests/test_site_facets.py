@@ -290,22 +290,35 @@ class TestOnlyNativesArePublished(unittest.TestCase):
         _use_our_db()
         cls.rows = search_plants()
 
-    def test_the_garden_cultivars_are_dropped(self):
+    def test_nothing_needs_dropping_any_more(self):
+        """The filter used to earn its keep on five rows: four fruit cultivars
+        and a duplicate bergamot. V2.80 removed all of them from the catalogue
+        outright -- *"we can keep the 422 and drop the 6"* -- so there is
+        nothing left for it to catch.
+
+        The rule stays, and this asserts it stays *correct* rather than
+        unused: every row now published is one this catalogue can defend, and
+        the day something non-native is added again the filter is still there
+        to hold it out."""
         dropped = {r["common_name"] for r in self.rows if not is_publishable(r)}
-        self.assertEqual(dropped, {"Goodland Apple", "Norland Apple",
-                                   "Evans Cherry", "Nanking Cherry",
-                                   "Bee Balm (Wild Bergamot)"})
+        self.assertEqual(dropped, set())
+        self.assertTrue(self.rows, "no rows at all would pass this vacuously")
 
     def test_a_non_alberta_prairie_native_is_kept(self):
-        """Stiff Goldenrod is flagged non-Alberta and is a genuine
-        Saskatchewan and Manitoba native. Filtering on the flag instead of on
-        the garden file would have thrown it out."""
+        """A species flagged non-Alberta can still be a genuine prairie native.
+        Filtering on the flag instead of on the garden file would throw it out.
+
+        Pinned to *Oligoneuron rigidum* until V2.80, which found it was
+        *Solidago rigida* under a second name and merged the two. *Echinacea
+        angustifolia* carries the case now, and carries it better: VASCAN
+        narrowed it to Saskatchewan, so the non-Alberta flag is read from a
+        flora rather than inferred."""
         rows = [r for r in self.rows
-                if r.get("scientific_name") == "Oligoneuron rigidum"]
+                if r.get("scientific_name") == "Echinacea angustifolia"]
         self.assertTrue(rows)
         for row in rows:
             self.assertFalse(row.get("native_to_alberta"))
-            self.assertEqual(row.get("native_provinces"), "SK,MB")
+            self.assertEqual(row.get("native_provinces"), "SK")
             self.assertTrue(is_publishable(row))
 
     def test_the_duplicate_bergamot_goes_but_the_native_one_stays(self):

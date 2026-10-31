@@ -27,8 +27,8 @@ import bmesh                                      # noqa: I001
 from mathutils import Matrix, Vector
 
 from . import conventions as C
-from .fauna_variants import (BEE_VARIANTS, BIRD_VARIANTS,
-                             LEP_VARIANTS)
+from .fauna_birds import build_bird
+from .fauna_variants import BEE_VARIANTS, LEP_VARIANTS
 from .materials import fauna_material
 from .mesh_ops import add_cone, add_uv_ball, bm_to_object, make_empty
 
@@ -237,56 +237,9 @@ def _build_lep(rng, coll, prefix=""):
     return _multi(rng, coll, LEP_VARIANTS, _build_lep_one)
 
 
-# ── bird (07-wildlife.js makeBirdCritter) ────────────────────────────────────
+# ── bird ─────────────────────────────────────────────────────────────────────
 
-# The three bird outlines a yard actually holds. A woodpecker propped on a trunk
-# and a chickadee on a twig are not the same bird, and the roster shows both.
-BIRD_BUILDS = {
-    "passerine":  {"body": 0.16, "body_s": (0.85, 1.35, 0.9), "beak": 0.09,
-                   "beak_r": 0.030, "tail": (0.12, 0.22), "tail_tilt": -0.3},
-    "woodpecker": {"body": 0.17, "body_s": (0.78, 1.5, 0.86), "beak": 0.16,
-                   "beak_r": 0.026, "tail": (0.09, 0.34), "tail_tilt": 0.55},
-    "hummer":     {"body": 0.11, "body_s": (0.9, 1.25, 0.95), "beak": 0.22,
-                   "beak_r": 0.012, "tail": (0.08, 0.14), "tail_tilt": -0.1},
-}
-
-
-def _build_bird_one(rng, coll, prefix="", build="passerine"):
-    B = BIRD_BUILDS.get(build, BIRD_BUILDS["passerine"])
-    n = lambda s: C.part_name(prefix, s)
-    objs = [
-        _ball(n(C.NODE_BODY), coll, C.MAT_BODY, B["body"], B["body_s"],
-              (0, 0, 0)),
-        _ball(n("Belly"), coll, C.MAT_BELLY, 0.13, (0.7, 1.0, 0.8),
-              (0, -0.06, -0.05), u=8, v=6),
-        _ball(n(C.NODE_HEAD), coll, C.MAT_BODY, 0.11, (1, 1, 1),
-              (0, 0.16, 0.12), u=9, v=7),
-    ]
-    bm = bmesh.new()          # beak: cone forward (+Y), origin at its base
-    add_cone(bm, B["beak_r"], 0.004, B["beak"], 5,
-             Matrix.Rotation(-math.pi / 2, 4, "X"))
-    beak = bm_to_object(bm, n(C.NODE_BEAK), coll, fauna_material(C.MAT_DARK))
-    beak.location = Vector((0, 0.28, 0.12))
-    objs.append(beak)
-    bm = bmesh.new()          # tail: flat slab. A woodpecker's is long and
-    tw, tl = B["tail"]        # propped DOWN against the trunk, not cocked up.
-    bmesh.ops.create_cube(bm, size=1.0,
-                          matrix=Matrix.Translation((0, -0.26 - tl * 0.4, 0.02))
-                          @ Matrix.Rotation(B["tail_tilt"], 4, "X")
-                          @ Matrix.Diagonal((tw, tl, 0.02, 1)))
-    objs.append(bm_to_object(bm, n(C.NODE_TAIL), coll,
-                             fauna_material(C.MAT_WING)))
-    for s, nm in ((-1, C.NODE_WING_L), (1, C.NODE_WING_R)):
-        def wing(bm, s=s):
-            add_uv_ball(bm, 0.14, (0.5, 1.0, 0.14),
-                        Matrix.Translation((0.12 * s, -0.02, 0)), u=8, v=4)
-        objs.append(_wing_obj(n(nm), coll, C.MAT_WING,
-                              (0.08 * s, -0.02, 0.04), wing))
-    return objs
-
-
-def _build_bird(rng, coll, prefix=""):
-    return _multi(rng, coll, BIRD_VARIANTS, _build_bird_one)
+# Nine body plans since V2.97 (F174), in their own module: fauna_birds.py.
 
 
 # ── fly (hover fly + darner dragonfly variants in one file) ──────────────────
@@ -419,7 +372,7 @@ def _build_mammal(rng, coll, prefix=""):
     return objs
 
 
-_BUILDERS = {"bee": _build_bee, "lep": _build_lep, "bird": _build_bird,
+_BUILDERS = {"bee": _build_bee, "lep": _build_lep, "bird": build_bird,
              "fly": _build_fly, "beetle": _build_beetle, "bat": _build_bat,
              "mammal": _build_mammal}
 

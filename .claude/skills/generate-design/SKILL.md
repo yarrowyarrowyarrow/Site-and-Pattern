@@ -32,23 +32,26 @@ goal filters + seeded communities with zero network — and since V2.23 it
 speaks the same placement vocabulary (a capacity-sized matrix-grass +
 forbs meadow mix via `_offline_plant_mix`, community pockets / a weighted
 mosaic via `_offline_community_plan`, budgeted by the shared
-`_trim_spec_to_budget`), and
-`src/generate_worker.py` transparently falls back to it on any
-`LLMError`, so the one-click button always yields a design.
+`_trim_spec_to_budget`). **Since V3.22 (RM-3) it is the only path the
+GUI takes**: `src/generate_worker.py` always calls `generate_design_offline`,
+and the dialog has no brief and no *Build without AI*. The LLM
+`generate_design` remains only in the CLI and the MCP server (frozen
+contract); the selection/geometry split above still governs it.
 
 ## Pipeline in one page
 
 ```
-GUI: src/generate_design_dialog.py  (brief, goal checkboxes, offline toggle,
-  │                                  budget, wildlife picker, density, match-site)
+GUI: src/generate_design_dialog.py  (goal checkboxes, budget, wildlife
+  │                                  picker, density, match-site)
   ▼
 src/controllers/generation.py  GenerationController.open_dialog
   │   persists goals → site_config["priorities"], hands over existing features (F5)
   ▼
 src/generate_worker.py  GenerateWorker on a QThread
-  │   offline flag → generate_design_offline;  LLMError → falls back to it
+  │   always generate_design_offline (V3.22); the LLM calls in steps 2 and 5
+  │   are CLI/MCP only — offline builds the spec from goals, critic is deterministic
   ▼
-src/llm_design.py  generate_design(prompt, …)
+src/llm_design.py  generate_design(prompt, …) / generate_design_offline(…)
   │ 1. zone context up front: elevation grid + wet/dry zones (src/zoning.py),
   │    keep-out circles + fill regions (src/exclusion.py), scored cell map
   │    (src/placement_score.py build_cell_env_map)
@@ -82,8 +85,8 @@ chat-completions endpoint; the default is **local Ollama**
 with stdlib `urllib` only. Resolution order for endpoint/model:
 explicit arg → `PERMADESIGN_LLM_ENDPOINT`/`PERMADESIGN_LLM_MODEL` env →
 `~/.permadesign_config.json` via `src/settings.py` (`llm_endpoint` /
-`llm_model`) → built-in default. Timeout 120 s. The User-Agent keeps the
-legacy `PermaDesign/1.0` string on purpose (see `legacy-lessons`).
+`llm_model`) → built-in default. Timeout 120 s. The User-Agent is
+`http_utils.user_agent()`, the app's one identity (V3.31).
 
 Spec safety rails, in order of defence:
 - `_parse_spec_json` tolerates markdown fences / prose around the JSON.

@@ -12,8 +12,10 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `64` (`src/db/plants.py:_SCHEMA_VERSION` — the
-  authoritative value; this doc's narrative may lag, the code wins)
+- **Current schema version:** `97` (`src/db/plants.py:_SCHEMA_VERSION` — the
+  authoritative value; this doc's narrative may lag, the code wins). It sat at
+  `75` here through nine bumps, which is what the parenthesis above is for and
+  is also why it is worth re-reading it whenever you bump.
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
   - Windows: `%APPDATA%/Site & Pattern/`
@@ -51,7 +53,7 @@ One row per species. Key columns (full list in the DDL):
 | `leaf_shape`, `leaf_size_cm`, `leaf_arrangement` | botanical morphology (v47). `leaf_size_cm` sets 3D foliage grain in real metres — a 20 cm bur oak leaf reads coarse, a 2 cm dwarf-birch leaf fine, at the same crown size |
 | `bark_color`, `fall_color` | hex (v47). The species' real trunk colour and autumn colour; `fall_color` empty = evergreen or no colouring, an honest empty rather than a guess |
 | `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) — woody habit |
-| `growth_form` | herbaceous habit (v48). The **source of truth** for which 3D archetype a non-woody plant gets; the viewer's genus table is now only a fallback |
+| `growth_form` | herbaceous habit (v48). The **source of truth** for which 3D archetype a non-woody plant gets; the viewer's genus table is now only a fallback. `jointed` (v89) is the horsetails: the body is the jointed stems, whatever `plant_type` (herb, rush or aquatic) says about where they grow. `submerged` (v90) lives under the water, only its flowers and shoot tips reaching the surface, where `floating` is leaves lying on it; with `emergent` these pick a wetland plant's body (`src/pond_habit.py`). `pads` and `globose` (v91) are the cacti, whose bodies are their stems: chains of flat pads and a spiny ball; with `succulent` they pick a succulent's body (`src/succulent_habit.py`) |
 | `fruit_form` | fruit SHAPE (v49) — berry \| strig \| raceme \| cherry \| pome \| hip \| strawberry \| aggregate \| flat_cluster. The companion to `fruit_color`: before it, every fleshy fruit in the catalogue drew as the same sphere sprite |
 | `bark_texture` | smooth \| furrowed \| papery \| shaggy \| scaly (v52). Which procedural bark grain the 3D viewer draws. Bark is how a woody plant is identified in winter, and one grain served all of them; note that within *Betula* only paper birch is `papery` — the kind of difference a genus table cannot hold. Seeded in `scripts/seed_surface_morphology.py` |
 | `leaf_surface` | matte \| glossy \| pubescent \| glaucous (v52). Recorded only where the character is distinctive enough to draw — a silvery wolf-willow, a waxy bog blueberry, a glossy Oregon-grape. Empty is the common case and the honest default |
@@ -64,7 +66,7 @@ One row per species. Key columns (full list in the DDL):
 | `flower_diameter_cm` | ONE floret across (v53). The most valuable number the catalogue was missing: bloom size used to be derived from *canopy*, so a pasqueflower and a sunflower scaled with the plant rather than with the flower |
 | `flower_center_color` | The disc/eye (v53). A black-eyed Susan **is** its dark disc; it was a yellow blob |
 | `flower_height_frac` | How far the bloom is held above the foliage, as a fraction of height (v53) |
-| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). **Read since V2.34**: the stem is a forked skeleton, and a goldenrod's silhouette IS its two orders of branching. Only the `erect` and `clump` growth forms have a stem to fork |
+| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). **Read since V2.34**: the stem is a forked skeleton, and a goldenrod's silhouette IS its two orders of branching. Only the `erect` and `clump` growth forms have a stem to fork; on a `jointed` horsetail (v89) it says where the whorls of branches are (`branched_throughout` Common Horsetail, `branched_above` Swamp Horsetail, `unbranched` the scouring-rushes) |
 | `basal_rosette` | 0/1 (v53) |
 | `flowering_stems` | How many inflorescences a MATURE plant carries (v54). Bloom display used to be sized off the plant's *canopy*, which is a proxy for spread and not for flowering: a pasqueflower holds three and a mature bergamot twenty-eight. **No flora records this** — the seeded values follow from the branching habit and are meant to be corrected in the field with `scripts/tune_morphology.py`. Empty falls back to a count derived from `stem_branching` |
 | `flower_data_source` | measured \| flora \| photo \| estimated (v55). **Where each flower number came from.** The seeder's values are genus-level botanical judgement, which is a reasonable start and is not a measurement; reporting "307 described" as though it meant 307 verified is what P9 forbids. Raised by `scripts/tune_morphology.py` as species are actually checked |
@@ -208,6 +210,43 @@ auto-expires.
 On `plants(plant_type)`, `plants(zone range)`, `plants(native_to_alberta)`,
 `planting_calendar(plant_id)`, the two member junctions, and the three
 `plant_fauna` columns. See the bottom of the DDL.
+
+---
+
+### `plants.native_provinces_source` (schema v79, V2.80)
+
+Where a species' `native_provinces` came from. It was the one claim on a
+species page with **no** source column, while flower colour and safety both had
+one -- and it is the claim an outside botanical review actually objected to,
+because 354 of 430 species published "AB, SK" from an inference about
+ecoregions continuing across the 110th meridian rather than from any flora.
+
+```sql
+plants.native_provinces_source TEXT DEFAULT ''
+  -- 'flora'   read from VASCAN's published national checklist
+  -- ''        nobody checked; src/nativity.py names the heuristic instead
+```
+
+**Blank is a real answer and must stay blank** for the ~20 species VASCAN could
+not settle -- a removal, a rename, or a lineage the archive reader could not
+follow. Stamping those would publish "read from a published flora" over an
+answer no flora gave, which is the overstatement this line of work exists to
+remove. `src.nativity.provenance` reads a missing source as *inferred* and
+prints the actual heuristic, which for them is still true.
+
+* **Authored by `scripts/ingest_flora_nativity.py --apply`**, over
+  `data/fetched/flora_nativity.json`. It applies exactly two things -- the
+  narrowings and the stamp -- and refuses removals, renames and undetermined.
+* **Read by `src/nativity.py`**, whose `SOURCE_FIELD` constant the apply
+  imports rather than re-spelling. A second copy of that string would make the
+  write a silent no-op: it succeeds, and every page goes on saying "inferred".
+* **`native_to_alberta` moves with it.** Separate column, and the one the
+  native filter and the Habitat Value Score actually read; V2.80 cleared seven.
+  Note `"1?"` is a legal value (native, editorially uncertain) that
+  `db/plants.py` reads as truthy and a plain `int()` raises on.
+* Additive and empty in `_migrate_to_v79`; the version bump forces the reseed
+  that carries the values in. Without the bump the column arrives empty and
+  stays empty forever -- and nothing raises.
 
 ---
 

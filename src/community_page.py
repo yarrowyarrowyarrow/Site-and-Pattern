@@ -1,0 +1,382 @@
+"""
+community_page.py — a plant community's page, beside the list (F206, V3.09).
+
+Design principle P10 — see docs/DESIGN_PHILOSOPHY.md.
+
+The owner, keeping Plant Communities: "I quite like the way the 'plants' now
+show up in an adjacent 'pop up' and would like the same for plant communities
+for ease of scrolling, visibility and use. Selecting a plant community can show
+the pictures of the plants in the community in the pop up (not too big as I
+want it to be mostly all visible in one go) along with the description of the
+community and the ability to drop down into individual descriptions of the
+plants."
+
+It shares the plant page's frame over the map's right edge
+(``src/species_flyout.py``): the community's name and its facts, Place, its
+members as small photographs three across, then its description (the pattern
+card the panel writes). A member's photograph opens that plant's page in the
+same frame, with the way back above it. Since V3.11 a photograph keeps its
+type's colour as a thin frame, names wrap to two lines rather than being cut,
+and the panel stops repeating the page (``set_details_in_page``).
+"""
+
+from __future__ import annotations
+
+import html
+
+from typing import Callable, Optional
+
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PyQt6.QtWidgets import (
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
+    QToolButton, QVBoxLayout, QWidget,
+)
+
+#: A member's photograph: small, so most communities fit on one screen.
+TILE = QSize(96, 64)
+COLUMNS = 3
+#: The type's colour round a photograph, so a photo still says what kind of
+#: plant it is (the owner, V3.11: the colours "disappear with the plants that
+#: have pictures").
+FRAME = 3
+
+_HEAD = "color: #e8f5e9; font-size: 16px; font-weight: bold;"
+_DIM = "color: #90a4ae; font-size: 12px;"
+_SECTION = ("color: #a5d6a7; font-size: 13px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+_TILE_STYLE = (
+    "QToolButton { color: #c8e6c9; background: transparent; font-size: 12px; "
+    "border: 1px solid #2e4a2e; border-radius: 4px; padding: 2px; }"
+    "QToolButton:hover { border-color: #66bb6a; }"
+    "QToolButton:focus { border: 2px solid #ffe082; }")
+
+
+class CommunityPage(QWidget):
+    """One community. ``show_community(polyculture)`` fills it from
+    ``polycultures.get_polyculture_by_id``'s dict."""
+
+    #: The ✕, or Esc while the page has focus.
+    close_requested = pyqtSignal()
+    #: Place this community (its id).
+    place_requested = pyqtSignal(int)
+    #: Open a member's page: ``{"id": plant_id}``.
+    member_requested = pyqtSignal(dict)
+    #: A related community named in the description (its id).
+    community_requested = pyqtSignal(int)
+
+    def __init__(self, parent=None, *,
+                 photo_warmer: Optional[Callable] = None,
+                 plant_fn: Optional[Callable] = None):
+        super().__init__(parent)
+        self.setObjectName("communityPage")
+        self._photo_warmer = photo_warmer
+        self._plant_fn = plant_fn
+        self._community: dict = {}
+        self._tiles: dict = {}          # plant id -> its QToolButton
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(14, 10, 10, 8)
+        outer.setSpacing(6)
+
+        head = QHBoxLayout()
+        names = QVBoxLayout()
+        names.setSpacing(2)
+        self._name = QLabel("")
+        self._name.setStyleSheet(_HEAD)
+        self._name.setWordWrap(True)
+        self._name.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        names.addWidget(self._name)
+        self._facts = QLabel("")
+        self._facts.setStyleSheet(_DIM)
+        self._facts.setWordWrap(True)
+        names.addWidget(self._facts)
+        head.addLayout(names, 1)
+        self._close = QToolButton()
+        self._close.setText("✕")
+        self._close.setAccessibleName("Close the community page")
+        self._close.setToolTip("Close (Esc)")
+        self._close.setFixedSize(28, 28)
+        self._close.setStyleSheet(
+            "QToolButton { color: #c8e6c9; background: transparent; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 14px; }"
+            "QToolButton:hover { border-color: #66bb6a; }"
+            "QToolButton:focus { border: 2px solid #ffe082; }")
+        self._close.clicked.connect(self.close_requested)
+        head.addWidget(self._close, 0, Qt.AlignmentFlag.AlignTop)
+        outer.addLayout(head)
+
+        from src.ui_style import BTN_PRIMARY
+        self._place = QPushButton("Place this community")
+        self._place.setObjectName("placeButton")
+        self._place.setStyleSheet(BTN_PRIMARY)
+        self._place.clicked.connect(
+            lambda: self.shown_id() is not None
+            and self.place_requested.emit(self.shown_id()))
+        outer.addWidget(self._place)
+
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setAccessibleName("Community page")
+        body = QWidget()
+        self._scroll.setWidget(body)
+        col = QVBoxLayout(body)
+        col.setContentsMargins(0, 0, 4, 0)
+        col.setSpacing(4)
+        self._members_head = QLabel("The plants")
+        self._members_head.setStyleSheet(_SECTION)
+        col.addWidget(self._members_head)
+        grid_holder = QWidget()
+        self._grid = QGridLayout(grid_holder)
+        self._grid.setContentsMargins(0, 0, 0, 0)
+        self._grid.setSpacing(4)
+        col.addWidget(grid_holder)
+        # F220 (V3.12): whether its plants are native around Edmonton, naming
+        # the ones that are not, which is why "Edmonton natives only" hides it.
+        self._local = QLabel("")
+        self._local.setWordWrap(True)
+        self._local.setStyleSheet(_DIM)
+        self._local.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        col.addWidget(self._local)
+        about = QLabel("About this community")
+        about.setStyleSheet(_SECTION)
+        col.addWidget(about)
+        self._about = QLabel("")
+        self._about.setWordWrap(True)
+        self._about.setTextFormat(Qt.TextFormat.RichText)
+        self._about.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+        self._about.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction)
+        self._about.setOpenExternalLinks(False)
+        self._about.linkActivated.connect(self._on_link)
+        col.addWidget(self._about)
+        col.addStretch()
+        outer.addWidget(self._scroll, 1)
+
+    # ── Filling it ───────────────────────────────────────────────────────────
+
+    def shown_id(self) -> Optional[int]:
+        cid = self._community.get("id")
+        return int(cid) if cid is not None else None
+
+    def members(self) -> list:
+        return list(self._community.get("members") or [])
+
+    def show_community(self, polyculture: dict, *, facts: str = "") -> None:
+        """Fill the page for ``polyculture``; ``facts`` is its one line
+        ("8 plants · Full Sun · Medium moisture"), worked out from it when
+        not given."""
+        self._community = dict(polyculture or {})
+        name = self._community.get("name") or ""
+        self._name.setText(name)
+        self.setAccessibleName(f"About {name}")
+        self._facts.setText(facts or _facts_for(self._community))
+        self._render_tiles()
+        self._local.setText(around_line(self.members()))
+        self._local.setVisible(bool(self._local.text()))
+        self._about.setText(_description_html(
+            self._community, card=getattr(self, "_advanced", False)))
+        self._scroll.verticalScrollBar().setValue(0)
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """The pattern card only with Advanced tools on (V3.21, RM-8); in the
+        simple app the page is the name, what it is for, its plants and
+        Place."""
+        self._advanced = bool(on)
+        if self._community:
+            self._about.setText(_description_html(self._community,
+                                                  card=self._advanced))
+
+    def refresh_photo(self, plant_id: int) -> None:
+        """A photograph finished downloading: draw it if it is a member's."""
+        btn = self._tiles.get(int(plant_id))
+        if btn is not None:
+            btn.setIcon(QIcon(self._tile_pixmap(int(plant_id))))
+
+    def keyPressEvent(self, event):                       # noqa: N802
+        if event.key() == Qt.Key.Key_Escape:
+            self.close_requested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def _render_tiles(self) -> None:
+        while self._grid.count():
+            item = self._grid.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        self._tiles = {}
+        seen = []
+        for m in self.members():
+            pid = m.get("plant_id")
+            if pid is None or int(pid) in self._tiles:
+                continue        # a community lists a species once per spot
+            pid = int(pid)
+            btn = QToolButton()
+            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            btn.setIconSize(TILE)
+            btn.setIcon(QIcon(self._tile_pixmap(pid, m)))
+            name = m.get("common_name") or f"Plant #{pid}"
+            btn.setStyleSheet(_TILE_STYLE)
+            btn.ensurePolished()        # measure in the tile's own font
+            btn.setText(two_lines(name, btn.fontMetrics(), TILE.width()))
+            btn.setAccessibleName(name)
+            btn.setToolTip(f"{name}: open its page")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(
+                lambda _c=False, p=pid: self.member_requested.emit({"id": p}))
+            self._grid.addWidget(btn, len(seen) // COLUMNS, len(seen) % COLUMNS)
+            self._tiles[pid] = btn
+            seen.append(pid)
+        # One height for every tile, so a one-line name's photograph lines up
+        # with a two-line name's beside it.
+        tallest = max((b.sizeHint().height() for b in self._tiles.values()),
+                      default=0)
+        for b in self._tiles.values():
+            b.setMinimumHeight(tallest)
+        n = len(seen)
+        self._members_head.setText(
+            f"The plants ({n} species)" if n else "No plants in it yet")
+
+    def _plant(self, plant_id: int) -> dict:
+        fn = self._plant_fn
+        if fn is None:
+            from src.db.plants import get_plant as fn
+        try:
+            return fn(plant_id) or {}
+        except Exception:                                  # noqa: BLE001
+            return {}
+
+    def _tile_pixmap(self, plant_id: int, member: Optional[dict] = None
+                     ) -> QPixmap:
+        """The plant's photograph cropped to a tile, or, until one is cached,
+        its type's colour (and the photograph asked for)."""
+        plant = self._plant(plant_id)
+        url = plant.get("image_url") or ""
+        path = None
+        if url:
+            try:
+                from src.image_cache import get_cached_image
+                path = get_cached_image(url)
+            except Exception:                              # noqa: BLE001
+                path = None
+        from src.member_colors import plant_color
+        colour = QColor(plant_color({**(member or {}), **plant}))
+        pix = QPixmap(path) if path else QPixmap()
+        if not pix.isNull():
+            scaled = pix.scaled(TILE, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                Qt.TransformationMode.SmoothTransformation)
+            x = max(0, (scaled.width() - TILE.width()) // 2)
+            y = max(0, (scaled.height() - TILE.height()) // 2)
+            photo = scaled.copy(x, y, TILE.width(), TILE.height())
+            painter = QPainter(photo)
+            w, h = TILE.width(), TILE.height()
+            for x, y, fw, fh in ((0, 0, w, FRAME), (0, h - FRAME, w, FRAME),
+                                 (0, 0, FRAME, h), (w - FRAME, 0, FRAME, h)):
+                painter.fillRect(x, y, fw, fh, colour)
+            painter.end()
+            return photo
+        if url and self._photo_warmer is not None:
+            try:
+                self._photo_warmer(plant)
+            except Exception:                              # noqa: BLE001
+                pass
+        swatch = QPixmap(TILE)
+        swatch.fill(colour)
+        return swatch
+
+    def _on_link(self, href: str) -> None:
+        if href.startswith("community:"):
+            try:
+                self.community_requested.emit(int(href.split(":", 1)[1]))
+            except ValueError:
+                pass
+
+
+def fold_parts(text: str, sep: str = " ") -> list:
+    """Where ``text`` may break: between words, but never after "&", so a
+    name folds as "Wet Meadow / Aster & Monkeyflower", not "Aster & /
+    Monkeyflower" (V3.19 review of QF-10)."""
+    if sep != " ":
+        return text.split(sep)
+    words = text.split()
+    for i in range(len(words) - 2, -1, -1):
+        if words[i] == "&":
+            words[i:i + 2] = [f"& {words[i + 1]}"]
+    return words
+
+
+def two_lines(name: str, metrics, width: int, sep: str = " ") -> str:
+    """A tile's name on up to two lines of ``width`` px, cut only when it will
+    not fit in two ("Northern Bedstraw" read "Northern Bed…" on one, V3.09).
+    ``sep`` breaks somewhere other than between words: the community list's
+    facts break between " · " parts, never inside "Partial Shade" (V3.19,
+    QF-10)."""
+    words = fold_parts(name, sep)
+    first = ""
+    while words and metrics.horizontalAdvance(
+            (first + sep + words[0]) if first else words[0]) <= width:
+        first = (first + sep + words.pop(0)) if first else words.pop(0)
+    if not first:                    # one word longer than the tile
+        return metrics.elidedText(name, Qt.TextElideMode.ElideRight, width)
+    rest = sep.join(words)
+    if not rest:
+        return first
+    return first + "\n" + metrics.elidedText(rest, Qt.TextElideMode.ElideRight,
+                                             width)
+
+
+def around_line(members: list, place: str = "") -> str:
+    """Whether a community's plants are native around ``place`` (F220): one
+    sentence, naming each species that is not, once. ``""`` with no members or
+    no list for the place."""
+    from src.native_here import native_names, places
+    if not place:
+        from src import region
+        place = region.default().key
+    if not members or place not in places():
+        return ""
+    local, short = native_names(place), places()[place]["short"]
+    outside = list(dict.fromkeys(
+        m.get("common_name") or "" for m in members
+        if (m.get("scientific_name") or "").strip() not in local))
+    if not outside:
+        return f"Every plant here is native around {short}."
+    return f"Not native around {short}: {', '.join(outside)}."
+
+
+def _facts_for(polyculture: dict) -> str:
+    """The list row's line for this community (F196), from the library index
+    that row is drawn from; the plant count alone when that cannot be read."""
+    from src.polyculture_panel import community_facts
+    try:
+        from src.db import polycultures
+        entry = polycultures.get_library_index().get(polyculture.get("id"))
+    except Exception:                                      # noqa: BLE001
+        entry = None
+    if entry is None:
+        entry = {"member_count": len(polyculture.get("members") or [])}
+    return community_facts(entry)
+
+
+def _description_html(polyculture: dict, *, card: bool = True) -> str:
+    """The pattern card the panel writes (F4) when ``card``, else (or when it
+    cannot be built) the community's own description."""
+    if not card:
+        return html.escape(polyculture.get("description") or "").replace(
+            "\n", "<br>")
+    try:
+        from src import pattern_language
+        from src.db import polycultures
+        pattern = pattern_language.build_pattern(
+            polyculture,
+            all_communities=polycultures.get_all_polycultures(
+                top_level_only=False))
+        return pattern_language.pattern_card_html(pattern, include_header=False)
+    except Exception:                                      # noqa: BLE001
+        return polyculture.get("description") or ""

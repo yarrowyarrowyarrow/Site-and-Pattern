@@ -165,30 +165,61 @@ class TestFetchFailureHonesty(unittest.TestCase):
 
     _BBOX = {"south": 53.5, "west": -113.51, "north": 53.51, "east": -113.5}
 
-    def test_retry_then_mirror_then_none(self):
-        calls = []
+    def test_every_server_once_then_none(self):
+        calls, why = [], []
 
         def post(query, url):
             calls.append(url)
             return None
 
-        out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None)
+        # The log says which server said what (V3.37: it said nothing).
+        with self.assertLogs(osm.log, "INFO") as logged:
+            out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None,
+                                      why=why)
         self.assertIsNone(out)
-        # primary, primary retry, mirror.
-        self.assertEqual(calls, [osm._OVERPASS_URLS[0],
-                                 osm._OVERPASS_URLS[0],
-                                 osm._OVERPASS_URLS[1]])
+        self.assertIn("no server answered", logged.output[-1])
+        self.assertIn("overpass-api.de", logged.output[0])
+        # V3.37: the others before the main one again, which is asked again
+        # only when it said it was busy (it did not say anything here).
+        self.assertEqual(calls, osm._OVERPASS_URLS)
+        self.assertEqual([m.host for m in why],
+                         [osm._host(u) for u in osm._OVERPASS_URLS])
+
+    def test_each_miss_is_said_as_it_happens(self):
+        heard = []
+        with self.assertLogs(osm.log, "INFO"):
+            osm._fetch_overpass(
+                "q", _post=lambda q, url: None, _sleep=lambda s: None,
+                on_miss=lambda m: heard.append(osm.trying_words(m)))
+        self.assertEqual(len(heard), len(osm._OVERPASS_URLS))
+        self.assertIn("overpass-api.de could not be reached", heard[0])
+        self.assertIn("another server", heard[0])
+
+    def test_a_busy_main_server_is_asked_again_after_a_pause(self):
+        calls, pauses = [], []
+
+        def post(query, url):
+            calls.append(url)
+            if url == osm._OVERPASS_URL:
+                return osm.Unanswered("overpass-api.de", osm.BUSY, "HTTP 429")
+            return osm.Unanswered(osm._host(url), osm.UNREACHABLE, "refused")
+
+        with self.assertLogs(osm.log, "INFO"):
+            osm._fetch_overpass("q", _post=post, _sleep=pauses.append)
+        self.assertEqual(calls, osm._OVERPASS_URLS + [osm._OVERPASS_URL])
+        self.assertEqual(pauses, [osm._BUSY_PAUSE_S])
 
     def test_mirror_success_after_primary_failure(self):
-        def post(query, url):
-            return {"elements": []} if "kumi" in url else None
+        for name in ("private.coffee", "kumi"):
+            def post(query, url, name=name):
+                return {"elements": []} if name in url else None
 
-        out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None)
-        self.assertEqual(out, {"elements": []})
+            out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None)
+            self.assertEqual(out, {"elements": []})
 
     def test_fetch_existing_features_none_on_failure(self):
         orig = osm._fetch_overpass
-        osm._fetch_overpass = lambda q: None
+        osm._fetch_overpass = lambda q, **kw: None
         try:
             self.assertIsNone(osm.fetch_existing_features(self._BBOX))
         finally:
@@ -196,11 +227,156 @@ class TestFetchFailureHonesty(unittest.TestCase):
 
     def test_fetch_buildings_keeps_empty_list_contract(self):
         orig = osm._fetch_overpass
-        osm._fetch_overpass = lambda q: None
+        osm._fetch_overpass = lambda q, **kw: None
         try:
             self.assertEqual(osm.fetch_buildings(self._BBOX), [])
+            self.assertIsNone(osm.fetch_buildings_or_none(self._BBOX))
         finally:
             osm._fetch_overpass = orig
+
+    def test_buildings_alone_do_not_ask_for_streets(self):
+        # V3.37: every part of a bulk download fetched every street in it.
+        asked = []
+        orig = osm._fetch_overpass
+        osm._fetch_overpass = lambda q, **kw: asked.append(q) or {
+            "elements": []}
+        try:
+            osm.fetch_buildings(self._BBOX)
+            osm.fetch_trees(self._BBOX)
+        finally:
+            osm._fetch_overpass = orig
+        self.assertEqual(len(asked), 2)
+        self.assertTrue(all("highway" not in q for q in asked))
+
+    def test_a_yard_declares_little_memory_and_a_city_the_default(self):
+        yard = {"south": 53.5, "west": -113.501, "north": 53.501,
+                "east": -113.5}
+        self.assertIn("[maxsize:", osm._query(yard, True, True, True))
+        self.assertNotIn("[maxsize:", osm._query(self._BBOX | {
+            "north": 53.53}, False, True))
+
+
+class TestWhyAServerDidNotAnswer(unittest.TestCase):
+    """V3.37: each failure is kept with its kind, so the status line can say
+    busy from offline from a certificate the computer could not check."""
+
+    _URL = osm._OVERPASS_URL
+
+    def setUp(self):
+        self._send = osm._send
+        osm._mozilla["context"] = None
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        osm._send = self._send
+        osm._mozilla["context"] = None
+
+    def _failing(self, exc):
+        def send(url, body, context=None):
+            raise exc
+        osm._send = send
+        return osm._post_overpass("q", self._URL)
+
+    def test_http_statuses(self):
+        import urllib.error
+        for code, kind in ((429, osm.BUSY), (504, osm.BUSY), (503, osm.BUSY),
+                           (403, osm.REFUSED), (400, osm.REFUSED)):
+            got = self._failing(urllib.error.HTTPError(
+                self._URL, code, "x", {}, None))
+            self.assertEqual((got.kind, got.detail), (kind, f"HTTP {code}"))
+            self.assertEqual(got.host, "overpass-api.de")
+
+    def test_timeouts_and_no_connection(self):
+        import socket
+        import urllib.error
+        self.assertEqual(self._failing(TimeoutError()).kind, osm.SLOW)
+        self.assertEqual(self._failing(urllib.error.URLError(
+            socket.timeout("timed out"))).kind, osm.SLOW)
+        self.assertEqual(self._failing(urllib.error.URLError(
+            ConnectionRefusedError())).kind, osm.UNREACHABLE)
+        self.assertEqual(self._failing(urllib.error.URLError(
+            "[Errno -2] Name or service not known")).kind, osm.UNREACHABLE)
+
+    def test_a_certificate_the_computer_cannot_check_is_asked_of_certifi(self):
+        import ssl
+        import urllib.error
+        try:
+            import certifi  # noqa: F401
+        except ImportError:
+            self.skipTest("certifi not installed")
+        contexts = []
+
+        def send(url, body, context=None):
+            contexts.append(context)
+            if context is None:
+                raise urllib.error.URLError(ssl.SSLCertVerificationError(
+                    "unable to get local issuer certificate"))
+            return b'{"elements": []}'
+
+        osm._send = send
+        with self.assertLogs(osm.log, "WARNING") as logged:
+            self.assertEqual(osm._post_overpass("q", self._URL),
+                             {"elements": []})
+        self.assertIn("certifi", logged.output[0])
+        self.assertIsNone(contexts[0])
+        self.assertIsInstance(contexts[1], ssl.SSLContext)
+        # And from then on, straight to the list that worked.
+        osm._post_overpass("q", self._URL)
+        self.assertIs(contexts[2], contexts[1])
+
+    def test_a_certificate_neither_list_can_check(self):
+        import ssl
+        import urllib.error
+        got = self._failing(urllib.error.URLError(
+            ssl.SSLCertVerificationError("certificate has expired")))
+        self.assertEqual(got.kind, osm.CERTIFICATE)
+
+    def test_answers_that_are_not_answers(self):
+        def answering(raw):
+            osm._send = lambda url, body, context=None: raw
+            return osm._post_overpass("q", self._URL)
+
+        self.assertEqual(answering(b"<html>Too busy</html>").kind,
+                         osm.GARBLED)
+        self.assertEqual(answering(b'{"remark": "x"}').kind, osm.GARBLED)
+        # A query the server cut short is part of an answer, not an answer.
+        cut = answering(b'{"elements": [], "remark": "runtime error: Query '
+                        b'timed out in \\"query\\" at line 1 after 26 s."}')
+        self.assertEqual(cut.kind, osm.BUSY)
+        self.assertEqual(answering(b'{"elements": []}'), {"elements": []})
+
+
+class TestFailureWords(unittest.TestCase):
+
+    @staticmethod
+    def _miss(kind, detail="", host="overpass-api.de"):
+        return osm.Unanswered(host, kind, detail)
+
+    def test_the_worst_news_is_said(self):
+        words = osm.failure_words([
+            self._miss(osm.BUSY, "HTTP 429"),
+            self._miss(osm.UNREACHABLE, host="overpass.private.coffee")])
+        self.assertIn("busy", words)
+        self.assertIn("Try again in a minute", words)
+
+    def test_each_kind_reads_differently(self):
+        said = {k: osm.failure_words([self._miss(k, "HTTP 403")])
+                for k in osm._KINDS}
+        self.assertEqual(len(set(said.values())), len(osm._KINDS))
+        self.assertIn("HTTP 403", said[osm.REFUSED])
+        self.assertIn("online", said[osm.UNREACHABLE])
+        self.assertIn("certificate", said[osm.CERTIFICATE].replace(
+            "secure connection", "certificate"))
+        for words in said.values():
+            # How a person tells a failure from an empty answer.
+            self.assertTrue(words.startswith("OpenStreetMap didn't answer"))
+            self.assertNotIn("Found 0", words)
+
+    def test_what_was_lost_is_the_callers(self):
+        words = osm.failure_words([self._miss(osm.SLOW)],
+                                  lost="no buildings came")
+        self.assertIn("so no buildings came.", words)
+        self.assertIn("didn't answer", osm.failure_words([]))
 
 
 class TestBoundaryFilter(unittest.TestCase):
@@ -265,6 +441,18 @@ class TestImportOsmResult(unittest.TestCase):
         self.assertEqual(out["added"], 0)
         self.assertIn("didn't answer", out["message"])
         self.assertNotIn("Found 0", out["message"])
+
+    def test_failure_says_why(self):
+        # The worker's failure (V3.37) carries what each server said.
+        proj = new_project("t")
+        out = osm.import_osm_result(
+            {"failed": [osm.Unanswered("overpass-api.de", osm.BUSY,
+                                       "HTTP 429")]},
+            proj, boundary=self._POLY)
+        self.assertEqual(out["added"], 0)
+        self.assertEqual(len(out["failed"]), 1)
+        self.assertIn("busy", out["message"])
+        self.assertEqual(proj["features"], [])
 
     def test_counts_and_message(self):
         proj = new_project("t")

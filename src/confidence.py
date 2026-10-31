@@ -203,6 +203,20 @@ MARKS: dict[str, Mark] = {
         "measured", "✓", "measured", inferred=False),
     "flora": Mark(
         "flora", "✓", "read from a published flora", inferred=False),
+    # A flora states the obvious once at the genus and then notes only
+    # departures from it, so 140 of this catalogue's species are described in
+    # Budd's with no colour of their own. Reading the genus recovers them, and
+    # a botanist reads a flora that way -- the genus description IS part of
+    # each species entry by the book's own convention.
+    #
+    # It gets its own mark rather than borrowing "flora" because it is a
+    # weaker reading and the reader deserves to weigh it. NOT inferred: the
+    # book asserts it, we did not compute it. That is the whole distinction
+    # from "estimated", which is this project's own genus default and the
+    # thing all of this exists to remove.
+    "flora_genus": Mark(
+        "flora_genus", "✓", "from the genus description in a flora",
+        inferred=False),
     "photo": Mark(
         "photo", "✓", "read off a photograph", inferred=False),
     "checked": Mark(

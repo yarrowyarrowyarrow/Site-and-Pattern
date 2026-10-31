@@ -33,7 +33,47 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 74`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 97`.
+
+**Nativity is the weakest claim in the seed data, and V2.75 retired the thing
+that generated it.** `native_provinces` was written by
+`scripts/tag_prairie_provenance.py` from a hand-authored `native_to_alberta`
+boolean plus the plant's ecoregion tags — and V2.72/73 replaced that vocabulary
+underneath it, so a re-run would have moved **237 of 431 species**. The script
+now refuses to run without an explicit override, and
+`data_quality.validate_provenance_generator` fails the build if its vocabulary
+drifts again. Do not hand-edit `native_provinces` to "fix" a row.
+
+**V2.80: the replacement ran.** The author downloaded VASCAN's Darwin Core
+Archive and `scripts/fetch_flora_nativity.py --from-archive <path>` read it with
+no network; `scripts/ingest_flora_nativity.py` reports, and `--apply` writes.
+414 of 434 species now carry `native_provinces_source = "flora"` and 34 province
+lists were narrowed where a published flora disagreed with the ecoregion
+inference. Three things it deliberately does not touch, and each has its own
+route: removals go through `data/excluded_taxa.json` with an authority (V2.74),
+renames are their own increment (they move plant ids, `plant_fauna_master.json`
+keys and public URLs), and `undetermined` is the archive reader failing to
+follow a lineage rather than a finding about a plant -- run
+`--explain "<species>"` on those before deciding anything. Those ~20 keep **no**
+source and go on naming the heuristic, which for them is still true.
+
+**Narrowing `native_provinces` means correcting `native_to_alberta` too.** They
+are separate columns and the second is what the native filter and the Habitat
+Value Score actually read; changing one alone leaves two fields in a row
+contradicting each other, with the score reading the stale one. Note some rows
+carry `"1?"` -- native to Alberta, editorially uncertain -- which `db/plants.py`
+reads as truthy and a plain `int()` raises on.
+
+**Removing a species is a seed-data change too (V2.74, and again in V2.75).** *Rudbeckia hirta*
+came out because VASCAN and Moss's *Flora of Alberta* both record it as
+introduced in Alberta, and a removal has a wider blast radius than an
+addition: it took 150 documented edges, a `plant_ecoregions` entry, two seeded
+polyculture memberships, a worked-example fallback, and **six animals whose
+only documented edge was to that plant** — leaving those in `fauna` trips
+`test_derived_edges`' orphan ceiling, and the answer is to remove them, not to
+raise it. Record the call in `data/excluded_taxa.json` with its authority;
+`data_quality.validate_excluded_taxa` then fails the build if the species
+reappears in either plant file or as the `plant` of an edge.
 
 **Sourcing is enforced (V2.42).** Every `source` field in
 `plant_fauna_master.json`, `bee_attributes_master.json` and

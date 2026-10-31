@@ -8,7 +8,7 @@ Leaflet. A slim Qt strip between the toolbars and the map costs no JS, cannot
 be repainted away by a map redraw, and reads as part of the app chrome.
 
 It shows the three-step path with the current step highlighted, carries the
-✨ Generate Design call to action, and **removes itself** once the user has a
+Plan my yard call to action, and **removes itself** once the user has a
 pin, a boundary and plants — guidance that outstays its welcome becomes
 furniture. A View-menu toggle brings it back.
 
@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 
 class FirstStepBar(QWidget):
-    """Three step chips + a Generate button + a dismiss ✕."""
+    """Three step chips + a Plan my yard button + a dismiss ✕."""
 
     #: A step chip was clicked — carries the step key ('pin'/'boundary'/'plants').
     step_clicked = pyqtSignal(str)
@@ -44,7 +44,7 @@ class FirstStepBar(QWidget):
 
         lead = QLabel("Getting started:")
         lead.setStyleSheet(
-            "color: #8aa88a; font-size: 11px; font-weight: bold;")
+            "color: #8aa88a; font-size: 12px; font-weight: bold;")
         row.addWidget(lead)
 
         self._chips: list[QPushButton] = []
@@ -60,23 +60,23 @@ class FirstStepBar(QWidget):
         # Lowest-priority element in the strip: it may be cut on a narrow
         # window, which is why the same sentence is on each chip's tooltip.
         self._detail = QLabel("")
-        self._detail.setStyleSheet("color: #a5c8a5; font-size: 11px;")
+        self._detail.setStyleSheet("color: #a5c8a5; font-size: 12px;")
         self._detail.setTextFormat(Qt.TextFormat.PlainText)
         self._detail.setMinimumWidth(0)
         self._detail.setSizePolicy(QSizePolicy.Policy.Ignored,
                                    QSizePolicy.Policy.Preferred)
         row.addWidget(self._detail, 2)
 
-        self._generate = QPushButton("✨ Generate Design")
+        self._generate = QPushButton("Plan my yard")
         self._generate.setCursor(Qt.CursorShape.PointingHandCursor)
         self._generate.setToolTip(
-            "Fill your boundary with native plants chosen from your goals "
-            "(Ctrl+G).\nEverything it places stays editable — drag, delete or "
-            "add to it.")
+            "Plan where you outlined with native plants, from a few "
+            "questions (Ctrl+G).\nEverything it places stays yours to drag, "
+            "delete or add to.")
         self._generate.setStyleSheet(
             "QPushButton { background: #2e7d32; color: #e8f5e9; "
             "border: 1px solid #66bb6a; border-radius: 4px; "
-            "padding: 4px 12px; font-weight: bold; font-size: 11px; }"
+            "padding: 4px 12px; font-weight: bold; font-size: 12px; }"
             "QPushButton:hover { background: #388e3c; }")
         self._generate.clicked.connect(self.generate_requested)
         row.addWidget(self._generate)
@@ -162,11 +162,11 @@ class FirstStepBar(QWidget):
         if live:
             return ("QPushButton { color: #0d1f0d; background: #a5d6a7; "
                     "border: 1px solid #c5e1a5; border-radius: 10px; "
-                    "padding: 2px 4px; font-size: 11px; font-weight: bold; }")
+                    "padding: 2px 4px; font-size: 12px; font-weight: bold; }")
         if done:
             return ("QPushButton { color: #7a9f7a; background: transparent; "
                     "border: 1px solid #2e4a2e; border-radius: 10px; "
-                    "padding: 2px 4px; font-size: 11px; }")
+                    "padding: 2px 4px; font-size: 12px; }")
         return ("QPushButton { color: #b0bec5; background: transparent; "
                 "border: 1px dashed #3e5c3e; border-radius: 10px; "
-                "padding: 2px 4px; font-size: 11px; }")
+                "padding: 2px 4px; font-size: 12px; }")

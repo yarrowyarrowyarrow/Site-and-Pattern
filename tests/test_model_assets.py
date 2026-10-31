@@ -365,29 +365,84 @@ class ModelAssetsTest(unittest.TestCase):
                     f"{rec.get('scientific_name')}: no baked {want} variant "
                     f"for {prefix}.{form_of(rec)} — rebuild html/assets/models")
                 checked += 1
-        # 316 today (229 herbaceous + 55 shrubs + 32 groundcover). Grass, sedge,
-        # vine and aquatic stay outside this guard: they map to layer.*
-        # archetypes carrying plain interchangeable variants rather than
-        # morphology ones. The floor only has to catch the lookup going empty.
-        self.assertGreater(checked, 300, "catalogue stopped resolving")
+        # 298 today; 316 when this was written, and the drift is the catalogue
+        # shrinking rather than the lookup failing — V2.74 and V2.80 removed
+        # introduced species and V2.82 merged five rows that were one plant
+        # filed twice. Grass, sedge, vine and aquatic stay outside this guard:
+        # they map to layer.* archetypes carrying plain interchangeable
+        # variants rather than morphology ones. The floor only has to catch the
+        # lookup going empty, so it sits well below the count on purpose —
+        # a floor set one row under it fails on every legitimate removal.
+        self.assertGreater(checked, 250, "catalogue stopped resolving")
+
+    def test_the_viewer_asks_for_what_was_baked(self):
+        """The same check from the VIEWER's side (V2.88).
+
+        The test above computes each key the generator's way, so it was
+        guarding the generator against itself. The viewer computes its key from
+        the numbers the SCENE sends, and `src/scene3d.py` rounded the recorded
+        canopy to 3 decimals while the generator divided by 1.5 x spacing as
+        computed (0.6000000000000001). Five species whose height / canopy is
+        exactly 1.0 or 1.5 landed in the class above the one baked for them,
+        and the lookup fell back to an unrelated unit, while this file stayed
+        green. So: build each species' 3D state the way the app does and ask
+        for the key the viewer would.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        from src.scene3d import plant_3d_state            # noqa: PLC0415
+        catalogue = json.loads(_read(os.path.join(_ROOT, "data",
+                                                  "plants_master.json")))
+        missing, checked = [], 0
+        for family, (types, form_of, prefix) in conventions.FAMILY_FORMS.items():
+            for rec in catalogue:
+                if rec.get("plant_type") not in types:
+                    continue
+                form = form_of(rec)
+                # db.plants._row_to_dict: canopy defaults to 1.5 x spacing.
+                sp = rec.get("spacing_m")
+                st = plant_3d_state(
+                    dict(rec, mature_height_meters=rec.get("mature_height_m"),
+                         mature_canopy_m=float(sp) * 1.5 if sp else None),
+                    0.0, 0.0, 0)
+                h, c = st["mature_height_m"], st["mature_canopy_m"]
+                blade = conventions.blade_class(rec.get("leaf_shape"))
+                grain = conventions.grain_class(rec.get("leaf_size_cm"), h, family)
+                if family == "herb" and form in conventions.ASPECT_HERB_FORMS:
+                    want = conventions.herb_variant_key(
+                        blade, grain, conventions.herb_aspect_class(form, h, c),
+                        conventions.branch_class(rec.get("stem_branching"))
+                        if form in conventions.BRANCH_HERB_FORMS else None)
+                else:
+                    want = conventions.variant_key(blade, grain)
+                keys = self.mf["plants"].get(f"{prefix}.{form}", {}).get(
+                    "variant_keys", {})
+                if want not in keys:
+                    missing.append(f"{rec.get('scientific_name')} -> "
+                                   f"{prefix}.{form} {want}")
+                checked += 1
+        self.assertEqual(missing, [], "the viewer would ask for units nobody "
+                                      "baked; its lookup then falls back")
+        self.assertGreater(checked, 250, "catalogue stopped resolving")
 
     def test_layer_and_fauna_keys_match_viewer(self):
         layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
                   if k.startswith("layer.")}
-        self.assertEqual(set(layers), {"grass", "aquatic", "vine",
-                                       "groundcover"})
+        # Vines left in V2.89: drawn on what they climb (22-vines.js), not baked.
+        self.assertEqual(set(layers), {"grass", "aquatic", "groundcover"})
         # Groundcover is morphology-keyed (V2.29): its 32 species carry 14 leaf
         # outlines, so it ships one unit per (blade × grain) like a herb rather
         # than N interchangeable draws.
         self.assertGreaterEqual(len(layers["groundcover"].get("variant_keys", {})), 4)
         self.assertIsNone(layers["groundcover"].get("variants"))
-        # grass / aquatic / vine are aspect-keyed (V2.33, F65). They always
+        # grass / aquatic are aspect-keyed (V2.33, F65). They always
         # shipped three units; until now the three were random draws of ONE
         # shape picked by a plant-id hash, so a 2.67:1 mountain brome and a
         # 0.56:1 golden sedge were both stretched out of a 1.31:1 archetype.
         # Same payload, three real shapes, chosen by the species.
         conventions = _assetlib_conventions()
-        for kind in ("grass", "aquatic", "vine"):
+        for kind in ("grass", "aquatic"):
             keys = layers[kind].get("variant_keys", {})
             self.assertIsNone(layers[kind].get("variants"),
                               f"layer.{kind} still declares interchangeable variants")
@@ -538,7 +593,7 @@ class ModelAssetsTest(unittest.TestCase):
         identification (F67).
         """
         try:
-            from src import scene_wildlife            # noqa: PLC0415
+            from src import bird_body_plan, scene_wildlife   # noqa: PLC0415
         except Exception:                             # noqa: BLE001
             self.skipTest("src.scene_wildlife not importable")
         wanted = {"bee": set(), "lep": set(), "bird": set()}
@@ -550,9 +605,11 @@ class ModelAssetsTest(unittest.TestCase):
                            ("Monarch", "butterfly"), ("Sphinx Moth", "moth"),
                            ("Nothing In Particular", "butterfly")):
             wanted["lep"].add(scene_wildlife._lep_appearance(name, "", kind)["build"])
-        for name in ("Downy Woodpecker", "Northern Flicker", "Ruby-throated "
-                     "Hummingbird", "Black-capped Chickadee", "Robin"):
-            wanted["bird"].add(scene_wildlife._bird_appearance(name)["build"])
+        # Birds by genus since V2.97 (src/bird_body_plan.py): every build the
+        # genus table can name, and the name-word fallback for a bird with none.
+        for genus in list(bird_body_plan.PLAN_BY_GENUS) + ["turdus"]:
+            wanted["bird"].add(bird_body_plan.appearance("", genus + " x")["build"])
+        wanted["bird"].add(bird_body_plan.appearance("Pileated Woodpecker", "")["build"])
         for key, builds in wanted.items():
             declared = set(self.mf["fauna"][key].get("nodes", []))
             missing = builds - declared

@@ -91,9 +91,10 @@ class TestFaunaSchema(unittest.TestCase):
         hosts = plants_for_fauna(monarch, relationship="larval_host")
         host_names = {h["common_name"] for h in hosts}
         # Every host must be an Asclepias (milkweed). The DB ships at least
-        # two: Showy Milkweed and Green Milkweed.
+        # two: Showy Milkweed and Oval-leaf Milkweed (named Green Milkweed
+        # until V3.18, a name that belongs to A. viridiflora).
         self.assertIn("Showy Milkweed", host_names)
-        self.assertIn("Green Milkweed", host_names)
+        self.assertIn("Oval-leaf Milkweed", host_names)
         for h in hosts:
             sci = (h.get("scientific_name") or "").lower()
             self.assertTrue(

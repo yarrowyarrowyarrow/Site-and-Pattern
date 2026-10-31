@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 
 from src import app_mode
 from src.branding import APP_NAME
-from src.start_screen import _LINK, _Row
+from src.start_screen import _LINK, _PLAIN, _PRIMARY, _Row
 from src.ui_style import BASE_SURFACE
 
 #: Re-exported so callers do not need to import two modules to read a choice.
@@ -44,8 +44,7 @@ class LearnMenu(QDialog):
     :mod:`src.app_mode` keys, or ``""`` if they closed it."""
 
     def __init__(self, parent: QWidget | None = None, *,
-                 discovery_line: str = "", communities: int = 0,
-                 sandbox: str = ""):
+                 communities: int = 0, sandbox: str = ""):
         super().__init__(parent)
         self.setWindowTitle(f"{APP_NAME}: Learn")
         self.setMinimumWidth(560)
@@ -64,16 +63,17 @@ class LearnMenu(QDialog):
         layout.addWidget(head)
         # One line, and it is a promise about what happens here rather than a
         # mission statement. Krug: happy talk must die.
-        sub = QLabel("Walk it, look it up, then be taught it.")
+        sub = QLabel("Walk it, then be taught it.")
         sub.setStyleSheet("color: #8fb98f; font-size: 13px;")
         layout.addWidget(sub)
         layout.addSpacing(6)
 
-        notes = app_mode.learn_notes(discovery_line=discovery_line,
-                                     communities=communities,
+        notes = app_mode.learn_notes(communities=communities,
                                      sandbox=sandbox)
-        for i, (key, icon, title) in enumerate(app_mode.LEARN_DOORS):
-            row = _Row(icon, title, notes.get(key, ""), primary=(i == 0), parent=self)
+        # The icons went with the start screen's in V3.23: no emoji.
+        for i, (key, _icon, title) in enumerate(app_mode.LEARN_DOORS):
+            row = _Row(title, notes.get(key, ""),
+                       _PRIMARY if i == 0 else _PLAIN, self)
             row.clicked.connect(lambda _c=False, k=key: self._pick(k))
             layout.addWidget(row)
 

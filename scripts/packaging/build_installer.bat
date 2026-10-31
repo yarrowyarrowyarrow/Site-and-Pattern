@@ -41,16 +41,24 @@ if exist venv (
     call venv\Scripts\activate.bat
 )
 
-REM Install runtime + build dependencies. requirements.txt must be installed
-REM first so PyInstaller can actually find PyQt6 et al. to bundle — otherwise
+REM Install runtime + build dependencies, at the versions the last good
+REM release was built with (constraints-windows.txt, V3.32 FN-12).
+REM requirements.txt must be installed first so PyInstaller can actually find PyQt6 et al. to bundle — otherwise
 REM it silently produces a broken app that crashes on launch.
 echo Installing dependencies...
-pip install -q -r requirements.txt
+pip install -q -r requirements.txt -c scripts\packaging\constraints-windows.txt
 if !ERRORLEVEL! neq 0 (
     echo ERROR: failed to install requirements.txt. Aborting.
     exit /b 1
 )
-pip install -q pyinstaller
+pip install -q pyinstaller -c scripts\packaging\constraints-windows.txt
+
+REM Record what this build was made with (V3.31, FN-12): pip runs quietly, so
+REM until V3.31 no log said which PyQt6 or numpy went into an installer. The
+REM file ships in the bundle and is printed into the build log.
+pip freeze > build-versions.txt
+pip --version >> build-versions.txt
+type build-versions.txt
 
 REM Bake the version into the bundle so the frozen app knows which
 REM V<major>.<minor> it is for the in-app updater (src\app_version.py). CI

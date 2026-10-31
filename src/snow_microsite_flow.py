@@ -52,8 +52,8 @@ def recompute(main) -> None:
     deg = snow_microsite.winter_prevailing_deg(rose)
     if deg is None:
         main.statusBar().showMessage(
-            "Snow catch needs wind data — fetch the wind rose on "
-            "Analysis → Wind first.", 5000)
+            "Snow catch needs this site's wind: drop a site pin, or press "
+            "Refresh wind data on Site → Wind.", 5000)
         main.map_widget.draw_snow_catch({"bands": [], "wind_from_deg": 0})
         return
     from src.wind_shadow import casters_from_project

@@ -18,6 +18,9 @@ return ``None`` from the fetcher and the corresponding row shows
 
 from __future__ import annotations
 
+import html
+
+import time
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QObject, QSettings, QThread, QTimer, pyqtSignal, pyqtSlot
@@ -37,7 +40,7 @@ from src import glossary, ui_style
 _TOOLTIP_CSS = (
     " QToolTip { color: #10200f; background-color: #f2f7ef;"
     " border: 1px solid #6c8f6c; border-radius: 4px; padding: 6px 8px;"
-    " font-size: 11px; font-weight: normal; }")
+    " font-size: 12px; font-weight: normal; }")
 
 
 def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
@@ -70,10 +73,40 @@ def _explain(form: QFormLayout, value: QWidget, key: str, **ctx) -> None:
         w.setStyleSheet((w.styleSheet() or "") + _TOOLTIP_CSS)
 
 
+def _wrap_form_values(page: QWidget) -> None:
+    """Every value a form on ``page`` shows wraps (V3.19, QF-5, R8).
+
+    The values arrive with the pin, after the guard against sideways scroll
+    had measured the empty page: "Aspen Parkland (central AB / SK)  (auto)"
+    beside "Growing-degree days:" needed 425 px of 402 in DejaVu Sans, the
+    font CI draws in. A value set at build time and one added later both
+    wrap, so the next row cannot bring it back.
+
+    And each value gets the column's whole width, on every platform. macOS's
+    style holds a form's fields to their size hint, and a wrapped label hints
+    at a quarter of 80 characters, so there "May 12 → Sep 18  (128 days)" was
+    laid out 127 px wide in a row one line tall, and drew as two lines cut
+    through the middle (V3.19, QF-5 review). Fusion and Windows already grow
+    the fields; this says so for the Mac too."""
+    for form in page.findChildren(QFormLayout):
+        form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        for row in range(form.rowCount()):
+            item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            value = item.widget() if item is not None else None
+            if isinstance(value, QLabel):
+                value.setWordWrap(True)
+
+
 # Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
 # the rich-text span; handlers later call setText() with plain strings, which
 # restores the normal value colour.
-_DASH = "<span style='color:#546e7a;'>—</span>"
+_DASH = "<span style='color:#90a4ae;'>—</span>"
+#: What the four lines and the sellers say before there is a pin (V3.30).
+#: Not an instruction: the strip says how (R26), so these say what will come.
+SUMMARY_EMPTY = "Your yard's cold, rain and soil show here once it is found."
+NURSERIES_EMPTY = ("Native plant sellers near your yard show here once it is "
+                   "found.")
 
 
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
@@ -227,23 +260,84 @@ class _SiteFetchWorker(QObject):
 class _GeocodeWorker(QObject):
     """Runs a single forward-geocode request off the UI thread."""
 
-    results = pyqtSignal(list)        # list[{label, lat, lng}]
-    failed  = pyqtSignal(str)         # error message
+    results = pyqtSignal(list)        # list[{label, lat, lng}]; [] = no match
+    failed  = pyqtSignal(str)         # the search could not be made
+
+    #: Nominatim's usage policy allows one request a second, so the second
+    #: search, across both provinces, waits out the rest of that second.
+    WIDEN_AFTER_S = 1.0
 
     def __init__(self, query: str,
                  near: "tuple[float, float] | None" = None):
         super().__init__()
         self._query = query
         self._near  = near
+        self._cancelled = False
+
+    def cancel(self):
+        """A newer search replaced this one: ask nothing more."""
+        self._cancelled = True
 
     @pyqtSlot()
     def run(self):
+        """``geocode_address`` answers ``None`` when it could not ask, and
+        that is a failure here, not an empty list (V3.19, QF-3, R6). What
+        went wrong goes to the log; the panel's words say what to do."""
         try:
             from src.property_data import geocode_address
-            hits = geocode_address(self._query, near=self._near) or []
-            self.results.emit(hits)
-        except Exception as exc:
-            self.failed.emit(str(exc))
+            started = time.monotonic()
+            hits = geocode_address(self._query, near=self._near)
+            if hits == [] and self._near is not None:
+                hits = self._across_both_provinces(geocode_address, started)
+        except Exception as exc:  # noqa: BLE001 — a search never takes the panel down
+            from src.log import get_logger
+            get_logger(__name__).warning("address search failed: %s", exc)
+            hits = None
+        if hits is None:
+            self.failed.emit("unreachable")
+        else:
+            self.results.emit(list(hits))
+
+    def _across_both_provinces(self, geocode, started: float):
+        """Nothing near the map's view: ask once more across Alberta and
+        Saskatchewan (V3.19, QF-3 review). The view only biases the search,
+        and the map opens on Edmonton, so "Calgary" or a Saskatoon address
+        found nothing within 50 km and was then told no such address exists
+        in either province. One more request, only on a miss, and none for a
+        search the next keystroke has already replaced."""
+        time.sleep(max(0.0, self.WIDEN_AFTER_S - (time.monotonic() - started)))
+        if self._cancelled:
+            return []
+        return geocode(self._query)
+
+
+class _QuestionWords(QLabel):
+    """A Field Notes question, wrapping beside the box it ticks (V3.03).
+
+    A QCheckBox's own words cannot wrap. At 12 px the longest question needed
+    392 px in DejaVu Sans, the font CI and many Linux desktops draw in, and the
+    tab scrolled sideways. So the box carries the question as its name (what a
+    screen reader says) and these words stand beside it; a click on them ticks
+    it, as a click on a checkbox's own words would."""
+
+    def __init__(self, text: str, box: QCheckBox, parent=None):
+        super().__init__(text, parent)
+        self._box = box
+        self.setWordWrap(True)
+
+    def mousePressEvent(self, event):  # noqa: N802 (Qt override)
+        if event.button() == Qt.MouseButton.LeftButton:
+            event.accept()             # so the release comes here
+            return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):  # noqa: N802 (Qt override)
+        if (event.button() == Qt.MouseButton.LeftButton
+                and self.rect().contains(event.position().toPoint())
+                and self._box.isEnabled()):
+            self._box.toggle()
+            return
+        super().mouseReleaseEvent(event)
 
 
 # ── Panel widget ─────────────────────────────────────────────────────────────
@@ -291,6 +385,12 @@ class SitePanel(QWidget):
     # OSM rarely maps individual trees outside cities, so rural/acreage
     # properties get their shade casters from the imagery instead.
     tree_detect_requested = pyqtSignal()
+    # F207 (V3.10): buildings and trees in one scan, then a review
+    # (src/features_scan_flow.py).
+    features_scan_requested = pyqtSignal()
+    # The import's status line changed: Sun & Shade › Existing features
+    # repeats it (V3.37, src/shade_features_flow.py).
+    osm_status_changed = pyqtSignal(str)
     # Bulk-download a region's building footprints for offline reuse (V1.66).
     download_buildings_requested = pyqtSignal()
 
@@ -310,6 +410,13 @@ class SitePanel(QWidget):
     # the checklist / free text; MainWindow stores it on the project.
     field_notes_changed = pyqtSignal(dict)
 
+    # The wind rose the pin's fetch read (or None), for the Wind page (V3.07):
+    # it was read here since V2.13 for one line on Site Info while the Wind
+    # page waited for its own button and fetched it again.
+    wind_rose_ready = pyqtSignal(object)
+    #: "Print this sheet" on Notes (F32): the prompts as a page.
+    print_field_sheet_requested = pyqtSignal()
+
     # Site photo overlay (F24, P11). Import a yard/drone photo as a map underlay,
     # adjust its on-map width + opacity, toggle it, or remove it.
     site_photo_import_requested = pyqtSignal(str)     # image file path
@@ -327,7 +434,6 @@ class SitePanel(QWidget):
         self._worker: Optional[_SiteFetchWorker] = None
         self._geo_thread: Optional[QThread] = None
         self._geo_worker: Optional[_GeocodeWorker] = None
-        self._geo_debounce: Optional[QTimer] = None
         self._auto_color = "#44cc00"
         self._contour_color = "#795548"
         # Map widget reference, set by MainWindow via attach_map_widget().
@@ -337,20 +443,14 @@ class SitePanel(QWidget):
         self._build_ui()
         self._set_empty_state()
 
-    def set_first_step(self, text: str):
-        """Show the current getting-started step at the top of the Site tab
-        (F45). Empty text hides the line."""
-        lbl = getattr(self, "_first_step", None)
-        if lbl is None:
-            return
-        lbl.setText(text or "")
-        lbl.setVisible(bool(text))
-
     def focus_address_search(self):
         """Put the cursor in the address box (F44 — 'Start from my yard' and
-        the step-1 chip both land here). Selects any existing text so typing
+        the step-1 chip both land here), with Site Info in front: a cursor in
+        a page behind another is nowhere. Selects any existing text so typing
         replaces it."""
         try:
+            from src.keyboard_help import show_panel
+            show_panel(self._addr_input)
             self._addr_input.setFocus(Qt.FocusReason.OtherFocusReason)
             self._addr_input.selectAll()
         except (AttributeError, RuntimeError):
@@ -364,8 +464,10 @@ class SitePanel(QWidget):
     # ── Construction ────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        """Site panel split into three sub-tabs (mirrors the Plants panel):
-        Site Information, Slope, and Shade."""
+        """Site Info, Slope, Features and Notes. Since V3.07 the Design
+        tab's Sun & Shade and Wind pages join them, between Slope and Features
+        (``src/side_panel_layout.py``): they describe the site, not the
+        design (the owner's answers to the V3.05 surface audit)."""
         from src.ui_style import inner_tab_stylesheet
         outer = QVBoxLayout(self)
         outer.setContentsMargins(4, 4, 4, 4)
@@ -386,11 +488,21 @@ class SitePanel(QWidget):
         tabs.setStyleSheet(inner_tab_stylesheet()
                            + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)
+        # Kept, with two of the pages, so pages can be put beside them and a
+        # jump can open Site Info whatever page is in front.
+        self._tabs = tabs
 
         self._build_info_page(self._add_scroll_page(tabs, "Site Info"))
+        self.info_page = tabs.widget(tabs.count() - 1)
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
+        self.slope_page = tabs.widget(tabs.count() - 1)
         self._build_features_page(self._add_scroll_page(tabs, "Features"))
-        self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
+        self.features_page = tabs.widget(tabs.count() - 1)
+        # "Notes" since V3.08: the site walk's questions, and below them the
+        # design journal and the notes pinned on the map, which the Planning
+        # tab built (src/side_panel_layout.py puts them in _journal_slot).
+        self._build_field_notes_page(self._add_scroll_page(tabs, "Notes"))
+        self.notes_page = tabs.widget(tabs.count() - 1)
 
     def _add_scroll_page(self, tabs, title):
         """Add a scrollable page to the inner tab strip; return its body layout."""
@@ -407,29 +519,13 @@ class SitePanel(QWidget):
 
     def _build_info_page(self, layout):
         """Site Information sub-tab: property pin/address + climate + soil."""
-        # F45: the current step, stated before anything else on the panel the
-        # user lands on first. Text comes from src/onboarding.first_step_line,
-        # so this and the getting-started strip always say the same thing.
-        self._first_step = QLabel("")
-        self._first_step.setWordWrap(True)
-        self._first_step.setVisible(False)
-        self._first_step.setStyleSheet(
-            "color: #dcedc8; font-size: 11px; font-weight: bold; "
-            "padding: 6px 8px; background: #1e3320; "
-            "border: 1px solid #3e5c3e; border-radius: 4px;")
-        layout.addWidget(self._first_step)
-
-        info = QLabel(
-            "Search an Alberta address below to drop a property pin and "
-            "auto-fill site data from public sources. Drag the pin to refine; "
-            "right-click on the pin to remove."
-        )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        layout.addWidget(info)
+        # The page opens on the pin. Until V3.19 a green box (the strip's
+        # current step again, F45) and a paragraph above it said how to drop
+        # the pin, under the getting-started strip saying it too: the same
+        # instruction three times on one screen (R26). The strip says it.
 
         # ── Property pin (with address search) ───────────────────────
-        pin_box = QGroupBox("Property pin")
+        pin_box = QGroupBox("Your yard")
         pin_box.setStyleSheet(_GROUP_STYLE)
         pin_layout = QVBoxLayout(pin_box)
         pin_layout.setSpacing(6)
@@ -437,7 +533,12 @@ class SitePanel(QWidget):
         # Address search row.
         search_row = QHBoxLayout()
         self._addr_input = QLineEdit()
-        self._addr_input.setPlaceholderText("Search Alberta address or place name…")
+        # The pack's words (V3.25, ED-7).
+        from src import region
+        self._addr_input.setPlaceholderText(
+            region.default().address_search.get("placeholder")
+            or "Search an address…")
+        self._addr_input.setAccessibleName("Search for an address or place")
         self._addr_input.setClearButtonEnabled(True)
         self._addr_input.setStyleSheet(
             "QLineEdit { background: #0d1f0d; color: #e8f5e9; "
@@ -449,10 +550,7 @@ class SitePanel(QWidget):
         search_row.addWidget(self._addr_input, 1)
 
         self._btn_search = QPushButton("Find")
-        self._btn_search.setToolTip(
-            "Look the address up and list matches below — click one to drop\n"
-            "the property pin there. No internet? Use “Use Pin Drop…” instead."
-        )
+        self._btn_search.setToolTip("Find this address on the map.")
         self._btn_search.setStyleSheet(_BTN_PRIMARY)
         self._btn_search.clicked.connect(self._on_address_search)
         search_row.addWidget(self._btn_search)
@@ -460,6 +558,7 @@ class SitePanel(QWidget):
 
         # Suggestion list — empty/hidden until typeahead returns hits.
         self._addr_results = QListWidget()
+        self._addr_results.setAccessibleName("Address matches")
         self._addr_results.setMaximumHeight(120)
         self._addr_results.setVisible(False)
         self._addr_results.setStyleSheet(
@@ -478,18 +577,21 @@ class SitePanel(QWidget):
         self._lbl_label.setWordWrap(True)
         self._lbl_coords = QLabel("—")
         pin_form.addRow("Location:", self._lbl_label)
-        pin_form.addRow("Coordinates:", self._lbl_coords)
         pin_layout.addLayout(pin_form)
 
         # Action buttons (manual pin drop / refresh / clear).
         btn_row = QHBoxLayout()
-        self._btn_drop = QPushButton("Use Pin Drop…")
+        self._btn_drop = QPushButton("Click my yard on the map")
         self._btn_drop.setToolTip(
-            "Click then click the map to drop the property pin manually"
-        )
+            "Then click your yard on the map to put its pin there.")
         self._btn_drop.setStyleSheet(_BTN_PRIMARY)
         self._btn_drop.clicked.connect(self.pin_drop_requested.emit)
-        btn_row.addWidget(self._btn_drop)
+        # A row of its own (V3.30): beside Refresh and Clear its longer words
+        # pushed Site Info 13 px past the panel in CI's DejaVu Sans.
+        drop_row = QHBoxLayout()
+        drop_row.addWidget(self._btn_drop)
+        drop_row.addStretch(1)
+        pin_layout.addLayout(drop_row)
 
         self._btn_refresh = QPushButton("Refresh data")
         self._btn_refresh.setToolTip(
@@ -513,12 +615,74 @@ class SitePanel(QWidget):
 
         layout.addWidget(pin_box)
 
+        # Where the pin is, as far as the app's knowledge goes (V3.25, ED-8):
+        # "Edmonton region.", or how far outside it is and what that means.
+        self._lbl_coverage = QLabel("")
+        self._lbl_coverage.setWordWrap(True)
+        self._lbl_coverage.setStyleSheet(
+            "color: #c8e6c9; font-size: 13px; padding: 2px 4px;")
+        self._lbl_coverage.setVisible(False)
+        layout.addWidget(self._lbl_coverage)
+
         self._lbl_status = QLabel("")
         self._lbl_status.setWordWrap(True)
         self._lbl_status.setStyleSheet(
-            "color: #ffcc80; font-size: 11px; padding: 2px 4px;"
+            "color: #ffcc80; font-size: 12px; padding: 2px 4px;"
         )
         layout.addWidget(self._lbl_status)
+
+        # ── Four lines, then Details (V3.30, WD-2; decision W5) ───────
+        # Where, Cold, Rain and Soil in plain words (src/site_summary.py);
+        # everything the page showed before waits under Details.
+        self._facts: dict = {}
+        self._summary_box = QFrame()
+        self._summary_box.setObjectName("siteSummary")
+        self._summary_box.setAccessibleName("Your yard in four lines")
+        self._summary_box.setStyleSheet(
+            "QFrame#siteSummary { background: #16281a; border: 1px solid "
+            "#2e4a2e; border-radius: 4px; }"
+            "QLabel { color: #e8f5e9; font-size: 13px; }")
+        sum_col = QVBoxLayout(self._summary_box)
+        sum_col.setContentsMargins(8, 6, 8, 6)
+        sum_col.setSpacing(4)
+        self._summary_labels: dict = {}
+        from src.site_summary import LINES
+        for _key, title in LINES:
+            lab = QLabel("")
+            lab.setWordWrap(True)
+            lab.setTextFormat(Qt.TextFormat.RichText)
+            lab.setVisible(False)
+            sum_col.addWidget(lab)
+            self._summary_labels[title] = lab
+        self._summary_empty = QLabel(SUMMARY_EMPTY)
+        self._summary_empty.setWordWrap(True)
+        sum_col.addWidget(self._summary_empty)
+        layout.addWidget(self._summary_box)
+
+        self._details_btn = QPushButton("Details ▸")
+        self._details_btn.setCheckable(True)
+        self._details_btn.setFlat(True)
+        self._details_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._details_btn.setToolTip(
+            "Growing-degree days, the snow, the soil's make-up and where "
+            "each figure comes from.")
+        self._details_btn.setStyleSheet(
+            "QPushButton { color: #a5d6a7; border: none; text-align: left; "
+            "padding: 2px 4px; font-size: 13px; }"
+            "QPushButton:focus { border: 1px solid #ffe082; }")
+        self._details_btn.toggled.connect(self._show_details)
+        layout.addWidget(self._details_btn)
+        self._details = QWidget()
+        self._details.setAccessibleName("Site details")
+        details_col = QVBoxLayout(self._details)
+        details_col.setContentsMargins(0, 0, 0, 0)
+        self._details.setVisible(False)
+        layout.addWidget(self._details)
+        outer_layout, layout = layout, details_col
+        coords_row = QFormLayout()
+        coords_row.setContentsMargins(4, 0, 0, 0)
+        coords_row.addRow("Coordinates:", self._lbl_coords)
+        layout.addLayout(coords_row)
 
         # ── Hardiness + climate ──────────────────────────────────────
         # Order: zone → GDD → frost window → rainfall → soil sit directly
@@ -532,7 +696,7 @@ class SitePanel(QWidget):
         self._lbl_zone   = QLabel("—")
         self._lbl_zone.setStyleSheet("color: #c8e6c9; font-weight: bold; font-size: 14px;")
         self._lbl_hard_src = QLabel("")
-        self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_hard_src.setWordWrap(True)
         # Tooltips for these rows come from src/glossary.py via _explain()
         # below, not from inline strings here (V2.55). Three of them used to be
@@ -549,9 +713,12 @@ class SitePanel(QWidget):
         # detected, jump to the Plant Communities tab with the Habitat filter
         # pre-set — from "where am I" straight to "what belongs here" (P2/P8).
         self._btn_browse_comms = QPushButton("")
+        # Named by its text, set when a region is found ("Browse 12
+        # reference communities for this ecoregion"): tests/test_app_smoke.
+        self._btn_browse_comms.setProperty("namedByContent", True)
         self._btn_browse_comms.setStyleSheet(
             "QPushButton { background: transparent; color: #81c784; border: none;"
-            " text-align: left; padding: 0; font-size: 11px;"
+            " text-align: left; padding: 0; font-size: 12px;"
             " text-decoration: underline; }"
             "QPushButton:hover { color: #a5d6a7; }"
         )
@@ -570,7 +737,17 @@ class SitePanel(QWidget):
         hl.addRow("Growing-degree days:", self._lbl_gdd)
         hl.addRow("Frost window:",        self._lbl_frost)
         hl.addRow("Ecoregion:",           self._lbl_ecoregion)
-        hl.addRow("",                     self._btn_browse_comms)
+        # The whole width, not the value column: a button's words cannot wrap,
+        # and beside "Growing-degree days:" this one made Site Info 458 px wide
+        # of 402 under Arial metrics once a pin found communities (V3.19, QF-5,
+        # R8). It first showed in V3.14; the guard had measured the empty page.
+        # In a box of its own, so the Advanced tools switch can hide it
+        # (V3.30, WD-2) while the fetch shows and hides the link inside.
+        self._browse_box = QWidget()
+        browse_col = QVBoxLayout(self._browse_box)
+        browse_col.setContentsMargins(0, 0, 0, 0)
+        browse_col.addWidget(self._btn_browse_comms)
+        hl.addRow(self._browse_box)
         # After addRow, always: labelForField only resolves once the row exists.
         # The zone gets its base explanation here and a refreshed one naming the
         # measured zone in _on_hardiness — set once at build time it would go
@@ -585,7 +762,7 @@ class SitePanel(QWidget):
 
         # ── Climate context (V2.13) ──────────────────────────────────
         # Elevation/aspect ride along from the Slope tab's fetch; the
-        # prevailing wind is a one-line summary of the Analysis → Wind rose
+        # prevailing wind is a one-line summary of the Wind page's rose
         # (windbreaks are one of the most actionable site responses).
         self._climate_box = QGroupBox("Climate context")
         self._climate_box.setStyleSheet(_GROUP_STYLE)
@@ -598,7 +775,7 @@ class SitePanel(QWidget):
         self._lbl_info_wind.setStyleSheet("color: #c8e6c9;")
         self._lbl_wind_hint = QLabel("")
         self._lbl_wind_hint.setWordWrap(True)
-        self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_wind_hint.setVisible(False)
         cl.addRow("Elevation:",       self._lbl_info_elev)
         cl.addRow("Aspect:",          self._lbl_info_aspect)
@@ -617,22 +794,22 @@ class SitePanel(QWidget):
         self._lbl_rain_monthly = QLabel("—")
         self._lbl_rain_monthly.setWordWrap(True)
         self._lbl_rain_monthly.setStyleSheet(
-            "color: #90caf9; font-family: monospace; font-size: 10px;"
+            "color: #90caf9; font-family: monospace; font-size: 12px;"
         )
         self._lbl_rain_src = QLabel("")
-        self._lbl_rain_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_rain_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_rain_src.setWordWrap(True)
         # Rain/snow timing (precip_split): what the total hides is *when* the
         # water arrives — growing-season rain infiltrates now; snow is a delayed
         # spring-melt pulse. Both are liquid-water equivalent (no depth figure).
         self._lbl_rain_growing = QLabel("—")
-        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 12px;")
         self._lbl_rain_growing.setWordWrap(True)
         self._lbl_rain_snow = QLabel("—")
-        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
+        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 12px;")
         self._lbl_rain_snow.setWordWrap(True)
         self._lbl_rain_note = QLabel("")
-        self._lbl_rain_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_rain_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_rain_note.setWordWrap(True)
         self._lbl_rain_note.setVisible(False)
         self._rain_form = rl
@@ -659,7 +836,7 @@ class SitePanel(QWidget):
         self._lbl_winter_thaw.setWordWrap(True)
         self._lbl_winter_notes = QLabel("")
         self._lbl_winter_notes.setWordWrap(True)
-        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 12px;")
         wl.addRow("Snow cover:", self._lbl_winter_cover)
         wl.addRow("Thaw stress:", self._lbl_winter_thaw)
         wl.addRow("", self._lbl_winter_notes)
@@ -677,7 +854,7 @@ class SitePanel(QWidget):
         self._lbl_soil_mix     = QLabel("—")
         self._lbl_soil_depth   = QLabel("—")
         self._lbl_soil_src     = QLabel("")
-        self._lbl_soil_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_soil_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_soil_src.setWordWrap(True)
         sl.addRow("pH (H₂O):",     self._lbl_soil_ph)
         sl.addRow("Texture class:", self._lbl_soil_texture)
@@ -693,6 +870,9 @@ class SitePanel(QWidget):
         # One-time offline soil pack (Gridded Soil Landscapes of Canada): real
         # per-location soil offline, instead of the regional approximation that
         # the paused SoilGrids API otherwise forces.
+        self._soil_dl_box = QWidget()          # advanced only (V3.30, WD-2)
+        soil_dl_col = QVBoxLayout(self._soil_dl_box)
+        soil_dl_col.setContentsMargins(0, 0, 0, 0)
         soil_btn_row = QHBoxLayout()
         self._soil_dl_btn = QPushButton("⬇ Download soil data (offline)")
         self._soil_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
@@ -705,37 +885,38 @@ class SitePanel(QWidget):
         self._soil_cancel_btn.setStyleSheet(_BTN_SECONDARY)
         self._soil_cancel_btn.setVisible(False)
         soil_btn_row.addWidget(self._soil_cancel_btn)
-        sl.addRow(soil_btn_row)
+        soil_dl_col.addLayout(soil_btn_row)
         self._soil_dl_status = QLabel("")
-        self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._soil_dl_status.setWordWrap(True)
-        sl.addRow(self._soil_dl_status)
+        soil_dl_col.addWidget(self._soil_dl_status)
+        sl.addRow(self._soil_dl_box)
         layout.addWidget(self._soil_box)
+        layout = outer_layout
 
         # ── Where to buy — native plant sources near the pin (V2.18) ──────────
-        self._nursery_box = QGroupBox("Where to buy — native plant sources")
+        self._nursery_box = QGroupBox("Where to buy")
         self._nursery_box.setStyleSheet(_GROUP_STYLE)
         nl = QVBoxLayout(self._nursery_box)
         self._lbl_nurseries = QLabel(
-            "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
-            "nurseries, seed houses and native-plant societies near you.</span>")
+            f"<span style='color:#90a4ae;'>{NURSERIES_EMPTY}</span>")
         self._lbl_nurseries.setWordWrap(True)
         self._lbl_nurseries.setTextFormat(Qt.TextFormat.RichText)
         self._lbl_nurseries.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextBrowserInteraction)
         self._lbl_nurseries.setOpenExternalLinks(True)
         nl.addWidget(self._lbl_nurseries)
+        # The pack's words (ED-4): which sellers these are, and to check.
+        from src import region as _region
         self._lbl_nursery_note = QLabel(
-            "Native-specific sources from the Native Plant Society of "
-            "Saskatchewan list (npss.sk.ca). Native plants and seed are seasonal "
-            "and often grown to order — confirm availability before visiting or "
-            "ordering; many suppliers ship province-wide.")
-        self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+            getattr(_region.default(), "nursery_note", "") or "")
+        self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_nursery_note.setWordWrap(True)
         nl.addWidget(self._lbl_nursery_note)
         layout.addWidget(self._nursery_box)
 
         layout.addStretch()
+        _wrap_form_values(layout.parentWidget())
 
     def _on_download_soil_clicked(self):
         self._soil_dl_btn.setEnabled(False)
@@ -750,7 +931,7 @@ class SitePanel(QWidget):
         self._soil_dl_btn.setEnabled(not busy)
         self._soil_cancel_btn.setVisible(busy)
 
-    # ── Field Notes sub-tab (F6, P11) ─────────────────────────────────────────
+    # ── Notes sub-tab: the site walk (F6, P11) ──────────────────────────────
 
     def _build_field_notes_page(self, layout):
         """Site-walk field notes: a prompted checklist + free text that capture
@@ -759,13 +940,19 @@ class SitePanel(QWidget):
         from src.field_notes import FIELD_PROMPTS
 
         info = QLabel(
-            "Walk the site — don't design it all from the screen. Tick what you "
-            "notice on the ground and jot a quick observation; it's saved with "
-            "the project and informs the design."
+            "Walk the site and note what the ground tells you; it is saved "
+            "with the design."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         layout.addWidget(info)
+
+        # F32 (V3.05): the same questions on paper, for the walk itself.
+        print_btn = QPushButton("Print this sheet…")
+        print_btn.setToolTip("Save these questions as a page to take outside, "
+                             "with anything you have noted so far")
+        print_btn.clicked.connect(self.print_field_sheet_requested)
+        layout.addWidget(print_btn)
 
         # Debounce so a flurry of keystrokes emits one update.
         self._fn_timer = QTimer(self)
@@ -782,17 +969,25 @@ class SitePanel(QWidget):
         self._fn_checks: dict = {}
         self._fn_notes: dict = {}
         for key, prompt in FIELD_PROMPTS:
-            cb = QCheckBox(prompt)
-            cb.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+            # The box and its words apart, so the words wrap (_QuestionWords).
+            cb = QCheckBox()
+            cb.setAccessibleName(prompt)
             cb.toggled.connect(self._fn_edited)
+            words = _QuestionWords(prompt, cb)
+            words.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+            question = QHBoxLayout()
+            question.setSpacing(6)
+            question.addWidget(cb, 0, Qt.AlignmentFlag.AlignTop)
+            question.addWidget(words, 1)
             le = QLineEdit()
             le.setPlaceholderText("what you noticed…")
+            le.setAccessibleName(f"What you noticed: {prompt}")
             le.setStyleSheet(
                 "QLineEdit { background: #1a2a1a; color: #c8e6c9; "
                 "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px; "
-                "font-size: 11px; }")
+                "font-size: 12px; }")
             le.textChanged.connect(self._fn_edited)
-            box_layout.addWidget(cb)
+            box_layout.addLayout(question)
             box_layout.addWidget(le)
             self._fn_checks[key] = cb
             self._fn_notes[key] = le
@@ -805,16 +1000,24 @@ class SitePanel(QWidget):
         layout.addWidget(free_label)
 
         self._fn_free = QTextEdit()
+        free_label.setBuddy(self._fn_free)
         self._fn_free.setPlaceholderText(
             "Soil felt like clay near the fence; back corner stays wet; "
             "magpies nest in the spruce…")
         self._fn_free.setStyleSheet(
             "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
-            "font-size: 11px; }")
+            "font-size: 12px; }")
         self._fn_free.setMinimumHeight(110)
         self._fn_free.textChanged.connect(self._fn_edited)
         layout.addWidget(self._fn_free)
+
+        # The design journal and the map's notes arrive here (V3.08).
+        self._journal_slot = QWidget()
+        slot = QVBoxLayout(self._journal_slot)
+        slot.setContentsMargins(0, 0, 0, 0)
+        slot.setSpacing(0)
+        layout.addWidget(self._journal_slot)
 
         self._build_site_photo_group(layout)
 
@@ -832,11 +1035,10 @@ class SitePanel(QWidget):
         v.setSpacing(6)
 
         hint = QLabel(
-            "Drop a photo of your yard (or a drone shot) onto the map as a "
-            "georeferenced underlay, centred on your pin. Drop annotation pins "
-            "to mark what you see.")
+            "A photo of your yard, or a drone shot, laid under the map and "
+            "centred on your pin.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
 
         self._sp_add_btn = QPushButton("Add a photo of your site…")
@@ -845,7 +1047,7 @@ class SitePanel(QWidget):
 
         self._sp_status = QLabel("No site photo.")
         self._sp_status.setWordWrap(True)
-        self._sp_status.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        self._sp_status.setStyleSheet("color: #b0bec5; font-size: 12px;")
         v.addWidget(self._sp_status)
 
         form = QFormLayout()
@@ -872,7 +1074,7 @@ class SitePanel(QWidget):
 
         self._sp_visible = QCheckBox("Show on map")
         self._sp_visible.setChecked(True)
-        self._sp_visible.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._sp_visible.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         self._sp_visible.toggled.connect(
             lambda on: None if self._sp_loading
             else self.site_photo_visible_changed.emit(bool(on)))
@@ -963,7 +1165,7 @@ class SitePanel(QWidget):
         self._lbl_slope   = QLabel("—")
         self._lbl_aspect  = QLabel("—")
         self._lbl_elev_src = QLabel("")
-        self._lbl_elev_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_elev_src.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self._lbl_elev_src.setWordWrap(True)
         el.addRow("Elevation:", self._lbl_elev)
         el.addRow("Slope:",     self._lbl_slope)
@@ -990,13 +1192,12 @@ class SitePanel(QWidget):
         slope_layout.addWidget(auto_header)
 
         slope_info = QLabel(
-            "Choose an area, then Generate. Edmonton uses the City's 0.5 m "
-            "LiDAR contours; elsewhere falls back to Copernicus DEM. 30 m "
-            "grid matches the DEM's native resolution — finer settings "
-            "interpolate but don't add real detail."
+            "Choose an area, then Generate. Edmonton has the City's 0.5 m "
+            "LiDAR; elsewhere the elevation is 30 m, and a finer grid only "
+            "interpolates it."
         )
         slope_info.setWordWrap(True)
-        slope_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        slope_info.setStyleSheet("color: #90a4ae; font-size: 12px;")
         slope_layout.addWidget(slope_info)
 
         slope_form = QFormLayout()
@@ -1034,12 +1235,22 @@ class SitePanel(QWidget):
         )
         slope_form.addRow("Slope grid:", self._auto_resolution)
 
+        # These four are what Generate draws, not switches on a drawn map:
+        # a click changes nothing until Generate is pressed, so each says so
+        # (V3.19, QF-19, R27). Disabled until a map existed, Water flow, off
+        # by default, could never be asked for the first time.
+        _on_generate = ("\nApplies when you press Generate; to change a map "
+                        "already drawn, press Generate again.")
         self._auto_want_contours = QCheckBox("Show contour lines")
         self._auto_want_contours.setChecked(True)
+        self._auto_want_contours.setToolTip(
+            "Draw lines joining ground of the same height." + _on_generate)
         slope_form.addRow(self._auto_want_contours)
 
         self._auto_want_slope = QCheckBox("Show slope colour ramp")
         self._auto_want_slope.setChecked(True)
+        self._auto_want_slope.setToolTip(
+            "Colour the ground by how steep it is." + _on_generate)
         slope_form.addRow(self._auto_want_slope)
 
         # Water flow & accumulation overlay (V2.13): D8 routing over the same
@@ -1053,16 +1264,19 @@ class SitePanel(QWidget):
             "teal where it ponds, arrows showing direction.\n"
             "Honesty note: Edmonton's 0.5 m LiDAR resolves yard-scale flow; "
             "elsewhere the 30 m DEM shows broad drainage patterns only — "
-            "don't site a swale off a single 30 m cell.")
+            "don't site a swale off a single 30 m cell." + _on_generate)
         slope_form.addRow(self._auto_want_water)
 
         self._auto_show_labels = QCheckBox("Label every 5th contour")
         self._auto_show_labels.setChecked(True)
+        self._auto_show_labels.setToolTip(
+            "Write the height on every fifth contour line." + _on_generate)
         slope_form.addRow(self._auto_show_labels)
 
         # Contour colour
         color_row = QHBoxLayout()
         self._auto_color_btn = QPushButton()
+        self._auto_color_btn.setAccessibleName("Contour colour")
         self._auto_color_btn.setFixedSize(28, 28)
         self._auto_color_btn.setStyleSheet(
             f"background: {self._auto_color}; border: 1px solid #4a7a4a; "
@@ -1076,8 +1290,10 @@ class SitePanel(QWidget):
         slope_layout.addLayout(slope_form)
 
         opa_row = QHBoxLayout()
-        opa_row.addWidget(QLabel("Ramp opacity:"))
+        opa_label = QLabel("Ramp opacity:")
+        opa_row.addWidget(opa_label)
         self._auto_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opa_label.setBuddy(self._auto_opacity_slider)
         self._auto_opacity_slider.setRange(0, 100)
         self._auto_opacity_slider.setValue(60)
         self._auto_opacity_slider.setToolTip("Transparency of the slope colour ramp.")
@@ -1090,7 +1306,7 @@ class SitePanel(QWidget):
         self._auto_status = QLabel("")
         self._auto_status.setWordWrap(True)
         self._auto_status.setStyleSheet(
-            "color: #ffcc80; font-size: 11px; padding: 2px;"
+            "color: #ffcc80; font-size: 12px; padding: 2px;"
         )
         slope_layout.addWidget(self._auto_status)
 
@@ -1132,8 +1348,8 @@ class SitePanel(QWidget):
 
         This was "Features && Shade" until V2.38, and it was two things under
         one label — capturing existing trees and buildings is data entry, and
-        the shade they cast is analysis. The shade map now lives on
-        Analysis → Sun & Shade, next to the sun that casts it."""
+        the shade they cast is analysis. The shade map lives on Sun & Shade,
+        next to the sun that casts it (Analysis until V3.07, now this tab)."""
         self._build_osm_section(layout)
         self._build_existing_features_section(layout)
         self._build_imagery_align_section(layout)
@@ -1156,7 +1372,7 @@ class SitePanel(QWidget):
 
         hint = QLabel("Shifts the satellite basemap only — not your data.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vb.addWidget(hint)
 
         form = QFormLayout()
@@ -1183,6 +1399,7 @@ class SitePanel(QWidget):
         vb.addWidget(reset)
 
         layout.addWidget(box)
+        self._sat_align_box = box       # advanced (V3.21)
 
     def _emit_sat_offset(self):
         self.satellite_offset_changed.emit(
@@ -1206,6 +1423,8 @@ class SitePanel(QWidget):
         """
         self._lat, self._lng, self._label = lat, lng, label or self._label
         self._lbl_coords.setText(f"{lat:.5f}, {lng:.5f}")
+        self._facts = {"lat": lat, "lng": lng, "label": self._label}
+        self._show_coverage()
         # Nurseries are local (no network) — fill immediately on pin.
         self._update_nurseries(lat, lng)
         if self._label:
@@ -1213,6 +1432,7 @@ class SitePanel(QWidget):
         else:
             self._lbl_label.setText("(custom pin)")
         self._reset_data_rows()
+        self._refresh_summary()
         if fetch:
             self._start_fetch()
         else:
@@ -1250,8 +1470,13 @@ class SitePanel(QWidget):
         if not hasattr(self, "_lbl_nurseries"):
             return
         try:
-            from src.db.nurseries import native_sources_near
-            rows = native_sources_near(lat, lng, limit=5)
+            # The one list (V3.24, ED-4): the pin's region pack's suppliers.
+            from src.db.nurseries import region_nurseries
+            from src import region_climate
+            rows = region_nurseries(lat, lng, limit=5)
+            pack = region_climate.pack_for({"latitude": lat, "longitude": lng})
+            self._lbl_nursery_note.setText(
+                getattr(pack, "nursery_note", "") if pack is not None else "")
         except Exception:  # noqa: BLE001 — directory is a nicety, never fatal
             rows = []
         if not rows:
@@ -1268,25 +1493,90 @@ class SitePanel(QWidget):
             name_html = (f"<a href='{url}' style='color:#66bb6a;'>{name}</a>"
                          if url else f"<b>{name}</b>")
             lines.append(f"{icon} {name_html}<br><span style='color:#90a4ae;"
-                         f"font-size:10px;'>{access}</span>")
+                         f"font-size:12px;'>{access}</span>")
         self._lbl_nurseries.setText("<br>".join(lines))
+
+    # ── The four lines (V3.30, WD-2) ─────────────────────────────────────────
+
+    def _fact(self, key: str, value) -> None:
+        """A fetch came back: keep what the four lines need, and redraw them."""
+        if getattr(self, "_facts", None) is None or self._lat is None:
+            return
+        self._facts[key] = value
+        self._refresh_summary()
+
+    def _refresh_summary(self) -> None:
+        if not hasattr(self, "_summary_labels"):
+            return
+        from src import site_summary
+        try:
+            shown = dict(site_summary.lines(dict(
+                self._facts, lat=self._lat, lng=self._lng)))
+        except Exception:   # noqa: BLE001 — a summary never blocks the page
+            shown = {}
+        for title, lab in self._summary_labels.items():
+            text = shown.get(title, "")
+            lab.setText(f"<b>{title}:</b> {html.escape(text)}" if text else "")
+            lab.setVisible(bool(text))
+        self._summary_empty.setVisible(not shown)
+
+    def summary_text(self) -> str:
+        """The four lines as plain text, as a person reads them."""
+        return "\n".join(lab.text().replace("<b>", "").replace("</b>", "")
+                         for lab in self._summary_labels.values()
+                         if lab.isVisibleTo(self) and lab.text())
+
+    def _show_details(self, on: bool) -> None:
+        self._details.setVisible(bool(on))
+        self._details_btn.setText("Details ▾" if on else "Details ▸")
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """With the advanced tools on, Site Info opens on its details."""
+        self._details_btn.setChecked(bool(on))
 
     def _refresh_clicked(self):
         if not self.has_pin():
-            self._lbl_status.setText("No pin set — search an address first.")
+            self._lbl_status.setText(
+                "Find your yard first: type your address above.")
             return
         self._reset_data_rows()
         self._start_fetch()
 
+    def _show_coverage(self):
+        from src import region
+        cov = region.coverage(self._lat, self._lng)
+        self._outside = cov.kind == region.OUTSIDE
+        text = region.message(cov)
+        self._lbl_coverage.setText(text)
+        # Inside the region the Where line says it (V3.30, WD-2); the line
+        # stays for a pin outside it, where it says what that changes.
+        self._lbl_coverage.setVisible(bool(text) and cov.kind != region.REGION)
+        self._lbl_coverage.setStyleSheet(
+            f"color: {'#ffcc80' if cov.kind != region.REGION else '#c8e6c9'};"
+            " font-size: 13px; padding: 2px 4px;")
+
+    def _set_status(self, text: str):
+        """The fetch's progress line. "Site data ready." is not said for a pin
+        outside the provinces, where most of it cannot be (V3.25, ED-8)."""
+        if getattr(self, "_outside", False) and text.startswith("Site data ready"):
+            text = ("Done. What no source covers for this pin is left "
+                    "blank.")
+        self._lbl_status.setText(text)
+
     def _set_empty_state(self):
+        self._outside = False
+        if hasattr(self, "_lbl_coverage"):
+            self._lbl_coverage.setText("")
+            self._lbl_coverage.setVisible(False)
         self._lbl_label.setText(_DASH)
         self._lbl_coords.setText(_DASH)
-        self._lbl_status.setText("Drop a pin to auto-fill site data.")
+        self._lbl_status.setText("")
+        self._facts = {}
+        self._refresh_summary()
         self._reset_data_rows()
         if hasattr(self, "_lbl_nurseries"):
             self._lbl_nurseries.setText(
-                "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
-                "societies, nurseries and seed houses near you.</span>")
+                f"<span style='color:#90a4ae;'>{NURSERIES_EMPTY}</span>")
 
     def _reset_data_rows(self):
         # Placeholders render dimmed (rich-text span) so the pre-pin panel
@@ -1330,7 +1620,7 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run)
-        worker.progress.connect(self._lbl_status.setText)
+        worker.progress.connect(self._set_status)
         worker.hardiness.connect(self._on_hardiness)
         worker.elevation.connect(self._on_elevation)
         worker.rainfall.connect(self._on_rainfall)
@@ -1405,6 +1695,7 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+        self._fact("zone", zone)
         # Re-explain the zone now that we know which one it is (F122, V2.55).
         # This is the row whose explanation depends on the measured value, so it
         # is refreshed here rather than left at the generic text set at build
@@ -1462,20 +1753,23 @@ class SitePanel(QWidget):
             eco_keys = [eco_keys] if eco_keys else []
         if not eco_keys:
             return 0
+        # The library's own filter, so the count is what the link opens on.
+        # This compared a list with a set from V2.37 to V3.14, which raised
+        # into the `except` below: the link never once showed (V3.14).
         try:
             from src.db import polycultures
-            labels = {polycultures.ECOREGION_LABELS.get(k) for k in eco_keys}
-            labels.discard(None)
-            if not labels:
-                return 0
-            idx = polycultures.get_library_index()
-            return sum(1 for e in idx.values()
-                       if e["parent_id"] is None
-                       and e["facets"].get("habitat") in labels)
+            return len(polycultures.filter_library(
+                polycultures.get_library_index(), regions=list(eco_keys)))
         except Exception:
             return 0
 
     def _on_wind(self, data):
+        """The pin's fetch read the wind rose: show it here, and hand it on to
+        the Wind page (``wind_rose_ready``)."""
+        self.show_wind(data)
+        self.wind_rose_ready.emit(data)
+
+    def show_wind(self, data):
         """One-line prevailing-wind summary for the Climate-context group.
         ``data`` is the wind.get_wind_summary rose dict or ``None``."""
         if not data:
@@ -1488,6 +1782,10 @@ class SitePanel(QWidget):
         if label:
             mean_txt = f"  (~{mean:.0f} km/h mean)" if mean is not None else ""
             cached = "  (cached)" if data.get("cached") else ""
+            # Offline with nothing cached, the Wind page falls back to the
+            # region's prevailing wind (V3.07 shows it here too): say so.
+            if data.get("approximate"):
+                cached = "  (a regional estimate)"
             self._lbl_info_wind.setText(f"from {label}{mean_txt}{cached}")
         else:
             self._lbl_info_wind.setText("No dominant direction")
@@ -1505,7 +1803,7 @@ class SitePanel(QWidget):
         fetch failure."""
         if not data:
             self._lbl_gdd.setText("Unavailable (offline?)")
-            self._lbl_frost.setText(_DASH)
+            self._lbl_frost.setText(self._pack_frost())
             return
         from src.climate import doy_to_date_label
         gdd = data.get("gdd5_mean")
@@ -1520,13 +1818,24 @@ class SitePanel(QWidget):
         last = data.get("last_spring_frost_doy")
         first = data.get("first_fall_frost_doy")
         free = data.get("frost_free_days")
+        self._fact("frost", (last, first) if last is not None
+                   and first is not None else None)
         if last is not None and first is not None:
             self._lbl_frost.setText(
                 f"{doy_to_date_label(last)} → {doy_to_date_label(first)}"
                 + (f"  ({free} days)" if free is not None else "")
             )
         else:
-            self._lbl_frost.setText(_DASH)
+            self._lbl_frost.setText(self._pack_frost())
+
+    def _pack_frost(self) -> str:
+        """The region's station normals while the site's own frost window is
+        missing (V3.25, ED-6): the same pair the sun path and the plan use.
+        A dash for a pin outside the provinces."""
+        from src import region_climate
+        f = region_climate.frost_dates({"latitude": self._lat,
+                                        "longitude": self._lng})
+        return f"{f['words']}  ({f['label']})" if f else _DASH
 
     def _on_winter(self, data):
         """Render snow-cover + survival metrics (the insulation half of snow).
@@ -1598,6 +1907,7 @@ class SitePanel(QWidget):
             self._lbl_rain_monthly.setText(row)
         self._lbl_rain_src.setText(data.get("source", ""))
         self._show_precip_timing(data)
+        self._fact("rain", data)
 
     def _show_precip_timing(self, data):
         """Surface what the precipitation total hides — *when* the water is
@@ -1643,7 +1953,10 @@ class SitePanel(QWidget):
         s = data.get("summary") or {}
         ph = s.get("ph_top")
         self._lbl_soil_ph.setText(f"{ph:.1f}" if ph is not None else "—")
-        self._lbl_soil_texture.setText(s.get("texture_class") or "—")
+        # "Sandy loam", not the regional atlas's "sandy_loam" (V3.19, QF-11).
+        from src.site_prep import texture_class
+        self._lbl_soil_texture.setText(
+            texture_class(s.get("texture_class")) or "—")
         sand = s.get("sand_pct_top")
         silt = s.get("silt_pct_top")
         clay = s.get("clay_pct_top")
@@ -1655,13 +1968,14 @@ class SitePanel(QWidget):
         if depth:
             self._lbl_soil_depth.setText(f"{depth} cm reported")
         self._lbl_soil_src.setText(data.get("source", ""))
+        self._fact("soil", data)
 
     def _on_fast_ready(self):
         """The non-climate fetches are in — flip the user-visible status
         to ready immediately, even though the slower climate call is
         still running in the worker. The climate row will update from
         '—' when its signal arrives."""
-        self._lbl_status.setText("Site data ready.")
+        self._set_status("Site data ready.")
 
     def _on_finished(self, result: dict):
         """The worker has finished every step including the slower
@@ -1704,7 +2018,7 @@ class SitePanel(QWidget):
         self._auto_status.setText(text)
 
     # ── The caster inventory ───────────────────────────────────────────────
-    # The shade *map* moved to Analysis → Sun & Shade in V2.38. This line
+    # The shade *map* moved to Sun & Shade in V2.38 (Site since V3.07). This line
     # stayed, because it belongs where the casters are entered: it answers
     # "did my import land?" the moment you press the button, not one tab away.
     # Analysis shows the same line from the same formatter, where it answers
@@ -1720,10 +2034,11 @@ class SitePanel(QWidget):
         from src import sun_shade
         buildings, trees = sun_shade.caster_counts(project_dict)
         text, have = sun_shade.caster_summary(
-            buildings, trees, where="this tab")
+            buildings, trees, where="this tab",
+            off=sun_shade.switched_off(project_dict))
         lbl.setText(text)
         lbl.setStyleSheet(
-            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 12px;")
 
     # ── Existing shade casters: mark/draw trees & buildings ────────────────
     # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
@@ -1746,7 +2061,7 @@ class SitePanel(QWidget):
                       "Draw traces the real outline (best shadows); Mark "
                       "drops a quick circle or box.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vb.addWidget(hint)
 
         # Running total of what will cast shade, refreshed by
@@ -1754,13 +2069,15 @@ class SitePanel(QWidget):
         # where you would go to fix it.
         self._caster_summary = QLabel("")
         self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 12px;")
         self.update_caster_summary(None)
         vb.addWidget(self._caster_summary)
 
         dims = QHBoxLayout()
-        dims.addWidget(QLabel("Height (m):"))
+        height_lbl = QLabel("Height (m):")
+        dims.addWidget(height_lbl)
         self._exist_height = QDoubleSpinBox()
+        height_lbl.setBuddy(self._exist_height)
         self._exist_height.setRange(1.0, 60.0)
         self._exist_height.setSingleStep(0.5)
         self._exist_height.setValue(6.0)
@@ -1770,6 +2087,7 @@ class SitePanel(QWidget):
                             "(building).")
         dims.addWidget(size_lbl)
         self._exist_size = QDoubleSpinBox()
+        size_lbl.setBuddy(self._exist_size)
         self._exist_size.setRange(0.5, 40.0)
         self._exist_size.setSingleStep(0.5)
         self._exist_size.setValue(6.0)
@@ -1786,6 +2104,7 @@ class SitePanel(QWidget):
         fol_lbl = QLabel("Tree type:")
         fol_row.addWidget(fol_lbl)
         self._exist_foliage = QComboBox()
+        fol_lbl.setBuddy(self._exist_foliage)
         self._exist_foliage.addItem("🍂 Deciduous (bare in winter)", "deciduous")
         self._exist_foliage.addItem("🌲 Evergreen (year-round shade)", "evergreen")
         self._exist_foliage.setToolTip(
@@ -1842,6 +2161,7 @@ class SitePanel(QWidget):
         vb.addLayout(btns)
 
         layout.addWidget(box)
+        self._existing_box = box        # advanced (V3.21)
 
     def _on_mark_existing(self, feature_id: str):
         """Emit a placement request for an existing tree/building, reusing the
@@ -1887,31 +2207,43 @@ class SitePanel(QWidget):
     def _build_osm_section(self, parent_layout):
         box = QGroupBox("Existing features — import")
         box.setToolTip("Start here: pull what's already on and around the "
-                       "site from OpenStreetMap so the shade map (Analysis → "
+                       "site from OpenStreetMap so the shade map (Site → "
                        "Sun & Shade) has real casters to work with. Anything "
-                       "missing can be drawn or marked by hand in the next "
-                       "section.")
+                       "missing can be marked by hand with Advanced tools on.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
-        hint = QLabel("Captures what's already there using your drawn "
-                      "property boundary (plus the neighbour margin below); "
-                      "with no boundary it searches ≈60 m around the pin. "
-                      "The shade map is only as real as these features.")
+        hint = QLabel("Imports what is already there, inside your boundary "
+                      "and the margin below (60 m around the pin with no "
+                      "boundary). The shade is only as real as these.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        hint.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(hint)
-        slow_note = QLabel("First import in a new area can take ~10–30 s while "
-                           "OpenStreetMap responds (slower outside big cities) — "
-                           "later imports nearby are quicker. For buildings you "
-                           "can also “Download buildings for this area” "
-                           "below for instant offline access.")
+        slow_note = QLabel("A first scan in a new area can take 10–30 s; "
+                           "later ones nearby are quicker.")
         slow_note.setWordWrap(True)
-        slow_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        slow_note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         v.addWidget(slow_note)
-        # The section's one primary action — the partner of "Show shade".
+        # The section's one primary action since V3.10: both imports below in
+        # one go, as one undo step, then a list to untick what is not there.
+        scan = QPushButton("Scan this area")
+        scan.setStyleSheet(_BTN_PRIMARY)
+        scan.setToolTip(
+            "Buildings from OpenStreetMap (or your offline building pack) and "
+            "trees from the canopy-height map, together, then a list of what "
+            "was found to untick anything that is not really there.")
+        scan.clicked.connect(self.features_scan_requested.emit)
+        v.addWidget(scan)
+
+        # Everything below Scan this area is behind View → Advanced tools
+        # (V3.21, src/advanced_tools.py): the two imports it runs together,
+        # their settings, the offline pack and the survey import.
+        self._features_more = QWidget()
+        mv = QVBoxLayout(self._features_more)
+        mv.setContentsMargins(0, 0, 0, 0)
+
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
         btn = QPushButton("Import Building Outlines")
-        btn.setStyleSheet(_BTN_PRIMARY)
+        btn.setStyleSheet(_BTN_SECONDARY)
         btn.setToolTip(
             "Traces nearby building perimeters — with heights from "
             "OpenStreetMap's height / storey tags where present, otherwise "
@@ -1922,14 +2254,14 @@ class SitePanel(QWidget):
             "trees need the online import).\n"
             "Imported features cast shade and keep plants off them.")
         btn.clicked.connect(self.osm_import_requested.emit)
-        v.addWidget(btn)
+        mv.addWidget(btn)
 
         # Trees from the imagery itself (V2.26): OSM's tree coverage is near
         # zero outside city cores, so treed acreages got nothing from the
         # import above — this reads crowns off the same satellite photo the
         # map displays, anywhere in the world.
         btn_trees = QPushButton("Import Tree Outlines")
-        btn_trees.setStyleSheet(_BTN_PRIMARY)
+        btn_trees.setStyleSheet(_BTN_SECONDARY)
         btn_trees.setToolTip(
             "Finds individual trees on the property so the shade map has real "
             "casters — OpenStreetMap rarely maps trees outside cities.\n"
@@ -1942,7 +2274,7 @@ class SitePanel(QWidget):
             "to reading the satellite photo (less reliable) when height data "
             "can't be reached.")
         btn_trees.clicked.connect(self.tree_detect_requested.emit)
-        v.addWidget(btn_trees)
+        mv.addWidget(btn_trees)
 
         # Detection sensitivity: the shortest crown to call a tree. Lower =
         # more (and smaller) trees — the canopy-height map underestimates
@@ -1956,6 +2288,7 @@ class SitePanel(QWidget):
         mh_lbl.setToolTip(mh_tip)
         mh_row.addWidget(mh_lbl)
         self._tree_min_height = QDoubleSpinBox()
+        mh_lbl.setBuddy(self._tree_min_height)
         self._tree_min_height.setRange(1.0, 15.0)
         self._tree_min_height.setSingleStep(0.5)
         self._tree_min_height.setDecimals(1)
@@ -1967,7 +2300,7 @@ class SitePanel(QWidget):
             lambda v_: QSettings().setValue("site/tree_min_height", v_))
         mh_row.addWidget(self._tree_min_height)
         mh_row.addStretch(1)
-        v.addLayout(mh_row)
+        mv.addLayout(mh_row)
 
         # Neighbour margin (V2.13): how far past the boundary to keep
         # buildings — a tall neighbour still shades the site. 0 = strictly
@@ -1981,6 +2314,7 @@ class SitePanel(QWidget):
             "only what's inside the boundary.")
         marg_row.addWidget(marg_lbl)
         self._osm_margin = QDoubleSpinBox()
+        marg_lbl.setBuddy(self._osm_margin)
         self._osm_margin.setRange(0.0, 100.0)
         self._osm_margin.setSingleStep(5.0)
         self._osm_margin.setDecimals(0)
@@ -1992,7 +2326,7 @@ class SitePanel(QWidget):
             lambda v_: QSettings().setValue("site/osm_neighbour_margin", v_))
         marg_row.addWidget(self._osm_margin)
         marg_row.addStretch(1)
-        v.addLayout(marg_row)
+        mv.addLayout(marg_row)
 
         # One-time bulk download of nearby building footprints into a local
         # cache (buildings.db), so future designs in this area import buildings
@@ -2002,7 +2336,7 @@ class SitePanel(QWidget):
         self._bldg_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._bldg_dl_btn.setToolTip(
             "Bulk-download OpenStreetMap building footprints around this "
-            "property into a local cache so 'Import from OpenStreetMap' works "
+            "property into a local cache so 'Scan this area' works "
             "instantly and offline here afterwards.")
         self._bldg_dl_btn.clicked.connect(self._on_download_buildings_clicked)
         bld_row.addWidget(self._bldg_dl_btn)
@@ -2010,7 +2344,7 @@ class SitePanel(QWidget):
         self._bldg_cancel_btn.setStyleSheet(_BTN_SECONDARY)
         self._bldg_cancel_btn.setVisible(False)
         bld_row.addWidget(self._bldg_cancel_btn)
-        v.addLayout(bld_row)
+        mv.addLayout(bld_row)
 
         # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
         # the whiteboxtools-style path. Only shown when a backend is available
@@ -2028,11 +2362,13 @@ class SitePanel(QWidget):
                 "Not needed for the normal path — the OSM import above "
                 "covers most yards.")
             btn_tiff.clicked.connect(self._on_pick_footprint_tiff)
-            v.addWidget(btn_tiff)
+            mv.addWidget(btn_tiff)
+
+        v.addWidget(self._features_more)
 
         self._osm_status = QLabel("")
         self._osm_status.setWordWrap(True)
-        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 11px;")
+        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 12px;")
         v.addWidget(self._osm_status)
         parent_layout.addWidget(box)
 
@@ -2047,6 +2383,7 @@ class SitePanel(QWidget):
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)
+        self.osm_status_changed.emit(text)      # Sun & Shade says it too
 
     def osm_neighbour_margin(self) -> float:
         """How far past the boundary the OSM import keeps neighbours (m)."""
@@ -2096,25 +2433,30 @@ class SitePanel(QWidget):
     def _build_terrain_data_section(self, layout):
         box = QGroupBox("Terrain Data (offline)")
         box.setStyleSheet(_GROUP_STYLE)
+        # Only a pack that names a city's contours offers them (V3.25, ED-7).
+        from src import region
+        home = region.default()
+        self._contour_place = home.short
+        box.setVisible(bool(home.elevation.get("municipal_contours")))
         vl = QVBoxLayout(box)
         vl.setSpacing(6)
 
         note = QLabel(
-            "Download the full City of Edmonton 0.5 m LiDAR contour dataset "
-            "for instant offline access. One-time download (~1 GB unpacked). "
-            "SRTM data outside Edmonton is cached automatically as you use it."
+            f"{home.short}'s 0.5 m LiDAR contours for use offline: one "
+            "download, about 1 GB. Elsewhere the elevation is kept as you "
+            "use it."
         )
         note.setWordWrap(True)
-        note.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        note.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vl.addWidget(note)
 
         self._terrain_status_lbl = QLabel("Checking…")
         self._terrain_status_lbl.setWordWrap(True)
-        self._terrain_status_lbl.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._terrain_status_lbl.setStyleSheet("color: #c8e6c9; font-size: 12px;")
         vl.addWidget(self._terrain_status_lbl)
 
         self._terrain_storage_lbl = QLabel("")
-        self._terrain_storage_lbl.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._terrain_storage_lbl.setStyleSheet("color: #90a4ae; font-size: 12px;")
         vl.addWidget(self._terrain_storage_lbl)
 
         self._terrain_progress = QProgressBar()
@@ -2128,7 +2470,7 @@ class SitePanel(QWidget):
         vl.addWidget(self._terrain_progress)
 
         btn_row = QHBoxLayout()
-        self._terrain_dl_btn = QPushButton("⬇ Download Edmonton Data")
+        self._terrain_dl_btn = QPushButton(f"⬇ Download {home.short} Data")
         self._terrain_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._terrain_dl_btn.clicked.connect(self._on_download_clicked)
         btn_row.addWidget(self._terrain_dl_btn)
@@ -2166,13 +2508,15 @@ class SitePanel(QWidget):
             if store.has_edmonton_data():
                 count = store.get_edmonton_feature_count()
                 self._terrain_status_lbl.setText(
-                    f"Edmonton: {count:,} features — offline ready"
+                    f"{self._contour_place}: {count:,} features — offline ready"
                 )
             else:
-                self._terrain_status_lbl.setText("No offline Edmonton data.")
+                self._terrain_status_lbl.setText(
+                    f"No offline {self._contour_place} data.")
             self._terrain_storage_lbl.setText(self._storage_text())
         except Exception:
-            self._terrain_status_lbl.setText("No offline Edmonton data.")
+            self._terrain_status_lbl.setText(
+                f"No offline {self._contour_place} data.")
             self._terrain_storage_lbl.setText("")
 
     def _storage_text(self) -> str:
@@ -2186,21 +2530,12 @@ class SitePanel(QWidget):
     # ── Address search (Nominatim) ─────────────────────────────────────────
 
     def _on_address_text_changed(self, text: str):
-        """Debounced typeahead — fire a geocode after 350 ms of idle."""
-        # Cancel any pending debounce timer.
-        if self._geo_debounce is None:
-            self._geo_debounce = QTimer(self)
-            self._geo_debounce.setSingleShot(True)
-            self._geo_debounce.timeout.connect(self._on_address_search_typeahead)
-        self._geo_debounce.stop()
+        """Typing searches nothing (V3.31, FN-6): OpenStreetMap's address
+        search asks apps not to query as people type, so the search runs on
+        Enter or Find. A cleared box clears the matches."""
         if len((text or "").strip()) < 3:
             self._addr_results.clear()
             self._addr_results.setVisible(False)
-            return
-        self._geo_debounce.start(350)
-
-    def _on_address_search_typeahead(self):
-        self._run_geocode(self._addr_input.text())
 
     def _on_address_search(self):
         # Manual submit (Enter / Find) — show "Searching…" feedback.
@@ -2225,16 +2560,7 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.results.connect(self._on_geocode_results)
-        # F45: a dead end is where a beginner gives up, so the failure names
-        # the way through instead of only the problem. Address search is the
-        # app's only networked *entry* point — offline, pin-drop is not a
-        # workaround, it is the supported path.
-        worker.failed.connect(
-            lambda msg: self._lbl_status.setText(
-                f"Search failed ({msg}). Address lookup needs the internet — "
-                f"use “Use Pin Drop…” below and click your yard "
-                f"on the map instead.")
-        )
+        worker.failed.connect(self._on_geocode_failed)
         # Auto-teardown chain — see _start_fetch for why we don't delete
         # threads synchronously.
         worker.results.connect(thread.quit)
@@ -2246,15 +2572,36 @@ class SitePanel(QWidget):
         self._geo_worker = worker
         thread.start()
 
+    # What the address search says when it cannot help (V3.19, QF-3, R6).
+    # F45: a dead end is where a beginner gives up, so each names the way
+    # through. Offline, Pin Drop is not a workaround but the supported path.
+    # The search covers Saskatchewan too since V2.14, so "No Alberta results"
+    # was wrong twice over: it blamed the address when the connection failed.
+    # A miss is a miss across both provinces: a search near the map's view
+    # that finds nothing asks again across both (_GeocodeWorker).
+    NO_MATCH_TEXT = (
+        "No address found in Alberta or Saskatchewan. Try a nearby "
+        "intersection or town name, or click “Use Pin Drop…” and then "
+        "your yard on the map.")
+    # Not "needs an internet connection": the same answer comes back when
+    # the search service is busy or refuses (an HTTP 429, 403 or 503), and
+    # then a connected person is sent to check a connection that works
+    # (V3.19, QF-3 review). Which one it was goes to the log.
+    COULD_NOT_SEARCH_TEXT = (
+        "Couldn't search for addresses just now. Check your internet "
+        "connection and try again, or click “Use Pin Drop…” and then your "
+        "yard on the map.")
+
+    def _on_geocode_failed(self, _reason: str = ""):
+        self._addr_results.clear()
+        self._addr_results.setVisible(False)
+        self._lbl_status.setText(self.COULD_NOT_SEARCH_TEXT)
+
     def _on_geocode_results(self, hits: list):
         self._addr_results.clear()
         if not hits:
             self._addr_results.setVisible(False)
-            # F45: say what to try next, not just that nothing was found.
-            self._lbl_status.setText(
-                "No Alberta results. Try a nearby intersection or town name — "
-                "or click “Use Pin Drop…” and click your yard on "
-                "the map.")
+            self._lbl_status.setText(self.NO_MATCH_TEXT)
             return
         for h in hits:
             item = QListWidgetItem(h["label"])
@@ -2282,6 +2629,7 @@ class SitePanel(QWidget):
         self._geo_worker = None
         self._geo_thread = None
         if worker is not None:
+            worker.cancel()     # no wider search for a replaced query (QF-3)
             for sig_name in ("results", "failed"):
                 try:
                     getattr(worker, sig_name).disconnect()

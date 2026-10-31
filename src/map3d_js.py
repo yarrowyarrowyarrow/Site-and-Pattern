@@ -52,25 +52,6 @@ def set_scene(scene: dict) -> str:
             f"{json.dumps(scene or {})});")
 
 
-def capture_ortho(rect: dict, width: int = 2048) -> str:
-    """JS to bake a top-down orthographic render of the loaded Gaussian-splat
-    backdrop into a PNG, for the 2D map's "yard photo" overlay (V1.65).
-
-    ``rect`` frames the camera to an exact scene-metre rectangle
-    ``{min_x, max_x, min_y, max_y}`` (east/north) so the PNG maps 1:1 onto the
-    splat's lat/lng bbox; ``width`` is the longest output edge in pixels. The
-    result returns asynchronously via the widget's ``onOrthoBaked`` bridge
-    slot (the splat may still be streaming when this fires). Guarded with
-    ``&&`` so it's a no-op until the viewer registers ``permaCaptureOrtho``."""
-    opts = {
-        "min_x": float(rect["min_x"]), "max_x": float(rect["max_x"]),
-        "min_y": float(rect["min_y"]), "max_y": float(rect["max_y"]),
-        "width": int(width),
-    }
-    return ("window.permaCaptureOrtho && window.permaCaptureOrtho("
-            f"{json.dumps(opts)});")
-
-
 def set_camera_preset(name: str) -> str:
     """JS placing the camera at a named preset (V2.33, F69).
 
@@ -112,12 +93,6 @@ def models_ready() -> str:
     scene when they land, so thumbnails taken too early would be a sheet of the
     procedural *fallback* geometry presented as the finished article."""
     return "(window.permaModelsReady ? window.permaModelsReady() : true);"
-
-
-def clear_splat() -> str:
-    """JS to remove the Gaussian-splat backdrop from the scene. Guarded with
-    ``&&`` so it's a no-op until the viewer registers ``permaClearSplat``."""
-    return "window.permaClearSplat && window.permaClearSplat();"
 
 
 def set_plants(records: list) -> str:

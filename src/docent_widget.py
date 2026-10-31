@@ -41,20 +41,19 @@ class DocentWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "Present your design — a short narrated tour built from its own "
-            "numbers, to walk a neighbour, an HOA board, or a class through what "
-            "it does.")
+            "A short narrated tour built from the design's own numbers, for a "
+            "neighbour, a board or a class.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
 
         self._subtitle = QLabel("")
         self._subtitle.setWordWrap(True)
-        self._subtitle.setStyleSheet("color: #a5d6a7; font-size: 11px; font-style: italic;")
+        self._subtitle.setStyleSheet("color: #a5d6a7; font-size: 12px; font-style: italic;")
         lay.addWidget(self._subtitle)
 
         self._counter = QLabel("")
-        self._counter.setStyleSheet("color: #90a4ae; font-size: 11px; font-weight: bold;")
+        self._counter.setStyleSheet("color: #90a4ae; font-size: 12px; font-weight: bold;")
         lay.addWidget(self._counter)
 
         self._title = QLabel("")

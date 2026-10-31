@@ -143,13 +143,14 @@ class TestTotalsWithStructuresAndMulch(unittest.TestCase):
 
     def test_structure_and_mulch_costs(self):
         self.assertEqual((self.plan.struct_low, self.plan.struct_high), (40.0, 80.0))
-        # 10 m² × 0.075 m = 0.75 m³ × ($35–$75)
-        self.assertEqual((self.plan.mulch_low, self.plan.mulch_high), (26.25, 56.25))
+        # 10 m² at the site-prep sheet's 5–8 cm (V3.20, OV-3): 0.5 m³ × $35
+        # to 0.8 m³ × $75.
+        self.assertEqual((self.plan.mulch_low, self.plan.mulch_high), (17.5, 60.0))
         self.assertEqual(len(self.plan.structures_detail), 1)
 
     def test_grand_total_is_plants_plus_structures_plus_mulch(self):
-        self.assertEqual(self.plan.grand_low, 208.0 + 40.0 + 26.25)
-        self.assertEqual(self.plan.grand_high, 446.0 + 80.0 + 56.25)
+        self.assertEqual(self.plan.grand_low, 208.0 + 40.0 + 17.5)
+        self.assertEqual(self.plan.grand_high, 446.0 + 80.0 + 60.0)
 
 
 class TestRenderText(unittest.TestCase):
@@ -164,7 +165,52 @@ class TestRenderText(unittest.TestCase):
         self.assertIn("ESTIMATED TOTAL:", text)
         self.assertIn("WHEN TO PLANT", text)
         self.assertIn(pp.PHASE_STRUCTURE, text)
-        self.assertIn("alclanativeplants.com", text)
+        # No pin, no suppliers: the list is "near you" (V3.18, EDF-1).
+        self.assertIn(pp.NO_PIN_SOURCES, text)
+
+    def test_suppliers_are_the_ones_passed_in_and_no_others(self):
+        """Until V3.18 every plan printed four Calgary-area suppliers, two in
+        no directory, whatever the yard (EDF-1)."""
+        plan = pp.build_planting_plan(_placed(), get_plant=_fake_get_plant)
+        text = pp.render_plan_text(plan, sources=[
+            ("Arnica Wildflowers", "Edmonton · 3 km", ""),
+            ("TreeTime.ca", "Edmonton · 6 km", "https://www.treetime.ca")])
+        self.assertIn("Arnica Wildflowers — Edmonton · 3 km", text)
+        self.assertIn("https://www.treetime.ca", text)
+        for gone in ("ALCLA", "Bow Valley", "Bedrock", "sources:"):
+            self.assertNotIn(gone, text)
+        self.assertNotIn(pp.NO_PIN_SOURCES, text)
+
+
+class TestThePrintoutsWords(unittest.TestCase):
+    """WD-5 (V3.30): "Where to buy around Edmonton", and a price said as the
+    pack says it, never "AB retail"."""
+
+    EDMONTON = {"latitude": 53.52, "longitude": -113.50}
+
+    def test_the_heading_names_the_place(self):
+        self.assertEqual(pp.buy_heading(self.EDMONTON),
+                         "Where to buy around Edmonton")
+        self.assertEqual(pp.buy_heading({"latitude": 50.0,
+                                         "longitude": -110.5}),
+                         "Where to buy near your yard")
+
+    def test_the_price_words(self):
+        self.assertEqual(pp.price_words(self.EDMONTON),
+                         "an estimate at Edmonton native nurseries; prices "
+                         "vary by nursery and year")
+        self.assertNotIn("Edmonton", pp.price_words(
+            {"latitude": 43.65, "longitude": -79.38}))
+
+    def test_the_text_plan(self):
+        plan = pp.build_planting_plan(_placed(), get_plant=_fake_get_plant)
+        text = pp.render_plan_text(
+            plan, sources=[("Arnica Wildflowers", "Edmonton · 3 km", "")],
+            site_config=self.EDMONTON)
+        self.assertIn("Where to buy around Edmonton:", text)
+        self.assertIn("at Edmonton native nurseries", text)
+        for gone in ("AB retail", "seed sources near your yard"):
+            self.assertNotIn(gone, text)
 
 
 class TestPlantingWindow(unittest.TestCase):
@@ -195,6 +241,26 @@ class TestRealDBIntegration(unittest.TestCase):
     def setUpClass(cls):
         from src.db.plants import init_db
         init_db()
+
+    def test_the_plan_and_the_order_file_name_the_same_suppliers(self):
+        """One directory, one list (V3.18, EDF-1): every supplier the order
+        file names for the native channels is in the plan's list, and the
+        plan names nothing the directory does not hold."""
+        from src.db.nurseries import all_nurseries
+        from src.order_file import suppliers_for
+        sc = {"latitude": 53.5461, "longitude": -113.4938}
+        names = [nm for nm, _w, _u in pp.sources_near(sc)]
+        self.assertTrue(names, "no suppliers near Edmonton")
+        directory = {n["name"] for n in all_nurseries()}
+        self.assertTrue(set(names) <= directory, set(names) - directory)
+        for channel in ("native_specialist", "seed_or_plug"):
+            for entry in suppliers_for(channel, sc["latitude"],
+                                       sc["longitude"]):
+                self.assertIn(entry.split(" (")[0], names, (channel, entry))
+
+    def test_no_pin_no_suppliers(self):
+        self.assertEqual(pp.sources_near({}), [])
+        self.assertEqual(pp.sources_near(None), [])
 
     def test_builds_from_seeded_get_plant(self):
         from src.db.plants import get_connection

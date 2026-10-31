@@ -7,6 +7,7 @@
 </style></head><body>
 <div id="status">booting…</div>
 <iframe id="v" src="scene3d.html"></iframe>
+<script src="probe_watch.js"></script>
 <script>
 // GLB model smoke probe (dev page, sprite_gallery.html precedent): pushes a
 // synthetic scene exercising every archetype family + five critter kinds,
@@ -76,7 +77,6 @@ const scene = {
   month: month, year: 30, is_night: false,
   sun: {azimuth_deg: 200, altitude_deg: 48},
   plants: plants, buildings: [], structures: close ? [] : structs,
-  scan_points: [], splat: null,
   terrain: null,
 };
 const wildlife = [

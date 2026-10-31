@@ -28,9 +28,17 @@ Why one-domain-at-a-time:
 
 from __future__ import annotations
 
+from src import outline_check
 from src.climate import get_zone, zone_label
 from src.controllers.undo_support import undoable
 from src.project_store import store_for
+
+# The zoom a pin a person sets is shown at (V3.19, QF-2, R7): about 160 m
+# across a laptop's map at Edmonton's latitude, a yard and its neighbours, so
+# the next step, drawing the outline, starts at the yard; and the deepest zoom
+# the street map has its own tiles for. Only a Pin Drop click and a chosen
+# address ask for it; an open, an undo or a dragged pin never moves the map.
+PIN_ZOOM = 19
 
 
 def _when_from_config(config: dict):
@@ -46,6 +54,26 @@ def _when_from_config(config: dict):
     return datetime(2025, int(w[0]), int(w[1]), int(w[2]), minute)
 
 
+def name_boundaries(project: dict, ids, name: str) -> bool:
+    """Give these boundaries the name the legend shows, or with an empty name
+    take it away (F217, V3.11). ``True`` when any boundary changed. Pure, so
+    the handler's dialog is all a test has to stand in for."""
+    wanted = {str(i) for i in ids or []}
+    changed = False
+    for f in project.get("features", []):
+        props = f.get("properties") or {}
+        if (props.get("element_type") != "property_boundary"
+                or props.get("boundary_id") not in wanted
+                or (props.get("name") or "") == name):
+            continue
+        if name:
+            props["name"] = name
+        else:
+            props.pop("name", None)
+        changed = True
+    return changed
+
+
 class MapEventRouter:
     """MapBridge slot handlers. Holds a MainWindow reference so handlers
     can mutate ``_project["features"]`` and call back into the other
@@ -59,9 +87,28 @@ class MapEventRouter:
 
     # ── Boundary handlers ────────────────────────────────────────────────────
 
+    def _refuse_crossing_outline(self, bid: str, kept=None):
+        """An outline that crosses itself is not kept (V3.19, QF-14, R29). A
+        drawn one comes off the map, which must not show a yard the design
+        does not hold; an edited one goes back to ``kept``, the feature the
+        design still holds. Then a box says why."""
+        m = self._main
+        if kept is None:
+            m.map_widget.undo_boundary(bid)
+            m.toolbar.reset_draw_buttons()
+            m._set_mode_label("Outline not kept: it crosses itself")
+        else:
+            ring = (kept.get("geometry") or {}).get("coordinates") or [[]]
+            m.map_widget.restore_boundary(
+                bid, outline_check.corners([[p[1], p[0]] for p in ring[0]]))
+        outline_check.tell_refused(m, edited=kept is not None)
+
     def _on_boundary_complete(self, bid: str, coords: list, color: str):
         """Multi-boundary: add a new boundary to the project."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
+        if outline_check.crosses_itself(coords):
+            self._refuse_crossing_outline(bid)
+            return
+        ring = outline_check.closed_ring(coords)
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -93,27 +140,100 @@ class MapEventRouter:
 
     @undoable("edit boundary")
     def _on_boundary_geom_changed(self, bid: str, coords: list):
-        """Update geometry of an existing boundary after vertex/move/scale drag."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
+        """Update geometry of an existing boundary after vertex/move/scale drag.
+        A corner dragged across another side is refused and put back
+        (V3.19, QF-14): nothing changes, so no undo step is recorded. An
+        outline saved crossing itself before V3.19 can still be reshaped,
+        so it can be mended."""
         for f in self._main._project.get("features", []):
             if (f.get("properties", {}).get("element_type") == "property_boundary"
                     and f["properties"].get("boundary_id") == bid):
-                f["geometry"]["coordinates"] = [ring]
+                ring = (f.get("geometry") or {}).get("coordinates") or [[]]
+                if (outline_check.crosses_itself(coords)
+                        and not outline_check.crosses_itself(
+                            [[p[1], p[0]] for p in ring[0]])):
+                    self._refuse_crossing_outline(bid, kept=f)
+                    return
+                f["geometry"]["coordinates"] = [outline_check.closed_ring(coords)]
                 break
         self._main._mark_modified()
 
     @undoable("edit boundary")
     def _on_boundary_props_changed(self, bid: str, color: str,
-                                    show_lengths: bool, show_area: bool):
-        """Update color/label toggles for an existing boundary."""
+                                    show_lengths: bool, show_area: bool,
+                                    show_handles: bool = True):
+        """Update the colour and the switches (labels; corner handles, V3.11)
+        of an existing boundary."""
         for f in self._main._project.get("features", []):
             if (f.get("properties", {}).get("element_type") == "property_boundary"
                     and f["properties"].get("boundary_id") == bid):
                 f["properties"]["color"] = color
                 f["properties"]["show_lengths"] = show_lengths
                 f["properties"]["show_area"] = show_area
+                f["properties"]["show_handles"] = bool(show_handles)
                 break
         self._main._mark_modified()
+
+    @undoable("name boundary")
+    def _on_boundary_name_requested(self, ids: list, current: str):
+        """Ask for the name the legend shows for these boundaries (F217,
+        V3.11): from a line of the legend, which can stand for several
+        boundaries of one colour, or from one boundary's menu. A cancelled
+        dialog changes nothing, so it leaves no undo step."""
+        from PyQt6.QtWidgets import QInputDialog
+        many = len(ids) > 1
+        name, ok = QInputDialog.getText(
+            self._main, "Name boundary",
+            (f"Name these {len(ids)} boundaries in the legend:" if many
+             else "Name this boundary in the legend:")
+            + "\n(Leave it empty to show it as “Boundary”.)",
+            text=current or "")
+        if not ok:
+            return
+        name = " ".join(name.split())[:60]
+        if name_boundaries(self._main._project, ids, name):
+            self._main.map_widget.set_boundary_names(ids, name)
+            self._main._mark_modified()
+
+    # ── Measurement handlers (F215, V3.11) ───────────────────────────────────
+
+    @undoable("measure")
+    def _on_measurement_added(self, measure_id: str, coords: list):
+        from src.measurements import add_measurement
+        if add_measurement(self._main._project, measure_id, coords):
+            self._main._mark_modified()
+
+    @undoable("remove measurement")
+    def _on_measurements_removed(self, ids: list):
+        from src.measurements import remove_measurements
+        if remove_measurements(self._main._project, ids):
+            self._main._mark_modified()
+
+    @undoable("delete selection")
+    def _on_selection_deleted(self, payload_json: str):
+        """Everything one Delete took off the map, as one undo step (V3.11).
+        Each kind goes to the handler its own removal has always used; they
+        are undoable too, and inside this checkpoint they record nothing of
+        their own."""
+        import json as _json
+        try:
+            gone = _json.loads(payload_json or "{}")
+        except ValueError:
+            return
+        if not isinstance(gone, dict):
+            return
+        if gone.get("plants"):
+            self._on_plants_removed_batch(_json.dumps(gone["plants"]))
+        for bid in gone.get("boundaries") or []:
+            self._on_boundary_removed(bid)
+        for marker_id, struct_id, lat, lng in gone.get("structures") or []:
+            self._on_structure_removed(marker_id, struct_id, lat, lng)
+        for shape_id in gone.get("shapes") or []:
+            self._on_shape_removed(shape_id)
+        if gone.get("measurements"):
+            self._on_measurements_removed(gone["measurements"])
+        if gone.get("sunpath"):
+            self._on_sun_path_removed()
 
     @undoable("remove boundary")
     def _on_boundary_removed(self, bid: str):
@@ -489,7 +609,7 @@ class MapEventRouter:
             }
         })
         self._main._mark_modified()
-        # Mirror into Planning → Notes ("Notes on the map" list).
+        # Mirror into Site › Notes ("Notes on the map" list).
         self._main._sync_planning_panel()
 
     @undoable("remove note")
@@ -644,19 +764,30 @@ class MapEventRouter:
         self._main._site_pin_mode = False
         self._main.map_widget.set_site_pin_drop_mode(False)
         self._main.site_panel.set_pin(lat, lng, label)
-        # Switch to the Site tab so results are visible.
+        # Bring Site › Site Info forward so the results are visible, whatever
+        # page the Site tab was on (it holds six since V3.07).
         try:
-            idx = self._main._side_tabs.indexOf(self._main.site_panel)
-            if idx >= 0:
-                self._main._side_tabs.setCurrentIndex(idx)
+            from src.keyboard_help import show_panel
+            show_panel(self._main.site_panel.info_page)
         except Exception:
             pass
         # Persist coordinates immediately; site data fills in when fetcher returns.
         sc = self._main._project["properties"].setdefault("site_config", {})
+        moved = (sc.get("latitude"), sc.get("longitude")) != (lat, lng)
         sc["latitude"]  = lat
         sc["longitude"] = lng
         if label:
+            previous = sc.get("pin_label", "")
             sc["pin_label"] = label
+            # A design nobody named takes its address's name (ST-5, V3.23),
+            # and keeps following it while the address is all it is (V3.37).
+            from src import start_flow
+            start_flow.name_from_pin(self._main, label, previous)
+        elif moved:
+            # A pin dropped by hand has no address until the reverse lookup
+            # answers (never, offline); keeping the last pin's label named the
+            # wrong place on the printed plan (V3.18).
+            sc.pop("pin_label", None)
         self._main._mark_modified()
         self._main._set_mode_label("Property pin set — fetching site data")
 
@@ -665,9 +796,11 @@ class MapEventRouter:
         self._main.site_panel.clear_pin()
         sc = self._main._project["properties"].setdefault("site_config", {})
         for key in ("latitude", "longitude", "pin_label",
-                    "rainfall", "soil", "elevation", "hardiness",
-                    "data_fetched_at"):
+                    "rainfall", "soil", "soil_ph", "soil_texture", "elevation",
+                    "hardiness", "data_fetched_at"):
             sc.pop(key, None)
+        # The pin's soil filtered Browse until V3.01 after the pin was gone.
+        self._main.plant_panel.set_soil_ph(None)
         self._main._mark_modified()
         self._main._set_mode_label("Property pin removed")
 
@@ -1189,11 +1322,6 @@ class MapEventRouter:
         counts = shade_zones.tag_counts(pk)
         self._main.analysis_panel.set_shade_zone_status(
             shade_zones.format_classification_status(len(rows), counts, mismatches))
-        # Mirror the mix into the Analysis tab's read-only breakdown.
-        try:
-            self._main.analysis_panel.set_shade_breakdown(counts)
-        except Exception:  # noqa: BLE001
-            pass
         # Draw the classified zones on the map as a coloured grid so the user can
         # see where the sun/partial/shade planting spots are.
         try:
@@ -1239,7 +1367,7 @@ class MapEventRouter:
         self._main._osm_margin = margin
         if bbox is None:
             self._main.site_panel.set_osm_status(
-                "Drop a pin or draw a boundary first.")
+                "Find your yard or outline it first.")
             return
 
         # Prefer the offline building pack when this area has been downloaded
@@ -1248,10 +1376,13 @@ class MapEventRouter:
         if building_flow.import_buildings_offline(self._main, bbox,
                                                   boundary=boundary,
                                                   margin_m=margin):
+            self._refresh_shade_if_active()      # the shade takes them in
             return
 
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
-        self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
+        worker = OSMWorker(bbox)
+        worker.progress.connect(self._main.site_panel.set_osm_status)
+        self._run_worker(worker, self._on_osm_ready, "osm")
 
     def _on_footprint_import_requested(self, tiff_path: str):
         """Vectorize shade-casting footprints from an nDSM GeoTIFF off-thread."""
@@ -1294,6 +1425,7 @@ class MapEventRouter:
             self._main._mark_modified()
             # Re-render the newly imported features through the structure path.
             self._reload_existing_features()
+            self._refresh_shade_if_active()      # the shade takes them in
         self._main.site_panel.set_osm_status(out["message"])
 
     def _reload_existing_features(self):
@@ -1352,14 +1484,16 @@ class MapEventRouter:
     def _on_edmonton_dl_finished(self, total: int):
         self._main.site_panel.set_terrain_status()
         self._main.statusBar().showMessage(
-            f"Edmonton terrain download complete — {total:,} features stored offline.",
+            f"{self._main.site_panel._contour_place} terrain download "
+            f"complete — {total:,} features stored offline.",
             8000,
         )
 
     def _on_edmonton_dl_error(self, message: str):
         self._main.site_panel.set_terrain_status()
         self._main.statusBar().showMessage(
-            f"Edmonton download failed: {message}", 10000,
+            f"{self._main.site_panel._contour_place} download failed: "
+            f"{message}", 10000,
         )
 
     def _on_dl_thread_done(self):
@@ -1482,8 +1616,9 @@ class MapEventRouter:
         and pan/zoom.
         """
         self._main.map_widget.place_site_pin(lat, lng, label or "")
-        # Centre on the new pin at a reasonable property-scale zoom.
-        self._main.map_widget.set_view(lat, lng, 17)
+        # To the yard, not zoom 17 whatever the view: that zoomed a person
+        # already closer back out (V3.19, QF-2).
+        self._main.map_widget.zoom_to_site_pin(lat, lng, PIN_ZOOM)
 
     def _on_site_pin_click(self, lat: float, lng: float):
         if not getattr(self._main, "_site_pin_mode", False):
@@ -1500,6 +1635,9 @@ class MapEventRouter:
         # instant feedback, then resolve the actual address in the
         # background and refresh the pin label once we have it.
         self._main.map_widget.place_site_pin(lat, lng, "")
+        # The map stayed at city scale, seven zoom levels from the yard the
+        # next step draws round (V3.19, QF-2, R7).
+        self._main.map_widget.zoom_to_site_pin(lat, lng, PIN_ZOOM)
         self._main._start_pin_reverse_geocode(lat, lng)
 
     def _on_pin_reverse_geocode_done(self, lat: float, lng: float,
@@ -1526,6 +1664,8 @@ class MapEventRouter:
         from src import soil_flow
         soil_flow.apply_soil_site_fields(self._main, result.get("soil"))
         sc["data_fetched_at"] = _utc_now_iso()
+        # The Water page's rainfall is the site's own once fetched (OV-7).
+        self._main.planning_panel.set_site_config(sc)
 
         # Mirror the auto-filled hardiness zone into the existing
         # top-level project field so the rest of the app picks it up.
@@ -1535,7 +1675,12 @@ class MapEventRouter:
             self._main._set_zone_display(zone)
 
         self._main._mark_modified()
-        self._main._set_mode_label("Site data ready")
+        # Not "ready" for a pin outside the provinces (V3.25, ED-8).
+        from src import region
+        outside = region.coverage(sc.get("latitude"), sc.get(
+            "longitude")).kind == region.OUTSIDE
+        self._main._set_mode_label("Site data: what this pin allows"
+                                   if outside else "Site data ready")
 
     # ── Growth timeline ──────────────────────────────────────────────────────
 
@@ -1609,9 +1754,9 @@ class MapEventRouter:
                 f"({pct_mature}%)."
             )
             if summary_fading:
-                summary += (
-                    f"\n{summary_fading} pioneer "
-                    f"species fading as the canopy fills in."
+                summary += (    # not "pioneer" (V3.19, WD-6)
+                    f"\n{summary_fading} early "
+                    f"plants giving way as the canopy fills in."
                 )
             if summary_emerging:
                 summary += (
@@ -1670,9 +1815,6 @@ class MapEventRouter:
             return
         import math
         import src.project as project_io
-        # _member_color lives at module level in src.app — lazy import to
-        # break the controller→MainWindow import cycle.
-        from src.app import _member_color
 
         polyculture = self._main._pending_polyculture
         members = polyculture.get("members", [])
@@ -1688,8 +1830,10 @@ class MapEventRouter:
         for m in members:
             pid = m["plant_id"]
             name = m["common_name"]
-            spacing_m, plant_type, _ = self._main._plant_info(pid)
-            color = _member_color(m)
+            # By type, or the colour you gave the species, as every other
+            # plant is and as the loader redraws it (V3.03): members had been
+            # coloured by layer until the design was reopened.
+            spacing_m, plant_type, color = self._main._plant_info(pid)
 
             mlat = lat + (m.get("offset_y", 0)) / 111320
             mlng = lng + (m.get("offset_x", 0)) / (111320 * cos_lat)

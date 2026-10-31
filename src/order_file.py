@@ -65,8 +65,8 @@ COLUMNS = (
 CHANNEL_LABELS = {
     "native_specialist": "Native plant nursery",
     "seed_or_plug": "Seed house / plug grower",
-    "garden_centre": "Garden centre",
-    "big_box": "Big-box garden department",
+    "garden_centre": "Often sold (native-plant nurseries)",
+    "big_box": "Widely sold (native-plant nurseries)",
     "rare": "Rare — specialist or collector",
     "": "Sourcing channel not recorded",
 }
@@ -162,9 +162,13 @@ def suppliers_for(channel: str, lat: Optional[float], lng: Optional[float], *,
     if lat is None or lng is None:
         return []
     try:
-        from src.db.nurseries import access_label, nurseries_for_availability
-        rows = nurseries_for_availability(channel, float(lat), float(lng),
-                                          limit=limit)
+        from src.db.nurseries import (access_label, in_region,
+                                      nurseries_for_availability)
+        # The pin's region pack names its suppliers (V3.24, ED-4), so the
+        # order file lists the same ones as the plan and the PDF.
+        rows = in_region(nurseries_for_availability(
+            channel, float(lat), float(lng), limit=10_000),
+            float(lat), float(lng))[:limit]
     except Exception:                                      # noqa: BLE001
         return []
     out = []
@@ -195,6 +199,27 @@ def order_totals(lines: list) -> tuple:
             round(sum(l.total_high for l in lines), 2))
 
 
+def _listed_by(lat, lng) -> Callable:
+    """``name -> "Supplier (seen); …"``: the region's nurseries whose stock
+    lists carry the plant (V3.25, ``src.local_stock``). Only inside a pack, and
+    only for the region's own natives."""
+    try:
+        from src import local_stock, region                  # noqa: PLC0415
+        r = region.at(lat, lng) if lat is not None else None
+    except Exception:                                      # noqa: BLE001
+        r = None
+    if r is None:
+        return lambda _name: ""
+
+    def listed(name: str) -> str:
+        if not local_stock.tier(name, r.key):
+            return ""
+        return "; ".join(f"{s} ({seen})" if seen else s for s, seen, form
+                         in local_stock.suppliers(name, r.key)
+                         if form == "plants")
+    return listed
+
+
 def write_csv(lines: list, project: Optional[dict] = None, *,
               stream=None) -> str:
     """The order as CSV text. Writes into ``stream`` when given.
@@ -208,6 +233,7 @@ def write_csv(lines: list, project: Optional[dict] = None, *,
     lat, lng = site_latlng(project or {})
 
     writer.writerow(COLUMNS)
+    listed = _listed_by(lat, lng)
     for channel, group in group_by_channel(lines):
         writer.writerow([])
         label = CHANNEL_LABELS.get(channel, CHANNEL_LABELS[""])
@@ -220,7 +246,7 @@ def write_csv(lines: list, project: Optional[dict] = None, *,
                 line.form, line.qty,
                 f"{line.unit_low:.2f}", f"{line.unit_high:.2f}",
                 f"{line.total_low:.2f}", f"{line.total_high:.2f}",
-                label, "",
+                label, listed(line.scientific_name),
             ])
     qty, low, high = order_totals(lines)
     writer.writerow([])

@@ -29,7 +29,7 @@ SOIL_PACK_SOURCES = [
     "soilLandscapesOfCanada90mGrid/data_donnees/tif/gridded_slc_90m.zip",
 ]
 
-_USER_AGENT = "PermaDesign/1.0 (+https://github.com/yarrowyarrowyarrow/permadesign)"
+from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
 
 
 def _default_opener(url: str) -> bytes:

@@ -17,101 +17,100 @@ markup have exactly one definition each.
 from __future__ import annotations
 
 from src import citations
-from src.static_site import _first_photo, hub_slug, species_ecoregions
-from src.static_site_render import (_crumb, _credit, _esc, _page, _photo_img,
-                                    _swatch, _up)
+from src.nativity import provinces
+from src.site_share import photo_card as share_photo
+from src.sourcing import describe as sourcing_text
+from src.static_site import _first_photo, hub_slug
+from src.static_site_gallery import gallery_html
+from src.static_site_points import occurrence_map
+from src.static_site_range import range_section
+from src.static_site_render import _crumb, _esc, _page, _swatch, _up
+
+
+def colour_cell_html(entry: dict, primary: str, depth: int) -> str:
+    """The flower-colour cell: a chip per colour, then the provenance mark.
+
+    **Its own function because this cell has been wrong three times, each time
+    by re-deriving an answer the entry was already carrying.**
+
+    * V2.75: it re-derived the provenance from the raw row with three
+      hard-coded cases, so **81 grass, sedge and rush pages read "not
+      verified"** -- a grass is wind-pollinated, so there is no showy flower to
+      have got wrong -- and any provenance word added later would have rendered
+      no mark at all and read as verified.
+    * V2.80: it rendered ``COLOUR_LABELS[classify(row)]``, the PRIMARY colour
+      only, while the entry held "Yellow to orange". The prickly pear, whose
+      yellow hex under a magenta photograph started the whole flower-colour
+      thread, published as "Yellow" on the very build meant to fix it.
+
+    A species with a range gets a chip for each of its colours, because it
+    genuinely belongs on both hub pages and ``search_plants`` already returns
+    it for either query. ``primary`` is the fallback for a row with no range
+    recorded, which is every row no flora has been read for.
+    """
+    from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES
+
+    keys = [k for k in (entry.get("bloom_colours") or ()) if k]
+    if not keys:
+        keys = [primary] if primary else []
+    if not keys:
+        return ""
+    note = (entry.get("bloom_colour_note") or "").strip()
+    mark = f'<span class="src">{_esc(note)}</span>' if note else ""
+    chips = " ".join(
+        f'<a class="chip" href="{_up(depth)}plants/colour/'
+        f'{_esc(hub_slug("colour", key))}/">'
+        f'{_swatch(COLOUR_SWATCHES.get(key, ""))}'
+        f'{_esc(COLOUR_LABELS.get(key, key))}</a>' for key in keys)
+    return f"{chips} {mark}"
 
 
 def render_species(entry: dict, model: dict, photo_src: dict,
                    include_notes: bool = False) -> str:
-    from src.ecoregion_map import (CAVEAT, frame_height,        # noqa: PLC0415
-                                   map_svg, region_fill)
     from src.flower_colour import COLOUR_LABELS, COLOUR_SWATCHES, classify
     depth = 2
     row = entry.get("row") or {}
     colour = classify(row)
     photo = _first_photo(entry)
-
-    if photo:
-        hero = (f'<figure class="hero-photo">'
-                f'{_photo_img(photo, depth, photo_src, entry.get("name") or "")}'
-                f'{_credit(photo)}</figure>')
-    else:
-        hero = ('<p class="note">No openly-licensed photograph of this species '
-                'is in the catalogue yet. We show a photo only when we can '
-                'credit the photographer.</p>')
+    # V3.35: the lead and the rest, each with its credit (F251).
+    hero = gallery_html(entry, depth, photo_src)
 
     badges = "".join(f'<span class="badge">{_esc(b)}</span>'
                      for b in (entry.get("badges") or []))
 
-    regions = species_ecoregions(entry)
-    eco_block = ""
-    if regions:
-        # A species' recorded range can name a region no hub page exists for:
-        # the moisture niches (riparian, wet_meadow) have no polygon, and a
-        # region nothing is filed under gets no page. Link when there is
-        # somewhere to go and print plain text when there is not, rather than
-        # emitting a link per range and hoping.
-        eco_pages = {p["value"]: p["slug"]
-                     for h in model["hubs"] if h["key"] == "ecoregion"
-                     for p in h["pages"]}
-        rows = []
-        for r in entry.get("ranges") or []:
-            n = int(r.get("occurrences") or 0)
-            evidence = (f"{n} occurrence records" if n else
-                        "from the catalogue's regional tag, not from "
-                        "occurrence records")
-            conf = (f', {_esc(r["confidence"])} confidence'
-                    if r.get("confidence") else "")
-            name = f'<strong>{_esc(r.get("name"))}</strong>'
-            slug = eco_pages.get(r.get("key") or "")
-            if slug:
-                name = (f'<a href="{_up(depth)}plants/ecoregion/'
-                        f'{_esc(slug)}/">{name}</a>')
-            # The swatch is what connects this line to the shape on the map,
-            # now that each region has a colour of its own. It carries the
-            # confidence band too, so it matches the fill exactly rather than
-            # being an approximation of it.
-            keyed = r.get("key") in regions
-            fill, _ = region_fill(r.get("key") or "", r.get("confidence") or "")
-            dot = (f'<span class="ecokey-sw" style="background:{fill}"></span>'
-                   if keyed else "")
-            cls = ' class="haskey"' if keyed else ""
-            rows.append(
-                f'<li{cls}>{dot}{name}'
-                f'<span class="src"> {_esc(r.get("where") or "")}: '
-                f'{evidence}{conf}</span></li>')
-        eco_block = f"""
-<section>
-  <h2>Where it has been recorded</h2>
-  <div class="ecowrap">
-    <figure class="mapfig">{map_svg(regions, width=420, height=frame_height(420),
-                                    title=f'Range of {entry.get("name")}')}</figure>
-    <div>
-      <ul class="ranges">{"".join(rows)}</ul>
-      <p class="note">A range seen three times is not the same claim as one
-      seen three hundred, so the count travels with the region.
-      {_esc(CAVEAT)}</p>
-    </div>
-  </div>
-</section>"""
+    # The two maps, and they go ABOVE the animals (V2.80).
+    #
+    # The animal list is not a sidebar: a well-recorded plant carries a hundred
+    # or more documented relationships, and below the fold they were burying the
+    # two things somebody asks about a plant *before* deciding to grow it -- does
+    # it grow here, and what else grows with it. Nobody scrolls past a hundred
+    # bees to find a map, so in practice the maps were unreachable on exactly the
+    # species that have the most evidence behind them.
+    #
+    # Order on this page is now: what it looks like, how to grow it, where it
+    # is, then who uses it. The animals lose nothing by being fourth -- they are
+    # what the reader came *back* for, and the wildlife index is the door for
+    # anybody starting from the animal instead.
+    eco_block = occurrence_map(entry, depth) + range_section(
+        entry, model, depth)
 
-    colour_cell = ""
-    if colour:
-        src = (row.get("flower_colour_source") or "").strip()
-        mark = ""
-        if src in ("name", "epithet"):
-            why = ("the species' own common name"
-                   if src == "name" else "the Latin epithet")
-            mark = f'<span class="src" title="Checkable against {why}">checked</span>'
-        elif src == "estimated":
-            mark = ('<span class="src" title="A genus-level default, not '
-                    'observed for this species">not verified</span>')
-        colour_cell = (
-            f'<a class="chip" href="{_up(depth)}plants/colour/'
-            f'{_esc(hub_slug("colour", colour))}/">'
-            f'{_swatch(COLOUR_SWATCHES.get(colour, ""))}'
-            f'{_esc(COLOUR_LABELS.get(colour, colour))}</a> {mark}')
+    # The provenance word comes from the entry, which got it from
+    # `src.confidence` via `plant_directory._bloom_colour` (V2.75).
+    #
+    # This block used to re-derive it from the raw row with three hard-coded
+    # cases, and the entry it was handed had carried the answer all along. Two
+    # consequences, both live on the published site:
+    #
+    # * **81 grass, sedge and rush pages read "not verified"**, because
+    #   `classify` returns `straw` from the plant's TYPE and never looks at the
+    #   hex whose `estimated` provenance this was reporting. A grass is not an
+    #   unverified purple: it is wind-pollinated, so there is no showy flower
+    #   to have got wrong. The desktop has said so since V2.48 and only the
+    #   website did not.
+    # * Any provenance word added later (`measured`, `flora`, `photo`) would
+    #   have rendered no mark at all here and read as verified, which is the
+    #   silent-default failure `src.confidence` exists to prevent.
+    colour_cell = colour_cell_html(entry, colour, depth)
 
     body = f"""
 {_crumb([("plants/", "Plants"), ("", entry.get("name") or "")], depth)}
@@ -125,18 +124,94 @@ def render_species(entry: dict, model: dict, photo_src: dict,
   </header>
   {hero}
   {_facts_table(entry, colour_cell, depth, model)}
-  {_wildlife_section(entry, model, depth)}
   {eco_block}
+  {_wildlife_section(entry, model, depth)}
   {_extras_section(entry, include_notes)}
 </article>
 """
-    desc = (f'{entry.get("name")} ({entry.get("scientific_name")}): '
-            f'{entry.get("sun") or "conditions unrecorded"}, '
-            f'{entry.get("bloom") or "bloom window unrecorded"}, '
+    # What a search result shows under the title (V2.84). It said "full
+    # sun,partial shade" -- the raw column, where the page's own table runs the
+    # same value through `_tokens` -- and never said where the plant is native,
+    # which is the one thing a search for "native plants Alberta" is asking.
+    where = " and ".join({"AB": "Alberta", "SK": "Saskatchewan"}.get(p, p)
+                         for p in provinces(entry.get("native")))
+    sun = _tokens(entry.get("sun")).lower() or "conditions unrecorded"
+    bloom = (f'flowers {entry["bloom"]}' if entry.get("bloom")
+             else "bloom window unrecorded")
+    desc = (f'{entry.get("name")} ({entry.get("scientific_name")})'
+            f'{", native to " + where if where else ""}: {sun}; {bloom}; '
             f'{(entry.get("wildlife") or {}).get("total", 0)} documented '
             f'animal relationships.')
+    # Sharing a species page should show that species, not the site default.
+    share_img, share_alt = share_photo(photo, photo_src,
+                                       entry.get("name") or "")
     return _page(f'{entry.get("name")} ({entry.get("scientific_name")})',
-                 desc, body, depth)
+                 desc, body, depth, image=share_img, image_alt=share_alt)
+
+
+def _native(entry: dict) -> str:
+    """The nativity claim with the mark it never had.
+
+    This is the outside review's actual criticism, and the retired generator
+    that produced the field says so in its own docstring: *"many species listed
+    as native to AB and SK are native to only one. They are reading the output
+    of this file."* Flower colour has carried a provenance note since V2.48 and
+    the field a reference work is named after has not. `src.nativity` explains
+    what replaces this (VASCAN, F144) and why the note is derived rather than
+    stored until then.
+    """
+    from src.native_here import province_words
+    from src.nativity import WITHHELD_NOTE, publishable
+    value = _esc(_tokens(entry.get("native")))
+    if not value:
+        return ""
+    if publishable(entry):
+        # V3.12: the sentence the desktop page prints, naming the province it
+        # is not native to. "SK" alone is how Eastern Red Columbine stayed
+        # unclear while being correct.
+        return _esc(province_words(entry))
+    # V2.80: an inferred claim is WITHHELD, not annotated. V2.78 printed it
+    # with the heuristic named beside it, which was a real improvement on
+    # printing it bare -- and it is still an inference published as this site's
+    # answer to the question it is named after. `.src` is the class the
+    # flower-colour note has used since V2.48, reused so the provenance marks
+    # on this page read as the same kind of statement.
+    return f'<span class="src">{_esc(WITHHELD_NOTE)}</span>'
+
+
+def _around(entry: dict, depth: int, model: dict) -> str:
+    """Native around Edmonton, with its evidence and a link to the list (F220,
+    V3.12): the words the desktop page prints, from the same entry."""
+    around = entry.get("around") or {}
+    if not around.get("words"):
+        return ""
+    hub = {h["key"]: h for h in model.get("hubs") or []}.get("around") or {}
+    slug = {p["value"]: p["slug"] for p in hub.get("pages") or []
+            }.get(around.get("place"))
+    link = (f' <a href="{_up(depth)}{hub["dir"]}/{_esc(slug)}/">The '
+            f'{_esc(around["short"])} list</a>' if slug else "")
+    return _esc(around["words"]) + link
+
+
+def _phenology(entry: dict) -> str:
+    """The bloom-and-fruit bar, or ``""`` when nothing is recorded.
+
+    The page already carried this three times in words -- "Jun-Sep" in a cell,
+    twelve month chips, and a sentence -- and none of them answer the question
+    a person reading a plant list actually has, which is *what is flowering in
+    July*. Six of 430 species have no bloom window and draw nothing rather than
+    an empty calendar, which would assert that we checked and they never
+    flower (P9).
+    """
+    from src.phenology_bar import CAVEAT, alt_text, parse_period, phenology_svg
+    bloom = parse_period(entry.get("bloom") or "")
+    fruit = parse_period(entry.get("fruit") or "")
+    svg = phenology_svg(bloom, fruit)
+    if not svg:
+        return ""
+    return (f'<div class="phenology" title="{_esc(CAVEAT)}">{svg}'
+            f'<span class="phenology-alt">{_esc(alt_text(bloom, fruit))}'
+            f'</span></div>')
 
 
 def _facts_table(entry: dict, colour_cell: str, depth: int,
@@ -152,6 +227,7 @@ def _facts_table(entry: dict, colour_cell: str, depth: int,
         for m in months if m in month_pages)
 
     rows = [
+        ("When", _phenology(entry)),
         ("Type", _esc(entry.get("plant_type"))),
         ("Sun", _esc(_tokens(entry.get("sun")))),
         ("Water", _esc(_tokens(entry.get("water")))),
@@ -165,7 +241,9 @@ def _facts_table(entry: dict, colour_cell: str, depth: int,
         ("Flower colour", colour_cell),
         ("In bloom", month_links),
         ("Fruit", _esc(entry.get("fruit"))),
-        ("Native to", _esc(_tokens(entry.get("native")))),
+        ("Native to", _native(entry)),
+        (f'Around {(entry.get("around") or {}).get("short") or "Edmonton"}',
+         _around(entry, depth, model)),
     ]
     cells = "".join(f"<tr><th>{_esc(label)}</th><td>{value}</td></tr>"
                     for label, value in rows if value)
@@ -252,8 +330,7 @@ def _wildlife_section(entry: dict, model: dict, depth: int) -> str:
 def _extras_section(entry: dict, include_notes: bool = False) -> str:
     parts = []
     fields = [("Safety", entry.get("safety")),
-              ("Edible parts", _tokens(entry.get("edible_parts"))),
-              ("Buying it", entry.get("sourcing"))]
+              ("Edible parts", _tokens(entry.get("edible_parts")))]
     # `notes` is unaudited free text and ~43 rows of it describe traditional
     # medicinal and plant-use practice. Publishing that to the open web is a
     # different act from showing it in a desktop panel: indexed, scraped,
@@ -271,6 +348,15 @@ def _extras_section(entry: dict, include_notes: bool = False) -> str:
         elif isinstance(value, (list, tuple)):
             value = "; ".join(str(v) for v in value)
         parts.append(f"<h3>{_esc(heading)}</h3><p>{_esc(value)}</p>")
+    # Prose, not the dict's own key names: this printed
+    # `price: ...; availability: ...; notes: ...` on all 422 pages (V2.80).
+    # The estimate note rides in its own `.src` mark, like every other
+    # provenance mark on this page, so it is not glued into the sentence.
+    buying, estimate = sourcing_text(entry.get("sourcing"))
+    if buying:
+        mark = (f' <span class="src">{_esc(estimate)}</span>'
+                if estimate else "")
+        parts.append(f"<h3>Buying it</h3><p>{_esc(buying)}{mark}</p>")
     prov = entry.get("provenance") or []
     if prov:
         parts.append("<h3>Where these numbers came from</h3><ul>" + "".join(

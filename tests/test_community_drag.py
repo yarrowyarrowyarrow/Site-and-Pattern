@@ -77,17 +77,22 @@ class TestCommunityDrag(unittest.TestCase):
         md = tree.mimeData([tree.topLevelItem(0)])
         self.assertTrue(md.hasFormat(_COMMUNITY_MIME))
 
-    def test_drop_adds_to_mix_and_expands(self):
+    def test_drop_adds_to_mix_and_shows_it(self):
+        """The mix strip is always in the column since V2.98 (it was inside a
+        collapsible Placement pane the drop had to expand)."""
         cid = self._first_community_id()
         if cid is None:
             self.skipTest("no communities seeded")
         p = self._panel
         p._mix_communities = []
         p._refresh_community_mix()
-        p._placement_panel.set_expanded(False)
+        self.assertTrue(p._mix_community_actions.isHidden(),
+                        "an empty mix shows disabled buttons")
         p._add_to_community_mix(cid)        # what the drop handler calls
         self.assertEqual(len(p._mix_communities), 1)
-        self.assertTrue(p._placement_panel.expanded())
+        self.assertFalse(p._mix_community_box.isHidden())
+        self.assertFalse(p._mix_community_scroll.isHidden())
+        self.assertFalse(p._mix_community_actions.isHidden())
 
     # ── Group By (V1.88) ─────────────────────────────────────────────────────
 

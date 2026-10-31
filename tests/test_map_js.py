@@ -94,7 +94,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
             cls.html += "\n" + js.read_text(encoding="utf-8")
 
     JS_NAMES = [
-        "setMode",
+        "setMode", "_pyModeSeq",
         "cancelDraw", "clearMeasure", "clearAll", "clearSelection",
         "deleteSelected", "toggleLegend",
         "setSatelliteVisible", "setBoundaryVisible", "setMeasureVisible",
@@ -124,7 +124,11 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawSitePhotoOverlay", "setSitePhotoVisible", "setSitePhotoOpacity",
         "clearSitePhoto",
         "drawSnowCatch", "setSnowCatchVisible", "clearSnowCatch",
+        "setNorthArrow", "setScaleBar",
+        "holdOfflineNotice",                 # V3.19, QF-6: Export PDF's grab
         "_removeBoundaryEntry",
+        # V3.11: measurements in the design, names, the legend's detail.
+        "loadMeasurement", "setBoundaryNames", "setLegendDetail",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",
         "structureMarkers", "hedgerowLayers", "shapeLayers",
@@ -230,6 +234,28 @@ class TestClears(unittest.TestCase):
         self.assertEqual(mj.clear_selection(),"clearSelection();")
         self.assertEqual(mj.delete_selected(),"deleteSelected();")
         self.assertEqual(mj.toggle_legend(),  "toggleLegend();")
+
+
+class TestV311Builders(unittest.TestCase):
+    """Measurements in the design (F215), boundary names and the legend's
+    detail (F217): strings go through JSON, so a quote in a name cannot end
+    the call early."""
+
+    def test_load_measurement(self):
+        self.assertEqual(
+            mj.load_measurement("m1", [[53.5, -113.5], ("53.6", -113.4)]),
+            'loadMeasurement("m1", JSON.parse("[[53.5, -113.5], [53.6, -113.4]]"));')
+
+    def test_set_boundary_names(self):
+        js = mj.set_boundary_names(["b1", 2], 'Bob\'s "lot"')
+        self.assertEqual(js, 'setBoundaryNames(JSON.parse("[\\"b1\\", \\"2\\"]"), '
+                             '"Bob\'s \\"lot\\"");')
+        self.assertEqual(mj.set_boundary_names(["b1"], None),
+                         'setBoundaryNames(JSON.parse("[\\"b1\\"]"), "");')
+
+    def test_set_legend_detail(self):
+        self.assertEqual(mj.set_legend_detail("species", "named"),
+                         'setLegendDetail("species", "named");')
 
 
 class TestMapView(unittest.TestCase):
@@ -514,30 +540,6 @@ class TestContoursAndAutoTerrain(unittest.TestCase):
         self.assertEqual(mj.clear_auto_terrain(), "clearAutoTerrain();")
 
 
-class TestSplatOrthoOverlay(unittest.TestCase):
-
-    def test_draw_splat_ortho_overlay_payload(self):
-        out = mj.draw_splat_ortho_overlay(
-            "data:image/png;base64,iVBORw0KGgo=",
-            {"north": 53.6, "south": 53.5, "east": -113.4, "west": -113.5},
-            opacity=0.9,
-        )
-        self.assertTrue(out.startswith("drawSplatOrthoOverlay(JSON.parse("))
-
-    def test_set_splat_ortho_visible_is_json_bool(self):
-        self.assertEqual(mj.set_splat_ortho_visible(True),
-                         "setSplatOrthoVisible(true);")
-        self.assertEqual(mj.set_splat_ortho_visible(False),
-                         "setSplatOrthoVisible(false);")
-
-    def test_set_splat_ortho_opacity_coerces_float(self):
-        self.assertEqual(mj.set_splat_ortho_opacity(1),
-                         "setSplatOrthoOpacity(1.0);")
-
-    def test_clear_splat_ortho(self):
-        self.assertEqual(mj.clear_splat_ortho(), "clearSplatOrtho();")
-
-
 class TestWindShadowBuilders(unittest.TestCase):
 
     def test_set_wind_casters_json(self):
@@ -647,6 +649,58 @@ class TestLayerStackAndClickDispatch(unittest.TestCase):
         base = _HTML_PATH.parent / "map"
         cls.src = {p.name: p.read_text(encoding="utf-8")
                    for p in sorted(base.glob("*.js"))}
+
+    def test_the_basemap_needs_no_api_key(self):
+        """A key-gated tile host stamps "API KEY REQUIRED" across every tile
+        and nothing in the app notices.
+
+        This is not hypothetical: CARTO's Voyager CDN was the basemap until
+        V2.80, when it began requiring a key and a user opened the designer to
+        a watermarked map. A key cannot fix it either -- this is an installed
+        desktop app, so a key in the source is the author's quota spent by
+        every install.
+
+        Scoped to the DEFAULT basemap, not to every tile URL in the tree. A
+        keyed host is fine where the user supplies the key themselves and the
+        layer is opt-in: `initMapboxLayer(token)` in 05-features.js takes a
+        token as an argument for sharper satellite, and that is a feature, not
+        this defect. What must never need a key is the ground the designer
+        draws on when somebody opens it for the first time having configured
+        nothing.
+        """
+        core = self.src["01-core.js"]
+        block = re.search(r"var BASEMAPS = \[(.*?)\n      \];", core, re.S)
+        self.assertIsNotNone(block, "no BASEMAPS list to check")
+        KEYED = ("cartocdn.com", "api.mapbox.com", "tiles.stadiamaps.com",
+                 "maps.googleapis.com", "api.maptiler.com",
+                 "tile.thunderforest.com")
+        for host in KEYED:
+            self.assertNotIn(host, block.group(1),
+                             f"the default basemap uses {host}, which "
+                             f"requires an API key per install")
+        for token in ("access_token", "apikey", "api_key", "?key="):
+            self.assertNotIn(token, block.group(1),
+                             f"the default basemap passes {token}")
+        # CARTO is the one that actually bit, and it has no user-key path in
+        # this app at all, so it should not appear anywhere in the map sources.
+        for name, text in self.src.items():
+            self.assertNotIn("cartocdn.com", text, f"{name} is back on CARTO")
+
+    def test_the_basemap_falls_back_rather_than_failing_blank(self):
+        """One dead host must not leave the designer with no ground at all, so
+        the candidates are a list and sustained tile errors advance it. Since
+        V3.19 (QF-6) the count is watchBaseTiles's, in 11-map-furniture.js,
+        which the core hands each base map with the step to the next; the
+        behaviour is tests/test_offline_map.py's."""
+        core = self.src["01-core.js"]
+        self.assertIn("BASEMAPS", core)
+        urls = re.findall(r"url:\s*'([^']+)'", core)
+        self.assertGreaterEqual(len(urls), 2,
+                                "one basemap is a single point of failure")
+        self.assertIn("watchBaseTiles(osmLayer, i + 1 < BASEMAPS.length", core,
+                      "nothing advances the fallback without this")
+        self.assertIn("'tileerror'", self.src["11-map-furniture.js"],
+                      "nothing counts the errors that advance it")
 
     def test_boundary_is_drawn_in_its_own_low_pane(self):
         core = self.src["01-core.js"]

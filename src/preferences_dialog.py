@@ -1,25 +1,42 @@
 """
-preferences_dialog.py — Map settings dialog for optional API tokens.
+preferences_dialog.py — View › Map Settings…: an optional satellite token and
+the scroll-wheel zoom step (moved here from the View row in V3.07; saved and
+applied by ``src/map_settings_flow.py``).
 """
 
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFormLayout, QLabel,
+    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
     QLineEdit, QVBoxLayout, QWidget,
 )
 from PyQt6.QtCore import Qt
 
 
 class MapPreferencesDialog(QDialog):
-    """Dialog for configuring optional map provider tokens."""
+    """The map's two settings: a Mapbox token and how far one wheel step
+    zooms."""
 
-    def __init__(self, current_token: str = "", parent: QWidget | None = None):
+    def __init__(self, current_token: str = "", parent: QWidget | None = None,
+                 *, zoom_level: str = "fine"):
+        from src.map_settings_flow import ZOOM_LEVELS
         super().__init__(parent)
         self.setWindowTitle("Map Settings")
         self.setMinimumWidth(440)
 
         layout = QVBoxLayout(self)
+
+        zoom_form = QFormLayout()
+        self._zoom = QComboBox()
+        self._zoom.setAccessibleName("Scroll-wheel zoom")
+        for level, words in ZOOM_LEVELS:
+            self._zoom.addItem(words, level)
+        found = self._zoom.findData(zoom_level)
+        self._zoom.setCurrentIndex(found if found >= 0 else 0)
+        self._zoom.setToolTip("How far one step of the mouse wheel zooms the "
+                              "map. Fine is the smoothest.")
+        zoom_form.addRow("Scroll-wheel zoom:", self._zoom)
+        layout.addLayout(zoom_form)
 
         info = QLabel(
             "<b>Mapbox Satellite (optional)</b><br>"
@@ -60,3 +77,6 @@ class MapPreferencesDialog(QDialog):
 
     def token(self) -> str:
         return self._token_edit.text().strip()
+
+    def zoom_level(self) -> str:
+        return self._zoom.currentData() or "fine"

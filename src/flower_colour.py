@@ -42,8 +42,9 @@ WIND_POLLINATED_TYPES = frozenset({"grass", "sedge", "rush"})
 #: ``(key, label, swatch, note)`` — the filter vocabulary, in the order a colour
 #: wheel runs so the facet list reads as a spectrum rather than a frequency
 #: table. ``swatch`` is a representative hex for a UI chip; ``note`` is the
-#: tooltip. Buckets with no species today (green) are kept: the vocabulary
-#: describes the colour space, not this month's seed data.
+#: tooltip. A bucket with no species in it would still be kept: the vocabulary
+#: describes the colour space, not this month's seed data. So no note counts
+#: its species: "three species" of orange was five once the owner looked.
 COLOURS: tuple = (
     ("white",  "White",            "#f2f2ea",
      "Clean white — the moon-garden palette."),
@@ -52,7 +53,7 @@ COLOURS: tuple = (
     ("yellow", "Yellow",           "#f2c11e",
      "The prairie's most common bloom colour by a wide margin."),
     ("orange", "Orange",           "#e07020",
-     "Rare here — three species."),
+     "Rare here."),
     ("red",    "Red",              "#d6453a",
      "Includes the deep wine reds."),
     ("pink",   "Pink",             "#e58fb0",
@@ -155,16 +156,52 @@ def classify(plant: dict) -> str:
     return classify_hex(colour)
 
 
+def colours(plant: dict) -> tuple:
+    """Every colour bucket this plant blooms in, primary first.
+
+    A flora does not say *yarrow is white*. It says **"Heads numerous, in a
+    flattopped inflorescence, white to pinkish"**, and prickly pear is *"yellow
+    to pinkish orange"* -- which is why one of them had a yellow hex and a
+    magenta photograph above it. One hex could not hold that, so reading a
+    flora produced 76 rows a person was asked to arbitrate, and arbitrating
+    them would have thrown away the very thing the flora was consulted for.
+
+    So a second colour is **data now, not a question**. ``flower_colours`` is a
+    comma-separated list of bucket keys; a row without one falls back to
+    classifying its single hex, which is every row that has not been read out
+    of a flora yet.
+
+    ``flower_color`` remains the primary hex and ``classify`` remains the
+    primary bucket, so every screen that draws one swatch is unchanged.
+    """
+    if (plant.get("plant_type") or "") in WIND_POLLINATED_TYPES:
+        return ("straw",) if (plant.get("flower_color") or "").strip() else ()
+    listed = [c.strip().lower()
+              for c in (plant.get("flower_colours") or "").split(",")
+              if c.strip().lower() in COLOUR_KEYS]
+    if listed:
+        # Deduplicated, order kept: the flora's own order is primary-first.
+        seen, out = set(), []
+        for key in listed:
+            if key not in seen:
+                seen.add(key)
+                out.append(key)
+        return tuple(out)
+    single = classify(plant)
+    return (single,) if single else ()
+
+
 def matches(plant: dict, wanted) -> bool:
     """Does ``plant`` fall in any of the ``wanted`` colour keys?
 
     An empty ``wanted`` means no restriction, matching how every other
-    ``search_plants`` filter reads an empty value.
+    ``search_plants`` filter reads an empty value. A species that blooms white
+    to pink answers **both** a white query and a pink one, because it is both.
     """
     keys = {str(k) for k in (wanted or []) if str(k).strip()}
     if not keys:
         return True
-    return classify(plant) in keys
+    return bool(keys & set(colours(plant)))
 
 
 def bucket_counts(plants) -> dict:

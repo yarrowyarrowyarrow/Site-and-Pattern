@@ -6,8 +6,10 @@ shrubs, then perennials, with groundcover knitting the ground tightest — and
 self-spreading species (F35, ``spread_habit``) are spaced wider still because
 they fill the gaps over time. This Qt-free engine is shared by:
 
-  * the community builder's "Auto-arrange by layer" (:func:`arrange_concentric`), and
-  * Fill Area matrix planting per type (:func:`layered_fill_plan`).
+  * the community builder's "Auto-arrange by layer" (:func:`arrange_concentric`),
+  * Fill Area matrix planting per type (:func:`layered_fill_plan`), and
+  * the spacing a person is told (:func:`spacing_to_plant_m`), which the plant
+    page, the buy list and the planting map's key all print (V3.19, QF-9).
 
 Design principle P2 (the best designs disappear into their context) — see
 docs/DESIGN_PHILOSOPHY.md.
@@ -92,6 +94,57 @@ def plant_spacing(rec, base_m: float) -> float:
     if canopy:
         s = max(s, float(canopy))
     return round(s, 3)
+
+
+# ── The spacing a person is told (V3.19, QF-9) ───────────────────────────────
+# R20: the plant page said Wild Bergamot "0.3 m apart" and the PDF key "0.9 m
+# apart". The 0.9 was nobody's: the buy list read the seed file's key
+# (``spacing_m``) off a database row whose column is ``spacing_meters``, so it
+# never found the catalogue's number and always printed the estimate below.
+# The catalogue's spacing is the one the map draws (every placed plant's circle
+# is that wide, generated or not, and the landing check reads it) and every
+# hand-placed pattern lays out at, so it is the one told. A generated design
+# lays out EVERY species wider than this (``llm_design._plant_spacing_m``: the
+# mature canopy, which ``get_plant`` fills in as 1.5 times this spacing, and at
+# least 0.5 m: 0.5 m for Wild Bergamot), so on a generated plan the scale
+# drawing is always looser than the key. Whether to print one number there is
+# the owner's open question (V3.19 plan, "Decisions the owner should hear").
+
+#: The estimate's ground unit, for a row the catalogue gives no spacing.
+_ESTIMATE_BASE_M = 0.45
+
+
+def spacing_to_plant_m(plant) -> float:
+    """How far apart to plant this species, centre to centre, in metres: the
+    catalogue's spacing (``spacing_meters`` on a database row, ``spacing_m`` in
+    the seed file and on a species entry), else :func:`plant_spacing`'s
+    estimate. To the nearest 5 cm, so a printed figure claims no precision the
+    catalogue does not have (P9). The plant page, the buy list and the
+    planting map's key all print this, through :func:`spacing_words`."""
+    rec = plant or {}
+    for key in ("spacing_meters", "spacing_m"):
+        try:
+            value = float(rec.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return _to_5cm(value)
+    return _to_5cm(plant_spacing(rec, base_m=_ESTIMATE_BASE_M))
+
+
+def spacing_words(metres) -> str:
+    """A spacing as it is printed: ``"0.3 m"``, to the nearest 5 cm; empty for
+    none."""
+    try:
+        value = float(metres or 0)
+    except (TypeError, ValueError):
+        return ""
+    return f"{_to_5cm(value):g} m" if value > 0 else ""
+
+
+def _to_5cm(metres: float) -> float:
+    """To the nearest 5 cm, with a 5 cm floor."""
+    return max(0.05, round(float(metres) * 20.0) / 20.0)
 
 
 # ── Community auto-arrange (concentric by layer) ─────────────────────────────

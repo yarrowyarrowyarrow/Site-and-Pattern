@@ -103,5 +103,38 @@ class TestBuildSnapshots(unittest.TestCase):
             self.assertEqual(s["scene"]["plants"], [])
 
 
+
+class TestWhatTheWindowSays(unittest.TestCase):
+    """V3.05 (surface audit): the window promised "years 1, 5, 15 and 30"
+    above a last panel reading Year 20, and drew an 11 x 8 m yard inside the
+    3D stage's 50 m box, a tenth of each panel."""
+
+    def test_the_sentence_names_the_years_shown(self):
+        from src.snapshot_timeline import years_line
+        line = years_line([1, 5, 15, 20])
+        self.assertIn("years 1, 5, 15 and 20", line)
+        self.assertNotIn("30", line)
+        self.assertIn("year 20", line)
+
+    def test_an_uncapped_design_says_nothing_about_stopping(self):
+        from src.snapshot_timeline import SNAPSHOT_YEARS, years_line
+        self.assertNotIn("stops", years_line(list(SNAPSHOT_YEARS)))
+
+    def test_the_frame_is_the_yard_not_the_stage(self):
+        from src.snapshot_timeline import content_bounds
+        scene = {"boundary": [[0, 0], [11, 0], [11, 8], [0, 8]],
+                 "plants": [{"x": 2.0, "y": 2.0, "canopy_m": 4.0}],
+                 "bounds": {"min_x": -25, "min_y": -25,
+                            "max_x": 25, "max_y": 25}}
+        b = content_bounds([scene])
+        self.assertLess(b["max_x"] - b["min_x"], 15)
+        self.assertLess(b["max_y"] - b["min_y"], 12)
+        self.assertLessEqual(b["min_x"], 0.0 - 1.0)   # the crown is inside
+
+    def test_nothing_drawn_is_no_frame(self):
+        from src.snapshot_timeline import content_bounds
+        self.assertIsNone(content_bounds([{"plants": [], "boundary": None}]))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -86,10 +86,11 @@ Inspect it (Linux example):
 
 ```bash
 sqlite3 "$HOME/.local/share/Site & Pattern/permadesign.db" \
-  ".tables" "SELECT COUNT(*) FROM plants;" "PRAGMA user_version;"
+  ".tables" "SELECT COUNT(*) FROM plants;" "SELECT version FROM _schema_version;"
 ```
 
-`PRAGMA user_version` is where the schema version is stored
+The `_schema_version` table is where the schema version is stored (not
+`PRAGMA user_version`, which stays 0)
 (`_get_schema_version` / `_set_schema_version`); compare it to
 `_SCHEMA_VERSION` in `src/db/plants.py` to see whether a reseed is pending.
 
@@ -108,6 +109,11 @@ The map is Leaflet inside `QWebEngineView` (`src/map_widget.py`), loading
 - WebEngine can't initialise (missing system libs / sandbox). Run from a
   terminal (§7) to see the Chromium error.
 - A JS error broke page init. See "seeing JS output" below.
+  `ReferenceError: L is not defined` means Leaflet itself did not load. Since
+  V2.83 it is vendored (`html/vendor/leaflet/`), so that now points at a
+  missing or mis-bundled file rather than at the network. A **grey** map with
+  zoom buttons is different and fine offline: the map is up and only the tiles
+  are missing.
 
 **Seeing JS console output / renderer errors:** `src/map_widget.py` routes
 the embedded page's `console.*` messages into Python

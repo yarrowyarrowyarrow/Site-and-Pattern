@@ -48,6 +48,32 @@ python3 -m unittest tests.test_architecture_guard tests.test_philosophy \
   tests.test_skill_library -v
 ```
 
+### The suite is green on Linux and that is evidence about Linux (V2.78)
+
+The author ran the full suite on Windows and got **seven errors nobody here
+could see**: `Path.read_text()` and the builtin `open()` decode with the
+*locale* codec, which is cp1252 on Windows, and `data/plants_master.json`
+carries 966 non-ASCII bytes that cp1252 cannot decode. Every one passed on
+every Linux machine.
+
+Python ships the instrument for this. Run it before believing a green suite:
+
+```bash
+PYTHONWARNDEFAULTENCODING=1 python3 -W error::EncodingWarning \
+  -m unittest discover -s tests -t .
+```
+
+`PYTHONWARNDEFAULTENCODING=1` makes every locale-default text operation emit
+`EncodingWarning`; `-W error::EncodingWarning` turns those into hard errors, so
+a latent Windows crash fails here instead of on the author's machine. It found
+**three separate shapes** of the same bug — bare `read_text`/`open`,
+`subprocess(text=True)`, and `tempfile.NamedTemporaryFile(mode="w")` — of which
+only the first was actually crashing.
+
+All three are now guarded statically by
+`TestEveryTextFileReadPinsItsEncoding`, so the strict run should stay clean;
+reach for it when adding code that touches files or spawns processes.
+
 ## The temp-DB pattern (copy-paste template)
 
 Every DB-touching test redirects `src.db.plants` module globals **before**
@@ -123,6 +149,7 @@ to the snapshot the test defends.
 
 | Guard test | Protects | When it fails, you… |
 |---|---|---|
+| `tests/test_architecture_guard.py` `TestEveryTextFileReadPinsItsEncoding` | Every text file read/write, `subprocess(text=True)` and text-mode `tempfile` pins `encoding="utf-8"` | …**add the encoding**, never suppress. The locale codec is never the right answer here: it is UTF-8 on Linux and cp1252 on Windows, and the seed JSON and this repo's own commit subjects both break cp1252. Note the guard is tree-wide on purpose — V1.95 fixed this in one file with a one-file guard and it came back in V2.75. |
 | `tests/test_architecture_guard.py` `TestStructuralCeilings` | Per-file line ceilings + MainWindow method cap (decomposition won't backslide) | …**extract** the new logic into a module/controller. Don't just raise the ceiling — see `add-feature`. Raise it only with a written reason, as prior bumps did. |
 | `tests/test_architecture_guard.py` `TestAgentApiContract` | The frozen scripting/MCP surface (`EXPECTED_*` maps) | …if the API change was intended, **deliberately** update the map; if not, you broke the surface — revert. See `agent-api`. |
 | `tests/test_architecture_guard.py` `TestAnalysisPanelTabsRegistered` | Every `_build_*_tab` actually calls `addTab` (a real regression where a tab vanished) | …make your `_build_*_tab` register its tab; don't move `addTab` into a setter. |
@@ -132,20 +159,27 @@ to the snapshot the test defends.
 | `tests/test_imports_resolved.py` | Every `src/` module imports cleanly (catches typos, bad lazy imports) | …fix the import; often a missing optional-dep guard. |
 | `tests/test_safety_filters.py` | Plant safety-tag filtering behaves | …fix the data/filter; never weaken a safety filter to pass. |
 | `tests/test_resource_path.py` | Frozen-build resource resolution via `resource_path` | …resolve bundled files through `src/resources.py`, not `__file__` joins. |
+| `tests/test_js_names.py` | Every function the 3D viewer's and the map's chunks call by bare name is declared in some chunk or the page (V3.37: V3.22 deleted `buildStructures` and every 3D scene push threw for fifteen releases) | …declare the function, or fix the call. A browser built-in it does not know goes in `BROWSER`, never a project function. |
+| `html/probe_watch.js` + `tests/test_scene3d_render.py` `fail_on_viewer_errors` | A 3D probe whose viewer throws **fails** instead of skipping as "no WebGL" (the V3.22–V3.37 masking) | …read the error it names: it is the viewer's. Only `permaBootError` (no WebGL) still skips. |
 | `tests/test_skill_library.py` | This skill library (frontmatter, dead paths, index) | …fix the skill: update a moved path, add the missing `SKILL.md`, or list it in `.claude/skills/README.md`. |
 
 ## Pitfalls
 
 - **A green suite is necessary but not sufficient** for UI-visible changes —
-  many widgets only get an offscreen smoke test, and the map/3D pages aren't
-  exercised headlessly at all. See the `verify` skill for the gap.
+  many widgets only get an offscreen smoke test, and the map/3D pages are
+  exercised only by the headless-Chromium probe tests, which need a Chromium
+  (`_find_chromium`). See the `verify` skill for the gap.
 - **Don't add a real network call to a test.** The slow tests are a known
   tax; new tests must stub the fetch (see `external-data` for how existing
   tests inject a fake `fetch_json`).
 - **Patch the DB globals before importing DB-openers**, or your test writes
   to the real user DB.
-- Skips are green. If you *want* the Qt/shapely path exercised, install the
-  dep locally — don't interpret `s` as broken.
+- Skips are green, and **a skip reason is a claim to check**, not a fact. "the
+  probe never reported — no WebGL" skipped three render gates on every CI run
+  from V3.22 to V3.37 while the viewer threw on every scene push; "no Chromium
+  binary" skipped every browser test in sessions because the finder did not
+  know `chrome-linux64`. Read the runner's skip reasons, and install the dep
+  (or point `CHROME=` at a browser) when one names something you have.
 
 ## Key files
 

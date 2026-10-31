@@ -5,6 +5,7 @@ iframe{width:900px;height:600px;border:0;display:block}
 </head><body>
 <div id="out">measuring…</div>
 <iframe id="v" src="scene3d.html"></iframe>
+<script src="probe_watch.js"></script>
 <script>
 // Render-level aspect check (dev page + the harness behind
 // tests/test_scene3d_render.py). Pushes ONE plant of known height_m/canopy_m at
@@ -60,7 +61,7 @@ function scene(c) {
     version: 1, year: 30, month: 7, is_night: false,
     origin: { lat: 51.05, lng: -114.07 }, bounds: B, boundary: null,
     sun: { azimuth_deg: 200, altitude_deg: 48 },
-    buildings: [], structures: [], scan_points: [], splat: null, terrain: null,
+    buildings: [], structures: [], terrain: null,
     plants: [Object.assign({
       plant_id: 1, common_name: genus, x: 0, y: 0,
       height_m: h, canopy_m: cw, plant_type: type, genus: genus,

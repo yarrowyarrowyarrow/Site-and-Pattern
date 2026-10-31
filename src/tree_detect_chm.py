@@ -63,7 +63,7 @@ _CHM_BASE = ("https://dataforgood-fb-data.s3.amazonaws.com/"
              "forests/v1/alsgedi_global_v6_float")
 _CHM_TILE_URL = _CHM_BASE + "/chm/{quadkey}.tif"
 _CHM_INDEX_URL = _CHM_BASE + "/tiles.geojson"
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+from src.http_utils import _USER_AGENT  # one identity (V3.31, FN-6)  # noqa: E402
 
 # Detection tuning (all stated estimates; heights themselves are measured).
 # 2 m default: the Meta CHM underestimates isolated/small crowns (MAE ≈ 2.8 m),

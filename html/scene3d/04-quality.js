@@ -247,6 +247,32 @@ let SHADOW_TEX = null;
 const TREE_SUBVARS = 3;    // distinct random branchings per species, so a stand
                            // of one species reads as individuals, not clones
 
+// How tall a plant is DRAWN, in metres: one answer for the body and for
+// everything that sits on it (V2.88). Each layer floors the recorded height
+// for its own model, and groundcover caps it. Until V2.88 the flowers, fruit
+// and seed heads read the RECORDED height instead, so nine groundcovers wore
+// their flowers above a mat capped at 18 cm (Canada Anemone's at 60 cm), and
+// the 0.5 m floor that suits a reed drew a 2 cm duckweed 25 times too tall.
+// src/scene_wildlife.py perches animals on the same cap
+// (GROUNDCOVER_DRAWN_MAX_M; tests/test_accuracy_render.py keeps them equal).
+const _BODY_H = { tree: [0.4, Infinity], shrub: [0.2, Infinity],
+                  grass: [0.3, Infinity], sedge: [0.3, Infinity],
+                  rush: [0.3, Infinity], aquatic: [0.05, Infinity],
+                  groundcover: [0.05, 0.18] };
+// Python decides some heights once, as `drawn`: a vine's climb from what stands
+// beside it (src/vine_habit.py, V2.89), a floating or submerged plant's height
+// over the water (src/pond_habit.py, V2.90). An undecided vine lies on the
+// ground, no higher than vine_habit.SPRAWL_HEIGHT_M (tests/test_accuracy_render.py
+// keeps the two equal). A horsetail has no reed or grass body to floor it.
+const _VINE_SPRAWL_H = 0.30;
+function bodyHeightOf(p) {
+  if (p && p.drawn) return Math.max(0.02, p.drawn.height_m);
+  if (p && p.plant_type === 'vine') return Math.max(0.05, Math.min(_VINE_SPRAWL_H, p.height_m || 0));
+  if (p && p.growth_form === 'jointed') return Math.max(0.05, p.height_m || 0);
+  const r = _BODY_H[p && p.plant_type] || [0.08, Infinity];   // herbs
+  return Math.min(r[1], Math.max(r[0], (p && p.height_m) || 0));
+}
+
 // A tree's structural tier — which is a SIZE class, not a growth stage. The
 // asset set carries three builds per species and this picks between them from
 // the plant's height right now (which already folds the growth year in, since
@@ -343,7 +369,7 @@ function buildArchetypes() {
   if (ARCH) return;
   // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
   // the rest are the cheap shared variant arrays.
-  const ground = [], grass = [], aquatic = [], vine = [];
+  const ground = [], grass = [], aquatic = [];
   const glb = (kind, i) =>
     useGLB() && window.glbLayerArch && window.glbLayerArch(kind, i);
   // Groundcover ships one unit per (blade class × grain class) its 32 species
@@ -360,10 +386,11 @@ function buildArchetypes() {
     grass.push(glb('grass', i) || buildGrassGeo(mulberry32(sd))));
   [541, 587, 631].forEach((sd, i) =>
     aquatic.push(glb('aquatic', i) || buildAquaticGeo(mulberry32(sd))));
-  [661, 707, 743].forEach((sd, i) =>
-    vine.push(glb('vine', i) || buildVineGeo(mulberry32(sd))));
-  ARCH = { ground, grass, aquatic, vine };
+  // Plain, whorled at the middle nodes, whorled throughout, mare's-tail.
+  const horsetail = [0, 1, 2, 3].map((v) => buildHorsetailGeo(mulberry32(811 + 37 * v), v));
+  ARCH = { ground, grass, aquatic, horsetail };
 }
+
 
 // Presets for the surfaces that vary BY SPECIES (F63). `surfaceMaterial(preset,
 // cls)` builds one material per (preset × class) on first use — a birch's papery
@@ -411,8 +438,6 @@ function ensurePlantMats() {
     // which is the same bug the shrubs had, one archetype family later. When
     // geometry changes KIND, every material applied to it is unreviewed.
     foliage: surfaceMaterial(MAT_PRESETS.crown, 'matte', true),
-    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true,
-               detail: 'leaf.matte', detailScale: 11.0, detailAmount: 0.30 }),
     // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
     // faceted masses were closed icosahedra. A solid can be FrontSide, which is
     // what this material was; a flat ribbon under backface culling is INVISIBLE
@@ -620,7 +645,7 @@ function buildHerbLayer(list, month, year, terrain) {
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
-      const h = Math.max(0.08, p.height_m);
+      const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
@@ -657,8 +682,10 @@ function buildShrubLayer(list, month, year, terrain) {
     const arch = getShrubArch(prof, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
+    // Both paths carry colours (the GLB's baked shade, the procedural gradient).
+    // Without `true` they were off, and no shrub drew either until V2.96 (F188).
     const foliage = instancedMesh(arch.foliageGeo, total,
-      surfaceMaterial(MAT_PRESETS.shrubLeaf, surf));
+      surfaceMaterial(MAT_PRESETS.shrubLeaf, surf, true));
     const stems = arch.stemGeo
       ? instancedMesh(arch.stemGeo, total,
                       surfaceMaterial(MAT_PRESETS.bark, bark,
@@ -673,7 +700,7 @@ function buildShrubLayer(list, month, year, terrain) {
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
-      const h = Math.max(0.2, p.height_m);
+      const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       const scol = fadeToward(stemHex, p.opacity);
@@ -681,6 +708,9 @@ function buildShrubLayer(list, month, year, terrain) {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);
         const gy = terrainHeightAt(x, wy, terrain);
+        if (!k && window.noteVineHost) {
+          noteVineHost(p, [arch.foliageGeo, arch.stemGeo], x, gy, -wy, c * m, h * m, rotY);
+        }
         setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
         if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
         names[idx] = p.common_name || '';
@@ -711,12 +741,21 @@ function buildPlants(group, plants, month, year, terrain) {
   // Succession: drop plants the closing canopy has shaded to death (V2.21), so
   // the year-N scene is the climax community — the survivors — not every plant
   // ever placed. Undefined health_state (older scenes / existing trees) is kept.
-  plants = (plants || []).filter(p => p.health_state !== 'dead');
+  // The scene's own list is kept too: a vine names its host by index into it.
+  const scenePlants = plants || [];
+  plants = scenePlants.filter(p => p.health_state !== 'dead');
+  if (window.vinesReset) vinesReset();
 
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
-                   aquatic: [], herb: [] };
+                   aquatic: [], herb: [], horsetail: [], pond: [], succulent: [] };
   for (const p of plants || []) {
-    let t = p.plant_type;
+    // A horsetail is jointed stems whatever its type (V2.89); a wetland plant or a
+    // succulent is the body Python gave it (V2.90 23-pond.js, V2.93 24-succulents.js).
+    const pb = p.drawn && p.drawn.body;
+    if (p.growth_form === 'jointed' || pb === 'whorled') { byKind.horsetail.push(p); continue; }
+    if (window.SUCCULENT_BODIES && SUCCULENT_BODIES[pb]) { byKind.succulent.push(p); continue; }
+    if (pb && pb !== 'reed' && pb !== 'herb') { byKind.pond.push(p); continue; }
+    let t = pb === 'herb' ? 'herb' : p.plant_type;
     if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
     const k = byKind[t] ? t : 'herb';
     byKind[k].push(p);
@@ -761,7 +800,7 @@ function buildPlants(group, plants, month, year, terrain) {
       const names = new Array(total), ids = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
-        const h = Math.max(0.4, p.height_m);
+        const h = bodyHeightOf(p);
         const c = unitXZ(arch.foliageGeo, Math.max(0.4, p.canopy_m));
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
@@ -773,6 +812,10 @@ function buildPlants(group, plants, month, year, terrain) {
           const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
           const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);
           const gy = terrainHeightAt(x, wy, terrain);
+          if (!k && window.noteVineHost) {     // something a vine can climb
+            noteVineHost(p, bare ? [arch.branchGeo] : [arch.branchGeo, arch.foliageGeo],
+                         x, gy, z, c * m, h * m, rotY);
+          }
           setInst2(branch, idx, x, gy, z, c * m, h * m, c * m, rotY, bcol);
           if (bare) setInst2(foliage, idx, x, gy, z, 0.001, 0.001, 0.001, rotY, _white);
           else setInst2(foliage, idx, x, gy, z, c * m, h * m, c * m, rotY, fcol);
@@ -798,32 +841,39 @@ function buildPlants(group, plants, month, year, terrain) {
 
   // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
   buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
-             (p) => [Math.max(0.16, p.canopy_m), Math.max(0.3, p.height_m),
+             (p) => [Math.max(0.16, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.16, p.canopy_m)], month, year, false, terrain,
              (p) => aspectBucket(p, 'grass'));
 
   // Aquatic / emergent marsh plants — tall erect reed/strap-leaf clumps; the
   // cattail's brown spike comes from the flower layer (V1.92).
   buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
-             (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
+             (p) => [Math.max(0.18, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.18, p.canopy_m)], month, year, false, terrain,
              (p) => aspectBucket(p, 'aquatic'));
-  // Vines — sprawling/twining leafy stems (V1.99), not a cone.
-  buildLayer(byKind.vine, 3, MATS.leaf, (v) => ARCH.vine[v],
-             (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
-                     Math.max(0.25, p.canopy_m)], month, year, false, terrain,
-             (p) => aspectBucket(p, 'vine'));
+  // Horsetails — jointed stems, whorled or plain as the species records its
+  // branching (V2.89, 14-layers.js buildHorsetailGeo).
+  buildLayer(byKind.horsetail, ARCH.horsetail.length, MATS.blade, (v) => ARCH.horsetail[v],
+             (p) => [Math.max(0.1, p.canopy_m), bodyHeightOf(p),
+                     Math.max(0.1, p.canopy_m)], month, year, false, terrain,
+             horsetailBucket);
+  // Vines — on the tree or shrub beside them, or on the ground (V2.89,
+  // 22-vines.js). After the trees and shrubs, which note where they stand.
+  if (window.buildVines) buildVines(byKind.vine, scenePlants, month, year, terrain);
+  // Floating leaves, submerged plants, broad leaves on stalks (V2.90, 23-pond.js).
+  if (window.buildPond) buildPond(byKind.pond, month, year, terrain);
+  // Pads, balls, swords, fleshy stems (V2.93, 24-succulents.js), before the flowers.
+  if (window.buildSucculents) buildSucculents(byKind.succulent, month, year, terrain);
 
   // Groundcover — a creeping mat of REAL leaves since V2.29 (it was faceted
   // domes), so each species gets the unit carrying its own leaf outline.
   buildLayer(byKind.groundcover, ARCH.ground.length, MATS.leaf,
              (v) => ARCH.ground[v],
-             (p) => [Math.max(0.18, p.canopy_m),
-                     Math.min(0.18, Math.max(0.05, p.height_m)),
+             (p) => [Math.max(0.18, p.canopy_m), bodyHeightOf(p),
                      Math.max(0.18, p.canopy_m)], month, year, true, terrain,
              groundcoverBucket);
 
-  // Contact shadows under trees and tall shrubs (skip near-vanished plants).
+  // Contact shadows under trees and tall shrubs, not near-vanished ones, on the slope (V3.04).
   const shadowed = byKind.tree
     .concat(byKind.shrub.filter(p => (p.height_m || 0) > 1.2))
     .filter(p => (p.opacity ?? 1) >= 0.2);
@@ -831,11 +881,11 @@ function buildPlants(group, plants, month, year, terrain) {
     const sh = instancedMesh(GEO.shadow, shadowed.length, MATS.shadow, false);
     shadowed.forEach((p, i) => {
       const c = Math.max(0.4, p.canopy_m) * 1.35;
-      _v.set(p.x, 0.03, -p.y); _s.set(c, 1, c); _q.identity();
+      onGround(p.x, p.y, terrain, 0.03); _s.set(c, 1, c);   // sets _v and _q
       _m.compose(_v, _q, _s);
       sh.setMatrixAt(i, _m);
     });
-    plantsGroup.add(sh);
+    sh.name = 'contact-shadows'; plantsGroup.add(sh);
   }
 
   // Flowers — real-coloured blooms on plants in flower for this month (V1.90).

@@ -1,14 +1,21 @@
 """
-on_this_design_panel.py — The "On this design" review tab.
+on_this_design_panel.py — what is on the design: the planted lists and the
+report card.
 
 Split out of ``src/plant_panel.py`` in Chunk 4 of the strengthening plan.
 Pure structural move: ``OnThisDesignPanel`` is now standalone and lives
 beside the plant browser instead of inside it.
 
 Three sub-tabs:
-  • Plants — species → count (driven by PlantPanel._placed_counts).
+  • Species — species → count (driven by PlantPanel._placed_counts).
   • Communities — community-name → instance count + member count.
-  • Stats — species count, Alberta-native %, layer / function tallies.
+  • Stats — the score, what to plant next, cues to care, cost.
+
+**Since V3.07 they sit in the Design tab** (``src/side_panel_layout.py``): the
+Stats page, as **Report card**, is its first page, and this panel, with Species
+and Communities, its second, **Planted**. Until then all three were under
+Plants › On This Design, "the best page in the app, three levels deep, under a
+tab named for browsing plants" (the V3.05 surface audit).
 
 App.py owns the instance and drives both inputs:
 ``set_plants_counts(plant_panel._placed_counts)`` whenever the Plants
@@ -18,11 +25,50 @@ inside ``_sync_planning_panel`` for Communities + Stats.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
-    QSizePolicy,
+    QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem,
 )
+
+
+class _WrapToList(QStyledItemDelegate):
+    """A wrapped row as wide as its list, and as tall as its words need there.
+    Qt measured the wrap without the stylesheet's item padding, so the rows of
+    "what eats it" came out 12 to 30 px wider than the list (V3.08): a
+    sideways scroll bar under it, and the end of each line cut off."""
+
+    def __init__(self, view: QListWidget):
+        super().__init__(view)
+        self._view = view
+
+    def sizeHint(self, option, index):                    # noqa: N802
+        width = self._view.viewport().width()
+        if width <= 0:
+            return super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        room, hint = width, QSize()
+        for _ in range(3):              # padding is learnt from the overshoot
+            opt.rect = QRect(0, 0, room, 10000)
+            hint = super().sizeHint(opt, index)
+            if hint.width() <= width:
+                break
+            room -= hint.width() - width
+        return QSize(min(hint.width(), width), hint.height())
+
+
+def _activate_on_keys(view: QListWidget, handler) -> None:
+    """Enter or Space on a row does what a click does. Until V3.02 these lists
+    were ``NoFocus``, so a keyboard could not reach the design's own contents;
+    the Menu key opens a row's menu at the row, as a right-click does."""
+    def run():
+        item = view.currentItem()
+        if item is not None:
+            handler(item)
+    for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+        QShortcut(QKeySequence(key), view,
+                  context=Qt.ShortcutContext.WidgetShortcut, activated=run)
 
 from src.plant_list_view import _RESULTS_LIST_STYLE, _type_icon
 
@@ -53,18 +99,18 @@ class OnThisDesignPanel(QWidget):
     species_substitute_requested = pyqtSignal(int)       # ctx: the nursery is out (F91)
     community_focus_requested = pyqtSignal(str)          # click → zoom to members
     open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
-    open_planning_requested = pyqtSignal()               # Stats: cost → Planning
+    open_buying_requested = pyqtSignal()                 # Stats: cost → Share › Export
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        from PyQt6.QtWidgets import QTabWidget, QTextBrowser
+        from PyQt6.QtWidgets import QTextBrowser
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(2)
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
-        # Third level in the tree (Plants → On This Design → here), so it takes
-        # the quietest tab style. This strip used to invent a boxed look of its
+        # Third level in the tree (Design › Planted › here since V3.07), so it
+        # takes the quietest tab style. This strip used to invent a boxed look of its
         # own, which made the deepest level the loudest of the three.
         from src.ui_style import leaf_tab_stylesheet
         self._tabs.setStyleSheet(leaf_tab_stylesheet())
@@ -76,12 +122,17 @@ class OnThisDesignPanel(QWidget):
         pl.setContentsMargins(2, 2, 2, 2)
         pl.setSpacing(2)
         self._plants_count_label = QLabel("None placed yet")
-        self._plants_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._plants_count_label.setStyleSheet("color: #90a4ae; font-size: 12px;")
         pl.addWidget(self._plants_count_label)
         self._plants_list = QListWidget()
         self._plants_list.setMinimumHeight(60)
         self._plants_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._plants_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._plants_list.setAccessibleName("Species in this design")
+        # Two lines a row since V3.08, the second what eats it and when, which
+        # wraps in a narrow panel rather than running off its edge.
+        self._plants_list.setWordWrap(True)
+        self._plants_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._plants_list.setItemDelegate(_WrapToList(self._plants_list))
         self._plants_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -89,6 +140,7 @@ class OnThisDesignPanel(QWidget):
             "Click a species to select and frame it on the map;\n"
             "right-click for select / remove / open in Plant Library.")
         self._plants_list.itemClicked.connect(self._on_plant_row_clicked)
+        _activate_on_keys(self._plants_list, self._on_plant_row_clicked)
         self._plants_list.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu)
         self._plants_list.customContextMenuRequested.connect(
@@ -104,13 +156,17 @@ class OnThisDesignPanel(QWidget):
         cl.setSpacing(2)
         self._communities_count_label = QLabel("No communities placed yet")
         self._communities_count_label.setStyleSheet(
-            "color: #78909c; font-size: 11px;"
+            "color: #90a4ae; font-size: 12px;"
         )
         cl.addWidget(self._communities_count_label)
         self._communities_list = QListWidget()
         self._communities_list.setMinimumHeight(60)
         self._communities_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._communities_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._communities_list.setAccessibleName("Communities in this design")
+        self._communities_list.setWordWrap(True)
+        self._communities_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._communities_list.setItemDelegate(
+            _WrapToList(self._communities_list))
         self._communities_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -118,6 +174,7 @@ class OnThisDesignPanel(QWidget):
             "Click a community to frame its placed members on the map.")
         self._communities_list.itemClicked.connect(
             self._on_community_row_clicked)
+        _activate_on_keys(self._communities_list, self._on_community_row_clicked)
         cl.addWidget(self._communities_list, 1)
         self._tabs.addTab(communities_widget, "Communities")
 
@@ -127,16 +184,19 @@ class OnThisDesignPanel(QWidget):
         sl.setContentsMargins(2, 2, 2, 2)
         sl.setSpacing(2)
         self._stats_text = QTextBrowser()
+        self._stats_text.setAccessibleName("Design summary")
         self._stats_text.setStyleSheet(
             "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"
         )
-        # Deep-links: the habitat-value and cost headings are anchors into the
-        # Analysis and Planning tabs (V2.13). Handle them ourselves rather than
+        # Deep-links: the habitat-value and cost headings are anchors into
+        # Design › Habitat and Share › Export (V2.13; V3.08). Handle them ourselves rather than
         # letting QTextBrowser try to navigate to a made-up URL.
         self._stats_text.setOpenLinks(False)
         self._stats_text.anchorClicked.connect(self._on_stats_anchor)
         sl.addWidget(self._stats_text, 1)
+        # The Design tab's Report card since V3.07 (src/side_panel_layout.py).
+        self._stats_page = stats_widget
         self._tabs.addTab(stats_widget, "Stats")
 
         # Latest enriched snapshot — stashed so Stats can refresh without
@@ -154,6 +214,38 @@ class OnThisDesignPanel(QWidget):
         # in three years (P13).
         self._cues_lines: list = []
         self._cues_tally = None
+        # What each plant feeds (src/what_it_feeds.py), by plant id, and what
+        # each community's members feed between them, by their ids: neither
+        # changes while the app runs, and these lists redraw on every edit.
+        self._food_of: dict = {}
+        self._group_food: dict = {}
+
+    def _eater_lines(self, plant_ids) -> dict:
+        """``{plant_id: "feeds 12: … · flowers Jul–Aug"}`` (V3.08: the
+        owner's "what eats this when", under each species)."""
+        from src.what_it_feeds import eaters_line, plant_food
+        need = [p for p in plant_ids if p not in self._food_of]
+        if need:
+            try:
+                found = plant_food(need)
+            except Exception:  # noqa: BLE001 — the rows still name the plants
+                return {}
+            for pid in need:
+                self._food_of[pid] = found.get(pid)
+        return {pid: eaters_line(self._food_of[pid]) for pid in plant_ids
+                if self._food_of.get(pid) is not None}
+
+    def _group_line(self, plant_ids) -> str:
+        """One line for a community: what its members feed between them, each
+        animal once, and when."""
+        from src.what_it_feeds import eaters_line, together
+        key = frozenset(plant_ids)
+        if key not in self._group_food:
+            try:
+                self._group_food[key] = together(key)
+            except Exception:  # noqa: BLE001
+                return ""
+        return eaters_line(self._group_food[key])
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -165,10 +257,13 @@ class OnThisDesignPanel(QWidget):
         try:
             from src.db.plants import get_plant
             total = 0
+            lines = self._eater_lines([int(pid) for pid in counts])
             for pid, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
                 p = get_plant(pid)
                 name = p["common_name"] if p else f"Plant #{pid}"
-                item = QListWidgetItem(f"{name}  ×{count}")
+                line = lines.get(int(pid))
+                item = QListWidgetItem(f"{name}  ×{count}"
+                                       + (f"\n{line}" if line else ""))
                 item.setIcon(_type_icon(p["plant_type"] if p else ""))
                 item.setData(Qt.ItemDataRole.UserRole, int(pid))
                 self._plants_list.addItem(item)
@@ -229,8 +324,8 @@ class OnThisDesignPanel(QWidget):
         target = url.toString()
         if target == "sap:analysis-habitat":
             self.open_habitat_analysis_requested.emit()
-        elif target == "sap:planning":
-            self.open_planning_requested.emit()
+        elif target == "sap:buy":
+            self.open_buying_requested.emit()
 
     # ── Communities + Stats sub-tabs ──────────────────────────────────
 
@@ -250,6 +345,7 @@ class OnThisDesignPanel(QWidget):
         from collections import defaultdict
         instances: dict[str, set] = defaultdict(set)
         member_counts: dict[str, int] = defaultdict(int)
+        species: dict[str, set] = defaultdict(set)
         for p in enriched:
             name = (p.get("polyculture_name") or "").strip()
             if not name:
@@ -261,15 +357,19 @@ class OnThisDesignPanel(QWidget):
             ) else p.get("placement_group_id")
             instances[name].add(key)
             member_counts[name] += 1
+            if p.get("plant_id") is not None:
+                species[name].add(int(p["plant_id"]))
         if not instances:
             self._communities_count_label.setText("No communities placed yet")
             return
         for name in sorted(instances.keys(), key=str.lower):
             n_inst = len(instances[name])
             n_mem = member_counts[name]
+            line = self._group_line(species[name]) if species[name] else ""
             item = QListWidgetItem(
                 f"{name}  — {n_inst} instance{'s' if n_inst != 1 else ''}"
                 f", {n_mem} member{'s' if n_mem != 1 else ''}"
+                + (f"\n{line}" if line else "")
             )
             item.setData(Qt.ItemDataRole.UserRole, name)
             self._communities_list.addItem(item)
@@ -323,12 +423,10 @@ class OnThisDesignPanel(QWidget):
         bits = []
         ns, n = getattr(sc, "native_species", 0), getattr(sc, "n_species", 0)
         if n:
-            bits.append(f"{ns} of {n} plants native")
-        fbt = getattr(sc, "fauna_by_taxon", None)
-        if fbt:
-            n_wild = sum(fbt.values())
-            if n_wild:
-                bits.append(f"{n_wild} wildlife species supported")
+            bits.append(f"{ns} of {n} species native")
+        fed = self._food_words()
+        if fed:
+            bits.append(fed)
         host = getattr(sc, "host_species", None) or []
         if host:
             bits.append(f"{len(host)} caterpillar host plants")
@@ -338,7 +436,7 @@ class OnThisDesignPanel(QWidget):
             f"<b>Habitat value</b> ›</a><br>{head}"
         ]
         if bits:
-            parts.append("<br><span style='color:#90a4ae;font-size:10px;'>"
+            parts.append("<br><span style='color:#90a4ae;font-size:12px;'>"
                          + ", ".join(bits) + "</span>")
         parts.append("</p>")
         return "".join(parts)
@@ -357,41 +455,31 @@ class OnThisDesignPanel(QWidget):
             return ""
         if not nudges:
             return ("<p><b>Where to grow next</b><br>"
-                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "<span style='color:#a5d6a7;font-size:12px;'>"
                     "This design already covers the habitat basics — nice "
                     "work.</span></p>")
         items = "".join(
             f"<li style='margin-bottom:3px;'>{nd['text']}</li>"
             for nd in nudges)
         return ("<p><b>Where to grow next</b>"
-                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:12px;'>"
                 f"{items}</ul></p>")
 
-    def _value_framing_html(self) -> str:
-        """One line that reads cost and habitat value together (F11, P6): the
-        spend isn't a cost, it's what buys the wildlife value above. Shown only
-        when both a cost total and a habitat score are present."""
-        bd = self._cost_breakdown
-        sc = self._habitat_value
-        if not bd or not sc or not bd.get("total"):
-            return ""
-        creates = []
-        fbt = getattr(sc, "fauna_by_taxon", None)
-        if fbt:
-            n_wild = sum(fbt.values())
-            if n_wild:
-                creates.append(f"{n_wild} wildlife species supported")
-        ns = getattr(sc, "native_species", 0)
-        if ns:
-            creates.append(f"{ns} native species")
-        n_struct = len(getattr(sc, "habitat_struct_types", []) or [])
-        if n_struct:
-            creates.append(f"{n_struct} habitat structure"
-                           f"{'s' if n_struct != 1 else ''}")
-        if not creates:
-            return ""
-        return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
-                "What your spend creates: " + ", ".join(creates) + ".</p>")
+    def _food_words(self) -> str:
+        """'recorded as food for N kinds of wildlife', counted as Design ›
+        Food counts it (V3.20, OV-5): food edges only, from the design's
+        plants. Asked of the database only when the plants change."""
+        ids = frozenset(p.get("plant_id")
+                        for p in getattr(self, "_latest_enriched", []) or []
+                        if p.get("plant_id") is not None)
+        if getattr(self, "_food_key", None) != ids:
+            try:
+                from src.what_it_feeds import food_counts, food_words
+                self._food_line = food_words(food_counts(ids)) if ids else ""
+            except Exception:                              # noqa: BLE001
+                self._food_line = ""
+            self._food_key = ids
+        return self._food_line
 
     def _cues_block_html(self) -> str:
         """Will the neighbours read it as cared for? (F75, P13.)
@@ -410,11 +498,11 @@ class OnThisDesignPanel(QWidget):
         tally = self._cues_tally
         if tally and tally[1] and tally[0] == tally[1]:
             head = ("<p><b>How it will be read</b><br>"
-                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "<span style='color:#a5d6a7;font-size:12px;'>"
                     f"All {tally[1]} cues to care are here — this will read as "
                     "tended.</span>")
         else:
-            sub = (f" <span style='color:#78909c;font-size:10px;'>"
+            sub = (f" <span style='color:#90a4ae;font-size:12px;'>"
                    f"({tally[0]} of {tally[1]} cues present)</span>"
                    if tally and tally[1] else "")
             head = f"<p><b>How it will be read</b>{sub}"
@@ -422,7 +510,7 @@ class OnThisDesignPanel(QWidget):
             f"<li style='margin-bottom:3px;'>{line}</li>"
             for line in self._cues_lines)
         return (head +
-                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:12px;'>"
                 f"{items}</ul></p>")
 
     def _lawn_block_html(self) -> str:
@@ -444,7 +532,7 @@ class OnThisDesignPanel(QWidget):
         rows = [f"{spec['label']}: {area(by[key])}"
                 for key, spec in ZONE_TYPES.items() if by.get(key, 0) > 0]
         if rows:
-            parts.append("<span style='color:#90a4ae;font-size:10px;'>"
+            parts.append("<span style='color:#90a4ae;font-size:12px;'>"
                          + " · ".join(rows) + "</span>")
         parts.append("</p>")
         return "".join(parts)
@@ -459,7 +547,7 @@ class OnThisDesignPanel(QWidget):
             v = bd.get(key)
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
-        parts = ["<p><a href='sap:planning' "
+        parts = ["<p><a href='sap:buy' "
                  "style='color:#a5d6a7;text-decoration:none;'>"
                  "<b>Estimated cost (CAD)</b> ›</a><br>",
                  row("Plants", "plants")]
@@ -484,7 +572,7 @@ class OnThisDesignPanel(QWidget):
                 else:
                     chips.append(f"{label} {format_cost(lo, hi)}")
             if chips:
-                parts.append("<span style='color:#90a4ae;font-size:10px;'>&nbsp;&nbsp;"
+                parts.append("<span style='color:#90a4ae;font-size:12px;'>&nbsp;&nbsp;"
                              + "<br>&nbsp;&nbsp;".join(chips) + "</span><br>")
         if bd.get("structures") and bd["structures"][1] > 0:
             parts.append(row("Structures", "structures"))
@@ -494,8 +582,8 @@ class OnThisDesignPanel(QWidget):
         if tot:
             parts.append(f"<b>Total: {format_cost(tot[0], tot[1])}</b>")
         parts.append(
-            "<br><span style='color:#78909c;font-size:10px;'>AB retail/install "
-            "estimate — varies by nursery, year, site.</span></p>"
+            "<br><span style='color:#90a4ae;font-size:12px;'>"
+            f"{_price_words(self)}.</span></p>"
         )
         return "".join(parts)
 
@@ -506,13 +594,12 @@ class OnThisDesignPanel(QWidget):
         # the same question — will this design work, and will it be allowed to.
         cues_html = self._cues_block_html()
         cost_html = self._cost_block_html()
-        framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
-            body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
+            body = "<i style='color:#90a4ae;'>Nothing placed yet.</i>"
             self._stats_text.setHtml(
                 body + lawn_html + value_html + nudges_html + cues_html
-                + cost_html + framing_html)
+                + cost_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -534,7 +621,9 @@ class OnThisDesignPanel(QWidget):
                 except Exception:
                     plant = {}
                 plant_cache[pid] = plant
-            if plant.get("native_to_alberta") or p.get("native_to_alberta"):
+            # The design's own stamp (V3.25, ED-9), else the Alberta flag.
+            if p.get("native", plant.get("native_to_alberta")
+                     or p.get("native_to_alberta")):
                 native += 1
             ptype = (plant.get("plant_type") or p.get("plant_type") or "").lower()
             if ptype:
@@ -553,7 +642,7 @@ class OnThisDesignPanel(QWidget):
         rows.append(
             f"<p><b>{total}</b> plants placed · "
             f"<b>{len(species)}</b> species · "
-            f"<b>{native_pct:.0f}%</b> Alberta-native</p>"
+            f"<b>{native_pct:.0f}%</b> of plants Alberta-native</p>"
         )
         if type_counts:
             rows.append("<p><b>Plant types</b><br>")
@@ -587,5 +676,12 @@ class OnThisDesignPanel(QWidget):
         rows.append(nudges_html)
         rows.append(cues_html)
         rows.append(cost_html)
-        rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))
+
+
+def _price_words(panel) -> str:
+    """"An estimate at Edmonton native nurseries; prices vary by nursery and
+    year" (V3.30, WD-5): the pack's words, never "AB retail"."""
+    from src.planting_plan import price_words
+    words = price_words(getattr(panel, "_site_config", None))
+    return words[0].upper() + words[1:]

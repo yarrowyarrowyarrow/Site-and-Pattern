@@ -81,7 +81,7 @@ class TestNotOverwriting(unittest.TestCase):
 
     def test_a_taken_name_gets_a_number_not_a_clobber(self):
         first = saves.unique_save_path("Meadow", self.dir)
-        open(first, "w").close()
+        open(first, "w", encoding="utf-8").close()
         second = saves.unique_save_path("Meadow", self.dir)
         self.assertNotEqual(first, second)
         self.assertTrue(os.path.exists(first), "the first save was destroyed")
@@ -91,7 +91,7 @@ class TestNotOverwriting(unittest.TestCase):
         made = []
         for _ in range(4):
             p = saves.unique_save_path("Meadow", self.dir)
-            open(p, "w").close()
+            open(p, "w", encoding="utf-8").close()
             made.append(p)
         self.assertEqual(len(set(made)), 4)
 
@@ -158,7 +158,7 @@ class TestTheList(unittest.TestCase):
 
     def test_non_saves_are_ignored(self):
         _write(self.dir, "real" + saves.SAVE_SUFFIX, _project("Real"))
-        with open(os.path.join(self.dir, "notes.txt"), "w") as f:
+        with open(os.path.join(self.dir, "notes.txt"), "w", encoding="utf-8") as f:
             f.write("hello")
         self.assertEqual([e["name"] for e in saves.list_saves(self.dir)],
                          ["Real"])
@@ -168,7 +168,7 @@ class TestTheList(unittest.TestCase):
 
     def test_one_broken_file_does_not_lose_the_others(self):
         _write(self.dir, "good" + saves.SAVE_SUFFIX, _project("Good"))
-        with open(os.path.join(self.dir, "bad" + saves.SAVE_SUFFIX), "w") as f:
+        with open(os.path.join(self.dir, "bad" + saves.SAVE_SUFFIX), "w", encoding="utf-8") as f:
             f.write("{")
         names = {e["name"] for e in saves.list_saves(self.dir)}
         self.assertIn("Good", names)
@@ -333,7 +333,7 @@ class TestTheBrowser(unittest.TestCase):
         self.assertFalse(dlg._btn_delete.isEnabled())
 
     def test_an_unreadable_save_is_shown_and_marked(self):
-        with open(os.path.join(self.dir, "bad" + saves.SAVE_SUFFIX), "w") as f:
+        with open(os.path.join(self.dir, "bad" + saves.SAVE_SUFFIX), "w", encoding="utf-8") as f:
             f.write("{")
         dlg = self._dialog()
         self.assertEqual(dlg._list.count(), 1)
@@ -383,7 +383,15 @@ class TestOpenGoesThroughTheList(unittest.TestCase):
         fn = next(n for n in ast.walk(tree)
                   if isinstance(n, ast.FunctionDef)
                   and n.name == "_ask_for_design_file")
-        self.assertIn("getOpenFileName", ast.dump(fn))
+        # One file dialog since V3.37, shared with the start screen's
+        # Open a file….
+        self.assertIn("ask_for_design_file", ast.dump(fn))
+        flow = (pathlib.Path(__file__).resolve().parent.parent
+                / "src" / "start_flow.py").read_text(encoding="utf-8")
+        shared = next(n for n in ast.walk(ast.parse(flow))
+                      if isinstance(n, ast.FunctionDef)
+                      and n.name == "ask_for_design_file")
+        self.assertIn("getOpenFileName", ast.dump(shared))
         opener = next(n for n in ast.walk(tree)
                       if isinstance(n, ast.FunctionDef) and n.name == "_on_open")
         self.assertIn("BROWSE", ast.dump(opener))

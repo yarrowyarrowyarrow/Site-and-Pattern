@@ -28,7 +28,8 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 import src.project as project_io
-from src.branding import APP_NAME
+from src.app_version import running_version
+from src.branding import window_title
 from src.log import get_logger
 
 _log = get_logger(__name__)
@@ -122,6 +123,12 @@ class PersistenceController:
             split_view.request_sync(self._main)
         except Exception:                                  # noqa: BLE001
             pass
+        # V3.08: the 3D preview and Growth Snapshots follow it too (F89).
+        try:
+            from src import follow_design
+            follow_design.request_sync(self._main)
+        except Exception:                                  # noqa: BLE001
+            pass
         # Caster inventory (V2.13): every feature mutation lands here, so the
         # "Casting shade: …" line stays live after imports, marks, draws,
         # removals and undo. Cheap pure feature scan. Both surfaces show it
@@ -144,6 +151,10 @@ class PersistenceController:
             onboarding_flow.refresh(self._main)
         except Exception:  # noqa: BLE001 — guidance must never block a save flag
             pass
+        # The status bar's jobs for this month follow the plants, for the same
+        # reason (V3.19, QF-12). Never raises.
+        from src import month_tasks
+        month_tasks.refresh(self._main)
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 
@@ -168,8 +179,18 @@ class PersistenceController:
             # back to asking rather than failing silently.
             self._on_save_as()
             return
-        name = (self._main._project.get("properties", {})
-                .get("project_name") or "Untitled Design")
+        props = self._main._project.setdefault("properties", {})
+        name = props.get("project_name") or ""
+        from src import design_name
+        if design_name.is_placeholder(name):
+            # Asked once, only when the address has not named it (ST-5).
+            from src import plain_messages
+            name = plain_messages.ask_design_name(self._main)
+            if not name:
+                return
+            props["project_name"] = name
+            from src import start_flow
+            start_flow._retitle(self._main, name)
         self._save_to_path(saves.unique_save_path(name, directory))
 
     def _on_save_as(self):
@@ -190,14 +211,18 @@ class PersistenceController:
             from src import saves
             saves.remember_last_design(path)
             name = self._main._project["properties"].get("project_name", "Design")
-            self._main.setWindowTitle(f"{APP_NAME} — {name}")
+            self._main.setWindowTitle(
+                window_title(name, version=running_version()))
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
             # The design is now durably on disk — a crash-recovery copy from
             # before this save would only offer to roll the user back.
             self.clear_autosave()
-        except Exception as exc:
-            _log.exception("save failed: %s", path)
-            QMessageBox.critical(self._main, "Save failed", str(exc))
+        except Exception:
+            from src import plain_messages
+            plain_messages.tell_save_failed(
+                self._main,
+                self._main._project.get("properties", {})
+                .get("project_name") or os.path.basename(path))
 
     # ── Autosave + crash recovery ─────────────────────────────────────────────
     # The timer writes a recovery copy (with the design's real path stamped
@@ -224,6 +249,9 @@ class PersistenceController:
         data["properties"] = props
         try:
             project_io.save_project(data, autosave_path())
+            # This session's own copy: a clean exit may delete it whatever
+            # became of the recovery question (see closeEvent).
+            self._wrote_autosave = True
         except Exception:
             _log.warning("autosave failed", exc_info=True)
 
@@ -240,6 +268,11 @@ class PersistenceController:
         One-shot per launch; the file is consumed (deleted) either way —
         declining means the user chose the on-disk version."""
         if getattr(self, "_recovery_checked", False):
+            return
+        if getattr(self, "_wrote_autosave", False):
+            # The file is this session's own (a page load late in a session),
+            # not one a crash left behind.
+            self._recovery_checked = True
             return
         # A pre-V2.39 autosave still sits in the home directory. Move it before
         # looking, or the one launch that most needs it would find nothing.
@@ -290,7 +323,8 @@ class PersistenceController:
             m._project_path = source if source and os.path.exists(source) else None
             m._modified = True         # recovered work is unsaved by definition
             self.render_project_to_map(fit_view=True)
-            m.setWindowTitle(f"{APP_NAME} — {name} *")
+            m.setWindowTitle(
+                window_title(name, version=running_version()) + " *")
             m.statusBar().showMessage("Recovered autosaved design", 5000)
             _log.info("restored autosave (source=%s)", source or "unsaved")
         self.clear_autosave()
@@ -515,9 +549,17 @@ class PersistenceController:
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
         self._apply_view_state(view)
-        # Feature-derived panel readouts (incl. the Planning → Notes map-note
+        # Feature-derived panel readouts (incl. the Site › Notes map-note
         # list) track the restored features.
         m._sync_planning_panel()
+
+    def redraw(self):
+        """Redraw the map from the project with the overlays on screen kept
+        (shade, wind shadow, sun path): for a change made in Python that the
+        map did not make itself, such as a replaced plan (V3.18)."""
+        view = self._capture_view_state()
+        self.render_project_to_map(fit_view=False)
+        self._apply_view_state(view)
 
     def _apply_view_state(self, target: dict):
         """Re-apply the transient overlays to ``target``. Called right after
@@ -583,6 +625,7 @@ class PersistenceController:
         m.map_widget.clear_all()
         # clearAll() leaves these alone, so wipe them explicitly before redraw.
         m.map_widget.clear_annotations()
+        m.map_widget.clear_measure()          # part of the design since V3.11
         m.map_widget.clear_shade_overlay()
 
         data = project_io.project_to_map_data(proj)
@@ -630,6 +673,8 @@ class PersistenceController:
         for ann in data.get("annotations", []):
             m.map_widget.place_annotation(
                 ann["annotation_id"], ann["lat"], ann["lng"], ann["text"])
+        for ms in data.get("measurements", []):
+            m.map_widget.load_measurement(ms["id"], ms["points"])
 
         auto_contours = data.get("auto_contours") or []
         if auto_contours:
@@ -648,14 +693,12 @@ class PersistenceController:
                 " and ".join(layers)
                 + " not loaded — click Generate to recompute.")
 
-        # Site pin (clearAll wiped it) + photoreal splat backdrop, both read
-        # from the project so undo of an import that removed them clears them.
+        # Site pin (clearAll wiped it), read from the project so an undo that
+        # removed it clears it.
         sc = proj.get("properties", {}).get("site_config") or {}
         plat, plng = sc.get("latitude"), sc.get("longitude")
         if plat is not None and plng is not None:
             m.map_widget.place_site_pin(plat, plng, sc.get("pin_label", ""))
-        from src import splat_flow
-        splat_flow.restore_splat_overlay(m)
         # Site photo underlay (F24) — same story: redraw from the project so
         # undo of an import that added/removed it stays in sync.
         from src import site_photo_flow

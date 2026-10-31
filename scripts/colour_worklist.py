@@ -48,7 +48,6 @@ is recorded in the seeder where the reasoning lives beside it (P9).
 from __future__ import annotations
 
 import argparse
-import collections
 import html
 import pathlib
 import sys
@@ -78,16 +77,11 @@ def ranked(rows: list[dict]) -> list[tuple]:
 
     ``siblings`` is how many species in the same genus carry that identical
     hex. It is the risk score: one shared value is one decision that was made
-    once and applied many times.
+    once and applied many times. One rule since V3.33, the photo review's
+    (``src.colour_checks.share_groups``).
     """
-    groups: dict = collections.defaultdict(list)
-    for row in rows:
-        genus = ((row.get("scientific_name") or "").split() or [""])[0]
-        groups[(genus, (row.get("flower_color") or "").strip().lower())].append(row)
-    out = [(len(v), g, h, sorted(v, key=lambda r: r.get("common_name") or ""))
-           for (g, h), v in groups.items()]
-    out.sort(key=lambda t: (-t[0], t[1]))
-    return out
+    from src.colour_checks import share_groups               # noqa: PLC0415
+    return share_groups(rows)
 
 
 def _photo(row: dict) -> dict:

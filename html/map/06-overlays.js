@@ -1,4 +1,4 @@
-// html/map/06-overlays.js — sun path, contours/terrain, shade overlays, wind, legend, site pin, QWebChannel bootstrap.
+// html/map/06-overlays.js — sun path, contours/terrain, shade overlays, wind, site pin, QWebChannel bootstrap.
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -98,7 +98,7 @@
         var altStr = pos.altitude.toFixed(0) + '°';
         var labelIcon = L.divIcon({
           className: 'measure-label',
-          html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
+          html: '<span style="font-size:12px">' + timeStr + ' ☀ ' + altStr + '</span>',
           iconSize: [0, 0],
           iconAnchor: [0, 14]
         });
@@ -154,7 +154,7 @@
           // Label
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
+            html: '<span style="font-size:12px">' + st.label + ' shadow</span>',
             iconSize: [0, 0],
             iconAnchor: [0, -4]
           });
@@ -272,7 +272,7 @@
       L.marker(pt, {
         icon: L.divIcon({
           className: 'measure-label',
-          html: '<span style="font-size:11px;font-weight:700">☀ ' +
+          html: '<span style="font-size:12px;font-weight:700">☀ ' +
                 Math.floor(best.hour) + ':' + mm + ' · ' +
                 best.altitude.toFixed(0) + '°</span>',
           iconSize: [0, 0], iconAnchor: [0, -12]
@@ -345,7 +345,7 @@
           var pt = contourPoints[idx];
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:9px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
+            html: '<span style="font-size:12px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
             iconSize: [0, 0],
             iconAnchor: [0, 8]
           });
@@ -386,7 +386,7 @@
 
         var arrowLabel = L.divIcon({
           className: 'structure-label',
-          html: '<span style="font-size:9px;color:' + color + '">▼ downhill</span>',
+          html: '<span style="font-size:12px;color:' + color + '">▼ downhill</span>',
           iconSize: [0, 0],
           iconAnchor: [0, -2]
         });
@@ -399,7 +399,7 @@
       // Right-click to delete individual contour
       line.bindTooltip(
         '<b>Contour: ' + elevation.toFixed(1) + 'm</b>' +
-        '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+        '<br><span style="color:#b0bec5;font-size:12px">Right-click to remove</span>',
         { className: 'plant-marker-label' }
       );
       line.on('contextmenu', function(e) {
@@ -585,7 +585,7 @@
           var mid = longest[Math.floor(longest.length / 2)];
           var labelIcon = L.divIcon({
             className: 'structure-label',
-            html: '<span style="font-size:9px;color:' + color +
+            html: '<span style="font-size:12px;color:' + color +
                   ';background:rgba(255,255,255,0.55);padding:0 3px;border-radius:2px">' +
                   elev.toFixed(1) + 'm</span>',
             iconSize: [0, 0],
@@ -719,47 +719,9 @@
       }
     }
 
-    // ── Splat "yard photo" overlay (V1.65) — a top-down render of the
-    // imported Gaussian-splat backdrop, baked in the 3D viewer and shown
-    // here as a personal, fresher satellite layer. Its own image layer
-    // (like slope/shade) so it composes with everything; markers/boundary
-    // stay on top via the default overlay pane. Mirrors drawShadeOverlay.
-    var splatOrthoLayer = null;
-
-    function drawSplatOrthoOverlay(payload) {
-      // payload: {image: data-url, bbox: {south, north, west, east}, opacity}
-      clearSplatOrtho();
-      if (!payload || !payload.image || !payload.bbox) return;
-      var b = payload.bbox;
-      var bnds = L.latLngBounds([b.south, b.west], [b.north, b.east]);
-      splatOrthoLayer = L.imageOverlay(payload.image, bnds, {
-        opacity: typeof payload.opacity === 'number' ? payload.opacity : 1.0,
-        interactive: false
-      }).addTo(map);
-    }
-
-    function setSplatOrthoVisible(visible) {
-      if (!splatOrthoLayer) return;
-      if (visible) { splatOrthoLayer.addTo(map); }
-      else { map.removeLayer(splatOrthoLayer); }
-    }
-
-    function setSplatOrthoOpacity(opacity) {
-      if (splatOrthoLayer && splatOrthoLayer.setOpacity) {
-        splatOrthoLayer.setOpacity(opacity);
-      }
-    }
-
-    function clearSplatOrtho() {
-      if (splatOrthoLayer) {
-        map.removeLayer(splatOrthoLayer);
-        splatOrthoLayer = null;
-      }
-    }
-
     // ── Site photo overlay (F24) — a user yard/drone photo dropped on the map
-    // as a georeferenced underlay. Same image-layer machinery as the splat
-    // "yard photo"; bbox is computed Python-side (src/site_photo.py).
+    // as a georeferenced underlay, its own image layer like the slope and
+    // shade overlays; bbox is computed Python-side (src/site_photo.py).
     var sitePhotoLayer = null;
 
     function drawSitePhotoOverlay(payload) {
@@ -941,7 +903,7 @@
 
       var dirLabel = L.divIcon({
         className: 'measure-label',
-        html: '<span style="font-size:10px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
+        html: '<span style="font-size:12px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
         iconSize: [0, 0],
         iconAnchor: [0, 14]
       });
@@ -1033,7 +995,7 @@
       var dLng = shelterLen * 0.5 * Math.sin(windRad) / (111320 * Math.cos(mid[0] * Math.PI / 180));
       var labelIcon = L.divIcon({
         className: 'structure-label',
-        html: '<span style="font-size:9px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
+        html: '<span style="font-size:12px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
         iconSize: [0, 0],
         iconAnchor: [0, 8]
       });
@@ -1220,21 +1182,7 @@
 
     function windShadowDragEnd() { _windDrag = null; }
 
-    // ── Legend toggle ──────────────────────────────────────────────────────
-    function toggleLegend() {
-      var legend = document.getElementById('map-legend');
-      var btn    = document.getElementById('legend-toggle');
-      var show   = !legend.classList.contains('visible');
-      legend.classList.toggle('visible', show);
-      btn.classList.toggle('active', show);
-    }
-
-    function setLegendVisible(visible) {
-      var legend = document.getElementById('map-legend');
-      var btn    = document.getElementById('legend-toggle');
-      legend.classList.toggle('visible', visible);
-      btn.classList.toggle('active', visible);
-    }
+    // The legend's toggle moved to 12-legend.js in V3.11, with the legend.
 
     // ── Site pin ──────────────────────────────────────────────────────────
     // Geocoding moved to the Python-side Site panel (src/site_panel.py +
@@ -1254,9 +1202,11 @@
         draggable: true,
         zIndexOffset: 1000,
         icon: L.icon({
-          iconUrl:    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          shadowUrl:  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          // Vendored (V2.83): relative to map.html. From unpkg the site pin,
+          // step 1 of getting started, drew as nothing with no internet.
+          iconUrl:    'vendor/leaflet/images/marker-icon.png',
+          iconRetinaUrl: 'vendor/leaflet/images/marker-icon-2x.png',
+          shadowUrl:  'vendor/leaflet/images/marker-shadow.png',
           iconSize:   [25, 41],
           iconAnchor: [12, 41],
           popupAnchor:[1, -34],
@@ -1292,6 +1242,26 @@
       }
     }
 
+    // A pin a person just set brings the yard into view (V3.19, QF-2, R7):
+    // after Pin Drop the map stayed at city scale, seven zoom levels from the
+    // yard the next step draws round. Python asks for this only after a Pin
+    // Drop click or a chosen address; placeSitePin never moves the map, so an
+    // open or an undo does not. It never zooms out: closer than `wanted`, the
+    // view stays, and only pans when the pin is off screen. The page decides,
+    // because only the page knows the zoom it is at now.
+    function sitePinView(current, wanted, pinInView) {
+      if (!(current >= wanted)) return {move: 'zoom', zoom: wanted};
+      return {move: pinInView ? 'stay' : 'pan', zoom: current};
+    }
+
+    function zoomToSitePin(lat, lng, wanted) {
+      var inView = false;
+      try { inView = map.getBounds().contains([lat, lng]); } catch (e) {}
+      var v = sitePinView(map.getZoom(), wanted, inView);
+      if (v.move === 'zoom') map.setView([lat, lng], v.zoom);
+      else if (v.move === 'pan') map.panTo([lat, lng]);
+    }
+
     function setSitePinVisible(visible) {
       if (!sitePinMarker) return;
       if (visible) sitePinMarker.addTo(map);
@@ -1300,7 +1270,11 @@
 
     // While pin-drop mode is armed, give the map a crosshair cursor so
     // the user has a visual "you are placing a point" affordance.
+    // The pin drop leaves the mode at 'none' (Python takes the next click), so
+    // the boundary asks this before treating a click as a press (V3.11).
+    var _sitePinDropArmed = false;
     function setSitePinDropMode(active) {
+      _sitePinDropArmed = !!active;
       try {
         map.getContainer().style.cursor = active ? 'crosshair' : '';
       } catch (e) {}

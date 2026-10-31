@@ -1,0 +1,269 @@
+{
+  "schema": 1,
+  "key": "edmonton",
+  "name": "Edmonton region",
+  "short": "Edmonton",
+  "province": "AB",
+  "area": {
+    "centre": [
+      53.5461,
+      -113.4938
+    ],
+    "radius_km": 50
+  },
+  "local_flora": {
+    "min_collections": 3
+  },
+  "ecoregion": "aspen_parkland",
+  "map": {
+    "centre": [
+      53.5461,
+      -113.4938
+    ],
+    "zoom": 12
+  },
+  "address_search": {
+    "placeholder": "Search an address in the Edmonton region",
+    "margin_km": 20
+  },
+  "climate": {
+    "station": "Edmonton City Centre A",
+    "period": "1981–2010",
+    "source": "Environment and Climate Change Canada, Canadian Climate Normals",
+    "url": "https://climate.weather.gc.ca/climate_normals/",
+    "monthly_precip_mm": [
+      22.5,
+      13.8,
+      16.1,
+      26.5,
+      49.3,
+      87.1,
+      91.7,
+      69.0,
+      43.4,
+      21.0,
+      16.8,
+      14.5
+    ],
+    "last_spring_frost": "05-15",
+    "first_fall_frost": "09-16",
+    "hardiness_zone": "3",
+    "zone_source": "the app's hardiness table (src/climate.py); NRCan's current map not yet checked"
+  },
+  "nurseries": [
+    "Arnica Wildflowers",
+    "TreeTime.ca",
+    "Edmonton Native Plant Society",
+    "ALCLA Native Plants",
+    "Wild About Flowers"
+  ],
+  "nursery_note": "Native-plant growers and societies for the Edmonton region. Stock is seasonal and often grown to order: check before you go.",
+  "communities": {
+    "hint": "Edmonton"
+  },
+  "example": {
+    "centre": [
+      53.5461,
+      -113.4938
+    ],
+    "name": "Example — Front Yard Lawn Conversion",
+    "width_m": 11.0,
+    "depth_m": 8.0,
+    "planting": [
+      [
+        [
+          "Saskatoon Berry"
+        ],
+        [
+          2.6,
+          6.2
+        ]
+      ],
+      [
+        [
+          "Chokecherry"
+        ],
+        [
+          7.9,
+          6.6
+        ]
+      ],
+      [
+        [
+          "Red Osier Dogwood"
+        ],
+        [
+          5.2,
+          6.9
+        ]
+      ],
+      [
+        [
+          "Golden Bean",
+          "Purple Prairie Clover"
+        ],
+        [
+          1.4,
+          4.4
+        ]
+      ],
+      [
+        [
+          "Wild Bergamot"
+        ],
+        [
+          3.5,
+          4.7
+        ]
+      ],
+      [
+        [
+          "Wild Bergamot"
+        ],
+        [
+          4.4,
+          3.9
+        ]
+      ],
+      [
+        [
+          "Oval-leaf Milkweed"
+        ],
+        [
+          6.4,
+          4.5
+        ]
+      ],
+      [
+        [
+          "Oval-leaf Milkweed"
+        ],
+        [
+          7.2,
+          5.1
+        ]
+      ],
+      [
+        [
+          "Stiff Goldenrod"
+        ],
+        [
+          9.3,
+          4.8
+        ]
+      ],
+      [
+        [
+          "Blanketflower",
+          "Prairie Coneflower"
+        ],
+        [
+          8.5,
+          3.6
+        ]
+      ],
+      [
+        [
+          "Purple Prairie Clover",
+          "Wild Blue Flax"
+        ],
+        [
+          2.2,
+          3.1
+        ]
+      ],
+      [
+        [
+          "Wild Blue Flax",
+          "Harebell"
+        ],
+        [
+          6.0,
+          3.2
+        ]
+      ],
+      [
+        [
+          "Prairie Crocus",
+          "Harebell"
+        ],
+        [
+          1.2,
+          1.5
+        ]
+      ],
+      [
+        [
+          "Blue Grama Grass",
+          "Rough Fescue"
+        ],
+        [
+          3.0,
+          1.7
+        ]
+      ],
+      [
+        [
+          "Blue Grama Grass",
+          "Rough Fescue"
+        ],
+        [
+          5.6,
+          1.3
+        ]
+      ],
+      [
+        [
+          "Blue Grama Grass",
+          "Rough Fescue"
+        ],
+        [
+          8.2,
+          1.6
+        ]
+      ],
+      [
+        [
+          "Wild Strawberry"
+        ],
+        [
+          4.2,
+          0.9
+        ]
+      ],
+      [
+        [
+          "Wild Strawberry"
+        ],
+        [
+          7.0,
+          0.8
+        ]
+      ],
+      [
+        [
+          "Boreal Yarrow"
+        ],
+        [
+          9.6,
+          2.0
+        ]
+      ]
+    ]
+  },
+  "overview": {
+    "price_note": "at Edmonton native nurseries"
+  },
+  "defaults": {
+    "local_natives_only": true,
+    "first_run_goals": [
+      "local_native",
+      "pollinator",
+      "well_behaved",
+      "low_cost"
+    ]
+  },
+  "elevation": {
+    "municipal_contours": "edmonton_open_data"
+  }
+}

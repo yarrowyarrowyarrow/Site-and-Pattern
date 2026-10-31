@@ -1,0 +1,5174 @@
+{
+ "about": "Flower colours checked against photographs (V3.33, src/colour_checks.py).",
+ "checks": {
+  "Abies balsamea": {
+   "made": "2026-10-19",
+   "observations": [
+    57824273,
+    46190455,
+    184821202,
+    85859056,
+    166955440,
+    178512795
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Acer glabrum": {
+   "made": "2026-10-19",
+   "observations": [
+    162399947,
+    121006182,
+    350880090,
+    117450173,
+    38761205,
+    210423268
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Acer negundo": {
+   "made": "2026-10-19",
+   "observations": [
+    283830050,
+    74072723,
+    217225867,
+    45827070,
+    159059403,
+    358050776
+   ],
+   "colours": [
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Achillea alpina": {
+   "made": "2026-10-19",
+   "observations": [
+    170312656,
+    30733441,
+    88596661,
+    95497474,
+    14625440,
+    396925479
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Achillea borealis": {
+   "made": "2026-10-19",
+   "observations": [
+    335627175,
+    127311653,
+    87665904,
+    234639307,
+    128385188,
+    98723299
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Acorus americanus": {
+   "made": "2026-10-19",
+   "observations": [
+    26373238,
+    25768160,
+    171887580,
+    197635518,
+    372062964,
+    253216493
+   ],
+   "colours": [
+    "yellow",
+    "green"
+   ],
+   "was": "estimated"
+  },
+  "Actaea rubra": {
+   "made": "2026-10-19",
+   "observations": [
+    121541217,
+    258095334,
+    227833294,
+    224312270,
+    120871699,
+    122258673
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Agastache foeniculum": {
+   "made": "2026-10-19",
+   "observations": [
+    128932156,
+    234453295,
+    302514210,
+    9973402,
+    126716006,
+    182311057
+   ],
+   "colours": [
+    "purple",
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Agoseris glauca": {
+   "made": "2026-10-19",
+   "observations": [
+    244995060,
+    383819101,
+    385025501,
+    97608780,
+    52164360,
+    176785864
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Agrimonia striata": {
+   "made": "2026-10-19",
+   "observations": [
+    88085547,
+    175276432,
+    234639315,
+    382721148,
+    234230743,
+    228995924
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Alisma triviale": {
+   "made": "2026-10-19",
+   "observations": [
+    235642454,
+    38492453,
+    231435221,
+    294721488,
+    14338029,
+    181421725
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Allium cernuum": {
+   "made": "2026-10-19",
+   "observations": [
+    32082835,
+    11071745,
+    55087085,
+    262734231,
+    29978899,
+    141856572
+   ],
+   "colours": [
+    "pink",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Allium schoenoprasum": {
+   "made": "2026-10-19",
+   "observations": [
+    105427454,
+    290450434,
+    294679748,
+    258640,
+    29188167,
+    1773763
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Allium textile": {
+   "made": "2026-10-19",
+   "observations": [
+    18150147,
+    27137010,
+    374732960,
+    47282628,
+    45922272,
+    224815137
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Alnus alnobetula": {
+   "made": "2026-10-19",
+   "observations": [
+    35805387,
+    42214271,
+    48426408,
+    176669325,
+    82070475,
+    295505709
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Alnus incana": {
+   "made": "2026-10-19",
+   "observations": [
+    113630872,
+    159552854,
+    200085940,
+    264458772,
+    204309972,
+    265329022
+   ],
+   "colours": [
+    "brown",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Amelanchier alnifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    215798588,
+    117809323,
+    361309385,
+    119794743,
+    301909104,
+    362944477
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Anaphalis margaritacea": {
+   "made": "2026-10-19",
+   "observations": [
+    305687753,
+    170968934,
+    169416741,
+    175972419,
+    246816991,
+    251234568
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Androsace chamaejasme": {
+   "made": "2026-10-19",
+   "observations": [
+    224466896,
+    370504691,
+    296314570,
+    51225640,
+    122152196,
+    128624564
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Anemonastrum canadense": {
+   "made": "2026-10-19",
+   "observations": [
+    232634912,
+    295409672,
+    53194641,
+    294180820,
+    357400037,
+    291016922
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Anemone cylindrica": {
+   "made": "2026-10-19",
+   "observations": [
+    144440709,
+    51372810,
+    61720646,
+    122106726,
+    173965575,
+    108611362
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Anemone multifida": {
+   "made": "2026-10-19",
+   "observations": [
+    50806229,
+    69303744,
+    224035763,
+    51429963,
+    50219033,
+    124139326
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Anemone virginiana": {
+   "made": "2026-10-19",
+   "observations": [
+    342625577,
+    294060363,
+    316290700,
+    250535093
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Angelica dawsonii": {
+   "made": "2026-10-19",
+   "observations": [
+    63136956,
+    288868112,
+    292618812,
+    222359149,
+    27668052,
+    18963895
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Antennaria microphylla": {
+   "made": "2026-10-19",
+   "observations": [
+    128227843,
+    227245187,
+    258800026
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Antennaria neglecta": {
+   "made": "2026-10-19",
+   "observations": [
+    161481650,
+    50500238,
+    78940406,
+    13934049,
+    48036402,
+    163199461
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Antennaria parvifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    7348243,
+    281133122,
+    278860341,
+    139894654,
+    174815645,
+    119824673
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Antennaria pulcherrima": {
+   "made": "2026-10-19",
+   "observations": [
+    295540559,
+    173521707,
+    90302081,
+    90293557,
+    302530076,
+    230675107
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Antennaria rosea": {
+   "made": "2026-10-19",
+   "observations": [
+    216895549,
+    254277856,
+    285775710,
+    40809294,
+    191242807,
+    231141847
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "epithet"
+  },
+  "Anticlea elegans": {
+   "made": "2026-10-19",
+   "observations": [
+    52320640,
+    89597039,
+    51616665,
+    52099322,
+    58393112,
+    236037953
+   ],
+   "colours": [
+    "cream",
+    "green"
+   ],
+   "was": "name"
+  },
+  "Anticlea occidentalis": {
+   "made": "2026-10-19",
+   "observations": [
+    294962530,
+    145687801,
+    231347576,
+    263899513,
+    304109744,
+    302121915
+   ],
+   "colours": [
+    "orange",
+    "red",
+    "green"
+   ],
+   "was": "flora"
+  },
+  "Apocynum androsaemifolium": {
+   "made": "2026-10-19",
+   "observations": [
+    231314951,
+    259313647,
+    374483189,
+    294514321,
+    288909210,
+    171323410
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Aquilegia brevistyla": {
+   "made": "2026-10-19",
+   "observations": [
+    110650833,
+    50506646,
+    167452283,
+    168771536,
+    126583327,
+    256827047
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "name"
+  },
+  "Aquilegia canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    401413133,
+    285849900,
+    398307992,
+    361122775,
+    290868147,
+    297429413
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "name"
+  },
+  "Aquilegia flavescens": {
+   "made": "2026-10-19",
+   "observations": [
+    56486238,
+    297939992,
+    297785450,
+    304972709,
+    260111696,
+    376355611
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "epithet"
+  },
+  "Aquilegia formosa": {
+   "made": "2026-10-19",
+   "observations": [
+    286381260,
+    376358592,
+    181201156,
+    257759335,
+    38766830,
+    122769735
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "name"
+  },
+  "Aralia nudicaulis": {
+   "made": "2026-10-19",
+   "observations": [
+    221294427,
+    221591199,
+    216408208,
+    222476463,
+    226825241,
+    221037301
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Arctostaphylos uva-ursi": {
+   "made": "2026-10-19",
+   "observations": [
+    13054235,
+    80405584,
+    23555349,
+    6490484,
+    77145829,
+    255020370
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Arnica chamissonis": {
+   "made": "2026-10-19",
+   "observations": [
+    305257567,
+    234452928,
+    88611815,
+    304968635,
+    55676471,
+    233845839
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Arnica cordifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    222350821,
+    105427455,
+    53181912,
+    122111433,
+    320743473,
+    126434265
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Arnica fulgens": {
+   "made": "2026-10-19",
+   "observations": [
+    61528230,
+    255529086,
+    335673084,
+    27182307,
+    223461613,
+    190746041
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Arnica lonchophylla": {
+   "made": "2026-10-19",
+   "observations": [
+    21695962,
+    333952315,
+    14560750,
+    262977932,
+    47365650,
+    224995400
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Arnica mollis": {
+   "made": "2026-10-19",
+   "observations": [
+    304014461,
+    361899562,
+    301423256,
+    132243496,
+    120018674,
+    236152149
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Arnica sororia": {
+   "made": "2026-10-19",
+   "observations": [
+    122764054,
+    222384765,
+    123393056,
+    170145950,
+    284672279,
+    122104545
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Artemisia campestris": {
+   "made": "2026-10-19",
+   "observations": [
+    105455618,
+    295132208,
+    230309100,
+    66007595,
+    291850353,
+    140586439
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Artemisia cana": {
+   "made": "2026-10-19",
+   "observations": [
+    135676503,
+    34399752,
+    28114037,
+    96326747,
+    233825552,
+    83088977
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Artemisia frigida": {
+   "made": "2026-10-19",
+   "observations": [
+    135041368,
+    32747685,
+    214482787,
+    263902411,
+    32575107,
+    33275410
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Artemisia ludoviciana": {
+   "made": "2026-10-19",
+   "observations": [
+    178230959,
+    304374654,
+    183739489,
+    219401767,
+    93902659,
+    91444527
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Artemisia tridentata": {
+   "made": "2026-10-19",
+   "observations": [
+    334507518,
+    60182541,
+    139288818,
+    17233929,
+    185365669,
+    34463706
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Asclepias speciosa": {
+   "made": "2026-10-19",
+   "observations": [
+    126362087,
+    191061666,
+    83884468,
+    171765602,
+    170109247,
+    172403149
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Aster alpinus": {
+   "made": "2026-10-19",
+   "observations": [
+    293403796,
+    262001467,
+    262001465,
+    173356122,
+    383622086,
+    262001469
+   ],
+   "colours": [
+    "cream",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Astragalus canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    234600626,
+    63610454,
+    386639711,
+    228520354,
+    382201549,
+    232787703
+   ],
+   "colours": [
+    "cream",
+    "green"
+   ],
+   "was": "flora"
+  },
+  "Astragalus crassicarpus": {
+   "made": "2026-10-19",
+   "observations": [
+    219323856,
+    25237012,
+    47127243,
+    259893376,
+    224078109,
+    221346547
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Astragalus drummondii": {
+   "made": "2026-10-19",
+   "observations": [
+    89688826,
+    193926591,
+    126150256,
+    145720033,
+    287907156,
+    165320116
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Astragalus laxmannii": {
+   "made": "2026-10-19",
+   "observations": [
+    121834034,
+    299379892,
+    304868254,
+    62670011,
+    325147660,
+    256472340
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Astragalus missouriensis": {
+   "made": "2026-10-19",
+   "observations": [
+    258624777,
+    28339918,
+    278400385,
+    222487304,
+    160423253,
+    258715157
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Balsamorhiza sagittata": {
+   "made": "2026-10-19",
+   "observations": [
+    115991892,
+    62970595,
+    48839853,
+    284170547,
+    263705385,
+    80238432
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Betula glandulosa": {
+   "made": "2026-10-19",
+   "observations": [
+    222061942,
+    173479355,
+    366811075,
+    145808438
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Betula occidentalis": {
+   "made": "2026-10-19",
+   "observations": [
+    78936166,
+    25604895,
+    211316875,
+    115026800,
+    80126220,
+    119525699
+   ],
+   "colours": [
+    "brown",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Betula papyrifera": {
+   "made": "2026-10-19",
+   "observations": [
+    50657506,
+    118999284,
+    163490383,
+    167452737
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Bistorta vivipara": {
+   "made": "2026-10-19",
+   "observations": [
+    125522470,
+    129933341,
+    21198458,
+    39387242,
+    307178661,
+    387745552
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Blitum capitatum": {
+   "made": "2026-10-19",
+   "observations": [
+    293899621,
+    123850245,
+    300839216,
+    56186353,
+    386988803,
+    38169076
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "blank"
+  },
+  "Calla palustris": {
+   "made": "2026-10-19",
+   "observations": [
+    125985292,
+    27479257,
+    367954097,
+    164319919,
+    193463309,
+    288320406
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Caltha natans": {
+   "made": "2026-10-19",
+   "observations": [
+    263724694,
+    233624455,
+    20194818,
+    1832648,
+    287598160,
+    232993379
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Caltha palustris": {
+   "made": "2026-10-19",
+   "observations": [
+    218519890,
+    81125540,
+    121828387,
+    168522999,
+    83969061,
+    176498296
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Campanula lasiocarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    254480980,
+    263891648,
+    252835927,
+    58510334,
+    85901101,
+    174775084
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Campanula rotundifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    54229930,
+    298761379,
+    72000445,
+    227840338,
+    8246659,
+    15184806
+   ],
+   "colours": [
+    "blue",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Canadanthus modestus": {
+   "made": "2026-10-19",
+   "observations": [
+    177898878,
+    312059746,
+    240426362,
+    54500176,
+    66202912,
+    55242951
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Capnoides sempervirens": {
+   "made": "2026-10-19",
+   "observations": [
+    32254148,
+    102274219,
+    250492193,
+    30061556,
+    29101254,
+    239313922
+   ],
+   "colours": [
+    "pink",
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Carex utriculata": {
+   "made": "2026-10-19",
+   "observations": [
+    168736056,
+    88493272,
+    143956614,
+    83200973,
+    59323838,
+    85685164
+   ],
+   "colours": [
+    "yellow",
+    "cream",
+    "brown"
+   ],
+   "was": "estimated"
+  },
+  "Castilleja lutescens": {
+   "made": "2026-10-19",
+   "observations": [
+    247158843,
+    124263453,
+    8266724,
+    37077809,
+    220901742,
+    368070533
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "epithet"
+  },
+  "Castilleja miniata": {
+   "made": "2026-10-19",
+   "observations": [
+    329298320,
+    15359961,
+    338105789,
+    85911093,
+    15990111,
+    386313642
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "flora"
+  },
+  "Cerastium arvense": {
+   "made": "2026-10-19",
+   "observations": [
+    79891967,
+    125357007,
+    82735487,
+    49979979,
+    118874907,
+    164879598
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Chamaenerion angustifolium": {
+   "made": "2026-10-19",
+   "observations": [
+    333834658,
+    190468878,
+    318542623,
+    233152241,
+    321090844,
+    172096876
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Chamaenerion latifolium": {
+   "made": "2026-10-19",
+   "observations": [
+    340500330,
+    171574242,
+    173253674,
+    304400716,
+    92638191,
+    88457137
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Cirsium flodmanii": {
+   "made": "2026-10-19",
+   "observations": [
+    30443430,
+    62647725,
+    387084417,
+    53106405,
+    180277660,
+    127888575
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Claytonia lanceolata": {
+   "made": "2026-10-19",
+   "observations": [
+    155265769,
+    156639658,
+    124476273,
+    268500511,
+    13511548,
+    46373369
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Clematis ligusticifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    230916785,
+    66269742,
+    292466373,
+    175477739,
+    15665010,
+    307195917
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Clematis occidentalis": {
+   "made": "2026-10-19",
+   "observations": [
+    119145987,
+    68438324,
+    144401210,
+    84931744,
+    121158050,
+    77371855
+   ],
+   "colours": [
+    "blue"
+   ],
+   "was": "name"
+  },
+  "Comandra umbellata": {
+   "made": "2026-10-19",
+   "observations": [
+    306407966,
+    98770231,
+    46560480,
+    162213278,
+    220703041,
+    50497983
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Comarum palustre": {
+   "made": "2026-10-19",
+   "observations": [
+    292770341,
+    175477978,
+    87231518,
+    70825106,
+    295229127,
+    107517229
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "estimated"
+  },
+  "Coreopsis tinctoria": {
+   "made": "2026-10-19",
+   "observations": [
+    138926564,
+    296877843,
+    191149526,
+    51609667,
+    235254302,
+    231083281
+   ],
+   "colours": [
+    "yellow",
+    "red",
+    "brown"
+   ],
+   "was": "flora"
+  },
+  "Cornus canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    225033036,
+    225041044,
+    236358489,
+    110414016,
+    166710458,
+    224996867
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Cornus sericea": {
+   "made": "2026-10-19",
+   "observations": [
+    123351215,
+    174187351,
+    246833638,
+    85717231,
+    303629237,
+    364838073
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Corylus cornuta": {
+   "made": "2026-10-19",
+   "observations": [
+    46957025,
+    208080908,
+    270533688,
+    266859990,
+    71345757,
+    194774511
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "blank"
+  },
+  "Crataegus chrysocarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    203962908,
+    164064248,
+    203962901,
+    165797458,
+    165430339,
+    292542471
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Crataegus douglasii": {
+   "made": "2026-10-19",
+   "observations": [
+    118863961,
+    220331993,
+    280146669,
+    160950970,
+    162389692,
+    38730062
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Cypripedium parviflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    287626478,
+    326508082,
+    6971954,
+    264362344,
+    98573332,
+    289591852
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Dalea candida": {
+   "made": "2026-10-19",
+   "observations": [
+    234811235,
+    178866708,
+    85708024,
+    315417613,
+    263907203,
+    235039464
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "epithet"
+  },
+  "Dalea purpurea": {
+   "made": "2026-10-19",
+   "observations": [
+    231119124,
+    189722036,
+    295850503,
+    173714896,
+    295743547,
+    127888576
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Dasiphora fruticosa": {
+   "made": "2026-10-19",
+   "observations": [
+    72739061,
+    70021976,
+    91843736,
+    56089800,
+    259825342,
+    162737651
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Delphinium glaucum": {
+   "made": "2026-10-19",
+   "observations": [
+    63360613,
+    336463713,
+    88939902,
+    304385801,
+    57468825,
+    188949161
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Dieteria canescens": {
+   "made": "2026-10-19",
+   "observations": [
+    317043845,
+    197530007,
+    261793976,
+    189259095,
+    75536277,
+    297596864
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Doellingeria umbellata": {
+   "made": "2026-10-19",
+   "observations": [
+    301393945,
+    310079812,
+    174033829
+   ],
+   "colours": [
+    "white",
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Draba aurea": {
+   "made": "2026-10-19",
+   "observations": [
+    104809489,
+    289977214,
+    289977127,
+    289977203,
+    289977199
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Draba incerta": {
+   "made": "2026-10-19",
+   "observations": [
+    1673624,
+    287230353,
+    11814099
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Drosera rotundifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    174392847,
+    174388469,
+    260300581,
+    181433136
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Dryas drummondii": {
+   "made": "2026-10-19",
+   "observations": [
+    26470213,
+    97827054,
+    226914934,
+    230895740,
+    54334140,
+    375404396
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Dryas hookeriana": {
+   "made": "2026-10-19",
+   "observations": [
+    87796862,
+    231308849,
+    14799021,
+    108298765,
+    383110823,
+    170555343
+   ],
+   "colours": [
+    "white",
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Drymocallis arguta": {
+   "made": "2026-10-19",
+   "observations": [
+    165250577,
+    226107291,
+    172789457,
+    170926816,
+    290559067,
+    295858943
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Echinacea angustifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    58618522,
+    342588353,
+    171897224,
+    316887804,
+    58457377
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "name"
+  },
+  "Elaeagnus commutata": {
+   "made": "2026-10-19",
+   "observations": [
+    146568249,
+    228103460,
+    151625122,
+    375128062,
+    164715221,
+    165392624
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "blank"
+  },
+  "Elodea canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    308111939,
+    302034978,
+    36224032,
+    54762207,
+    105467005,
+    368161289
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Endotropis alnifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    335016340,
+    81958348,
+    336102857,
+    320566510,
+    350703230,
+    81262165
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Equisetum arvense": {
+   "made": "2026-10-19",
+   "observations": [
+    74833113,
+    38945336,
+    311713041,
+    120279965,
+    105991198,
+    45946098
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Equisetum fluviatile": {
+   "made": "2026-10-19",
+   "observations": [
+    102912678,
+    59048418,
+    115205566,
+    126550766,
+    127944764,
+    134787639
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Ericameria nauseosa": {
+   "made": "2026-10-19",
+   "observations": [
+    145857525,
+    151510881,
+    244380580,
+    242751318,
+    248116684,
+    313711315
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Erigeron caespitosus": {
+   "made": "2026-10-19",
+   "observations": [
+    52878897,
+    304389073,
+    56851091,
+    126419767,
+    294925289,
+    105993090
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Erigeron glabellus": {
+   "made": "2026-10-19",
+   "observations": [
+    199690967,
+    124627949,
+    130565047,
+    234091554,
+    335673096,
+    303554868
+   ],
+   "colours": [
+    "purple",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Erigeron philadelphicus": {
+   "made": "2026-10-19",
+   "observations": [
+    124670046,
+    224035854,
+    165355338,
+    228248364,
+    244063862,
+    123736148
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Erigeron speciosus": {
+   "made": "2026-10-19",
+   "observations": [
+    125069750,
+    127888565,
+    222578471,
+    292206770,
+    226374184,
+    174407392
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Eriogonum androsaceum": {
+   "made": "2026-10-19",
+   "observations": [
+    173720865,
+    88578121,
+    103826823,
+    55875726,
+    171420731,
+    173531535
+   ],
+   "colours": [
+    "cream",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Eriogonum flavum": {
+   "made": "2026-10-19",
+   "observations": [
+    259214494,
+    141040731,
+    72295786,
+    51872560,
+    120024820,
+    90834694
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "epithet"
+  },
+  "Eriogonum umbellatum": {
+   "made": "2026-10-19",
+   "observations": [
+    67328699,
+    129636379,
+    232759668,
+    27269434,
+    33628941,
+    21264246
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Erythranthe guttata": {
+   "made": "2026-10-19",
+   "observations": [
+    7389965,
+    30220469,
+    29875121,
+    87347075,
+    227506147,
+    125060756
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Erythranthe lewisii": {
+   "made": "2026-10-19",
+   "observations": [
+    29559482,
+    38875698,
+    35833485,
+    59187266,
+    53961143,
+    88580138
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "name"
+  },
+  "Erythronium grandiflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    50561267,
+    24572477,
+    42454646,
+    163773631,
+    147446171,
+    116026584
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Escobaria vivipara": {
+   "made": "2026-10-19",
+   "observations": [
+    83714956,
+    27291297,
+    106253907,
+    259313652,
+    27812468,
+    333468251
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Eurybia conspicua": {
+   "made": "2026-10-19",
+   "observations": [
+    229547182,
+    126017060,
+    151510923,
+    183823572,
+    138018403,
+    237006199
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Eurybia sibirica": {
+   "made": "2026-10-19",
+   "observations": [
+    235721661,
+    310647914,
+    112994752,
+    88703975,
+    228231391,
+    262077869
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Euthamia graminifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    102729457,
+    131685484,
+    132466282,
+    128808617,
+    30288379,
+    315968972
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Eutrochium maculatum": {
+   "made": "2026-10-19",
+   "observations": [
+    238488171,
+    240229774,
+    178218836,
+    94153898,
+    135668816,
+    31747904
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Fragaria vesca": {
+   "made": "2026-10-19",
+   "observations": [
+    46752127,
+    245269850,
+    183826736,
+    218787079,
+    217987395,
+    224105460
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Fragaria virginiana": {
+   "made": "2026-10-19",
+   "observations": [
+    49683878,
+    124429956,
+    183164506,
+    3502220,
+    54599748,
+    174179686
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Fritillaria pudica": {
+   "made": "2026-10-19",
+   "observations": [
+    41146762,
+    110897893,
+    13441726,
+    208221870,
+    314204885,
+    204078287
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Gaillardia aristata": {
+   "made": "2026-10-19",
+   "observations": [
+    30464401,
+    230496113,
+    56812460,
+    192295864,
+    53744206,
+    32443562
+   ],
+   "colours": [
+    "orange",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Galium boreale": {
+   "made": "2026-10-19",
+   "observations": [
+    203534046,
+    123284241,
+    13613155,
+    300509072,
+    374483187,
+    165925063
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Galium triflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    82938303,
+    60474777,
+    83842574,
+    171060960,
+    133248548,
+    13815247
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Gentiana affinis": {
+   "made": "2026-10-19",
+   "observations": [
+    92306313,
+    178854152,
+    33049519,
+    336122984,
+    389553135,
+    16918223
+   ],
+   "colours": [
+    "purple",
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Gentiana calycosa": {
+   "made": "2026-10-19",
+   "observations": [
+    303278819,
+    303882319,
+    308206369,
+    236644099,
+    306163231,
+    308207559
+   ],
+   "colours": [
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Gentianella amarella": {
+   "made": "2026-10-19",
+   "observations": [
+    178005139,
+    317465405,
+    70060037,
+    177296849,
+    54855279,
+    42931793
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Geranium richardsonii": {
+   "made": "2026-10-19",
+   "observations": [
+    224034302,
+    201163501,
+    170943062,
+    294215860,
+    295428368,
+    50951875
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "name"
+  },
+  "Geranium viscosissimum": {
+   "made": "2026-10-19",
+   "observations": [
+    294684729,
+    219226741,
+    174963255,
+    234879282,
+    49301716,
+    52543466
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "name"
+  },
+  "Geum aleppicum": {
+   "made": "2026-10-19",
+   "observations": [
+    125885252,
+    13995702,
+    170714799,
+    29101285,
+    299697962,
+    55572852
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Geum macrophyllum": {
+   "made": "2026-10-19",
+   "observations": [
+    378254360,
+    124679369,
+    124484807,
+    370995799,
+    224665767,
+    122404842
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Geum rivale": {
+   "made": "2026-10-19",
+   "observations": [
+    228181372,
+    168726533,
+    298520641,
+    222170195,
+    229116861,
+    227247559
+   ],
+   "colours": [
+    "purple",
+    "red"
+   ],
+   "was": "name"
+  },
+  "Geum triflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    45812378,
+    47324646,
+    49893137,
+    49292226,
+    368072528,
+    49646608
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Glycyrrhiza lepidota": {
+   "made": "2026-10-19",
+   "observations": [
+    167514404,
+    46926705,
+    130400590,
+    300590248,
+    169787127,
+    90051882
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Grindelia squarrosa": {
+   "made": "2026-10-19",
+   "observations": [
+    32069419,
+    137938412,
+    223902033,
+    172086401,
+    239259637,
+    16476653
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Gutierrezia sarothrae": {
+   "made": "2026-10-19",
+   "observations": [
+    313239582,
+    89233817,
+    45768587,
+    56657217,
+    235257831,
+    263902452
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Hedysarum americanum": {
+   "made": "2026-10-19",
+   "observations": [
+    174980334,
+    169701675,
+    143843191,
+    383967451,
+    64691191,
+    146056328
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Hedysarum boreale": {
+   "made": "2026-10-19",
+   "observations": [
+    230223095,
+    368360981,
+    386772018,
+    254077806,
+    302745650,
+    366854221
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Hedysarum mackenziei": {
+   "made": "2026-10-19",
+   "observations": [],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "blank"
+  },
+  "Hedysarum sulphurescens": {
+   "made": "2026-10-19",
+   "observations": [
+    294960882,
+    104701558,
+    55563912,
+    383982721,
+    130483922,
+    253135701
+   ],
+   "colours": [
+    "yellow",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Helenium autumnale": {
+   "made": "2026-10-19",
+   "observations": [
+    143416124,
+    295011291,
+    304346216,
+    304346552,
+    235097134,
+    132754601
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Helianthus maximiliani": {
+   "made": "2026-10-19",
+   "observations": [
+    320862225,
+    134222374,
+    58913410,
+    134222350
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Helianthus nuttallii": {
+   "made": "2026-10-19",
+   "observations": [
+    59823425,
+    132478345,
+    308726616,
+    176525070,
+    89819579,
+    261019573
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Helianthus pauciflorus": {
+   "made": "2026-10-19",
+   "observations": [
+    304725241,
+    234056481,
+    234453357,
+    238319808,
+    14777223,
+    87790390
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Helianthus tuberosus": {
+   "made": "2026-10-19",
+   "observations": [
+    62315037,
+    240839645,
+    34584164,
+    401920971,
+    247080365,
+    250345701
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Heterotheca villosa": {
+   "made": "2026-10-19",
+   "observations": [
+    36086194,
+    54455056,
+    129483538,
+    128742429,
+    166925946,
+    46215909
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Heuchera cylindrica": {
+   "made": "2026-10-19",
+   "observations": [
+    64055916,
+    6609536,
+    49461652,
+    119186939,
+    44529392,
+    29421567
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Heuchera parvifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    191913054,
+    122511656,
+    18139915,
+    28519825,
+    100788611,
+    162983386
+   ],
+   "colours": [
+    "green",
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Heuchera richardsonii": {
+   "made": "2026-10-19",
+   "observations": [
+    231261362,
+    29410799,
+    51017958,
+    124954689,
+    14473156,
+    55437782
+   ],
+   "colours": [
+    "red",
+    "purple",
+    "green"
+   ],
+   "was": "flora"
+  },
+  "Hieracium umbellatum": {
+   "made": "2026-10-19",
+   "observations": [
+    303021641,
+    257303221,
+    138568875,
+    233334025,
+    176683302,
+    13440657
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Hippuris vulgaris": {
+   "made": "2026-10-19",
+   "observations": [
+    369925389,
+    227886255,
+    222950796
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Iliamna rivularis": {
+   "made": "2026-10-19",
+   "observations": [
+    263780951,
+    231525778,
+    134954209,
+    183283283,
+    383455974,
+    289437828
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Iris missouriensis": {
+   "made": "2026-10-19",
+   "observations": [
+    50211680,
+    289988824,
+    12454689,
+    263413002,
+    32808726,
+    329747172
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "name"
+  },
+  "Juniperus communis": {
+   "made": "2026-10-19",
+   "observations": [
+    58309607,
+    349124927,
+    93058858,
+    186948608,
+    80405138,
+    145788631
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Juniperus horizontalis": {
+   "made": "2026-10-19",
+   "observations": [
+    83586825,
+    183860357,
+    23284833,
+    62535321,
+    246584042,
+    77345780
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Juniperus scopulorum": {
+   "made": "2026-10-19",
+   "observations": [
+    115601212,
+    167998713,
+    153010084,
+    355581620,
+    400080589,
+    194839588
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Krascheninnikovia lanata": {
+   "made": "2026-10-19",
+   "observations": [
+    51950421,
+    50898071,
+    84770817,
+    165853789,
+    126299717,
+    175669771
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Larix laricina": {
+   "made": "2026-10-19",
+   "observations": [
+    96141441,
+    165647713,
+    86367283,
+    311609211,
+    144104515,
+    217385414
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Lathyrus ochroleucus": {
+   "made": "2026-10-19",
+   "observations": [
+    285438927,
+    225137624,
+    171861007,
+    27911047,
+    27251831,
+    49546801
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "epithet"
+  },
+  "Lathyrus venosus": {
+   "made": "2026-10-19",
+   "observations": [
+    53693455,
+    124067204,
+    50583340,
+    228378683,
+    85726607,
+    228378610
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Ledum groenlandicum": {
+   "made": "2026-10-19",
+   "observations": [
+    226365523,
+    283744909,
+    308602845,
+    52093998,
+    181413787,
+    299602004
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Lemna trisulca": {
+   "made": "2026-10-19",
+   "observations": [
+    305759027,
+    231522818,
+    315959728,
+    298128316,
+    187539650,
+    243014384
+   ],
+   "verdict": "no_showy_flower",
+   "was": "estimated"
+  },
+  "Liatris ligulistylis": {
+   "made": "2026-10-19",
+   "observations": [
+    131685464,
+    32251435,
+    289802900,
+    233615844,
+    233621335,
+    129042667
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Liatris punctata": {
+   "made": "2026-10-19",
+   "observations": [
+    174624898,
+    243483258,
+    234880274,
+    234809952,
+    56090086,
+    172277500
+   ],
+   "colours": [
+    "purple",
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Lilium philadelphicum": {
+   "made": "2026-10-19",
+   "observations": [
+    125559244,
+    230173165,
+    125381241,
+    58139974,
+    124455604,
+    238268192
+   ],
+   "colours": [
+    "orange",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Linnaea borealis": {
+   "made": "2026-10-19",
+   "observations": [
+    259801325,
+    186880639,
+    124943057,
+    283872871,
+    250636770,
+    263899505
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Linum lewisii": {
+   "made": "2026-10-19",
+   "observations": [
+    127951565,
+    373937788,
+    26369001,
+    317688340,
+    258204412,
+    229133685
+   ],
+   "colours": [
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Linum rigidum": {
+   "made": "2026-10-19",
+   "observations": [
+    125715423,
+    46215897,
+    254759518,
+    14654539,
+    47981709,
+    298963230
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Lithospermum ruderale": {
+   "made": "2026-10-19",
+   "observations": [
+    264347263,
+    259585178,
+    26122719,
+    260075068,
+    44537804,
+    124578368
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Lonicera dioica": {
+   "made": "2026-10-19",
+   "observations": [
+    285494282,
+    369865482,
+    125298954,
+    223589505,
+    224996826,
+    167547752
+   ],
+   "colours": [
+    "orange",
+    "yellow",
+    "red"
+   ],
+   "was": "estimated"
+  },
+  "Lonicera involucrata": {
+   "made": "2026-10-19",
+   "observations": [
+    20169565,
+    55547744,
+    145163133,
+    126344397,
+    83724118,
+    391978271
+   ],
+   "colours": [
+    "red",
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Lupinus argenteus": {
+   "made": "2026-10-19",
+   "observations": [
+    161783457,
+    168432725,
+    288504475,
+    288550074,
+    167984859,
+    55352049
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Lupinus sericeus": {
+   "made": "2026-10-19",
+   "observations": [
+    247158933,
+    247158868,
+    122497204,
+    225249156,
+    235104189,
+    58669532
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Lysimachia ciliata": {
+   "made": "2026-10-19",
+   "observations": [
+    162540805,
+    307156737,
+    30095282,
+    52436994,
+    236439154,
+    134106551
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Mahonia repens": {
+   "made": "2026-10-19",
+   "observations": [
+    169594087,
+    265103167,
+    359211709,
+    163265921,
+    123886226,
+    46460984
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Maianthemum amplexicaule": {
+   "made": "2026-10-19",
+   "observations": [
+    86518256,
+    50013137,
+    124145200,
+    51286617,
+    135131493,
+    53739643
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Maianthemum canadense": {
+   "made": "2026-10-19",
+   "observations": [
+    285439655,
+    86334814,
+    125620149,
+    124200887,
+    50824818,
+    51800114
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Maianthemum stellatum": {
+   "made": "2026-10-19",
+   "observations": [
+    374171782,
+    165822970,
+    166872422,
+    172428857,
+    227610616,
+    121514426
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Matteuccia struthiopteris": {
+   "made": "2026-10-19",
+   "observations": [
+    102913830,
+    164883121,
+    84638429,
+    126417523,
+    166143045,
+    126734974
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Mentha canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    177291994,
+    238486386,
+    172568662,
+    177168468,
+    174189025,
+    89987900
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Menyanthes trifoliata": {
+   "made": "2026-10-19",
+   "observations": [
+    83969068,
+    119971129,
+    199563547,
+    229408513,
+    229409963,
+    106281250
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Mertensia paniculata": {
+   "made": "2026-10-19",
+   "observations": [
+    222756668,
+    226430718,
+    174585310,
+    221035903,
+    370909121,
+    26380377
+   ],
+   "colours": [
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Mimulus ringens": {
+   "made": "2026-10-19",
+   "observations": [
+    323366948,
+    172154860,
+    14708170,
+    2429875,
+    28861905,
+    7377277
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Mitella nuda": {
+   "made": "2026-10-19",
+   "observations": [
+    226614563,
+    224504688,
+    283286229,
+    228322069,
+    222543832,
+    72421563
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Monarda fistulosa": {
+   "made": "2026-10-19",
+   "observations": [
+    260269133,
+    301323486,
+    53353061,
+    54676876,
+    174507222,
+    28847341
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Myosotis asiatica": {
+   "made": "2026-10-19",
+   "observations": [
+    256148994,
+    105153925,
+    65059289,
+    60924921,
+    112616164,
+    39172698
+   ],
+   "colours": [
+    "blue"
+   ],
+   "was": "estimated"
+  },
+  "Myriophyllum sibiricum": {
+   "made": "2026-10-19",
+   "observations": [
+    177212363,
+    191707528,
+    235028215,
+    302975422,
+    32235195,
+    30013415
+   ],
+   "colours": [
+    "red",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Nuphar variegata": {
+   "made": "2026-10-19",
+   "observations": [
+    229548353,
+    98574997,
+    93441885,
+    299732306,
+    165243356,
+    86662498
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Oenothera biennis": {
+   "made": "2026-10-19",
+   "observations": [
+    56427933,
+    90484800,
+    135993132,
+    171881022,
+    12751370,
+    32192411
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Oenothera cespitosa": {
+   "made": "2026-10-19",
+   "observations": [
+    79474838,
+    27445196,
+    83348163,
+    6574268,
+    9681395,
+    9303468
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Oenothera nuttallii": {
+   "made": "2026-10-19",
+   "observations": [
+    234880219,
+    52974775,
+    54832225,
+    57671355,
+    57005435,
+    34515950
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "name"
+  },
+  "Oenothera suffrutescens": {
+   "made": "2026-10-19",
+   "observations": [
+    231252900,
+    105992315,
+    225714683,
+    304868069,
+    298502130,
+    167890591
+   ],
+   "colours": [
+    "red",
+    "white"
+   ],
+   "was": "name"
+  },
+  "Opuntia fragilis": {
+   "made": "2026-10-19",
+   "observations": [
+    235413733,
+    255952033,
+    39034025,
+    169591704,
+    84761430,
+    83712309
+   ],
+   "colours": [
+    "yellow",
+    "orange"
+   ],
+   "was": "flora"
+  },
+  "Opuntia polyacantha": {
+   "made": "2026-10-19",
+   "observations": [
+    54196549,
+    226454328,
+    97948438,
+    292482918,
+    283509774,
+    85315744
+   ],
+   "colours": [
+    "yellow",
+    "orange",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Orthocarpus luteus": {
+   "made": "2026-10-19",
+   "observations": [
+    234459012,
+    45275652,
+    176661477,
+    89950673,
+    325147656,
+    359132562
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Osmorhiza berteroi": {
+   "made": "2026-10-19",
+   "observations": [
+    222780473,
+    361156420,
+    216427418,
+    222758242,
+    199931083,
+    122682684
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Osmorhiza longistylis": {
+   "made": "2026-10-19",
+   "observations": [
+    165382527,
+    225040404,
+    226927717,
+    223024964,
+    224297901,
+    166170982
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Oxytropis borealis": {
+   "made": "2026-10-19",
+   "observations": [
+    143891450,
+    50365721,
+    293453707,
+    226897944,
+    102105050,
+    252100801
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Oxytropis campestris": {
+   "made": "2026-10-19",
+   "observations": [
+    101968454,
+    325981096,
+    255048612,
+    253479620,
+    315591420,
+    177874138
+   ],
+   "colours": [
+    "purple",
+    "cream"
+   ],
+   "was": "name"
+  },
+  "Oxytropis monticola": {
+   "made": "2026-10-19",
+   "observations": [
+    325981096,
+    324984426,
+    327073492,
+    55867933,
+    237573760,
+    252443997
+   ],
+   "colours": [
+    "cream",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Oxytropis sericea": {
+   "made": "2026-10-19",
+   "observations": [
+    81522505,
+    46108332,
+    64495073,
+    25576441,
+    123385750,
+    123386043
+   ],
+   "colours": [
+    "yellow",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Oxytropis splendens": {
+   "made": "2026-10-19",
+   "observations": [
+    125261950,
+    255842425,
+    230615878,
+    125254087,
+    203675700,
+    385491287
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Packera cana": {
+   "made": "2026-10-19",
+   "observations": [
+    227689175,
+    125696906,
+    121601053,
+    129430015,
+    82157962,
+    36650971
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Paxistima myrsinites": {
+   "made": "2026-10-19",
+   "observations": [
+    185207866,
+    218933637,
+    76796084,
+    283727138,
+    351643296,
+    391867022
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "estimated"
+  },
+  "Pedicularis bracteosa": {
+   "made": "2026-10-19",
+   "observations": [
+    64450019,
+    29781923,
+    53984194,
+    68171965,
+    297405089,
+    30298283
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "flora"
+  },
+  "Pediomelum esculentum": {
+   "made": "2026-10-19",
+   "observations": [
+    222573596,
+    122230081,
+    225511598,
+    221960937,
+    221963034,
+    65061453
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Penstemon albertinus": {
+   "made": "2026-10-19",
+   "observations": [
+    105428157,
+    259705352,
+    103826826,
+    89666096,
+    104027246,
+    227824817
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Penstemon confertus": {
+   "made": "2026-10-19",
+   "observations": [
+    168336849,
+    125702960,
+    224783516,
+    332623755,
+    218793557,
+    286731415
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Penstemon ellipticus": {
+   "made": "2026-10-19",
+   "observations": [
+    145219461,
+    297753689,
+    229676467,
+    55865861,
+    134658518,
+    103612089
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Penstemon eriantherus": {
+   "made": "2026-10-19",
+   "observations": [
+    151450291,
+    124410300,
+    134261086,
+    49884633,
+    119624716,
+    122534411
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Penstemon gracilis": {
+   "made": "2026-10-19",
+   "observations": [
+    231235372,
+    229381336,
+    51375139,
+    228554459,
+    295431282,
+    13668948
+   ],
+   "colours": [
+    "purple",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Penstemon lyallii": {
+   "made": "2026-10-19",
+   "observations": [
+    229047289,
+    85477724,
+    233884779,
+    230667535,
+    228017113,
+    18543803
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Penstemon nitidus": {
+   "made": "2026-10-19",
+   "observations": [
+    81249676,
+    151622477,
+    220362540,
+    223190185,
+    48730058,
+    248914154
+   ],
+   "colours": [
+    "blue",
+    "pink"
+   ],
+   "was": "name"
+  },
+  "Penstemon procerus": {
+   "made": "2026-10-19",
+   "observations": [
+    29560965,
+    191874811,
+    301321092,
+    174511708,
+    169828096,
+    170948776
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "name"
+  },
+  "Peritoma serrulata": {
+   "made": "2026-10-19",
+   "observations": [
+    248393664,
+    239115143,
+    265698491,
+    9197953,
+    284455466,
+    339995808
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Persicaria amphibia": {
+   "made": "2026-10-19",
+   "observations": [
+    262185259,
+    242187203,
+    168733309,
+    15065371,
+    78493552,
+    225341425
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Petasites frigidus": {
+   "made": "2026-10-19",
+   "observations": [
+    80894112,
+    77487277,
+    115662463,
+    269466861,
+    253717937,
+    280708741
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "blank"
+  },
+  "Phacelia sericea": {
+   "made": "2026-10-19",
+   "observations": [
+    51298626,
+    290141922,
+    287219596,
+    242617542,
+    24796574,
+    255842429
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Phlox hoodii": {
+   "made": "2026-10-19",
+   "observations": [
+    79475500,
+    41293146,
+    208777381,
+    219585019,
+    19158363,
+    109502351
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Physaria didymocarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    119679294,
+    78916568,
+    161690243,
+    144460396,
+    252094566,
+    184035560
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Physostegia ledinghamii": {
+   "made": "2026-10-19",
+   "observations": [
+    234639925,
+    137235992,
+    387189184
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Physostegia parviflora": {
+   "made": "2026-10-19",
+   "observations": [
+    238823078,
+    90575342,
+    308455029,
+    132754603,
+    33766767,
+    304569475
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Picea glauca": {
+   "made": "2026-10-19",
+   "observations": [
+    31967085,
+    37146888,
+    335097914,
+    32566296,
+    39575089,
+    30948168
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Picea mariana": {
+   "made": "2026-10-19",
+   "observations": [
+    99737004,
+    148730822,
+    196231920,
+    19293644,
+    31721001,
+    75938600
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Pinus banksiana": {
+   "made": "2026-10-19",
+   "observations": [
+    183442234,
+    164985669,
+    183539369,
+    73616317,
+    336165815,
+    292480383
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Pinus contorta": {
+   "made": "2026-10-19",
+   "observations": [
+    71179354,
+    406794135,
+    199316447,
+    103689323,
+    201482415,
+    28835844
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Polemonium acutiflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    253596040,
+    232601486,
+    295152753,
+    232598582,
+    254686811,
+    194467871
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Polemonium pulcherrimum": {
+   "made": "2026-10-19",
+   "observations": [
+    163582066,
+    214716871,
+    266006907,
+    121511234,
+    80306260,
+    74893185
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Polygala senega": {
+   "made": "2026-10-19",
+   "observations": [
+    50524548,
+    197238064,
+    51285723,
+    51130698,
+    53107337,
+    287630614
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "blank"
+  },
+  "Populus angustifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    158436922,
+    130875201,
+    307404726,
+    132093931,
+    167827405,
+    92507291
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Populus balsamifera": {
+   "made": "2026-10-19",
+   "observations": [
+    277900423,
+    274425388,
+    273606183,
+    273566772,
+    115137602,
+    212258974
+   ],
+   "colours": [
+    "red",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Populus deltoides": {
+   "made": "2026-10-19",
+   "observations": [
+    314033847,
+    77027292,
+    62237015
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Populus tremuloides": {
+   "made": "2026-10-19",
+   "observations": [
+    111048973,
+    157788457,
+    204676511,
+    344318410,
+    361199094,
+    157175891
+   ],
+   "colours": [
+    "brown",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Potentilla anserina": {
+   "made": "2026-10-19",
+   "observations": [
+    226980007,
+    288030931,
+    282798860,
+    283179651,
+    286102780,
+    366120149
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Potentilla gracilis": {
+   "made": "2026-10-19",
+   "observations": [
+    89202997,
+    18213691,
+    134949095,
+    127888556,
+    153506662,
+    293215466
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Potentilla hippiana": {
+   "made": "2026-10-19",
+   "observations": [
+    109411827,
+    147436841,
+    109465870,
+    376484785,
+    168021941,
+    124273574
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Potentilla pensylvanica": {
+   "made": "2026-10-19",
+   "observations": [
+    103539852,
+    49094785,
+    151633102,
+    307138178,
+    26985710,
+    288021717
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Primula conjugens": {
+   "made": "2026-10-19",
+   "observations": [
+    47465951,
+    259909289,
+    146096036,
+    216662272,
+    63118007,
+    283170289
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Primula pauciflora": {
+   "made": "2026-10-19",
+   "observations": [
+    72646494,
+    346059335,
+    221685198,
+    181510759,
+    255033013,
+    117814187
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Prosartes trachycarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    79229751,
+    120246686,
+    118877940,
+    275239227,
+    83583929,
+    37148569
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "blank"
+  },
+  "Prunella vulgaris": {
+   "made": "2026-10-19",
+   "observations": [
+    125303834,
+    127932868,
+    299972084,
+    187378586,
+    52874806,
+    291992353
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Prunus pensylvanica": {
+   "made": "2026-10-19",
+   "observations": [
+    79190901,
+    118089831,
+    49798861,
+    365098712,
+    280109154,
+    25384847
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Prunus virginiana": {
+   "made": "2026-10-19",
+   "observations": [
+    48373536,
+    217989808,
+    224463989,
+    286192153,
+    222520267,
+    80947124
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Pseudotsuga menziesii": {
+   "made": "2026-10-19",
+   "observations": [
+    18963455,
+    219017814,
+    146989061,
+    226673577,
+    200760458,
+    49397715
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Pulsatilla nuttalliana": {
+   "made": "2026-10-19",
+   "observations": [
+    110882105,
+    71950477,
+    111532642,
+    43506287,
+    75110919,
+    271143241
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Pyrola asarifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    203253235,
+    227247446,
+    84606587,
+    305289140,
+    267764236,
+    236642552
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "name"
+  },
+  "Quercus macrocarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    241542967,
+    47792017,
+    316210172,
+    163823741,
+    219878227
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Ranunculus rhomboideus": {
+   "made": "2026-10-19",
+   "observations": [
+    311310086,
+    163476981,
+    118961632,
+    76821854,
+    70090661,
+    218237010
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Ratibida columnifera": {
+   "made": "2026-10-19",
+   "observations": [
+    305676707,
+    228762644,
+    86618480,
+    88571393,
+    47703139,
+    134764757
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Rhinanthus minor": {
+   "made": "2026-10-19",
+   "observations": [
+    30062971,
+    26307958,
+    221317950,
+    26347195,
+    81680888,
+    253941983
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Rhodiola integrifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    144585116,
+    108234148,
+    55875728,
+    53326162,
+    84341574,
+    225144092
+   ],
+   "colours": [
+    "red"
+   ],
+   "was": "flora"
+  },
+  "Rhus aromatica": {
+   "made": "2026-10-19",
+   "observations": [
+    362747051,
+    118018397,
+    78425618,
+    161713377,
+    314938715,
+    79475009
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "blank"
+  },
+  "Ribes americanum": {
+   "made": "2026-10-19",
+   "observations": [
+    219093199,
+    219614736,
+    217745307,
+    221719823,
+    299265396,
+    219628202
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Ribes aureum": {
+   "made": "2026-10-19",
+   "observations": [
+    220562693,
+    209269783,
+    75446926,
+    286046954,
+    365885232,
+    76136056
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "epithet"
+  },
+  "Ribes glandulosum": {
+   "made": "2026-10-19",
+   "observations": [
+    280107806,
+    219393725,
+    163701066,
+    282256160,
+    280149774,
+    280938436
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Ribes hudsonianum": {
+   "made": "2026-10-19",
+   "observations": [
+    81706767,
+    162413128,
+    82445084,
+    286184320,
+    28042471,
+    80786974
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Ribes lacustre": {
+   "made": "2026-10-19",
+   "observations": [
+    338475569,
+    160700912,
+    262013132,
+    12913573,
+    258006855,
+    55311605
+   ],
+   "colours": [
+    "green",
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Ribes oxyacanthoides": {
+   "made": "2026-10-19",
+   "observations": [
+    79863117,
+    35805266,
+    47917722,
+    161597976,
+    47356830,
+    25924050
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Ribes triste": {
+   "made": "2026-10-19",
+   "observations": [
+    25944350,
+    216685218,
+    217430647,
+    362748428,
+    122775268,
+    80140563
+   ],
+   "colours": [
+    "pink",
+    "red"
+   ],
+   "was": "name"
+  },
+  "Rosa acicularis": {
+   "made": "2026-10-19",
+   "observations": [
+    35412117,
+    50196937,
+    27174909,
+    68790539,
+    369938912,
+    284745805
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Rosa arkansana": {
+   "made": "2026-10-19",
+   "observations": [
+    89543674,
+    127888541,
+    173649242,
+    167889551,
+    173777147,
+    51181267
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Rosa woodsii": {
+   "made": "2026-10-19",
+   "observations": [
+    105277242,
+    78909498,
+    282804147,
+    287219116,
+    376183668,
+    30085382
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Rubus arcticus": {
+   "made": "2026-10-19",
+   "observations": [
+    68725492,
+    254270275,
+    283743761,
+    50129769,
+    231902634,
+    373435274
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Rubus idaeus": {
+   "made": "2026-10-19",
+   "observations": [
+    168119275,
+    168482562,
+    171301522,
+    28416222,
+    48413194,
+    375734677
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Rubus parviflorus": {
+   "made": "2026-10-19",
+   "observations": [
+    165250014,
+    171662388,
+    167814298,
+    13282368,
+    14096921,
+    85377262
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Rubus pedatus": {
+   "made": "2026-10-19",
+   "observations": [
+    312811178,
+    61863177,
+    293414182,
+    385143227,
+    259311458,
+    55171887
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Rubus pubescens": {
+   "made": "2026-10-19",
+   "observations": [
+    334161893,
+    223591564,
+    223189443,
+    375902090,
+    375744190,
+    122574954
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Sagittaria cuneata": {
+   "made": "2026-10-19",
+   "observations": [
+    242749522,
+    231523073,
+    257308224,
+    63610435,
+    229555252,
+    177587630
+   ],
+   "colours": [
+    "white",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Sagittaria latifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    334734870,
+    56382447,
+    53190123,
+    61054911,
+    55225231,
+    59478089
+   ],
+   "colours": [
+    "white",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Salix amygdaloides": {
+   "made": "2026-10-19",
+   "observations": [
+    283472967,
+    287908410,
+    123905904,
+    349523724,
+    283473096,
+    349970754
+   ],
+   "colours": [
+    "yellow",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Salix bebbiana": {
+   "made": "2026-10-19",
+   "observations": [
+    309768662,
+    164214680,
+    164876549,
+    284149938,
+    163638157,
+    365653156
+   ],
+   "colours": [
+    "cream",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Salix brachycarpa": {
+   "made": "2026-10-19",
+   "observations": [
+    86664120,
+    285242836,
+    311839260,
+    183797382,
+    227441387,
+    127052968
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Salix discolor": {
+   "made": "2026-10-19",
+   "observations": [
+    159572601,
+    164224707,
+    210563674,
+    211344981,
+    277941156,
+    351354095
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Salix exigua": {
+   "made": "2026-10-19",
+   "observations": [
+    28182426,
+    71196608,
+    72561037,
+    372482785,
+    157146476,
+    47418545
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Salix interior": {
+   "made": "2026-10-19",
+   "observations": [
+    48467187,
+    164138083,
+    163581078,
+    82477371,
+    222520324,
+    316901837
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Salix petiolaris": {
+   "made": "2026-10-19",
+   "observations": [
+    365160409,
+    278625603,
+    277941130,
+    79448337,
+    107606067,
+    365160276
+   ],
+   "colours": [
+    "cream",
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Schoenoplectus acutus": {
+   "made": "2026-10-19",
+   "observations": [
+    28633354,
+    57419446,
+    177404361,
+    28862005,
+    52381212,
+    129484372
+   ],
+   "colours": [
+    "brown"
+   ],
+   "was": "estimated"
+  },
+  "Scutellaria galericulata": {
+   "made": "2026-10-19",
+   "observations": [
+    234784347,
+    300698560,
+    18270190,
+    124197740,
+    128730947,
+    391308149
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Sedum lanceolatum": {
+   "made": "2026-10-19",
+   "observations": [
+    294512358,
+    374350337,
+    55823778,
+    226660033,
+    103882726,
+    104469935
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Shepherdia argentea": {
+   "made": "2026-10-19",
+   "observations": [
+    354345602,
+    45528845,
+    209172384,
+    113512936,
+    43636129,
+    68016762
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "blank"
+  },
+  "Shepherdia canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    75035935,
+    283186030,
+    118739773,
+    282725591,
+    114123299,
+    45412553
+   ],
+   "verdict": "no_showy_flower",
+   "was": "blank"
+  },
+  "Sibbaldia procumbens": {
+   "made": "2026-10-19",
+   "observations": [
+    173977591,
+    55343288,
+    107757301,
+    59908444,
+    262166761,
+    75630340
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Silene acaulis": {
+   "made": "2026-10-19",
+   "observations": [
+    60624285,
+    329932637,
+    32252978,
+    87749210,
+    236379487,
+    305319201
+   ],
+   "colours": [
+    "pink",
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Sisyrinchium montanum": {
+   "made": "2026-10-19",
+   "observations": [
+    29547800,
+    51258306,
+    192309310,
+    3185696,
+    220966172,
+    224996578
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Sium suave": {
+   "made": "2026-10-19",
+   "observations": [
+    87924912,
+    28410495,
+    300710336,
+    301399619,
+    31260911,
+    90534775
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Solanum triflorum": {
+   "made": "2026-10-19",
+   "observations": [
+    51609656,
+    14557310,
+    52380773,
+    296439994,
+    383793748,
+    290231356
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "blank"
+  },
+  "Solidago altissima": {
+   "made": "2026-10-19",
+   "observations": [
+    56084871,
+    386348624,
+    129209343
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago canadensis": {
+   "made": "2026-10-19",
+   "observations": [
+    30997842,
+    7613755,
+    129540384,
+    7309316,
+    7233851,
+    14518533
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago gigantea": {
+   "made": "2026-10-19",
+   "observations": [
+    250645943,
+    228953016,
+    99957273,
+    88388650,
+    229501662,
+    153199110
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago glutinosa": {
+   "made": "2026-10-19",
+   "observations": [
+    9077032,
+    65861732,
+    237401216,
+    208995424,
+    52176013,
+    132497860
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago lepida": {
+   "made": "2026-10-19",
+   "observations": [
+    231541028,
+    30171784,
+    132984653,
+    233548576,
+    138918497,
+    241220803
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago missouriensis": {
+   "made": "2026-10-19",
+   "observations": [
+    85207574,
+    7225095,
+    131829663,
+    298594977,
+    201083973,
+    167117933
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Solidago rigida": {
+   "made": "2026-10-19",
+   "observations": [
+    320326542,
+    29720290,
+    129736904,
+    59210682,
+    129374071,
+    128380120
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "estimated"
+  },
+  "Sorbus scopulina": {
+   "made": "2026-10-19",
+   "observations": [
+    170033025,
+    81786170,
+    387053946,
+    329668408,
+    227830023,
+    124239368
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Sparganium eurycarpum": {
+   "made": "2026-10-19",
+   "observations": [
+    128105924,
+    168250228,
+    176262654,
+    293957146,
+    229531851,
+    170884433
+   ],
+   "colours": [
+    "yellow",
+    "green"
+   ],
+   "was": "estimated"
+  },
+  "Sphaeralcea coccinea": {
+   "made": "2026-10-19",
+   "observations": [
+    225778151,
+    151625355,
+    386773498,
+    54482024,
+    83471269,
+    290575661
+   ],
+   "colours": [
+    "orange"
+   ],
+   "was": "estimated"
+  },
+  "Spiraea alba": {
+   "made": "2026-10-19",
+   "observations": [
+    228525577,
+    34287959,
+    129231010,
+    125460637,
+    338365708,
+    293948905
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Spiraea betulifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    121144555,
+    30328994,
+    379653536,
+    27418599
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Spiranthes romanzoffiana": {
+   "made": "2026-10-19",
+   "observations": [
+    57218434,
+    385084240,
+    234751146,
+    179236359,
+    231282291,
+    14653455
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Stachys pilosa": {
+   "made": "2026-10-19",
+   "observations": [
+    229602666,
+    295310697,
+    224035937,
+    228512877,
+    253126016,
+    376890938
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Stuckenia pectinata": {
+   "made": "2026-10-19",
+   "observations": [
+    87053729,
+    49788952,
+    292322160,
+    278696849,
+    132616001,
+    8846786
+   ],
+   "colours": [
+    "brown"
+   ],
+   "was": "estimated"
+  },
+  "Symphoricarpos albus": {
+   "made": "2026-10-19",
+   "observations": [
+    227375127,
+    51180272,
+    15281884,
+    305419516,
+    294514098,
+    14395817
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Symphoricarpos occidentalis": {
+   "made": "2026-10-19",
+   "observations": [
+    127308969,
+    128104600,
+    229382658,
+    223272968,
+    244720061,
+    87642856
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Symphyotrichum boreale": {
+   "made": "2026-10-19",
+   "observations": [
+    230673770,
+    397619707,
+    236625548,
+    257434381,
+    174396095,
+    179240955
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Symphyotrichum campestre": {
+   "made": "2026-10-19",
+   "observations": [
+    239199220,
+    378292954,
+    182577455,
+    182573179,
+    239199034
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Symphyotrichum ciliolatum": {
+   "made": "2026-10-19",
+   "observations": [
+    139375416,
+    60278323,
+    90088889,
+    401959709,
+    246099181,
+    302627847
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Symphyotrichum ericoides": {
+   "made": "2026-10-19",
+   "observations": [
+    306995698,
+    108415642,
+    31616013,
+    136360061,
+    181942953,
+    239860525
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "name"
+  },
+  "Symphyotrichum falcatum": {
+   "made": "2026-10-19",
+   "observations": [
+    127714886,
+    238837418,
+    32873461,
+    93053242,
+    174603313,
+    88413981
+   ],
+   "colours": [
+    "white",
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Symphyotrichum foliaceum": {
+   "made": "2026-10-19",
+   "observations": [
+    236296210,
+    183942682,
+    232639682,
+    239100103,
+    238812028
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Symphyotrichum hesperium": {
+   "made": "2026-10-19",
+   "observations": [
+    129120382,
+    30917694,
+    99710699,
+    39528392,
+    187032038,
+    31847990
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Symphyotrichum laeve": {
+   "made": "2026-10-19",
+   "observations": [
+    56073355,
+    128921896,
+    321979871,
+    31590756,
+    132679635,
+    171129359
+   ],
+   "colours": [
+    "purple",
+    "blue"
+   ],
+   "was": "flora"
+  },
+  "Symphyotrichum lanceolatum": {
+   "made": "2026-10-19",
+   "observations": [
+    15468302,
+    129120382,
+    242767397,
+    128385243,
+    181972998,
+    133239604
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Symphyotrichum puniceum": {
+   "made": "2026-10-19",
+   "observations": [
+    142271207,
+    142885689,
+    31141861,
+    175141976,
+    233863401,
+    30726316
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "estimated"
+  },
+  "Thalictrum dasycarpum": {
+   "made": "2026-10-19",
+   "observations": [
+    229799235,
+    222929870,
+    64545125,
+    228998145,
+    169920273,
+    293500971
+   ],
+   "colours": [
+    "white",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Thalictrum occidentale": {
+   "made": "2026-10-19",
+   "observations": [
+    53216421,
+    289694543,
+    66233705,
+    218933590,
+    167935754,
+    27847339
+   ],
+   "colours": [
+    "green",
+    "brown"
+   ],
+   "was": "estimated"
+  },
+  "Thalictrum venulosum": {
+   "made": "2026-10-19",
+   "observations": [
+    223527697,
+    119326741,
+    121673216,
+    370179122,
+    294864928,
+    25712577
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Thermopsis rhombifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    304868764,
+    8264064,
+    97739482,
+    31720584,
+    124304519,
+    166532275
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Townsendia exscapa": {
+   "made": "2026-10-19",
+   "observations": [
+    215647557,
+    3612193,
+    18590430,
+    280462303,
+    118299446,
+    280462058
+   ],
+   "colours": [
+    "pink",
+    "cream"
+   ],
+   "was": "flora"
+  },
+  "Townsendia parryi": {
+   "made": "2026-10-19",
+   "observations": [
+    283181326,
+    27731438,
+    226254305,
+    91697218,
+    330547459,
+    226086227
+   ],
+   "colours": [
+    "purple",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Typha latifolia": {
+   "made": "2026-10-19",
+   "observations": [
+    174390663,
+    126248861,
+    29208607,
+    296386106,
+    260829735,
+    234059348
+   ],
+   "colours": [
+    "brown"
+   ],
+   "was": "estimated"
+  },
+  "Ulmus americana": {
+   "made": "2026-10-19",
+   "observations": [
+    152578363,
+    149686210,
+    338233118,
+    260839695,
+    208532727,
+    150968326
+   ],
+   "colours": [
+    "brown",
+    "green"
+   ],
+   "was": "blank"
+  },
+  "Urtica gracilis": {
+   "made": "2026-10-19",
+   "observations": [
+    57671181,
+    123594919,
+    173148657,
+    173950128,
+    29872265,
+    299532076
+   ],
+   "colours": [
+    "green",
+    "brown"
+   ],
+   "was": "blank"
+  },
+  "Utricularia vulgaris": {
+   "made": "2026-10-19",
+   "observations": [
+    133042046,
+    7380942,
+    299290117,
+    175446158,
+    226808232,
+    95502430
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  },
+  "Vaccinium myrtilloides": {
+   "made": "2026-10-19",
+   "observations": [
+    222558210,
+    124334829,
+    218825364,
+    372445698,
+    194779888,
+    370542666
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Vaccinium myrtillus": {
+   "made": "2026-10-19",
+   "observations": [
+    98931993,
+    30074460,
+    279421621,
+    46998994,
+    77522157,
+    91878530
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Vaccinium oxycoccos": {
+   "made": "2026-10-19",
+   "observations": [
+    380109625,
+    166904618,
+    166710414,
+    168137653,
+    49671484,
+    166948247
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "estimated"
+  },
+  "Vaccinium uliginosum": {
+   "made": "2026-10-19",
+   "observations": [
+    104201434,
+    27462298,
+    13347114,
+    216257607,
+    52174201,
+    48053697
+   ],
+   "colours": [
+    "pink",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Valeriana sitchensis": {
+   "made": "2026-10-19",
+   "observations": [
+    261085356,
+    86335845,
+    14326563,
+    167802109,
+    175110963,
+    53323315
+   ],
+   "colours": [
+    "white",
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Veronica americana": {
+   "made": "2026-10-19",
+   "observations": [
+    239990528,
+    88471555,
+    95337642,
+    226360984,
+    169983921,
+    31769237
+   ],
+   "colours": [
+    "blue",
+    "purple"
+   ],
+   "was": "blank"
+  },
+  "Viburnum edule": {
+   "made": "2026-10-19",
+   "observations": [
+    258908113,
+    50847587,
+    259699594,
+    284151583,
+    224466824,
+    159595965
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "estimated"
+  },
+  "Viburnum opulus": {
+   "made": "2026-10-19",
+   "observations": [
+    194779148,
+    27063970,
+    223866649,
+    200335327,
+    122843232,
+    223008078
+   ],
+   "colours": [
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Vicia americana": {
+   "made": "2026-10-19",
+   "observations": [
+    145784069,
+    225580254,
+    223279759,
+    294625695,
+    286085697,
+    224817430
+   ],
+   "colours": [
+    "pink"
+   ],
+   "was": "flora"
+  },
+  "Viola adunca": {
+   "made": "2026-10-19",
+   "observations": [
+    142943284,
+    274313288,
+    47466816,
+    80048188,
+    79607604,
+    79857716
+   ],
+   "colours": [
+    "purple",
+    "blue"
+   ],
+   "was": "name"
+  },
+  "Viola orbiculata": {
+   "made": "2026-10-19",
+   "observations": [
+    96329284,
+    46460873,
+    379836991,
+    288653162,
+    3514759,
+    3497887
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "name"
+  },
+  "Viola palustris": {
+   "made": "2026-10-19",
+   "observations": [
+    219165460,
+    218893940,
+    219550739,
+    79287338,
+    370665104,
+    375378931
+   ],
+   "colours": [
+    "purple",
+    "white"
+   ],
+   "was": "flora"
+  },
+  "Viola pedatifida": {
+   "made": "2026-10-19",
+   "observations": [
+    292542467,
+    264371756,
+    217630591,
+    264371753,
+    120081619,
+    217630509
+   ],
+   "colours": [
+    "purple"
+   ],
+   "was": "flora"
+  },
+  "Viola rugulosa": {
+   "made": "2026-10-19",
+   "observations": [
+    240432963,
+    281529435,
+    364899206,
+    300309772,
+    252679908,
+    307788370
+   ],
+   "colours": [
+    "pink",
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Yucca glauca": {
+   "made": "2026-10-19",
+   "observations": [
+    127981853,
+    67418637,
+    126948553,
+    126910019,
+    126024877,
+    126950055
+   ],
+   "colours": [
+    "cream"
+   ],
+   "was": "estimated"
+  },
+  "Zizia aptera": {
+   "made": "2026-10-19",
+   "observations": [
+    48377918,
+    86344708,
+    267784946,
+    165204770,
+    170966402,
+    29476899
+   ],
+   "colours": [
+    "yellow"
+   ],
+   "was": "flora"
+  }
+ }
+}

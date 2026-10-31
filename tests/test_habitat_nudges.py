@@ -89,7 +89,7 @@ class TestHabitatNudges(unittest.TestCase):
     def test_native_nudge_mentions_swap(self):
         sc = _score(n_species=10, native_species=6, score_native=12.0)
         nudges = habitat_nudges(sc, limit=8)   # want every applicable nudge
-        native = [n for n in nudges if "aren't Alberta-native" in n["text"]]
+        native = [n for n in nudges if "aren't " in n["text"]]
         self.assertTrue(native)
         self.assertIn("4 of 10", native[0]["text"])
 
@@ -98,7 +98,7 @@ class TestHabitatNudges(unittest.TestCase):
         sc = _score(n_species=5, native_species=5, score_native=20.0,
                     gap_months=[5], score_bloom=17.14)
         nudges = habitat_nudges(sc)
-        self.assertFalse(any("aren't Alberta-native" in n["text"]
+        self.assertFalse(any("aren't " in n["text"]
                              for n in nudges))
 
     def test_missing_layers_listed(self):

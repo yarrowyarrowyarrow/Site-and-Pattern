@@ -53,16 +53,32 @@ _BANDS: tuple = (
     ("21+", "21 or more plants"),
 )
 
-#: ``(key, label, group, combine, options)``. `combine="all"` makes a facet's
-#: own ticks AND rather than OR — ticking "has a photograph" and "is a
-#: specialist" should narrow to animals that are both, the way the plant page's
-#: safety facet works.
+#: ``(key, label, group, combine, options)``. `combine="all"` would make a
+#: facet's own ticks AND rather than OR; nothing here needs it since V2.80,
+#: because no facet's values overlap any more.
+#:
+#: **Photograph and specialist were one facet called "Also" until V2.80**, with
+#: a tick each and no way to ask the other half of either question. Reported as:
+#: *"The 'also' option tab within Wildlife is unnecessarily hiding the has
+#: photograph, is a specialist options."* They are two questions and they are
+#: now two named dropdowns, each answered by every animal, so "no photograph
+#: yet" is a filter rather than the absence of one.
+#:
+#: The negative labels are not symmetrical on purpose (P9). Whether a
+#: photograph exists is a fact about this catalogue and "yet" says so. Whether
+#: an animal is a specialist is a fact about the animal that we may simply not
+#: have recorded, so the box says **not recorded as** one rather than asserting
+#: it is not — the author's wording was "isn't a specialist", and that is a
+#: claim 1,000 rows of silence cannot support.
 _FACETS: tuple = (
     ("taxon", "Kind of animal", "The animal", "any", TAXON_GROUPS),
     ("uses", "How it uses the plant", "The animal", "any", _USE_LABELS),
     ("count", "Plants recorded", "The record", "any", _BANDS),
-    ("has", "Also", "The record", "all",
-     (("photo", "Has a photograph"), ("specialist", "Is a specialist"))),
+    ("photo", "Photograph", "The record", "any",
+     (("yes", "Has a photograph"), ("no", "No photograph yet"))),
+    ("specialist", "Specialist", "The record", "any",
+     (("yes", "Is a specialist"),
+      ("no", "Not recorded as a specialist"))),
 )
 
 
@@ -83,22 +99,23 @@ def facets_for(animal: dict) -> dict:
     `browse.js` treats as no match — the same rule the plant index runs on, and
     the reason an animal with no photograph disappears when the photograph box
     is ticked rather than surviving as an unknown.
+
+    `photo` and `specialist` are the two facets every animal answers, because
+    both are yes-or-no about *the record* and the answer is always one of them.
+    Before V2.80 an animal without either simply carried no key, which made the
+    negative half of each question unaskable.
     """
-    has = []
-    if (animal.get("image") or "").strip() and (animal.get("credit") or ""):
-        has.append("photo")
-    if int(animal.get("specialists") or 0):
-        has.append("specialist")
     known = {key for key, _label in _USE_LABELS}
-    out = {
+    has_photo = bool((animal.get("image") or "").strip()
+                     and (animal.get("credit") or ""))
+    return {
         "taxon": [animal.get("taxon") or ""],
         "uses": sorted({k if k in known else "other"
                         for k in (animal.get("kinds") or [])}),
         "count": [_band(int(animal.get("total") or 0))],
+        "photo": ["yes" if has_photo else "no"],
+        "specialist": ["yes" if int(animal.get("specialists") or 0) else "no"],
     }
-    if has:
-        out["has"] = has
-    return out
 
 
 def _photo(animal: dict, photo_src: dict, root: str) -> tuple:
@@ -195,8 +212,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
 <div class="searchhead">
   <h1>Search {listed} animals</h1>
   <p class="lede">Pick an animal to see the plants it feeds on, lays eggs on or
-  shelters in. Every one is a documented record with a source. A star marks a
-  specialist: an animal that cannot simply move to another plant.</p>
+  shelters in. Every one is a documented record with a source.</p>
 </div>
 {note}
 
@@ -212,7 +228,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
       <p class="count" id="count" role="status">{listed} animals</p>
       <div id="active" class="active"></div>
     </div>
-    <div class="fscroll">{_panels(animals)}</div>
+    <details class="fscroll" open><summary class="ftoggle">Filters</summary>{_panels(animals)}</details>
   </form>
 
   <div class="results">
@@ -226,7 +242,7 @@ def render_wildlife_index(model: dict, listed: int, total_fauna: int,
 </div>
 <script id="catalogue" type="application/json">{payload}</script>
 """
-    return _page(f"Search {listed} prairie animals | {SITE_NAME}",
+    return _page(f"Search {listed} animals | {SITE_NAME}",
                  "Native bees, butterflies, moths, birds and mammals, and the "
                  "documented plants each one depends on.", body, 1, wide=True,
                  scripts=f'<script src="{_up(1)}assets/browse.js"></script>')
@@ -267,8 +283,16 @@ def render_wildlife(animal: dict, photo_src: dict) -> str:
 {notes}
 {blocks}
 """
+    # Sharing an animal page should show that animal (V2.80). Built from
+    # `photo_src` rather than from `src` above, which has already had the page's
+    # `../../` prepended and is therefore not a path a scraper can resolve.
+    # `credit` empty means there is no publishable photograph at all, so the
+    # card falls back to the site default rather than to an uncredited image.
+    share_img = (photo_src.get(animal.get("image") or "",
+                               animal.get("image") or "") if credit else "")
     return _page(f'{animal["name"]}: the plants it needs',
                  (f'{blurb} ' if blurb else "")
                  + f'{total} documented plant relationships with '
                    f'{animal.get("scientific_name")}.',
-                 body, depth, wide=True)
+                 body, depth, wide=True, image=share_img,
+                 image_alt=f'{animal["name"]}. {credit}'.strip())

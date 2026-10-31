@@ -26,8 +26,43 @@ from __future__ import annotations
 
 # What the user sees.
 APP_NAME = "Site & Pattern"
-APP_TAGLINE = "Native Habitat Designer"
+def _home() -> str:
+    """The default region pack's short name, for the tagline (V3.24: the
+    region names itself; ``src/region.py``)."""
+    try:
+        from src import region
+        return region.default().short
+    except Exception:                                      # noqa: BLE001
+        return ""
+
+
+# S6, V3.23: "Native plant yards for Edmonton", the default pack's place.
+APP_TAGLINE = (f"Native plant yards for {_home()}" if _home()
+               else "Native plant yards")
 APP_TITLE = f"{APP_NAME} — {APP_TAGLINE}"
+
+#: The licence the program is under (V3.18, FN-1; the owner's decision D1).
+#: It was the PolyForm Noncommercial License, which the GPL v3 that PyQt6 is
+#: licensed under does not allow a program built on it to be distributed
+#: under. ``LICENSE`` holds the text; Help › About and the README name it, and
+#: ``tests/test_licence.py`` keeps the three saying the same thing.
+LICENCE_NAME = "GNU General Public License, version 3"
+LICENCE_SPDX = "GPL-3.0-only"
+
+
+def window_title(document: str | None = None, *, version: str | None) -> str:
+    """The main window's title (F231, V3.16): the name, the release it is
+    running, and the open design, or the tagline before one is named.
+    ``window_title(version=None)`` is ``APP_TITLE``.
+
+    The version is there so a screenshot says which copy it came from, and so
+    an update can be checked at a glance: the words come from the program, the
+    number from the ``version.txt`` installed beside it. It is a required
+    keyword so a new caller cannot leave it out by accident; pass
+    ``app_version.running_version()``."""
+    name = f"{APP_NAME} {version}" if version else APP_NAME
+    return f"{name} — {document or APP_TAGLINE}"
+
 
 # Per-user data-folder names (see ``src/user_paths.py``). The folder is migrated
 # from the legacy name to the new one on first launch after the rebrand.

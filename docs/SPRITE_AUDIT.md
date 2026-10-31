@@ -650,3 +650,350 @@ Ranked by value per hour, because the bottleneck is data, not geometry:
    numbers are measured per release instead of argued about.
 4. **Licence-clean photographs**, which the tuning in (1) needs as its
    reference and which roadmap F72 wants anyway.
+
+## Sixth pass — V2.87–V2.88 (every species, and what the viewer was reading)
+
+The fifth pass covered about 140 animals. By V2.87 the catalogue carried **424
+plants and 1,144 animals**, most of the animals added by the V2.59–V2.65 fauna
+expansion with defaults for a look. So this pass checked all of them, and
+checked them differently: every plant rendered through the real viewer (the
+sprite-gallery path, baked models loaded, Balanced, July, mature), every animal
+built with the viewer's own model loader, the viewer's model-selection logic
+reproduced in Python over the shipped catalogue, and — because what a user sees
+is not the catalogue but a design — `scene_wildlife.wildlife_for_scene` run on
+400 random designs of 8 to 30 plants, by day and by night. The full report,
+with every species and a contact sheet per family, is
+[published separately](https://claude.ai/artifact/4DxfwtbLxQsLHWMdUkELXD).
+
+**The scores went down, and that is the measurement improving, not the models
+getting worse.** The fifth pass never measured bloom size, and most of today's
+animals did not exist then.
+
+| Family | Fidelity | Distinctness | Main problem |
+|---|---|---|---|
+| Deciduous trees (13) | 5 | 4 | Cottonwoods borrow the aspen; elm and box elder get the default — fixed in V2.92 |
+| Conifers (7) | 5 | 3 | Pines read as bottle brushes; spruce, fir, Douglas-fir and juniper share a look — pines and juniper fixed in V2.92 |
+| Shrubs (54) | 5 | 4 | Willows on the smallest leaf variant look bare; stretched up to 2.5x |
+| Wildflower bodies (215) | 4 | 3 | Rosettes are one dark lettuce; asters look like grass |
+| Flowers in bloom | 3 | 5 | **Cluster flowers drawn at cluster size** — fixed in V2.88, see below |
+| Grasses, sedges, rushes (80) | 3 | 1 | One wide-bladed fan in three proportions |
+| Aquatics (19) | 2 | 1 | Every aquatic is the same reed tuft — fixed in V2.90 |
+| Groundcover (30) | 4 | 3 | Cacti and creeping juniper as tufts — cacti fixed in V2.93 |
+| Climbers (6) | 2 | 2 | Free-standing leafy columns — fixed in V2.89 |
+| Fruit (44 species) | 4 | 6 | Shapes right; every fruit 17 to 34 cm across |
+| Bees (338) | 5 | 4 | Recorded bands not drawn — fixed in V2.88 |
+| Butterflies | 4 | 4 | Flat colour, no pattern |
+| Moths (189) | 2 | 2 | 159 drawn as butterflies — fixed in V2.88 |
+| Other insects (408) | 2 | 1 | One hoverfly for wasps, beetles, bugs and ants — partly fixed in V2.88 |
+| Birds (49) | 3 | 3 | One songbird body for owls, hawks, geese and cranes |
+| Mammals (6) | 5 | 4 | Shrew and vole are the mouse |
+
+**The finding that shaped the batches:** the largest defects were not models at
+all. They were the viewer, or the scene builder feeding it, reading the wrong
+number, and each one reached hundreds of species through one expression.
+
+### What V2.88 fixed (batch A, no new models)
+
+Plan: [`V2.88-reading-what-was-recorded`](plans/V2.88-reading-what-was-recorded.md).
+
+**26 · Each flower in a cluster at its own size.** `15-florets.js` scaled every
+floret by the reach of the WHOLE raceme, spike, panicle, umbel or cyme. Over the
+215 cluster species a drawn floret was **3.6 to 15.2x its recorded diameter,
+median 7.8x**; after, **median 1.36x, at most 3.2x**, the excess being deliberate
+(a drawn floret stands in for n / drawn real ones and covers their area). The
+cluster also grew upward from 70–92% of the plant, so **64 topped out more than a
+quarter above the plant's recorded height**; it now hangs from the top, and none
+does. Heads and single flowers were already right and are unchanged.
+
+**27 · Animals from what was recorded, not from words in their names.** 207 of
+343 lepidoptera and 347 of 408 other insects carry their binomial as their common
+name, so a keyword test on the name drew **159 moths as butterflies** and **208
+wasps, beetles, bugs and ants as hoverflies**. The recorded kind
+(`lepidoptera_attributes.kind`, every row since schema v40) and the group each
+insect's description names (`src/fauna_body_plan.py`) decide now. In the
+400-design simulation, night scenes went from **76% of animals on the wrong body
+plan to none**; by day 2% are on a stand-in model flagged `interim` (wasps on the
+fly, bugs and ants on the beetle) until F173 builds theirs.
+
+**28 · The recorded bee bands on the bee you actually see.** The baked bee only
+toggled three generic shells in the thorax colour, so 54 of 69 described bees wore
+the wrong pattern and the American Bumble Bee was solid black. It is now ringed one
+band per recorded tergite, T1 to T6, following the abdomen's taper.
+
+**29 · A rounding tie and a fallback that said one thing and did another.**
+`scene3d.py` rounded canopy to three decimals; the generator does not, so five
+species whose height / canopy is exactly 1.0 or 1.5 asked for a leaf unit never
+baked, and the lookup fell back to unit 0 of the file, not the neutral unit its
+comment promised. Heart-leaved Alexanders had lost its compound leaves.
+`test_model_assets` passed throughout because it computed the key the generator's
+way: it was guarding the generator against itself. It now also computes the key
+from what `build_scene` sends.
+
+**30 · Heights the flowers ignored.** One function, `bodyHeightOf`, now says how
+tall a plant is drawn, and the flowers, fruit and animals read it: Canada Anemone's
+flowers had floated at 60 cm over an 18 cm mat, and a 2 cm duckweed was a 0.5 m reed.
+
+**31 · The alphabet.** `wildlife_for_scene` took the first N animals by common
+name, so **65% of a daytime design's animals started with "A"** (13% of the
+catalogue). A stable hash of the species and the design's plants orders them now:
+14%, and twice as many distinct species across the 400 designs (429 → 882).
+
+**A render probe pins all of it** (`tests/test_accuracy_render.py`,
+`html/accuracy_probe.html`): real catalogue plants through `build_scene` into the
+viewer in headless Chromium, reading back each floret's drawn diameter, where the
+flowers top out, how tall the plant is, and which rings the baked bee wears.
+Against the pre-fix viewer it fails fourteen ways.
+
+**One trade-off, stated.** The tiny-flowered legumes (the prairie clovers, the
+milk-vetches) now show small specks of colour, because that is how big their
+flowers are; a bed of them reads less saturated than the blobs did. That is the
+real plant at the scale it is drawn, and the right answer to it is F180's tuning
+(flowering stems, how many heads), not bigger flowers.
+
+### What V2.89 fixed (F179 climbers, F176 horsetails)
+
+Plan: [`V2.89-climbers-and-horsetails`](plans/V2.89-climbers-and-horsetails.md).
+
+**32 · A vine on what it climbs.** A vine's recorded height is how far it
+climbs, and the viewer had drawn it as how tall it stands: a 6 m Wild Clematis
+was a 6 m green pillar in the open. The owner's rule decides now. A vine climbs
+the tree or shrub whose footprint touches its own, and with none it lies on the
+ground, 30 cm at most. `src/vine_habit.py` makes that decision once, in the
+scene. The viewer then measures the host's own drawn crown (its outer radius at
+each height and bearing, sampled along the mesh's edges, because a trunk's
+vertices sit only at its two ends) and runs the vine's stems over it. The
+species' own leaves go on the stems, and its flowers and fruit among the leaves
+in the upper two thirds. The animals perch where the foliage is. The baked
+`layer.vine` column is retired, not rebaked: a model baked once cannot fit
+whichever crown it lands on.
+
+**33 · Horsetails as jointed stems.** The four *Equisetum* were a grass tuft, a
+reed tuft and two rush tufts, because their `plant_type` says where they grow.
+Two of them wore a grass seed-head plume, and a horsetail has no flowers at all.
+A `jointed` growth form now routes all four to a drawn body: green stems ringed
+with dark sheaths at the nodes, whorls of branches all the way up (Common), at
+the middle nodes (Swamp) or none, with a pointed tip (Scouring-rush,
+Variegated). The plumes are gone. Schema v89.
+
+Both are pinned in the render probe. Against the old viewer, it reports the
+climber's leaves missing and the lone vine standing 3.00 m tall. Against the old
+data, it counts the plume on the two horsetails that wore one.
+
+### What V2.90 fixed (F175 the pond, and F181)
+
+Plan: [`V2.90-vines-find-hosts-and-the-pond`](plans/V2.90-vines-find-hosts-and-the-pond.md).
+
+**34 · The pond.** Seventeen aquatics were one reed tuft, so a pond-lily stood
+20 cm up in the air and a submerged pondweed half a metre. `src/pond_habit.py`
+now gives each wetland plant its body from its recorded habit and leaves, once,
+in the scene:
+
+* floating leaves in the species' outline, lying on the water;
+* submerged plants showing only what reaches the surface;
+* broad leaves on stalks (arrowheads, water-plantain, calla, buckbean);
+* mare's-tail as the horsetail builder's whorled-leaf unit;
+* the reeds keeping their tuft.
+
+The water matters because the pond structure's surface is an opaque sheet
+10 cm up: a pad drawn at ground level inside it would be invisible, so the
+scene says where the water is. Four submerged plants had been recorded
+`floating` with the pond-lily, and are `submerged` now.
+
+**35 · Generated vines on something to climb (F181).** The generator seats each
+vine at the base of a tree or shrub it planted. With none, it places the vine
+anyway and the design notes say there is nothing for it to climb, the owner's
+choice of the three offered.
+
+Mare's-tail first came out as a scouring-rush, because the layer took its
+unit number modulo a variant count that stopped at three. The render probe now
+compares the two bodies' vertex counts, the only measure that could tell them
+apart.
+
+### What V2.92 fixed (F178 trees with their own shape)
+
+Plan: [`V2.92-trees-with-their-own-shape`](plans/V2.92-trees-with-their-own-shape.md).
+
+**36 · Ten trees drawn as themselves.** Six new baked archetypes and four
+rebuilt, each authored at its species' recorded proportions, so none borrows
+another's model and gets stretched to fit: the elm's vase (a low fork into
+leaders that keep climbing), box elder's several leaning trunks and three-leaflet
+leaves, the two cottonwoods with their own crowns and leaves, Peach-leaved
+Willow, and a juniper that is a lumpy cone foliated to the ground rather than a
+spruce. Water birch and Bebb's willow, both recorded `multi_stem`, leave the
+ground as clumps of stems; until now the generator could not grow a second stem.
+
+**37 · Pines, not bottle brushes.** A new builder: whorls of limbs, each ending
+in a cluster of tufts, with bare trunk between the whorls. The lodgepole has a
+long clear bole and a rounded top; the jack pine a crooked trunk, kinked limbs
+and eight dead stubs kept below its crown. Each tuft has a small solid core the
+eye reads as the shoot's mass, where the old tuft was eighteen needles from one
+point.
+
+Stylised draws the same clumps and forks with its own generator. The pines in
+Stylised are unchanged, the fallback's recorded limit. Black Spruce still wears
+White Spruce's model, because nothing the catalogue records tells them apart.
+
+Found on the way, F186: from a person's eye height most leaf cards render
+near-black on every tree, mostly because of how the viewer lights a card seen
+from its shaded side, with the baked shading adding to it.
+
+### What V2.93 fixed (F177 succulents and cacti)
+
+Plan: [`V2.93-succulents-and-cacti`](plans/V2.93-succulents-and-cacti.md).
+
+**38 · Succulents with bodies of their own.** The six succulents had each
+borrowed another plant's body:
+
+* both prickly pears were the groundcover mat's star of narrow blades, because
+  a cactus's leaves are scales and `scale` is a narrow outline;
+* the ball cactus and roseroot were the herb mat drawn in 5 mm and 3 cm leaves,
+  which from a path is nothing;
+* soapweed yucca was a leafy bush with its flowers inside it;
+* the stonecrop, which this audit had passed, was the same narrow-bladed star.
+
+`src/succulent_habit.py` now gives each a body, once, in the scene, and
+`24-succulents.js` draws it:
+
+* the prickly pears are chains of spiny pads, a first pad leaning low and more
+  standing on its rim, with the flowers sitting on the top rims (Brittle
+  Prickly-pear's had floated at 1.4 times the plant);
+* the ball cactus is a cluster of globes, tubercles on a spiral, each tipped
+  with a star of pale spines;
+* the yucca is blue-grey rosettes of sword leaves at their recorded 50 cm, one
+  flower stalk per recorded flowering stem rising to the recorded height,
+  standing from bloom to the end of fruit;
+* roseroot is leafy stems of fleshy leaves with the flowers on top;
+* the stonecrop is flowering stems over a mat of short shoots that outlasts
+  them.
+
+Two growth forms, `pads` and `globose`, carry it in the data (schema v91).
+
+The render probe pins each body, and fails seven ways against the V2.92 viewer.
+
+Found on the way: with the yucca no longer drawn as a shrub, a vine beside it
+climbed a dome the yucca's size, and the generator could seat one there. A shrub
+recorded as a rosette has no crown, so a vine beside one now lies on the ground.
+
+### What V2.94 fixed (F186 the dark crowns)
+
+Plan: [`V2.94-leaves-let-light-through`](plans/V2.94-leaves-let-light-through.md).
+
+**39 · Crowns that read green from a path.** This audit looked at the trees from
+above, where a crown is its sunlit tops. From a person's height more than half of
+every crown was near-black. Three causes, each measured by switching it alone:
+
+* a leaf card seen from its shaded side took no sun at all, where a real leaf
+  seen with the sun behind it glows;
+* the baked shade darkened the sun as well as the sky, so a sunlit leaf inside a
+  crown was shaded twice, by the shadow map and by the bake;
+* the bake put its ground at the crown's lowest leaf, because a crown is baked
+  without its trunk, and buried nearly every interior leaf.
+
+A leaf now takes the light falling on its far side, times the share it lets
+through (broad leaves 0.55, herbs 0.45, needles 0.3), in a new chunk,
+`01c-leaves.js`. The bake shades the sky, and only 30% of the sun. The 25 tree
+models are rebaked standing on the ground, and nothing but their crowns' shade
+changed.
+
+Over the 20 trees from 1.6 m, near-black went from 57% to 38%. Trembling Aspen
+went 39% → 2% and Paper Birch 41% → 6%, and in a whole yard the bur oak's crown
+turns from black leaf silhouettes to green leaves. Stylised keeps its facets.
+
+**The first measurement was wrong.** Its mask drew front faces only, so it
+dropped every leaf with its back to the camera, which from below is most of
+them. It was redone before any number was kept.
+
+Found on the way:
+
+* **F187**: the ground bounce is about a seventh of what the viewer's own sun
+  and sky would reflect off the ground it draws. It keeps tier undersides,
+  trunks and walls dark on their shaded side. The evergreen conifers still read
+  darker from a path (45-74% near-black), mostly for other reasons: their dark
+  recorded colours, opaque needles and the shade between tiers.
+* **F188**: shrub foliage is drawn with vertex colours off, so no shrub has ever
+  shown its baked shade.
+
+### What V2.95 fixed (F185 water plants in the pond)
+
+Plan: [`V2.95-water-plants-go-in-the-pond`](plans/V2.95-water-plants-go-in-the-pond.md).
+
+**40 · The pond-lily on the lawn.** V2.90 drew each wetland plant by its own
+body, and drew a floating one on a pond's water when it stood in one. None ever
+did: the generator placed water plants like any other plant, before the pond,
+so in a measured design all six stood on grass, 9 to 28 m from the pond. In the
+app it was worse, because the pond never reached the map at all.
+
+`src/pond_planting.py` now seats every water plant in a pond by its body:
+* floating and submerged plants in the open water the 3D scene draws;
+* emergents in the shallows of the north shore.
+
+With no pond they are left out and named. A bare pond is planted, and the
+generated structures reach the map.
+
+### What V2.96 fixed (F188 the shrubs' shade)
+
+Plan: [`V2.96-shrubs-show-their-shade`](plans/V2.96-shrubs-show-their-shade.md).
+
+**41 · Shrubs that are not cut-outs.** Every shrub model carries a baked shade,
+and none was ever drawn. The shrub layer asked for its leaf material without
+saying its geometry carries colours, which the material reads as no; every
+other foliage call says yes. So from above a shrub was a flat-lit green cut-out,
+and Stylised's shrubs lacked the gradient every other Stylised plant has.
+
+Turned on as it was, the old bake (the trees' before V2.94) put 35% of a shrub's
+pixels near-black from a path. The eight shrub models are rebaked with the
+trees' `CROWN_AO`, and nothing but their leaves' shade changed.
+
+Over the 53 shrubs:
+
+* from a path, luma 0.345 → 0.295 and near-black 19% → 25%, still brighter than
+  the trees;
+* from above, the shade between leaf clusters rises 19%.
+
+The darkest from a path are mostly the 40 shrubs that share one default leaf
+green, because nothing records a shrub's leaf colour (noted under F180).
+
+### What V2.97 fixed (F174 the birds)
+
+Plan: [`V2.97-birds-with-their-own-bodies`](plans/V2.97-birds-with-their-own-bodies.md).
+
+**42 · Birds at their own size, where they would be.** The audit found twelve big
+birds drawn as a songbird perched inside a plant. Measuring them found more:
+**every bird was drawn about 2.4 times its length**. The viewer sets a bird's
+width to its recorded wingspan, and the three builds' wings were paddles, so the
+body that came with the right width was 52 cm for a robin, 51 cm for a Downy
+Woodpecker and three metres for the Sandhill Crane.
+
+Nine builds now, each with its wings at its birds' real span and a folded pair
+shown at rest, picked by genus:
+
+* hawks, falcons and the owl sit upright on a tall tree's top; a hawk soars over
+  a young design, and an owl with no tree is not drawn;
+* grouse, ptarmigans and the crane walk on the ground beside their plants;
+* the Snow Goose and Northern Shoveler float on a pond at their waterline, and
+  walk without one.
+
+The robin is 22 cm, the hawk 57 cm, and the crane stands 1.07 m. One span to
+length per build leaves birds with unusually long or short tails 14-25% off. The
+colours are unchanged (F172).
+
+### Still open after the sixth pass
+
+The batches that need a model, a data decision or a flora, one row each in
+`BACKLOG.md` group O: **F172** catalogue corrections (six flower colours, three
+habit records, 21 bird colour rows, 64 bees on the default look, and since V2.89
+the Wild Clematis flower), **F173** insect body plans, ~~F174 bird body plans~~ (V2.97),
+~~F175 the pond~~ (V2.90), ~~F176 horsetails~~ (V2.89), ~~F177 succulents and cacti~~ (V2.93),
+~~F178 trees with their own shape~~ (V2.92), ~~F179 climbers~~ (V2.89), **F180**
+telling species apart, and ~~F181~~, placing vines where they can climb (V2.90).
+~~F186, dark crowns from eye level~~ (V2.94), which found **F187**, the
+ground bounce, and ~~F188, the shrubs' shade never drawn~~ (V2.96). V2.97's
+birds found **F190**: animals carry no range, so ptarmigans reach prairie yards.
+Plus F114 wing patterns, F115 shrub aspect and F117 fruit, now with a size to be
+drawn at.
+
+**Not checked in this pass**, honestly: nothing was compared against photographs
+(the judgments of look are the auditor's, and the six colours in F172 need a
+flora before the data changes); software rendering changes lighting and edges,
+not shapes or sizes; winter and autumn states, night lighting, the Stylised level,
+the fly-as-a-bee avatar and structures were not looked at.

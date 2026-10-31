@@ -1,26 +1,14 @@
 """
-collapsible_panel.py — Reusable header-with-chevron panel widget.
+collapsible_panel.py — the side panel's collapse strip (``CollapsibleSidebar``).
 
-Generalises the ad-hoc "▼ On This Design" toggle that used to live in
-plant_panel.py. Wrap any QWidget in a CollapsiblePanel and the chevron
-in the header bar will animate it to a hidden state, leaving only the
-header visible. Clicking again restores it.
+The module once held ``CollapsiblePanel`` too, a header that hid a section of a
+panel. Its toggle was ``NoFocus`` by design, which is how a keyboard user lost
+the Placement section, and nothing has used it since V2.98 moved placing into
+the bar over the map. It was deleted in V3.02 (F195). The strip below takes
+focus and says what it does; Ctrl+\\ does the same from anywhere.
 
-Persistent collapse state is keyed by a caller-supplied panel_id; the
-state is read from / written to the shared user-settings JSON file via
-src.settings.
-
-Usage
------
-    from src.collapsible_panel import CollapsiblePanel
-
-    cp = CollapsiblePanel("Filters", panel_id="plant_filters")
-    cp.set_content(my_existing_widget)
-    parent_layout.addWidget(cp)
-
-The wrapped widget keeps its existing parent / layout; CollapsiblePanel
-just toggles its visibility. Call cp.expanded() / cp.set_expanded(bool)
-to read/control state programmatically.
+Persistent collapse state is keyed by a caller-supplied panel_id; the state is
+read from / written to the shared user-settings JSON file via src.settings.
 """
 
 from __future__ import annotations
@@ -28,7 +16,7 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QToolButton, QLabel, QSizePolicy,
+    QWidget, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -66,104 +54,6 @@ def _save_collapsed_state(panel_id: str, collapsed: bool) -> None:
         save_config(cfg)
     except Exception:
         pass
-
-
-class CollapsiblePanel(QWidget):
-    """A simple panel with a header bar + chevron + collapsible body."""
-
-    toggled = pyqtSignal(bool)   # True when expanded, False when collapsed
-
-    HEADER_STYLE = (
-        "QToolButton { color: #a5d6a7; font-weight: bold; "
-        "border: none; padding: 4px 6px; text-align: left; "
-        "background: #1b3a1b; }"
-        "QToolButton:hover { background: #224a22; color: #c8e6c9; }"
-    )
-
-    def __init__(self, title: str, panel_id: str = "",
-                 expanded: bool = True, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self._panel_id = panel_id
-        self._content: Optional[QWidget] = None
-
-        # Apply persisted state, falling back to the caller's default.
-        saved = _load_collapsed_state(panel_id)
-        if saved is not None:
-            expanded = not saved
-        self._expanded = expanded
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        header = QHBoxLayout()
-        header.setContentsMargins(0, 0, 0, 0)
-        header.setSpacing(0)
-
-        self._toggle_btn = QToolButton(self)
-        self._toggle_btn.setText(("▼ " if expanded else "▶ ") + title)
-        self._toggle_btn.setStyleSheet(self.HEADER_STYLE)
-        self._toggle_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._toggle_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                        QSizePolicy.Policy.Fixed)
-        self._toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._toggle_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._toggle_btn.clicked.connect(self._on_toggle)
-        header.addWidget(self._toggle_btn)
-
-        root.addLayout(header)
-
-        # Content placeholder layout; populated by set_content().
-        self._content_holder = QVBoxLayout()
-        self._content_holder.setContentsMargins(0, 0, 0, 0)
-        self._content_holder.setSpacing(0)
-        root.addLayout(self._content_holder)
-
-        self._title = title
-        # Collapsed panels clamp their own height to the header so they shrink
-        # to a bare chevron even inside a QSplitter (which otherwise keeps the
-        # pane's allocated size and leaves an empty gap above the header).
-        self._apply_height_clamp()
-
-    # ── Public API ────────────────────────────────────────────────────────
-
-    def _apply_height_clamp(self) -> None:
-        """Cap height to the header when collapsed; lift the cap when expanded."""
-        if self._expanded:
-            self.setMaximumHeight(16777215)   # QWIDGETSIZE_MAX
-        else:
-            self.setMaximumHeight(self._toggle_btn.sizeHint().height())
-
-    def set_content(self, widget: QWidget) -> None:
-        """Embed `widget` as the collapsible body. Existing widget is removed."""
-        if self._content is not None:
-            self._content_holder.removeWidget(self._content)
-            self._content.setParent(None)
-        self._content = widget
-        widget.setParent(self)
-        self._content_holder.addWidget(widget)
-        widget.setVisible(self._expanded)
-        self._apply_height_clamp()
-
-    def expanded(self) -> bool:
-        return self._expanded
-
-    def set_expanded(self, expanded: bool, *, persist: bool = True) -> None:
-        if expanded == self._expanded:
-            return
-        self._expanded = expanded
-        if self._content is not None:
-            self._content.setVisible(expanded)
-        self._toggle_btn.setText(("▼ " if expanded else "▶ ") + self._title)
-        self._apply_height_clamp()
-        if persist:
-            _save_collapsed_state(self._panel_id, not expanded)
-        self.toggled.emit(expanded)
-
-    # ── Internals ─────────────────────────────────────────────────────────
-
-    def _on_toggle(self):
-        self.set_expanded(not self._expanded)
 
 
 class CollapsibleSidebar(QWidget):
@@ -216,7 +106,9 @@ class CollapsibleSidebar(QWidget):
                                   QSizePolicy.Policy.Expanding)
         self._chev.setFixedWidth(self.COLLAPSED_WIDTH)
         self._chev.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._chev.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Reachable by Tab, and named for what pressing it does (V3.02).
+        self._chev.setAccessibleName(
+            f"Collapse {title}" if expanded else f"Expand {title}")
         self._chev.clicked.connect(self._on_toggle)
         root.addWidget(self._chev)
 
@@ -261,6 +153,8 @@ class CollapsibleSidebar(QWidget):
         self._chev.setToolTip(
             f"Collapse {self._title}" if expanded else f"Expand {self._title}"
         )
+        self._chev.setAccessibleName(
+            f"Collapse {self._title}" if expanded else f"Expand {self._title}")
         if persist:
             _save_collapsed_state(self._panel_id, not expanded)
         self.toggled.emit(expanded)

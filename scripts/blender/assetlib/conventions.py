@@ -101,6 +101,16 @@ CROWN_ASPECT = {
     "def_slender": 2.6,
     "def_oval": 1.8,
     "def_spreading": 1.2,
+    # V2.92 (F178): archetypes of their own for the trees that borrowed one.
+    # A borrowed model was also a STRETCHED one: the cottonwoods drew the
+    # aspen's 2.7 crown at 1.67 (1.6x sideways), Peach-leaved Willow Bebb's 1.8
+    # at 1.33, the juniper the default conifer's 3.0 at 1.78.
+    "elm": 1.67,          # Ulmus americana 25/15 — the vase
+    "boxelder": 1.25,     # Acer negundo 15/12 — broad, low-forked
+    "cottonwood": 1.67,   # Populus deltoides 25/15
+    "cottonwood_narrow": 1.67,  # Populus angustifolia 15/9
+    "willow_peach": 1.33,  # Salix amygdaloides 12/9
+    "juniper": 1.78,      # Juniperus scopulorum 8/4.5
 }
 
 # The same figure for the other flora families, by the archetype key each maps
@@ -129,8 +139,9 @@ HERB_ASPECT = {
 # grass/sedge/rush share the grass tuft, so its figure is theirs pooled. This
 # stays the representative figure for the family (the manifest-level target and
 # the groundcover's single aspect); the per-unit targets are the axis below.
-LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
-                "groundcover": 0.42}
+# Vines left in V2.89: the viewer draws them on the tree or shrub they climb
+# (html/scene3d/22-vines.js), so there is no free-standing vine unit to bake.
+LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "groundcover": 0.42}
 
 # ── the layer aspect axis (V2.33, F65) ──────────────────────────────────────
 #
@@ -154,12 +165,10 @@ LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
 LAYER_ASPECT_CLASSES = {
     "grass":   (1.07, 1.33, 1.78),
     "aquatic": (0.55, 1.00, 1.78),   # lo pulled up off the floating-leaf floor
-    "vine":    (1.47, 1.72, 3.00),
 }
 LAYER_ASPECT_BREAKS = {
     "grass":   (1.17, 1.50),
     "aquatic": (0.67, 1.33),
-    "vine":    (1.67, 2.00),
 }
 # Which layer kinds carry the axis. Groundcover is absent on purpose: its
 # variant axis is already (blade × grain), it is the one layer looked straight
@@ -204,6 +213,8 @@ LEAF_CM = {
     "aspen": 6.0, "poplar": 10.0, "birch": 8.0, "birch_water": 4.0,
     "oak": 20.0, "willow": 6.0, "cherry": 8.0, "cherry_orchard": 7.0,
     "apple": 8.0, "def_slender": 7.0, "def_oval": 7.0, "def_spreading": 7.0,
+    "elm": 12.0, "boxelder": 15.0, "cottonwood": 9.0, "cottonwood_narrow": 8.0,
+    "willow_peach": 10.0, "juniper": 0.2,
     "vase": 8.0, "spreading": 6.0, "mound": 5.5, "thicket": 6.0,
     "irregular": 4.0, "arching": 6.0, "prostrate": 3.0, "upright": 7.0,
 }
@@ -233,6 +244,13 @@ DECID_LEAF_SHAPE = {
     "cherry_orchard": "ovate",   # Prunus cerasus 'Evans'
     "apple": "elliptic",     # Malus domestica
     "def_slender": "ovate", "def_oval": "ovate", "def_spreading": "ovate",
+    # V2.92 (F178). Plains cottonwood's leaf is deltoid, which the leaf-shape
+    # vocabulary does not have; it is recorded, and drawn, ovate.
+    "elm": "elliptic",               # Ulmus americana
+    "boxelder": "compound_pinnate",  # Acer negundo — the one compound tree leaf
+    "cottonwood": "ovate",           # Populus deltoides
+    "cottonwood_narrow": "lanceolate",  # Populus angustifolia — a willow's leaf
+    "willow_peach": "lanceolate",    # Salix amygdaloides
 }
 
 # Representative mature height in metres for each tree archetype — the median
@@ -250,6 +268,8 @@ ARCHETYPE_HEIGHT_M = {
     "oak": 18.0, "willow": 8.0, "cherry": 8.0, "cherry_orchard": 4.0,
     "apple": 4.5,
     "def_slender": 15.0, "def_oval": 12.0, "def_spreading": 10.0,
+    "elm": 25.0, "boxelder": 15.0, "cottonwood": 25.0,
+    "cottonwood_narrow": 15.0, "willow_peach": 12.0, "juniper": 8.0,
 }
 
 # ── how big one crown-edge leaf card is (V2.33) ──────────────────────────────
@@ -591,7 +611,12 @@ def grain_class(leaf_size_cm, height_m, family="herb"):
 # Mirrors _FORM_ALIAS in html/scene3d/03-herbs.js and flora_herbs.
 HERB_FORM_ALIAS = {"cushion": "mat", "succulent": "mat", "sprawling": "mat",
                    "vining": "clump", "tussock": "grassy", "emergent": "grassy",
-                   "floating": "mat"}
+                   "floating": "mat", "submerged": "mat",
+                   # Horsetails are drawn by the viewer, not baked (V2.89);
+                   # the alias only keeps a herb-typed one resolvable here.
+                   "jointed": "grassy",
+                   # So are the cacti (V2.93, 24-succulents.js).
+                   "pads": "mat", "globose": "mat"}
 
 
 def herb_form_for(rec):
@@ -618,7 +643,7 @@ SHRUB_GENUS_FORM = {
 
 # Where a shrub's own `branching` (schema v47) beats its genus (V2.33, F64).
 #
-# The same demotion 03-herbs.js:treeFormFor did to `formBias`: the species'
+# The same demotion 03b-trees.js:treeFormFor did to `formBias`: the species'
 # recorded character wins and the genus table becomes the fallback it always
 # should have been. `branching` is seeded for 100% of the catalogue's 56 shrubs,
 # and three of its values name silhouettes the five genus forms simply cannot

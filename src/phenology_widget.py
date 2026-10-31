@@ -41,15 +41,17 @@ class PhenologyWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "What your design is doing this month — and what to walk outside "
-            "and confirm. A landscape is a trajectory, not an install day.")
+            "What is happening in the design, and what to go outside and "
+            "check.")
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
 
         row = QHBoxLayout()
-        row.addWidget(self._muted("Month:"))
+        month_label = self._muted("Month:")
+        row.addWidget(month_label)
         self._month_combo = QComboBox()
+        month_label.setBuddy(self._month_combo)
         self._month_combo.addItems(_MONTHS)
         self._month_combo.setCurrentIndex(self._month - 1)
         self._month_combo.currentIndexChanged.connect(self._on_month)
@@ -81,14 +83,14 @@ class PhenologyWidget(QWidget):
 
         strip_label = QLabel("The year at a glance")
         strip_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px; font-weight: bold; padding: 6px 0 2px 0;")
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
         lay.addWidget(strip_label)
 
         self._strip = QLabel("")
         self._strip.setTextFormat(Qt.TextFormat.RichText)
         self._strip.setWordWrap(True)
         self._strip.setStyleSheet("font-family: 'Consolas','Courier New',monospace; "
-                                  "font-size: 11px; color: #cfe3f0;")
+                                  "font-size: 12px; color: #cfe3f0;")
         lay.addWidget(self._strip)
 
         lay.addStretch()
@@ -96,7 +98,7 @@ class PhenologyWidget(QWidget):
 
     def _muted(self, text: str) -> QLabel:
         lab = QLabel(text)
-        lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
         return lab
 
     def _on_month(self, idx: int):
@@ -145,6 +147,9 @@ class PhenologyWidget(QWidget):
         if now["tasks"]:
             tasks = "; ".join(f"{t['verb']} {t['name']}" for t in now["tasks"][:8])
             parts.append(f"<b style='color:#ffcc80'>To do:</b> {tasks}")
+        if now.get("first_year"):
+            parts.append("<b style='color:#a5d6a7'>If you planted this year:"
+                         f"</b> {now['first_year']}")
         if not parts:
             return "<i style='color:#90a4ae'>Nothing predicted to change this month.</i>"
         return "<br>".join(parts)
@@ -154,7 +159,7 @@ class PhenologyWidget(QWidget):
         for slot in months:
             n = slot["n_active"]
             block = "·" if n == 0 else ("▪" if n < 3 else "▮")
-            color = "#cfe3f0" if slot["month"] == current else "#5f7d8c"
+            color = "#cfe3f0" if slot["month"] == current else "#90a4ae"
             weight = "bold" if slot["month"] == current else "normal"
             cells.append(f"<span style='color:{color}; font-weight:{weight}'>"
                          f"{slot['abbr']} {block}</span>")

@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from src.habitat_score import parse_month_range
+from src.maintenance_calendar import says_prune
 
 _MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -34,7 +35,12 @@ _MONTH_FULL = ["", "January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
 
 # Planting-calendar statuses that are a hands-on task worth a reminder (the
-# 'dormant'/'growing' base states are not actionable).
+# 'dormant'/'growing' base states are not actionable). 'harvest' only of a
+# plant with edible parts, and 'pruning' only in spring (V3.20, OV-8): the
+# calendar holds 612 "harvest" rows, mostly the flowering or seeding months of
+# plants nobody eats, and a few autumn pruning rows, so in October this said
+# "prune Tall Goldenrod; harvest Smooth Aster" beside a care calendar saying
+# leave the stems standing until spring (OVF-5).
 _TASK_STATUSES = {"start_indoors", "direct_sow", "transplant", "harvest", "pruning"}
 _TASK_VERB = {
     "start_indoors": "start seeds indoors", "direct_sow": "direct-sow",
@@ -56,11 +62,12 @@ def _distinct_plants(placed_plants: list[dict],
             "common_name": p.get("common_name") or "",
             "bloom_period": p.get("bloom_period"),
             "fruit_period": p.get("fruit_period"),
+            "edible_parts": p.get("edible_parts"),
         }
         # Fill any missing piece from the DB (fruit_period is rarely on the
         # placed feature; bloom_period usually is).
         if rec["bloom_period"] is None or rec["fruit_period"] is None \
-                or not rec["common_name"]:
+                or rec["edible_parts"] is None or not rec["common_name"]:
             if get_plant is None:
                 from src.db.plants import get_plant as _gp
                 get_plant = _gp
@@ -70,6 +77,8 @@ def _distinct_plants(placed_plants: list[dict],
                 rec["bloom_period"] = row.get("bloom_period")
             if rec["fruit_period"] is None:
                 rec["fruit_period"] = row.get("fruit_period")
+            if rec["edible_parts"] is None:
+                rec["edible_parts"] = row.get("edible_parts") or ""
         seen[pid] = rec
     return list(seen.values())
 
@@ -147,6 +156,10 @@ def build_phenology(placed_plants: Optional[list[dict]], *,
         for entry in (cal or []):
             st = entry.get("status")
             mm = entry.get("month")
+            if st == "harvest" and not str(rec.get("edible_parts") or "").strip():
+                continue
+            if st == "pruning" and not says_prune(mm):
+                continue
             if st in _TASK_STATUSES and isinstance(mm, int) and 1 <= mm <= 12:
                 months[mm - 1]["tasks"].append({"name": name, "status": st,
                                                 "verb": _TASK_VERB.get(st, st)})
@@ -157,6 +170,12 @@ def build_phenology(placed_plants: Optional[list[dict]], *,
                             + len(slot["tasks"]))
 
     now = _now_slice(months[month - 1], len(plants))
+    # The care calendar's first-year job for the month, so this page and
+    # the PDF's calendar say the same thing in November (OV-8).
+    now["first_year"] = ""
+    if plants:
+        from src.maintenance_calendar import first_year_task
+        now["first_year"] = first_year_task(month)
     return {
         "current_month": month,
         "current_name": _MONTH_FULL[month],

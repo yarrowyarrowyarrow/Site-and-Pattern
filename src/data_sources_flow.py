@@ -19,6 +19,8 @@ no method — the same pattern as ``feedback_flow`` and ``onboarding_flow``.
 
 from __future__ import annotations
 
+import html
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QDialogButtonBox, QLabel, QScrollArea, QVBoxLayout, QWidget,
@@ -111,6 +113,17 @@ def _body_html() -> str:
         parts.append("</ul>")
 
     parts.append(f"<p><i>{disclaimer()}</i></p>")
+
+    # FN-5 (V3.31): every service the app asks, credited as each asks, and
+    # what it is sent (src/services.py, which a test holds to the code).
+    from src.services import SERVICES, PRIVACY
+    parts.append("<h4>Services the app asks while you use it</h4><ul>")
+    for s in SERVICES:
+        credit = f" <i>{html.escape(s.credit)}</i>." if s.credit else ""
+        parts.append(f"<li><b>{html.escape(s.name)}</b>: "
+                     f"{html.escape(s.used_for)}.{credit} Sent: "
+                     f"{html.escape(s.sent)}.</li>")
+    parts.append(f"</ul><p>{html.escape(PRIVACY)}</p>")
 
     placeholders = [r for r in all_sources()
                     if (r.get("kind") or "") == "NOT_A_WORK"]

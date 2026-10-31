@@ -363,7 +363,7 @@ class TestLayersScoredAgainstTheReference(unittest.TestCase):
             return out
         cls.grassland = ids(["Big Bluestem", "Blue Grama Grass",
                              "Prairie Crocus", "Common Yarrow",
-                             "Wild Bergamot", "Black-eyed Susan",
+                             "Wild Bergamot", "Prairie Coneflower",
                              "Purple Prairie Clover", "Canada Goldenrod",
                              "Smooth Aster", "Prairie Sage"])
         conn.close()
@@ -451,6 +451,43 @@ class TestLayersScoredAgainstTheReference(unittest.TestCase):
         src = inspect.getsource(hs._reference_layer_score)
         self.assertIn("from src.reference_fidelity import fidelity", src)
         self.assertNotIn("PRESENCE_FRACTION", src)
+
+
+class NativeCountsForThePin(unittest.TestCase):
+    """ED-17 (the owner's E5) and ED-9, V3.25: a deliberate headline change.
+    In the Edmonton region "native" is the Edmonton list; for a pin elsewhere
+    in the provinces it is that province, as VASCAN records it."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        by_name = {p["scientific_name"]: p["id"] for p in get_all_plants()}
+        cls.goldenrod = by_name["Solidago canadensis"]     # AB, not Edmonton
+        cls.bergamot = by_name["Monarda fistulosa"]        # on the list
+        cls.bluestem = by_name["Andropogon gerardi"]       # SK only
+
+    def _score(self, ids, lat, lng):
+        from src.habitat_score import score_for_project
+        return score_for_project([{"plant_id": i} for i in ids], [],
+                                 lat=lat, lng=lng)
+
+    def test_canada_goldenrod_loses_its_credit_in_edmonton(self):
+        s = self._score([self.goldenrod, self.bergamot], 53.52, -113.52)
+        self.assertEqual(s.native_species, 1)
+        self.assertEqual(s.native_basis, "native around Edmonton")
+
+    def test_a_regina_design_scores_a_saskatchewan_native(self):
+        s = self._score([self.bluestem], 50.45, -104.6)
+        self.assertEqual(s.native_species, 1)
+        self.assertEqual(s.native_basis, "native to Saskatchewan")
+        calgary = self._score([self.bluestem], 51.05, -114.07)
+        self.assertEqual(calgary.native_species, 0, "not native to Alberta")
+
+    def test_the_nudge_says_which_native(self):
+        from src.habitat_score import habitat_nudges
+        s = self._score([self.goldenrod, self.bergamot], 53.52, -113.52)
+        text = " ".join(n.get("text", "") for n in habitat_nudges(s, limit=10))
+        self.assertIn("aren't native around Edmonton", text)
 
 
 if __name__ == "__main__":

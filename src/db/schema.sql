@@ -63,6 +63,12 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Flower colour + form (schema v31, V1.90) — drives real-coloured flowers in
     -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
     flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
+    -- Every colour it blooms in, comma-separated bucket keys, primary first
+    -- (schema v81, V2.80). A flora says "white to pinkish", not "white";
+    -- one hex could not hold that and the range is the information. Blank
+    -- means nobody has read a flora for this row, and flower_color is then
+    -- the only answer there is.
+    flower_colours TEXT DEFAULT '',
     -- Where that hex came from (schema v64, V2.48). The colour was seeded at
     -- GENUS level and nothing recorded that: 32 genera had 3+ species sharing
     -- one hex, so both columbines were red. Once colour became filterable
@@ -72,6 +78,16 @@ CREATE TABLE IF NOT EXISTS plants (
     --   estimated | the genus default, i.e. not observed for this species
     -- See scripts/seed_flower_colour.py, which is the provenance record.
     flower_colour_source TEXT DEFAULT '',
+    -- Where the province list came from (v79, V2.80). `native_provinces` was
+    -- the one claim on the page with no source column, while flower colour and
+    -- safety both had one -- and it is the claim the outside botanical review
+    -- actually objected to, because 354 of 430 species published "AB,SK" from
+    -- an inference about ecoregions continuing across the 110th meridian.
+    --   flora | read from VASCAN's published national checklist
+    --   ''    | nobody checked; src/nativity.py names the heuristic instead
+    -- Blank is the honest default and must stay blank for the ~20 species
+    -- VASCAN could not settle. See scripts/ingest_flora_nativity.py --apply.
+    native_provinces_source TEXT DEFAULT '',
     flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
     fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
     -- Fruit SHAPE (v49, V2.29) — the companion to fruit_color. Every fleshy
@@ -282,6 +298,9 @@ CREATE TABLE IF NOT EXISTS polyculture_members (
 -- Unlike polycultures, recipes carry per-member weights instead of x/y offsets;
 -- they drive ratio assignment for row/grid/circle placements and can be
 -- "populated" into a polyculture's circle via the builder.
+-- Nothing has read these since the plant-mix builder stopped using recipes;
+-- src/db/recipes.py went in V3.22 (RM-6). The tables stay so an old database,
+-- and any rows a user made, open unchanged.
 CREATE TABLE IF NOT EXISTS polyculture_recipes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,

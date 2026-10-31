@@ -6,11 +6,9 @@ P5 (perception is constructed — make the real site legible under the design) �
 see docs/DESIGN_PHILOSOPHY.md.
 
 Qt-free maths + persistence for dropping a personal yard/drone photo onto the 2D
-map as a georeferenced underlay (complementing the Gaussian-splat "yard photo").
-The image itself is embedded as a data URL on a ``site_photo`` GeoJSON feature,
-exactly like the splat backdrop's baked ``ortho_png`` — so the map plumbing
-(``draw_*_overlay`` / opacity / visibility / clear) is the same and the overlay
-reloads instantly with the project.
+map as a georeferenced underlay. The image itself is embedded as a data URL on
+a ``site_photo`` GeoJSON feature, so the overlay reloads instantly with the
+design.
 
 Placement is kept simple and honest: the photo is centred on a chosen point
 (the property pin, or the current map centre) and scaled to a real-world

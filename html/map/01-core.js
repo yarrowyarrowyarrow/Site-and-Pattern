@@ -11,11 +11,10 @@
     var map, osmLayer, satelliteLayer, mapboxSat, drawnItems, drawControl;
 
     // ── Multi-boundary state ─────────────────────────────────────────────────
-    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths, showArea}
+    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths,
+    // showArea, showHandles, name} (the last two V3.11, 02-boundary.js)
     var boundaries      = [];
     var boundaryAreaUnit = 0;          // 0=m² 1=ha 2=acre 3=km²
-    // Legacy single refs used only by setBoundaryVisible/clearAll redirects
-    var _legacyBoundaryLayer = null;   // unused sentinel
 
     // Edit-mode state for boundary vertex dragging
     var boundaryEditId      = null;    // id of boundary currently in edit mode
@@ -35,7 +34,9 @@
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
     var bridge        = null; // Python QObject exposed via QWebChannel
     var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
+    var _pyModeSeq    = 0;      // stamp of Python's last mode change, echoed by setMode (V2.98)
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+    var currentCommunity = null; // {name, radius_m, members} placing one (V2.99, 08-footprint.js)
 
     // Structure state
     var structureMarkers = {};  // id -> L.layerGroup
@@ -69,10 +70,10 @@
 
     // ── Unified selection model ──────────────────────────────────────────────
     // Each entry is a `_pd`-style descriptor with at least { kind, ... }
-    // where kind ∈ 'plant' | 'boundary' | 'structure' | 'shape'
+    // where kind ∈ 'plant' | 'boundary' | 'structure' | 'shape' | 'measure'
     // | 'sunpath' and the rest of the fields identify the underlying object
-    // (markerId, boundaryId, shapeId, etc.). 'shape' covers OSM buildings,
-    // shade-casting footprints and custom area shapes — all in shapeLayers.
+    // (markerId, boundaryId, shapeId, measureId, etc.). 'shape' covers OSM
+    // buildings, shade-casting footprints and custom area shapes (shapeLayers).
     // Keeping a flat list lets marquee/Delete/right-click operate uniformly
     // across feature types — the previous code had per-type isolated state.
     var selectedItems = [];
@@ -106,6 +107,7 @@
       if (a.kind === 'boundary')  return a.boundaryId === b.boundaryId;
       if (a.kind === 'structure') return a.structureId === b.structureId;
       if (a.kind === 'shape')     return a.shapeId === b.shapeId;
+      if (a.kind === 'measure')   return a.measureId === b.measureId;
       if (a.kind === 'sunpath')   return true;   // single sunpath at a time
       return false;
     }
@@ -169,12 +171,8 @@
         var c = plantMarkers[mid];
         if (!c || !c._pd) return;
         var sel = _selectionContains(c._pd);
-        var baseColor = c._pd.customColor || TYPE_COLORS[c._pd.plantType] || '#66bb6a';
-        c.setStyle({
-          color:       sel ? '#fdd835' : baseColor,
-          weight:      sel ? 3.0 : 1.5,
-          fillOpacity: sel ? 0.55 : 0.35
-        });
+        c.setStyle(sel ? { color: '#fdd835', weight: 3.0, fillOpacity: 0.55 }
+                       : plantMarkerStyle(plantColour(c._pd)));
       });
       // Boundaries
       boundaries.forEach(function(b) {
@@ -215,12 +213,15 @@
           });
         });
       }
+      refreshMeasureSelection();                      // 04-tools.js
       _updateSelectionBadge();
     }
 
     // Tiny floating badge in the top-right corner showing N selected items
     // and a "Delete" affordance — keeps the UI obvious for first-time users.
     function _updateSelectionBadge() {
+      // Edit › Delete is offered while something is selected (V3.19, QF-15).
+      if (bridge && bridge.onSelectionCount) bridge.onSelectionCount(selectedItems.length);
       var el = document.getElementById('_pd_sel_badge');
       if (selectedItems.length === 0) {
         if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -424,6 +425,7 @@
           if (hit) hits.push({ kind: 'shape', shapeId: shid });
         });
       }
+      measureMarqueeHits(bounds, hits);               // 04-tools.js
       // Sun path — represented by its centre tooltip; we check the
       // existing centre marker via sunPathLayer if present.
       if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
@@ -439,54 +441,48 @@
       return hits;
     }
 
-    // Delete every currently-selected item across types, emitting the
-    // appropriate per-type bridge signal so Python project state stays
-    // synchronised. Uses a snapshot since underlying maps mutate.
+    // Delete every currently-selected item across types. Each is taken off the
+    // map here, and Python is told once, with the lot (V3.11, F215): until then
+    // each kind was its own bridge call and so its own undo step, and five
+    // plants and two boundaries took three presses of Ctrl+Z to bring back.
+    // Python hands each kind to the handler its own removal always used.
     function deleteSelected() {
       var snapshot = selectedItems.slice();
       selectedItems = [];
-      var removedPlants = [];   // batch plant removals into one bridge call
+      var gone = { plants: [], boundaries: [], structures: [], shapes: [],
+                   measurements: [], sunpath: false };
       for (var i = 0; i < snapshot.length; i++) {
         var item = snapshot[i];
         if (item.kind === 'plant') {
           var c = plantMarkers[item.markerId];
           if (c && c._pd) {
-            removedPlants.push({ plantId: c._pd.plantId,
-                                 lat: c._pd.lat, lng: c._pd.lng });
+            gone.plants.push({ plantId: c._pd.plantId,
+                               lat: c._pd.lat, lng: c._pd.lng });
           }
           _removeSinglePlantMarker(item.markerId, true);
         } else if (item.kind === 'boundary') {
-          if (boundaryEditId === item.boundaryId && typeof exitBoundaryEditMode === 'function') {
-            exitBoundaryEditMode();
-          }
-          if (typeof _removeBoundaryEntry === 'function') {
-            _removeBoundaryEntry(item.boundaryId);
-            if (bridge) bridge.onBoundaryRemoved(item.boundaryId);
-          }
+          if (boundaryEditId === item.boundaryId) exitBoundaryEditMode();
+          _removeBoundaryEntry(item.boundaryId);
+          gone.boundaries.push(item.boundaryId);
         } else if (item.kind === 'structure') {
           var sg2 = structureMarkers[item.structureId];
           if (sg2) { map.removeLayer(sg2); delete structureMarkers[item.structureId]; }
-          if (bridge && bridge.onStructureRemoved) {
-            bridge.onStructureRemoved(item.structureId, item.structId,
-                                      item.lat, item.lng);
-          }
+          gone.structures.push([item.structureId, item.structId, item.lat, item.lng]);
         } else if (item.kind === 'shape') {
-          if (typeof shapeEditId !== 'undefined' && shapeEditId === item.shapeId
-              && typeof exitShapeEditMode === 'function') {
-            exitShapeEditMode();
-          }
-          var shg = (typeof shapeLayers !== 'undefined') ? shapeLayers[item.shapeId] : null;
+          if (shapeEditId === item.shapeId) exitShapeEditMode();
+          var shg = shapeLayers[item.shapeId];
           if (shg) { map.removeLayer(shg); delete shapeLayers[item.shapeId]; }
-          if (bridge && bridge.onShapeRemoved) bridge.onShapeRemoved(item.shapeId);
+          gone.shapes.push(item.shapeId);
+        } else if (item.kind === 'measure') {
+          _removeMeasureById(item.measureId);
+          gone.measurements.push(item.measureId);
         } else if (item.kind === 'sunpath') {
-          if (typeof clearSunPath === 'function') {
-            clearSunPath();
-            if (bridge) bridge.onSunPathRemoved();
-          }
+          clearSunPath();
+          gone.sunpath = true;
         }
       }
-      if (removedPlants.length && bridge && bridge.onPlantsRemovedBatch) {
-        bridge.onPlantsRemovedBatch(JSON.stringify(removedPlants));
+      if (snapshot.length && bridge && bridge.onSelectionDeleted) {
+        bridge.onSelectionDeleted(JSON.stringify(gone));
       }
       _refreshSelectionVisuals();
     }
@@ -506,18 +502,61 @@
         zoomControl: true,
         zoomSnap: 0.1,
         zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
-        wheelPxPerZoomLevel: 60
+        wheelPxPerZoomLevel: 60,
+        doubleClickZoom: false    // onMapDblClick zooms, only with no tool (V3.23)
       });
 
-      osmLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 22,
-          maxNativeZoom: 19
-        }
-      ).addTo(map);
+      // ── The basemap, and why it is not CARTO any more (V2.80) ───────────
+      // This was CARTO's Voyager raster CDN, chosen because its muted palette
+      // sits quietly under the shade, contour and planting overlays. CARTO
+      // now requires an API key on that CDN and stamps "API KEY REQUIRED"
+      // across every tile of an anonymous request, which is what a user saw.
+      //
+      // A key is not a fix here: this is a desktop app somebody installs, so
+      // a key baked into the source is the author's key being spent by every
+      // install, and a key per user is a signup between somebody and their
+      // own garden. So the basemap has to be one that needs no key.
+      //
+      // Two are tried in order. Esri first, because the satellite layer below
+      // already uses that host, so it is the one third party known to work
+      // from an install rather than a new dependency taken on faith.
+      // OpenStreetMap's own tiles are the fallback: no key, no account, and
+      // the most licence-clean option there is.
+      var BASEMAPS = [
+        { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+               'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+          // D4 (V3.31): Esri asks for "Powered by Esri" and the data's
+          // sources on any map showing its basemaps.
+          opts: { attribution: 'Powered by <a href="https://www.esri.com/">Esri</a> | ' +
+                               'Esri and its data partners, © OpenStreetMap contributors, ' +
+                               'and the GIS User Community',
+                  maxZoom: 22, maxNativeZoom: 19 } },
+        { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          opts: { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                  maxZoom: 22, maxNativeZoom: 19 } }
+      ];
+
+      // Fall back on sustained tile errors, not on the first one: a single
+      // missing tile at the edge of coverage is normal and must not throw the
+      // whole basemap away. A dead or key-gated host fails every tile, so the
+      // count climbs immediately and the swap happens within a screenful.
+      // Since V3.19 (QF-6) the count and the swap are watchBaseTiles's
+      // (11-map-furniture.js), and only a host that never drew a tile is
+      // swapped: one that drew is kept when the connection drops, since it
+      // is the one that comes back. The last host says the map needs one.
+      var _baseIndex = 0;
+      function _useBasemap(i) {
+        if (i >= BASEMAPS.length) { return; }
+        _baseIndex = i;
+        if (osmLayer) { map.removeLayer(osmLayer); }
+        osmLayer = L.tileLayer(BASEMAPS[i].url, BASEMAPS[i].opts).addTo(map);
+        watchBaseTiles(osmLayer, i + 1 < BASEMAPS.length ? function () {
+          if (_baseIndex !== i) return;
+          console.warn('[map] basemap ' + i + ' failing; falling back');
+          _useBasemap(i + 1);
+        } : null);
+      }
+      _useBasemap(0);
 
       // Satellite imagery lives in its own pane (below the tile pane so the
       // shade/contour overlays still draw on top) so the alignment nudge
@@ -553,9 +592,12 @@
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 24, maxNativeZoom: 19,
+        { attribution: 'Powered by <a href="https://www.esri.com/">Esri</a> | ' +
+                       'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+          maxZoom: 24, maxNativeZoom: 19,
           pane: 'satellitePane' }
       );
+      watchBaseTiles(satelliteLayer, null);
 
       drawnItems = new L.FeatureGroup().addTo(map);
       plantLayerGroup = L.layerGroup().addTo(map);
@@ -563,6 +605,9 @@
       // Map click handler
       map.on('click', onMapClick);
       map.on('mousemove', onMapMouseMove);
+      map.on('mouseout', function () {
+        if (typeof hideCursorFootprint === 'function') hideCursorFootprint();
+      });
       map.on('dblclick', onMapDblClick);
 
       // Push the current view centre to Python on every pan/zoom so
@@ -576,6 +621,9 @@
       map.on('mousedown', _terrainRectOnMouseDown);
       map.on('mousemove', _terrainRectOnMouseMove);
       map.on('mouseup',   _terrainRectOnMouseUp);
+
+      // A press inside the boundary being edited drags it (02-boundary.js).
+      map.on('mousedown', boundaryPressed);
 
       // Drag-to-reposition for placed plants (singletons + polyculture
       // groups). The drag itself is armed from the plant marker's own
@@ -604,7 +652,10 @@
             && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
           L.DomEvent.stop(e);
           _resetPatternState();
+          return;
         }
+        // Otherwise a right-click on the boundary opens its menu (V3.11).
+        boundaryContextMenu(e);
       });
 
       // Escape exits edit mode / cancels in-progress polygon
@@ -620,10 +671,13 @@
         }
       });
 
-      // Click on map background while in boundary/shape-edit → exit edit mode
-      // (polygon clicks stop propagation so this only fires on background)
-      map.on('click', function() {
+      // A click on the boundary edits it, decided here because the plants'
+      // canvas covers its pane (02-boundary.js, V3.11). Any other click on the
+      // background ends an outline edit (shape and plant clicks stop
+      // propagation, so they never arrive here).
+      map.on('click', function(e) {
         if (currentMode !== 'none') return;
+        if (boundaryClicked(e)) return;
         if (shapeEditId !== null) {
           exitShapeEditMode();
         } else if (boundaryEditId !== null) {
@@ -656,6 +710,11 @@
 
       // Shift+drag marquee selection (replaces Leaflet's box-zoom).
       _initMarqueeHandlers();
+
+      // Enter acts at the centre, Shift+Enter finishes (V3.02).
+      if (typeof initMapKeyboard === 'function') initMapKeyboard();
+      // The legend follows what is drawn (V3.11, 12-legend.js).
+      if (typeof initLegend === 'function') initLegend();
     }
 
     // Emit the current view centre to Python — wired to map.moveend
@@ -754,10 +813,23 @@
           && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
         _drawPatternPreview(e.latlng);
       }
+      if (typeof updateCursorFootprint === 'function') updateCursorFootprint(e.latlng);
+      boundaryHover(e);
     }
 
+    // Leaflet's own double-click zoom ran first, so the double-click that
+    // closes an outline also zoomed the map (the owner, V3.23). It is off;
+    // with no tool armed a double-click zooms as it did, by the scroll step.
     function onMapDblClick(e) {
       L.DomEvent.stop(e);
+      if (currentMode !== 'none') { finishDrawing(); return; }
+      var d = map.options.zoomDelta, o = e.originalEvent || {};
+      map.setZoomAround(e.containerPoint, map.getZoom() + (o.shiftKey ? -d : d));
+    }
+
+    // What a double-click finishes, and Shift+Enter on the map (V3.02,
+    // html/map/09-keyboard.js).
+    function finishDrawing() {
       if (currentMode === 'boundary' && drawingPolygon) {
         finishBoundaryPolygon();
       } else if (currentMode === 'hedgerow' && hedgerowPoints.length >= 2) {
@@ -817,7 +889,7 @@
         if (item.checked !== undefined) {
           var chk = document.createElement('span');
           chk.textContent = item.checked ? '✓' : '  ';
-          chk.style.cssText = 'font-size:11px;width:12px;display:inline-block;color:#80cbc4';
+          chk.style.cssText = 'font-size:12px;width:12px;display:inline-block;color:#80cbc4';
           btn.appendChild(chk);
         }
         var lbl = document.createElement('span');

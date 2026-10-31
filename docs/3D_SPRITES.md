@@ -61,9 +61,11 @@ the **live gallery** below lets you rotate and inspect each one.
 
 ## See them live
 
-**In the app:** **View → 3D Sprite Gallery…** — a native window that drives the
-real viewer; pick any sprite from the sidebar, and set a **Detail** level
-(Low / Medium / High) if the view is sluggish on your machine.
+**As a window:** `python -m src.sprite_gallery_window` — a native window that
+drives the real viewer; pick any sprite from the sidebar, and set a **Detail**
+level (Stylised / Balanced / Lifelike) if the view is sluggish on your machine.
+It was **View → 3D Sprite Gallery…** until V3.07, when the owner retired it from
+the menu: a developer's bench, not a gardener's tool.
 
 **Standalone (browser):** the same gallery as a web page — drag to orbit, scroll
 to zoom, pick any item from the sidebar.
@@ -313,9 +315,18 @@ foliage masses:
 | `irregular` | sparse asymmetric woody (often silvery) | Sagebrush, buffaloberry |
 | **Herbaceous** (by growth form) | `buildPerennialGeo` | leaves built to the species' real habit *(V1.98)* | wildflower / herb / fern — see below |
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
-| Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
+| Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | the reeds (Cattail, Great Bulrush, Giant Bur-reed) |
+| Floating leaves | `_pondFloating` (`23-pond.js`) | pads in the species' outline (heart, kidney, round) lying on a pond's water, or on the ground outside one *(V2.90)* | Yellow Pond-lily, duckweed |
+| Submerged | `_pondSubmerged` | only what reaches the surface: shoot tips lying on it, the flowers above *(V2.90)* | waterweed, milfoil, pondweed, bladderwort |
+| Broad leaves on stalks | `_pondBroad` | a crown of stalks, each ending in the species' blade *(V2.90)* | arrowheads, water-plantain, calla, buckbean |
+| Whorled stems | `buildHorsetailGeo` unit 3 | unbranched stems clothed in whorls of narrow leaves *(V2.90)* | Common Mare's-tail |
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
-| Vine | `buildVineGeo` | sprawling/twining leafy stems *(V1.99)* | Blue Clematis, vetch, peavine |
+| Vine | `buildVines` (`22-vines.js`) | climbs the tree or shrub beside it, over that host's drawn crown; with none, a low tangle at most 30 cm tall *(V2.89; `buildVineGeo` drew a free-standing column)* | Wild Clematis, vetch, peavine |
+| Horsetail | `buildHorsetailGeo` | jointed stems ringed with dark sheaths at the nodes: whorled throughout, whorled above, or plain with a pointed tip *(V2.89)* | the four *Equisetum* |
+| Pads | `_succPads` (`24-succulents.js`) | chains of flat spiny joints, a first one leaning low and more standing on its rim, the flowers on the top rims; small joints plumper *(V2.93)* | both prickly pears |
+| Ball | `_succBall` | one to five globes of spiral tubercles, each with a star of pale radial spines and a dark central *(V2.93)* | Ball Cactus |
+| Swords | `_succSwords` | rosettes of stiff channelled leaves at the recorded leaf length, flat to upright, and a flower stalk per recorded flowering stem from bloom to the end of fruit *(V2.93)* | Soapweed Yucca |
+| Fleshy | `_succFleshy` | upright stems crowded with small lens-shaped leaves, the flowers on top; on a groundcover, the same stems over a mat of short shoots *(V2.93)* | Roseroot, Lance-leaved Stonecrop |
 
 Herbaceous plants (wildflower / herb / fern) are built to their **growth form**
 (`HERB_FORMS`, keyed by genus via `_HPROF`, else inferred from flower form +

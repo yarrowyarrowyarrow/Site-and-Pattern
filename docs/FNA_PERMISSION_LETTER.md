@@ -5,6 +5,14 @@ they want to fill the catalogue's flower measurements from published
 descriptions. See [`DATA_SOURCES.md`](DATA_SOURCES.md) for why asking is the
 better move than reasoning carefully about fair dealing.
 
+> **Reread before sending (V3.18).** This draft was written when the app was
+> under the PolyForm Noncommercial licence and told FNA so. The code is now
+> under the GNU GPL v3, which lets anyone sell copies, so the letter below says
+> that instead. FNA may weigh that differently: if it matters, the numbers
+> recorded from FNA could be offered under their own noncommercial terms,
+> separate from the code's licence, as the occurrence records already are.
+> Which to ask for is the owner's choice.
+
 **Where to send it:** the Flora of North America Association's contact address,
 via [floranorthamerica.org](http://floranorthamerica.org/). eFloras.org is
 operated by Missouri Botanical Garden and Harvard University Herbaria; if the
@@ -14,15 +22,16 @@ recipient. Ask FNAA first — they hold the copyright in the descriptions.
 ---
 
 **Subject:** Permission request — recording floral measurements for a
-noncommercial native-plant app
+free native-plant app
 
 Dear Flora of North America Association,
 
 I am building **Site & Pattern**, a free desktop application that helps people
 in Alberta and the Canadian prairies convert lawns to native habitat — pollinator
-plantings, ecological restoration, that sort of work. It is released under a
-noncommercial licence (PolyForm Noncommercial 1.0.0), is not sold, and is not
-part of any commercial product or service.
+plantings, ecological restoration, that sort of work. It is free software under
+the GNU General Public License, version 3: I do not sell it, and it is not part
+of any commercial product or service, though that licence lets others
+redistribute it, including for a fee.
 
 The app draws each species in a 3D preview so that someone can see what a
 planting will actually look like before they dig. To do that honestly it needs a

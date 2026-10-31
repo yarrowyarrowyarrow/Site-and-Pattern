@@ -5,19 +5,6 @@
 // are globals set by the bootstrap), so load ORDER is dependency
 // order. Do not add ES `import`/`export` here.
 
-// Spark — the OPTIONAL photoreal yard-scan backdrop (V1.65). Load it WITHOUT
-// blocking module evaluation: a top-level `await` here would stall the entire
-// viewer — window.permaSetScene is registered far below, so nothing past this
-// point runs until the import settles, and if Spark were slow or hung the whole
-// 3D view would silently never start. Fire-and-forget instead; SplatMesh /
-// SparkRenderer fill in when ready and the splat code (all guarded, and the
-// SparkRenderer is created lazily) simply no-ops until then. The core 3D view
-// never waits on Spark.
-let SplatMesh = null, SparkRenderer = null;
-import('@sparkjsdev/spark')
-  .then((m) => { SplatMesh = m.SplatMesh; SparkRenderer = m.SparkRenderer; })
-  .catch((err) => console.warn('Spark splat backdrop unavailable:', err));
-
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
 // ── wind + time ─────────────────────────────────────────────────────────────
@@ -96,9 +83,9 @@ try {
   renderer = new THREE.WebGLRenderer({ antialias: true,
                                        preserveDrawingBuffer: true });
 } catch (e) {
-  window.permaBootError = '<b>3D needs WebGL</b><br>This system\'s graphics '
-    + 'stack doesn\'t offer WebGL, so the 3D preview can\'t render here. '
-    + 'The 2D map is unaffected.';
+  window.permaBootError = '<b>3D needs WebGL</b><br>This computer\'s graphics '
+    + 'are not available to the viewer (an old or blocked driver, a virtual '
+    + 'machine or a remote desktop). The map and everything else still work.';
   window.permaFatal(window.permaBootError);
   throw e;
 }
@@ -119,23 +106,6 @@ const scene = new THREE.Scene();
 // The gradient sky dome (below) is the backdrop; fog blends the ground plane
 // into its horizon band. Both colours track the sun via updateAtmosphere.
 scene.fog = new THREE.Fog(0xeaf2f8, 380, 1500);
-
-// Spark needs a SparkRenderer in the scene to draw splats with the normal
-// THREE.WebGLRenderer (V1.65). Created LAZILY — only once Spark has loaded
-// (background import above) AND a splat is actually added — so the core view
-// never depends on Spark. Constructed defensively: if it fails, the design
-// still renders, only the photoreal backdrop is unavailable.
-let sparkRenderer = null;
-function ensureSparkRenderer() {
-  if (sparkRenderer || !SparkRenderer) return sparkRenderer;
-  try {
-    sparkRenderer = new SparkRenderer({ renderer });
-    scene.add(sparkRenderer);
-  } catch (e) {
-    sparkRenderer = null;
-  }
-  return sparkRenderer;
-}
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
 camera.position.set(45, 38, 55);
@@ -495,9 +465,31 @@ function frameCamera(bounds) {
   const r = Math.max(w, d) * 0.75;
   const cx = (bounds.min_x + bounds.max_x) / 2;
   const cz = -(bounds.min_y + bounds.max_y) / 2;
-  controls.target.set(cx, 0, cz);
-  camera.position.set(cx + r * 0.9, r * 0.85, cz + r * 1.1);
+  const gy = terrainHeightAt(cx, -cz, lastTerrain);    // the pivot is ON the ground
+  controls.target.set(cx, gy, cz);
+  camera.position.set(cx + r * 0.9, gy + r * 0.85, cz + r * 1.1);
   controls.update();
+}
+
+// The orbit on a slope (V3.04). The terrain's heights are metres above the
+// site's lowest point, and maxPolarAngle only keeps the camera above the plane
+// through its pivot, so with the pivot at 0 an orbit turned low went into the
+// hill on the uphill side, where the one-sided ground vanishes and the sky
+// shows through. The pivot sits on the ground (frameCamera, and here when the
+// terrain arrives after the first push, carrying the view with it), and the
+// render loop keeps the camera half a metre above the ground under it.
+function groundKey(t) {
+  return t ? [t.base_m, t.rows, t.cols, t.min_x, t.min_y, t.max_x, t.max_y].join() : '';
+}
+function settleOrbitOnGround() {
+  const dy = terrainHeightAt(controls.target.x, -controls.target.z, lastTerrain)
+    - controls.target.y;
+  controls.target.y += dy; camera.position.y += dy;
+  controls.update();
+}
+function keepAboveGround() {
+  const g = terrainHeightAt(camera.position.x, -camera.position.z, lastTerrain) + 0.5;
+  if (camera.position.y < g) camera.position.y = g;
 }
 
 function fadeToward(hex, opacity) {

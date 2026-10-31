@@ -74,7 +74,7 @@ These started life as entries below and have since landed — the State markers 
 
 | ID | Feature | Lives in | Advances |
 |----|---------|----------|----------|
-| F1 | "Why it matters" ecological-role labels in the plant browser | `src/ecological_role.py`, surfaced in `src/plant_list_view.py` | P6, P10 |
+| F1 | "Why it matters" ecological-role labels in the plant browser | `src/ecological_role.py`, surfaced on the species page (`src/species_page.py`, beside the Browse list since V3.00) | P6, P10 |
 | F2 | Year 1 / 5 / 15 / 30 snapshot view | `src/snapshot_timeline.py`, `src/snapshot_window.py` | P4 |
 | F3 | Food-web completeness score | `src/habitat_score.py` (`food_web`), `src/design_critic.py` | P3, P6 |
 | F4 | Pattern-language framing for communities | `src/pattern_language.py`, `src/polyculture_panel.py` | P1, P7 |
@@ -95,6 +95,8 @@ These started life as entries below and have since landed — the State markers 
 | F41 | Numbered plant-by-numbers map — a scale plan drawing, keyed to the buy list | `src/planting_map.py`, drawn in `src/pdf_export.py` | P5, P11 |
 | F42 | Design-specific maintenance calendar — the work falling year by year | `src/maintenance_calendar.py` | P4, P9 |
 | F43 | Site-prep & soil-amendment sheet — decompact, don't enrich | `src/site_prep.py` | P8, P11, P9 |
+| F32 | **Field-mode checklist (printable)** — the ten site-walk prompts on one page, a box to tick and lines to write on each, what is already noted filled in; alone from Site › Field Notes, and the design PDF's first job (V3.05) | `src/field_notes.py` (`walk_sheet`), `src/pdf_export.py` (`export_field_sheet`), `src/field_sheet_flow.py` | P11 |
+| F19 | **"Why here?"** — every generated plant carries why it is where it is: its cell's score in words, or the rule that placed it (a vine at its host's foot, a mixed stand, a community, the design review, the pond); shown first on its page, which a click on the map now opens (V3.05) | `src/placement_score.py` (`explain_cell_for_plant`), `src/why_here.py`, `src/species_flyout.py` | P2, P5 |
 | F87 | Game-style saves — a saves folder, Save that stops asking where, an in-app list instead of the OS file dialog | `src/saves.py` + `src/saves_dialog.py` | P13 |
 | F90 | **Plant directory** — the catalogue as a browsable reference work: search, thirteen filters, and a species page with photo, conditions, season, morphology, sourced range *with occurrence counts and confidence*, every documented animal (specialists flagged), companions and sourcing. Opens with no design in existence; "Quiz me on these" runs Field Study over the current filter | `src/plant_directory.py` + `src/plant_directory_window.py` | P5, P6, P10, P13 |
 | F99 | **Per-plant age and nursery stock** — a plant carries the timeline year it went in, so a new sapling reads as new against an established community instead of matching it instantly. Trees start at 5 years old and shrubs at 3, because nobody plants those from seed; herbs and grasses still go in from plugs. Opt-in per plant, so every design made before it renders unchanged | `src/scene3d.py` (`effective_age`, `NURSERY_AGE_YEARS`) + `planted_year` in the GeoJSON feature | P4, P9 |
@@ -159,7 +161,7 @@ were still hedging.
 | ✅ F16 | Seasonal view toggle (spring/summer/fall/winter) | M | Med | P4, P5 |
 | ✅ F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
 | F18 | Site-condition remediation advisor | M | Med | P8, P4 |
-| F19 | "Why here?" composition reasoning toggle | M | Low | P2, P5 |
+| ✅ F19 | "Why here?" composition reasoning toggle — **V3.05**, on the page a click on a placed plant opens | M → S | Low | P2, P5 |
 | ✅ F20 | Maintenance-over-time curve — **delivered in substance by F42**; only a chart is left, and it belongs inside F42 | S | Low | P4 |
 | F21 | Ecosystem-services readout | M | Med | P6, P9 |
 | ✅ F22 | Naturalistic drift placement | M | Med | P2 |
@@ -176,7 +178,7 @@ were still hedging.
 | F29 | Scenario *ranges* on the timeline | M | Low | P9, P4 |
 | F30 | Invisible-relationship legend | S | Low | P5, P7 |
 | F31 | Glossary / concept explainers | S | Low | P7, P5 |
-| F32 | Field-mode checklist (printable) | S | Low | P11 |
+| ✅ F32 | Field-mode checklist (printable) — **V3.05** | S | Low | P11 |
 | ~~F33~~ | Seasonal observation journal — **subsumed by F73 + F86** (V2.52) | M | Low | P11, P4 |
 | F34 | Shearing-layers data audit | S | Low | P4 |
 | ✅ F35 | Self-seeding / spread simulation | M | Med | P1, P4 |
@@ -200,6 +202,8 @@ columns) to emit short badges — "Keystone", "Hosts 7 caterpillars", "Specialis
 "Pollinator plant" — highest-value first. The delegate caches the line per `plant_id` (paint runs on
 every scroll) and renders it text-only as the first detail row, avoiding the `plant_panel.py` guard
 ceiling (the logic and tests live outside the widget). The collapsed-row badge remains the next slice.
+*(V3.00: the painted detail row is gone. The line leads the species page, "Why it matters", which
+opens beside the Browse list; `species_entry` assembles it from the same function.)*
 
 ### ✅ F2 · Year 1 / 5 / 15 / 30 snapshot view — *Shipped · was Impact High / Effort M / Risk Low (P4)*
 **Shipped** in `src/snapshot_timeline.py` + `src/snapshot_window.py`. The philosophy's literal
@@ -395,8 +399,9 @@ short sourced one-liners next to the habitat components in `src/analysis_panel.p
 source key into a citation a reader can take to a library, with two honesty rules at the
 render layer: a `NOT_A_WORK` placeholder is never dressed up as a citation, and every entry
 currently reads `unverified` because the details were transcribed from the seed data rather
-than checked against the work. It is rendered by `plant_directory_window._citation_block`
-(the species page) and by the Help → Data Sources dialog (`data_sources_flow.py`).
+than checked against the work. It is rendered by `species_page.SpeciesPage._citation_block`
+(the species page, in the Plant Directory and beside the Browse list since V3.00) and by the
+Help → Data Sources dialog (`data_sources_flow.py`).
 
 **Missing half, and it is the one this card was about.** No *design-side* surface shows a
 citation: not the Analysis panel, not the relationship web, not the 3D dossier card. A user
@@ -452,9 +457,19 @@ From measured soil/disturbance, recommend a *repair sequence* (pioneer cover →
 builders → target community). **How:** `property_data.fetch_soil` returns `ph_top` +
 `texture_class`; combine with plant `soil_ph_min/max` (via `search_plants(soil_ph=…)`) and
 `succession.successional_role` to stage a recommendation. Revives parked brainstorm L3
-through a restoration lens.
+through a restoration lens. *(V3.01: "measured" overstates it. The pH `fetch_soil` returns is an
+estimate for the area (the soil pack, SoilGrids or a regional default), and the plants' pH ranges
+carry no provenance (F201): a repair sequence staged on the two would be a guess on a guess. The
+same comparison has filtered Browse since V1.67, silently until V3.01 made it a chip.)*
 
-### F19 · "Why here?" composition reasoning toggle — *Impact Med · Effort M → S · Risk Low — **half already built** (P2, P5)*
+### ✅ F19 · "Why here?" composition reasoning toggle — *Shipped V3.05 · was Impact Med · Effort M → S · Risk Low (P2, P5)*
+
+> **✅ Shipped in V3.05**, on the 2D map rather than the 3D card: the dossier is per species and a
+> reason is per plant. The chosen cell is read back in words, every other placing rule names
+> itself (`src/why_here.py`), and a click on a placed plant opens its page with the reasons first.
+> The click had never been listened to. Plan:
+> [`V3.05-every-surface-counted`](plans/V3.05-every-surface-counted.md).
+
 Explain why the generator placed a plant where it did — turn the black box into a teacher.
 **How:** `placement_score` already produces the ecological + aesthetic sub-scores per cell;
 surface them on plant click ("north edge: tall-to-the-back + full sun match"). **Scope this
@@ -541,7 +556,7 @@ connectivity to the design's planted areas; a new analysis layer.
   analysis panel naming what each overlay teaches the eye to see.
 - **F31 · Glossary / concept explainers** — *S · Low (P7, P5)* — **fold into F45**: plain-language definitions
   for keystone, host, succession, mycorrhiza, linked from the UI and docs.
-- **F32 · Field-mode checklist (printable)** — *S · Low (P11)*: a site-walk sheet via
+- **✅ F32 · Field-mode checklist (printable)** — *S · Low (P11)* — **shipped V3.05**: a site-walk sheet via
   `pdf_export.py` so the user records outside, then enters findings (pairs with F6).
 - **~~F33~~ · Seasonal observation journal** — **subsumed by F73 + F86 (V2.52)**: timestamped
   notes ("first bloom", "snow lingered here") in the project `properties` that accrue site
@@ -1012,7 +1027,8 @@ consecutive increments.
 > followed by **F41, F42 and F43** — which turned the Planting Plan from a buy list into the whole
 > take-it-outside document: prep the ground → buy it → dig it in the right places → phase it → keep
 > it alive. **ONBOARD and ACT/OUTPUT are both clear.** F32 (a printable field-walk sheet) is all
-> that remains of ACT, and Tier 2's confidence block is the next coherent increment.
+> that remains of ACT, and Tier 2's confidence block is the next coherent increment. *(F32 shipped
+> in V3.05.)*
 
 The rest of this review stands as written; the tiers below are unchanged apart from Tier 1 having
 landed in full.
@@ -1027,7 +1043,7 @@ since they serve the viewer rather than a funnel stage:
 | LEGIBILITY / EDUCATE | 6 | F15, F19, F21, F29, F30, F31 | well served by what shipped |
 | DECIDE / CONFIDENCE | 5 | F8, F12, F13, F14, F28 | all cheap, all unbuilt |
 | MAINTAIN | 2 | F20, F33 · ✅ F42 | F42 shipped — the one that saves plantings |
-| ~~ACT / OUTPUT~~ | 1 | F32 · ✅ F41, ✅ F43 | **cleared in V2.31** bar the printable field sheet |
+| ~~ACT / OUTPUT~~ | 1 | F32 · ✅ F41, ✅ F43 | **cleared in V2.31** bar the printable field sheet, which shipped in V3.05 |
 | ~~ONBOARD / ACTIVATE~~ | ~~2~~ | ✅ F44, ✅ F45 | **cleared in V2.31** |
 
 (F34 belongs in `data_quality.py` rather than any column, and F49 straddles LEGIBILITY and ACT —
@@ -1116,7 +1132,7 @@ Sequenced for **more ecosystems created** — the short version of the V2.31 rev
   constraint, and the priority this roadmap had stated and skipped for seven increments.
 - ✅ **Done — close the loop to the ground (ACTION):** ✅ F40 → ✅ F17 → ✅ F41 (the missing half of
   F40) → ✅ F42 (the calendar that keeps year-one plants alive) → ✅ F43. Only **F32** (a printable
-  field-walk sheet) is left in this stage.
+  field-walk sheet) is left in this stage. *(✅ V3.05.)*
 - **Now — build the trust to act (CONFIDENCE):** the Tier 2 block below.
   F8 / F12 / F28 / F14 / F13 as **one** block, not five cards.
 - **Depth is now optional, not owed.** ✅ F1–F7/F9/F10/F16/F17/F22/F24/F35/F40–F45

@@ -1,0 +1,295 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:900px;height:600px;border:0;display:block}
+#out{padding:8px;white-space:pre;font-family:ui-monospace,monospace}</style>
+</head><body>
+<div id="out">reading the legend…</div>
+<iframe id="m" src="map.html"></iframe>
+<script>
+// The legend names what is on the map (dev page + the harness behind
+// tests/test_legend.py, V3.11, F217). The owner: "hiding anything from the
+// legend that does not appear on the map", boundaries "simply ... boundary"
+// or by the names given them, plants by type or down to the species. Drives
+// the real map.html in a frame: adds, hides and removes things the way the
+// app does, waits for the legend to follow (it rebuilds on Leaflet's own
+// layeradd/layerremove, debounced), and reads what it says. Every call the
+// page makes to Python is recorded instead of sent. Since F218 it also reads
+// the species numbers at three zooms (each plant its own, a close pair
+// sharing one, a crowd that leaves some waiting) and the rings a legend line
+// draws round its species' plants.
+//
+// Results go into document.title as JSON, read by a headless `--dump-dom` run.
+
+const LAT = 53.5461, LNG = -113.4938, D = 0.0002;
+const YARD = [[LAT - D, LNG - D * 1.5], [LAT - D, LNG + D * 1.5],
+              [LAT + D, LNG + D * 1.5], [LAT + D, LNG - D * 1.5]];
+const OUTSIDE = [[LAT - D * 0.2, LNG + D * 1.7], [LAT - D * 0.2, LNG + D * 2.4],
+                 [LAT + D * 0.4, LNG + D * 2.4], [LAT + D * 0.4, LNG + D * 1.7]];
+const out = {};
+let w, calls = [];
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function called(name) { return calls.filter(c => c[0] === name); }
+// {section key: [line text, …]} as the legend reads now.
+function legend() {
+  const body = w.document.getElementById('legend-body'), r = {};
+  body.querySelectorAll('.legend-section').forEach(s => {
+    r[s.dataset.section] = Array.from(s.querySelectorAll('.legend-item'))
+      .map(i => i.textContent.replace('✎', '').replace(/\s+/g, ' ').trim());
+  });
+  if (!Object.keys(r).length) r._note = body.textContent.trim();
+  return r;
+}
+function press(section, value) {
+  const b = w.document.querySelector('#map-legend button[data-legend="' + section +
+                                     '"][data-value="' + value + '"]');
+  b.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
+}
+function numbers() {
+  return Array.from(w.document.querySelectorAll('.sp-species-num'));
+}
+function tags() { return w._speciesNumberLayer ? w._speciesNumberLayer.getLayers() : []; }
+// Pairs of numbers drawn over one another, as the page lays them out.
+function overlapping() {
+  const r = numbers().map(n => n.getBoundingClientRect());
+  let n = 0;
+  for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) {
+    if (r[i].left < r[j].right - 0.5 && r[j].left < r[i].right - 0.5 &&
+        r[i].top < r[j].bottom - 0.5 && r[j].top < r[i].bottom - 0.5) n++;
+  }
+  return n;
+}
+// How far, in px, each number's middle is from the plant it sits on.
+function offPlant() {
+  const box = w.map.getContainer().getBoundingClientRect();
+  return Math.max(0, ...tags().map(mk => {
+    const r = mk.getElement().getBoundingClientRect();
+    const p = w.map.latLngToContainerPoint(mk._spCircle.getLatLng());
+    return Math.hypot((r.left + r.right) / 2 - box.left - p.x, (r.top + r.bottom) / 2 - box.top - p.y);
+  }));
+}
+function hiddenNote() {
+  const n = w.document.querySelector('#legend-body .legend-hidden');
+  return n ? n.textContent : null;
+}
+function rings() { return w._findLayer ? w._findLayer.getLayers().length : 0; }
+function findRow(name) {
+  return Array.from(w.document.querySelectorAll('#legend-body button[data-find]'))
+    .find(b => b.textContent.indexOf(name) >= 0);
+}
+function fire(el, type) {
+  el.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, view: w }));
+}
+// The zoom at which a metre is `px` pixels on screen, here.
+function zoomFor(px) {
+  return Math.log2(px * 156543.03392 * Math.cos(LAT * Math.PI / 180));
+}
+async function zoomTo(px) {
+  w.map.setView([LAT, LNG], zoomFor(px), { animate: false });
+  await settle();
+}
+async function settle() { await wait(150); }
+
+async function run() {
+  const ready = () => (w = document.getElementById('m').contentWindow).map && w.map.getContainer;
+  for (let i = 0; i < 100 && !ready(); i++) await wait(50);
+  if (!ready()) throw new Error('the map never started');
+  w.bridge = new Proxy({}, { get: (t, name) => (...args) => { calls.push([name].concat(args)); } });
+  w.map.fitBounds(YARD, { padding: [80, 80] });
+
+  // Closed, it builds nothing; open on an empty map, it says so.
+  w.setLegendVisible(true);
+  await settle();
+  out.empty = legend();
+
+  // Plants: two wildflower species, a tree, and one you coloured yourself.
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D, 2, 'wildflower', null);
+  w.placePlantMarker(42, 'Wild Bergamot', LAT + D * 0.5, LNG + D * 1.2, 2, 'wildflower', null);
+  w.placePlantMarker(7, 'Harebell', LAT, LNG - D, 2, 'wildflower', null);
+  w.placePlantMarker(3, 'Bur Oak', LAT - D * 0.5, LNG, 8, 'tree', null);
+  w.placePlantMarker(11, 'Prairie Smoke', LAT + D * 0.2, LNG + D * 0.2, 2, 'wildflower', '#ff5722');
+  await settle();
+  out.by_type = legend();
+
+  // Boundaries, simple: one line however many, a swatch per colour.
+  w.loadBoundary(JSON.stringify({ id: 'b1', color: 'green', points: YARD }), false);
+  w.loadBoundary(JSON.stringify({ id: 'b2', color: 'blue', points: OUTSIDE }), false);
+  await settle();
+  const bsec = () => w.document.querySelector('[data-section="boundaries"]');
+  out.boundaries_simple = { lines: legend().boundaries,
+                            swatches: bsec().querySelectorAll('.legend-swatch').length };
+  w.setBoundaryVisible(false);
+  await settle();
+  out.boundaries_hidden = 'boundaries' in legend();
+  w.setBoundaryVisible(true);
+
+  // A structure, an existing conifer, a shed, a building that casts shade, a
+  // fence and a measurement.
+  w.placeStructureOnMap({ id: 'pond', name: 'Pond', icon: '💧', size_m: 4, shape: 'circle',
+                          color: '#1565c0', fill_color: '#42a5f5' }, LAT - D * 0.6, LNG + D);
+  w.placeStructureOnMap({ id: 'existing_tree', name: 'Existing tree', icon: '🌲', size_m: 6,
+                          shape: 'circle', color: '#1b5e20', fill_color: '#2e7d32',
+                          category: 'Existing' }, LAT + D * 0.7, LNG - D * 1.2);
+  w.loadShape({ shape_id: 's1', shape_type: 'Shed', label: 'Shed', fill_color: '#8d6e63',
+                stroke_color: '#5d4037', fill_opacity: 0.4,
+                points: [[LAT + D * 0.2, LNG - D * 1.4], [LAT + D * 0.2, LNG - D * 1.1],
+                         [LAT + D * 0.5, LNG - D * 1.1], [LAT + D * 0.5, LNG - D * 1.4]] });
+  w.loadShape({ shape_id: 's2', shape_type: 'Building (OSM)', label: 'Building (OSM)',
+                fill_color: '#90a4ae', stroke_color: '#546e7a', height_m: 6,
+                points: [[LAT - D * 0.9, LNG - D * 1.4], [LAT - D * 0.9, LNG - D * 1.0],
+                         [LAT - D * 0.6, LNG - D * 1.0], [LAT - D * 0.6, LNG - D * 1.4]] });
+  w.loadHedgerow({ points: [[LAT - D * 0.95, LNG - D], [LAT - D * 0.95, LNG + D]],
+                   style: 'fence', color: '#795548' });
+  w.loadMeasurement('m1', [[LAT, LNG - D], [LAT, LNG + D]]);
+  await settle();
+  out.everything = legend();
+  w.setMeasureVisible(false);
+  await settle();
+  out.measure_hidden = (legend().other || []).indexOf('Measurement') >= 0;
+  w.setMeasureVisible(true);
+
+  // The Canopy view's ring is named only while it is drawn.
+  w.setCanopyVisible(true);
+  await settle();
+  out.canopy_on = (legend().plants || []).filter(t => t.indexOf('Mature spread') === 0).length;
+  w.setCanopyVisible(false);
+  await settle();
+  out.canopy_off = (legend().plants || []).filter(t => t.indexOf('Mature spread') === 0).length;
+
+  // Plants hidden with the View bar: no plant section.
+  w.setPlantsVisible(false);
+  await settle();
+  out.plants_hidden = 'plants' in legend();
+  w.setPlantsVisible(true);
+  await settle();
+
+  // Species: numbered as the planting plan numbers them, at every zoom (F218).
+  calls = [];
+  press('plants', 'species');
+  await settle();
+  out.species = { lines: legend().plants, told: called('onLegendDetailChanged').map(c => c.slice(1)),
+                  focus: w.document.activeElement && w.document.activeElement.dataset.value,
+                  look: (() => {
+                    const n = numbers()[0], s = n && w.getComputedStyle(n);
+                    return s ? [s.backgroundColor, s.fontSize] : null;
+                  })() };
+  // Close in (a metre is 20 px), every plant holds its own number, on it.
+  await zoomTo(20);
+  out.own = { numbers: numbers().map(n => n.textContent).sort(), off: offPlant(),
+              note: hiddenNote() };
+  // A dragged plant takes its number with it.
+  const oak = Object.values(w.plantMarkers).find(c => c._pd.plantId === 3);
+  oak.setLatLng([LAT - D * 0.3, LNG + D * 0.1]);
+  out.follows = (() => {
+    const mk = tags().find(m => m._spCircle === oak);
+    const a = mk.getLatLng(), b = oak.getLatLng();
+    return Math.abs(a.lat - b.lat) < 1e-9 && Math.abs(a.lng - b.lng) < 1e-9;
+  })();
+  // Further out (2.5 px a metre: a 2 m plant is 5 px across), the two Wild
+  // Bergamots 2.6 m apart share one number, where until F218 there was none.
+  await zoomTo(2.5);
+  out.grouped = { numbers: numbers().map(n => n.textContent).sort(),
+                  bergamot: tags().filter(mk => mk._spCircle._pd.plantId === 42)
+                    .map(mk => mk._spMembers.length),
+                  overlapping: overlapping(), note: hiddenNote() };
+  // The whole yard 4 px across, with eight more species in it: no number
+  // covers another, and the legend says how many wait for a closer zoom.
+  await zoomTo(0.1);
+  const extra = [];
+  for (let i = 0; i < 8; i++) {
+    extra.push(w.placePlantMarker(100 + i, 'Extra ' + i, LAT + D * 0.1 * (i % 3),
+                                  LNG + D * 0.1 * Math.floor(i / 3), 1, 'wildflower', null));
+  }
+  await settle();
+  out.crowded = { species: w.document.querySelectorAll('#legend-body button[data-find]').length,
+                  tags: tags().length, overlapping: overlapping(), note: hiddenNote() };
+  extra.forEach(id => w._removeSinglePlantMarker(id, true));
+  w.map.fitBounds(YARD, { padding: [80, 80], animate: false });
+  await settle();
+  out.crowded.after = hiddenNote();
+
+  // Pointing at a species in the legend rings its plants and leaving lets them
+  // go; a click keeps them, through a rebuild, until a second click.
+  const berg = () => findRow('Wild Bergamot');
+  out.find = { buttons: w.document.querySelectorAll('#legend-body button[data-find]').length,
+               label: berg().getAttribute('aria-label') };
+  fire(berg(), 'mouseover');
+  out.find.hover = rings();
+  out.find.on_plants = w._findLayer.getLayers().every(r => Object.values(w.plantMarkers).some(
+    c => c._pd.plantId === 42 && c.getLatLng().equals(r.getLatLng())));
+  fire(berg(), 'mouseout');
+  out.find.left = rings();
+  fire(berg(), 'click');
+  out.find.pinned = [rings(), berg().getAttribute('aria-pressed')];
+  const yarrow = w.placePlantMarker(55, 'Yarrow', LAT - D * 0.2, LNG - D * 0.5, 1, 'wildflower', null);
+  await settle();                                     // the legend is built again
+  out.find.rebuilt = [rings(), berg().getAttribute('aria-pressed')];
+  w._removeSinglePlantMarker(yarrow, true);
+  await settle();
+  findRow('Harebell').dispatchEvent(new w.FocusEvent('focusin', { bubbles: true }));
+  out.find.tabbed = rings();                          // Harebell's one plant
+  findRow('Harebell').dispatchEvent(new w.FocusEvent('focusout', { bubbles: true }));
+  out.find.tabbed_away = rings();                     // the kept Bergamots again
+  await zoomTo(0.5);                                  // a 2 m plant is a 1 px dot
+  out.find.far_radius = Math.min(...w._findLayer.getLayers().map(r => r.getRadius()));
+  w.map.fitBounds(YARD, { padding: [80, 80], animate: false });
+  await settle();
+  fire(berg(), 'click');
+  out.find.unpinned = [rings(), berg().getAttribute('aria-pressed')];
+  fire(berg(), 'click');
+  press('plants', 'type');
+  await settle();
+  out.find.type = [rings(), w.document.querySelectorAll('#legend-body button[data-find]').length];
+  press('plants', 'species');
+  await settle();
+  out.find.species_again = rings();
+
+  // Boundaries, named: a line per colour and name; a click names its line.
+  press('boundaries', 'named');
+  await settle();
+  out.named = { lines: legend().boundaries, told: called('onLegendDetailChanged').slice(-1)[0].slice(1) };
+  w.setBoundaryNames(['b1'], 'City park land');
+  w.setBoundaryNames(['b2'], 'Private lot');
+  await settle();
+  out.named.after = legend().boundaries;
+  calls = [];
+  const line = Array.from(w.document.querySelectorAll('button.legend-name'))
+    .find(b => b.textContent.indexOf('Private lot') >= 0);
+  line.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
+  out.named.asked = called('onBoundaryNameRequested').map(c => [JSON.parse(c[1]), c[2]]);
+  // A name is text, never markup.
+  w.setBoundaryNames(['b2'], '<img src=x onerror="window._xss=1">');
+  await settle();
+  out.named.escaped = !w.document.querySelector('#legend-body img') && !w._xss;
+  w.setBoundaryNames(['b2'], 'Private lot');
+  // Two boundaries of one colour and name are one line, and it names both.
+  w.loadBoundary(JSON.stringify({ id: 'b3', color: 'blue', name: 'Private lot',
+                                  points: OUTSIDE.map(p => [p[0] + D * 0.8, p[1]]) }), false);
+  await settle();
+  out.named.grouped = legend().boundaries;
+  calls = [];
+  Array.from(w.document.querySelectorAll('button.legend-name'))
+    .find(b => b.textContent.indexOf('Private lot') >= 0)
+    .dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
+  out.named.asked_both = called('onBoundaryNameRequested').map(c => JSON.parse(c[1]));
+
+  // Closed, the numbers and the rings go; Python's word sets the detail back.
+  fire(findRow('Wild Bergamot'), 'click');
+  out.open_rings = rings();
+  w.setLegendVisible(false);
+  out.closed_numbers = numbers().length;
+  out.closed_rings = rings();
+  w.setLegendDetail('type', 'simple');
+  w.setLegendDetail('nonsense', 42);                  // ignored
+  w.setLegendVisible(true);
+  await settle();
+  out.back = { detail: Object.assign({}, w.legendDetail), plants: legend().plants,
+               boundaries: legend().boundaries, numbers: numbers().length };
+}
+
+run().then(
+  () => { document.title = 'MEASURED ' + JSON.stringify(out); },
+  e => { out.error = String(e && e.stack || e); document.title = 'MEASURED ' + JSON.stringify(out); }
+).finally(() => { document.getElementById('out').textContent = JSON.stringify(out, null, 1); });
+</script>
+</body></html>

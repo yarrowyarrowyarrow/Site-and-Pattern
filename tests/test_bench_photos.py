@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(_ROOT, "scripts"))
 
 import tune_morphology as bench                             # noqa: E402
 
-_SCI = "Rudbeckia hirta"
+_SCI = "Ratibida columnifera"
 
 
 class TestVocabulary(unittest.TestCase):
@@ -132,11 +132,11 @@ class TestLookupLinks(unittest.TestCase):
         """Order is by licence, not by quality. FNA has the best descriptions
         and is copyrighted; Budd's is a Government of Canada publication AND the
         right region, so it is what somebody should reach for first."""
-        links = bench.lookup_links("Rudbeckia hirta")
+        links = bench.lookup_links("Ratibida columnifera")
         self.assertIn("Budd", links[0]["name"])
 
     def test_only_some_links_offer_to_be_read(self):
-        links = bench.lookup_links("Rudbeckia hirta")
+        links = bench.lookup_links("Ratibida columnifera")
         readable = [l["name"] for l in links if l.get("read")]
         self.assertTrue(readable)
         self.assertLess(len(readable), len(links),

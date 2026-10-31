@@ -221,6 +221,25 @@ def lep_activity_seasons() -> dict:
         conn.close()
 
 
+def lep_kinds() -> dict:
+    """``{fauna_id: 'butterfly' | 'moth' | 'skipper'}`` for every lepidopteran
+    whose kind is recorded (V2.88).
+
+    The 3D scene used to decide butterfly or moth from the COMMON NAME, which
+    since the fauna expansion is usually the scientific name, so 159 moths were
+    drawn as butterflies. `kind` has been recorded for every row since schema
+    v40; this is what reads it.
+    """
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT fauna_id, kind FROM lepidoptera_attributes "
+            "WHERE kind IS NOT NULL").fetchall()
+        return {r[0]: r[1] for r in rows}
+    finally:
+        conn.close()
+
+
 def plants_in_genera(genera: list[str]) -> list[dict]:
     """Return plant rows whose scientific-name genus (the first token) is one of
     ``genera`` (case-insensitive). Used by the bee habitat builder's genus-level

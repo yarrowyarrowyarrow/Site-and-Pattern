@@ -364,8 +364,36 @@ class TestOneVocabularyEverywhere(unittest.TestCase):
     """
 
     def test_the_validator_accepts_exactly_the_vocabulary(self):
+        """All three levels of it (V2.75).
+
+        This asserted equality with the 24 bare ecoregion keys, and was right
+        when the vocabulary had one level. V2.68 added an ecozone above and an
+        Alberta natural subregion below; V2.73's migration then wrote
+        `zone_prairies` onto 303 species, and the validator called every one of
+        them an unknown key -- 303 of 430 warnings were the gate disagreeing
+        with data the same release shipped.
+
+        Still exactly the vocabulary, still one source: `ecoregion_tree` reads
+        the same polygon file. What changed is how much of it the gate can see.
+        """
         from src.data_quality import _load_ecoregion_keys
-        self.assertEqual(_load_ecoregion_keys(), set(_eco.ecoregion_keys()))
+        from src.ecoregion_tree import tree
+
+        expected = set(_eco.ecoregion_keys())
+
+        def walk(nodes):
+            for key, _name, _level, children in nodes:
+                expected.add(key)
+                walk(children)
+
+        walk(tree())
+        self.assertEqual(_load_ecoregion_keys(), expected)
+        # The three levels are all present, and the prefixes are what keep
+        # "Athabasca Plain" the ecoregion apart from "Athabasca Plain" the
+        # Alberta subregion.
+        self.assertTrue(any(k.startswith("zone_") for k in expected))
+        self.assertTrue(any(k.startswith("sub_") for k in expected))
+        self.assertIn("aspen_parkland", expected)
 
     def test_the_validator_refuses_an_empty_vocabulary(self):
         """A silent pass is worse than a loud failure in a data gate: an empty

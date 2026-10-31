@@ -63,7 +63,9 @@ jobs:
         run: |
           set -eux
           arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
-          arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller
+          # At the versions of the last good build (V3.32, FN-12).
+          arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller \
+            -c scripts/packaging/constraints-macos.txt
 
       - name: Shim pip/pyinstaller to the x86_64 framework Python
         # The python.org framework ships `pip3`, not a bare `pip`, and we need
@@ -89,7 +91,17 @@ jobs:
       - name: Publish to a GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          # `release-` PREFIX IS LOAD-BEARING (V2.80). Tagging with the bare
+          # branch name gave every release a tag identical to a branch, which
+          # git cannot disambiguate: `git push -u origin V2.79` fails with
+          # "src refspec matches more than one", and `git pull origin V2.79`
+          # silently resolves the TAG and rewinds the working branch to it.
+          # That has cost this project real time more than once. The Release's
+          # display `name` below stays the bare version, so nothing a reader
+          # sees changes. `github_releases._TAG_RE` accepts both spellings and
+          # must keep accepting the old one: ~102 tags use it and each anchors
+          # a release the in-app updater reads.
+          tag_name: release-${{ github.ref_name }}
           # WITHOUT THIS LINE THE TAG LANDS ON THE WRONG COMMIT (fixed V2.72).
           # This action creates the tag when it does not already exist, and with
           # no target_commitish GitHub anchors a new tag to the REPOSITORY'S
@@ -101,6 +113,16 @@ jobs:
           # "Source code" links on the release page, pointed somewhere else.
           target_commitish: ${{ github.sha }}
           name: ${{ github.ref_name }}
+          # PRERELEASE BY DEFAULT (V3.18, FN-7, decision D5). The in-app updater
+          # skips prereleases (github_releases.list_releases), so a push builds
+          # and publishes installers without offering them to every installed
+          # copy; five releases reached users in one day before this. The
+          # owner offers one by promoting it: on the release page (Edit, untick
+          # "Set as a pre-release"), or with promote-release.yml once that file
+          # is on the default branch. A later push to a promoted version makes it
+          # a prerelease again until it is promoted again: the new build is
+          # the one nobody has looked at. Keep in step with the other file.
+          prerelease: true
           # Keep this body IDENTICAL to release-windows.yml: both workflows
           # publish to the same release, so whichever finishes last sets the
           # final notes — a shared combined body keeps them correct either way.
@@ -124,6 +146,19 @@ jobs:
             After that first time it opens normally. To get future versions, use **Help → Check for Updates** inside the app — those install with no security warning.
 
             *Apple Silicon (M1–M4): if macOS offers to install **Rosetta** on first launch, click Install (one time).*
+
+            ### Your first yard, in five steps
+            1. **Find your yard:** type your address on the Site tab and press Find, or click your yard on the map.
+            2. **Outline a bed:** press **▱ Shape** above the map, choose *Garden Bed*, press *Draw on the map*, click the bed's corners and click the first corner again to close it.
+            3. **Plan my yard:** the button in the strip above the map fills the bed with plants native to your area.
+            4. **Look at the overview:** Design › Overview says what the plan feeds, how full it is and what it will take.
+            5. **Print the plan:** Share › Export › **Export PDF…** gives the overview, a shopping list, a planting map and a care calendar.
+
+            The app is not an identification guide: check a plant's identity with a book or a person before you collect or eat it.
+
+            **What leaves your computer:** the address you type (to OpenStreetMap's address search), your yard's location (to Open-Meteo and SoilGrids, for its climate and soil) and the part of the map on screen (to the map's tile servers). No account, no analytics. Help › About says the same.
+
+            **Feedback:** Help › Send Feedback… in the app, or [open an issue](https://github.com/yarrowyarrowyarrow/Site-and-Pattern/issues/new) if you have a GitHub account.
 
             ---
           generate_release_notes: true

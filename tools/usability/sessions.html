@@ -1,0 +1,476 @@
+<title>Plan My Yard Sessions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Young+Serif&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field clipboard. The rule that decides "finished" on top, the
+   script to read aloud, then one sheet per person, then the words people
+   did not know (they feed the app's glossary). */
+:root {
+  --bg: #f3f5f1;          /* sage-tinted paper */
+  --surface: #ffffff;
+  --ink: #1d2a24;         /* spruce-black */
+  --muted: #56645c;
+  --line: #d5ddd6;
+  --accent: #2f5d4a;      /* spruce */
+  --accent-ink: #ffffff;
+  --gold: #b8860b;        /* stiff goldenrod */
+  --gold-soft: #f6ecd2;
+  --good: #2e7d4f;
+  --good-soft: #e1f1e7;
+  --warn: #9a6400;
+  --warn-soft: #fbf0d9;
+  --bad: #b03a2e;
+  --bad-soft: #f8e4e1;
+  --focus: #b8860b;
+  --font-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141b17; --surface: #1c2520; --ink: #e4ece6; --muted: #a3b1a8;
+    --line: #33413a; --accent: #7fc0a1; --accent-ink: #0f1713;
+    --gold: #e0b44c; --gold-soft: #3a3120; --good: #7fd09e; --good-soft: #1f3529;
+    --warn: #e7b65a; --warn-soft: #3a2f1a; --bad: #f08b7f; --bad-soft: #3d2420;
+    --focus: #e0b44c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141b17; --surface: #1c2520; --ink: #e4ece6; --muted: #a3b1a8;
+  --line: #33413a; --accent: #7fc0a1; --accent-ink: #0f1713;
+  --gold: #e0b44c; --gold-soft: #3a3120; --good: #7fd09e; --good-soft: #1f3529;
+  --warn: #e7b65a; --warn-soft: #3a2f1a; --bad: #f08b7f; --bad-soft: #3d2420;
+  --focus: #e0b44c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 16px; line-height: 1.5;
+}
+.wrap {
+  max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.1; }
+h2 { font-size: 24px; }
+h3 { font-size: 19px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); font-size: 17px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--muted); font-weight: 700; }
+section { display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn {
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+  padding: 10px 16px; font-weight: 700; min-height: 44px;
+}
+.btn.quiet { background: transparent; color: var(--accent); border: 1px solid var(--line); font-weight: 400; }
+.btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); font-weight: 400; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* The rule */
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.rule .count { font-family: var(--font-display); font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+.rule .count small { font-size: 20px; color: var(--muted); }
+.slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.slot { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed var(--line);
+  display: grid; place-items: center; font-family: var(--font-data); font-size: 13px; color: var(--muted); }
+.slot.pass { border: 2px solid var(--good); background: var(--good-soft); color: var(--good); }
+.slot.fail { border: 2px solid var(--bad); background: var(--bad-soft); color: var(--bad); }
+.slot.part { border: 2px solid var(--warn); background: var(--warn-soft); color: var(--warn); }
+.status { padding: 4px 10px; border-radius: 999px; font-size: 14px; font-weight: 700; display: inline-block; }
+.status.good { background: var(--good-soft); color: var(--good); }
+.status.wait { background: var(--gold-soft); color: var(--gold); }
+.status.bad { background: var(--bad-soft); color: var(--bad); }
+.repeat-list { display: flex; flex-direction: column; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.repeat-list li { font-size: 15px; }
+@media (max-width: 560px) { .rule { grid-template-columns: 1fr; } }
+
+/* Setup and tasks */
+.checklist { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 68ch; }
+.tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.task { display: flex; flex-direction: column; gap: 8px; }
+.task .num { font-family: var(--font-data); color: var(--gold); font-weight: 500; font-size: 14px; }
+.task .say { font-family: var(--font-display); font-size: 17px; line-height: 1.35; }
+.task .win { font-size: 14px; color: var(--muted); }
+.task.must { border-color: var(--gold); }
+.must-tag { font-size: 12px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* People */
+.people-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.people { display: flex; flex-direction: column; gap: 16px; }
+.empty { text-align: left; color: var(--muted); border-style: dashed; }
+.person { display: flex; flex-direction: column; gap: 14px; }
+.person-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); min-width: 0; }
+input, select, textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  min-height: 40px; color: var(--ink); min-width: 0;
+}
+textarea { resize: vertical; min-height: 64px; width: 100%; }
+.person-name { font-family: var(--font-display); font-size: 20px; padding: 6px 10px; }
+.grid { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 720px; }
+th, td { border-top: 1px solid var(--line); padding: 8px 6px; vertical-align: top; text-align: left; }
+th { font-size: 13px; color: var(--muted); font-weight: 700; }
+td.n { font-family: var(--font-data); color: var(--gold); width: 28px; }
+td select { width: 140px; }
+td input.min { width: 72px; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+td textarea { min-height: 40px; }
+select.unaided { border-color: var(--good); background: var(--good-soft); }
+select.help { border-color: var(--warn); background: var(--warn-soft); }
+select.no { border-color: var(--bad); background: var(--bad-soft); }
+.saving { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.danger-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Words */
+.words { display: flex; flex-wrap: wrap; gap: 8px; }
+.word { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 15px; }
+.word b { font-family: var(--font-data); font-weight: 500; color: var(--gold); margin-left: 6px; }
+.note { font-size: 14px; color: var(--muted); }
+.banner { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <span class="eyebrow">Site &amp; Pattern · usability sessions (FN-9)</span>
+    <h1>Plan My Yard Sessions</h1>
+    <p class="lede">Five homeowners, seven tasks, watched without helping. Write down where each person stops, and the words they did not know. These notes decide whether the app is finished.</p>
+  </header>
+
+  <section aria-labelledby="rule-h">
+    <h2 id="rule-h">Is it finished?</h2>
+    <div class="card rule">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <p><strong>Finished when four of five people do tasks 1, 2, 6 and 7 unaided</strong>, and no task fails for the same reason twice.</p>
+        <div class="slots" id="slots" aria-label="Each person's result on tasks 1, 2, 6 and 7"></div>
+        <div id="rule-status"></div>
+      </div>
+      <div class="count" id="count" aria-live="polite">0<small> / 4 needed</small></div>
+    </div>
+    <div class="card" id="repeats-card">
+      <h3 style="margin-bottom:8px">Where tasks stopped</h3>
+      <p class="note" style="margin-bottom:10px">Read these side by side. Two people stopping at the same place for the same reason is a fix to make before the next session.</p>
+      <ul class="repeat-list" id="repeats"><li class="note">Nothing has stopped yet.</li></ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="setup-h">
+    <h2 id="setup-h">Before each session</h2>
+    <div class="card">
+      <ol class="checklist">
+        <li>A Windows laptop at 1366 × 768, with the newest release installed fresh (not updated over an old copy).</li>
+        <li>An internet connection, and the person's own address, or a friend's.</li>
+        <li>Advanced tools off (View menu). That is how a new copy starts.</li>
+        <li>Screen recording, only if they agree. 45 minutes.</li>
+        <li>Say: <em>"We are testing the app, not you. Please think aloud."</em> Then read one task at a time, and do not help.</li>
+        <li>Write no name or address on this page. "Person 3" is enough; the notes are shared.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section aria-labelledby="tasks-h">
+    <h2 id="tasks-h">The seven tasks, to read aloud</h2>
+    <div class="tasks" id="tasks"></div>
+  </section>
+
+  <section aria-labelledby="people-h">
+    <div class="people-head">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h2 id="people-h">People</h2>
+        <p class="note">One sheet per person. Changes save as you go, and everyone with this page sees them.</p>
+      </div>
+      <button class="btn" id="add" type="button" disabled>Add a person</button>
+    </div>
+    <div id="banner"></div>
+    <div class="people" id="people">
+      <div class="card empty" id="empty">
+        <p>No sessions recorded yet. After the first one, press <strong>Add a person</strong> and fill in the sheet: for each task, whether they did it unaided, how many minutes it took, where they stopped, and any word they did not know.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="words-h">
+    <h2 id="words-h">Words people did not know</h2>
+    <p class="note">From every sheet, most often first. These go into the app's word list (docs/homeowner/09-words.md) so the next copy says them differently.</p>
+    <div class="words" id="words"><span class="note">None yet.</span></div>
+  </section>
+</div>
+
+<script>
+const TASKS = [
+  { n: 1, must: true, say: "You'd like to replace some of your front lawn with native plants. Start a plan for your yard.",
+    win: "A pin on their yard and an outline or a bed, within 10 minutes, without help." },
+  { n: 2, must: true, say: "Get the app to suggest a planting.",
+    win: "A plan in the drawn area." },
+  { n: 3, say: "Is this planting going to look messy from the street? What would help?",
+    win: "They find the Overview's street item and name one sign of care." },
+  { n: 4, say: "Find a plant in your plan that will feed caterpillars, and tell me how tall it gets.",
+    win: "They open a plant's page and read both." },
+  { n: 5, say: "Swap one plant you don't like for another that suits the same spot.",
+    win: "A plant is replaced (the plant page's Swap…, or by hand)." },
+  { n: 6, must: true, say: "You're going to the nursery on Saturday. Get what you'll need.",
+    win: "A printed or saved plan and order file." },
+  { n: 7, must: true, say: "Close the app. Next week, come back to this yard.",
+    win: "One click from the start screen." },
+];
+const MUST = TASKS.filter(t => t.must).map(t => String(t.n));
+const OUTCOMES = [["", "Not recorded"], ["unaided", "Unaided"], ["help", "With help"], ["no", "Not done"]];
+const FITS = [["", "Not recorded"], ["sam", "Converting a lawn (Sam)"], ["jordan", "New house, bare lot (Jordan)"],
+              ["robin", "Gardener adding natives (Robin)"], ["other", "Someone else"]];
+
+const $ = id => document.getElementById(id);
+const el = (tag, props = {}, kids = []) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of [].concat(kids)) if (k != null) e.append(k);
+  return e;
+};
+
+// The script, static.
+for (const t of TASKS) {
+  $("tasks").append(el("div", { class: "card task" + (t.must ? " must" : "") }, [
+    el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, [
+      el("span", { class: "num", text: "Task " + t.n }),
+      t.must ? el("span", { class: "must-tag", text: "Counts for finished" }) : null,
+    ]),
+    el("p", { class: "say", text: "“" + t.say + "”" }),
+    el("p", { class: "win", text: "Done when: " + t.win }),
+  ]));
+}
+
+let db = null, canWrite = true;
+let sessions = [];            // [{id, data}]
+const cards = new Map();      // id -> {root, refresh}
+const pending = new Map();    // id -> timer
+
+function personPasses(d) {
+  const tasks = d.tasks || {};
+  const outs = MUST.map(n => (tasks[n] || {}).outcome || "");
+  if (outs.every(o => o === "unaided")) return "pass";
+  if (outs.some(o => o === "help" || o === "no")) return "fail";
+  return "part";
+}
+
+function renderRule() {
+  const slots = $("slots"); slots.textContent = "";
+  let passed = 0, failed = 0;
+  sessions.forEach((s, i) => {
+    const r = personPasses(s.data);
+    if (r === "pass") passed++; if (r === "fail") failed++;
+    const label = s.data.label || ("Person " + (i + 1));
+    slots.append(el("span", { class: "slot " + r, title: label + ": " +
+      (r === "pass" ? "tasks 1, 2, 6 and 7 unaided" : r === "fail" ? "needed help or did not finish one of 1, 2, 6, 7" : "not all recorded yet"),
+      text: String(i + 1) }));
+  });
+  for (let i = sessions.length; i < 5; i++) slots.append(el("span", { class: "slot", title: "No one yet", text: String(i + 1) }));
+  $("count").innerHTML = "";
+  $("count").append(String(passed), el("small", { text: " / 4 needed" }));
+
+  // Repeats: every task that stopped, grouped by task.
+  const byTask = {};
+  sessions.forEach((s, i) => {
+    const tasks = s.data.tasks || {};
+    for (const t of TASKS) {
+      const r = tasks[String(t.n)] || {};
+      if (r.outcome === "help" || r.outcome === "no") {
+        (byTask[t.n] = byTask[t.n] || []).push({ who: s.data.label || ("Person " + (i + 1)),
+          how: r.outcome === "help" ? "with help" : "not done", why: (r.stopped || "").trim() });
+      }
+    }
+  });
+  const list = $("repeats"); list.textContent = "";
+  const keys = Object.keys(byTask);
+  if (!keys.length) list.append(el("li", { class: "note", text: "Nothing has stopped yet." }));
+  for (const n of keys) {
+    const rows = byTask[n];
+    const li = el("li", {}, [el("strong", { text: "Task " + n + (rows.length > 1 ? " · " + rows.length + " people" : "") + ": " })]);
+    li.append(rows.map(r => r.who + " (" + r.how + ")" + (r.why ? ": " + r.why : ", no reason written")).join("; "));
+    list.append(li);
+  }
+
+  const repeated = keys.filter(n => byTask[n].length > 1);
+  let status;
+  if (passed >= 4 && sessions.length >= 5 && !repeated.length) status = el("span", { class: "status good", text: "Finished: four of five did it unaided" });
+  else if (failed > sessions.length - 4 && sessions.length >= 5) status = el("span", { class: "status bad", text: "Not yet: fewer than four can pass. Fix what stopped them, then run more sessions." });
+  else status = el("span", { class: "status wait", text: sessions.length < 5 ? (5 - sessions.length) + " more " + (5 - sessions.length === 1 ? "session" : "sessions") + " to run" : "Check the repeats below" });
+  $("rule-status").textContent = "";
+  $("rule-status").append(status);
+  if (repeated.length) $("rule-status").append(" ", el("span", { class: "note", text: "Tasks " + repeated.join(", ") + " stopped more than one person: read the reasons." }));
+}
+
+function renderWords() {
+  const counts = new Map();
+  for (const s of sessions) for (const r of Object.values(s.data.tasks || {})) {
+    for (const w of String(r.words || "").split(/[,;\n]/)) {
+      const word = w.trim().toLowerCase(); if (!word) continue;
+      counts.set(word, (counts.get(word) || 0) + 1);
+    }
+  }
+  const box = $("words"); box.textContent = "";
+  if (!counts.size) { box.append(el("span", { class: "note", text: "None yet." })); return; }
+  [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .forEach(([w, c]) => box.append(el("span", { class: "word" }, [w, c > 1 ? el("b", { text: "×" + c }) : null])));
+}
+
+function save(id, patch, saving) {
+  if (!db || !canWrite) return;
+  clearTimeout(pending.get(id));
+  saving.textContent = "Saving…";
+  pending.set(id, setTimeout(async () => {
+    try { await db.collection("sessions").doc(id).update(patch); saving.textContent = "Saved"; }
+    catch (e) { saving.textContent = ""; readOnly(e); }
+  }, 600));
+}
+
+function readOnly(e) {
+  canWrite = false;
+  $("add").disabled = true;
+  $("banner").textContent = "";
+  const msg = (e && (e.code === "permission_denied" || e.code === "not_granted"))
+    ? "You can read these notes. To add to them, ask the page's owner for edit access."
+    : "Changes could not be saved just now. Check the connection and reload the page.";
+  $("banner").append(el("p", { class: "banner", text: msg }));
+  for (const c of cards.values()) c.root.querySelectorAll("input,select,textarea,button").forEach(x => x.disabled = true);
+}
+
+function setIfIdle(input, value) {
+  if (document.activeElement !== input && input.value !== (value ?? "")) input.value = value ?? "";
+}
+
+function buildCard(id) {
+  const saving = el("span", { class: "saving", "aria-live": "polite" });
+  const name = el("input", { class: "person-name", id: "name-" + id, "aria-label": "Who (no real names)" });
+  name.addEventListener("input", () => save(id, { label: name.value }, saving));
+  const date = el("input", { type: "date", id: "date-" + id });
+  date.addEventListener("change", () => save(id, { date: date.value }, saving));
+  const fits = el("select", { id: "fits-" + id }, FITS.map(([v, t]) => el("option", { value: v, text: t })));
+  fits.addEventListener("change", () => save(id, { fits: fits.value }, saving));
+
+  const rows = {};
+  const tbody = el("tbody");
+  for (const t of TASKS) {
+    const k = String(t.n);
+    const outcome = el("select", { id: `o-${id}-${k}`, "aria-label": `Task ${k}: result` },
+      OUTCOMES.map(([v, txt]) => el("option", { value: v, text: txt })));
+    const minutes = el("input", { class: "min", type: "number", min: "0", step: "1", id: `m-${id}-${k}`, "aria-label": `Task ${k}: minutes` });
+    const stopped = el("textarea", { id: `s-${id}-${k}`, rows: "1", "aria-label": `Task ${k}: where they stopped and why` });
+    const words = el("input", { id: `w-${id}-${k}`, "aria-label": `Task ${k}: words they did not know`, placeholder: "e.g. boundary, cover" });
+    const expected = el("textarea", { id: `e-${id}-${k}`, rows: "1", "aria-label": `Task ${k}: what they expected that was not there` });
+    const write = (field, input) => save(id, { tasks: { [k]: { [field]: field === "minutes" ? (input.value === "" ? null : Number(input.value)) : input.value } } }, saving);
+    outcome.addEventListener("change", () => { paint(outcome); write("outcome", outcome); });
+    minutes.addEventListener("input", () => write("minutes", minutes));
+    stopped.addEventListener("input", () => write("stopped", stopped));
+    words.addEventListener("input", () => write("words", words));
+    expected.addEventListener("input", () => write("expected", expected));
+    rows[k] = { outcome, minutes, stopped, words, expected };
+    tbody.append(el("tr", {}, [
+      el("td", { class: "n", text: k + (t.must ? "*" : "") }),
+      el("td", {}, outcome), el("td", {}, minutes), el("td", {}, stopped), el("td", {}, words), el("td", {}, expected),
+    ]));
+  }
+  const notes = el("textarea", { id: "notes-" + id, "aria-label": "Anything else" });
+  notes.addEventListener("input", () => save(id, { notes: notes.value }, saving));
+
+  let armed = false;
+  const del = el("button", { class: "btn danger", type: "button", text: "Delete this sheet" });
+  const delNote = el("span", { class: "note" });
+  del.addEventListener("click", async () => {
+    if (!armed) { armed = true; del.textContent = "Press again to delete"; delNote.textContent = "This removes the sheet for everyone."; return; }
+    try { await db.collection("sessions").doc(id).delete(); } catch (e) { readOnly(e); }
+  });
+  del.addEventListener("blur", () => { armed = false; del.textContent = "Delete this sheet"; delNote.textContent = ""; });
+
+  const root = el("article", { class: "card person", "aria-label": "Session sheet" }, [
+    el("div", { class: "person-top" }, [
+      el("div", { class: "fields" }, [
+        el("label", { for: "name-" + id }, ["Who (no real names)", name]),
+        el("label", { for: "date-" + id }, ["Date", date]),
+        el("label", { for: "fits-" + id }, ["Fits", fits]),
+      ]),
+      saving,
+    ]),
+    el("div", { class: "grid" }, el("table", {}, [
+      el("thead", {}, el("tr", {}, ["Task", "Result", "Minutes", "Where they stopped (over 10 s), and why", "Words they did not know", "What they expected"].map(h => el("th", { text: h })))),
+      tbody,
+    ])),
+    el("p", { class: "note", text: "* counts for finished." }),
+    el("label", { for: "notes-" + id }, ["Anything else", notes]),
+    el("div", { class: "danger-row" }, [del, delNote]),
+  ]);
+
+  function paint(sel) { sel.className = sel.value; }
+  function refresh(d) {
+    setIfIdle(name, d.label); setIfIdle(date, d.date); setIfIdle(fits, d.fits); setIfIdle(notes, d.notes);
+    for (const [k, r] of Object.entries(rows)) {
+      const t = (d.tasks || {})[k] || {};
+      setIfIdle(r.outcome, t.outcome); paint(r.outcome);
+      setIfIdle(r.minutes, t.minutes == null ? "" : String(t.minutes));
+      setIfIdle(r.stopped, t.stopped); setIfIdle(r.words, t.words); setIfIdle(r.expected, t.expected);
+    }
+    if (!canWrite) root.querySelectorAll("input,select,textarea,button").forEach(x => x.disabled = true);
+  }
+  return { root, refresh };
+}
+
+function renderPeople() {
+  const box = $("people");
+  $("empty").hidden = sessions.length > 0;
+  const seen = new Set();
+  sessions.forEach(s => {
+    seen.add(s.id);
+    let c = cards.get(s.id);
+    if (!c) { c = buildCard(s.id); cards.set(s.id, c); }
+    box.append(c.root);          // keeps order; moving a node keeps its focus state
+    c.refresh(s.data);
+  });
+  for (const [id, c] of cards) if (!seen.has(id)) { c.root.remove(); cards.delete(id); }
+}
+
+function renderAll() { renderRule(); renderPeople(); renderWords(); }
+renderRule();
+
+$("add").addEventListener("click", async () => {
+  if (!db) return;
+  const n = sessions.length + 1;
+  try {
+    await db.collection("sessions").add({ label: "Person " + n, date: new Date().toISOString().slice(0, 10),
+      fits: "", notes: "", tasks: {}, created: new Date().toISOString() });
+  } catch (e) { readOnly(e); }
+});
+
+(async () => {
+  db = await (window.claude?.use?.("db") ?? Promise.resolve(null));
+  if (!db) {
+    $("banner").append(el("p", { class: "banner", text: "The shared notes could not be reached here. Open this page while signed in to claude.ai to read and add to them." }));
+    return;
+  }
+  try {
+    const user = await window.claude.use("user");
+    const may = user && typeof user.can === "function" ? await user.can("data.write") : null;
+    if (may === false) canWrite = false;
+  } catch (_) { /* decide on the first refused write instead */ }
+  $("add").disabled = !canWrite;
+  if (!canWrite) readOnly({ code: "not_granted" });
+  db.collection("sessions").orderBy("created").onSnapshot(snap => {
+    sessions = snap.docs.filter(d => d.exists).map(d => ({ id: d.id, data: d.data() || {} }));
+    renderAll();
+  }, e => {
+    $("banner").textContent = "";
+    $("banner").append(el("p", { class: "banner", text: "The notes stopped updating (" + (e && e.code || "error") + "). Reload the page." }));
+  });
+})();
+</script>

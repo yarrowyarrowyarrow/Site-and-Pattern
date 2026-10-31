@@ -419,7 +419,9 @@ class TestTheLifeStageRecovery(unittest.TestCase):
         for pair in (("Evening Primrose", "Schinia florida"),
                      ("Spreading Dogbane", "Cycnia tenera"),
                      ("Flat-topped White Aster", "Chlosyne harrisii"),
-                     ("Slender Nettle", "Polygonia interrogationis")):
+                     # "Slender Nettle" until V2.82 merged the duplicate
+                     # Urtica gracilis rows under the name a reader searches.
+                     ("Stinging Nettle", "Polygonia interrogationis")):
             self.assertIn(pair, hosts)
 
     def test_the_recovery_added_no_monarch_host(self):

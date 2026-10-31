@@ -82,7 +82,11 @@ class ReferenceEcosystemWindow(QWidget):
                  center: Optional[tuple] = None,
                  toolbar_groups=_TOOLBAR_GROUPS):
         super().__init__(None)   # top-level window
-        self.setWindowTitle(f"{APP_NAME}: Reference Ecosystem")
+        self.setWindowTitle(f"{APP_NAME}: Walk a Wild Landscape")
+        # Dark like the app (F209, V3.08): its pale-green words were written
+        # for a dark window and sat on light grey, nearly invisible.
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
         self.resize(960, 700)
         self._center = center or (51.05, -114.07)
         self._project: dict = {}
@@ -121,7 +125,7 @@ class ReferenceEcosystemWindow(QWidget):
         self._desc = QLabel("")
         self._desc.setWordWrap(True)
         self._desc.setStyleSheet(
-            "color: #b7c9bd; font-size: 11px; padding: 0 10px 6px 10px;")
+            "color: #b7c9bd; font-size: 12px; padding: 0 10px 6px 10px;")
         lay.addWidget(self._desc)
 
         self.viewer = Map3DWidget(self)
@@ -172,7 +176,7 @@ class ReferenceEcosystemWindow(QWidget):
 
     def _label(self, text: str) -> QLabel:
         lab = QLabel(text)
-        lab.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        lab.setStyleSheet("color: #90a4ae; font-size: 12px;")
         return lab
 
     def _build_tools(self) -> QHBoxLayout:

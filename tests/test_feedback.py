@@ -13,6 +13,8 @@ part of the contract as what it does.
 import os
 import sys
 import unittest
+from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -95,6 +97,31 @@ class TestFeedbackCore(unittest.TestCase):
         from src.github_releases import DEFAULT_REPO
         self.assertIn(DEFAULT_REPO, feedback.issue_url("idea", "hi"))
 
+    def test_the_email_carries_the_report(self):
+        url = feedback.mailto_url("feedback@example.org", "idea",
+                                  "Show bloom by week & month",
+                                  feedback.diagnostics("V3.31", 90))
+        self.assertTrue(url.startswith("mailto:feedback@example.org?subject="))
+        q = parse_qs(urlparse(url).query)
+        self.assertEqual(q["subject"][0],
+                         "Site & Pattern: Idea: Show bloom by week & month")
+        self.assertIn("App version: V3.31", q["body"][0])
+        self.assertNotIn("+", url, "spaces are %20 in a mailto link")
+        self.assertEqual(feedback.mailto_url("", "idea", "x"), "")
+
+    def test_the_address_comes_from_the_edition(self):
+        from src import region
+        region._edition.cache_clear()
+        self.addCleanup(region._edition.cache_clear)
+        with mock.patch.object(region, "_edition",
+                               return_value={"feedback_email": " a@b.org "}):
+            self.assertEqual(region.feedback_address(), "a@b.org")
+        with mock.patch.object(region, "_edition",
+                               return_value={"feedback_email": "not an address"}):
+            self.assertEqual(region.feedback_address(), "")
+        with mock.patch.object(region, "_edition", return_value={}):
+            self.assertEqual(region.feedback_address(), "")
+
     def test_special_characters_survive_the_url(self):
         msg = "It said “100 % done” & then crashed — at 53.5°N?"
         from urllib.parse import parse_qs, urlparse
@@ -118,15 +145,40 @@ class TestFeedbackDialog(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
-    def _dialog(self):
+    def _dialog(self, address="feedback@example.org"):
         from src.feedback_dialog import FeedbackDialog
-        return FeedbackDialog(feedback.diagnostics("V2.37", 58))
+        return FeedbackDialog(feedback.diagnostics("V2.37", 58),
+                              address=address)
 
     def test_send_is_disabled_until_there_is_something_to_say(self):
         d = self._dialog()
-        self.assertFalse(d._ok.isEnabled())
+        for btn in (d._copy, d._email, d._github):
+            self.assertFalse(btn.isEnabled())
         d._text.setPlainText("it broke")
-        self.assertTrue(d._ok.isEnabled())
+        for btn in (d._copy, d._email, d._github):
+            self.assertTrue(btn.isEnabled())
+
+    def test_no_account_is_needed(self):
+        """FN-8: the address is on screen to copy, and Copy message copies the
+        whole report, details included."""
+        d = self._dialog()
+        self.assertIn("feedback@example.org", d._where.text())
+        d._text.setPlainText("The map stayed grey")
+        d._copy.click()
+        from PyQt6.QtWidgets import QApplication
+        copied = QApplication.clipboard().text()
+        self.assertTrue(copied.startswith("Subject: Site & Pattern: Confusing:"))
+        self.assertIn("The map stayed grey", copied)
+        self.assertIn("App version: V2.37", copied)
+        self.assertIn("feedback@example.org", d._copied.text())
+        d._github.click()
+        self.assertEqual(d.way(), "github")
+
+    def test_with_no_address_github_and_the_copy_remain(self):
+        d = self._dialog(address="")
+        self.assertTrue(d._email.isHidden())
+        self.assertFalse(d._github.isHidden())
+        self.assertNotIn("@", d._where.text())
 
     def test_choosing_a_category_changes_the_prompt(self):
         d = self._dialog()
@@ -150,6 +202,24 @@ class TestHelpMenuWiring(unittest.TestCase):
                / "src" / "app.py").read_text(encoding="utf-8")
         self.assertIn("Send &Feedback…", src)
         self.assertIn("feedback_flow.send_feedback", src)
+
+    def test_help_opens_the_guide_in_the_readme(self):
+        """FN-11: Help › How to Plan Your Yard opens the README's guide; the
+        anchor is GitHub's slug of the guide's heading."""
+        import pathlib
+        import re
+        from src import feedback_flow
+        root = pathlib.Path(__file__).resolve().parent.parent
+        self.assertIn("feedback_flow.open_guide",
+                      (root / "src" / "app.py").read_text(encoding="utf-8"))
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        heading = re.search(r"^### (Your first yard.*)$", readme, re.M).group(1)
+        slug = re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
+        self.assertTrue(feedback_flow.GUIDE_URL.endswith("#" + slug))
+        for words in ("More info", "Run anyway", "Open Anyway",
+                      "not an identification guide",
+                      "What leaves your computer", "Send Feedback"):
+            self.assertIn(words, readme)
 
     def test_it_costs_no_new_mainwindow_method(self):
         """The flow-module discipline, which tests/test_onboarding.py also

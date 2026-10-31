@@ -314,10 +314,24 @@ class TestSeededDerivedEdges(unittest.TestCase):
                   AND f.id NOT IN (SELECT fauna_id_a FROM fauna_fauna)
                   AND f.id NOT IN (SELECT fauna_id_b FROM fauna_fauna)
             """).fetchone()[0]
-            # Three remain: a kestrel, a magpie and a bat — predators whose
-            # trophic level this data model genuinely does not express. Faking
-            # them a plant edge would be worse than leaving them orphaned.
-            self.assertLessEqual(orphans, 5)
+            # Seven remain, for two different reasons, and the second is a
+            # debt rather than a design limit.
+            #
+            # A kestrel and a big brown bat are predators whose trophic level
+            # this data model genuinely does not express. Faking them a plant
+            # edge would be worse than leaving them orphaned.
+            #
+            # The other five — Red-winged Blackbird, Mourning Dove, House
+            # Finch, Black-headed Grosbeak, White-breasted Nuthatch — are
+            # seed-eaters whose *only documented* plant was Common Sunflower,
+            # removed in V2.80 because VASCAN records it as introduced here.
+            # Their trophic level IS expressible; the catalogue simply has no
+            # other seed record for them yet. They are kept because they are
+            # unmistakably Alberta birds and deleting them would assert
+            # otherwise, where leaving them says only that our edge data is
+            # thin. The website already omits them: it publishes an animal
+            # only when a documented plant backs it.
+            self.assertLessEqual(orphans, 7)
         finally:
             conn.close()
 

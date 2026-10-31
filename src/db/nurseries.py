@@ -164,3 +164,32 @@ def native_sources_near(lat: float, lng: float, limit: int = 6) -> list[dict]:
     for n in picked:
         n["access"] = access_label(n)
     return picked
+
+
+# ── One list (V3.24, ED-4; docs/homeowner/08 EDF-1, EDF-5) ───────────────────
+
+def in_region(rows: list, lat, lng) -> list:
+    """``rows`` limited to the suppliers the pin's region pack names; all of
+    them when the pin is outside every pack. The owner (V3.24): only a few
+    retailers in the region sell native plants at all, and the pack names
+    them, so an Edmonton pin is not shown Saskatchewan's society (EDF-5)."""
+    from src import region                                   # noqa: PLC0415
+    r = region.at(lat, lng)
+    if r is None:
+        return list(rows)
+    named = set(r.nurseries)
+    return [n for n in rows if n.get("name") in named]
+
+
+def region_nurseries(lat: float, lng: float, limit: int = 6) -> list[dict]:
+    """The one list of where to buy, for Site Info, the plan, the PDF and the
+    order file: inside a region pack, the suppliers it names, nearest first;
+    outside every pack, :func:`native_sources_near`. Each row carries
+    ``access`` (:func:`access_label`)."""
+    from src import region                                   # noqa: PLC0415
+    if region.at(lat, lng) is None:
+        return native_sources_near(lat, lng, limit=limit)
+    rows = in_region(nurseries_near(lat, lng, limit=10_000), lat, lng)
+    for n in rows:
+        n["access"] = access_label(n)
+    return rows[:max(1, int(limit))]

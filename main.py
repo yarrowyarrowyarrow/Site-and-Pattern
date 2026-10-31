@@ -67,6 +67,25 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("PermaDesign")
 
+    # One ring that follows keyboard focus in every window, the start screen
+    # included (F195, V3.02): the panels' own stylesheets remove Qt's.
+    # V3.05: an exception escaping a button's code is logged and reported,
+    # not the end of the session (PyQt6 aborts on one otherwise).
+    from src import slot_errors
+    slot_errors.install()
+
+    from src import focus_ring
+    focus_ring.install(app)
+    # And every control at least 24 px across, and every checkbox's box
+    # visible (F195, V3.03).
+    from src import indicator_style, target_size
+    target_size.install(app)
+    indicator_style.install(app)
+    # The app's own icon on every window, the start screen's included (F232,
+    # V3.17); the .exe and the Mac app carry it from the build.
+    from src import app_icon
+    app_icon.install(app)
+
     # The start screen, ahead of the map (V2.40, page in V2.41). Everything it
     # offers is read from disk — the saves folder, the design you were last in,
     # an autosave that survived a crash, what is in bloom — so it needs no
@@ -85,6 +104,15 @@ def main():
     QTimer.singleShot(0, lambda: built.setdefault("window", MainWindow()))
     choice = onboarding_flow.choose_start_action()
 
+    # Closing the start screen at launch quits (V3.23, S7). The window built
+    # behind it is closed inside the event loop, so its web page is let go
+    # before the process ends.
+    if choice == onboarding_flow.QUIT:
+        if built.get("window") is not None:
+            built["window"].close()
+        QTimer.singleShot(0, app.quit)
+        sys.exit(app.exec())
+
     window = built.get("window") or MainWindow()
     # V2.43 — the Learn door does not open the design app. Its surfaces are
     # standalone windows (a walkable landscape, the Field Guide, the lessons),
@@ -101,6 +129,10 @@ def main():
     # moment this function returns, with nothing on screen and no error. A
     # working app on the wrong screen beats a silent exit.
     if not any(w.isVisible() for w in app.topLevelWidgets()):
+        from src.log import get_logger
+        get_logger("main").warning(
+            "Start choice %r left no window on screen; showing the main "
+            "window", choice)
         window.show()
 
     sys.exit(app.exec())

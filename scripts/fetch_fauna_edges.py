@@ -94,9 +94,15 @@ _INTERACTIONS = {
 
 #: GloBI taxon-path fragments → this app's five `fauna.taxon` values. First hit
 #: wins, so order matters: Lepidoptera before the general Insecta catch-all.
+#:
+#: **Not "Apoidea" (V2.84).** The superfamily holds the bees AND the apoid
+#: wasps -- beewolves, sand wasps, mud daubers, crabronids -- and mapping it
+#: filed 43 wasps as bees, which the site then labelled "native bee". The bees
+#: are the Anthophila clade and its six families, named below; an apoid wasp
+#: now falls through to the Insecta catch-all like every other wasp here, and
+#: `data_quality.validate_bee_taxon` fails the gate if one comes back.
 _TAXA = (
     ("Lepidoptera", "lepidoptera"),
-    ("Apoidea", "bee"),
     ("Anthophila", "bee"),
     ("Andrenidae", "bee"),
     ("Apidae", "bee"),

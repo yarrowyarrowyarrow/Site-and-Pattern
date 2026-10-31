@@ -103,7 +103,7 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
         return subprocess.run(
             ["git", "-C", self._upstream, *args],
             capture_output=True, text=True, check=False,
-        )
+        encoding="utf-8")
 
     def _init_repo(self):
         # "Upstream" repo with an initial commit on main. We disable commit
@@ -119,7 +119,7 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
         self._run_upstream("config", "user.name", "T")
         self._run_upstream("config", "commit.gpgsign", "false")
         self._run_upstream("config", "tag.gpgsign", "false")
-        with open(os.path.join(self._upstream, "f"), "w") as f:
+        with open(os.path.join(self._upstream, "f"), "w", encoding="utf-8") as f:
             f.write("hi\n")
         self._run_upstream("add", "f")
         self._run_upstream("commit", "-q", "-m", "init")
@@ -136,7 +136,7 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
             return subprocess.run(
                 ["git", "-C", self._downstream, *args],
                 capture_output=True, text=True, timeout=timeout, check=False,
-            )
+            encoding="utf-8")
         return _git
 
     def _make_remote_branch(self, name):
@@ -144,7 +144,7 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
         # Sanitize the branch name to a flat filename — slashes in branch
         # names (e.g. "feature/foo") would otherwise become subdirectories.
         safe = name.replace("/", "_")
-        with open(os.path.join(self._upstream, safe + ".txt"), "w") as f:
+        with open(os.path.join(self._upstream, safe + ".txt"), "w", encoding="utf-8") as f:
             f.write(name)
         self._run_upstream("add", ".")
         self._run_upstream("commit", "-q", "-m", name)
@@ -209,7 +209,7 @@ class TestNextVersionBranch(unittest.TestCase):
         self._run_upstream("config", "user.email", "t@t")
         self._run_upstream("config", "user.name", "T")
         self._run_upstream("config", "commit.gpgsign", "false")
-        with open(os.path.join(self._upstream, "f"), "w") as f:
+        with open(os.path.join(self._upstream, "f"), "w", encoding="utf-8") as f:
             f.write("hi\n")
         self._run_upstream("add", "f")
         self._run_upstream("commit", "-q", "-m", "init")
@@ -219,20 +219,20 @@ class TestNextVersionBranch(unittest.TestCase):
 
     def _run_upstream(self, *args):
         return subprocess.run(["git", "-C", self._upstream, *args],
-                              capture_output=True, text=True, check=False)
+                              capture_output=True, text=True, check=False, encoding="utf-8")
 
     def _git_runner(self):
         def _git(*args, timeout=10):
             return subprocess.run(
                 ["git", "-C", self._downstream, *args],
                 capture_output=True, text=True, timeout=timeout, check=False,
-            )
+            encoding="utf-8")
         return _git
 
     def _make_remote_branch(self, name):
         self._run_upstream("checkout", "-q", "-b", name)
         safe = name.replace("/", "_")
-        with open(os.path.join(self._upstream, safe + ".txt"), "w") as f:
+        with open(os.path.join(self._upstream, safe + ".txt"), "w", encoding="utf-8") as f:
             f.write(name)
         self._run_upstream("add", ".")
         self._run_upstream("commit", "-q", "-m", name)
@@ -315,14 +315,14 @@ class TestVersionBranchSwitchCheckout(unittest.TestCase):
 
     def _u(self, *args):
         return subprocess.run(["git", "-C", self._upstream, *args],
-                              capture_output=True, text=True, check=False)
+                              capture_output=True, text=True, check=False, encoding="utf-8")
 
     def _d(self, *args):
         return subprocess.run(["git", "-C", self._downstream, *args],
-                              capture_output=True, text=True, check=False)
+                              capture_output=True, text=True, check=False, encoding="utf-8")
 
     def _write_commit(self, name, body, msg):
-        with open(os.path.join(self._upstream, name), "w") as f:
+        with open(os.path.join(self._upstream, name), "w", encoding="utf-8") as f:
             f.write(body + "\n")
         self._u("add", ".")
         self._u("commit", "-q", "-m", msg)
@@ -376,14 +376,14 @@ class TestOneClickUpdateHelpers(TestVersionBranchSwitchCheckout):
     def test_update_to_branch_stashes_and_restores_local_changes(self):
         self._d("checkout", "-q", "main")
         path = os.path.join(self._downstream, "f")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write("local edit\n")
         self.assertTrue(working_tree_dirty(self._runner()))
         ok, note = update_to_branch(self._runner(), "V1.77",
                                     stash_label="test-stash")
         self.assertTrue(ok, note)
         self.assertEqual(note, "")
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             self.assertEqual(fh.read().strip(), "local edit",
                              "stashed local change was not restored")
 
@@ -391,7 +391,7 @@ class TestOneClickUpdateHelpers(TestVersionBranchSwitchCheckout):
         # A user's own file saved into the app folder must not trigger the
         # stash prompt (and must never be swept into a stash).
         with open(os.path.join(self._downstream, "yard.perma.geojson"),
-                  "w") as fh:
+                  "w", encoding="utf-8") as fh:
             fh.write("{}\n")
         self.assertFalse(working_tree_dirty(self._runner()))
         ok, note = update_to_branch(self._runner(), "V1.77")
@@ -419,7 +419,7 @@ class TestOneClickUpdateHelpers(TestVersionBranchSwitchCheckout):
     def test_fast_forward_refuses_divergence(self):
         self._d("checkout", "-B", "V1.77", "origin/V1.77")
         # Local commit downstream + different commit upstream → diverged.
-        with open(os.path.join(self._downstream, "local.txt"), "w") as fh:
+        with open(os.path.join(self._downstream, "local.txt"), "w", encoding="utf-8") as fh:
             fh.write("mine\n")
         self._d("add", ".")
         self._d("-c", "user.email=t@t", "-c", "user.name=T",
@@ -450,7 +450,7 @@ class TestConflictedCheckoutRecovery(TestVersionBranchSwitchCheckout):
         updater used to: stash a local edit, switch to a branch that touched the
         same file, pop."""
         self._d("checkout", "-q", "main")
-        with open(os.path.join(self._downstream, "f"), "w") as fh:
+        with open(os.path.join(self._downstream, "f"), "w", encoding="utf-8") as fh:
             fh.write("my own edit\n")
         # V1.77 changed a DIFFERENT file, so make the branch touch 'f' too.
         self._u("checkout", "-q", "V1.77")
@@ -503,7 +503,7 @@ class TestConflictedCheckoutRecovery(TestVersionBranchSwitchCheckout):
         """The root-cause fix: update_to_branch must not hand back a checkout
         that no later update can use."""
         self._d("checkout", "-q", "main")
-        with open(os.path.join(self._downstream, "f"), "w") as fh:
+        with open(os.path.join(self._downstream, "f"), "w", encoding="utf-8") as fh:
             fh.write("my own edit\n")
         self._u("checkout", "-q", "V1.77")
         self._write_commit("f", "upstream rewrote this", "V1.77 touches f")
@@ -533,10 +533,10 @@ class TestConflictedCheckoutRecovery(TestVersionBranchSwitchCheckout):
         which is why it is allowed where `reset --hard` is not."""
         self._d("checkout", "-B", "V1.77", "origin/V1.77")
         path = os.path.join(self._downstream, "v177.txt")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write("unrelated local work\n")
         ok, _detail = abort_conflicted_state(self._runner())
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             self.assertEqual(fh.read().strip(), "unrelated local work",
                              "abort must never destroy uncommitted local work")
 

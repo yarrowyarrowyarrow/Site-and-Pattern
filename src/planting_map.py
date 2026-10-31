@@ -39,6 +39,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Optional
 
+from src.planting_spacing import spacing_to_plant_m, spacing_words
 from src.projection import metres_per_deg
 
 #: Padding around the drawn extent, in metres, so nothing touches the frame.
@@ -225,10 +226,9 @@ def _key_entries(placed_plants, numbers, plan, get_plant) -> list:
     for pid, number in sorted(numbers.items(), key=lambda kv: kv[1]):
         plant = get_plant(pid) or {}
         try:
-            # Same helper the F40 plan uses, so a key row and a buy-list row
-            # never quote different spacings for one species.
-            from src.planting_plan import _spacing_for           # noqa: PLC0415
-            spacing = float(_spacing_for(plant))
+            # The plant page's spacing (V3.19, QF-9), as the F40 plan quotes
+            # it, so a key row, a buy-list row and the page agree.
+            spacing = float(spacing_to_plant_m(plant))
         except Exception:                                        # noqa: BLE001
             spacing = 0.0
         out.append(MapKeyEntry(
@@ -279,14 +279,10 @@ def render_map_key_text(pm: PlantingMap) -> str:
 
 
 def _spacing_str(metres: float) -> str:
-    """Spacing to the nearest 5 cm.
-
-    ``plant_spacing`` returns an unrounded estimate off canopy and spread
-    habit; printing "0.878 m apart" on a sheet somebody plants from claims a
-    precision the model does not have (P9).
-    """
-    rounded = round(float(metres) * 20.0) / 20.0
-    return f"{rounded:g} m"
+    """Spacing to the nearest 5 cm, as the plant page and the PDF print it
+    (V3.19, QF-9): printing "0.878 m apart" on a sheet somebody plants from
+    claims a precision nothing here has (P9)."""
+    return spacing_words(metres)
 
 
 def _wrap(text: str, width: int) -> list[str]:

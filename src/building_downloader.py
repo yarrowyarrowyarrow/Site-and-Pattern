@@ -27,6 +27,10 @@ _TILE_DEG = 0.03          # ~3 km lat / ~2 km lng at 53°N — a comfy Overpass 
 _PACE_S = 1.0             # delay between Overpass calls (politeness)
 
 
+class DownloadFailed(RuntimeError):
+    """Part of the area did not come, so the pack is not marked complete."""
+
+
 def tile_region(bbox: dict, step_deg: float = _TILE_DEG) -> list:
     """Split a region ``bbox`` ({south,north,west,east}) into a grid of
     sub-bboxes of side ``step_deg``. The last row/column is clamped to the
@@ -61,28 +65,66 @@ def download_region(region_bbox: dict, store: BuildingStore, *,
                     region_name: str = "") -> int:
     """Fetch every sub-tile of ``region_bbox`` and merge into ``store``.
 
-    ``fetch_fn(subbbox) -> list[building item]`` defaults to
-    ``osm_features.fetch_buildings``. ``on_progress(total_new, done, total)``
-    and ``should_cancel() -> bool`` are optional. Returns the number of new
+    ``fetch_fn(subbbox) -> list[building item] | None`` defaults to
+    ``osm_features.fetch_buildings_or_none``; ``None`` or a raise is a part
+    that failed. ``on_progress(total_new, done, total)`` and
+    ``should_cancel() -> bool`` are optional. Returns the number of new
     buildings stored; marks the pack complete only if it ran to the end (a
     cancel leaves a partial cache that ``has_data()`` still reports False for).
+
+    A failed part does not stop the run, and is asked once more at the end;
+    when one still fails, :class:`DownloadFailed` says how many, and the pack
+    is not marked complete (V3.37). Until then a failure read as an empty part:
+    a run on which the server never answered ended "Building pack ready — 0
+    footprints", and a pack with parts missing could answer for a yard on the
+    seam and so skip the live fetch.
     """
+    why: list = []
     if fetch_fn is None:
-        from src.osm_features import fetch_buildings as fetch_fn  # noqa: PLW0127
+        from src.osm_features import fetch_buildings_or_none
+
+        def fetch_fn(sub):
+            return fetch_buildings_or_none(sub, why=why)
+
+    def _fetch(sub):
+        try:
+            return fetch_fn(sub)
+        except Exception:  # noqa: BLE001 — one flaky tile shouldn't kill the run
+            return None
+
     tiles = tile_region(region_bbox)
     total_new = 0
+    failed = []
     for i, sub in enumerate(tiles):
         if should_cancel and should_cancel():
             return total_new                      # partial — not marked complete
-        try:
-            items = fetch_fn(sub) or []
-        except Exception:  # noqa: BLE001 — one flaky tile shouldn't kill the run
-            items = []
-        total_new += store.add_buildings(items)
+        items = _fetch(sub)
+        if items is None:
+            failed.append(sub)
+        else:
+            total_new += store.add_buildings(items)
         if on_progress:
             on_progress(total_new, i + 1, len(tiles))
         if pace_s and i + 1 < len(tiles):
             time.sleep(pace_s)
+    still = []
+    for sub in failed:                            # one more try each
+        if should_cancel and should_cancel():
+            return total_new
+        if pace_s:
+            time.sleep(pace_s)
+        items = _fetch(sub)
+        if items is None:
+            still.append(sub)
+        else:
+            total_new += store.add_buildings(items)
+    if still:
+        from src.osm_features import failure_words
+        words = failure_words(why, lost="the pack is not ready")
+        if len(still) < len(tiles):
+            words = (f"{len(still)} of {len(tiles)} parts of the area did "
+                     f"not come. {words}")
+        raise DownloadFailed(words)
     store.mark_complete(region_name or _region_label(region_bbox), total_new)
     return total_new
 
@@ -132,6 +174,9 @@ if _HAVE_QT:
                     on_progress=_progress,
                     should_cancel=lambda: self._cancel,
                     region_name=self._region_name)
+            except DownloadFailed as exc:
+                self.error.emit(str(exc))
+                return
             except Exception as exc:  # noqa: BLE001 — never crash the thread
                 self.error.emit(f"Building download failed: {exc}")
                 return

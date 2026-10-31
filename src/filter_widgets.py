@@ -8,7 +8,10 @@ same look and behaviour from one implementation instead of copies.
 
 Contents:
   * ``CheckableComboBox`` — a QComboBox whose items carry checkboxes, for
-    "pick several" facet filters (moved from plant_panel.py, V1.84).
+    "pick several" facet filters (moved from plant_panel.py, V1.84). Since V3.01
+    it keeps no current item, which is what left "● Shrub" on the box with
+    nothing ticked (F194), and it can open on a line saying how its values
+    combine (``rule=``) and read its dimension once chosen (``set_face``).
   * ``COMBO_STYLE`` / ``TOGGLE_STYLE`` — the shared QSS for facet dropdowns and
     checkable filter chips (formerly locals in PlantPanel._build_ui).
   * ``make_multi_combo`` — factory that builds a styled multi-select facet
@@ -22,7 +25,11 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
 )
 from PyQt6.QtCore import Qt, QEvent, QRect, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QStandardItem, QStandardItemModel
+from PyQt6.QtGui import (
+    QBrush, QColor, QFont, QStandardItem, QStandardItemModel,
+)
+
+from src.indicator_style import EDGE as _BOX_EDGE
 
 
 # A second line under an item's label — the place it is, under what it is.
@@ -35,8 +42,15 @@ DEPTH_ROLE = Qt.ItemDataRole.UserRole + 90
 PARENT_ROLE = Qt.ItemDataRole.UserRole + 91
 EXPANDED_ROLE = Qt.ItemDataRole.UserRole + 92
 LABEL_ROLE = Qt.ItemDataRole.UserRole + 93
-#: Pixels from a parent row's left edge that open/close it rather than check it.
-_DISCLOSURE_WIDTH = 18
+#: Marks the line a list opens on ("Tick boxes to choose several…", V3.01): a row
+#: that is read, never ticked, counted or cleared.
+RULE_ROLE = Qt.ItemDataRole.UserRole + 94
+#: What a click on a row means (V3.04): the first pixels from its left edge
+#: are its box, which ticks it and leaves the list open for more; a branch's
+#: arrow opens or closes it; the name ticks it and closes the list.
+_BOX_ZONE = 22
+#: Where a two-line row's text begins: the box (5 + 12 px) and a 7 px gap.
+_TEXT_X = 23
 
 SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -88,7 +102,8 @@ class _TwoLineDelegate(QStyledItemDelegate):
                            box, box)
         painter.save()
         painter.setRenderHint(painter.RenderHint.Antialiasing, True)
-        painter.setPen(QColor("#66bb6a" if checked else "#4a6a4a"))
+        # The unchecked edge is indicator_style's (V3.03): #4a6a4a was 2.3:1.
+        painter.setPen(QColor("#66bb6a" if checked else _BOX_EDGE))
         painter.setBrush(QColor("#2e5a2e") if checked else Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(check_rect, 2, 2)
         if checked:
@@ -113,9 +128,9 @@ class _TwoLineDelegate(QStyledItemDelegate):
             fm.elidedText(title, Qt.TextElideMode.ElideRight, width))
 
         small = QFont(option.font)
-        small.setPointSizeF(max(6.5, option.font.pointSizeF() - 1.5))
+        small.setPixelSize(12)          # the app's floor (V3.03)
         painter.setFont(small)
-        painter.setPen(QColor("#78909c"))
+        painter.setPen(QColor("#90a4ae"))
         sub_fm = painter.fontMetrics()
         # The title carries its indentation in the string, so it lines up on
         # its own; the subtitle is stored bare — deliberately, so the data is
@@ -138,7 +153,7 @@ class _TwoLineDelegate(QStyledItemDelegate):
 
 COMBO_STYLE = (
     "QComboBox { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; "
-    "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+    "border-radius: 3px; padding: 2px 6px; font-size: 12px; }"
     "QComboBox:hover { border-color: #4a7a4a; }"
     "QComboBox::drop-down { border: none; width: 16px; }"
     "QComboBox QLineEdit { background: transparent; color: #a5d6a7; border: none; }"
@@ -148,8 +163,8 @@ COMBO_STYLE = (
 )
 
 TOGGLE_STYLE = (
-    "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
-    "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+    "QPushButton { background: #1e2e1e; color: #90a4ae; border: 1px solid #2e4a2e; "
+    "border-radius: 3px; padding: 2px 6px; font-size: 12px; }"
     "QPushButton:checked { background: #2e5a2e; color: #a5d6a7; border-color: #66bb6a; }"
     "QPushButton:hover { border-color: #4a7a4a; }"
 )
@@ -169,9 +184,11 @@ class CheckableComboBox(QComboBox):
 
     selectionChanged = pyqtSignal()
 
-    def __init__(self, placeholder: str = "Any", parent=None):
+    def __init__(self, placeholder: str = "Any", parent=None, *,
+                 rule: str = ""):
         super().__init__(parent)
         self._placeholder = placeholder
+        self._face = None
         self.setModel(QStandardItemModel(self))
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
@@ -180,10 +197,19 @@ class CheckableComboBox(QComboBox):
         le.setPlaceholderText(placeholder)
         le.installEventFilter(self)
         self.view().viewport().installEventFilter(self)
+        # The list's own window, which takes the click that closes it (V3.14).
+        self._popup = self.view().parentWidget()
+        self._popup.installEventFilter(self)
         self.model().itemChanged.connect(self._on_item_changed)
-        # An editable combo otherwise echoes the current item's text; keep the
-        # display under our control so it shows the checked labels (or nothing).
-        self.currentIndexChanged.connect(lambda _=0: self._refresh_text())
+        # **No current item, ever (V3.01).** A QComboBox draws its current
+        # item's icon beside the text, and whenever that item's data changes,
+        # which ticking it does, Qt rewrites the line edit with its name, after
+        # our itemChanged handler has run. Anything that made Shrub current
+        # (the wheel over the closed box, an arrow key, Return in the list) left
+        # "● Shrub" on the box once Shrub was unticked: the dot is its swatch.
+        self.currentIndexChanged.connect(self._keep_no_current)
+        if rule:
+            self._add_rule(rule)
         # Stay flexible, not rigid: expand to share the row evenly and base the
         # size hint on a short minimum (not the longest item) so two combos in a
         # row split 50/50 at any window width — same layout on a 22" or 27"
@@ -259,6 +285,8 @@ class CheckableComboBox(QComboBox):
         self.model().blockSignals(True)
         for i in range(self.model().rowCount()):
             it = self.model().item(i)
+            if not it.isCheckable():
+                continue            # the rule line: setting a state draws a box
             it.setCheckState(
                 Qt.CheckState.Checked
                 if it.data(Qt.ItemDataRole.UserRole) in keyset
@@ -275,28 +303,117 @@ class CheckableComboBox(QComboBox):
         return event.pos()
 
     def eventFilter(self, obj, event):  # noqa: N802 (Qt override)
+        if (obj is self._popup
+                and event.type() == QEvent.Type.MouseButtonPress
+                and self.rect().contains(
+                    self.mapFromGlobal(event.globalPosition()).toPoint())):
+            # A click on the box only closes its list (V3.14). Windows replays
+            # the press that closes a popup to what is under it, sparing an
+            # editable combo only on its arrow, and this box's release opens
+            # the list: it closed and reopened in one motion. Qt spares a
+            # non-editable combo anywhere, and clears this before each press.
+            obj.setAttribute(Qt.WidgetAttribute.WA_NoMouseReplay, True)
+            return False
         if (obj is self.lineEdit()
                 and event.type() == QEvent.Type.MouseButtonRelease):
             self.showPopup()
             return True
         if (obj is self.view().viewport()
                 and event.type() == QEvent.Type.MouseButtonRelease):
-            idx = self.view().indexAt(self._event_point(event))
-            if idx.isValid():
-                it = self.model().itemFromIndex(idx)
-                point = self._event_point(event)
-                if self._has_children(it) and point.x() < _DISCLOSURE_WIDTH:
-                    # The left edge of a parent row opens and closes it; the
-                    # rest of the row still checks. Two jobs, one row, and the
-                    # arrow is the affordance that says so.
+            point = self._event_point(event)
+            idx = self.view().indexAt(point)
+            it = self.model().itemFromIndex(idx) if idx.isValid() else None
+            if it is not None and it.isCheckable():
+                part = self._part_clicked(it, idx, point)
+                if part == "arrow":
                     self._set_expanded(it, not self._is_expanded(it))
                 else:
                     it.setCheckState(
                         Qt.CheckState.Unchecked
                         if it.checkState() == Qt.CheckState.Checked
                         else Qt.CheckState.Checked)
-            return True  # keep the popup open for further toggles
+                    if part == "name":
+                        self.hidePopup()
+            return True  # the click was the list's: nothing else acts on it
         return super().eventFilter(obj, event)
+
+    def _part_clicked(self, item, index, point) -> str:
+        """``"box"``, ``"arrow"`` or ``"name"``: what a click on a row meant.
+
+        Until V3.04 every click left the list open, for ticking several in one
+        trip, so closing it took another click on the filter: the owner's
+        report. A name now ticks and closes, as a choice from any dropdown
+        does, and the box still ticks and stays open. A branch's left edge had
+        opened it, and that edge is where its box is drawn, so a branch's box
+        could not be ticked; the arrow before its name opens it now."""
+        x = point.x() - self.view().visualRect(index).left()
+        if x < _BOX_ZONE:
+            return "box"
+        if self._has_children(item):
+            fm = self.view().fontMetrics()
+            depth = int(item.data(DEPTH_ROLE) or 0)
+            start = _TEXT_X + fm.horizontalAdvance("      " * depth)
+            if start - 4 <= x <= start + fm.horizontalAdvance("\u25be ") + 4:
+                return "arrow"
+        return "name"
+
+    def _keep_no_current(self, index: int):
+        if index >= 0:
+            self.setCurrentIndex(-1)        # re-enters with -1, which redraws
+            return
+        self._refresh_text()
+
+    def wheelEvent(self, event):  # noqa: N802 (Qt override)
+        """Passed on, so the panel scrolls. A multi-select has no next value
+        to step to; the wheel only ever made an item current (above)."""
+        event.ignore()
+
+    def keyPressEvent(self, event):  # noqa: N802 (Qt override)
+        """↑, ↓ and Space open the list. On a single-choice combo they step the
+        value, which here meant making an item current and nothing else. F4 and
+        Alt+↓ open it already, as Qt's own keys."""
+        # Arrow keys carry the keypad modifier on some keyboards (macOS).
+        if (event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Space)
+                and event.modifiers() in (Qt.KeyboardModifier.NoModifier,
+                                          Qt.KeyboardModifier.KeypadModifier)):
+            self.showPopup()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def set_face(self, face):
+        """``face(checked_keys) -> str``: what the box reads once something is
+        ticked ("Type: Tree or Shrub"). Without one it reads the checked labels,
+        as before V3.01."""
+        self._face = face
+        self._refresh_text()
+
+    def _add_rule(self, text: str):
+        """The line the list opens on, saying how ticked values combine. Not
+        enabled, so the arrow keys pass over it and a click does nothing; its
+        colour is set rather than left to the disabled palette, which is the
+        faint grey this panel's contrast work removed elsewhere."""
+        item = QStandardItem(text)
+        item.setData(True, RULE_ROLE)
+        item.setData(text, LABEL_ROLE)
+        item.setFlags(Qt.ItemFlag.NoItemFlags)
+        item.setForeground(QBrush(QColor("#a8b8b0")))
+        font = QFont(self.font())
+        font.setItalic(True)
+        item.setFont(font)
+        item.setToolTip(text)
+        self.model().appendRow(item)
+        self.setCurrentIndex(-1)
+        # The list is free to be wider than the box that opens it, and the
+        # sentence should not be cut.
+        width = self.fontMetrics().horizontalAdvance(text) + 36
+        self.view().setMinimumWidth(max(self.view().minimumWidth(), width))
+
+    def rule_text(self) -> str:
+        for row in self._rows():
+            if row.data(RULE_ROLE):
+                return row.text()
+        return ""
 
     # ── tree behaviour ──────────────────────────────────────────────────
     def _rows(self):
@@ -370,7 +487,7 @@ class CheckableComboBox(QComboBox):
         self._two_line = True
         self.setItemDelegate(_TwoLineDelegate(self))
         view = self.view()
-        view.setMinimumWidth(280)
+        view.setMinimumWidth(max(view.minimumWidth(), 280))
         view.setTextElideMode(Qt.TextElideMode.ElideRight)
 
     def _refresh_text(self):
@@ -378,13 +495,22 @@ class CheckableComboBox(QComboBox):
                    or self.model().item(i).text()).strip()
                   for i in range(self.model().rowCount())
                   if self.model().item(i).checkState() == Qt.CheckState.Checked]
+        if self._face is not None:
+            text = self._face(self.checked_keys()) if labels else ""
+            tip = text
         # Past two, a joined list is guaranteed to elide mid-word and say less
         # than a count would — "3 selected" is at least true and whole.
-        if len(labels) > 2:
-            self.lineEdit().setText(f"{len(labels)} selected")
+        elif len(labels) > 2:
+            text, tip = f"{len(labels)} selected", ", ".join(labels)
         else:
-            self.lineEdit().setText(", ".join(labels))
-        self.lineEdit().setToolTip(", ".join(labels))
+            text = tip = ", ".join(labels)
+        le = self.lineEdit()
+        le.setText(text)
+        # setText leaves the cursor at the end, and a line edit scrolls to keep
+        # its cursor in view: a face wider than the box showed its tail and lost
+        # the dimension it starts with.
+        le.setCursorPosition(0)
+        le.setToolTip(tip)
 
     def _on_item_changed(self, _item):
         self._refresh_text()

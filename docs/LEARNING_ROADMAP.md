@@ -162,8 +162,8 @@ database:
 | 1 | `src/branding.py` | 35 | Variables and strings. The app's name lives here. |
 | 2 | `src/app_version.py` | 38 | Functions, reading a file, `try/except`. |
 | 3 | `src/errors.py` | 46 | Classes as labeled error types. |
-| 4 | `src/geometry.py` | 70 | Functions doing math on lat/lng pairs. |
-| 5 | `src/member_colors.py` | 92 | Dictionaries as lookup tables. |
+| 4 | `src/member_colors.py` | 50 | Dictionaries as lookup tables. |
+| 5 | `src/geometry.py` | 70 | Functions doing math on lat/lng pairs. |
 | 6 | `src/projection.py` | 98 | A class with methods; why "the map only stores lat/lon". |
 | 7 | `src/succession.py` | 131 | Everything above, in service of ecology you already understand. |
 

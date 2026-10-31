@@ -25,7 +25,7 @@ from typing import Optional
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QColor, QPainter, QPolygonF
 from PyQt6.QtWidgets import (
-    QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QGridLayout, QLabel, QVBoxLayout, QWidget,
 )
 
 from src.branding import APP_NAME
@@ -132,14 +132,16 @@ class SnapshotWindow(QWidget):
         self._main = main
         self.setWindowTitle(f"{APP_NAME}: Growth Snapshots")
         self.resize(720, 700)
+        # Dark like the app (F209), and no Refresh button: it follows the
+        # design (src/follow_design.py, V3.08).
+        from src.ui_style import WINDOW_STYLE
+        self.setStyleSheet(WINDOW_STYLE)
 
         root = QVBoxLayout(self)
-        intro = QLabel(
-            "Watch your design mature: the same plan at years 1, 5, 15 and 30. "
-            "Plants grow and self-seeders spread; faint plants are pioneers "
-            "fading as the community matures.")
-        intro.setWordWrap(True)
-        root.addWidget(intro)
+        # Filled by refresh(), from the years actually shown (V3.05).
+        self._intro = QLabel("")
+        self._intro.setWordWrap(True)
+        root.addWidget(self._intro)
 
         grid = QGridLayout()
         grid.setSpacing(8)
@@ -150,13 +152,8 @@ class SnapshotWindow(QWidget):
             grid.addWidget(canvas, i // 2, i % 2)
         root.addLayout(grid, 1)
 
-        row = QHBoxLayout()
         self._status = QLabel("")
-        row.addWidget(self._status, 1)
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh)
-        row.addWidget(refresh_btn)
-        root.addLayout(row)
+        root.addWidget(self._status)
 
     def refresh(self):
         """Re-read the live project and rebuild the four panels."""
@@ -166,7 +163,13 @@ class SnapshotWindow(QWidget):
         except Exception:  # noqa: BLE001 — a snapshot view should never crash
             snaps = []
 
-        bounds = _union_bounds([s["scene"] for s in snaps])
+        from src.snapshot_timeline import content_bounds, years_line
+        scenes = [s["scene"] for s in snaps]
+        bounds = content_bounds(scenes) or _union_bounds(scenes)
+        self._intro.setText(
+            years_line([s["year"] for s in snaps]) + " Plants grow and "
+            "self-seeders spread; faint plants are the early ones giving way "
+            "as the community matures.")
         for i, canvas in enumerate(self._canvases):
             if i < len(snaps):
                 canvas.set_panel(snaps[i]["scene"], snaps[i]["year"], bounds)

@@ -128,11 +128,12 @@ def _context_facts(plant_rows: list, footprint_m: float) -> list[str]:
         facts.append(f"to {tall:.0f} m tall" if tall >= 1.5
                      else "stays low (<1.5 m)")
 
-    natives = [r for r in plant_rows if r.get("native_to_alberta")]
+    from src import design_native
+    natives = [r for r in plant_rows if design_native.is_native(r)]
     if plant_rows:
         pct = round(100 * len(natives) / len(plant_rows))
         if pct >= 100:
-            facts.append("all Alberta natives")
+            facts.append(f"all {design_native.words()}")
         elif pct:
             facts.append(f"{pct}% native")
     return facts
@@ -302,7 +303,7 @@ def _facts_html(facts: list[str]) -> str:
     if not facts:
         return ""
     joined = " · ".join(html.escape(f) for f in facts)
-    return (f'<div style="color:#7fae7f; font-size:11px; margin:1px 0 6px 0;">'
+    return (f'<div style="color:#7fae7f; font-size:12px; margin:1px 0 6px 0;">'
             f'{joined}</div>')
 
 
@@ -333,7 +334,7 @@ def pattern_card_html(pattern: dict, *, include_header: bool = True) -> str:
         center = pattern.get("center")
         if center:
             out.append(f'<p style="margin:0 0 4px 0; color:#9e9e9e; '
-                       f'font-size:11px;">Anchored on {html.escape(center)} · '
+                       f'font-size:12px;">Anchored on {html.escape(center)} · '
                        f'{pattern.get("n_members", 0)} plants</p>')
 
     out.append(_section_html("Problem", pattern.get("problem", "")))
@@ -350,7 +351,7 @@ def pattern_card_html(pattern: dict, *, include_header: bool = True) -> str:
         links = " · ".join(
             f'<a href="community:{r["id"]}" style="color:#90caf9; '
             f'text-decoration:none;">{html.escape(r["name"])}</a> '
-            f'<span style="color:#9e9e9e; font-size:10px;">'
+            f'<span style="color:#9e9e9e; font-size:12px;">'
             f'({html.escape(r["relation"])})</span>'
             for r in related
         )

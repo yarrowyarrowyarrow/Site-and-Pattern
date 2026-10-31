@@ -47,21 +47,75 @@ _FORM_BY_TYPE = {
 }
 _FORM_FALLBACK = "plug or seed"
 
-# Alberta native plant / seed sources (display name + buy link).
-NURSERIES = [
-    ("ALCLA Native Plants", "https://alclanativeplants.com/"),
-    ("Bow Valley Habitat Development", "https://bowvalleyhabitat.com/"),
-    ("Wild About Flowers", "https://wildaboutflowers.ca/"),
-    ("Bedrock Seed Bank", "https://bedrockseedbank.ca/"),
+# Nursery-source buckets, in display order, with their section headings.
+#
+# Until V3.18 the headings named suppliers ("sources: ALCLA, Bow Valley
+# Habitat") and a hard-coded NURSERIES list printed four Calgary-area names
+# under every plan, two of them in no directory, while the order file, built
+# from the directory, named Edmonton's growers: two different lists in one
+# export (EDF-1). The suppliers now come from :func:`sources_near`, the same
+# directory the Site panel and the order file read.
+SOURCE_SECTIONS = [
+    ("native_woody", "NATIVE TREES & SHRUBS"),
+    ("native_herb",  "NATIVE HERBACEOUS & GROUNDCOVER"),
+    ("cultivated",   "CULTIVATED / NON-NATIVE  (local garden centres)"),
 ]
 
-# Nursery-source buckets, in display order, with their section headings.
-SOURCE_SECTIONS = [
-    ("native_woody", "NATIVE TREES & SHRUBS  (sources: ALCLA, Bow Valley Habitat)"),
-    ("native_herb",  "NATIVE HERBACEOUS & GROUNDCOVER  "
-                     "(sources: ALCLA, Wild About Flowers, Bedrock Seed Bank)"),
-    ("cultivated",   "CULTIVATED / NON-NATIVE  (sources: local garden centres)"),
-]
+#: Said where a list of suppliers would be when the design has no pin: the
+#: list is "near you", and without a place there is no honest one to give.
+NO_PIN_SOURCES = ("Set your yard's pin to list the native plant nurseries "
+                  "and seed sources near you.")
+
+
+def _pack(site_config):
+    from src import region
+    sc = site_config or {}
+    if sc.get("latitude") is None or sc.get("longitude") is None:
+        return None
+    return region.at(sc["latitude"], sc["longitude"])
+
+
+def buy_heading(site_config) -> str:
+    """"Where to buy around Edmonton" inside a region pack, else "Where to
+    buy near your yard" (V3.30, WD-5): the printout's and the order file's
+    heading over the sellers."""
+    pack = _pack(site_config)
+    return (f"Where to buy around {pack.short}" if pack is not None
+            else "Where to buy near your yard")
+
+
+def price_words(site_config) -> str:
+    """What a cost range is: "at Edmonton native nurseries" from the pack
+    (OV-13), else "an estimate", with the caveat that prices vary."""
+    # The pin's pack, or the default with no pin, as the Overview reads it;
+    # a pin outside every pack names no nurseries.
+    pack = _pack(site_config)
+    if pack is None and (site_config or {}).get("latitude") is None:
+        from src import region
+        pack = region.default()
+    note = ((getattr(pack, "overview", None) or {}).get("price_note")
+            or "").strip() if pack is not None else ""
+    return ((f"an estimate {note}" if note else "an estimate")
+            + "; prices vary by nursery and year")
+
+
+def sources_near(site_config, limit: int = 6) -> list:
+    """``[(name, how to reach it, web address), ...]`` for the native-plant
+    suppliers nearest the design's pin, from the nursery directory
+    (:func:`src.db.nurseries.region_nurseries`: the pin's region pack's,
+    V3.24), nearest first; ``[]`` with
+    no pin or no directory. One list for every output that names suppliers."""
+    sc = site_config or {}
+    lat, lng = sc.get("latitude"), sc.get("longitude")
+    if lat is None or lng is None:
+        return []
+    try:
+        from src.db.nurseries import region_nurseries
+        rows = region_nurseries(float(lat), float(lng), limit=limit)
+    except Exception:                                      # noqa: BLE001
+        return []
+    return [(n.get("name") or "", n.get("access") or "",
+             n.get("url") or "") for n in rows if n.get("name")]
 
 # Phases: the order a conversion actually goes into the ground — woody structure
 # first, then the herbaceous matrix, then the gap-filling self-spreaders. (P8/P4)
@@ -149,26 +203,14 @@ def _source_bucket(native: bool, ptype: str) -> str:
 
 
 def _spacing_for(plant: dict) -> float:
-    """Centre-to-centre spacing (m): the plant's own ``spacing_m`` when present,
-    else the naturalistic layer/spread-aware estimate.
+    """Centre-to-centre spacing (m), as the plant page tells it (V3.19, QF-9).
 
-    Rounded to 5 cm. ``plant_spacing`` returns an unrounded figure derived from
-    canopy width and spread habit; printing "0.878 m apart" on a sheet somebody
-    plants from claims a precision the estimate does not have, and nobody
-    spaces plants to the millimetre anyway (P9).
+    This read ``spacing_m``, the seed file's name, off a database row whose
+    column is ``spacing_meters``, so for every real plant it printed the
+    layer/spread estimate instead: Wild Bergamot 0.9 m on the buy list and the
+    planting map's key, 0.3 m on its page (R20).
     """
-    explicit = plant.get("spacing_m")
-    if explicit:
-        try:
-            return _round_spacing(float(explicit))
-        except (TypeError, ValueError):
-            pass
-    return _round_spacing(planting_spacing.plant_spacing(plant, base_m=0.45))
-
-
-def _round_spacing(metres: float) -> float:
-    """Spacing to the nearest 5 cm, with a 5 cm floor."""
-    return max(0.05, round(float(metres) * 20.0) / 20.0)
+    return planting_spacing.spacing_to_plant_m(plant)
 
 
 def _phase_for(plant: dict) -> str:
@@ -228,7 +270,12 @@ def planting_window(plant: dict) -> str:
         return "Spring after soil thaws (≈May), or early fall"
     if ptype == "root":
         return "Spring (≈May), or fall dormancy"
-    return "Late spring, after the last frost (late May–Jun)"
+    # The region's last frost (V3.25, ED-6), so the plan, Site Info and the
+    # sun path name one date.
+    from src import region_climate
+    f = region_climate.frost_dates()
+    after = region_climate.date_words(f["last"]) if f else "late May"
+    return f"Late spring, after the last frost (about {after}) to June"
 
 
 def _structures_detail(structures, get_structure) -> list:
@@ -257,13 +304,18 @@ def _structures_detail(structures, get_structure) -> list:
 
 
 def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0,
-                        get_plant=None, get_structure=None) -> PlantingPlan:
+                        get_plant=None, get_structure=None,
+                        site_config=None) -> PlantingPlan:
     """Aggregate a placed design into a :class:`PlantingPlan`.
 
     ``placed_plants`` are placed-plant dicts (``plant_id`` / ``common_name``);
     ``structures`` are structure-definition dicts (as stored on a placed feature's
     ``struct_def``); ``bed_area_m2`` is the drawn bed area to mulch. ``get_plant``
-    / ``get_structure`` are injectable for tests."""
+    / ``get_structure`` are injectable for tests. ``site_config`` is the
+    design's site: "native" is counted for its pin (``src.design_native``,
+    V3.25)."""
+    from src import design_native
+    counts_native = design_native.rule(site_config)
     if get_plant is None:
         from src.db.plants import get_plant as _gp
         get_plant = _gp
@@ -283,7 +335,7 @@ def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0
     for pid, qty in counts.items():
         plant = get_plant(pid) or {}
         ptype = (plant.get("plant_type") or "other").strip().lower()
-        native = bool(plant.get("native_to_alberta"))
+        native = counts_native(plant)
         lo, hi = sourcing.plant_price_range(plant)
         item = PlantingItem(
             plant_id=pid,
@@ -331,9 +383,12 @@ def build_planting_plan(placed_plants, structures=None, bed_area_m2: float = 0.0
     )
 
 
-def render_plan_text(plan: PlantingPlan) -> str:
-    """Render a :class:`PlantingPlan` as the plain-text export (nursery list +
-    phased planting schedule)."""
+def render_plan_text(plan: PlantingPlan, sources=None,
+                     site_config=None) -> str:
+    """Render a :class:`PlantingPlan` as the plain-text export (buy list +
+    phased planting schedule + where to buy). ``sources`` is
+    :func:`sources_near` for the design's pin; ``None`` or ``[]`` says to set
+    a pin instead of naming suppliers from somewhere else."""
     fc = sourcing.format_cost
     lines = [
         f"{APP_NAME} — Planting Plan",
@@ -353,7 +408,8 @@ def render_plan_text(plan: PlantingPlan) -> str:
             line = f"  {it.common_name}"
             if it.scientific_name:
                 line += f"  ({it.scientific_name})"
-            line += (f"  ×{it.qty}  [{it.form}]  space ~{it.spacing_m:g} m  "
+            line += (f"  ×{it.qty}  [{it.form}]  "
+                     f"space ~{planting_spacing.spacing_words(it.spacing_m)}  "
                      f"~{fc(it.ext_low, it.ext_high)}")
             lines.append(line)
             sub_lo += it.ext_low
@@ -384,7 +440,7 @@ def render_plan_text(plan: PlantingPlan) -> str:
         lines.append(f"Mulch:            {fc(plan.mulch_low, plan.mulch_high)}")
     lines.append(
         f"ESTIMATED TOTAL:  {fc(plan.grand_low, plan.grand_high)}  "
-        f"(AB retail/install estimate — varies by nursery, year, site)"
+        f"({price_words(site_config)})"
     )
     lines.append("")
 
@@ -399,8 +455,18 @@ def render_plan_text(plan: PlantingPlan) -> str:
             lines.append(f"  {it.common_name} ×{it.qty} — {it.planting_window}")
         lines.append("")
 
-    lines.append("Alberta native plant nurseries / seed sources:")
-    for nm, url in NURSERIES:
-        lines.append(f"  • {nm:<32} {url}")
+    if sources:
+        lines.append(buy_heading(site_config) + ":")
+        for nm, where, url in sources:
+            line = f"  • {nm}"
+            if where:
+                line += f" — {where}"
+            if url:
+                line += f"  {url}"
+            lines.append(line)
+        lines.append("  Stock is seasonal and often grown to order: "
+                     "check before you go.")
+    else:
+        lines.append(NO_PIN_SOURCES)
 
     return "\n".join(lines)

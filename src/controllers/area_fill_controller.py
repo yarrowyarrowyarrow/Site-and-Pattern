@@ -332,7 +332,6 @@ class AreaFillController:
         ``pattern_kind`` so the feature records how the plant was placed."""
         import math
         import src.project as project_io
-        from src.member_colors import member_color
         main = self._main
         batch: list = []
         for alat, alng, poly in units:
@@ -343,14 +342,15 @@ class AreaFillController:
                 pid = m["plant_id"]
                 name = m.get("common_name", "") or f"Plant #{pid}"
                 try:
-                    spacing, plant_type, _ = main._plant_info(pid)
+                    spacing, plant_type, colour = main._plant_info(pid)
                 except Exception:
-                    spacing, plant_type = 1.0, None
+                    spacing, plant_type, colour = 1.0, None, ""
+                # By type, like every plant and like a reload (V3.03).
                 mlat = alat + float(m.get("offset_y") or 0.0) / 111320
                 mlng = alng + float(m.get("offset_x") or 0.0) / (111320 * cos_lat)
                 main.map_widget.place_plant_marker(
                     pid, name, mlat, mlng, spacing_m=spacing,
-                    plant_type=plant_type, color=member_color(m),
+                    plant_type=plant_type, color=colour,
                     group_id=group_id, community_id=community_id)
                 store_for(main).add_plant(
                     pid, name, mlat, mlng, placement_group_id=group_id,

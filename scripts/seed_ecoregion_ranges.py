@@ -89,6 +89,7 @@ import urllib.error
 import urllib.request
 from datetime import date
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import urlencode
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -99,7 +100,21 @@ PLANT_FILES = ("plants_master.json", "garden_plants.json")
 
 GBIF_SEARCH = "https://api.gbif.org/v1/occurrence/search"
 PAGE_SIZE = 300
-MAX_RECORDS_PER_SPECIES = 6000     # plenty for a range; keeps a run bounded
+#: Records fetched per species before the harvest stops asking.
+#:
+#: **It is not a neutral bound, and V2.77 measured what it costs.** GBIF's
+#: default result order is newest-first, so for a plant with tens of thousands
+#: of records this window is the last few years and nothing else. Sixteen
+#: species in this catalogue sit at the cap; between them they hold 89,964
+#: records dated 2021-2026 and **thirty-one** herbarium specimens. Saskatoon
+#: Berry has 6,000 records, two of them specimens, none older than 2024.
+#:
+#: Raising it is the wrong fix -- it would multiply the harvest for every
+#: species to rescue sixteen. `--specimen-pass` asks for the specimens as their
+#: own query instead, which costs one request for most species, and
+#: `fetch_occurrences(truncated=...)` makes hitting the cap visible so this
+#: cannot go unnoticed again.
+MAX_RECORDS_PER_SPECIES = 6000
 USER_AGENT = ("SiteAndPattern-ecoregion-seeder/1.0 "
               "(https://github.com/yarrowyarrowyarrow/Site-and-Pattern)")
 
@@ -117,6 +132,56 @@ RETRY_WAITS = (5, 15, 45, 120)
 # Records from these bases are places a person put the plant, not places it
 # grows. Leaving them in is how a botanical garden becomes an ecoregion.
 EXCLUDED_BASES = {"LIVING_SPECIMEN", "MATERIAL_SAMPLE", "FOSSIL_SPECIMEN"}
+
+# NOT filtered: identification quality. GBIF's
+# `identificationVerificationStatus` is populated by a minority of publishers
+# and is absent on most herbarium records, so requiring it would discard the
+# best-determined material in the harvest to exclude nothing in particular.
+# The decision is deliberate and is disclosed on the website's Method page
+# rather than left for a reader to discover. `basisOfRecord` IS cached per
+# record (below), so a future pass can weigh a determined specimen against a
+# phone photograph without re-fetching.
+
+#: Where the raw points go, so a re-derivation never needs the network again.
+CACHE_PATH = PROJECT_ROOT / "data" / "fetched" / "plant_occurrences.json"
+CACHE_VERSION = 1
+
+#: A record whose own stated uncertainty is larger than this cannot place a
+#: plant in a *region*, so it is not counted as evidence for one.
+#:
+#: 10 km is chosen against the geography rather than picked round: the
+#: narrowest of the 24 ELC ecoregions is a few tens of kilometres across, so a
+#: record uncertain to 10 km can still say which one it is in near the middle
+#: and is refused near the edges by nothing at all — which is why this is a
+#: floor and not the whole answer. Records with NO stated uncertainty are
+#: KEPT: absent is not estimated (src/confidence.py), most herbarium sheets
+#: state none, and dropping them would silently prefer phone photographs to
+#: museum specimens.
+MAX_COORD_UNCERTAINTY_M = 10_000.0
+
+
+class Occurrence(NamedTuple):
+    """One georeferenced record, with the provenance a re-run would need.
+
+    **A NamedTuple, and lat/lng first, on purpose.** ``ranges_for_species``
+    reads ``point[0]`` and ``point[1]``, so these drop straight into the
+    existing derivation and into every test double that yields plain
+    ``(lat, lng)`` pairs. The extra fields ride along for the cache.
+
+    Why the cache exists at all (V2.75): until now the pipeline kept only the
+    derived *counts*. That made every question about the derivation — a
+    changed threshold, a corrected polygon, a boundary rule, or simply "where
+    in the region are those records?" — cost a fresh harvest of ~400,000 GBIF
+    records. It is why the 5 km buffer bug could be found here and not fixed
+    here, and why the site could report a count and never a map.
+    """
+
+    lat: float
+    lng: float
+    uncertainty_m: float | None = None
+    year: int | None = None
+    basis: str = ""
+    dataset_key: str = ""
 
 
 def polygon_bbox(pad: float = 0.5) -> tuple[float, float, float, float]:
@@ -272,13 +337,28 @@ def catalogue_species() -> list[str]:
 
 def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
                       throttle: "_Throttle | None" = None,
-                      bbox: tuple[float, float, float, float] | None = None
+                      bbox: tuple[float, float, float, float] | None = None,
+                      basis_of_record: str = "",
+                      truncated: list | None = None
                       ) -> list[tuple[float, float]]:
     """Georeferenced occurrence coordinates for one species, inside the bbox.
 
     Filters GBIF-side to records that have coordinates, no recorded geospatial
     issue, and a position within the shipped polygons' bounding box; filters
     here to wild occurrences (see EXCLUDED_BASES).
+
+    ``basis_of_record`` narrows the query to one kind of record GBIF-side --
+    ``"PRESERVED_SPECIMEN"`` for the herbarium sheets. This is not a
+    convenience: see :data:`MAX_RECORDS_PER_SPECIES`. A harvest bounded at six
+    thousand records, ordered newest-first, is four years of phone photographs
+    for a common plant, and the century of specimens behind it never arrives.
+    Asking for the specimens *as their own query* is the only way they can be
+    reached at all.
+
+    ``truncated`` is an optional list this appends to when the cap was hit
+    before GBIF said ``endOfRecords`` -- so a caller can tell "GBIF had no more"
+    apart from "we stopped asking", which is the distinction the cap had been
+    silently erasing.
 
     Raises :class:`FetchFailed` rather than returning ``[]`` when GBIF could
     not be read. An empty list means "GBIF has no records here", which is a
@@ -288,7 +368,7 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
     throttle = throttle or _Throttle()
     lat_min, lat_max, lng_min, lng_max = bbox or polygon_bbox()
 
-    points: list[tuple[float, float]] = []
+    points: list[Occurrence] = []
     offset = 0
     while offset < MAX_RECORDS_PER_SPECIES:
         query = urlencode({
@@ -302,6 +382,7 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
             "decimalLongitude": f"{lng_min},{lng_max}",
             "limit": PAGE_SIZE,
             "offset": offset,
+            **({"basisOfRecord": basis_of_record} if basis_of_record else {}),
         })
         data = _get_json(f"{GBIF_SEARCH}?{query}", 60.0, throttle)
         results = data.get("results") or []
@@ -311,20 +392,165 @@ def fetch_occurrences(scientific_name: str, *, verbose: bool = False,
             lat, lng = rec.get("decimalLatitude"), rec.get("decimalLongitude")
             if lat is None or lng is None:
                 continue
-            points.append((float(lat), float(lng)))
+            unc = rec.get("coordinateUncertaintyInMeters")
+            year = rec.get("year")
+            points.append(Occurrence(
+                # 4 dp is ~11 m, matching the shipped polygons' own rounding.
+                # Storing more would be precision the join cannot use.
+                lat=round(float(lat), 4),
+                lng=round(float(lng), 4),
+                uncertainty_m=float(unc) if unc is not None else None,
+                year=int(year) if year else None,
+                basis=(rec.get("basisOfRecord") or ""),
+                dataset_key=(rec.get("datasetKey") or ""),
+            ))
         if data.get("endOfRecords") or not results:
             break
         offset += PAGE_SIZE
         throttle.wait()
+    else:
+        # The `while` ran to its bound rather than breaking: GBIF still had
+        # records and we stopped asking. Recorded, not assumed.
+        if truncated is not None:
+            truncated.append(scientific_name)
     return points
+
+
+# ── The point cache, and what a point has to be worth ───────────────────────
+
+def usable_points(points, *, max_uncertainty_m: float = MAX_COORD_UNCERTAINTY_M
+                  ) -> tuple[list, int]:
+    """``(points that can place a plant in a region, how many were refused)``.
+
+    A record that states its own coordinate uncertainty is telling you what it
+    can and cannot support, and the pipeline had never read it. A specimen
+    georeferenced to "the county" carries an uncertainty in the tens of
+    kilometres, and counting it toward one ecoregion asserts something its own
+    metadata denies.
+
+    This is the honest instrument for the objection a botanical review raised
+    about boundaries — better than any threshold on *counts*, because it acts
+    per record and for a stated reason rather than hoping errors average out.
+
+    Records with no stated uncertainty are kept; see
+    :data:`MAX_COORD_UNCERTAINTY_M`.
+    """
+    kept, refused = [], 0
+    for point in points:
+        unc = getattr(point, "uncertainty_m", None)
+        if unc is not None and unc > max_uncertainty_m:
+            refused += 1
+            continue
+        kept.append(point)
+    return kept, refused
+
+
+def write_cache(by_species: dict, *, path=CACHE_PATH, generated: str = "",
+                source: str = "") -> dict:
+    """Write the raw points, so no future question needs the network.
+
+    Compact on purpose: a run is ~400,000 records, and one JSON object per
+    record with six keys is several times the size of one array per record
+    with two interned lookup tables. Both `basis` and `dataset_key` repeat
+    across tens of thousands of rows, so they are stored once and referenced by
+    index. The shape is documented in the file's own ``columns`` field, so it
+    reads without this docstring.
+    """
+    bases: list[str] = []
+    datasets: list[str] = []
+    base_ix: dict[str, int] = {}
+    ds_ix: dict[str, int] = {}
+
+    def intern(value, table, index):
+        if value not in index:
+            index[value] = len(table)
+            table.append(value)
+        return index[value]
+
+    species: dict[str, list] = {}
+    for name in sorted(by_species):
+        rows = []
+        for pt in by_species[name]:
+            unc = getattr(pt, "uncertainty_m", None)
+            rows.append([
+                round(float(pt[0]), 4), round(float(pt[1]), 4),
+                None if unc is None else round(float(unc)),
+                getattr(pt, "year", None),
+                intern(getattr(pt, "basis", ""), bases, base_ix),
+                intern(getattr(pt, "dataset_key", ""), datasets, ds_ix),
+            ])
+        species[name] = rows
+
+    blob = {
+        "version": CACHE_VERSION,
+        "generated": generated or date.today().isoformat(),
+        "source": source or "GBIF occurrence search",
+        "comment": (
+            "Raw georeferenced points behind data/plant_ecoregions.json, kept "
+            "so a re-derivation costs nothing. Before V2.75 only the derived "
+            "counts survived a run, so changing the threshold, correcting a "
+            "polygon or drawing the records on a map all required re-fetching "
+            "~400,000 records. Dev cache: the app never reads this."),
+        "columns": ["lat", "lng", "uncertainty_m", "year",
+                    "basis_index", "dataset_index"],
+        "basis": bases,
+        "datasets": datasets,
+        "species": species,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(blob, f, separators=(",", ":"))
+        f.write("\n")
+    return blob
+
+
+def read_cache(path=CACHE_PATH) -> dict:
+    """``{scientific_name: [Occurrence, ...]}`` from the cache, or ``{}``.
+
+    The inverse of :func:`write_cache`, and the entry point for every offline
+    consumer — ``scripts/plot_occurrences.py`` and any future re-derivation.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            blob = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    bases = blob.get("basis") or []
+    datasets = blob.get("datasets") or []
+
+    def name_at(table, i):
+        return table[i] if isinstance(i, int) and 0 <= i < len(table) else ""
+
+    out: dict[str, list] = {}
+    for name, rows in (blob.get("species") or {}).items():
+        points = []
+        for row in rows or []:
+            if not isinstance(row, list) or len(row) < 2:
+                continue
+            row = list(row) + [None] * (6 - len(row))
+            points.append(Occurrence(
+                lat=float(row[0]), lng=float(row[1]),
+                uncertainty_m=None if row[2] is None else float(row[2]),
+                year=row[3] if isinstance(row[3], int) else None,
+                basis=name_at(bases, row[4]),
+                dataset_key=name_at(datasets, row[5]),
+            ))
+        out[name] = points
+    return out
 
 
 # ── The run ─────────────────────────────────────────────────────────────────
 
 def derive(names: list[str], *, min_records: int, verbose: bool,
            fetch=fetch_occurrences, throttle: "_Throttle | None" = None,
-           on_progress=None) -> tuple[dict, dict, list, list]:
+           on_progress=None, collect=None,
+           tally: dict | None = None) -> tuple[dict, dict, list, list]:
     """``(species_ranges, dropped, no_records, failed)`` for a list of species.
+
+    ``collect`` is an optional dict that receives ``{name: points}`` as they
+    arrive — the raw harvest, before the uncertainty filter, so the cache holds
+    what GBIF actually returned and the filter stays a derivation-time decision
+    that can be revisited without re-fetching.
 
     ``failed`` is separate from ``no_records`` on purpose: a species GBIF
     refused to answer for has NOT been shown to grow nowhere, and the run
@@ -356,6 +582,9 @@ def derive(names: list[str], *, min_records: int, verbose: bool,
             throttle.wait()
             continue
 
+        if collect is not None:
+            collect[name] = list(points)
+
         if not points:
             no_records.append(name)
             if verbose:
@@ -363,7 +592,13 @@ def derive(names: list[str], *, min_records: int, verbose: bool,
             throttle.wait()
             continue
 
-        rows = ranges_for_species(points, min_records=min_records)
+        points, refused = usable_points(points)
+        if refused and verbose:
+            print(f"[{i}/{len(names)}] {name}: {refused} record(s) too "
+                  f"coarsely georeferenced to place in a region")
+
+        rows = ranges_for_species(points, min_records=min_records,
+                                  tally=tally)
         thin = dropped_regions(points, min_records=min_records)
         if rows:
             species_ranges[name] = rows
@@ -378,6 +613,92 @@ def derive(names: list[str], *, min_records: int, verbose: bool,
         throttle.wait()
 
     return species_ranges, dropped, no_records, failed
+
+
+#: The one basis of record a public dot map can be drawn from. Herbarium
+#: sheets carry no rare-taxa coordinate obscuring (the sheet is already in a
+#: cabinet with a label on it), and their licence is a fact about the whole
+#: collection rather than a per-observer choice -- which is what the printed
+#: regional floras plot, for both of those reasons.
+SPECIMEN_BASIS = "PRESERVED_SPECIMEN"
+
+
+def merge_into_cache(harvest: dict, *, path=CACHE_PATH) -> tuple[dict, dict]:
+    """``(merged cache, {name: how many records were new})``.
+
+    De-duplicates on ``(lat, lng, year, dataset_key)``. Not on the whole tuple:
+    ``uncertainty_m`` and ``basis`` can be re-stated between GBIF exports for a
+    record that is the same sheet in the same cabinet, and counting it twice
+    would inflate exactly the number a confidence band is computed from.
+
+    Not on ``(lat, lng)`` alone either. Two different collectors at the same
+    trailhead in different decades are two records, and a dot map that silently
+    collapsed them would under-report the very thing it is drawn to show.
+    """
+    merged = read_cache(path)
+    added: dict[str, int] = {}
+    for name, points in harvest.items():
+        have = merged.get(name) or []
+        seen = {(p[0], p[1], getattr(p, "year", None),
+                 getattr(p, "dataset_key", "")) for p in have}
+        fresh = []
+        for pt in points:
+            key = (pt[0], pt[1], getattr(pt, "year", None),
+                   getattr(pt, "dataset_key", ""))
+            if key in seen:
+                continue
+            seen.add(key)
+            fresh.append(pt)
+        if fresh:
+            merged[name] = list(have) + fresh
+            added[name] = len(fresh)
+    return merged, added
+
+
+def specimen_pass(names: list[str], *, throttle: "_Throttle | None" = None,
+                  verbose: bool = True, fetch=fetch_occurrences
+                  ) -> tuple[dict, list]:
+    """``({name: specimen records}, failed)`` -- the herbarium half, on its own.
+
+    Asked as its own GBIF query rather than filtered out of the general
+    harvest, because the general harvest cannot reach it: see
+    :data:`MAX_RECORDS_PER_SPECIES`. Most species answer in one request (GBIF
+    returns the whole first page when there are fewer than ``PAGE_SIZE``), so
+    running this over the entire catalogue costs minutes and needs no guess
+    about which species were truncated.
+    """
+    throttle = throttle or _Throttle()
+    harvest: dict[str, list] = {}
+    failed: list[tuple[str, str]] = []
+    for i, name in enumerate(names, 1):
+        try:
+            points = fetch(name, verbose=verbose, throttle=throttle,
+                           basis_of_record=SPECIMEN_BASIS)
+        except FetchFailed as exc:
+            failed.append((name, str(exc)))
+            print(f"[{i}/{len(names)}] {name}: COULD NOT FETCH ({exc}) "
+                  f"-- NOT recorded as having no specimens")
+            throttle.wait()
+            continue
+        harvest[name] = list(points)
+        if verbose:
+            print(f"[{i}/{len(names)}] {name}: {len(points)} specimen record(s)")
+        throttle.wait()
+    return harvest, failed
+
+
+def cache_fetcher(cache: dict):
+    """A ``fetch`` for :func:`derive` that reads the cache instead of GBIF.
+
+    The cache was built so that no question about this derivation would ever
+    need the network again, and until now nothing used it that way -- a changed
+    threshold or a corrected polygon still meant a fresh harvest on a machine
+    with egress. It also means the derivation can be re-run, and its diff read,
+    in a session that has no egress at all.
+    """
+    def fetch(name, **_kwargs):
+        return list(cache.get(name) or [])
+    return fetch
 
 
 def load_existing() -> dict[str, list[dict]]:
@@ -416,6 +737,15 @@ def main(argv: list[str] | None = None) -> int:
                         "Raised automatically for the rest of the run on a 429.")
     p.add_argument("--dry-run", action="store_true",
                    help="Print the result; write nothing.")
+    p.add_argument("--specimen-pass", action="store_true",
+                   help="Fetch PRESERVED_SPECIMEN records as their own query "
+                        "and merge them into the point cache. The general "
+                        "harvest is capped and ordered newest-first, so for a "
+                        "common plant it never reaches the herbarium sheets.")
+    p.add_argument("--from-cache", action="store_true",
+                   help="Re-derive from data/fetched/plant_occurrences.json "
+                        "with NO network. Use after --specimen-pass, or after "
+                        "any change to the polygons or the threshold.")
     p.add_argument("--quiet", action="store_true")
     args = p.parse_args(argv)
 
@@ -426,6 +756,10 @@ def main(argv: list[str] | None = None) -> int:
     names = args.species or catalogue_species()
     if args.limit:
         names = names[:args.limit]
+
+    if args.specimen_pass:
+        return _run_specimen_pass(names, sleep=args.sleep, verbose=verbose,
+                                  dry_run=args.dry_run)
 
     existing: dict[str, list[dict]] = {}
     if args.resume:
@@ -441,14 +775,47 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if args.resume else 1
 
     lat_min, lat_max, lng_min, lng_max = polygon_bbox()
-    throttle = _Throttle(args.sleep)
+    throttle = _Throttle(0.0 if args.from_cache else args.sleep)
+    fetch = fetch_occurrences
 
-    print(f"Deriving ecoregion ranges for {len(names)} species from GBIF "
-          f"(min {min_records} records per region, {throttle.sleep:.1f}s "
-          f"between calls).")
-    print(f"Querying only lat {lat_min:.1f}..{lat_max:.1f}, "
-          f"lng {lng_min:.1f}..{lng_max:.1f} — records outside the polygons "
-          f"are never counted, so there is no reason to download them.\n")
+    if args.from_cache:
+        cache = read_cache()
+        if not cache:
+            print(f"No point cache at "
+                  f"{CACHE_PATH.relative_to(PROJECT_ROOT)}. Run this script "
+                  f"without --from-cache, on a machine with egress, first.",
+                  file=sys.stderr)
+            return 1
+        fetch = cache_fetcher(cache)
+        missing = [n for n in names if n not in cache]
+        print(f"Re-deriving {len(names)} species from "
+              f"{sum(len(v) for v in cache.values()):,} cached records "
+              f"(min {min_records} per region). No network.")
+        if missing:
+            # Not silently absent: a species the cache never held would come
+            # out of this run with no rows, which reads as "grows nowhere".
+            one = len(missing) == 1
+            print(f"  {len(missing)} of them "
+                  f"{'is' if one else 'are'} NOT in the cache and will derive "
+                  f"to nothing. {'It keeps its' if one else 'They keep their'} "
+                  f"existing rows only if you run with --resume: "
+                  f"{', '.join(missing[:6])}"
+                  f"{' ...' if len(missing) > 6 else ''}")
+        print()
+    else:
+        print(f"Deriving ecoregion ranges for {len(names)} species from GBIF "
+              f"(min {min_records} records per region, {throttle.sleep:.1f}s "
+              f"between calls).")
+        print(f"Querying only lat {lat_min:.1f}..{lat_max:.1f}, "
+              f"lng {lng_min:.1f}..{lng_max:.1f} — records outside the "
+              f"polygons are never counted, so there is no reason to download "
+              f"them.\n")
+
+    # Bound before `checkpoint` closes over it, not merely before `derive`
+    # calls it: the closure would resolve either way and only one of those is
+    # a thing the next reader can see is safe.
+    harvest: dict[str, list] = {}
+    tally: dict = {}
 
     def checkpoint(partial: dict):
         """Write what we have so far, so an interrupt is not a lost harvest."""
@@ -456,11 +823,13 @@ def main(argv: list[str] | None = None) -> int:
             return
         merged = dict(existing)
         merged.update(partial)
-        _write(merged, min_records)
+        _write(merged, min_records, tally,
+               from_cache=bool(args.from_cache))
 
     ranges, dropped, no_records, failed = derive(
-        names, min_records=min_records, verbose=verbose,
-        throttle=throttle, on_progress=checkpoint)
+        names, min_records=min_records, verbose=verbose, fetch=fetch,
+        throttle=throttle, on_progress=checkpoint, tally=tally,
+        collect=None if args.from_cache else harvest)
 
     merged = dict(existing)
     merged.update(ranges)
@@ -469,6 +838,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  {len(merged)} species with at least one region "
           f"({len(ranges)} from this run)")
     print(f"  {len(no_records)} species with no records inside the polygons")
+    seen = sum(tally.values())
+    if seen:
+        from src.ecoregion import SIMPLIFICATION_M
+        print(f"  {tally.get('counted', 0):,} of {seen:,} records counted; "
+              f"{tally.get('unsettled', 0):,} "
+              f"({tally.get('unsettled', 0) / seen:.1%}) fell within "
+              f"{SIMPLIFICATION_M:.0f} m of a border and count for no region; "
+              f"{tally.get('outside', 0):,} were outside the layer")
     if failed:
         print(f"  {len(failed)} species COULD NOT BE FETCHED — these are NOT "
               f"recorded as absent. Re-run with --resume to retry them:")
@@ -492,9 +869,25 @@ def main(argv: list[str] | None = None) -> int:
         print("\n--dry-run: nothing written.")
         return 0
 
-    _write(merged, min_records)
+    _write(merged, min_records, tally,
+           from_cache=bool(args.from_cache))
     print(f"\nWrote {OUTPUT_PATH.relative_to(PROJECT_ROOT)} "
           f"({len(merged)} species)")
+
+    # The raw points, so nothing after this needs the network (V2.75). A
+    # partial run still writes what it got: the cache is a strict improvement
+    # on nothing, and --resume merges the next run into it.
+    if harvest:
+        previous = read_cache()
+        previous.update(harvest)
+        write_cache(previous,
+                    source=f"GBIF occurrence search, retrieved {date.today()}")
+        records = sum(len(v) for v in previous.values())
+        size_mb = CACHE_PATH.stat().st_size / 1_000_000
+        print(f"Wrote {CACHE_PATH.relative_to(PROJECT_ROOT)} "
+              f"({records:,} records over {len(previous)} species, "
+              f"{size_mb:.1f} MB). Re-deriving from it needs no network — see "
+              f"scripts/plot_occurrences.py.")
     if failed:
         print("Re-run with --resume before committing — some species are "
               "missing because GBIF refused, not because they grow nowhere.")
@@ -504,13 +897,105 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _write(species_ranges: dict, min_records: int) -> None:
+def _run_specimen_pass(names: list[str], *, sleep: float, verbose: bool,
+                       dry_run: bool) -> int:
+    """``--specimen-pass``: the herbarium half, merged into the cache.
+
+    Deliberately does NOT re-derive the ranges. Fetching and deriving are two
+    decisions and the diff between them is the thing worth reading, so this
+    ends by naming the command that does the second one.
+    """
+    if not read_cache():
+        print(f"No point cache at {CACHE_PATH.relative_to(PROJECT_ROOT)}. "
+              f"Run the full harvest first; a specimen pass merges into an "
+              f"existing cache rather than standing in for one.",
+              file=sys.stderr)
+        return 1
+
+    throttle = _Throttle(sleep)
+    print(f"Asking GBIF for {SPECIMEN_BASIS} records for {len(names)} "
+          f"species, as their own query.")
+    print(f"The general harvest stops at {MAX_RECORDS_PER_SPECIES:,} records "
+          f"per species and GBIF orders newest-first, so for a common plant "
+          f"it is recent observations all the way down and the specimens "
+          f"never arrive. This is how they are reached.\n")
+
+    harvest, failed = specimen_pass(names, throttle=throttle, verbose=verbose)
+    merged, added = merge_into_cache(harvest)
+
+    fetched = sum(len(v) for v in harvest.values())
+    gained = sum(added.values())
+    print(f"\n  {fetched:,} specimen records fetched over {len(harvest)} "
+          f"species; {gained:,} of them were not already cached.")
+    empty = sorted(n for n, v in harvest.items() if not v)
+    if empty:
+        print(f"  {len(empty)} species have NO specimen records in range. That "
+              f"is a real finding about the herbaria, not a fetch failure:")
+        for name in empty[:20]:
+            print(f"      {name}")
+        if len(empty) > 20:
+            print(f"      ... and {len(empty) - 20} more")
+    if added:
+        print("\n  Biggest gains (these are the species the cap was hiding):")
+        for name, n in sorted(added.items(), key=lambda kv: -kv[1])[:15]:
+            print(f"      +{n:5d}  {name}")
+    if failed:
+        print(f"\n  {len(failed)} species COULD NOT BE FETCHED and are NOT "
+              f"recorded as specimen-free. Re-run for them:")
+        for name, why in failed[:20]:
+            print(f"      {name}: {why}")
+
+    if dry_run:
+        print("\n--dry-run: nothing written.")
+        return 0
+    if not gained:
+        print("\nNothing new; cache left alone.")
+        return 2 if failed else 0
+
+    write_cache(merged,
+                source=f"GBIF occurrence search + {SPECIMEN_BASIS} pass, "
+                       f"retrieved {date.today().isoformat()}")
+    records = sum(len(v) for v in merged.values())
+    print(f"\nWrote {CACHE_PATH.relative_to(PROJECT_ROOT)} "
+          f"({records:,} records over {len(merged)} species).")
+    print("Next: re-derive from it with no network, and read the diff:")
+    print("    python scripts/seed_ecoregion_ranges.py --from-cache")
+    return 2 if failed else 0
+
+
+def _retrieved_source(from_cache: bool) -> str:
+    """What to write as ``source``, which is a *retrieval* date (V2.81).
+
+    This said ``retrieved {today}`` unconditionally, and a ``--from-cache``
+    re-derivation fetches nothing: the V2.81 run would have stamped
+    "retrieved 2026-08-31" on a harvest taken on the 24th and published that
+    on every species page, under a heading whose whole job is answering *as of
+    when*. A derivation date and a retrieval date are two facts and only one of
+    them is today's.
+    """
+    if not from_cache:
+        return f"GBIF occurrence search, retrieved {date.today().isoformat()}"
+    try:
+        with open(CACHE_PATH, encoding="utf-8") as handle:
+            cached = json.load(handle)
+    except Exception:                                         # noqa: BLE001
+        cached = {}
+    stated = (cached.get("source") or "").strip()
+    if stated:
+        return stated
+    when = (cached.get("generated") or "").strip()
+    return (f"GBIF occurrence search, retrieved {when}" if when
+            else "GBIF occurrence search, retrieval date not recorded")
+
+
+def _write(species_ranges: dict, min_records: int,
+           tally: dict | None = None, *, from_cache: bool = False) -> None:
     from src.ecoregion_ranges import build_document
     doc = build_document(
         species_ranges,
-        source=f"GBIF occurrence search, retrieved {date.today().isoformat()}",
+        source=_retrieved_source(from_cache),
         generated=date.today().isoformat(),
-        min_records=min_records)
+        min_records=min_records, tally=tally)
     OUTPUT_PATH.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
                            encoding="utf-8")
 

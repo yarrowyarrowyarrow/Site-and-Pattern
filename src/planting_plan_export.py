@@ -80,8 +80,11 @@ def assemble(project: dict, placed_plants: list, structures: list, plan,
     caller substitute an already-rendered F40 section.
     """
     if plan_text is None:
-        from src.planting_plan import render_plan_text
-        plan_text = render_plan_text(plan)
+        from src.planting_plan import render_plan_text, sources_near
+        site_config = ((project or {}).get("properties") or {}).get(
+            "site_config")
+        plan_text = render_plan_text(plan, sources=sources_near(site_config),
+                                     site_config=site_config)
 
     sections = [
         _section(lambda: site_prep_section(project, placed_plants,

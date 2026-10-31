@@ -4,10 +4,13 @@ Every fact and every photograph this app ships, with its source and its licence.
 Written so that the question *"are you allowed to have that?"* has an answer that
 can be checked rather than asserted.
 
-The app itself is [PolyForm Noncommercial 1.0.0](../LICENSE). That matters here:
-several of the terms below are easier to satisfy for a noncommercial project than
-they would be for a product, and a few of the choices only make sense in that
-light.
+The app's code is under the [GNU General Public License, version 3](../LICENSE)
+since V3.18; it was PolyForm Noncommercial 1.0.0 before, and several entries
+below were written in that light. **The code's licence does not change the
+data's.** Each record and photograph keeps the licence its publisher gave it:
+a CC BY-NC record stays noncommercial whatever the program around it allows, and
+anyone who takes the data out of the app takes those terms with it. The project
+itself is still free and not sold.
 
 > **This document is now reachable from inside the app** (V2.42) —
 > **Help → "Where This Data Came From…"**, built by `src/data_sources_flow.py`
@@ -30,11 +33,54 @@ light.
 | | |
 |---|---|
 | Photographs | **Sound.** Every one is CC0 / CC BY / CC BY-SA, credited per photo, and a test fails the build if a credit goes missing. |
-| Ecoregion range per species | **Was the worst gap in the catalogue, now being fixed.** The tags were generated heuristically and never sourced — a user caught it (Saskatoon Berry, a defining Aspen Parkland shrub, carried no parkland tag). Schema v59 replaces them with counts derived from GBIF occurrence records, each row carrying its evidence. |
+| Ecoregion range per species | **Sourced, and V2.75 found two things wrong with how.** The tags were once generated heuristically and never sourced; schema v59 replaced them with counts derived from GBIF occurrence records, each row carrying its evidence. Then an outside review asked where in the ecoregion those records were, and checking turned up a **5 km proximity buffer** reaching the derivation from site detection (16.4% of points inside the layer are credited to two or more regions) and a spatial join running against the display-simplified polygons. **Both are fixed and the data is re-derived (V2.76).** Re-fetched from GBIF on 2026-08-21 and derived by containment: 489,546 attributed records became **361,447**, and 493 of 4,218 region claims proved to have almost no records inside them. The error was **concentrated, not scattered** — `western_continental_ranges` is a BC region clipped to a hairline inside Alberta (0.02% of the layer), so a five-kilometre apron many times its own area was sweeping in every montane record near the border. It went from **135 species to 15**. `/method/` states this to readers rather than restating the numbers quietly. |
+| Nativity per province | **The weakest claim in the catalogue, and it is being replaced.** `native_provinces` was *generated* from a hand-authored `native_to_alberta` boolean plus the plant's ecoregion tags — no plant record carries a citation of any kind. V2.75 retired the generator (it had gone stale against a vocabulary replaced two releases earlier) and shipped the machinery to source it from VASCAN. Until that fetch runs, treat "native to AB, SK" as the catalogue's assertion, not a sourced fact. |
 | Flower morphology | **Was a gap, now recorded.** The numbers are genus-level botanical judgement. Until V2.36 nothing said so per species; now `flower_data_source` and `flower_data_citation` do. |
 | Everything else | Named below. Nothing is scraped, and nothing is copied out of a copyrighted flora. |
 
 ---
+
+
+## Occurrence coordinates (V2.80)
+
+**Source:** GBIF, cached by `scripts/seed_ecoregion_ranges.py`, filtered and
+shipped by `scripts/seed_occurrence_points.py` as
+`data/plant_occurrence_points.json`. 171,896 marks over 426 species, drawn on
+every species page.
+
+**A coordinate is held to a different licence bar than a photograph, and that
+is a deliberate decision the author made in V2.79.**
+
+| | photographs | occurrence coordinates |
+|---|---|---|
+| constant | `fetch_inaturalist_images.ACCEPT_LICENSES` / `PUBLISHABLE` | `PUBLISHABLE_COORDINATES` |
+| CC0, CC BY | published | published |
+| **CC BY-NC** | **withheld** | **published** |
+| unknown / unspecified | withheld | withheld |
+
+The reasoning: *a photograph is redistributed as a work; a coordinate is a fact
+about a place.* Where a plant was recorded is not authored, and a dot on a
+distribution map is not a republication of the observer's creative work, so the
+NonCommercial term — which governs commercial reuse of the work — does not
+reach it. The photograph rule is untouched and a test asserts the coordinate
+set is a strict superset of it.
+
+The split is not academic. Of 365,092 records that are inside Alberta or
+Saskatchewan and precise enough to draw, **329,267 are CC BY-NC observations**:
+the entire iNaturalist layer. Holding coordinates to the photograph bar
+published a map that was 94% herbarium specimens and called it the observation
+record.
+
+**Three filters, all disclosed on `/method/`:** coordinate uncertainty over
+10 km is refused, records outside the two provinces are dropped (F142), and a
+dataset absent from the licence table is dropped rather than assumed
+permissive. Records closer together than 0.01° are drawn once, which is under
+half a pixel at the size the maps are shown.
+
+**Not shipped:** `data/fetched/plant_occurrences.json`, the raw cache. It is a
+dev artefact holding 559,502 unfiltered records including the ones no licence
+permits redrawing.
+
 
 ## Photographs
 
@@ -219,7 +265,8 @@ A draft is in [`FNA_PERMISSION_LETTER.md`](FNA_PERMISSION_LETTER.md).
 | Map tiles | OpenStreetMap + CARTO; Esri and Mapbox satellite layers | attributed in the Leaflet control (`html/map/01-core.js`, `05-features.js`) |
 | Fauna records and plant↔fauna links | Compiled for this project from published host-plant and pollinator literature | ours |
 | **Ecoregion polygons** | Rectangular approximations drawn for this project (V1.36), to be replaced by **CEC Level III Ecoregions of North America** via `scripts/prepare_ecoregions.py` — *check the CEC's terms before committing that output* | ours today; CEC terms apply once regenerated |
-| **Per-species ecoregion range** (schema v59) | [GBIF](https://www.gbif.org/) occurrence search — georeferenced records intersected with the polygons above by `scripts/seed_ecoregion_ranges.py`. **Only the derived counts are stored**, never GBIF's records themselves: each row is "N georeferenced records fall inside this region", which is a number we computed, not a dataset we redistribute. Every row ships its count, a confidence band and the retrieval date | GBIF search API is open; the derived counts are ours |
+| **Per-species ecoregion range** (schema v59) | [GBIF](https://www.gbif.org/) occurrence search — georeferenced records intersected with the polygons above by `scripts/seed_ecoregion_ranges.py`. **Only the derived counts are published to the website**: each row is "N georeferenced records fall inside this region", which is a number we computed. Every row ships its count, a confidence band and the retrieval date. **Counts are inflated by about 0.8%** where two simplified polygons overlap at a shared border and one record satisfies both (V2.78, mostly Calgary); left in place and disclosed on `/method/` rather than resolved by guessing a side. **The raw points are cached in `data/fetched/plant_occurrences.json`** (V2.75) so a re-derivation costs no network — the app never reads it and the website never publishes it, but it IS committed to a public repository, so this row said "not redistributed" for one increment while it was. **Corrected in V2.77**, and the licences were then looked up rather than assumed: `scripts/fetch_dataset_licences.py` asked GBIF per dataset (224 of them) and got **61 CC0, 82 CC-BY, 81 CC-BY-NC**. All three permit redistribution; CC-BY and CC-BY-NC require attribution, which the cache file carries per record as `dataset_key`, and CC-BY-NC restricts commercial use of those records, a condition that travels with them: the code's move to the GPL in V3.18 does not lift it. Drawing the points on a public page is a further step and has not been taken — see the "Publish the occurrence points" backlog entry | GBIF's search API is open and the derived counts are ours. The cached points are GBIF's records, redistributed here under the publishers' own CC licences with `dataset_key` attribution; per-dataset licence tokens are in `data/fetched/dataset_licences.json` |
+| **Nativity and accepted names** (V2.75, machinery only) | [VASCAN](https://data.canadensys.net/vascan/), the Database of Vascular Plants of Canada, via `scripts/fetch_flora_nativity.py`. One request per species returns `establishmentMeans` **per province** and the accepted name with synonym status — the two things this catalogue has never had. Only the derived verdict is stored, per species: which provinces VASCAN calls it native in, whether the name is superseded, and `unstated` where VASCAN says nothing. **The fetch had not been run when this was written**; the container's egress policy answers 403 to `data.canadensys.net` | VASCAN is published under CC BY 4.0 by the Canadensys network; attribution is owed and is given here and on the website |
 | **Botanical diagrams** — the 33 leaf shapes, inflorescence architectures and leaf arrangements | Drawn as code in [`html/botany/diagrams.js`](../html/botany/diagrams.js) from the botanical definitions. **Not traced from any published figure**, which matters because good ones exist and are copyrighted: a raceme is a raceme, the term is nobody's property, and the drawing is ours. Committed to `docs/img/botany/` by `scripts/render_botany_diagrams.js` | ours |
 | **Fauna diagrams** — wing shapes, wing patterns, resting postures, flight styles, bee builds, scopa positions | As above, in [`html/botany/fauna.js`](../html/botany/fauna.js) → `docs/img/fauna/` | ours |
 | **Fauna morphology** (schema v58) — bumblebee band patterns, wingspans, wing colours and shapes, flight styles | Genus-level and field-mark-level judgement in `scripts/seed_fauna_morphology.py`, carrying forward what `src/scene_wildlife.py` already asserted. **Every record ships `morph_data_source: estimated` with a blank citation.** Nothing is copied from a key or a plate; a band pattern here is what a species is generally described as, not a transcription. Raised to `photo`/`flora`/`measured` in `scripts/tune_fauna.py` as somebody checks it — at which point the citation becomes mandatory. The position on reading facts out of a copyrighted guide is the same one argued above for floras: **"T2 orange" is a fact, and facts are nobody's property** | ours, per-record provenance |

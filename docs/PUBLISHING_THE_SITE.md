@@ -21,8 +21,8 @@ because serving a file is nearly free for them.
 python -m src.cli build-site public
 ```
 
-That writes about 1,660 files into a new folder called `public`: 432 species
-pages, 1,138 wildlife pages, the ecoregion map, the browse page and its search
+That writes about 1,680 files into a new folder called `public`: 431 species
+pages, 1,132 wildlife pages, the ecoregion map, the browse page and its search
 index. The counts are computed at build time and printed at the end, so the
 numbers in this paragraph are illustrative and the ones on your screen are
 real.
@@ -37,9 +37,10 @@ the folder is always a fresh snapshot of the database.
 By default **321 of the photographs are hotlinked**, meaning the page points at the
 photo on iNaturalist rather than carrying a copy. That is legal and correctly
 credited, but it means the pages load slower and a photo can disappear if the
-source removes it. To bundle copies instead, warm the local image cache first
-(open the plant browser in the app and scroll through it) and rebuild. The build
-tells you which it did:
+source removes it. To bundle copies instead, run
+`python scripts/warm_photo_cache.py` once (about six minutes) and rebuild. It
+also decides which photograph a shared link carries, so see **Step 5**. The
+build tells you which it did:
 
 ```
 photos: 0 copied from cache, 321 left as links
@@ -70,21 +71,42 @@ and publishing becomes one command rather than a separate account.
 
 ```bash
 python -m src.cli build-site public
-cd public
-git init -b gh-pages
-git add -A
-git commit -m "Publish the plant directory"
-git remote add origin https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
-git push -f origin gh-pages
+git -C public init -b gh-pages
+git -C public add -A
+git -C public commit -m "Publish the plant directory"
+git -C public remote add origin https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+git -C public push -f origin gh-pages
 ```
 
 A minute or two later the site is at
 `https://yarrowyarrowyarrow.github.io/Site-and-Pattern/`.
 
-To update it later, repeat those same commands. The `-f` is safe here and only
-here: the `gh-pages` branch holds *generated* files, so overwriting it loses
-nothing that is not rebuilt from the catalogue in seconds. Never use `-f` on a
-`V*.*` branch.
+**Why `git -C public` and not `cd public` (V2.81).** These commands used to
+start with `cd public`, and every one after it did real damage if that `cd` did
+not take effect: `rm -rf .git` in the repository root destroys your whole
+history, and `git push -f origin gh-pages` then publishes the *source tree* as
+the website. Both of those happened here, in one run, because a shell had
+silently returned to the repository root between two steps.
+
+`git -C <dir>` names the directory on every single command, so no step depends
+on where the previous one left you. It is the same fix as an absolute path.
+
+If you are re-publishing over an existing `public/`, delete the folder first
+(`rm -rf public`) rather than the `.git` inside it — `build-site` does not clear
+its output directory, so a rebuild over an old one republishes species you have
+since removed. Check before you push:
+
+```bash
+ls public/index.html public/CNAME && ! test -d public/src && echo "this is a site"
+```
+
+That prints `this is a site` only if the folder holds a built site and *not* a
+copy of the source tree. If it prints nothing, stop: you are about to publish
+the wrong directory.
+
+The `-f` is safe here and only here: the `gh-pages` branch holds *generated*
+files, so overwriting it loses nothing that is not rebuilt from the catalogue in
+minutes. Never use `-f` on a `V*.*` branch.
 
 ### Netlify, if you would rather not touch git for this
 
@@ -168,15 +190,50 @@ existing link breaks.
 
 ## Step 4: find out whether anyone is reading it (optional)
 
-Off unless you ask for it. With no token the site makes **no request to
-anywhere else at all**, which is how it has always shipped and the default this
-step does not change.
+Off unless you ask for it. With no analytics argument the site makes **no
+request to anywhere else at all**, which is how it has always shipped and the
+default this step does not change.
 
-**Why Cloudflare Web Analytics and not Google Analytics.** It is free, it needs
-no cookie banner because it sets no cookies, it keeps no per-visitor
-identifier, and your domain is already on Cloudflare so there is no new account
-to open. Google Analytics would give more numbers than you need and would put a
-consent obligation on a catalogue that currently has none.
+There are two counters you can turn on, separately or together. Both are free,
+neither sets a cookie, neither keeps a per-visitor identifier, and either one
+adds a line to the footer of every page saying it is there. That is the price
+of admission: a script that needed a consent banner would not be in here.
+
+| | Answers | Keeps history |
+|---|---|---|
+| **Cloudflare Web Analytics** | *is anybody reading this at all* | free tier holds roughly the last day |
+| **Umami** | *which pages, and is it growing* | months |
+
+**Turn on Umami if you only turn on one.** Cloudflare's short window is the
+whole reason this step gained a second option in V2.73: a 24-hour snapshot
+cannot show you that March had twice February's readers, or that one species
+page is where most people arrive.
+
+**Why not Google Analytics.** It would give far more numbers than you need and
+would put a consent obligation on a catalogue that currently has none.
+
+### 4a. Umami — the one that keeps history
+
+1. Sign up at **[cloud.umami.is](https://cloud.umami.is)** (there is a free
+   tier; check their pricing page for the current event limit).
+2. **Add a website**, name it and enter `grownativeplants.ca`.
+3. Open that website's **Settings**. Copy the **Website ID** — a UUID, five
+   groups of hex digits separated by hyphens, like
+   `0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8`.
+
+Copy the **ID**, not the tracking-code snippet and not the share URL. The build
+writes the snippet for you, and the share URL is a different thing entirely.
+
+```bash
+python -m src.cli build-site public --base-url https://grownativeplants.ca/ \
+  --umami-website-id 0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8
+```
+
+If you signed up in Umami's **EU region**, add
+`--umami-src https://eu.umami.is/script.js` — the ID alone will not find it,
+and the symptom is a dashboard that stays at zero.
+
+### 4b. Cloudflare — keep it as the control
 
 Get the token once:
 
@@ -186,26 +243,49 @@ Get the token once:
 3. You do not need the snippet. Copy only the long value after `"token":` —
    32 characters, letters and digits.
 
-Then build with it:
+You can pass both flags at once, and for the first fortnight you should:
 
 ```bash
 python -m src.cli build-site public --base-url https://grownativeplants.ca/ \
-  --analytics-token PASTE_THE_TOKEN_HERE
+  --analytics-token PASTE_THE_TOKEN_HERE \
+  --umami-website-id 0f8c1a2b-3d4e-5f60-7182-93a4b5c6d7e8
 ```
 
-**What it does.** Adds one `<script>` to the end of every page, pointing at
-Cloudflare's beacon, and adds a line to the footer saying so. **How to read the
-output.** The last line of the build now reads either `analytics: Cloudflare
-beacon embedded, disclosed in the footer` or `analytics: none (the site makes
-no external request)`. Read that line — it is the only way to know which kind
-of build you just made. **What failure looks like:** a mistyped token is
-*refused* with an error rather than published, because the value goes into
-2,000 pages and a broken one would be silent. A token that is well-formed but
-belongs to a different site will not error; it will just record nothing, so
-check Cloudflare shows traffic within a day of publishing.
+Two counters on the same pages should report roughly the same traffic. If Umami
+shows nothing while Cloudflare shows visitors, the problem is the Umami setup,
+not the audience. Once the two agree, drop `--analytics-token` and Cloudflare
+is off with no other change.
 
-Numbers show up under the same **Web Analytics** page in Cloudflare, usually
-within a few minutes of the first visit.
+### 4c. Reading the build output
+
+**What these flags do.** Each adds one `<script>` to the end of every page and
+adds a sentence to the footer naming what is there.
+
+**How to read the output.** The last line of the build now names the providers
+it embedded:
+
+```
+  analytics: Cloudflare Web Analytics + Umami embedded, disclosed in the footer
+  analytics: Umami embedded, disclosed in the footer
+  analytics: none (the site makes no external request)
+```
+
+Read that line. It is the only way to know which kind of build you just made,
+and it is why the line names them rather than saying "yes".
+
+**What failure looks like.** A mistyped token or a website ID that is not a
+UUID is *refused with an error* rather than published, because the value goes
+into 2,000 pages and a broken one would be silent. But a value that is
+well-formed and belongs to somebody else's site will **not** error: it will
+build cleanly and record nothing. So after publishing, visit the site yourself
+and check the number moves. Cloudflare usually shows it within a few minutes;
+Umami shows the visit almost immediately, on its **Realtime** page.
+
+**The one that will confuse you later:** `cloud.umami.is/script.js` is on the
+common ad-blocker lists, so some of your visitors are never counted and the
+number is a floor, not a total. The fix is to serve the script from your own
+domain, and that is what `--umami-src` is for — it takes any https URL, so if
+you ever self-host Umami, only the build command changes.
 
 ---
 
@@ -227,12 +307,99 @@ Worth knowing so you do not go looking for it:
 - **It works with no scripts.** Filtering uses a small script, but every page is
   readable and every link works with JavaScript switched off.
 
+## Step 5: the picture a shared link shows (V2.80)
+
+When you paste a link to the site into Facebook, Reddit, Slack, Discord or a
+text message, that app fetches your page and unfolds it into a card: a
+headline, a sentence, and a photograph. Every page now carries the tags that
+say what goes in that card.
+
+**The thing to understand about this, because it is genuinely unlike the rest
+of the site: you cannot check it by looking at the site.** The card is
+assembled by somebody else's server. Your pages will look perfect and the card
+can still be a grey box, and you would not find out until a friend pasted the
+link. So two rules and one build line.
+
+### 5a. `--base-url` is not optional any more
+
+Facebook does not open your page and follow a relative path the way a browser
+does. It fetches the image URL on its own, from its own servers, with nothing
+to resolve `assets/photos/prairie-crocus.jpeg` against. A relative path gives
+it nothing, silently.
+
+That is why the image URL has to be absolute, and the only place the build can
+learn your domain is `--base-url`. You are almost certainly already passing it
+(it also writes the `CNAME` file), but now leaving it off costs you the picture
+as well as the domain.
+
+### 5b. Warm the photo cache, so the picture is yours
+
+`build-site` never downloads anything, on purpose. If a photograph is already
+in your local cache it copies it into `public/assets/photos/` and the site
+serves its own copy; if not, the page points at the original iNaturalist URL.
+
+Both work as a share card. Your own copy is better for two reasons: it loads
+from your domain rather than at somebody else's speed, and it survives the
+photographer deleting the original.
+
+```bash
+python scripts/warm_photo_cache.py
+```
+
+**What it does:** downloads every catalogue photograph once into your user data
+folder (beside the database, *not* into the repository, so it survives deleting
+`public/` and does not add 70 MB to git). **Why this command:** the build
+deliberately never fetches, so warming is a separate step you run when you feel
+like it. **How long:** about six minutes, one request per second, because
+iNaturalist asks for no more than 60 a minute. **How to read it:** it reports
+each failure and skips it; a photo that will not download falls back to the
+hotlink it already had, so a partial run is strictly better than none. **Run it
+again any time** and it is nearly free, because anything already cached is
+never re-downloaded.
+
+### 5c. The build now tells you which of the three you got
+
+The last line of `build-site` says what a shared link will actually show:
+
+```
+  share card: https://grownativeplants.ca/assets/photos/prairie-crocus.jpeg
+              (your own copy)
+```
+
+That is the one you want. The other two:
+
+| Line | What it means | Fix |
+|---|---|---|
+| `(hotlinked, run scripts/warm_photo_cache.py to serve your own copy)` | The card **will** show a photo, served from iNaturalist. Fine to publish. | 5b, when you feel like it |
+| `share card: TEXT ONLY. Pass --base-url …` | The card will be a grey box. | 5a |
+| `share card: TEXT ONLY. No species … has a credited photograph` | Nothing in the catalogue is publishable as an image. | Investigate, this should not happen |
+
+### 5d. Checking it for real, after you publish
+
+The tags can only be tested against a live URL. Once the site is up:
+
+* **Facebook:** paste the URL into
+  [developers.facebook.com/tools/debug](https://developers.facebook.com/tools/debug/)
+  and press *Scrape Again*. It shows you the exact card and lists any tag it
+  could not read. **This is also how you fix a stale card** — these services
+  cache aggressively, so if you publish a change and the old blurb keeps
+  appearing, *Scrape Again* is what clears it.
+* **Everywhere else:** paste the link into a Slack message to yourself, or a
+  Discord channel nobody reads. The preview appears in a second or two.
+* **Try a species page too**, not just the home page. A species page shares
+  *that* species' photograph, so `…/plants/prairie-crocus/` and
+  `…/plants/wild-bergamot/` should show different pictures. If they show the
+  same one, the per-page tag is not being read.
+
 ## What to check before you publish
 
 1. Open `public/index.html` locally and click through a species page, the
    ecoregion map, and a wildlife page.
-2. Decide the photo question above (hotlinked or bundled).
-3. Decide whether the 276 unverified flower colours are acceptable to publish
+2. Read the last four lines of the build output: analytics, feedback form,
+   photographs, and **share card**. Each names what it did, and the share-card
+   line is the only one you cannot verify by looking at the site.
+3. Decide the photo question above (hotlinked or bundled).
+4. Decide whether the unverified flower colours are acceptable to publish
    marked as unverified. They are marked honestly, but they are visible.
    `docs/DATA_GAPS.md` has the worklist for closing that.
 

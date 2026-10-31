@@ -123,7 +123,6 @@ MORPHOLOGY = {
     "Spiraea alba":            ("lanceolate", 6.0, "alternate", "#6e5f4c", "#c8a03a", "multi_stem"),
     "Spiraea alba var. latifolia": ("lanceolate", 6.0, "alternate", "#6e5f4c", "#c8a03a", "multi_stem"),
     "Spiraea betulifolia":     ("ovate", 4.0, "alternate", "#6e5f4c", "#c8703a", "multi_stem"),
-    "Spiraea douglasii":       ("elliptic", 7.0, "alternate", "#6e5f4c", "#c8903a", "suckering"),
     "Symphoricarpos albus":    ("ovate", 4.0, "opposite", "#75695c", "#b8a860", "multi_stem"),
     "Symphoricarpos occidentalis": ("ovate", 5.0, "opposite", "#75695c", "#b8a860", "suckering"),
     "Vaccinium myrtilloides":  ("elliptic", 3.0, "alternate", "#6a5a48", "#b5402e", "decurrent"),

@@ -25,19 +25,26 @@ from __future__ import annotations
 from PyQt6.QtWidgets import QDialog
 
 
-def _safely(fn) -> None:
-    """Run an action without letting it take the launch with it."""
+def _safely(fn, what: str) -> None:
+    """Run an action without letting it take the launch with it.
+
+    A failure is reported, not swallowed (V3.18, ST-3): until then this
+    ``pass`` hid a NameError that left the Lessons door dead for a release,
+    and ``main.py``'s safety net then showed the design window instead, which
+    read as "Learn opens the regular app". ``what`` names the thing that could
+    not open, in the words the message uses ("The Lessons").
+    """
     try:
         fn()
     except Exception:                                      # noqa: BLE001
-        pass
+        from src import slot_errors
+        slot_errors.report(what)
 
 
 def open_learn_menu(parent) -> str:
     """Show the Learn menu, built against what the learner has actually done."""
     from src.learn_menu import LearnMenu
-    dlg = LearnMenu(parent, discovery_line=discovery_line(),
-                    communities=community_count(),
+    dlg = LearnMenu(parent, communities=community_count(),
                     sandbox=sandbox_name())
     if dlg.exec() != QDialog.DialogCode.Accepted:
         return ""
@@ -57,7 +64,7 @@ def open_studio(main) -> None:
     from src.learn_menu import LearnStudioWindow
 
     def _go():
-        plants, title = _sandbox_plants()
+        plants, title = sandbox_plants()
         win = getattr(main, "_learn_studio", None)
         if win is None:
             win = LearnStudioWindow(plants, title)
@@ -68,7 +75,7 @@ def open_studio(main) -> None:
         win.raise_()
         win.activateWindow()
 
-    _safely(_go)
+    _safely(_go, "The Lessons")
 
 
 def sandbox_key() -> str:
@@ -116,14 +123,3 @@ def community_count() -> int:
         return len(community_keys())
     except Exception:                                      # noqa: BLE001
         return 0
-
-
-def discovery_line() -> str:
-    """"37 of 581 species discovered" — the collection loop's one number, on
-    the front door. ``""`` when the ledger cannot be read, which is the right
-    answer for a start screen that must never fail to open over a count."""
-    try:
-        from src.db import progress
-        return progress.coverage_line()
-    except Exception:                                      # noqa: BLE001
-        return ""

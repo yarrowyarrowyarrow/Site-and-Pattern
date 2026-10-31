@@ -22,12 +22,12 @@ from __future__ import annotations
 
 
 # The app's base surface — dark green ground, pale text. It normally reaches a
-# widget by inheritance from `app.py:_APP_STYLE`, which is set on the
-# MainWindow. A window that opens *before* the MainWindow exists (the V2.40
-# start menu) has nothing to inherit from and lands on the platform's default
-# light palette, where this app's pale-green text is close to invisible. Such a
-# window carries this itself. Mirrors the first block of `_APP_STYLE` — if that
-# palette moves, move it here too.
+# widget by inheritance from `APP_STYLE` below, which is set on the MainWindow.
+# A window that opens *before* the MainWindow exists (the V2.40 start menu) has
+# nothing to inherit from and lands on the platform's default light palette,
+# where this app's pale-green text is close to invisible. Such a window carries
+# this itself. Mirrors the first block of `APP_STYLE` — if that palette moves,
+# move it here too.
 BASE_SURFACE = (
     "QWidget { background-color: #1a2a1a; color: #c8e6c9; "
     "font-family: 'Segoe UI', 'Arial', sans-serif; font-size: 13px; }"
@@ -62,6 +62,115 @@ BTN_DOWNLOAD = (
     "QPushButton:disabled { color: #455a64; border-color: #37474f; }"
 )
 
+
+
+# ── Whole windows ────────────────────────────────────────────────────────────
+# The main window's stylesheet (in app.py until V3.08, when the 3D preview and
+# Growth Snapshots started wearing it too).
+APP_STYLE = """
+QMainWindow, QWidget {
+    background-color: #1a2a1a;
+    color: #c8e6c9;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    font-size: 13px;
+}
+
+QMenuBar {
+    background-color: #1b2b1b;
+    color: #c8e6c9;
+    border-bottom: 1px solid #2e4a2e;
+}
+QMenuBar::item:selected {
+    background-color: #2e4a2e;
+}
+QMenu {
+    background-color: #1e2e1e;
+    color: #c8e6c9;
+    border: 1px solid #2e4a2e;
+}
+QMenu::item:selected {
+    background-color: #2e4a2e;
+}
+/* An item or a switch that cannot be used now looks it (V3.19, QF-15 and
+   QF-19): QWidget's colour above holds in every state, so a greyed Undo read
+   exactly like an offered one. Disabled controls are exempt from 4.5:1 and
+   meant to recede; this is about 4:1 on the panels. */
+QMenu::item:disabled {
+    color: #6b8a72;
+}
+QCheckBox:disabled {
+    color: #6b8a72;
+}
+
+QToolBar {
+    background-color: #1b2b1b;
+    border-bottom: 1px solid #2e4a2e;
+    spacing: 4px;
+    padding: 2px 4px;
+}
+QToolButton {
+    color: #c8e6c9;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+}
+QToolButton:hover {
+    background: #2e4a2e;
+    border-color: #4a7a4a;
+}
+QToolButton:checked {
+    background: #2e5a2e;
+    border-color: #66bb6a;
+    color: #a5d6a7;
+}
+
+QStatusBar {
+    background-color: #152015;
+    color: #90a4ae;
+    border-top: 1px solid #2e4a2e;
+    font-size: 12px;
+}
+
+QSplitter::handle {
+    background-color: #2e4a2e;
+    width: 2px;
+}
+
+QScrollBar:vertical {
+    background: #1a2a1a;
+    width: 14px;
+}
+QScrollBar::handle:vertical {
+    background: #5a8a5a;
+    border-radius: 6px;
+    min-height: 24px;
+}
+"""
+
+# A window of its own (the 3D preview, Growth Snapshots) inherits nothing from
+# the MainWindow: it is top-level, so until V3.08 it opened in the platform's
+# light palette beside a dark app, and the 3D preview's pale-green edit hint
+# (#cfe8d2) sat on near-white at about 1.2:1 (F209). Such a window sets this:
+# the app's own surface, and buttons that show when they are on, because the
+# preview's View row is checkable buttons.
+WINDOW_STYLE = APP_STYLE + """
+QPushButton {
+    background: #24352b; color: #c8e6c9; border: 1px solid #3a5a3a;
+    border-radius: 4px; padding: 4px 8px;
+}
+QPushButton:hover { border-color: #66bb6a; }
+QPushButton:checked { background: #2e5a2e; color: #e8f5e9; border-color: #66bb6a; }
+QPushButton:disabled { color: #6b8a72; border-color: #2e4a2e; }
+QComboBox {
+    background: #1e2e1e; color: #c8e6c9; border: 1px solid #3a5a3a;
+    border-radius: 3px; padding: 2px 6px;
+}
+QComboBox QAbstractItemView {
+    background: #1e2e1e; color: #c8e6c9; selection-background-color: #2e5a2e;
+}
+QLabel { background: transparent; }
+"""
 
 # ── The tab hierarchy ────────────────────────────────────────────────────────
 # The side panel nests three deep — Plants → On This Design → Stats — and until
@@ -108,7 +217,7 @@ def top_tab_stylesheet() -> str:
         "top: -1px; }"
         "QTabBar { background: #0f1a10; }"
         "QTabBar::tab { background: #0f1a10; color: #8aa08d; "
-        "padding: 7px 4px; font-size: 11px; "
+        "padding: 7px 4px; font-size: 12px; "
         "border: 1px solid transparent; border-bottom: none; }"
         "QTabBar::tab:selected { background: #1e2a1e; color: #c8e6c9; "
         "font-weight: bold; "
@@ -123,7 +232,7 @@ def inner_tab_stylesheet() -> str:
     return (
         "QTabWidget::pane { border: none; background: #1e2a1e; }"
         "QTabBar::tab { background: #15251a; color: #90a4ae; "
-        "padding: 4px 10px; font-size: 11px; "
+        "padding: 4px 10px; font-size: 12px; "
         "border-bottom: 2px solid transparent; }"
         "QTabBar::tab:selected { color: #a5d6a7; "
         "border-bottom: 2px solid #66bb6a; }"
@@ -142,10 +251,10 @@ def leaf_tab_stylesheet() -> str:
     """
     return (
         "QTabWidget::pane { border: none; background: #1e2a1e; }"
-        "QTabBar::tab { background: transparent; color: #78909c; "
-        "padding: 3px 9px; font-size: 10px; "
+        "QTabBar::tab { background: transparent; color: #90a4ae; "
+        "padding: 4px 9px; font-size: 12px; "
         "border-bottom: 1px solid transparent; }"
-        "QTabBar::tab:selected { color: #90a4ae; "
+        "QTabBar::tab:selected { color: #cfd8dc; "
         "border-bottom: 1px solid #4a7a4a; }"
         "QTabBar::tab:hover { color: #b0bec5; }"
     )

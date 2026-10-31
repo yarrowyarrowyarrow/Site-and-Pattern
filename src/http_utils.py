@@ -23,9 +23,29 @@ from src.log import get_logger
 
 log = get_logger(__name__)
 
-# Legacy product identifier, retained intentionally (see CLAUDE.md: User-Agent
-# strings deliberately keep the pre-rebrand "PermaDesign" name).
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+#: Where the app can be found, said on every request (V3.31, FN-6).
+APP_URL = "https://github.com/yarrowyarrowyarrow/Site-and-Pattern"
+
+
+def user_agent() -> str:
+    """The app's name and version, and where it lives: what OpenStreetMap's
+    and Nominatim's usage policies ask an app to send, and what Open-Meteo's
+    operators can read when a version misbehaves. The map's tile requests send
+    the same string (``map_widget``).
+
+    Until V3.31 it was ``PermaDesign/1.0`` and the pre-rebrand repository,
+    kept "for providers' allow-lists"; no provider has an entry for it (the
+    app has no keys and no registration), so it only named a product that no
+    longer exists and a version that never changed."""
+    try:
+        from src.app_version import running_version
+        version = (running_version() or "dev").lstrip("V")
+    except Exception:                                      # noqa: BLE001
+        version = "dev"
+    return f"SiteAndPattern/{version} (+{APP_URL})"
+
+
+_USER_AGENT = user_agent()
 
 
 def http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:

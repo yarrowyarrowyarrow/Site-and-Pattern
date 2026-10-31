@@ -98,7 +98,7 @@ On first GUI launch (and on the first facade/CLI call), `init_db()`
    migrates a pre-V1.69 `PermaDesign` folder to `Site & Pattern` once).
 2. Creates `permadesign.db` there and seeds it from the shipped
    `data/*.json` (plants, fauna, junctions, nurseries, communities).
-3. Records the schema version in `PRAGMA user_version`.
+3. Records the schema version in the `_schema_version` table.
 
 Per-OS DB path (from `src/user_paths.py`):
 

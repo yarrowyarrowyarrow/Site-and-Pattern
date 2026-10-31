@@ -54,6 +54,11 @@ def _smallest_communities(n: int) -> list[dict]:
         community_natural_radius, get_polyculture_by_id,
     )
     comms = [c for c in _api.list_polycultures() if c.get("id") is not None]
+    # Only communities this site can take (V2.85): since F154 a community with
+    # a member not native to the yard's province is not offered, and the
+    # smallest seeded one ("Prairie Pollinator Garden") carries Canada
+    # Goldenrod, which VASCAN records for Saskatchewan and not Alberta.
+    comms = llm._communities_for_site(comms, llm._site_filters(_EDM), 0.0)
     comms.sort(key=lambda c: community_natural_radius(
         get_polyculture_by_id(c["id"]) or {}))
     return comms[:n]
@@ -203,8 +208,13 @@ class TestMixPlacement(unittest.TestCase):
         self.assertEqual(len(instances.get(comm["name"], set())), 2,
                          "1-member community mix folds to count instances")
         yarrow = _api.query_plants(query="yarrow")[0]["id"]
+        # Only the ones the PLANT mix placed. The community mix above can also
+        # contain yarrow -- after V2.80 the smallest community does -- and
+        # counting both made this read 6 and look like a fold-down failure
+        # when fold-down was working. A community member carries the community
+        # it came from; a plain plant group does not.
         n_yarrow = sum(1 for p in project.placed_plants
-                       if p["plant_id"] == yarrow)
+                       if p["plant_id"] == yarrow and not p.get("polyculture_name"))
         self.assertEqual(n_yarrow, 4,
                          "1-member plant mix folds to a plain plant group")
 

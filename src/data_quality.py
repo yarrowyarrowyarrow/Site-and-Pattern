@@ -33,6 +33,7 @@ asserts ``validate_all()`` returns no errors against the live data.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -58,8 +59,9 @@ DATA_DIR     = PROJECT_ROOT / "data"
 # cleanup backlog stays visible without breaking CI.
 #
 # The split was calibrated against the V1.31 shipped data:
-#   * ``native_to_alberta`` has ``'1?'`` markers handled by
-#     ``polyculture_panel._truthy_int`` — warning, not error.
+#   * ``native_to_alberta`` had ``'1?'`` markers — warning, not error. The
+#     last five, every one recorded in Alberta by VASCAN, were set to 1 in
+#     V3.05 (F199), and the marker is no longer accepted.
 #   * ``permaculture_uses`` carries informal tags like ``overstory`` and
 #     ``food_forest`` that aren't (yet) in ``_USE_DEFINITIONS`` — warning.
 #     Future release can promote them to canonical entries and the
@@ -123,7 +125,19 @@ BRANCHING_HABITS  = {"excurrent", "decurrent", "multi_stem", "suckering",
 # the data can select the 3D form directly instead of a genus table guessing it.
 GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
                      "fern", "vining", "tussock", "emergent", "floating",
-                     "cushion", "succulent", "sprawling"}
+                     "cushion", "succulent", "sprawling",
+                     # V2.89: a horsetail's body is its jointed stems, with
+                     # the leaves reduced to sheaths; drawn by 14-layers.js.
+                     "jointed",
+                     # V2.90: lives under the water, only its flowers and shoot
+                     # tips reaching the surface (src/pond_habit.py). Not
+                     # "floating", which is leaves lying on the surface.
+                     "submerged",
+                     # V2.93: cacti, whose bodies are their stems: chains of
+                     # flat pads (the prickly pears) and a spiny ball (the ball
+                     # cactus), drawn by src/succulent_habit.py. "succulent" is
+                     # the rest: fleshy leaves on an ordinary stem or mat.
+                     "pads", "globose"}
 # Surface character (schema v52). What a species' bark and foliage look like
 # close up — the 3D viewer's procedural grain (html/scene3d/01b-surface.js).
 # Empty is meaningful and common: a per-genus bark default and a matte leaf.
@@ -231,9 +245,11 @@ GROWTH_CURVES     = {"slow_start", "steady", "fast_early"}
 # Calendar status — matches the schema.sql CHECK on planting_calendar.status.
 CALENDAR_STATUS   = {"dormant", "start_indoors", "direct_sow", "transplant",
                      "growing", "harvest", "pruning"}
-# native_to_alberta is documented as 0/1 but the data carries '1?' for
-# uncertain-native records; the code handles it via _truthy_int.
-NATIVE_TO_ALBERTA = {0, 1, "0", "1", "1?", "0?"}
+# native_to_alberta is 0/1. It carried '1?' for uncertain records until V3.05
+# (F199), when the last five, all recorded in Alberta by VASCAN, became 1: a
+# native-only design had been leaving them out. The pickers read
+# native_provinces since V3.00; the generator still reads this flag.
+NATIVE_TO_ALBERTA = {0, 1, "0", "1"}
 
 # Canadian province/territory codes accepted in the native_provinces field
 # (V2.15). The app's coverage is the prairies (AB, SK) with neighbours allowed
@@ -282,12 +298,42 @@ def _load_ecoregion_keys() -> set[str]:
     worse than a loud failure in a data gate.
     """
     from src.ecoregion import ecoregion_keys            # noqa: PLC0415
+    from src.ecoregion_tree import tree                 # noqa: PLC0415
     keys = set(ecoregion_keys())
+
+    # Refuse BEFORE widening. The empty-vocabulary guard below is the whole
+    # safety property of this function, and adding a second source of keys
+    # would have quietly defeated it: with `ecoregion_keys()` returning
+    # nothing, the tree walk still produces 51 keys, so the check would pass
+    # and the validator would go on accepting every token in the catalogue.
+    # `tests/test_ecoregion.py:test_the_validator_refuses_an_empty_vocabulary`
+    # caught exactly that.
     if not keys:
         raise RuntimeError(
             "No ecoregion vocabulary — data/ecoregions_canada.geojson is "
             "missing or unreadable. Refusing to validate against an empty "
             "key set, which would accept anything.")
+
+    # V2.75: the vocabulary has three levels, and this gate only knew one.
+    #
+    # V2.68 put an ecozone above the ecoregion and an Alberta natural subregion
+    # below it, with the upper and lower keys prefixed ``zone_``/``sub_``
+    # because "Athabasca Plain" names both an ecoregion and a subregion and
+    # they are different ground. V2.73's own migration then wrote
+    # ``zone_prairies`` onto 303 species — and this validator, reading only the
+    # 24 bare ecoregion keys, called every one of them unknown. 303 of 430
+    # warnings were the gate disagreeing with a migration the same release
+    # shipped, and the volume buried everything else in the file.
+    #
+    # Walk the tree rather than listing the prefixes: a key is valid if the
+    # shipped polygon file puts it somewhere in the hierarchy, so adding a
+    # level would widen this with nothing to remember here.
+    def _walk(nodes) -> None:
+        for key, _name, _level, children in nodes:
+            keys.add(key)
+            _walk(children)
+
+    _walk(tree())
     return keys
 
 
@@ -622,7 +668,7 @@ def validate_all() -> tuple[list[str], list[str]]:
     # Fauna data spine: the bee attributes (F37) and fauna photo-licence
     # compliance (A1). Both read shipped data/*.json the app reseeds from.
     for validate_fauna in (validate_bee_attributes, validate_fauna_images,
-                           validate_fauna_morphology):
+                           validate_fauna_morphology, validate_bee_taxon):
         e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
@@ -648,13 +694,205 @@ def validate_all() -> tuple[list[str], list[str]]:
     # only by the care of whoever last edited them. docs/DATA_AUDIT.md.
     for validate_provenance in (validate_sources, validate_plant_fauna,
                                 validate_plant_images,
+                                validate_excluded_taxa,
                                 validate_safety_provenance,
                                 validate_host_genus_coverage,
-                                validate_use_tags_against_edges):
+                                validate_use_tags_against_edges,
+                                validate_keystone_genera,
+                                validate_pending_species):
         e, w = validate_provenance()
         errors.extend(e)
         warnings.extend(w)
+
+    # Nativity (V2.75). The claim the public catalogue leads with, and the one
+    # thing in the seed data that had no gate of any kind — not the value, not
+    # its consistency, not the generator that writes it.
+    for validate_nativity in (validate_nativity_consistency,
+                              validate_nativity_evidence,
+                              validate_provenance_generator,
+                              validate_local_flora):
+        e, w = validate_nativity()
+        errors.extend(e)
+        warnings.extend(w)
+
+    # Names (V2.82). The gate had an opinion about every field on a row except
+    # the two a reader actually reads.
+    for validate_names in (validate_accepted_names,
+                           validate_common_name_collisions):
+        e, w = validate_names()
+        errors.extend(e)
+        warnings.extend(w)
     return errors, warnings
+
+
+#: Rows whose binomial is not VASCAN's accepted name **on purpose**, each with
+#: the reason (V2.82).
+#:
+#: Every one of these is a recent recombination the checklist has adopted and
+#: the regional floras, the nurseries and the people searching for the plant
+#: have not. Following VASCAN here would publish *Trichogalium boreale* as the
+#: name of Northern Bedstraw, which is correct and useless.
+#:
+#: **This is a holding pattern, not a policy.** Which nomenclature the site
+#: follows is one decision for the author to make once, over this whole list;
+#: the list exists so that a *new* synonym entering the catalogue fails the gate
+#: instead of joining sixteen others unnoticed. An entry here is a claim that
+#: the disagreement is known, which is why each carries a reason and why
+#: ``KNOWN_NATIVITY_CONFLICTS`` was emptied rather than left to rot.
+KNOWN_NOMENCLATURE: dict = {
+    "Avenula hookeri": "VASCAN: Helictochloa hookeri — 2011 recombination",
+    "Bromus marginatus": "VASCAN: Bromus sitchensis var. marginatus — sunk to a variety",
+    "Calamovilfa longifolia": "VASCAN: Sporobolus rigidus — 2014 Sporobolus merger",
+    "Carex raymondii": "VASCAN: Carex atratiformis — and the English names differ too, so this one needs a flora",
+    "Escobaria vivipara": "VASCAN: Pelecyphora vivipara — 2022 recombination",
+    "Galium boreale": "VASCAN: Trichogalium boreale — 2023 segregate no regional flora uses",
+    "Hedysarum mackenziei": "VASCAN: Hedysarum boreale subsp. mackenziei — and H. boreale is a separate row here",
+    "Ledum groenlandicum": "VASCAN: Rhododendron groenlandicum — Labrador Tea is sold under Ledum everywhere",
+    "Matteuccia struthiopteris": "VASCAN: Matteuccia pensylvanica — the fern is sold as struthiopteris",
+    "Oxytropis monticola": "VASCAN: Oxytropis campestris var. spicata — and O. campestris is a separate row here",
+    "Piptatherum canadense": "VASCAN: Piptatheropsis canadensis",
+    "Polemonium acutiflorum": "VASCAN: Polemonium villosum",
+    "Polygala senega": "VASCAN: Senega officinalis — 2021 segregate",
+    "Potentilla anserina": "VASCAN: Argentina anserina — Silverweed is universally Potentilla",
+    "Spartina gracilis": "VASCAN: Sporobolus hookerianus — 2014 Sporobolus merger",
+    "Spartina pectinata": "VASCAN: Sporobolus michauxianus — as above",
+    "Spiraea betulifolia": "VASCAN resolves this to Spiraea splendens var. rosea, which is PINK and this row is white — a suspect match, and the open 'Pink Spirea' question from V2.80 sits on it",
+    "Symphyotrichum hesperium": "VASCAN: S. lanceolatum subsp. hesperium — and S. lanceolatum is a separate row here",
+}
+
+
+def _accepted_names():
+    """``{queried name: record}`` from the VASCAN extract, or ``None``.
+
+    Its own function so the gate has one seam a test can hold, and so the
+    difference between *the extract says nothing about this row* and *there is
+    no extract* stays visible: the first is normal, the second means the check
+    is not running.
+    """
+    try:
+        blob = json.loads((DATA_DIR / "fetched" / "flora_nativity.json")
+                          .read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    return (blob or {}).get("results") or {}
+
+
+def validate_accepted_names() -> tuple[list[str], list[str]]:
+    """A row's binomial against the accepted name the checklist gave for it.
+
+    The comparison that was never made (V2.82). ``flora_nativity.json`` has
+    carried an ``accepted_name`` for every species since V2.80 and nothing had
+    ever compared it to the name the row is filed under, so the catalogue
+    published *Campanula alaskana* for two releases with its own extract saying
+    *Campanula rotundifolia* on the next line. It surfaced as a complaint about
+    a **common** name, because a wrong binomial is invisible until it lands
+    beside a similar one -- here, *Campanula lasiocarpa*, which made the pair
+    read as swapped.
+
+    Two failures, weighted differently:
+
+    * The accepted name **is another row in this catalogue**: an ERROR with no
+      allowlist. That is one plant on two pages, with the derived data split
+      across both -- *Dodecatheon pulchellum* and *Primula pauciflora* each
+      published the same 116 range cells.
+    * The accepted name is merely different: an ERROR unless the row is in
+      ``KNOWN_NOMENCLATURE`` with a reason, because the alternative is sixteen
+      disagreements and no way to tell them from a seventeenth that is a bug.
+    """
+    from src.taxon_names import (binomial,                   # noqa: PLC0415
+                                 is_infraspecific)
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    accepted = _accepted_names()
+    if accepted is None:
+        return errors, ["accepted names: no VASCAN extract, check skipped"]
+
+    rows = [r for name in ("plants_master.json", "garden_plants.json")
+            for r in _load_json_list(DATA_DIR / name) if isinstance(r, dict)]
+    here = {(r.get("scientific_name") or "").strip() for r in rows}
+
+    for row in rows:
+        sci = (row.get("scientific_name") or "").strip()
+        record = accepted.get(sci)
+        if not isinstance(record, dict):
+            continue
+        want = binomial(record.get("accepted_name") or "")
+        if not want or want == sci:
+            continue
+        who = f"{sci} ({row.get('common_name')})"
+        # The specific shape of V2.80's four bad renames, named as itself: a row
+        # at a rank below species where the checklist answered about the
+        # species. That is not a nomenclatural disagreement, it is a taxon that
+        # does not exist, and no allowlist entry should ever excuse one.
+        if (is_infraspecific(sci) and not is_infraspecific(want)
+                and sci.startswith(want) and want not in here):
+            errors.append(
+                f"accepted names: {who} claims a rank the checklist does not "
+                f"carry — it answered about {want} at species rank. This is "
+                f"the V2.80 failure: an infraspecific epithet read off the "
+                f"wrong end of an authority string. Rename to {want}")
+        elif want in here:
+            errors.append(
+                f"accepted names: {who} is a synonym of {want}, which is "
+                f"ALSO a row in this catalogue — one plant, two species pages "
+                f"and two sets of occurrence data. Merge with "
+                f"scripts/remove_taxon.py --merge-into {want!r}")
+        elif sci not in KNOWN_NOMENCLATURE:
+            errors.append(
+                f"accepted names: {who} is filed under a name the checklist "
+                f"does not accept; it resolves to {want}. Rename with "
+                f"scripts/rename_taxon.py, or add it to "
+                f"data_quality.KNOWN_NOMENCLATURE with the reason the "
+                f"catalogue keeps the older name")
+
+    stale = sorted(set(KNOWN_NOMENCLATURE) - here)
+    if stale:
+        warnings.append(
+            f"accepted names: {len(stale)} KNOWN_NOMENCLATURE entries name "
+            f"rows that are no longer in the catalogue ({', '.join(stale)}) — "
+            f"an allowlist entry that outlives what it excused turns a "
+            f"temporary silence into a permanent one")
+    return errors, warnings
+
+
+def validate_common_name_collisions() -> tuple[list[str], list[str]]:
+    """Two rows a reader cannot tell apart (V2.82).
+
+    The common name is what the website is browsed, searched and slugified by,
+    and three pairs of rows led with the same one -- *False Dragonhead* for two
+    *Physostegia*, *Prairie Cinquefoil* for a *Potentilla* and a *Drymocallis*,
+    *Marsh Hedge Nettle* for a species and its own invalid variety. A trailing
+    parenthetical alias hid all three from the exact-match duplicate check that
+    existed, which is why this compares the **lead** name.
+
+    A shared name is an ERROR rather than a warning for a reason found in
+    V2.68: ``_unique_slugs`` resolves a collision by appending the scientific
+    name, so the day a collision appears the page **moves**, and it moves back
+    if the collision is later fixed.
+    """
+    from collections import defaultdict                      # noqa: PLC0415
+
+    errors: list[str] = []
+    lead: dict = defaultdict(list)
+    for name in ("plants_master.json", "garden_plants.json"):
+        for row in _load_json_list(DATA_DIR / name):
+            if not isinstance(row, dict):
+                continue
+            common = (row.get("common_name") or "").strip()
+            if common:
+                lead[common.split(" (")[0].strip().lower()].append(row)
+    for key, group in sorted(lead.items()):
+        if len(group) < 2:
+            continue
+        who = ", ".join(f"{r.get('scientific_name')} = "
+                        f"{r.get('common_name')!r}" for r in group)
+        errors.append(
+            f"common names: {len(group)} rows lead with {key!r} — {who}. One "
+            f"of them is wearing the other's name, or they are one plant; "
+            f"either way a reader cannot tell the pages apart and a slug "
+            f"collision moves a published URL")
+    return errors, []
 
 
 def validate_flower_colour() -> tuple[list[str], list[str]]:
@@ -672,6 +910,10 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
     where the name legitimately describes a berry, a seed head or the foliage
     are listed in ``scripts/seed_flower_colour.py:KEEP`` with a reason and are
     skipped here by the same list, so the audit and the fix cannot drift.
+    **A colour the owner checked in photographs** (``photo``, V3.34) is
+    skipped too: the name was evidence because nobody had looked, and somebody
+    now has. *Purple* Coneflower flowers pink; ``data/flower_colour_checks.json``
+    holds the observations that say so, which is the reason KEEP would hold.
 
     **A genus where three or more species share one hex and not one of them is
     checkable** is a WARNING. It is not proof of an error (a goldenrod genus
@@ -715,7 +957,7 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
         sci = (rec.get("scientific_name") or "").strip()
         if (rec.get("flower_color") or "").strip():
             genera[sci.split(" ")[0]].append(rec)
-        if sci in KEEP:
+        if sci in KEEP or rec.get("flower_colour_source") == "photo":
             continue
         name = (rec.get("common_name") or "").lower()
         if any(token in name for token in not_the_flower):
@@ -741,8 +983,8 @@ def validate_flower_colour() -> tuple[list[str], list[str]]:
             continue
         if len({(r.get("flower_color") or "") for r in rows}) > 1:
             continue
-        if any((r.get("flower_colour_source") or "") in ("name", "epithet")
-               for r in rows):
+        if any((r.get("flower_colour_source") or "") in
+               ("name", "epithet", "photo", "checked") for r in rows):
             continue
         warnings.append(
             f"flower colour: all {len(rows)} {genus} species share one hex and "
@@ -971,6 +1213,77 @@ def validate_bee_attributes() -> tuple[list[str], list[str]]:
             errors.append(
                 f"bee_attributes: {name}: graded tongue_length {tl!r} is only "
                 f"documented for Bombus (use 'unknown' elsewhere)")
+    return errors, warnings
+
+
+#: The bee genera this catalogue carries, by family (V2.84). The bees are the
+#: Anthophila clade of the superfamily Apoidea: exactly these six families.
+BEE_GENERA: dict = {
+    "Apidae": ("Anthophora", "Apis", "Bombus", "Ceratina", "Diadasia",
+               "Epeolus", "Eucera", "Habropoda", "Holcopasites", "Melecta",
+               "Melissodes", "Nomada", "Triepeolus", "Xeromelecta",
+               "Xylocopa", "Zacosmia"),
+    "Andrenidae": ("Andrena", "Calliopsis", "Panurginus", "Perdita",
+                   "Protandrena", "Pseudopanurgus"),
+    "Halictidae": ("Agapostemon", "Augochlorella", "Dufourea", "Halictus",
+                   "Lasioglossum", "Nomia", "Sphecodes"),
+    "Colletidae": ("Colletes", "Hylaeus"),
+    "Megachilidae": ("Anthidiellum", "Anthidium", "Coelioxys", "Dianthidium",
+                     "Heriades", "Hoplitis", "Megachile", "Osmia", "Stelis"),
+    "Melittidae": ("Macropis",),
+}
+
+#: Apoid wasps: the rest of Apoidea, which is not bees (V2.84). Until then the
+#: GloBI fetch mapped the whole superfamily to ``bee`` and 43 of these shipped
+#: labelled "native bee" -- with descriptions that already said "Beewolves",
+#: "Mud daubers" and "Crabronid wasps", so whoever wrote them knew. Every other
+#: wasp in the catalogue (yellowjackets, paper and potter wasps) was already
+#: ``other_insect``, and these follow them.
+APOID_WASP_GENERA: dict = {
+    "Sphecidae": ("Ammophila", "Isodontia", "Podalonia", "Prionyx",
+                  "Sceliphron", "Sphex"),
+    "Philanthidae": ("Aphilanthops", "Cerceris", "Eucerceris", "Philanthus"),
+    "Bembicidae": ("Bembix", "Bicyrtes", "Gorytes", "Nysson"),
+    "Crabronidae": ("Ectemnius", "Lindenius", "Liris", "Lyroda", "Oxybelus",
+                    "Tachytes"),
+    "Pemphredonidae": ("Pemphredon",),
+}
+
+
+def validate_bee_taxon() -> tuple[list[str], list[str]]:
+    """``taxon = 'bee'`` means a bee (V2.84). Returns ``(errors, warnings)``.
+
+    **Error** for a genus known to be an apoid wasp: that is the mistake that
+    shipped, and it has a known right answer (``other_insect``). **Warning**
+    for a bee-filed genus in neither table: probably a bee genus nobody has
+    listed yet, but it is how a syrphid fly or a new wasp would arrive, so it
+    gets looked at once and added to :data:`BEE_GENERA` rather than trusted.
+    """
+    fauna_path = DATA_DIR / "fauna_master.json"
+    try:
+        fauna = json.loads(fauna_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        return [f"{fauna_path.name}: could not load ({e})"], []
+    bees = {g for gs in BEE_GENERA.values() for g in gs}
+    wasps = {g: fam for fam, gs in APOID_WASP_GENERA.items() for g in gs}
+    errors: list[str] = []
+    unknown: dict = {}
+    for row in fauna:
+        if row.get("taxon") != "bee":
+            continue
+        name = row.get("scientific_name") or ""
+        genus = name.split(" ")[0]
+        if genus in wasps:
+            errors.append(
+                f"fauna: {name} is filed as a bee but {genus} is an apoid wasp "
+                f"({wasps[genus]}); use taxon 'other_insect'")
+        elif genus not in bees:
+            unknown.setdefault(genus, []).append(name)
+    warnings = [
+        f"fauna: {len(names)} row(s) filed as bees in genus {genus}, which is "
+        f"in neither data_quality.BEE_GENERA nor APOID_WASP_GENERA -- check its "
+        f"family and add it to one ({', '.join(sorted(names)[:3])})"
+        for genus, names in sorted(unknown.items())]
     return errors, warnings
 
 
@@ -1222,6 +1535,131 @@ def validate_plant_images() -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+#: The occurrence-derived files, keyed by scientific name. They are rebuilt
+#: from `data/fetched/plant_occurrences.json`, which keeps every record ever
+#: harvested -- including species later excluded -- so a full rebuild
+#: republishes them unless the seeders skip them (V2.87, where one did).
+DERIVED_BY_SCIENTIFIC = ("plant_ecoregions.json", "plant_ranges.json",
+                         "plant_occurrence_points.json")
+
+
+def excluded_scientific_names() -> set:
+    """The binomials in ``data/excluded_taxa.json``, for the seeders to skip."""
+    try:
+        blob = json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set()
+    return {(t.get("scientific_name") or "").strip()
+            for t in blob.get("taxa") or [] if isinstance(t, dict)} - {""}
+
+
+def validate_excluded_taxa() -> tuple[list[str], list[str]]:
+    """A species removed on purpose must stay removed.
+
+    ``data/excluded_taxa.json`` records the calls that have been made and the
+    authority behind each. This gate is the half that makes the record load
+    bearing: without it a removal is a one-time edit that the next data pass
+    can quietly undo, and *Rudbeckia hirta* has a live route back in —
+    ``data/fetched/fauna_edges_candidates.json`` still holds 389 GloBI records
+    naming it, and re-adding the plant row is all it would take for the next
+    sourcing run to re-propose its 150 edges.
+
+    Matched on **both** names, because the two catalogues key on different
+    ones: the plant files carry ``scientific_name``, and every edge in
+    ``plant_fauna_master.json`` names its plant by ``common_name``. Checking
+    only the binomial would have let all 150 edges back with nothing said.
+
+    The list is deliberately narrow — specific taxa with specific evidence, not
+    a nativity rule. Absent from the catalogue and absent from the list means
+    nobody has considered the species, which is a different statement.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        blob = json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return ["excluded_taxa.json: not found"], warnings
+    except json.JSONDecodeError as e:
+        return [f"excluded_taxa.json: JSON parse error: {e}"], warnings
+
+    by_sci: dict[str, dict] = {}
+    by_common: dict[str, dict] = {}
+    for entry in blob.get("taxa") or []:
+        if not isinstance(entry, dict):
+            errors.append("excluded_taxa.json: each taxa entry must be an "
+                          "object")
+            continue
+        sci = (entry.get("scientific_name") or "").strip()
+        if not sci:
+            errors.append("excluded_taxa.json: an entry has no scientific_name")
+            continue
+        # The entry is the evidence. An exclusion with no authority is a
+        # preference, and this file is not for those.
+        for field in ("reason", "authority", "removed_in"):
+            if not (entry.get(field) or "").strip():
+                errors.append(
+                    f"excluded_taxa.json: {sci} has no {field}")
+        by_sci[sci.lower()] = entry
+        for name in entry.get("common_names") or []:
+            if (name or "").strip():
+                by_common[name.strip().lower()] = entry
+
+    def _flag(who: str, entry: dict, where: str) -> None:
+        errors.append(
+            f"excluded taxon: {who} is back in {where} — it was removed in "
+            f"{entry.get('removed_in')} ({entry.get('reason')}). "
+            f"{entry.get('authority')} If that call has changed, edit "
+            f"data/excluded_taxa.json first and say why.")
+
+    for name in ("plants_master.json", "garden_plants.json"):
+        try:
+            records = json.loads(
+                (DATA_DIR / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            sci = (rec.get("scientific_name") or "").strip().lower()
+            common = (rec.get("common_name") or "").strip().lower()
+            entry = by_sci.get(sci) or by_common.get(common)
+            if entry is not None:
+                _flag(rec.get("scientific_name") or rec.get("common_name")
+                      or "?", entry, name)
+
+    # The derived files too (V2.87). A full rebuild from the point cache put six
+    # excluded species back into the range and occurrence files, and nothing
+    # here looked at them.
+    for name in DERIVED_BY_SCIENTIFIC:
+        try:
+            blob_d = json.loads((DATA_DIR / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for sci in (blob_d.get("species") or {}):
+            entry = by_sci.get((sci or "").strip().lower())
+            if entry is not None:
+                _flag(sci, entry, name)
+
+    try:
+        edges = json.loads(
+            (DATA_DIR / "plant_fauna_master.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        edges = []
+    seen: set[str] = set()
+    for rec in edges:
+        if not isinstance(rec, dict):
+            continue
+        plant = (rec.get("plant") or "").strip()
+        key = plant.lower()
+        if key and key not in seen and (key in by_common or key in by_sci):
+            seen.add(key)
+            _flag(plant, by_common.get(key) or by_sci[key],
+                  "plant_fauna_master.json")
+    return errors, warnings
+
+
 def validate_safety_provenance() -> tuple[list[str], list[str]]:
     """A toxicity rating must say where it came from.
 
@@ -1347,6 +1785,111 @@ def validate_use_tags_against_edges() -> tuple[list[str], list[str]]:
     return [], warnings
 
 
+#: The genera whose every member carries ``keystone_species`` (V2.86).
+#:
+#: The tag was always a genus claim -- `ecological_role` calls it "Tallamy's
+#: high-value genera that anchor the food web" -- and the catalogue applied it
+#: that way to every member of seven genera and to nothing outside them. Two
+#: of the five woody genera Tallamy & Shropshire rank highest for caterpillars
+#: (oak, cherry, willow, birch, poplar; *Conservation Biology* 23:941, 2009)
+#: were missing, so Paper Birch and Bur Oak scored no keystone credit while
+#: every willow did. Written down so the rule is checked rather than
+#: remembered, and so a new member of one of these genera cannot arrive
+#: without the tag. Adding a genus here moves Habitat Value Scores, which is a
+#: decision to take with a source, not a tidy-up.
+KEYSTONE_GENERA = frozenset({
+    # woody: Tallamy & Shropshire's top five
+    "Quercus", "Prunus", "Salix", "Betula", "Populus",
+    # herbaceous: the goldenrods, asters and sunflowers
+    "Solidago", "Symphyotrichum", "Aster", "Helianthus",
+})
+
+
+def validate_keystone_genera() -> tuple[list[str], list[str]]:
+    """``keystone_species`` on exactly the members of `KEYSTONE_GENERA`.
+
+    Both directions are errors: a member without the tag under-scores a
+    design, and a tag outside the list is a claim with no rule behind it.
+    Checks the rows waiting for a flora (`src.pending_species`) too, because
+    they are promoted into the catalogue as they stand.
+    """
+    from src import pending_species                         # noqa: PLC0415
+
+    errors: list[str] = []
+    rows = [r for name in ("plants_master.json", "garden_plants.json")
+            for r in _load_json_list(DATA_DIR / name) if isinstance(r, dict)]
+    rows += pending_species.load()
+    for row in rows:
+        sci = (row.get("scientific_name") or "").strip()
+        if not sci:
+            continue
+        genus = sci.split()[0]
+        tags = {t.strip() for t in
+                (row.get("permaculture_uses") or "").split(",")}
+        tagged = "keystone_species" in tags
+        who = f"{sci} ({row.get('common_name')})"
+        if genus in KEYSTONE_GENERA and not tagged:
+            errors.append(
+                f"keystone genera: {who} is a {genus} without the "
+                f"keystone_species tag every {genus} carries")
+        elif tagged and genus not in KEYSTONE_GENERA:
+            errors.append(
+                f"keystone genera: {who} is tagged keystone_species but "
+                f"{genus} is not in data_quality.KEYSTONE_GENERA")
+    return errors, []
+
+
+def validate_pending_species() -> tuple[list[str], list[str]]:
+    """The rows waiting for a flora (`src.pending_species`, V2.86).
+
+    They are promoted into the catalogue as they stand, so they are held to
+    the catalogue's rules now rather than at promotion, on a machine that may
+    be the author's and in a hurry. Four things on top of the per-row checks:
+    no source stamped (the source is what they are waiting for), not already a
+    catalogue row, not a call already made in ``excluded_taxa.json``, and no
+    lead common name another row already uses.
+    """
+    from src import pending_species                         # noqa: PLC0415
+
+    rows = pending_species.load()
+    if not rows:
+        return [], []
+    errors, warnings = validate_records(rows, pending_species.PENDING_FILE)
+    catalogue = [r for name in ("plants_master.json", "garden_plants.json")
+                 for r in _load_json_list(DATA_DIR / name)
+                 if isinstance(r, dict)]
+    have = {(r.get("scientific_name") or "").strip() for r in catalogue}
+    lead = {(r.get("common_name") or "").split(" (")[0].strip().lower()
+            for r in catalogue}
+    try:
+        excluded = {(t.get("scientific_name") or "").strip() for t in json.loads(
+            (DATA_DIR / "excluded_taxa.json").read_text(encoding="utf-8")
+        ).get("taxa", [])}
+    except (FileNotFoundError, json.JSONDecodeError):
+        excluded = set()
+    seen: set = set()
+    for row in rows:
+        sci = row["scientific_name"].strip()
+        name = (row.get("common_name") or "").split(" (")[0].strip().lower()
+        who = f"{pending_species.PENDING_FILE}: {sci}"
+        if (row.get("native_provinces_source") or "").strip():
+            errors.append(f"{who} carries a nativity source; a pending row "
+                          f"is waiting for one, and ingest stamps it")
+        if sci in have:
+            errors.append(f"{who} is already in the catalogue; promote it "
+                          f"with scripts/ingest_flora_nativity.py --apply or "
+                          f"delete the pending row")
+        if sci in excluded:
+            errors.append(f"{who} is in excluded_taxa.json; that call was "
+                          f"made, with an authority, and a pending row would "
+                          f"reverse it")
+        if name in lead or name in seen:
+            errors.append(f"{who} leads with the common name {name!r}, which "
+                          f"another row already uses")
+        seen.add(name)
+    return errors, warnings
+
+
 def validate_host_genus_coverage() -> tuple[list[str], list[str]]:
     """Host genera the fauna cite that the plant catalogue cannot supply.
 
@@ -1390,7 +1933,7 @@ def validate_host_genus_coverage() -> tuple[list[str], list[str]]:
 # this module stays importable without the DB layer (it is run by the CLI gate
 # and by tests that never open a database); tests/test_plant_photos.py asserts
 # the two lists agree.
-PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+PHOTO_SLOTS = ("flower", "habit", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
 
 
@@ -1463,6 +2006,13 @@ def validate_photo_coverage() -> tuple[list[str], list[str]]:
         if slot not in PHOTO_SLOTS:
             errors.append(f"plant_photos: {sci}: unknown slot {slot!r}")
         lic = (e.get("license") or "").lower().strip()
+        # The licence itself was not checked here until V3.35, when this file
+        # went from 2 rows to a few hundred; validate_plant_images had only
+        # ever read the one photo in plants_master.json.
+        if lic not in _PLANT_IMAGE_LICENSES:
+            errors.append(
+                f"plant_photos: {sci}: licence {lic!r} is not in the permitted "
+                f"set {sorted(_PLANT_IMAGE_LICENSES)}")
         if lic and lic != "cc0" and not (e.get("attribution") or "").strip():
             errors.append(
                 f"plant_photos: {sci}: {lic} photo needs a non-empty attribution")
@@ -1477,3 +2027,287 @@ def _load_json_list(path) -> list:
     except (FileNotFoundError, json.JSONDecodeError):
         return []
     return data if isinstance(data, list) else []
+
+
+# ── Nativity: the claim the public site leads with (V2.75) ──────────────────
+#
+# An outside review of the published catalogue asked, in effect, why the site
+# is sure. It was not sure; it had four fields that looked like four
+# corroborating sources and were one editorial claim wearing four coats
+# (`native_to_alberta` -> `native_provinces` -> `native_region` -> the row's
+# prose). V2.74 named that shape when *Rudbeckia hirta* came out. These three
+# checks are the parts of it a machine can hold an opinion about.
+#
+# None of them decides nativity. This repo does not ship an authority and will
+# not infer one (see `data/excluded_taxa.json:_scope`). They check that the
+# catalogue does not contradict itself, that a claim is not floating free of
+# every other record in the repo, and that the generator behind the claim is
+# still speaking the vocabulary the app uses.
+
+#: Same taxon under two names, disagreeing about where it is native, where the
+#: disagreement is KNOWN and the resolution is a taxon merge rather than a
+#: nativity call. Modelled on ``scripts/seed_flower_colour.KEEP``: an entry
+#: buys silence for one specific pair and costs a written reason, so the check
+#: stays loud for every pair nobody has looked at.
+#:
+#: **Empty since V2.80, because its one entry was resolved rather than
+#: re-explained.** It held *Stiff Goldenrod* from V2.69 to V2.80: *Solidago
+#: rigida* and *Oligoneuron rigidum*, one taxon under two names, two published
+#: pages making opposite claims. The entry said resolving it "waits on F137
+#: (VASCAN)", and when the archive arrived it settled the question — VASCAN
+#: treats *Oligoneuron* as a synonym of *Solidago*, so the duplicate row went
+#: and the 78 edges stayed with the survivor's common name.
+#:
+#: Kept as a mechanism, not deleted, because the check behind it is the
+#: valuable part: an entry buys silence for one specific pair and costs a
+#: written reason, so the check stays loud for every pair nobody has looked at.
+#: An empty allowlist is the honest state — no pair is currently excused.
+KNOWN_NATIVITY_CONFLICTS: dict[str, str] = {}
+
+
+def validate_nativity_consistency() -> tuple[list[str], list[str]]:
+    """One plant, one answer about where it is native (V2.75).
+
+    Two rows that are the same taxon under different names must not disagree
+    about nativity. The catalogue has no synonym field — ``scientific_name``
+    is a free string checked by one regex — so the signal available here is a
+    **shared common name**, which is exactly how the live case presents:
+    *Stiff Goldenrod* ships twice, as ``Solidago rigida`` (native to AB and SK)
+    and ``Oligoneuron rigidum`` (``native_to_alberta = 0``, SK and MB).
+
+    A common name is a weaker key than a binomial and that is the point. It is
+    the key the *reader* uses, and two pages titled the same thing saying
+    opposite things is a defect whatever the taxonomy turns out to be.
+
+    An ERROR, because the site publishes both claims. Known unresolved pairs
+    live in ``KNOWN_NATIVITY_CONFLICTS`` with their reason.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    rows: list[dict] = []
+    for name in ("plants_master.json", "garden_plants.json"):
+        rows.extend(r for r in _load_json_list(DATA_DIR / name)
+                    if isinstance(r, dict))
+
+    by_common: dict[str, list[dict]] = {}
+    for record in rows:
+        common = (record.get("common_name") or "").strip().lower()
+        if common:
+            by_common.setdefault(common, []).append(record)
+
+    for common, group in sorted(by_common.items()):
+        if len(group) < 2:
+            continue
+        claims = {
+            (str(r.get("native_to_alberta")).strip(),
+             (r.get("native_provinces") or "").strip())
+            for r in group
+        }
+        if len(claims) < 2:
+            continue
+        names = ", ".join(sorted(
+            (r.get("scientific_name") or "?") for r in group))
+        if common in KNOWN_NATIVITY_CONFLICTS:
+            warnings.append(
+                f"nativity: {common!r} ({names}) disagree about nativity — "
+                f"known: {KNOWN_NATIVITY_CONFLICTS[common]}")
+            continue
+        detail = "; ".join(
+            f"native_to_alberta={ab!r} native_provinces={prov!r}"
+            for ab, prov in sorted(claims))
+        errors.append(
+            f"nativity: {common!r} ships as {names} and the rows disagree "
+            f"about where it is native ({detail}). Same common name, opposite "
+            "claims, both published. Fix the rows, or record the pair in "
+            "data_quality.KNOWN_NATIVITY_CONFLICTS with the reason it cannot "
+            "be resolved yet.")
+    return errors, warnings
+
+
+def validate_nativity_evidence() -> tuple[list[str], list[str]]:
+    """A published nativity claim that nothing in the repo agrees or disagrees
+    with (V2.75).
+
+    **This is not an occurrence gate, and must never be read as one.**
+    Occurrence is not nativity — that distinction is the whole of
+    ``src/establishment.py`` and it is what V2.74's exclusion note rests on: the
+    black-eyed Susan had 215 georeferenced records across eight prairie
+    ecoregions and was still introduced. Records cannot confirm a native claim.
+
+    What they can do is *fail to be there at all*. A row asserting AB or SK
+    nativity with no entry in ``data/plant_ecoregions.json`` — not a low count,
+    no entry — is a claim standing entirely alone: no occurrence record, no
+    authority (plants carry no citation field), nothing that could disagree
+    with it. That is precisely the position *Rudbeckia hirta* held for eleven
+    releases, and it is the shortlist a human should read.
+
+    A WARNING, naming every species, because the correct response is a look
+    rather than an edit.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        blob = json.loads(
+            (DATA_DIR / "plant_ecoregions.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return errors, ["plant_ecoregions.json: not found — nativity evidence "
+                        "not checked"]
+    except json.JSONDecodeError as e:
+        return [f"plant_ecoregions.json: JSON parse error: {e}"], warnings
+
+    have = {name for name, rows in (blob.get("species") or {}).items() if rows}
+
+    missing: list[str] = []
+    for record in _load_json_list(DATA_DIR / "plants_master.json"):
+        if not isinstance(record, dict):
+            continue
+        claims = bool(record.get("native_to_alberta")) or bool(
+            (record.get("native_provinces") or "").strip())
+        sci = (record.get("scientific_name") or "").strip()
+        if claims and sci and sci not in have:
+            missing.append(sci)
+
+    if missing:
+        warnings.append(
+            f"nativity: {len(missing)} published rows assert nativity with no "
+            "occurrence record of any kind behind them (no entry in "
+            "plant_ecoregions.json — not a low count, no entry). Occurrence "
+            "does not prove nativity, but nothing here disagrees with these "
+            f"either: {', '.join(sorted(missing))}")
+    return errors, warnings
+
+
+def validate_local_flora() -> tuple[list[str], list[str]]:
+    """The local lists (F220, V3.12): ``data/local_flora.json`` and the owner's
+    rulings behind it.
+
+    Errors when the list does not cover the catalogue exactly, when a ruling is
+    malformed or names a species the catalogue no longer has (a rename has to
+    carry it, which ``rename_taxon.py`` does), when a ruling tries to make a
+    species native that VASCAN does not record in the province, or when a
+    ruling has been edited and the list not re-derived. Whether the list is
+    what the occurrence cache gives today is ``tests/test_local_flora.py``'s
+    job: that reads 18 MB, and this gate should not.
+    """
+    from src import region
+    from src.local_flora import parse_document, parse_rulings
+    errors: list[str] = []
+    rows = {r.get("scientific_name"): r
+            for r in _load_json_list(DATA_DIR / "plants_master.json")
+            if isinstance(r, dict) and r.get("scientific_name")}
+    places: dict = {}
+    parsed: dict = {}
+    # One list and one rulings file per region pack (V3.24, ED-2).
+    for key in region.regions():
+        try:
+            pack = DATA_DIR / "regions" / key
+            doc = json.loads((pack / "local_flora.json")
+                             .read_text(encoding="utf-8"))
+            rulings = json.loads((pack / "local_flora_rulings.json")
+                                 .read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            return [f"local_flora ({key}): {e}"], []
+        try:
+            parsed.update(parse_rulings(rulings, rows))
+        except ValueError as e:
+            return [f"{key}/local_flora_rulings.json: {e}"], []
+        got = parse_document(doc)
+        if key not in got:
+            return [f"{key}/local_flora.json: no list for {key}, or a version "
+                    "this code cannot read"], []
+        places[key] = got[key]
+    fix = "; run python scripts/derive_local_flora.py --write"
+    for key, place in places.items():
+        listed = set(place["species"])
+        if listed != set(rows):
+            errors.append(
+                f"local_flora.json: {key} lists {len(listed)} species and the "
+                f"catalogue has {len(rows)} (missing: "
+                f"{sorted(set(rows) - listed)[:5]}, extra: "
+                f"{sorted(listed - set(rows))[:5]}){fix}")
+        for name, ruling in (parsed.get(key) or {}).items():
+            got = place["species"].get(name) or {}
+            if got.get("ruling") != ruling["ruling"]:
+                errors.append(f"local_flora.json: the {key} ruling on {name} "
+                              f"is not in the derived list{fix}")
+        stale = sorted(n for n, e in place["species"].items()
+                       if e.get("ruling") and n not in (parsed.get(key) or {}))
+        if stale:
+            errors.append(f"local_flora.json: {key} carries rulings the "
+                          f"rulings file no longer has: {stale[:5]}{fix}")
+    return errors, []
+
+
+def validate_provenance_generator() -> tuple[list[str], list[str]]:
+    """The generator behind ``native_provinces`` still speaks the app's
+    vocabulary (V2.75).
+
+    ``scripts/tag_prairie_provenance.py`` derives the SK half of every
+    ``native_provinces`` value from a set of ecoregion keys that run unbroken
+    across the AB/SK border. It is honest about being a heuristic. What nothing
+    could say is that **the vocabulary changed underneath it**: V2.72 adopted
+    the 24 surveyed ELC regions and V2.73 migrated the tags, and four of the
+    generator's six keys stopped existing. A simulated re-run at V2.75 moved
+    237 of 431 species — so the field the public site publishes as "Native to"
+    was the output of a generator that would no longer produce it, and every
+    downstream check read the field rather than the generator.
+
+    An ERROR. A generator whose input vocabulary has drifted is not a stale
+    comment; it is a live routine that will silently rewrite the catalogue the
+    next time somebody runs it.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        vocabulary = _load_ecoregion_keys()
+    except RuntimeError as e:                       # no polygon file
+        return [f"provenance generator: {e}"], warnings
+
+    path = PROJECT_ROOT / "scripts" / "tag_prairie_provenance.py"
+    if not path.exists():
+        return errors, warnings                     # retired outright: fine
+
+    # Read the constant, do not run the module. This validator must never
+    # execute a script whose day job is rewriting data/plants_master.json, and
+    # importing it would run its module-level path setup for no benefit.
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"), str(path))
+    except (OSError, SyntaxError) as e:
+        return ([f"provenance generator: {path.name} could not be read: {e}"],
+                warnings)
+
+    declared: set[str] | None = None
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "_SK_SHARED"
+                   for t in node.targets):
+            continue
+        try:
+            value = ast.literal_eval(node.value)
+        except ValueError:
+            break                                   # computed, not a literal
+        declared = {str(v) for v in value}
+        break
+
+    # A parser that quietly finds nothing is how the *previous* AST-based
+    # vocabulary loader failed (see _load_ecoregion_keys). Not finding the
+    # constant is a failure to check, and says so.
+    if declared is None:
+        return ([f"provenance generator: {path.name} no longer declares "
+                 "_SK_SHARED as a literal, so its vocabulary could not be "
+                 "checked. Update this validator or retire the generator — "
+                 "silently not checking is the failure mode this guards."],
+                warnings)
+
+    stale = sorted(k for k in declared if k not in vocabulary)
+    if stale:
+        errors.append(
+            f"provenance generator: {path.name} keys off ecoregion tokens that "
+            f"data/ecoregions_canada.geojson no longer defines: "
+            f"{', '.join(stale)}. Running it would rewrite native_provinces "
+            "from a vocabulary that does not exist. Update the keys or retire "
+            "the generator; do not leave it runnable and wrong.")
+    return errors, warnings

@@ -57,7 +57,61 @@ _OPTIONAL_FIELDS = (
     # needs no schema bump. Absent on everything made before V2.44, which is
     # exactly what keeps those designs rendering unchanged.
     "planted_year",
+    # V3.05 (F19): the reasons the generator chose this plant's spot, in
+    # words, shown on its page when it is clicked on the map. Project data:
+    # a hand-placed plant has none, and an empty list is not written.
+    "why_here",
+    # V3.18 (PY-5): which run of the planner placed this plant, so running it
+    # again replaces that plan instead of stacking a second one on it. A
+    # hand-placed plant has none, and keeps its place through every replace.
+    "plan_run",
 )
+
+
+def _in_plan(props: dict, run: str) -> bool:
+    """Whether a feature's properties belong to plan ``run`` (see
+    :func:`last_plan` for the ``legacy:`` form)."""
+    if run.startswith("legacy:"):
+        return (props.get("element_type") == "plant"
+                and props.get("pattern_kind") == "generated"
+                and not props.get("plan_run")
+                and (props.get("placement_group_id") or "") == run[7:])
+    return props.get("plan_run") == run
+
+
+def last_plan(features: Iterable[dict]) -> tuple[str, int]:
+    """``(run, plants)`` for the design's most recent generated plan, or
+    ``("", 0)`` when it has none.
+
+    A plan from before V3.18 carries no run id. Its plants are still known,
+    by ``pattern_kind = "generated"`` and the placement group the whole run
+    shared, and ``"legacy:<group>"`` stands for it; its structures cannot be
+    told from hand-placed ones, so a replace leaves them where they are."""
+    features = list(features or [])
+    run = ""
+    for f in reversed(features):
+        if (f.get("properties") or {}).get("plan_run"):
+            run = f["properties"]["plan_run"]
+            break
+    if not run:
+        for f in reversed(features):
+            p = f.get("properties") or {}
+            if (p.get("element_type") == "plant"
+                    and p.get("pattern_kind") == "generated"):
+                run = "legacy:" + (p.get("placement_group_id") or "")
+                break
+    if not run:
+        return "", 0
+    plants = sum(1 for f in features
+                 if (f.get("properties") or {}).get("element_type") == "plant"
+                 and _in_plan(f.get("properties") or {}, run))
+    return run, plants
+
+
+def without_plan(features: Iterable[dict], run: str) -> list:
+    """``features`` less every one that belongs to plan ``run``."""
+    return [f for f in (features or [])
+            if not (run and _in_plan(f.get("properties") or {}, run))]
 
 
 def _close(a: float, b: float, tol: float = COORD_TOL_DEG) -> bool:
@@ -205,6 +259,19 @@ class ProjectStore:
         building richer records than the bare feature rebuild gives)."""
         self._placed[:] = list(records)
 
+    def remove_plan(self, run: str) -> int:
+        """Remove every feature of generated plan ``run``, plants and
+        structures alike, and bring the index back into agreement. Returns
+        how many features went. Hand-placed plants are never in a plan."""
+        if not run:
+            return 0
+        kept = without_plan(self.features, run)
+        gone = len(self.features) - len(kept)
+        if gone:
+            self.features[:] = kept
+            self._placed[:] = self.records_from_features()
+        return gone
+
     def rebuild_index(self) -> None:
         """Rebuild the placed-plants index in place from the current
         features. Used by undo/redo snapshot restore, which swaps the whole
@@ -223,7 +290,9 @@ class ProjectStore:
                   pattern_kind: str = "",
                   quantity: int = 1,
                   feature_id: str = "",
-                  planted_year=None) -> dict:
+                  planted_year=None,
+                  why_here=None,
+                  plan_run: str = "") -> dict:
         """Append one placed plant to both structures. Returns the index
         record (callers feed it to the map widget / panels).
 
@@ -255,6 +324,10 @@ class ProjectStore:
             record["polyculture_center_lng"] = polyculture_center_lng
         if placement_group_id:
             record["placement_group_id"] = placement_group_id
+        if why_here:
+            record["why_here"] = list(why_here)
+        if plan_run:
+            record["plan_run"] = plan_run
         self._placed.append(record)
         self.features.append(
             plant_feature(record, pattern_kind=pattern_kind,

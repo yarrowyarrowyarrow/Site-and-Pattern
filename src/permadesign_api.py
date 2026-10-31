@@ -41,7 +41,7 @@ from src.project import load_project, save_project, project_to_map_data
 from src.db.plants import get_plant, search_plants
 from src.db.polycultures import get_polyculture_by_id, get_all_polycultures
 from src.db.structures import get_structure, get_all_structures
-from src.habitat_score import compute_habitat_score, HabitatScoreError
+from src.habitat_score import HabitatScoreError, score_for_project, site_pin
 from src.errors import (
     ProjectError,
     PlantNotFoundError,
@@ -56,6 +56,7 @@ __all__ = [
     "list_polycultures",
     "list_structures",
     "run_analysis",
+    "yard_overview",
     "pull_plant_impact",
     "chickadee_provision",
     "relationship_web",
@@ -294,12 +295,32 @@ def run_analysis(project: Project) -> dict:
     """
     _ensure_db()
     try:
-        score = compute_habitat_score(project.placed_plants, project.structures)
+        lat, lng = site_pin(project)
+        score = score_for_project(project.placed_plants, project.structures,
+                                  lat=lat, lng=lng)
     except HabitatScoreError as exc:
         raise AnalysisError(f"Habitat score unavailable: {exc}") from exc
     return {
         "habitat_score": score.as_dict() if score is not None else None,
         "warnings": project.validate(),
+    }
+
+
+def yard_overview(project: Project) -> dict:
+    """How the yard is doing, as Design › Overview and the PDF's first page
+    say it (V3.27, OV-1): ``{"heading", "items": [{key, title, status,
+    status_word, lines, action, target}], "text"}``."""
+    _ensure_db()
+    from src import yard_overview_items as yi
+    data = project.as_dict()
+    items = yi.overview(data)
+    return {
+        "heading": yi.heading(data),
+        "items": [{"key": it.key, "title": it.title, "status": it.status,
+                   "status_word": it.status_word, "lines": list(it.lines),
+                   "action": it.action, "target": it.target}
+                  for it in items],
+        "text": yi.as_text(items),
     }
 
 

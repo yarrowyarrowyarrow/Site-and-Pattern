@@ -142,9 +142,15 @@ class TestConfidence(unittest.TestCase):
 
 
 class TestCountingPoints(unittest.TestCase):
-    def test_an_overlap_counts_for_both_regions(self):
-        """Not double-counting: the species really is recorded from a place
-        that is in both, and 'first match wins' is the bug being undone."""
+    def test_a_lookup_returning_two_regions_counts_for_both(self):
+        """Whatever the injected lookup returns is counted, all of it.
+
+        This is about the counting rule, not about geometry: the *caller*
+        decides what a point is in. With the real polygons that is now
+        containment only (see TestARecordIsEvidenceAboutOnePlace) — the ELC
+        regions tile, so two answers means the lookup was asked a different
+        question, and answering it is the caller's business.
+        """
         rows = R.ranges_for_species(_points(overlap=10), lookup=_fake_lookup)
         self.assertEqual({r["ecoregion"] for r in rows},
                          {"aspen_parkland", "western_alberta_upland"})
@@ -255,11 +261,17 @@ class TestTheDerivationScript(unittest.TestCase):
     # halves of the pipeline agree about Alberta.
     _EDMONTON     = (53.55, -113.49)     # aspen_parkland
     # V2.68: was commented `mid_boreal_uplands`, one of the six hand-traced
-    # regions. Under the surveyed layer this point returns TWO keys — it sits
-    # inside Wabasca Lowland and within 5 km of Mid-Boreal Uplands, which
-    # `lookup_ecoregions` reports rather than picking a winner. A yard on a
-    # boundary is genuinely in both, and saying so is the P9 answer.
-    _FORT_MCMURRAY = (56.73, -111.38)    # wabasca_lowland + mid_boreal_uplands
+    # regions. Under the surveyed layer this point sits INSIDE Wabasca Lowland
+    # and within 5 km of Mid-Boreal Uplands.
+    #
+    # V2.75: it therefore derives as Wabasca Lowland alone. The paragraph that
+    # stood here argued the second key was the P9 answer — "a yard on a
+    # boundary is genuinely in both, and saying so" — and that is still true
+    # *of a yard*. It is not true of a herbarium sheet. Site detection keeps
+    # the buffer; range derivation counts containment, because a record is
+    # evidence about the place it was made and nowhere else. Same coordinate,
+    # two questions, two right answers.
+    _FORT_MCMURRAY = (56.73, -111.38)    # in wabasca_lowland, near mid_boreal_uplands
 
     def test_it_drives_the_derivation_per_species(self):
         from scripts.seed_ecoregion_ranges import derive
@@ -281,10 +293,12 @@ class TestTheDerivationScript(unittest.TestCase):
         self.assertEqual(ranges["Amelanchier alnifolia"],
                          [{"ecoregion": "aspen_parkland", "occurrences": 30,
                            "confidence": "high"}])
-        # Both keys the boundary point resolves to are reported as short of
-        # the threshold, and neither is silently collapsed into the other.
+        # The near-miss report names the region the two records are IN, and
+        # not the one they are merely near (V2.75). Before the buffer was
+        # taken out of derivation this read `{"wabasca_lowland": 2,
+        # "mid_boreal_uplands": 2}` — two records producing four.
         self.assertEqual(dropped["Amelanchier alnifolia"],
-                         {"wabasca_lowland": 2, "mid_boreal_uplands": 2})
+                         {"wabasca_lowland": 2})
         self.assertEqual(none, ["Nothing recordedii"])
 
     def test_the_saskatoon_berry_case_end_to_end(self):
@@ -857,3 +871,610 @@ class TestTheFilterAgreesWithTheCard(unittest.TestCase):
         both = {p["id"] for p in _plants_mod.search_plants(
             ecoregion=["aspen_parkland", "riparian"])}
         self.assertEqual(geo | wet, both)
+
+
+class TestARecordIsEvidenceAboutOnePlace(unittest.TestCase):
+    """The 5 km buffer must not reach range derivation (V2.75).
+
+    ``ecoregion._NEAR_BOUNDARY_M`` was written in V2.67 to answer *which
+    ecoregion is this yard in*, replacing the deliberate overlap V2.38 had
+    drawn into the placeholder polygons. ``ranges_for_species`` defaulted its
+    lookup to the same function and inherited the buffer silently, so the
+    shipped counts credit a record to every region within five kilometres of
+    it. Measured over 4,000 random points inside the layer, 16.4% land in two
+    or more.
+
+    An outside review of the published site noticed the symptom and blamed the
+    ~900 m boundary simplification. The simplification is real and is the
+    smaller half.
+    """
+
+    #: A real coordinate in Northern Continental Divide whose buffered lookup
+    #: also returns Aspen Parkland. This is the reviewer's own hypothetical --
+    #: "a mountain species that shows up in Aspen Parkland" -- as a fact about
+    #: the shipped polygons rather than a worry.
+    MONTANE_NEAR_PARKLAND = (50.1165, -114.2478)
+
+    #: Montane and nowhere near an edge. The point above turned out to be
+    #: inside the *boundary margin* too (V2.81), so it can no longer carry the
+    #: half of this regression that says a montane record still counts for its
+    #: own region.
+    MONTANE_DEEP = (49.05, -113.90)
+
+    def test_the_two_questions_give_different_answers_at_a_boundary(self):
+        from src.ecoregion import lookup_ecoregions
+        lat, lng = self.MONTANE_NEAR_PARKLAND
+        buffered = lookup_ecoregions(lat, lng)
+        contained = lookup_ecoregions(lat, lng, near_m=0.0)
+        self.assertEqual(contained, ["northern_continental_divide"])
+        self.assertIn("aspen_parkland", buffered)
+        self.assertEqual(buffered[0], contained[0],
+                         "the containing region must still sort first")
+
+    def test_derivation_is_not_buffered(self):
+        """The regression. Three records at one montane coordinate must not
+        make a parkland claim."""
+        rows = R.ranges_for_species([self.MONTANE_DEEP] * 3)
+        self.assertEqual([r["ecoregion"] for r in rows],
+                         ["northern_continental_divide"])
+
+    def test_site_detection_keeps_its_buffer(self):
+        """The default is unchanged on purpose: every other caller is asking
+        where a yard is, and there the second answer is the point."""
+        from src.ecoregion import _NEAR_BOUNDARY_M, lookup_ecoregions
+        self.assertEqual(_NEAR_BOUNDARY_M, 5_000.0)
+        lat, lng = self.MONTANE_NEAR_PARKLAND
+        self.assertGreater(len(lookup_ecoregions(lat, lng)), 1)
+
+    def test_an_interior_point_is_unaffected(self):
+        """The fix must be invisible away from edges, or it is not a fix."""
+        from src.ecoregion import lookup_ecoregions
+        interior = (52.5, -113.0)
+        self.assertEqual(lookup_ecoregions(*interior),
+                         lookup_ecoregions(*interior, near_m=0.0))
+
+    def test_dropped_regions_uses_the_same_rule(self):
+        """Otherwise the near-miss report would name regions the derivation
+        never considered, which is worse than not reporting."""
+        near = R.dropped_regions([self.MONTANE_DEEP] * 2)
+        self.assertNotIn("aspen_parkland", near)
+        self.assertEqual(near, {"northern_continental_divide": 2})
+
+
+class TestABorderCannotBeReadCloserThanItIsDrawn(unittest.TestCase):
+    """A record must be further inside a region than the outline's own error
+    before it counts for that region (V2.81).
+
+    V2.75 took the 5 km buffer out of range derivation and left plain
+    containment behind, which asks which side of a line a point falls on and
+    answers to the metre. These lines are simplified to about 900 m. Reported
+    from the published site, on the map where the dots are all in the Rockies:
+
+        "Aspen parkland cannot be absorbing these mountain native species,
+         such as mountain forgetmenot and alberta penstemmon."
+
+    The measurement behind this class, which is what makes it a bug and not a
+    preference: *Penstemon albertinus* published **17 Aspen Parkland records**
+    beside 284 montane ones. All 17 sit in a single 663 m by 291 m patch, 25 to
+    202 metres inside the parkland boundary. It is one population next to a
+    line drawn to a kilometre, published as a region a mountain plant reaches.
+    """
+
+    #: The cluster itself, from ``data/fetched/plant_occurrences.json``.
+    THE_SEVENTEEN = (50.4173, -114.5445)
+
+    def test_the_reported_case(self):
+        rows = R.ranges_for_species([TestARecordIsEvidenceAboutOnePlace
+                                     .MONTANE_DEEP] * 300
+                                    + [self.THE_SEVENTEEN] * 17)
+        self.assertEqual([r["ecoregion"] for r in rows],
+                         ["northern_continental_divide"],
+                         "17 records in one 600 m patch just inside the line "
+                         "is not a parkland range")
+
+    def test_containment_alone_would_still_get_it_wrong(self):
+        """Naming what the old rule did, so this cannot be mistaken for the
+        V2.75 fix arriving late. Containment puts the cluster in the parkland
+        and is not wrong about the geometry -- the geometry is what cannot be
+        read that closely."""
+        from src.ecoregion import lookup_ecoregions
+        self.assertEqual(lookup_ecoregions(*self.THE_SEVENTEEN, near_m=0.0),
+                         ["aspen_parkland"])
+
+    def test_the_margin_is_the_number_the_drawings_disclose(self):
+        """Not a tuned threshold. ``ecoregion_map.CAVEAT`` prints "about 900 m"
+        under every map on the site; this is that sentence as arithmetic, and
+        the two must not drift."""
+        from src.ecoregion import SIMPLIFICATION_M
+        from src.ecoregion_map import CAVEAT
+        self.assertEqual(SIMPLIFICATION_M, 900.0)
+        self.assertIn("900 m", CAVEAT)
+
+    def test_a_deep_record_is_untouched(self):
+        from src.ecoregion import confident_ecoregion
+        self.assertEqual(confident_ecoregion(52.5, -113.0), ["aspen_parkland"])
+
+    #: Real cached records that containment puts inside two regions at once --
+    #: the Calgary parkland/fescue crossing the Method page used to disclose,
+    #: and the same artefact twice in the mountains.
+    DOUBLY_CONTAINED = (
+        (51.1220, -114.0979, "aspen_parkland", "fescue_grassland"),
+        (52.3916, -116.3555, "eastern_continental_ranges",
+         "western_alberta_upland"),
+        (52.8819, -118.4508, "eastern_continental_ranges",
+         "western_continental_ranges"),
+    )
+
+    def test_a_record_now_counts_for_at_most_one_region(self):
+        """The overlap this replaces. Each region's share of a common border
+        was simplified separately, so neighbours overlap by a sliver and a
+        record inside one counted for both -- eight in a thousand, which the
+        Method page disclosed as a known limit.
+
+        A doubly contained point is by construction within the margin of a
+        boundary, so this is now structurally impossible rather than measured
+        and apologised for. Both halves are asserted: that these coordinates
+        really are the old double count, and that they no longer are."""
+        from src.ecoregion import confident_ecoregion, lookup_ecoregions
+        for lat, lng, first, second in self.DOUBLY_CONTAINED:
+            self.assertEqual(sorted(lookup_ecoregions(lat, lng, near_m=0.0)),
+                             sorted((first, second)),
+                             "this coordinate is meant to be an overlap")
+            self.assertEqual(confident_ecoregion(lat, lng), [])
+
+    def test_zero_margin_is_the_old_rule(self):
+        """Kept as a seam so a test can characterise what changed, and so the
+        margin is a decision this module states rather than one it hides."""
+        from src.ecoregion import confident_ecoregion
+        self.assertEqual(confident_ecoregion(*self.THE_SEVENTEEN, margin=0),
+                         ["aspen_parkland"])
+        self.assertEqual(confident_ecoregion(*self.THE_SEVENTEEN), [])
+
+    def test_the_layers_outer_edge_is_not_a_boundary_either(self):
+        """A record just inside the BC line still counts for its region.
+
+        The ambiguity this rule exists for is *which of two ecoregions*, and
+        at the edge of the study area there is no second one to be confused
+        with -- the open question there is *is this on our ground at all*,
+        which `subject_area` answers separately and which V2.78 already fixed.
+        Measuring to any ring rather than to a different region's would have
+        deleted the whole western edge of the montane record."""
+        from src.ecoregion import confident_ecoregion, lookup_ecoregions
+        edge = (52.20, -117.28)          # montane, close to British Columbia
+        self.assertEqual(lookup_ecoregions(*edge, near_m=0.0),
+                         ["eastern_continental_ranges"])
+        self.assertEqual(confident_ecoregion(*edge),
+                         ["eastern_continental_ranges"])
+
+    def test_an_internal_subregion_seam_is_not_a_boundary(self):
+        """The layer splits every ecoregion by Alberta natural subregion, so
+        Aspen Parkland alone is nine features and 65 polygon parts. Measuring
+        to the nearest *ring* would treat those internal seams as borders and
+        delete records from the middle of a region. The distance is measured
+        only to parts of a DIFFERENT region."""
+        import json
+        import pathlib
+        from src.ecoregion import confident_ecoregion
+        path = (pathlib.Path(__file__).parent.parent / "data"
+                / "ecoregions_canada.geojson")
+        feats = json.loads(path.read_text(encoding="utf-8"))["features"]
+        subs = {(f["properties"] or {}).get("ab_subregion") or ""
+                for f in feats
+                if (f["properties"] or {}).get("key") == "aspen_parkland"}
+        self.assertGreater(len(subs), 2, "the seams this guards must exist")
+        self.assertEqual(confident_ecoregion(52.5, -113.0), ["aspen_parkland"])
+
+
+class TestARenameReachesTheCacheToo(unittest.TestCase):
+    """A re-derivation must not be able to lose a species (V2.81).
+
+    ``scripts/rename_taxon.py`` re-keyed the three shipped files keyed by
+    scientific name and not the raw point cache the first two are *derived
+    from*. Nothing broke and nothing warned at rename time. The bill arrived an
+    increment later: the V2.81 re-derivation wrote **407 species where the file
+    had 415**, and seven of the eight missing ones were still in the catalogue,
+    having been renamed in V2.80.
+
+    The seeder does print a warning naming them, and it printed it on the
+    second line of a 900-line log, where it was scrolled past. A guard nobody
+    reads is a guard that has to fail instead.
+    """
+
+    def test_every_shipped_species_is_still_in_the_cache(self):
+        """The exact failure: a name in the derived file that the cache cannot
+        produce again is one re-run away from vanishing."""
+        import scripts.seed_ecoregion_ranges as seeder
+        cache = seeder.read_cache()
+        if not cache:
+            self.skipTest("the point cache is a dev artefact")
+        shipped = R.parse_document(
+            json.loads(seeder.OUTPUT_PATH.read_text(encoding="utf-8")))
+        orphans = sorted(set(shipped) - set(cache))
+        self.assertEqual(orphans, [],
+                         "these have derived ranges that no re-derivation "
+                         "could reproduce; the cache still holds them under "
+                         "an older name")
+
+    def test_the_rename_tool_rekeys_the_cache(self):
+        """Fixing the data without fixing the tool would put the next rename
+        straight back here."""
+        from scripts.rename_taxon import BY_SCIENTIFIC
+        self.assertIn("fetched/plant_occurrences.json", BY_SCIENTIFIC)
+
+    def test_the_cache_speaks_the_catalogues_names(self):
+        """The other direction, as a warning rather than a hard rule: a cached
+        name that is not a catalogue name is either a rename that has not
+        reached the cache or a species that has left. Both are fine to hold
+        points for -- what is not fine is the reverse, above."""
+        import pathlib
+
+        import scripts.seed_ecoregion_ranges as seeder
+        cache = seeder.read_cache()
+        if not cache:
+            self.skipTest("the point cache is a dev artefact")
+        root = pathlib.Path(__file__).parent.parent / "data"
+        catalogue = {row["scientific_name"]
+                     for name in ("plants_master.json", "garden_plants.json")
+                     for row in json.loads(
+                         (root / name).read_text(encoding="utf-8"))
+                     if isinstance(row, dict) and row.get("scientific_name")}
+        self.assertEqual(sorted(set(catalogue) - set(cache)), [],
+                         "a catalogue species the cache cannot answer for "
+                         "derives to nothing, which reads as grows nowhere")
+
+
+class TestARederivationIsNotARetrieval(unittest.TestCase):
+    """``source`` is a *retrieval* date and must not follow the clock (V2.81).
+
+    ``_write`` stamped ``retrieved {today}`` on every run, including
+    ``--from-cache``, which fetches nothing at all. The V2.81 re-derivation
+    would have published "retrieved 2026-08-31" against a harvest taken on the
+    24th -- on 421 species pages, under a Method-page heading whose entire job
+    is answering *as of when*, and with the cache sitting right there saying
+    otherwise. Two facts wearing one date; only ``generated`` is today's.
+    """
+
+    def test_a_cache_run_keeps_the_harvests_date(self):
+        from scripts.seed_ecoregion_ranges import CACHE_PATH, _retrieved_source
+        if not CACHE_PATH.exists():
+            self.skipTest("the point cache is a dev artefact")
+        cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(_retrieved_source(True), cached["source"])
+
+    def test_a_live_run_dates_itself(self):
+        from datetime import date
+
+        from scripts.seed_ecoregion_ranges import _retrieved_source
+        self.assertIn(date.today().isoformat(), _retrieved_source(False))
+
+    def test_the_shipped_file_did_not_redate_its_harvest(self):
+        """The regression as it would actually be seen: the file says it was
+        retrieved when the records were, not when the file was written."""
+        import scripts.seed_ecoregion_ranges as seeder
+        if not seeder.CACHE_PATH.exists():
+            self.skipTest("the point cache is a dev artefact")
+        cache = json.loads(seeder.CACHE_PATH.read_text(encoding="utf-8"))
+        shipped = json.loads(seeder.OUTPUT_PATH.read_text(encoding="utf-8"))
+        self.assertIn(cache["generated"], shipped["source"])
+
+
+class TestThePointCache(unittest.TestCase):
+    """The raw points survive a run (V2.75).
+
+    Until now the pipeline kept only derived counts, so every later question
+    about the derivation cost a fresh harvest of ~400,000 GBIF records. That is
+    why the 5 km buffer could be diagnosed and not re-derived, and why the site
+    could publish "31 occurrence records" and never show where they are.
+    """
+
+    def setUp(self):
+        import pathlib
+        import scripts.seed_ecoregion_ranges as seeder
+        self.seeder = seeder
+        self.tmp = pathlib.Path(tempfile.mkdtemp()) / "plant_occurrences.json"
+
+    def _points(self):
+        O = self.seeder.Occurrence
+        return [
+            O(53.5501, -113.4900, 25.0, 2019, "HUMAN_OBSERVATION", "inat"),
+            O(53.5600, -113.5000, None, 1908, "PRESERVED_SPECIMEN", "herb"),
+            O(53.5700, -113.5100, 50_000.0, 2001, "HUMAN_OBSERVATION", "inat"),
+        ]
+
+    def test_it_round_trips_every_field(self):
+        pts = self._points()
+        self.seeder.write_cache({"Testus plantus": pts}, path=self.tmp)
+        self.assertEqual(self.seeder.read_cache(self.tmp)["Testus plantus"],
+                         pts)
+
+    def test_a_missing_cache_is_empty_not_an_error(self):
+        self.assertEqual(self.seeder.read_cache(self.tmp / "nope"), {})
+
+    def test_the_interned_tables_do_not_confuse_two_species(self):
+        """`basis` and `dataset_key` are stored once and referenced by index.
+        An off-by-one there would relabel records silently, which is the worst
+        failure a provenance cache can have."""
+        O = self.seeder.Occurrence
+        blob = {"A": [O(50.0, -110.0, None, 2000, "PRESERVED_SPECIMEN", "herb")],
+                "B": [O(51.0, -111.0, None, 2001, "HUMAN_OBSERVATION", "inat")]}
+        self.seeder.write_cache(blob, path=self.tmp)
+        back = self.seeder.read_cache(self.tmp)
+        self.assertEqual(back["A"][0].basis, "PRESERVED_SPECIMEN")
+        self.assertEqual(back["A"][0].dataset_key, "herb")
+        self.assertEqual(back["B"][0].basis, "HUMAN_OBSERVATION")
+        self.assertEqual(back["B"][0].dataset_key, "inat")
+
+    def test_an_occurrence_still_works_as_a_lat_lng_pair(self):
+        """The derivation reads point[0] and point[1]. If that ever stopped
+        being true, every range in the catalogue would quietly become empty."""
+        rows = R.ranges_for_species(
+            [self.seeder.Occurrence(53.55, -113.49)] * 4)
+        self.assertEqual([r["ecoregion"] for r in rows], ["aspen_parkland"])
+
+    def test_a_plain_tuple_is_still_accepted(self):
+        """Old test doubles and any caller with bare pairs keep working."""
+        rows = R.ranges_for_species([(53.55, -113.49)] * 4)
+        self.assertEqual([r["ecoregion"] for r in rows], ["aspen_parkland"])
+
+
+class TestTheSpecimenPass(unittest.TestCase):
+    """The herbarium half, asked for as its own query (F140, V2.77).
+
+    ``MAX_RECORDS_PER_SPECIES`` bounds the harvest and GBIF orders newest
+    first, so for a common plant the six-thousand-record window is the last few
+    years of phone observations and the century of specimens behind it never
+    arrives. Sixteen species in this catalogue sit at that cap holding 89,964
+    records and thirty-one specimens between them. Nobody noticed, because a
+    truncated harvest and a complete one look identical once cached.
+    """
+
+    def setUp(self):
+        import pathlib
+        import scripts.seed_ecoregion_ranges as seeder
+        self.seeder = seeder
+        self.O = seeder.Occurrence
+        self.tmp = pathlib.Path(tempfile.mkdtemp()) / "plant_occurrences.json"
+
+    def test_it_asks_gbif_for_specimens_and_not_for_everything(self):
+        """The whole point: filtering the answer cannot reach what the cap cut."""
+        seen = {}
+
+        def fake(name, *, verbose=False, throttle=None, basis_of_record="",
+                 **_kw):
+            seen[name] = basis_of_record
+            return [self.O(53.55, -113.49, 30.0, 1911, basis_of_record, "herb")]
+
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False, fetch=fake)
+        self.assertEqual(seen["Testus plantus"], "PRESERVED_SPECIMEN")
+        self.assertEqual(len(harvest["Testus plantus"]), 1)
+        self.assertEqual(failed, [])
+
+    def test_a_refusal_is_not_recorded_as_having_no_specimens(self):
+        """Same rule the main harvest learned in V2.75, in the new code path."""
+        def flaky(name, **_kw):
+            raise self.seeder.FetchFailed("HTTP 429")
+
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False, fetch=flaky)
+        self.assertEqual(harvest, {})
+        self.assertEqual([n for n, _why in failed], ["Testus plantus"])
+
+    def test_a_genuine_absence_is_recorded_as_an_empty_list(self):
+        harvest, failed = self.seeder.specimen_pass(
+            ["Testus plantus"], throttle=_NoWait(), verbose=False,
+            fetch=lambda name, **_kw: [])
+        self.assertEqual(harvest, {"Testus plantus": []})
+        self.assertEqual(failed, [])
+
+    def test_hitting_the_cap_is_reported_rather_than_looking_like_the_end(self):
+        """The bug's mechanism, pinned. A harvest that stopped because we
+        stopped asking must not be indistinguishable from one GBIF ended."""
+        pages = {"n": 0}
+
+        def _get_json(url, timeout, throttle):
+            pages["n"] += 1
+            return {"results": [{"decimalLatitude": 53.55,
+                                 "decimalLongitude": -113.49,
+                                 "basisOfRecord": "HUMAN_OBSERVATION"}]
+                                * self.seeder.PAGE_SIZE,
+                    "endOfRecords": False}
+
+        original = self.seeder._get_json
+        self.seeder._get_json = _get_json
+        try:
+            truncated = []
+            self.seeder.fetch_occurrences("Testus plantus", throttle=_NoWait(),
+                                          truncated=truncated)
+            self.assertEqual(truncated, ["Testus plantus"])
+        finally:
+            self.seeder._get_json = original
+
+    def test_a_harvest_gbif_ended_is_not_reported_as_truncated(self):
+        def _get_json(url, timeout, throttle):
+            return {"results": [{"decimalLatitude": 53.55,
+                                 "decimalLongitude": -113.49,
+                                 "basisOfRecord": "PRESERVED_SPECIMEN"}],
+                    "endOfRecords": True}
+
+        original = self.seeder._get_json
+        self.seeder._get_json = _get_json
+        try:
+            truncated = []
+            self.seeder.fetch_occurrences("Testus plantus", throttle=_NoWait(),
+                                          truncated=truncated)
+            self.assertEqual(truncated, [])
+        finally:
+            self.seeder._get_json = original
+
+    # ── merging into the cache ──────────────────────────────────────────────
+
+    def test_the_same_sheet_twice_is_counted_once(self):
+        """A duplicate inflates the number a confidence band is computed from,
+        which is the one number the whole pipeline exists to keep honest."""
+        sheet = self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")
+        self.seeder.write_cache({"Testus plantus": [sheet]}, path=self.tmp)
+        merged, added = self.seeder.merge_into_cache(
+            {"Testus plantus": [sheet]}, path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 1)
+        self.assertEqual(added, {})
+
+    def test_two_collectors_at_one_trailhead_stay_two_records(self):
+        """De-duplicating on coordinates alone would collapse exactly what a
+        dot map is drawn to show."""
+        self.seeder.write_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1974, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 2)
+        self.assertEqual(added, {"Testus plantus": 1})
+
+    def test_a_restated_uncertainty_is_still_the_same_record(self):
+        """GBIF exports re-state these; the sheet in the cabinet is one sheet."""
+        self.seeder.write_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 250.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(len(merged["Testus plantus"]), 1)
+        self.assertEqual(added, {})
+
+    def test_a_species_the_cache_never_held_is_added_whole(self):
+        self.seeder.write_cache({"Testus plantus": []}, path=self.tmp)
+        merged, added = self.seeder.merge_into_cache({"Novus sp.": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertEqual(added, {"Novus sp.": 1})
+        self.assertIn("Novus sp.", merged)
+
+    def test_merging_never_drops_what_was_already_there(self):
+        old = [self.O(50.0, -110.0, None, 2000, "HUMAN_OBSERVATION", "inat")]
+        self.seeder.write_cache({"Testus plantus": old}, path=self.tmp)
+        merged, _added = self.seeder.merge_into_cache({"Testus plantus": [
+            self.O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "herb")]},
+            path=self.tmp)
+        self.assertIn(old[0], merged["Testus plantus"])
+
+
+class TestDerivingWithoutTheNetwork(unittest.TestCase):
+    """``--from-cache`` (F140, V2.77).
+
+    The cache was built so no later question about this derivation would need
+    egress, and until now nothing read it that way: a changed threshold or a
+    corrected polygon still meant a fresh harvest on somebody's laptop. This is
+    the seam that makes the derivation, and its diff, reproducible anywhere.
+    """
+
+    def test_it_derives_the_same_rows_the_network_run_would(self):
+        from scripts.seed_ecoregion_ranges import cache_fetcher, derive
+        O = __import__("scripts.seed_ecoregion_ranges",
+                       fromlist=["Occurrence"]).Occurrence
+        points = [O(53.55, -113.49, 30.0, 1911, "PRESERVED_SPECIMEN", "h")] * 5
+        live, _d, _n, _f = derive(
+            ["Testus plantus"], min_records=3, verbose=False,
+            fetch=lambda name, **_kw: points, throttle=_NoWait())
+        cached, _d, _n, _f = derive(
+            ["Testus plantus"], min_records=3, verbose=False,
+            fetch=cache_fetcher({"Testus plantus": points}),
+            throttle=_NoWait())
+        self.assertEqual(live, cached)
+        self.assertEqual([r["ecoregion"] for r in cached["Testus plantus"]],
+                         ["aspen_parkland"])
+
+    def test_a_species_absent_from_the_cache_derives_to_nothing(self):
+        """And the CLI says so before writing, because "no rows" reads as
+        "grows nowhere" and the cache is not the catalogue."""
+        from scripts.seed_ecoregion_ranges import cache_fetcher, derive
+        ranges, _d, none, failed = derive(
+            ["Absent sp."], min_records=3, verbose=False,
+            fetch=cache_fetcher({}), throttle=_NoWait())
+        self.assertEqual(ranges, {})
+        self.assertEqual(none, ["Absent sp."])
+        self.assertEqual(failed, [])
+
+    def test_the_committed_points_agree_with_the_committed_ranges(self):
+        """A spot check on the real pair, cheap enough to run every time.
+
+        The full re-derivation over 555,477 points takes about forty minutes of
+        CPU and was run once (V2.77: 420 species, zero differing rows). This
+        samples it, so a cache and a shipped file that drift apart -- a
+        re-fetch committed without a re-derivation, or the reverse -- fails
+        here rather than being discovered by somebody reading a map.
+        """
+        import scripts.seed_ecoregion_ranges as seeder
+        cache = seeder.read_cache()
+        if not cache:
+            self.skipTest("the point cache is a dev artefact")
+        with open(seeder.OUTPUT_PATH, encoding="utf-8") as f:
+            shipped = R.parse_document(json.load(f))
+        # The ten largest: most records, most chances to disagree, and they
+        # cover every ecoregion between them.
+        sample = sorted(shipped, key=lambda n: -len(cache.get(n) or []))[:10]
+        self.assertTrue(sample)
+        for name in sample:
+            points, _refused = seeder.usable_points(cache[name])
+            got = {(r["ecoregion"], r["occurrences"], r["confidence"])
+                   for r in R.ranges_for_species(points)}
+            want = {(r["ecoregion"], r["occurrences"], r["confidence"])
+                    for r in shipped[name]}
+            self.assertEqual(got, want, name)
+
+    def test_it_makes_no_request(self):
+        """The suite's offline guard would fail this if it reached the network,
+        but stating it is what makes the guarantee readable."""
+        from scripts.seed_ecoregion_ranges import cache_fetcher
+        fetch = cache_fetcher({"Testus plantus": [(53.55, -113.49)]})
+        self.assertEqual(len(fetch("Testus plantus")), 1)
+        self.assertEqual(fetch("Nobody sp."), [])
+
+
+class TestCoordinateUncertainty(unittest.TestCase):
+    """A record states what it can support, and the pipeline had never read it.
+
+    The direct answer to the boundary objection: better than any threshold on
+    counts, because it acts per record and for a stated reason.
+    """
+
+    def setUp(self):
+        import scripts.seed_ecoregion_ranges as seeder
+        self.seeder = seeder
+
+    def test_a_record_georeferenced_to_the_county_is_refused(self):
+        O = self.seeder.Occurrence
+        kept, refused = self.seeder.usable_points(
+            [O(53.55, -113.49, 25.0), O(53.55, -113.49, 40_000.0)])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(refused, 1)
+
+    def test_no_stated_uncertainty_is_kept(self):
+        """Absent is not estimated (src/confidence.py). Most herbarium sheets
+        state none, and dropping them would silently prefer phone photographs
+        to museum specimens."""
+        O = self.seeder.Occurrence
+        kept, refused = self.seeder.usable_points([O(53.55, -113.49, None)])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(refused, 0)
+
+    def test_the_threshold_is_adjustable(self):
+        O = self.seeder.Occurrence
+        pts = [O(53.55, -113.49, 8_000.0)]
+        self.assertEqual(self.seeder.usable_points(pts)[1], 0)
+        self.assertEqual(
+            self.seeder.usable_points(pts, max_uncertainty_m=1_000.0)[1], 1)
+
+    def test_derive_applies_it_and_the_cache_keeps_what_it_refused(self):
+        """The filter is a derivation-time decision; the cache holds what GBIF
+        actually returned, so revisiting the threshold costs no network."""
+        O = self.seeder.Occurrence
+        coarse = [O(53.55, -113.49, 90_000.0)] * 5
+        fine = [O(53.55, -113.49, 30.0)] * 4
+        harvest: dict = {}
+        ranges, _dropped, _none, _failed = self.seeder.derive(
+            ["Testus plantus"], min_records=3, verbose=False,
+            fetch=lambda name, *, verbose=False, throttle=None: coarse + fine,
+            throttle=_NoWait(), collect=harvest)
+        self.assertEqual(ranges["Testus plantus"][0]["occurrences"], 4)
+        self.assertEqual(len(harvest["Testus plantus"]), 9)

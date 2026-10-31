@@ -70,7 +70,7 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # 2402 now
+        (_SRC / "app.py", 2600),                       # 2417 now (V3.11)
         # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
         # own surface partly for this reason: a reference work's worth of
         # controls cannot land here. The next thing that needs a line from this
@@ -81,18 +81,30 @@ class TestStructuralCeilings(unittest.TestCase):
         # to `filter_widgets.build_ecoregion_tree`, where the widget it drives
         # already lives. 18 lines of headroom is not a reprieve; the
         # placement/polyculture-mix extraction above is still the next move.
-        (_SRC / "plant_panel.py", 1600),               # 1582 now
+        # V2.98: half of it happened. The placement *UI* left for the bar over
+        # the map (src/placement_bar.py; the pattern controls, Qty and colour
+        # are built here and adopted there), about 100 lines, and the arming
+        # rules it exposed took them back: net +1. The mix is the half left.
+        # V2.99: looking is not placing (F191). The rules both panels share
+        # went to src/place_action.py; what is left here (the Place button,
+        # what is placed apart from what is looked at) took it to 1599. One
+        # line: step 2 (F192) cannot start here without extracting the mix.
+        # V3.00: step 2 started here anyway, because it took the other half
+        # out instead: the search, the filters and the list's wiring are
+        # src/plant_picker.py, shared with the Directory and the builder, and
+        # this file went 1599 -> 1435. The mix is still the next extraction.
+        (_SRC / "plant_panel.py", 1600),               # 1437 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
         # in flow modules; the terrain-queue block is the natural extraction
         # when this trips again.
-        (_SRC / "controllers" / "map_events.py", 2100),# ~1903 now
+        (_SRC / "controllers" / "map_events.py", 2100),# 1988 now (V3.11)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
-        (_SRC / "polyculture_panel.py", 2900),         # ~2527 now
-        (_SRC / "site_panel.py", 2700),                # ~2240 now
-        (_SRC / "analysis_panel.py", 2450),            # 2355 now — 95 LEFT
+        (_SRC / "polyculture_panel.py", 2900),         # 2569 now (V3.05)
+        (_SRC / "site_panel.py", 2700),                # 2371 now (V3.05)
+        (_SRC / "analysis_panel.py", 1900),            # 1810 now (V3.20 retired Tips)
         # V2.53 (the confidence block). Qt-free cores, so they carry their own
         # ceilings rather than living in the panel that shows them.
         (_SRC / "confidence.py", 400),                 # 298 now
@@ -101,8 +113,40 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.41 — the plant directory (F90). Opted in on arrival rather than
         # when they first hurt: a ceiling added late is a ceiling set around
         # whatever shape the file drifted into.
-        (_SRC / "plant_directory.py", 600),            # 552 now
-        (_SRC / "plant_directory_window.py", 640),     # 518 now
+        (_SRC / "plant_directory.py", 600),            # 452 now
+        # V3.00 (F192) — one picker and one species page, opted in on arrival.
+        # The page is the Directory's, moved out of its window so the Browse
+        # tab can show it too; the vocabulary is Qt-free so a test can check
+        # every parameter against search_plants without a display.
+        # V3.01 (F194): the vocabulary gained the words a filter is read by
+        # (its face, its rule, what is on, the soil pH's) and what emptied a
+        # result, raised 450 -> 520 as one cohesive Qt-free table; the picker
+        # passed its own ceiling and the chips and the empty state went to
+        # src/filter_status.py instead, and its copy of src/flow_layout.py's
+        # FlowLayout was deleted. V3.05 (F200): Native began naming the pin's
+        # province, the picker passed 560 again, and its quality toggles went
+        # to filter_status.QualityChips, as the chips had.
+        (_SRC / "plant_filters.py", 520),              # 520 now (V3.05): full
+        (_SRC / "plant_picker.py", 560),               # 510 now (V3.14): the order
+        # block (set_site to _reorder, about 60 lines) is the next to go.
+        (_SRC / "filter_status.py", 300),              # 295 now (V3.14)
+        # V3.14, opted in on arrival: the filters in two tiers, everyday first
+        # (the owner: "so so busy"), which took the picker's filter building
+        # with it; and which ecoregions a community belongs in, Qt-free.
+        (_SRC / "filter_area.py", 220),                # 150 now
+        (_SRC / "community_regions.py", 160),          # 100 now
+        # V3.02 (F195), opted in on arrival: the ring that follows keyboard
+        # focus, and the one table of keys the window and Help both read.
+        (_SRC / "focus_ring.py", 200),                 # 180 now
+        (_SRC / "keyboard_help.py", 260),              # 240 now
+        (_SRC / "accessible_names.py", 120),           # 54 now
+        # V3.03 (F195, second half): the 24 px floor under every control,
+        # raised only where a control would draw smaller, and a checkbox's box
+        # drawn where it can be seen.
+        (_SRC / "target_size.py", 160),                # 127 now
+        (_SRC / "indicator_style.py", 180),            # 134 now
+        (_SRC / "species_page.py", 720),               # 689 now
+        (_SRC / "species_flyout.py", 200),             # 168 now
         # V2.47 — the colour filter and the public catalogue. Opted in on
         # arrival, the V2.41 precedent. What does NOT live in the renderer any
         # more is the stylesheet and the browse script, which were Python
@@ -132,12 +176,23 @@ class TestStructuralCeilings(unittest.TestCase):
         # drift — so splitting makes two half-files with one caller. The next
         # facet that needs more than a one-line derivation should take that
         # extraction rather than this number going to 600.
-        (_SRC / "site_facets.py", 520),                # 476 now
+        (_SRC / "site_facets.py", 520),                # 319 now (V3.12)
+        # V3.12: the derivations went to their own module, the split the
+        # comment above named, when the Edmonton facet needed the room.
+        (_SRC / "site_facet_values.py", 340),          # 263 now
         # V2.68 — the vocabulary itself. Opted in on arrival, the V2.41
         # precedent, and overdue: this file decides what a real property gets
         # recommended, and it grew MultiPolygon support, boundary proximity and
         # three-level display without ever being guarded.
-        (_SRC / "ecoregion.py", 480),                  # 438 now
+        # V2.81: 480 -> 570. A third question about the same geometry --
+        # `confident_ecoregion`, which is what a *record* is evidence for, as
+        # against where a yard is and what a polygon contains. Raised rather
+        # than split because the only seam on offer is a worse file: the rule
+        # is four lines of logic over `_feature_index`, `_within_box` and
+        # `_distance_to_ring_m`, and moving it out would export three private
+        # helpers to save eighty lines that are mostly the incident it exists
+        # for. The polygons and the questions asked of them stay together.
+        (_SRC / "ecoregion.py", 570),                  # 552 now
         # V2.49: 260 -> 340. The first number was set against a module that
         # drew six rectangles and nothing else; the map then gained provincial
         # borders, city dots, province codes and hand-placed region labels,
@@ -198,7 +253,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # through this module, so a second one that wants a hierarchy gets it
         # for free rather than growing a private copy.
         (_SRC / "ecoregion_tree.py", 340),             # 282 now
-        (_SRC / "filter_widgets.py", 560),             # 434 now
+        (_SRC / "filter_widgets.py", 560),             # 546 now (V3.04)
         # V2.68: 460 -> 560. `_subregion_pages` builds the third level of the
         # drill-down. It is MODEL code and stays with the model: moving it into
         # the renderer would put "what is a subregion page" in the view layer,
@@ -210,17 +265,79 @@ class TestStructuralCeilings(unittest.TestCase):
         # page that answers "where?" (the map page, the per-region maps, the
         # subregion pages) and this module keeps the ones that answer "what?".
         # Third split off this file, after the species page and the About page.
-        (_SRC / "static_site_render.py", 800),         # 713 now
-        (_SRC / "static_site_regions.py", 320),        # 246 now
-        (_SRC / "static_site_species.py", 340),        # 256 now
+        # V2.80 spent most of what was left: 788 now, 12 to spare. The share
+        # card went into `src/site_share.py` rather than in here for that
+        # reason, on the V2.73 precedent -- what a build tells other people's
+        # machines is not rendering. The next page-shell concern needs a
+        # module, not the remaining twelve lines.
+        (_SRC / "static_site_render.py", 800),         # 788 now
+        # V2.73 — the fifth split off the renderer, and the only one that is
+        # not a page. `static_site_render.py` sat at 721 of 800 and growing one
+        # analytics provider into two in place would have spent most of the
+        # remaining headroom on a concern that is not rendering. The seam is
+        # real either way: "which counters is this build carrying, what tags do
+        # they emit, and what does the footer therefore have to say" is one
+        # question, and it was three globals and two functions scattered among
+        # the page shells. Opted in on arrival, the V2.41 precedent.
+        (_SRC / "site_analytics.py", 220),             # 187 now
+        (_SRC / "static_site_regions.py", 320),        # 269 now
+        # V3.13: the native-area page split off the regions module at 318/320
+        # when one of its sentences had to grow to stay true. Opted in on
+        # arrival, the V2.41 precedent.
+        (_SRC / "static_site_around.py", 120),         # 71 now
+        # V2.75: the species page hit 351 against 340 when the range block
+        # learned to say what it claims, and the seam was already named in the
+        # module's own docstring -- "a range map with its evidence" is one of
+        # its four parts, and the part an outside botanical review spent most
+        # of its words on. Split rather than raised.
+        #
+        # V2.81: 340 -> 380, and this one is a repair rather than a decision.
+        # The reordering that put the maps above the animals landed the file at
+        # 344 with the ceiling left at 340, so the guard was red on the branch
+        # before it was merged -- which is what a ceiling is for and also why
+        # it has to be raised in the same commit as the lines. Thirty-six of
+        # headroom, no more: the four-part split named above is still the next
+        # move, not a bigger number.
+        (_SRC / "static_site_species.py", 380),        # 344 now
+        (_SRC / "static_site_range.py", 260),          # 168 now
+        # The Method page is a page, not another paragraph in the renderer --
+        # the same call V2.73 made for analytics, and the renderer has 90
+        # lines of headroom left, not 190.
+        (_SRC / "static_site_method.py", 260),         # 184 now
+        # V2.78: `ecoregion_basemap` hit 271/260 when it grew the
+        # point-in-subject-provinces test. Answered with a split rather than a
+        # bigger number, and the split is the right one anyway: that module
+        # draws the ground, `subject_area` decides whether a piece of evidence
+        # is on it. A shim keeps the old import working.
+        (_SRC / "subject_area.py", 180),               # 105 now
+        (_SRC / "phenology_bar.py", 220),              # 184 now
+        (_SRC / "nativity.py", 180),                   # 116 now
+        # V3.12 (F220): native around Edmonton. The rule and its file format,
+        # and the one read side every surface asks. Opted in on arrival.
+        (_SRC / "local_flora.py", 360),                # 296 now
+        (_SRC / "native_here.py", 280),                # 227 now
+        # V3.26 (PR-1): the ranking, one table of weights and its words.
+        (_SRC / "plant_priority.py", 380),             # 340 now
+        (_SRC / "plant_page_sections.py", 250),        # 209 now
+        # V3.27 (OV-1): what the overview measures, and its six items.
+        (_SRC / "yard_overview.py", 400),              # 372 now (V3.28)
+        # Plan My Yard (V3.28): the fill to cover, and the dialog, which grew
+        # by its four states and its advanced half.
+        (_SRC / "plan_cover.py", 250),                 # 180 now (V3.29)
+        (_SRC / "generate_design_dialog.py", 650),     # 556 now (V3.29)
+        # Try another, front or back, about this plan (V3.29).
+        (_SRC / "plan_notes.py", 250),                 # 173 now
+        (_SRC / "street_band.py", 300),                # 236 now
+        (_SRC / "plan_bar.py", 150),                   # 105 now
+        (_SRC / "yard_overview_items.py", 480),        # 430 now
         # V2.71 — the fourth split, on the same rule as the three above. The
         # wildlife index became a filtered search with its own facet
         # vocabulary, which is a *different* vocabulary from the plant one in
         # site_facets.py and belongs beside the pages that use it.
         (_SRC / "static_site_wildlife.py", 340),       # 274 now
         (_HTML / "site" / "browse.js", 200),           # 156 now
-        (_SRC / "start_screen.py", 380),               # 292 now
-        (_SRC / "onboarding_flow.py", 620),            # ~551 now
+        (_SRC / "start_screen.py", 380),               # 376 now (V3.37)
+        (_SRC / "onboarding_flow.py", 620),            # 571 now (V3.04)
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
         # ceiling added late is a ceiling set around whatever shape the file
         # drifted into. learn_flow.py exists *because* this guard fired — the
@@ -241,7 +358,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # and deciding what each one LOOKS like and how big it is (the
         # appearance half, _appearance_for / _size_for / _flight_for). That is
         # the seam when this trips; do not raise the number.
-        (_SRC / "scene_wildlife.py", 980),             # 907 now
+        (_SRC / "scene_wildlife.py", 980),             # 975 now (V2.93)
         # V2.43: the reference window went from a read-only diorama (163
         # lines) to an editable sandbox. When this trips, the split is the
         # edit half — the bridge slots and the trowel — into its own _flow.
@@ -271,46 +388,89 @@ class TestStructuralCeilings(unittest.TestCase):
         # hand-rolls the toolbar the V2.44 extraction was meant to share (the
         # note at the import explains why that swap was deferred), so the
         # ceiling is set where it is to make the next growth pay for it.
-        (_SRC / "scene3d_window.py", 950),             # 911 now
+        (_SRC / "scene3d_window.py", 950),             # 950 now (V3.05): split before adding
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
-        (_HTML / "map.html", 400),                     # ~235 now
-        (_HTML / "map" / "01-core.js", 950),           # ~885 now
-        (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
-        (_HTML / "map" / "03-plants.js", 950),         # ~931 now
-        (_HTML / "map" / "04-tools.js", 450),          # ~367 now
+        (_HTML / "map.html", 400),                     # 269 now (V3.11)
+        (_HTML / "map" / "01-core.js", 950),           # 930 now (V3.11)
+        (_HTML / "map" / "02-boundary.js", 750),       # 626 now (V3.11)
+        # V3.11 (F216, F217): the corner-handle switch and names had 7 lines
+        # left, so a shape's outline editing, which only lived here because it
+        # copies the boundary's vertex drag, moved out whole, loaded straight
+        # after this file so nothing runs in a new order.
+        (_HTML / "map" / "02b-shape-edit.js", 200),    # 142 now
+        (_HTML / "map" / "03-plants.js", 950),         # 939 now (V3.11)
+        (_HTML / "map" / "04-tools.js", 450),          # 380 now (V3.11)
         # V2.26: +editable existing features (drag + scroll-resize of detected/
         # marked trees & buildings) — in-domain growth for the features file,
         # kept together to avoid the cross-chunk load-order traps a split adds.
-        (_HTML / "map" / "05-features.js", 1200),      # ~1120 now
+        (_HTML / "map" / "05-features.js", 1200),      # 1193 now (V3.11): 7 left,
+        # and the next feature here needs a split first (structures or the
+        # satellite alignment are the seams)
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
-        (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
+        (_HTML / "map" / "06-overlays.js", 1560),      # 1323 now (V3.11)
         # V2.31 (F5): the relationship-web overlay went into its own chunk
         # rather than onto 06-overlays.js, which was already the biggest of
         # the six. Geometry stays in src/relationship_graph.py — if this file
         # grows past its ceiling the cause is almost certainly ecology logic
         # that belongs in Python.
         (_HTML / "map" / "07-network.js", 400),        # ~200 now
+        # V2.99 (F191): the footprint under the cursor while placing, its own
+        # chunk because 03-plants.js, where the pattern preview lives, was at
+        # 950 of 950. A community's shape arrives from src/placement_footprint.py.
+        (_HTML / "map" / "08-footprint.js", 250),      # ~150 now
+        # V3.02 (F195): the map without a mouse, its own chunk on arrival:
+        # Enter acts through onMapClick and Shift+Enter through finishDrawing,
+        # so new tools need no keyboard code here.
+        (_HTML / "map" / "09-keyboard.js", 200),       # 143 now
+        # V3.03 (F195): how a plant is drawn (its colour, its outline, its
+        # shape) and the legend that says so, in one place: the type table
+        # moved here from 03-plants.js.
+        (_HTML / "map" / "10-plant-key.js", 200),      # 102 now (V3.11)
+        # V3.06 (F205): the north arrow and the scale bar, opted in on
+        # arrival, as the map's furniture rather than any one overlay's.
+        (_HTML / "map" / "11-map-furniture.js", 200),  # 132 now
+        # V3.11 (F217): the legend, built from what is drawn, opted in on
+        # arrival: a pure model and renderer node can test, and the part that
+        # reads the map.
+        (_HTML / "map" / "12-legend.js", 520),         # 422 now
+        # V3.11 (F218): the species numbers on the map at every zoom, and the
+        # rings that find a species from the legend, moved out of the legend
+        # on arrival rather than taking it to its ceiling. The layout
+        # (numberGroups) is pure, so node tests it.
+        (_HTML / "map" / "13-species-numbers.js", 360),  # 298 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        (_HTML / "scene3d.html", 400),                 # 391 now — 9 LEFT
-        (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
+        # 400 now (V2.94, 01c-leaves.js), NONE LEFT: the next chunk needs the
+        # bootstrap's FILES list moved out of the page, not a bigger number.
+        (_HTML / "scene3d.html", 400),
+        (_HTML / "scene3d" / "01-core.js", 700),       # 606 now (V3.04)
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
         # the surface work and the real-wind work land in the same function, so
         # the fix was the split the ceiling asks for rather than a bigger number.
-        (_HTML / "scene3d" / "01b-surface.js", 550),   # ~403 now
-        (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
-        (_HTML / "scene3d" / "03-herbs.js", 700),      # ~431 now
-        (_HTML / "scene3d" / "04-quality.js", 900),    # ~629 now
-        (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
+        (_HTML / "scene3d" / "01b-surface.js", 550),   # 512 now (V2.94)
+        # V2.94 (F186): how a leaf is lit, in its own chunk because 01b-surface
+        # reached 548/550 with it inline. Light through a leaf and the bake on
+        # the sky; anything more about light belongs in its own chunk too.
+        (_HTML / "scene3d" / "01c-leaves.js", 150),    # 74 now
+        # 687 now (V3.04, one ground on a slope). The next ground work is a chunk
+        # of its own, which needs the bootstrap's FILES list moved out first.
+        (_HTML / "scene3d" / "02-plants.js", 700),
+        (_HTML / "scene3d" / "03-herbs.js", 700),      # ~432 now
+        # V2.92 (F178): the procedural trees, split out of 03-herbs.js when the
+        # Stylised half of F178 took it to 758/700 — the split the ceiling
+        # asks for, along the herbs/trees seam.
+        (_HTML / "scene3d" / "03b-trees.js", 450),     # ~339 now
+        (_HTML / "scene3d" / "04-quality.js", 900),    # 896 now (V2.93): move code out first
+        (_HTML / "scene3d" / "05-flowers.js", 800),    # 775 now (V3.04)
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
-        (_HTML / "scene3d" / "08-modes.js", 600),      # ~496 now
+        (_HTML / "scene3d" / "08-modes.js", 600),      # 503 now
         # V2.46b: the walker's body and his held net, extracted when the net
         # took 08-modes.js to 625/600. The seam was chosen for load order as
         # much as for size: nothing in here is called from the animation
@@ -322,6 +482,17 @@ class TestStructuralCeilings(unittest.TestCase):
         # this is what an animal is MADE OF, 07 is how it behaves — and
         # nothing here is called from the animation loop.
         (_HTML / "scene3d" / "21-critters.js", 400),   # 212 now
+        # V2.89: vines fitted to the host they climb (F179). The profile
+        # measurement and the path/leaf builders; when this trips, the host
+        # profile half is the seam.
+        (_HTML / "scene3d" / "22-vines.js", 520),      # ~433 now
+        # V2.90: the pond (F175) — floating leaves, submerged plants, broad
+        # leaves on stalks. Its own chunk because 04-quality.js had no room;
+        # when this trips, the three body builders are the seam.
+        (_HTML / "scene3d" / "23-pond.js", 350),       # ~189 now
+        # V2.93: succulents and cacti (F177) — pads, balls, swords, fleshy
+        # stems. When this trips, the unit shapes are the seam.
+        (_HTML / "scene3d" / "24-succulents.js", 650),  # ~533 now
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.
@@ -339,20 +510,20 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "13-stylised.js", 400),   # ~115 now
         # V2.34: the four procedural layer tufts, moved out of
         # 04-quality.js when the Stylised switch took it past 900.
-        (_HTML / "scene3d" / "14-layers.js", 400),     # ~101 now
+        (_HTML / "scene3d" / "14-layers.js", 400),     # ~161 now
         # V2.34: the bloom as geometry — florets, discs and the nine
         # inflorescence architectures. 05-flowers.js was at 737 of its
         # 800 and this is a different thing from a canvas drawing.
-        (_HTML / "scene3d" / "15-florets.js", 500),    # ~429 now
+        (_HTML / "scene3d" / "15-florets.js", 500),    # ~493 now (V2.93)
         # V2.43: click-to-plant + the viewer's first QWebChannel. Geometry in,
         # coordinates out — if this file grows past its ceiling the cause is
         # almost certainly placement logic that belongs in
         # src/reference_edit.py, where the single write path is.
-        (_HTML / "scene3d" / "16-editing.js", 300),    # 206 now
+        (_HTML / "scene3d" / "16-editing.js", 300),    # 292 now (V3.04, a click meets the slope)
         # V2.44: the tween registry and the plant/pull/catch animations. If
         # this outgrows its ceiling the cause is almost certainly a fourth
         # animation that wants its own chunk, not a bigger number here.
-        (_HTML / "scene3d" / "17-anim.js", 340),       # 239 now
+        (_HTML / "scene3d" / "17-anim.js", 340),       # 254 now
         # V2.45: the flight model's viewer half — real hertz, the bout
         # envelope, and the body offset that comes out of it. The physics and
         # every number live in src/flight_model.py; if this file grows past its
@@ -544,16 +715,6 @@ class TestAnalysisPanelTabsRegistered(unittest.TestCase):
                     f"another method?",
                 )
 
-    def test_set_shade_breakdown_has_no_dead_code_after_return(self):
-        fn = self._func("AnalysisPanel", "set_shade_breakdown")
-        # No addTab should live in the setter (that was the misplaced line),
-        # and the setter must not register tabs.
-        self.assertFalse(
-            self._calls_addtab(fn),
-            "set_shade_breakdown should not call addTab — the Habitat tab "
-            "registration belongs at the end of _build_habitat_tab.",
-        )
-
 
 class TestAgentApiContract(unittest.TestCase):
     """D3 — freeze the public scripting + MCP surface."""
@@ -565,6 +726,7 @@ class TestAgentApiContract(unittest.TestCase):
         "list_polycultures": ["top_level_only"],
         "list_structures": [],
         "run_analysis": ["project"],
+        "yard_overview": ["project"],                   # OV-1 (V3.27)
         "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
         "chickadee_provision": ["project"],             # F47 (V2.13)
         "relationship_web": ["project", "kinds"],       # F5  (V2.31)
@@ -631,9 +793,217 @@ class TestAgentApiContract(unittest.TestCase):
         )
 
 
+class TestEveryTextFileReadPinsItsEncoding(unittest.TestCase):
+    """Bare `read_text()` / `open()` use the *locale* codec, not UTF-8.
+
+    On Windows that is cp1252, which cannot decode this repo's own data: the
+    seed JSON is full of en dashes and accented names, and
+    ``plants_master.json`` dies at byte 0x8f.
+
+    **This project has now learned it twice.** V1.95 hit it in
+    ``src/sprite_gallery.py`` and answered with a guard --
+    ``test_seed_reads_pin_utf8_encoding`` -- that reads exactly one file. So
+    when V2.75's data-quality tests read the same seed JSON the same bare way,
+    nothing objected, and **seven tests errored on the author's machine while
+    passing on every Linux box** for two releases. A guard scoped to the file
+    where the bug was found does not stop the bug; it stops that instance of it.
+
+    Scoped precisely so it stays worth reading:
+
+    * ``.read_text()`` / ``.write_text()`` are pathlib text I/O and always need
+      an encoding.
+    * the **builtin** ``open()`` in text mode needs one. ``rasterio.open``,
+      ``Image.open``, ``fiona.open``, ``webbrowser.open`` and
+      ``QIODevice.open`` are attribute calls on something else and are none of
+      this test's business -- an earlier draft flagged all eleven of them and
+      would have been switched off within a week.
+    * binary mode is exempt: there is no encoding to pin.
+    """
+
+    #: Everything that ships or runs. Not `docs/` or the plans, which are data.
+    ROOTS = ("src", "scripts", "tests", "tools")
+
+    @staticmethod
+    def _offenders(path: Path):
+        """``[(lineno, source line)]`` for calls with no ``encoding=``."""
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if "encoding" in {k.arg for k in node.keywords}:
+                continue
+            if isinstance(fn, ast.Attribute) and fn.attr in ("read_text",
+                                                             "write_text"):
+                found.append((node.lineno, lines[node.lineno - 1].strip()))
+            elif isinstance(fn, ast.Name) and fn.id == "open":
+                mode = ""
+                if len(node.args) > 1 and isinstance(node.args[1], ast.Constant):
+                    mode = str(node.args[1].value)
+                for kw in node.keywords:
+                    if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                        mode = str(kw.value.value)
+                if "b" not in mode:
+                    found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_text_file_call_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "text file opened without encoding=\"utf-8\" — this is the "
+                "cp1252 crash on Windows, and it passes on Linux:\n  "
+                + "\n  ".join(offenders))
+
+    @staticmethod
+    def _subprocess_offenders(path: Path):
+        """Text-mode ``subprocess`` calls with no ``encoding=``.
+
+        The same bug wearing different clothes, and
+        ``PYTHONWARNDEFAULTENCODING=1`` is what surfaced it while checking the
+        fix for the first one. ``text=True`` decodes the child's output with the
+        locale codec, so on Windows ``git log --format=%s`` over this repo's own
+        history dies on the first em dash in a commit subject.
+        """
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if not isinstance(fn, ast.Attribute):
+                continue
+            if getattr(fn.value, "id", "") != "subprocess":
+                continue
+            if fn.attr not in ("run", "check_output", "Popen", "call",
+                               "check_call"):
+                continue
+            kw = {k.arg: k.value for k in node.keywords}
+            if "encoding" in kw:
+                continue
+            if any(isinstance(kw.get(flag), ast.Constant) and kw[flag].value
+                   for flag in ("text", "universal_newlines")):
+                found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_subprocess_text_mode_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._subprocess_offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "subprocess text=True with no encoding=\"utf-8\" — decodes "
+                "the child's output with the locale codec:\n  "
+                + "\n  ".join(offenders))
+
+    #: stdlib helpers that open text with the locale codec unless told
+    #: otherwise. `tempfile.NamedTemporaryFile(mode="w")` is the one that
+    #: actually appeared here; the rest are listed because they are the same
+    #: shape and cost nothing to hold.
+    STDLIB_TEXT = {("tempfile", "NamedTemporaryFile"),
+                   ("tempfile", "TemporaryFile"),
+                   ("tempfile", "SpooledTemporaryFile"),
+                   ("io", "TextIOWrapper"), ("io", "open")}
+
+    @classmethod
+    def _stdlib_offenders(cls, path: Path):
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+        except (SyntaxError, UnicodeDecodeError):
+            return []
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            if not isinstance(fn, ast.Attribute):
+                continue
+            if (getattr(fn.value, "id", ""), fn.attr) not in cls.STDLIB_TEXT:
+                continue
+            kw = {k.arg: k.value for k in node.keywords}
+            if "encoding" in kw:
+                continue
+            mode = kw.get("mode")
+            mode = str(mode.value) if isinstance(mode, ast.Constant) else ""
+            # tempfile defaults to binary; only an explicit text mode matters.
+            if "b" in (mode or "b"):
+                continue
+            found.append((node.lineno, lines[node.lineno - 1].strip()))
+        return found
+
+    def test_no_bare_stdlib_text_helper_anywhere(self):
+        root = _SRC.parent
+        offenders = []
+        for name in self.ROOTS:
+            for path in sorted((root / name).rglob("*.py")):
+                for lineno, line in self._stdlib_offenders(path):
+                    offenders.append(
+                        f"{path.relative_to(root)}:{lineno}: {line[:90]}")
+        if offenders:
+            self.fail(
+                "stdlib text-mode helper with no encoding=\"utf-8\":\n  "
+                + "\n  ".join(offenders))
+
+    def test_our_own_commit_subjects_are_what_makes_that_bite(self):
+        """Not hypothetical either: this repo's history is full of em dashes,
+        and `scripts/retag_releases.py` reads commit subjects through exactly
+        that call."""
+        import subprocess                                   # noqa: PLC0415
+        out = subprocess.run(
+            ["git", "log", "--format=%s", "-400"],
+            capture_output=True, text=True, encoding="utf-8",
+            cwd=str(_SRC.parent), check=False)
+        if out.returncode != 0:
+            self.skipTest("not a git checkout")
+        # A shallow clone is not a repo whose history went ASCII. Cloud
+        # sessions land on `--depth 50`-ish checkouts, where this sampled 52
+        # subjects, found none with an accent in them and failed -- a test
+        # asserting a fact about the *clone*, which is the same shape as the
+        # V2.79 ingest guard that was asserting a fact about the working tree.
+        # Below the sample size the claim is not being tested, so say so.
+        subjects = out.stdout.splitlines()
+        if len(subjects) < 200 or (_SRC.parent / ".git" / "shallow").exists():
+            self.skipTest(f"shallow clone: {len(subjects)} subjects is too "
+                          f"small a sample to say the history is ASCII")
+        self.assertTrue(any(ord(ch) > 0x7F for ch in out.stdout),
+                        "no non-ASCII in 400 commit subjects — check why")
+
+    def test_the_seed_json_is_what_makes_this_bite(self):
+        """Not hypothetical. If the seed data were ASCII this guard would be
+        pedantry; it is not, and the byte that killed seven tests is in there."""
+        blob = (_SRC.parent / "data" / "plants_master.json").read_bytes()
+        self.assertTrue(any(b > 0x7F for b in blob),
+                        "plants_master.json is pure ASCII — check why")
+        with self.assertRaises(UnicodeDecodeError):
+            blob.decode("cp1252")
+
+
 class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
-    """Guards against two ways a module has aborted the whole run rather than
-    failing a test. Both cost hours to find, because the abort happens in a
+    """Guards against three ways a module has aborted the whole run rather than
+    failing a test. Each cost hours to find, because the abort happens in a
     *later* module than the one at fault and prints no test name."""
 
     def test_no_module_builds_a_qapplication_with_an_empty_argv(self):
@@ -690,6 +1060,44 @@ class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
             offenders, [],
             "deleteLater() on a window without close() or stop_threads() "
             "first — its workers outlive it and abort the run later")
+
+    def test_every_object_on_a_web_channel_has_a_qt_parent(self):
+        """A ``QWebChannel`` keeps a bare pointer to each object registered on it.
+
+        ``MapWidget`` built its bridge with no parent, so all that kept it
+        alive was the view wrapper's Python attribute. PyQt's ``deleteLater()``
+        hands the view to C++, and outside an event loop the deferred delete
+        never runs; a garbage-collection pass then cleared the wrapper and
+        freed the bridge under a page that was still loading. The page's first
+        message to the channel read the freed object: a segfault in
+        ``QMetaObjectPublisher::classInfoForObject``, in a later module that
+        only pumped events (CI, V2.98). A parent ties the object to the view;
+        measured, the view's page and channel are destroyed before it.
+        """
+        src_root = Path(__file__).resolve().parent.parent / "src"
+        offenders, seen = [], 0
+        for path in sorted(src_root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            built = {ast.unparse(n.targets[0]): n.value for n in ast.walk(tree)
+                     if isinstance(n, ast.Assign) and len(n.targets) == 1
+                     and isinstance(n.value, ast.Call)}
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "registerObject"
+                        and len(node.args) == 2):
+                    continue
+                seen += 1
+                obj = node.args[1]
+                call = obj if isinstance(obj, ast.Call) else built.get(ast.unparse(obj))
+                if call is None or not (call.args or any(
+                        k.arg == "parent" for k in call.keywords)):
+                    offenders.append(f"src/{path.relative_to(src_root)}:{node.lineno}")
+        self.assertGreaterEqual(seen, 2, "the guard no longer finds the bridges")
+        self.assertEqual(
+            offenders, [],
+            "an object registered on a QWebChannel is built without a Qt "
+            "parent — Python garbage collection can free it under a live page")
 
 
 if __name__ == "__main__":

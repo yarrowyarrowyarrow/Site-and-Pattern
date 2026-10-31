@@ -187,7 +187,6 @@ def format_cost(low: float, high: float) -> str:
 # Bulk landscape mulch, delivered (CAD per cubic metre). Coarse Alberta estimate;
 # arborist chips can be free, bagged retail is dearer — this brackets the middle.
 MULCH_PRICE_PER_M3: tuple[float, float] = (35.0, 75.0)
-DEFAULT_MULCH_DEPTH_CM: float = 7.5  # a typical establishment mulch depth
 
 
 def structure_cost(structures, get_structure=None) -> tuple[float, float]:
@@ -213,14 +212,20 @@ def structure_cost(structures, get_structure=None) -> tuple[float, float]:
     return (round(lo, 2), round(hi, 2))
 
 
-def mulch_cost(area_m2, depth_cm: float = DEFAULT_MULCH_DEPTH_CM,
+def mulch_cost(area_m2, depth_cm=None,
                price_per_m3: tuple[float, float] = MULCH_PRICE_PER_M3
                ) -> tuple[float, float]:
-    """Estimated ``(low, high)`` CAD to mulch ``area_m2`` at ``depth_cm`` deep."""
+    """Estimated ``(low, high)`` CAD to mulch ``area_m2``. ``depth_cm`` is a
+    ``(low, high)`` range or one depth; by default the site-prep sheet's
+    5–8 cm (``site_prep.MULCH_DEPTH_CM``), so the cost and the sheet's cubic
+    metres are one depth, not 7.5 cm here and 5–8 cm there (V3.20, OV-3)."""
+    if depth_cm is None:
+        from src.site_prep import MULCH_DEPTH_CM as depth_cm
+    shallow, deep = (depth_cm if isinstance(depth_cm, (tuple, list))
+                     else (depth_cm, depth_cm))
     area = max(0.0, float(area_m2 or 0.0))
-    volume_m3 = area * (max(0.0, float(depth_cm)) / 100.0)
-    return (round(volume_m3 * price_per_m3[0], 2),
-            round(volume_m3 * price_per_m3[1], 2))
+    return (round(area * max(0.0, float(shallow)) / 100.0 * price_per_m3[0], 2),
+            round(area * max(0.0, float(deep)) / 100.0 * price_per_m3[1], 2))
 
 
 def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
@@ -232,3 +237,76 @@ def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
     m = mulch_cost(mulch_area_m2)
     total = (round(p[0] + s[0] + m[0], 2), round(p[1] + s[1] + m[1], 2))
     return {"plants": p, "structures": s, "mulch": m, "total": total}
+
+
+#: How readily a tier can be bought (V3.14). The generator ranks by it, so the
+#: owner's "most useful and available plants" reach designs first; nothing
+#: filters on it except the Easy to find toggle.
+_EASE = {"big_box": 2, "garden_centre": 2, "native_specialist": 1,
+         "seed_or_plug": 1, "rare": 0}
+
+
+def ease(row) -> int:
+    """2 common, 1 sold now and then or as seed, 0 hard to find, from the
+    region's nurseries' stock (V3.25, ``src.local_stock``). A plant no stock
+    list covers keeps its old tier here, at most 1: only stock shows a plant
+    is common. Unrecorded counts as 1: absent is not rare (P9)."""
+    from src import local_stock                              # noqa: PLC0415
+    try:
+        return local_stock.ease(row or {})
+    except Exception:                                      # noqa: BLE001
+        return min(_EASE.get(((row or {}).get("availability_class")
+                              or "").strip(), 1), 1)
+
+
+def hard_to_find(row) -> bool:
+    """Whether a plant is rarely sold at all (``rare``)."""
+    return ease(row) == 0
+
+
+#: ``availability_class`` as a clause a reader can act on.
+#:
+#: The class is *how you get it*, not always a kind of shop, so one frame does
+#: not fit all five: "usually from a **seed or plug**" (82 species) and "usually
+#: from a **big box**" (15) are what dropping the raw token into a sentence
+#: produces, and neither is English. An unknown class falls back to the token
+#: with its underscores opened out, which is what the desktop has always shown.
+_AVAILABILITY_CLAUSE = {
+    "native specialist": "usually from a native-plant nursery",
+    # Neither names a shop since V3.24 (the owner: few natives are sold at
+    # garden centres or big-box stores at all).
+    "garden centre": "often sold by native-plant nurseries",
+    "big box": "one of the most widely sold natives",
+    "seed or plug": "usually sold as seed or plugs",
+    "rare": "hard to find in the trade",
+}
+
+
+def describe(sourcing) -> tuple[str, str]:
+    """``(sentence, estimate note)`` from a ``scene_dossier._sourcing`` dict.
+
+    **The website published this dict's own key names on all 422 species
+    pages** — ``price: about $8-$16 per plant (estimate); availability: garden
+    centre; notes: Estimate (herb default); AB retail as of 2026`` — because
+    its renderer had a generic "a dict becomes ``k: v`` pairs" branch and
+    nothing more specific. The desktop had rendered the same dict as prose
+    since the field existed; only the public surface leaked the schema.
+
+    The formatting lives here, next to the numbers, so the third surface that
+    needs it does not invent a fourth wording. The estimate note comes back
+    separately rather than glued on, because a page marks provenance in its own
+    way and this module should not be choosing markup for it.
+    """
+    if not isinstance(sourcing, dict):
+        return str(sourcing or ""), ""
+    note = (sourcing.get("notes") or "").strip()
+    price = (sourcing.get("price") or "").strip()
+    token = (sourcing.get("availability") or "").strip().replace("_", " ")
+    where = _AVAILABILITY_CLAUSE.get(token.lower(), token)
+    if price and where:
+        text = f"{price}, {where}"
+    else:
+        text = price or where
+    if not text:
+        return "", note
+    return text[:1].upper() + text[1:] + ".", note

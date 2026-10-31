@@ -37,7 +37,7 @@ from src.db.plants import init_db, search_plants          # noqa: E402
 
 from src.flower_colour import (                           # noqa: E402
     COLOUR_KEYS, COLOUR_LABELS, WIND_POLLINATED_TYPES, bucket_counts, classify,
-    classify_hex, matches,
+    classify_hex, colours, matches,
 )
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -69,14 +69,66 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
     #: V2.50: white 73 -> 72 and pink 43 -> 42, because the duplicate
     #: *Geum triflorum* and *Valeriana sitchensis* rows were merged away.
     #:
+    #: V2.74: yellow 84 -> 83, because *Rudbeckia hirta* left the catalogue —
+    #: VASCAN and Moss's *Flora of Alberta* both record it as introduced in
+    #: Alberta. This is the "data change worth noticing" half of the comment
+    #: below doing its job: the removal was made in `data/`, and the only thing
+    #: that said so out loud was this snapshot.
+    #:
+    #: V2.75: yellow 83 -> 82, and it is the same species of removal for the
+    #: second release running. *Helianthus giganteus* is an eastern plant —
+    #: VASCAN records it from Ontario eastward and Moss does not treat it — and
+    #: it shipped `native_provinces = "AB,SK"` with a yellow floret. Twice now
+    #: this snapshot has been the thing that noticed a catalogue row leaving.
+    #:
     #: The distribution as measured after the V2.48 per-species correction. A
     #: change here is either a data change worth noticing or a classifier
     #: regression; both should stop the build rather than quietly re-file 81
     #: grasses. (V2.47 shipped 79/77/75/61/43/26/16/8/3/2 off genus-level
     #: seeding, which is what put a red flower on the blue columbine.)
+    #: V2.80 removed six coloured rows and the drop is entirely accounted for,
+    #: which is the check worth doing before touching a snapshot like this:
+    #: yellow -4 (Agoseris parviflora, Solidago simplex, Helianthus annuus,
+    #: Oligoneuron rigidum), straw -1 (Festuca ovina), white -1 (Achillea
+    #: millefolium, merged into A. borealis). No bucket moved for any other
+    #: reason, so the classifier is unchanged.
+    #: V2.80, third pass, and the biggest movement this snapshot has ever
+    #: recorded: **146 species had their colour read out of Budd's Flora**, so
+    #: this is no longer a distribution of genus guesses. cream -9, purple -7
+    #: and pink -5 were the largest piles of estimate; white +8, blue +7 and
+    #: green +4 are where the flora put them instead. Only the PRIMARY colour
+    #: is counted here (`classify`), so the 45 species carrying a range appear
+    #: once, under the colour their own name or the flora leads with.
+    #:
+    #: A change here is still either a data change worth noticing or a
+    #: classifier regression. This one is the former, and the numbers to check
+    #: it against are in `data/fetched/flower_colour_review.tsv`, which carries
+    #: the sentence behind every one of the 146.
+    #: V2.82 removes five rows and no colours: the catalogue was carrying five
+    #: plants twice, each under a name the flora does not accept, and the
+    #: merges took white -1 (*Spiraea alba* var. *latifolia*), purple -1
+    #: (*Stachys pilosa* var. *pilosa*), pink -2 (*Dodecatheon pulchellum* and
+    #: *Hedysarum alpinum*) and one row with no colour recorded at all
+    #: (*Urtica gracilis* subsp. *gracilis*, below). Five rows, five
+    #: decrements, all accounted for -- which is the check this snapshot is
+    #: for.
+    #: V2.87 adds seven trees: white +1 (Round-leaved Hawthorn, whose white is
+    #: marked `estimated` like the rest of its genus), and six with no showy
+    #: flower to record, counted below.
+    #: V2.89: straw -2. Common Scouring-rush and Variegated Horsetail are filed
+    #: as rushes and carried the graminoid straw with a plume; a horsetail has
+    #: no flower at all, so both now record none, like the other two.
+    #: V3.18: green -1, white +1. *Asclepias ovalifolia* was coloured from the
+    #: name "Green Milkweed", which belongs to *A. viridiflora* (F171); renamed
+    #: Oval-leaf Milkweed, its hoods are white to cream.
+    #: V3.34: the owner's photo review (F172), every flowering plant looked
+    #: at in photographs of it in flower. The main colour changed on 70 of
+    #: 343, 25 blanks gained one and duckweed's guess was cleared; each answer
+    #: with the observations shown is in `data/flower_colour_checks.json`.
+    #: Blue -12 is the largest move: most "blue" flowers look purple.
     EXPECTED = {
-        "yellow": 84, "straw": 81, "white": 72, "purple": 53, "pink": 42,
-        "cream": 23, "blue": 21, "red": 6, "orange": 3, "brown": 2, "green": 1,
+        "straw": 78, "yellow": 85, "white": 85, "purple": 43, "pink": 46,
+        "blue": 16, "cream": 14, "red": 13, "green": 5, "orange": 5, "brown": 7,
     }
 
     def test_every_seeded_species_lands_where_it_did(self):
@@ -85,9 +137,21 @@ class TestTheClassifierAgainstTheShippedData(unittest.TestCase):
         self.assertEqual(got, self.EXPECTED)
 
     def test_the_unrecorded_stay_unrecorded(self):
-        """44 rows record no flower colour. They must classify to "" — not to
-        white, which is what a naive parse of an empty hex would give."""
-        self.assertEqual(bucket_counts(_seed_rows()).get(""), 44)
+        """51 rows record no flower colour. They must classify to "" — not to
+        white, which is what a naive parse of an empty hex would give.
+
+        44 until V2.82 merged the duplicate *Urtica gracilis* row, which was
+        one of them: a nettle is wind-pollinated and has no bloom colour to
+        record. 43 -> 49 in V2.87: six of the seven trees promoted then are
+        wind-pollinated or catkin-bearing (two cottonwoods, a willow, a maple,
+        an elm and a juniper), and their rows leave the colour blank rather
+        than guess one. 49 -> 51 in V2.89: the two horsetails that wore a
+        grass plume. They make spores in a cone and have no bloom colour.
+        51 -> 27 in V3.34: the owner looked at each blank in photographs and
+        gave 25 of them a colour (Trembling Aspen's catkins are brown, Wild
+        Sarsaparilla is white), and found duckweed's guessed white was no
+        showy flower."""
+        self.assertEqual(bucket_counts(_seed_rows()).get(""), 27)
 
     def test_no_seeded_hex_falls_through_unclassified(self):
         unclassified = sorted({
@@ -191,17 +255,26 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         self.assertGreater(len(yellow), 0)
         self.assertLess(len(yellow), len(every))
         for plant in yellow:
-            self.assertEqual(classify(plant), "yellow")
+            self.assertIn("yellow", colours(plant))
 
     def test_an_empty_filter_does_not_restrict(self):
         self.assertEqual(len(search_plants(flower_colours=[])),
                          len(search_plants()))
 
     def test_multiple_colours_are_a_union(self):
-        white = search_plants(flower_colours=["white"])
-        yellow = search_plants(flower_colours=["yellow"])
-        both = search_plants(flower_colours=["white", "yellow"])
-        self.assertEqual(len(both), len(white) + len(yellow))
+        """A union, and since V2.80 **not** a sum.
+
+        Two species bloom both white and yellow, so they answer either query
+        and are counted once in the union. Asserting `len(both) == len(white) +
+        len(yellow)` quietly assumed the buckets were disjoint, which stopped
+        being true the moment a flora was allowed to say "white to yellowish".
+        """
+        white = {p["id"] for p in search_plants(flower_colours=["white"])}
+        yellow = {p["id"] for p in search_plants(flower_colours=["yellow"])}
+        both = {p["id"] for p in search_plants(flower_colours=["white", "yellow"])}
+        self.assertEqual(both, white | yellow)
+        self.assertTrue(white & yellow,
+                        "no species is both, so this no longer tests overlap")
 
     def test_it_composes_with_the_other_filters(self):
         """Colour is a post-query pass; it must not discard the SQL filters
@@ -210,7 +283,10 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         self.assertGreater(len(rows), 0)
         for plant in rows:
             self.assertEqual(plant["plant_type"], "wildflower")
-            self.assertEqual(classify(plant), "purple")
+            # `colours`, not `classify`: a species the flora records as "red or
+            # purple" answers a purple query on its second colour, and its
+            # primary is red.
+            self.assertIn("purple", colours(plant))
 
     def test_the_directory_facet_drives_it(self):
         from src import plant_directory as pd
@@ -219,7 +295,7 @@ class TestTheFilterReachesTheQueryLayer(unittest.TestCase):
         rows = pd.search({"colour": ["blue"]})
         self.assertGreater(len(rows), 0)
         for plant in rows:
-            self.assertEqual(classify(plant), "blue")
+            self.assertIn("blue", colours(plant))
 
 
 class TestTheZoneRangeSurvivesItsData(unittest.TestCase):
@@ -298,15 +374,30 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
         return species_entry(row[0])
 
     def test_a_checked_colour_says_so(self):
-        entry = self._entry("Blue Columbine")
-        self.assertEqual(entry["bloom_colour"], "blue")
-        self.assertEqual(entry["bloom_colour_label"], "Blue")
+        entry = self._entry("Oval-leaf Milkweed")
+        self.assertEqual(entry["bloom_colour"], "white")
         self.assertIn("checked", entry["bloom_colour_note"])
 
+    def test_a_colour_read_off_photographs_says_so(self):
+        """Blue Columbine was the checked example until V3.34, when the
+        owner's photo review recorded it blue to purple."""
+        entry = self._entry("Blue Columbine")
+        self.assertEqual(entry["bloom_colour"], "blue")
+        self.assertEqual(entry["bloom_colour_label"], "Blue to purple")
+        self.assertIn("photograph", entry["bloom_colour_note"])
+
     def test_an_estimated_colour_says_that_instead(self):
-        entry = self._entry("Wild Bergamot")
-        self.assertEqual(entry["bloom_colour"], "purple")
-        self.assertIn("not verified", entry["bloom_colour_note"])
+        """Wild Bergamot was the example until V2.80 sourced it from Budd's,
+        and then the example was looked up; since V3.34 no flowering plant's
+        colour is a guess (every one was looked at in photographs), so the
+        row is made up. The wording still matters: the next species added
+        with its genus's colour must say it is not verified."""
+        from src.plant_directory import _bloom_colour     # noqa: PLC0415
+        note = _bloom_colour({"plant_type": "wildflower",
+                              "flower_color": "#8e6fc4",
+                              "flower_colour_source": "estimated"}
+                             )["bloom_colour_note"]
+        self.assertIn("not verified", note)
 
     def test_a_grass_is_not_described_as_unverified(self):
         """A sedge's straw bucket is a botanical fact about a wind-pollinated
@@ -334,3 +425,162 @@ class TestTheColourReachesBothSurfaces(unittest.TestCase):
         blank = [p["common_name"] for p in coloured
                  if not _bloom_colour(p)["bloom_colour_label"]]
         self.assertEqual(blank, [])
+
+
+class TestAFlowerCanBloomInMoreThanOneColour(unittest.TestCase):
+    """*"Flowers that list multiple colours should have that possibility in the
+    code."*
+
+    Reading Budd's produced 146 sourced colours and 76 named more than one:
+    "white to pinkish", "yellow to pinkish orange". Asking a person to pick one
+    of each pair discards the very thing the flora was consulted for -- and the
+    prickly pear is the case in miniature, since it had a yellow hex and a
+    magenta photograph and both were right.
+    """
+
+    def test_a_range_reads_back_in_order(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea", "flower_colours": "white,pink"}),
+            ("white", "pink"))
+
+    def test_the_primary_bucket_is_unchanged_by_the_range(self):
+        """Every screen that draws one swatch must keep working."""
+        from src.flower_colour import classify
+        row = {"flower_color": "#f2f2ea", "flower_colours": "white,pink"}
+        self.assertEqual(classify(row), "white")
+
+    def test_a_row_with_no_range_falls_back_to_its_hex(self):
+        from src.flower_colour import colours
+        self.assertEqual(colours({"flower_color": "#f2c11e"}), ("yellow",))
+
+    def test_a_row_with_no_colour_at_all_has_none(self):
+        from src.flower_colour import colours
+        self.assertEqual(colours({"flower_color": ""}), ())
+
+    def test_a_two_coloured_species_answers_both_queries(self):
+        """The point of the whole change: white-to-pink is white AND pink."""
+        from src.flower_colour import matches
+        row = {"flower_color": "#f2f2ea", "flower_colours": "white,pink"}
+        self.assertTrue(matches(row, ["white"]))
+        self.assertTrue(matches(row, ["pink"]))
+        self.assertFalse(matches(row, ["blue"]))
+
+    def test_junk_in_the_list_is_ignored_not_trusted(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea",
+                     "flower_colours": "white,chartreuse,pink"}),
+            ("white", "pink"))
+
+    def test_duplicates_collapse(self):
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#f2f2ea",
+                     "flower_colours": "white,white,pink"}),
+            ("white", "pink"))
+
+    def test_a_grass_is_still_straw_whatever_the_list_says(self):
+        """The wind-pollinated rule is the primary one and a range must not
+        route around it: a seed head is not a bloom."""
+        from src.flower_colour import colours
+        self.assertEqual(
+            colours({"flower_color": "#cbbd80", "plant_type": "grass",
+                     "flower_colours": "white,pink"}),
+            ("straw",))
+
+
+class TestThePageSaysTheWholeRange(unittest.TestCase):
+    """Printing only the first of "white to pinkish" throws away the half that
+    explains why the photograph above it looks wrong."""
+
+    def _label(self, **row):
+        from src.plant_directory import _bloom_colour
+        return _bloom_colour(row)["bloom_colour_label"]
+
+    def test_two_colours_read_as_a_range(self):
+        self.assertEqual(
+            self._label(flower_color="#f2f2ea", flower_colours="white,pink"),
+            "White to pink")
+
+    def test_three_or_more_read_as_a_list(self):
+        """"yellow to pinkish orange" is a range; three colours is a set, and
+        a sentence: "Yellow, Pink and orange" until V3.34, when the photo
+        review gave eight plants three colours and the capital showed."""
+        self.assertEqual(
+            self._label(flower_color="#f2c11e",
+                        flower_colours="yellow,pink,orange"),
+            "Yellow, pink and orange")
+
+    def test_one_colour_is_unchanged(self):
+        self.assertEqual(self._label(flower_color="#f2c11e"), "Yellow")
+
+    def test_a_grass_still_says_seed_heads(self):
+        self.assertEqual(
+            self._label(flower_color="#cbbd80", plant_type="grass",
+                        flower_colours="white,pink"),
+            "Straw or green seed heads")
+
+    def test_a_flora_sourced_colour_is_not_marked_unverified(self):
+        """'flora' is a mark src.confidence already knows. 'budds' is not: it
+        comes back recorded=False and labelled 'not recorded', which would have
+        printed the opposite of the truth on every page just sourced."""
+        from src.plant_directory import _bloom_colour
+        got = _bloom_colour({"flower_color": "#f2f2ea",
+                             "flower_colours": "white,pink",
+                             "flower_colour_source": "flora"})
+        self.assertEqual(got["bloom_colour_note"], "read from a published flora")
+
+
+class TestTheRangeReachesThePublishedPage(unittest.TestCase):
+    """Three times now a colour has been re-derived at the render site instead
+    of read from the entry that already carried it, and each time the page
+    published something the catalogue did not say. See
+    ``static_site_species.colour_cell_html`` for the other two.
+
+    This is the third: the cell rendered the PRIMARY colour's label while the
+    entry held "Yellow to orange", so the prickly pear -- whose yellow hex
+    under a magenta photograph started the whole flower-colour thread --
+    published as "Yellow" on the very build meant to fix it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+        from src.plant_directory import species_entry
+        row = next(r for r in search_plants()
+                   if r.get("scientific_name") == "Opuntia polyacantha")
+        cls.entry = species_entry(row["id"])
+
+    def test_the_entry_carries_the_range(self):
+        """Yellow to orange until V3.34; the owner's photographs added the
+        magenta that started the thread, so three colours read as a set,
+        capitalised as a sentence is ("Yellow, Orange and pink" before)."""
+        self.assertEqual(self.entry["bloom_colours"],
+                         ("yellow", "orange", "pink"))
+        self.assertEqual(self.entry["bloom_colour_label"],
+                         "Yellow, orange and pink")
+
+    def test_the_cell_links_every_colour_of_the_range(self):
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html(self.entry, "yellow", 2)
+        self.assertIn("plants/colour/yellow/", html)
+        self.assertIn("plants/colour/orange/", html,
+                      "the second colour got no chip, so the page publishes "
+                      "less than the catalogue knows")
+
+    def test_a_single_colour_gets_exactly_one_chip(self):
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html({"bloom_colours": ("blue",)}, "blue", 2)
+        self.assertIn("plants/colour/blue/", html)
+        self.assertNotIn("plants/colour/orange/", html)
+
+    def test_a_row_with_no_range_falls_back_to_the_primary(self):
+        """Every row no flora has been read for still has to render."""
+        from src.static_site_species import colour_cell_html
+        html = colour_cell_html({}, "purple", 2)
+        self.assertIn("plants/colour/purple/", html)
+
+    def test_nothing_recorded_renders_nothing(self):
+        from src.static_site_species import colour_cell_html
+        self.assertEqual(colour_cell_html({}, "", 2), "")

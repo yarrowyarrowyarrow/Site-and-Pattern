@@ -19,9 +19,14 @@ to each other. Each tile is drawn by the real viewer via ``window.permaSnapshot`
 (push scene → snapshot → next), so the sheet cannot drift from what the app
 renders. It honours the search box, so "Ribes" is a sheet of just the currants.
 
-``open_sprite_gallery(main)`` is the entry point the View menu uses; it keeps a
-singleton on ``main._sprite_gallery_window`` (no new MainWindow method — the
-architecture guard's method ceiling stays meaningful).
+**A developer's bench, not a menu item** (V3.07). It was View → 3D Sprite
+Gallery… until the owner retired it from the menu on the V3.05 surface audit:
+a gardener has no use for every archetype side by side. It opens on its own:
+
+    python -m src.sprite_gallery_window
+
+``open_sprite_gallery(main)`` keeps a singleton on
+``main._sprite_gallery_window`` when given a window, and none without one.
 """
 
 from __future__ import annotations
@@ -362,3 +367,19 @@ def open_sprite_gallery(main=None) -> SpriteGalleryWindow:
     win.raise_()
     win.activateWindow()
     return win
+
+
+def main() -> int:
+    """Open the gallery on its own (the module's ``__main__``). The Qt names
+    are the app's, so the Detail choice is the one 3D Preview remembers."""
+    import sys
+    from PyQt6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication(sys.argv or ["sprite-gallery"])
+    app.setApplicationName("PermaDesign")
+    app.setOrganizationName("PermaDesign")
+    open_sprite_gallery()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

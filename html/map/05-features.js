@@ -83,7 +83,7 @@
       // Tooltip on hover
       mainLayer.bindTooltip(
         '<b>' + escH(icon) + ' ' + escH(name) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">' + Number(sizeM) + 'm' +
+        '<span style="color:#b0bec5;font-size:12px">' + Number(sizeM) + 'm' +
         (structDef.maintenance_hours_year ? ' · ~' + Number(structDef.maintenance_hours_year) + ' hrs/yr' : '') +
         '<br>Right-click to remove</span>',
         { className: 'plant-marker-label' }
@@ -162,6 +162,7 @@
       if (st.layer.setStyle) st.layer.setStyle({ color: s.color,
                                                  fillColor: s.fill });
       st.foliage = foliage;
+      scheduleLegend();                                   // 12-legend.js
       if (st.label && st.label.setIcon) {
         st.label.setIcon(L.divIcon({ className: 'structure-label',
           html: '<span class="struct-icon">' + s.icon + '</span> ' +
@@ -368,18 +369,21 @@
         lineJoin: 'round'
       }).addTo(group);
 
+      // The line's length, for every style. Until V3.11 it was measured only
+      // where plants are dotted along it, so a fence (no dots) threw on the
+      // tooltip below and was never kept, saved or sent to Python.
+      var totalLen = 0, segments = [];
+      for (var i = 1; i < hedgerowPoints.length; i++) {
+        var from = L.latLng(hedgerowPoints[i-1]);
+        var to   = L.latLng(hedgerowPoints[i]);
+        var segLen = from.distanceTo(to);
+        segments.push({ from: from, to: to, len: segLen });
+        totalLen += segLen;
+      }
+      var numPlants = s.fillDots ? Math.floor(totalLen / spacing) + 1 : 0;
+
       // Plant markers along the line
       if (s.fillDots) {
-        var totalLen = 0;
-        var segments = [];
-        for (var i = 1; i < hedgerowPoints.length; i++) {
-          var from = L.latLng(hedgerowPoints[i-1]);
-          var to   = L.latLng(hedgerowPoints[i]);
-          var segLen = from.distanceTo(to);
-          segments.push({ from: from, to: to, len: segLen });
-          totalLen += segLen;
-        }
-        var numPlants = Math.floor(totalLen / spacing) + 1;
         var distAlong = 0;
         var segIdx = 0;
         var segDist = 0;
@@ -409,7 +413,8 @@
 
       // Label at midpoint
       var midIdx = Math.floor(hedgerowPoints.length / 2);
-      var labelText = species || (style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }));
+      var styleWords = style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var labelText = species || styleWords;
       var labelIcon = L.divIcon({
         className: 'hedgerow-label',
         html: escH(labelText),
@@ -419,9 +424,10 @@
       L.marker(hedgerowPoints[midIdx], { icon: labelIcon, interactive: false }).addTo(group);
 
       // Tooltip
-      var tooltipText = '<b>Hedgerow</b>';
+      var tooltipText = '<b>' + escH(styleWords) + '</b>';
       if (species) tooltipText += '<br>' + escH(species);
-      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + Number(numPlants) + ' plants · ' +
+      tooltipText += '<br><span style="color:#b0bec5;font-size:12px">' +
+        (numPlants ? '~' + Number(numPlants) + ' plants · ' : '') +
         totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
       mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
 
@@ -609,7 +615,7 @@
         : '<br>Click to edit outline · right-click to remove';
       polygon.bindTooltip(
         '<b>' + escH(label || shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr)
+        '<span style="color:#b0bec5;font-size:12px">Area: ' + escH(areaStr)
           + shadeLine + '</span>',
         { className: 'plant-marker-label' }
       );
@@ -772,14 +778,17 @@
     // src/app.py:_on_polyculture_click. (The old SVG-batch path lived here.)
     // ── Mode control (called from Python) ────────────────────────────────────
     function setMode(mode, data) {
+      var wasMode  = currentMode;
       currentMode  = mode;
       currentPlant = null;
+      currentCommunity = null;
       currentStructure = null;
       currentHedgerow  = null;
       currentShape     = null;
       // Starting any tool ends an in-progress outline edit so its vertex
       // handles (added to the map, not the shape group) don't orphan.
       if (shapeEditId !== null) exitShapeEditMode();
+      if (mode !== 'measure') _cancelMeasureStart();  // its first dot (04-tools.js)
 
       switch (mode) {
         case 'boundary':
@@ -813,6 +822,7 @@
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'polyculture':
+          currentCommunity = data || null;   // its footprint (V2.99)
           // Single plant-community drop. No JS-side placement — the bridge
           // map_clicked → _on_polyculture_click does it. A real mode (NOT
           // 'none') so a click on a boundary/shape forwards to onMapClick
@@ -835,7 +845,8 @@
           // finishFillArea() → onFillAreaComplete (scatters plants, makes no shape).
           currentShape = {stroke_color: '#66bb6a', fill_color: '#66bb6a',
                           fill_opacity: 0.12, _fillMode: true};
-          shapePoints = [];
+          // Re-arming a fill mid-drawing swaps the plants, not the corners.
+          if (wasMode !== 'fill') shapePoints = [];
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'contour':
@@ -876,13 +887,19 @@
           _resetPatternState();
           drawnItems.clearLayers();
       }
-      // Keep the placement crosshair over interactive layers (boundaries,
-      // shapes, …) instead of Leaflet's default pointer, so hovering a
-      // boundary while placing still reads as "click to place here". Idle
-      // mode (no crosshair) keeps the pointer as an edit affordance.
+      // Keep the placement crosshair over interactive layers (shapes,
+      // markers, …) instead of Leaflet's default pointer, so hovering one
+      // while placing still reads as "click to place here". Idle mode (no
+      // crosshair) keeps the pointer as an edit affordance.
       var _container = map.getContainer();
       if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
       else _container.classList.remove('placing');
+      if (typeof resetCursorFootprint === 'function') resetCursorFootprint();
+      // The keyboard's centre mark comes and goes with the tool (V3.02).
+      if (typeof syncCentreMark === 'function') syncCentreMark();
+      // Report every mode (V2.98): Esc and a finished fill end placing here,
+      // and Python must follow. See src/placement_bar_flow.py.
+      if (bridge && bridge.onModeChanged) bridge.onModeChanged(mode, _pyModeSeq);
     }
 
     // ── Satellite imagery alignment nudge ──────────────────────────────────
@@ -1121,10 +1138,12 @@
       clearShadeZones();
       clearSitePin(false);
       drawnItems.clearLayers();
+      clearSelection();   // its badge and Edit › Delete go too (V3.19, QF-15)
     }
 
     function loadBoundary(dataJson, fit) {
-      // dataJson: JSON string of {id, points, color, showLengths, showArea}
+      // dataJson: JSON string of {id, points, color, showLengths, showArea,
+      // showHandles, name} (the last two V3.11)
       // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
       // fit (default true): recenter the map on the boundary. Undo/redo
       // re-renders pass false so the camera doesn't jump on every Ctrl+Z.
@@ -1140,8 +1159,9 @@
         showLengths = data.showLengths !== false;
         showArea    = data.showArea !== false;
       }
-      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
-      if (fit !== false) map.fitBounds(entry.layer.getBounds());
+      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea,
+                                    data.showHandles !== false, data.name || '');
+      if (fit !== false) fitWhenShown(entry.layer.getBounds());   // 02-boundary.js
     }
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {

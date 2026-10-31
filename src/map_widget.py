@@ -10,7 +10,8 @@ point, add a builder there and a thin method here.
 
 import os
 import sys
-from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSlot, pyqtSignal, QUrl, QTimer
+from PyQt6.QtWidgets import QWidget
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
@@ -76,11 +77,33 @@ class MapBridge(QObject):
     # Boundary geometry changed via vertex/move/scale drag (id, new points)
     boundary_geom_changed = pyqtSignal(str, list)
 
-    # Boundary color or label toggles changed (id, color, showLengths, showArea)
-    boundary_props_changed = pyqtSignal(str, str, bool, bool)
+    # Boundary color or a switch changed (id, color, showLengths, showArea,
+    # showHandles: the corner handles, V3.11)
+    boundary_props_changed = pyqtSignal(str, str, bool, bool, bool)
 
     # Boundary removed via context menu (id)
     boundary_removed = pyqtSignal(str)
+
+    # Name these boundaries (ids, their name now): from the legend or the
+    # boundary's menu; Python asks for the name (V3.11, F217)
+    boundary_name_requested = pyqtSignal(list, str)
+
+    # A measurement is part of the design (V3.11, F215): made (id, two
+    # [lat, lng] points) and removed (ids)
+    measurement_added = pyqtSignal(str, list)
+    measurements_removed = pyqtSignal(list)
+
+    # Everything one Delete removed, as one JSON payload, so it is one undo
+    # step (V3.11): {plants, boundaries, structures, shapes, measurements,
+    # sunpath}
+    selection_deleted = pyqtSignal(str)
+    # How many things are selected now, so Edit › Delete is offered only when
+    # there is something to delete (V3.19, QF-15)
+    selection_count_changed = pyqtSignal(int)
+
+    # The legend's switches (plants 'type'|'species', boundaries
+    # 'simple'|'named'), to be remembered (V3.11, F217)
+    legend_detail_changed = pyqtSignal(str, str)
 
     # A plant was placed on the map
     plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
@@ -160,6 +183,14 @@ class MapBridge(QObject):
         # plant_id, common_name, spacing_m, plant_type, custom_color,
         # positions_json, pattern_kind
 
+    # Every mode the map enters, with the stamp of the last mode change Python
+    # had sent (V2.98). The map leaves placing on its own (Esc, a finished
+    # fill) and Python has to follow; see src/placement_bar_flow.py.
+    mode_changed = pyqtSignal(str, int)                   # mode, python_seq
+
+    # A click on the scale bar switched its units ("km" or "m", F205).
+    scale_unit_changed = pyqtSignal(str)
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -204,13 +235,56 @@ class MapBridge(QObject):
         except Exception:
             pass
 
-    @pyqtSlot(str, str, bool, bool)
-    def onBoundaryPropsChanged(self, bid: str, color: str, show_lengths: bool, show_area: bool):
-        self.boundary_props_changed.emit(bid, color, show_lengths, show_area)
+    @pyqtSlot(str, str, bool, bool, bool)
+    def onBoundaryPropsChanged(self, bid: str, color: str, show_lengths: bool,
+                               show_area: bool, show_handles: bool):
+        self.boundary_props_changed.emit(bid, color, show_lengths, show_area,
+                                         show_handles)
 
     @pyqtSlot(str)
     def onBoundaryRemoved(self, bid: str):
         self.boundary_removed.emit(bid)
+
+    @pyqtSlot(str, str)
+    def onBoundaryNameRequested(self, ids_json: str, current: str):
+        import json
+        try:
+            ids = [str(i) for i in json.loads(ids_json or "[]")]
+        except Exception:
+            return
+        if ids:
+            self.boundary_name_requested.emit(ids, current or "")
+
+    @pyqtSlot(str, str)
+    def onMeasurementAdded(self, measure_id: str, coords_json: str):
+        import json
+        try:
+            coords = json.loads(coords_json)
+        except Exception:
+            return
+        self.measurement_added.emit(measure_id, coords)
+
+    @pyqtSlot(str)
+    def onMeasurementsRemoved(self, ids_json: str):
+        import json
+        try:
+            ids = [str(i) for i in json.loads(ids_json or "[]")]
+        except Exception:
+            return
+        if ids:
+            self.measurements_removed.emit(ids)
+
+    @pyqtSlot(str)
+    def onSelectionDeleted(self, payload_json: str):
+        self.selection_deleted.emit(payload_json or "{}")
+
+    @pyqtSlot(int)
+    def onSelectionCount(self, count: int):
+        self.selection_count_changed.emit(max(0, int(count)))
+
+    @pyqtSlot(str, str)
+    def onLegendDetailChanged(self, plants: str, boundaries: str):
+        self.legend_detail_changed.emit(plants or "", boundaries or "")
 
     @pyqtSlot(float, float)
     def onSunAnchorPlaced(self, lat: float, lng: float):
@@ -389,6 +463,14 @@ class MapBridge(QObject):
     def onTerrainBboxCancelled(self):
         self.terrain_bbox_cancelled.emit()
 
+    @pyqtSlot(str, int)
+    def onModeChanged(self, mode: str, python_seq: int):
+        self.mode_changed.emit(mode or "none", int(python_seq))
+
+    @pyqtSlot(str)
+    def onScaleUnitChanged(self, unit: str):
+        self.scale_unit_changed.emit("m" if unit == "m" else "km")
+
 
 class _LoggingPage(QWebEnginePage):
     """QWebEnginePage that forwards every JS console.* + uncaught error to
@@ -419,12 +501,28 @@ class MapWidget(QWebEngineView):
     callers never have to format JS strings themselves.
     """
 
+    #: An analysis overlay was drawn or cleared (V3.19, QF-19): the switches
+    #: that change one are offered only while it is on the map
+    #: (src/overlay_switches.py). Every draw and clear passes through here,
+    #: whoever asked for it (a button, undo, an open, the map's own menu).
+    overlays_changed = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._shown_overlays: set = set()
+        # What a screen reader calls it (V3.02). The page names its own parts
+        # (html/map/09-keyboard.js); see childEvent for the widget that takes
+        # focus.
+        self.setAccessibleName("Map")
         # Install the logging page BEFORE wiring the QWebChannel so any
         # JS error / warning that fires during page load surfaces on
         # stderr instead of disappearing into the sandbox.
         self.setPage(_LoggingPage(self))
+        # The tiles say who is asking (V3.31, FN-6): OpenStreetMap's tile
+        # policy asks apps not to send a browser's default User-Agent. One
+        # string with the Python requests (http_utils.user_agent).
+        from src.http_utils import user_agent
+        self.page().profile().setHttpUserAgent(user_agent())
         # Catch render-subprocess crashes. When QtWebEngine's renderer
         # process dies (often during a canvas/GPU paint with bad input),
         # JS halts mid-tick — no errors, no heartbeat, map goes blank.
@@ -432,7 +530,18 @@ class MapWidget(QWebEngineView):
         # signal turns an invisible crash into a single stderr line we
         # can grep for.
         self.page().renderProcessTerminated.connect(self._on_render_terminated)
-        self.bridge = MapBridge()
+        # Parented to the view, so it lives exactly as long as the page that
+        # calls it. The channel keeps a bare pointer to it, and until V2.98 the
+        # bridge's only owner was this wrapper's Python attribute: PyQt's
+        # deleteLater() hands the view to C++, and a garbage-collection pass
+        # that then clears the wrapper freed the bridge under a live page. The
+        # page's first message to the channel read the freed object and
+        # segfaulted, in whatever later code happened to be running (CI, V2.98).
+        self.bridge = MapBridge(self)
+        # Stamp on every mode change Python sends; the map echoes the last one
+        # it saw with each mode report, so a report that crossed a newer change
+        # in flight can be told apart and ignored (V2.98).
+        self._mode_seq = 0
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self._channel)
@@ -444,6 +553,13 @@ class MapWidget(QWebEngineView):
         self._last_zoom:   int | None = None
         self.bridge.map_moved.connect(self._on_map_moved)
         self.bridge.map_ready.connect(self._on_map_ready)
+        # Whether the page has said it is ready, since it last started loading
+        # (V3.04). map_ready fires once per load, and the window is built
+        # behind the start screen, so it has usually fired before anything
+        # that wants the map asks: onboarding_flow.act_on_start_choice waited
+        # for it anyway, and the start screen's choice was dropped (F197).
+        self.is_ready = False
+        self.loadStarted.connect(self._on_load_started)
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()
@@ -457,10 +573,39 @@ class MapWidget(QWebEngineView):
         self._last_center = (lat, lng)
         self._last_zoom = zoom
 
+    def _on_load_started(self):
+        self.is_ready = False
+        self._note_overlay("sun_path", False)       # a new page draws none
+        self._note_overlay("wind", False)
+
+    def overlay_shown(self, name: str) -> bool:
+        """Whether the overlay ``"sun_path"`` or ``"wind"`` is drawn now."""
+        return name in self._shown_overlays
+
+    def _note_overlay(self, name: str, shown: bool) -> None:
+        before = set(self._shown_overlays)
+        if shown:
+            self._shown_overlays.add(name)
+        else:
+            self._shown_overlays.discard(name)
+        if self._shown_overlays != before:
+            self.overlays_changed.emit()
+
     def _on_map_ready(self):
+        self.is_ready = True
         token = get_mapbox_token()
         if token:
             self.set_mapbox_token(token)
+
+    def childEvent(self, event):  # noqa: N802 (Qt override)
+        """Name the render widget as it arrives. It is what takes keyboard
+        focus, a screen reader read it as an unnamed "filler" (V3.02), and
+        QtWebEngine makes a new one whenever the renderer restarts."""
+        super().childEvent(event)
+        if event.type() == QEvent.Type.ChildPolished:
+            child = event.child()
+            if isinstance(child, QWidget) and not child.accessibleName():
+                child.setAccessibleName(self.accessibleName())
 
     def _on_render_terminated(self, status, exit_code):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
@@ -481,6 +626,16 @@ class MapWidget(QWebEngineView):
 
     def run_js(self, js: str):
         self.page().runJavaScript(js)
+
+    @property
+    def mode_seq(self) -> int:
+        """The stamp of the last mode change sent to the map."""
+        return self._mode_seq
+
+    def _run_mode_js(self, js: str):
+        """Send a mode change, stamped (see ``_mode_seq``)."""
+        self._mode_seq += 1
+        self.run_js(map_js.stamp_mode(self._mode_seq) + js)
 
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
@@ -511,18 +666,27 @@ class MapWidget(QWebEngineView):
                 # when missing, mirroring the get_plant fallback.
                 "mature_canopy_m": mature_canopy_m or (spacing_m * 1.5),
             }
-            self.run_js(map_js.set_mode_with_payload("plant", payload))
+            self._run_mode_js(map_js.set_mode_with_payload("plant", payload))
         else:
-            self.run_js(map_js.set_mode(mode))
+            self._run_mode_js(map_js.set_mode(mode))
+
+    def set_polyculture_mode(self, footprint: dict):
+        """Place a single community: the map's 'polyculture' mode, carrying
+        its footprint (``placement_footprint.community_footprint``) for the
+        ghost under the cursor (V2.99)."""
+        self._run_mode_js(map_js.set_mode_with_payload("polyculture", footprint))
 
     def cancel_draw(self):
-        self.run_js(map_js.cancel_draw())
+        self._run_mode_js(map_js.cancel_draw())
 
     def clear_measure(self):
         self.run_js(map_js.clear_measure())
 
     def clear_all(self):
         self.run_js(map_js.clear_all())
+        # clearAll takes the sun path and the wind overlay with it (V3.19).
+        self._note_overlay("sun_path", False)
+        self._note_overlay("wind", False)
 
     def set_satellite_visible(self, visible: bool):
         self.run_js(map_js.set_satellite_visible(visible))
@@ -644,6 +808,12 @@ class MapWidget(QWebEngineView):
     def clear_site_pin(self):
         self.run_js(map_js.clear_site_pin())
 
+    def zoom_to_site_pin(self, lat: float, lng: float, zoom: int):
+        """Bring the pin a person just set into view at about yard scale; the
+        page never zooms out (V3.19, QF-2). Not part of ``place_site_pin``,
+        which an open or an undo also calls."""
+        self.run_js(map_js.zoom_to_site_pin(lat, lng, zoom))
+
     def set_site_pin_drop_mode(self, active: bool):
         """Toggle the crosshair cursor while the user is arming a pin drop."""
         self.run_js(map_js.set_site_pin_drop_mode(active))
@@ -681,7 +851,7 @@ class MapWidget(QWebEngineView):
 
     def set_structure_mode(self, struct_def: dict):
         """Enter structure placement mode with a structure definition."""
-        self.run_js(map_js.set_mode_with_payload("structure", struct_def))
+        self._run_mode_js(map_js.set_mode_with_payload("structure", struct_def))
 
     def load_structure(self, struct_def: dict, lat: float, lng: float):
         """Load a structure from a saved project."""
@@ -691,7 +861,7 @@ class MapWidget(QWebEngineView):
 
     def set_hedgerow_mode(self, hedge_config: dict):
         """Enter hedgerow drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
+        self._run_mode_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
 
     def load_hedgerow(self, hedge_def: dict):
         """Load a hedgerow from a saved project."""
@@ -701,7 +871,7 @@ class MapWidget(QWebEngineView):
 
     def set_shape_mode(self, shape_config: dict):
         """Enter custom shape drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("shape", shape_config))
+        self._run_mode_js(map_js.set_mode_with_payload("shape", shape_config))
 
     def load_shape(self, shape_def: dict):
         """Load a custom shape from a saved project."""
@@ -714,7 +884,7 @@ class MapWidget(QWebEngineView):
 
     def enter_sun_anchor_mode(self):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
-        self.run_js(map_js.set_mode("sun_anchor"))
+        self._run_mode_js(map_js.set_mode("sun_anchor"))
 
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
@@ -722,9 +892,11 @@ class MapWidget(QWebEngineView):
             self.run_js(map_js.draw_sun_path(data, lat, lng))
         else:
             self.run_js(map_js.draw_sun_path(data))
+        self._note_overlay("sun_path", True)
 
     def clear_sun_path(self):
         self.run_js(map_js.clear_sun_path())
+        self._note_overlay("sun_path", False)
 
     def set_sun_path_time(self, minutes):
         """Move the sun marker along the drawn arc (scrub-rate; JS-only)."""
@@ -736,7 +908,7 @@ class MapWidget(QWebEngineView):
 
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""
-        self.run_js(map_js.set_mode_with_payload("contour", config))
+        self._run_mode_js(map_js.set_mode_with_payload("contour", config))
 
     def clear_contours(self):
         self.run_js(map_js.clear_contours())
@@ -753,7 +925,7 @@ class MapWidget(QWebEngineView):
 
     def enter_terrain_draw_mode(self):
         """Enter free-draw rectangle mode for picking a terrain bbox."""
-        self.run_js(map_js.set_mode("terrain_rect"))
+        self._run_mode_js(map_js.set_mode("terrain_rect"))
 
     def draw_auto_contours(self, contours: list[dict], color: str, show_labels: bool):
         """Render generated contour lines on the map. Replaces existing auto layer."""
@@ -779,21 +951,6 @@ class MapWidget(QWebEngineView):
 
     def clear_shade_overlay(self):
         self.run_js(map_js.clear_shade_overlay())
-
-    def draw_splat_ortho_overlay(self, png_data_url: str, bbox: dict,
-                                 opacity: float = 1.0):
-        """Show the baked top-down Gaussian-splat "yard photo" as its own
-        ImageOverlay (V1.65) — a personal satellite layer of the user's yard."""
-        self.run_js(map_js.draw_splat_ortho_overlay(png_data_url, bbox, opacity))
-
-    def set_splat_ortho_visible(self, visible: bool):
-        self.run_js(map_js.set_splat_ortho_visible(visible))
-
-    def set_splat_ortho_opacity(self, opacity: float):
-        self.run_js(map_js.set_splat_ortho_opacity(opacity))
-
-    def clear_splat_ortho(self):
-        self.run_js(map_js.clear_splat_ortho())
 
     # ── Site photo overlay (F24) ─────────────────────────────────────────────
 
@@ -866,9 +1023,22 @@ class MapWidget(QWebEngineView):
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
         self.run_js(map_js.draw_wind_overlay(data))
+        self._note_overlay("wind", True)
 
     def clear_wind_overlay(self):
         self.run_js(map_js.clear_wind_overlay())
+        self._note_overlay("wind", False)
+
+    # ── North arrow and scale bar (F205, V3.06) ──────────────────────────────
+
+    def set_north_arrow(self, visible: bool):
+        self.run_js(map_js.set_north_arrow(visible))
+
+    def set_scale_bar(self, visible: bool, unit: str = "auto"):
+        self.run_js(map_js.set_scale_bar(visible, unit))
+
+    def hold_offline_notice(self, held: bool):
+        self.run_js(map_js.hold_offline_notice(held))
 
     # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
     # call sites in src/app.py. Each is a one-line wrapper around the
@@ -918,6 +1088,14 @@ class MapWidget(QWebEngineView):
         """Delete every currently-selected map item."""
         self.run_js(map_js.delete_selected())
 
+    def select_all(self):
+        """Select everything shown on the map (Edit › Select all, V3.19)."""
+        self.run_js(map_js.select_all())
+
+    def load_measurement(self, measure_id: str, points: list):
+        """Draw a measurement from the design, telling nobody (V3.11)."""
+        self.run_js(map_js.load_measurement(measure_id, points))
+
     def place_plant_marker(self, plant_id: int, common_name: str,
                             lat: float, lng: float,
                             spacing_m: float = 1.0, plant_type: str = "herb",
@@ -940,10 +1118,23 @@ class MapWidget(QWebEngineView):
             plant_id, from_lat, from_lng, to_lat, to_lng,
         ))
 
+    def restore_boundary(self, boundary_id: str, points: list):
+        """A boundary's corners as the design holds them, after an edit that
+        would make it cross itself is refused (V3.19, QF-14)."""
+        self.run_js(map_js.restore_boundary(boundary_id, points))
+
+    def set_boundary_names(self, boundary_ids: list, name: str):
+        """The name the legend shows for these boundaries (V3.11)."""
+        self.run_js(map_js.set_boundary_names(boundary_ids, name))
+
     def set_crosshair_cursor(self):
         """Force a crosshair cursor on the map — used while arming a
         plant-community click-to-place gesture."""
         self.run_js(map_js.set_crosshair_cursor())
+
+    def set_legend_detail(self, plants: str, boundaries: str):
+        """Plants by type or species, boundaries simple or named (V3.11)."""
+        self.run_js(map_js.set_legend_detail(plants, boundaries))
 
     def set_plant_group_for_latest(self, plant_id: int, lat: float, lng: float,
                                     group_id: str):
@@ -964,6 +1155,12 @@ class MapWidget(QWebEngineView):
     def toggle_legend(self):
         """Toggle the on-map legend overlay."""
         self.run_js(map_js.toggle_legend())
+
+    def focus_by_keyboard(self):
+        """Give the map keyboard focus as the F6 key does: the window's focus,
+        then the page's, on the map itself, with its ring showing (V3.02)."""
+        self.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        self.run_js(map_js.focus_by_keyboard())
 
     def undo_boundary(self, boundary_id: str):
         self.run_js(map_js.undo_boundary(boundary_id))

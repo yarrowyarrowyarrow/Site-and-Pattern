@@ -77,8 +77,9 @@ class SceneViewerAssetsTest(unittest.TestCase):
 
     def test_importmap_targets_are_vendored_and_exist(self):
         imports = self._importmap()
-        # The three keys the viewer (and Spark) rely on.
-        for key in ("three", "three/addons/", "@sparkjsdev/spark"):
+        # The keys the viewer relies on (Spark's went with the yard scan in
+        # V3.22, RM-2).
+        for key in ("three", "three/addons/"):
             self.assertIn(key, imports, f"importmap missing '{key}'")
         for key, target in imports.items():
             self.assertTrue(
@@ -95,19 +96,16 @@ class SceneViewerAssetsTest(unittest.TestCase):
                                 f"vendored file missing for '{key}': {path}")
 
     def test_required_vendor_files_present(self):
-        # Including Pass.js, which Spark imports via 'three/addons/...', and
-        # three.core.js, which three.module.js re-exports from (V1.77 bug).
+        # Including three.core.js, which three.module.js re-exports from (V1.77 bug).
         required = [
             ("three", "three.module.js"),
             ("three", "three.core.js"),
             ("three", "addons", "controls", "OrbitControls.js"),
             ("three", "addons", "utils", "BufferGeometryUtils.js"),
-            ("three", "addons", "postprocessing", "Pass.js"),
             # V2.27: Blender GLB model assets (09-models.js) — the loader's
             # '../utils/BufferGeometryUtils.js' import resolves to the vendored
             # file above (test_vendored_imports_resolve walks it).
             ("three", "addons", "loaders", "GLTFLoader.js"),
-            ("spark", "spark.module.js"),
         ]
         for parts in required:
             path = os.path.join(_VENDOR, *parts)
@@ -136,7 +134,7 @@ class SceneViewerAssetsTest(unittest.TestCase):
             return None
 
         # Line-anchored so import-like text inside bundled string literals
-        # (e.g. Spark's inline workers) and JSDoc comment examples don't match.
+        # and JSDoc comment examples don't match.
         spec_re = re.compile(
             r"^\s*(?:import|export)\b[^\n]*?\bfrom\s*['\"]([^'\"]+)['\"]"
             r"|^\s*import\s*\(\s*['\"]([^'\"]+)['\"]", re.M)
@@ -175,7 +173,6 @@ class SceneViewerAssetsTest(unittest.TestCase):
     def test_split_chunks_use_no_es_imports(self):
         # The chunks are CLASSIC scripts sharing globals (THREE etc. come from the
         # bootstrap module); a stray ES `import`/`export` would throw at load.
-        # Dynamic `import(...)` (Spark) is fine and stays.
         chunk_dir = os.path.join(_ROOT, "html", "scene3d")
         if not os.path.isdir(chunk_dir):
             self.skipTest("viewer not split into chunks")
