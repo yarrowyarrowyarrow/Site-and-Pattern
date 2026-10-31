@@ -347,7 +347,8 @@ class TestP12(unittest.TestCase):
         # Browse list too: the guard follows it.
         # V3.39–V3.41: the walk's cards, the quiz and the lessons are learning
         # surfaces (BACKLOG F88: every one joins this scan).
-        for name in ("plant_directory.py", "start_screen.py", "species_page.py", "species_flyout.py",
+        for name in ("plant_directory.py", "start_screen.py", "start_rows.py",
+                     "species_page.py", "species_flyout.py",
                      "plant_picker.py", "plant_filters.py", "lessons.py",
                      "lesson_track_widget.py", "quiz_topics.py",
                      "field_study_widget.py", "walk_cards.py",

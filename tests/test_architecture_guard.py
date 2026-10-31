@@ -336,16 +336,22 @@ class TestStructuralCeilings(unittest.TestCase):
         # site_facets.py and belongs beside the pages that use it.
         (_SRC / "static_site_wildlife.py", 340),       # 274 now
         (_HTML / "site" / "browse.js", 200),           # 156 now
-        (_SRC / "start_screen.py", 380),               # 376 now (V3.37)
+        (_SRC / "start_screen.py", 380),               # 369 now (V3.42)
+        # V3.42: the two-column rebuild took start_screen.py past its 380;
+        # its rows, links, card and layout helpers moved here, opted in on
+        # arrival.
+        (_SRC / "start_rows.py", 280),                 # 219 now
         (_SRC / "onboarding_flow.py", 620),            # 571 now (V3.04)
         # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
         # ceiling added late is a ceiling set around whatever shape the file
         # drifted into. learn_flow.py exists *because* this guard fired — the
         # Learn wiring took onboarding_flow.py to 646/620 and the honest fix
         # was the split it asks for, not a bigger number.
-        (_SRC / "learn_flow.py", 260),                 # 129 now
-        (_SRC / "learn_menu.py", 300),                 # 144 now
-        (_SRC / "app_mode.py", 200),                   # 124 now
+        (_SRC / "learn_flow.py", 260),                 # 124 now
+        # learn_menu.py until V3.42, when the menu went and the window it
+        # held stayed (the Lessons and the Quizzes).
+        (_SRC / "learn_window.py", 200),               # 85 now
+        (_SRC / "app_mode.py", 200),                   # 94 now
         (_SRC / "reference_edit.py", 340),             # 297 now
         (_SRC / "db" / "progress.py", 320),            # 275 now
         # V2.45: the wingbeat physics. Mostly derivation and sourcing notes —

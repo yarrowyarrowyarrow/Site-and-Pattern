@@ -139,6 +139,9 @@ def graduate(project: dict, target: Optional[tuple] = None, *,
     out.setdefault("features", [])
     props = out.setdefault("properties", {})
     props["name"] = graduated_name(project)
+    # What every list and title reads (V3.42): with ``name`` alone the start
+    # screen listed the design by its file name, ".perma.geojson" and all.
+    props["project_name"] = props["name"]
     # Where it came from, kept on the project so the provenance is not folded
     # into a display string that someone later reformats.
     src_props = (project or {}).get("properties") or {}

@@ -73,7 +73,10 @@ class TheStepsNameRealControls(unittest.TestCase):
     CONTROLS = ("Click my yard on the map", "Draw on the map", "Garden Bed",
                 "Plan my yard", "Try another", "Export PDF",
                 "Where This &Data Came From", "Send &Feedback",
-                "&Start Screen")
+                "&Start Screen",
+                # V3.42: the guide sent people to "Learn about native
+                # plants" after it had gone; the Learn doors are named here.
+                "Walk a wild landscape", "Quizzes")
 
     def test_each_control_exists_in_the_source(self):
         source = "\n".join(p.read_text(encoding="utf-8")

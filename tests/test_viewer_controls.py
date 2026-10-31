@@ -284,7 +284,7 @@ class TestSplitView(unittest.TestCase):
     def test_learn_mode_does_not_get_it(self):
         """Deliberate: a second view of the same place is exactly the
         complexity the Learn door exists to remove."""
-        learn = _read("src", "learn_flow.py") + _read("src", "learn_menu.py")
+        learn = _read("src", "learn_flow.py") + _read("src", "learn_window.py")
         self.assertNotIn("split_view", learn)
 
 

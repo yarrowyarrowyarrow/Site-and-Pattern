@@ -16,7 +16,7 @@
 
 ## Learning about native plants
 
-**Help → Start Screen… → Learn about native plants** opens a wild landscape you can walk through and plant in, a quiz, and short lessons.
+The start screen's **Learn** column has an example yard, **Walk a wild landscape** (a wild place you can walk through and plant in), short **Lessons** and **Quizzes**. In the app, **Help → Start Screen…** brings it back.
 
 ## It is not an identification guide
 

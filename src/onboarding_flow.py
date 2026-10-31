@@ -108,42 +108,33 @@ def choose_start_action() -> str:
 
 
 def _menu_loop(parent, *, at_launch: bool = False) -> str:
-    """The start screen, plus the Learn menu behind its first door (V2.43).
+    """The start screen, and the choices it answers before the map.
 
-    A loop rather than two calls, because **Back has to go somewhere**. The
-    Learn menu is a second screen, not a dead end: closing it or pressing Back
-    returns to the start screen, so a person who opens the wrong door is not
-    dropped into an app they did not choose. Without the loop the only way out
-    of Learn would be to quit.
+    A loop, because **Cancel has to go somewhere**. *All N designs…* and
+    *Open a file…* are answered here (V3.37), on the screen's side of the
+    map: the list and the file picker open over the start screen, a design
+    picked there comes back as that design, and Cancel comes back to the
+    screen. Until V3.37 they were acted on once the window was shown, so the
+    map opened first and the list sat over it (the owner: it "opens the whole
+    app map page which it shouldn't until the actual design has been
+    selected"). From V2.43 to V3.41 the loop also held the Learn menu, a
+    second screen whose Back came round to this one; its doors are on the
+    start screen since V3.42.
 
     Returns the choice to act on once there is a window — which may be a
     Learn-side key (see :func:`src.app_mode.opens_main_window`, which is what
     decides whether the MainWindow is shown at all).
-
-    *All N designs…* and *Open a file…* are answered here too (V3.37), on the
-    screen's side of the map: the list and the file picker open over the
-    start screen, a design picked there comes back as that design, and
-    Cancel comes back to the screen. Until V3.37 they were acted on once the
-    window was shown, so the map opened first and the list sat over it (the
-    owner: it "opens the whole app map page which it shouldn't until the
-    actual design has been selected").
     """
-    from src import app_mode, learn_flow, start_flow
+    from src import start_flow
     from src.start_screen import ALL_DESIGNS, OPEN_FILE
     while True:
         choice = _open_menu(parent, at_launch=at_launch)
-        if choice in (ALL_DESIGNS, OPEN_FILE):
-            path = start_flow.choose_design(parent,
-                                            listed=choice == ALL_DESIGNS)
-            if path:
-                return start_flow.path_choice(path)
-            continue            # Cancel: back to the start screen
-        if choice != app_mode.LEARN:
+        if choice not in (ALL_DESIGNS, OPEN_FILE):
             return choice
-        sub = learn_flow.open_learn_menu(parent)
-        if sub and sub != app_mode.BACK:
-            return sub
-        # Back, or closed. Round again to the start screen.
+        path = start_flow.choose_design(parent, listed=choice == ALL_DESIGNS)
+        if path:
+            return start_flow.path_choice(path)
+        # Cancel: round again to the start screen.
 
 
 def _open_menu(parent, *, at_launch: bool = False) -> str:
@@ -312,8 +303,8 @@ def _dispatch(main, choice: str) -> None:
     if not choice or choice == QUIT:
         return
     from src import start_flow
-    from src.app_mode import STUDIO
-    from src.start_screen import CONTINUE, EXAMPLE, RECOVER, REFERENCE, UPDATE
+    from src.start_screen import (CONTINUE, EXAMPLE, LESSONS, QUIZZES,
+                                  RECOVER, REFERENCE, UPDATE)
     if start_flow.dispatch(main, choice):
         pass            # NEW_YARD, OPEN_PATH, ALL_DESIGNS, OPEN_FILE (V3.23)
     elif choice == RECOVER:
@@ -327,9 +318,9 @@ def _dispatch(main, choice: str) -> None:
         open_example(main)
     elif choice == REFERENCE:
         _open_reference(main)
-    elif choice == STUDIO:
+    elif choice in (LESSONS, QUIZZES):
         from src import learn_flow
-        learn_flow.open_studio(main)
+        learn_flow.open_studio(main, page=choice)
     elif choice == UPDATE:
         _safely(lambda: main._on_check_for_updates(), "The update check")
     refresh(main)

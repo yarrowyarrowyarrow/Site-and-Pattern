@@ -11,18 +11,21 @@ too complicated at the moment"*, and *"I'd love the design side to be sort of
 professional, and that's where you go once you understand the basics and you
 wanna design a landscape."*
 
-So the app has two front doors:
+So some of the start screen's doors open standalone windows: no map, no side
+tabs, no site analysis. A landscape you can walk into and plant, the lessons,
+and the quizzes. The design app (``MainWindow``) is built behind the start
+screen and simply never shown for them.
 
-  **Learn** — standalone windows, no map, no side tabs, no site analysis. A
-  landscape you can walk into and plant, the catalogue as a reference work, and
-  the lessons. This is where a beginner lands.
-  **Design** — today's MainWindow, entirely unchanged, for when you know what
-  you are doing.
+**Since V3.42 these doors are on the start screen itself**, in its Learn
+column beside *Look at an example yard* (the owner: the example, the walk and
+the lessons "grouped together in a simple fashion that leads to these
+options", with Lessons and Quizzes as separate items). The second screen they
+sat behind from V2.43, ``LearnMenu``, is gone, and with it Back. The window
+the lessons and quizzes open in is :mod:`src.learn_window`.
 
 Qt-free on purpose: this module decides *routing*, and routing is exactly the
-part that must be testable without a display. The screens that show these
-choices (``start_screen``, ``learn_menu``) stay presentation-only, the way
-``start_screen`` has been since V2.41.
+part that must be testable without a display. The screen that shows these
+choices (``start_screen``) stays presentation-only.
 
 ## Why this is not the toggle V2.42 argued against
 
@@ -42,7 +45,7 @@ would be the thing V2.42 refused, and this is not.
 
 ## The move that makes Learn cheap
 
-Learn mode carries a **real project** — the reference landscape from
+The Learn windows carry a **real project** — the reference landscape from
 :mod:`src.reference_ecosystem`, made editable in V2.43. It is a genuine
 FeatureCollection of ``plant_feature()`` records, so every design-coupled
 teaching tool in the repo binds to it with no rewrite at all, because each one
@@ -50,45 +53,34 @@ already takes ``placed_plants`` as a plain argument: ``lesson_track``,
 ``plant_impact``, ``habitat_score``, ``docent``, ``field_study``,
 ``chickadee_scenario``, ``scene_wildlife``.
 
-That is also why the walk returns the choice key the start screen already used
-(``REFERENCE``): it opens a surface that existed, and
-``onboarding_flow._dispatch`` needed no new branch for it. The Plant Directory
-row (``DIRECTORY``) went in V3.22 (RM-10, the owner's S4): the same plant pages
-are in Placement › Plants.
+That is also why the walk's key is the one the start screen already used for
+that surface (``REFERENCE``): ``onboarding_flow._dispatch`` needed no second
+way to say the same thing. The Plant Directory door (``DIRECTORY``) went in
+V3.22 (RM-10, the owner's S4): the same plant pages are in Placement › Plants.
 """
 
 from __future__ import annotations
 
-#: The two front doors, as returned by the start screen.
-LEARN = "learn"
+#: What a dismissed or turned-off start screen opens: the design app.
 DESIGN = "design"
 
-#: Rows on the Learn menu. ``WALK`` is deliberately the *same* key the start
-#: screen used for this surface before it moved in here, so the dispatch table
-#: did not have to grow a second way to say the same thing.
+#: The start screen's Learn doors that open a window of their own. ``WALK`` is
+#: deliberately the *same* key the start screen used for this surface before
+#: the Learn menu existed (``start_screen.REFERENCE``).
 WALK = "reference"        # the walkable, editable reference landscape
-STUDIO = "studio"         # lessons + field study, over the sandbox
-BACK = "back"             # return to the start screen
+LESSONS = "lessons"       # the lessons, over the walk you planted in
+QUIZZES = "quizzes"       # Field Study's quizzes, by topic (F208)
 
-#: ``(key, icon, title)`` — the Learn menu, in the order a person needs it: go
-#: somewhere and look at it, look something up, then be taught about it. The
-#: note beside each row is computed (see :func:`learn_notes`), because a fact
-#: about your own situation beats a description of the button — the V2.41
-#: start-screen lesson, applied to its second screen.
-LEARN_DOORS = (
-    (WALK, "🌲", "Walk a wild landscape"),
-    (STUDIO, "📚", "Lessons & Field Study"),
-)
-
-#: Choices that live entirely in Learn mode and must NOT bring up the
-#: MainWindow. This set is the whole mechanical content of the mode split: the
+#: Choices that live entirely in their own windows and must NOT bring up the
+#: MainWindow. This set is the whole mechanical content of the split: the
 #: simplification the feedback asked for is precisely "the beginner does not
-#: meet the map".
-_LEARN_ONLY = frozenset({WALK, STUDIO})
+#: meet the map". *Look at an example yard* sits beside them on the screen
+#: and is not one of them: the example is a design, on the map.
+_LEARN_ONLY = frozenset({WALK, LESSONS, QUIZZES})
 
 
 def is_learn_choice(choice: str) -> bool:
-    """Whether this choice is handled by a standalone Learn-mode window."""
+    """Whether this choice is handled by a standalone Learn window."""
     return choice in _LEARN_ONLY
 
 
@@ -100,24 +92,3 @@ def opens_main_window(choice: str) -> bool:
     turning it into "show nothing" would leave the user with no app.
     """
     return not is_learn_choice(choice)
-
-
-def learn_notes(communities: int = 0, sandbox: str = "") -> dict:
-    """The note column for each Learn door — one short fact per row.
-
-    Kept here rather than in the widget so the wording is testable without a
-    display, and so the five-word ceiling the start-screen tests enforce is
-    checkable in one place. Every string must survive its inputs being empty:
-    this runs before any project exists.
-
-    """
-    if communities:
-        walk = f"{communities} communities"
-    else:
-        walk = "plant and pull, live"
-    if sandbox:
-        walk = f"continue in {sandbox}"
-    return {
-        WALK: walk,
-        STUDIO: "about the landscape you're in",
-    }

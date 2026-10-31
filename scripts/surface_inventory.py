@@ -1043,11 +1043,8 @@ def main_run(args) -> dict:
                                          "text": label, "kind": "menu",
                                          "effects": effects(before, after)})
                 restore(main, before, None, example)
-        try:
-            from src import learn_flow
-            learn_flow.open_learn_menu(main)
-        except Exception as exc:                           # noqa: BLE001
-            sys.stderr.write(f"[surface] learn menu: {exc}\n")
+        # The Learn menu went in V3.42: its doors are on the start screen,
+        # which Help › Start Screen opens in the pass above.
         pump(300)
 
     report["dialogs"] = CAPTURE["records"]

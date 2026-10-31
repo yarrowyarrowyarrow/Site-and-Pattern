@@ -321,25 +321,29 @@ class TheScreenCanBeRead(unittest.TestCase):
 
     def test_every_colour_pair_clears_four_and_a_half(self):
         from tests._visual import contrast
-        from src import start_screen as s
-        for row in (s._PLAIN, s._PRIMARY, s._AMBER):
+        from src import start_rows as s
+        # V3.42 adds the outlined rows (H3) and the rows inside the Learn
+        # card, which stand on the card's plain ground.
+        for row in (s.PLAIN, s.FILLED, s.OUTLINED, s.AMBER, s.IN_CARD):
+            ground = s.PLAIN["bg"] if row is s.IN_CARD else row["bg"]
             for part in ("head", "note"):
-                self.assertGreaterEqual(contrast(row[part], row["bg"]), 4.5,
+                self.assertGreaterEqual(contrast(row[part], ground), 4.5,
                                         (row, part))
                 self.assertGreaterEqual(contrast(row[part], row["hover"]), 4.5,
                                         (row, part, "hover"))
         ground = "#1a2a1a"
-        for colour in ("#8fc98f", "#a5c4a7", "#e8f5e9"):
+        for colour in ("#8fc98f", "#ef9a9a", s.QUIET, s.HEAD):
             self.assertGreaterEqual(contrast(colour, ground), 4.5, colour)
 
     def test_no_text_under_twelve_pixels(self):
         import re
         import pathlib
-        src = (pathlib.Path(__file__).resolve().parent.parent / "src"
-               / "start_screen.py").read_text(encoding="utf-8")
-        sizes = [int(n) for n in re.findall(r"font-size:\s*(\d+)px", src)]
-        self.assertTrue(sizes)
-        self.assertGreaterEqual(min(sizes), 12)
+        root = pathlib.Path(__file__).resolve().parent.parent / "src"
+        for name in ("start_screen.py", "start_rows.py"):
+            src = (root / name).read_text(encoding="utf-8")
+            sizes = [int(n) for n in re.findall(r"font-size:\s*(\d+)px", src)]
+            self.assertTrue(sizes, name)
+            self.assertGreaterEqual(min(sizes), 12, name)
 
 
 if __name__ == "__main__":
