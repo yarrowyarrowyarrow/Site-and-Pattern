@@ -19,8 +19,13 @@ from typing import Callable, Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
-    QLabel, QPushButton, QVBoxLayout, QWidget,
+    QComboBox, QFormLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
+
+#: The old quiz, a little of everything: photo names, the animals that depend
+#: on a few plants, and the design's food-web gap (``field_study``). Kept as a
+#: choice; the topics come first (V3.40, F208).
+MIXED = "mixed"
 
 _OK = "#a5d6a7"
 _BAD = "#ef9a9a"
@@ -71,11 +76,44 @@ class FieldStudyWidget(QWidget):
         lay.setSpacing(8)
 
         intro = QLabel(
-            "Identify plants, trace who depends on whom, and find the gaps in "
-            "your design.")
+            "Practise one thing at a time: naming plants, who uses whom, and "
+            "when and where plants grow.")
         intro.setWordWrap(True)
         intro.setStyleSheet("color: #90a4ae; font-size: 12px;")
         lay.addWidget(intro)
+
+        # What to practise, about which plants, and how long (V3.40, F208).
+        from src import quiz_topics
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        self._topic = QComboBox()
+        self._topic.setAccessibleName("What to practise")
+        for _g, group_words, topics in quiz_topics.GROUPS:
+            self._add_heading(group_words)
+            for key, words in topics:
+                self._topic.addItem(words, key)
+        self._add_heading("Mixed")
+        self._topic.addItem("A bit of everything", MIXED)
+        self._topic.setCurrentIndex(self._topic.findData("any_plant"))
+        form.addRow("Practise", self._topic)
+        self._focus = QComboBox()
+        self._focus.setAccessibleName("Which plants")
+        for key, words in quiz_topics.focus_options():
+            self._focus.addItem(words, key)
+        form.addRow("Plants", self._focus)
+        self._length = QComboBox()
+        self._length.setAccessibleName("How many questions")
+        for n in quiz_topics.LENGTHS:
+            self._length.addItem(f"{n} questions", n)
+        self._length.setCurrentIndex(self._length.findData(10))
+        form.addRow("Length", self._length)
+        lay.addLayout(form)
+        self._status = QLabel("")
+        self._status.setWordWrap(True)
+        self._status.setStyleSheet("color: #9ccc9c; font-size: 12px;")
+        lay.addWidget(self._status)
+        for box in (self._topic, self._focus):
+            box.currentIndexChanged.connect(lambda _i: self._update_status())
 
         self._start_btn = QPushButton("Start a quiz")
         self._start_btn.setStyleSheet(
@@ -132,11 +170,93 @@ class FieldStudyWidget(QWidget):
         lay.addWidget(self._next_btn)
 
         lay.addStretch()
+        self._update_status()
+
+    def _add_heading(self, words: str):
+        """A group's name in the topic list: bold, shown, not choosable."""
+        self._topic.addItem(words, "")
+        item = self._topic.model().item(self._topic.count() - 1)
+        item.setEnabled(False)
+        font = item.font()
+        font.setBold(True)
+        item.setFont(font)
+
+    def set_landscape_words(self, words: str):
+        """What the landscape topic calls the plants it asks about ("the
+        landscape you walked" in the Learn window, "this design" in the main
+        window's Learn tab)."""
+        self._where = words
+
+    def set_topic(self, key: str):
+        """Choose a topic (``quiz_topics`` key, or ``MIXED``)."""
+        i = self._topic.findData(key)
+        if i >= 0:
+            self._topic.setCurrentIndex(i)
+
+    def _choice(self) -> tuple:
+        return (self._topic.currentData() or MIXED,
+                self._focus.currentData() or "all",
+                int(self._length.currentData() or 10))
+
+    def _update_status(self):
+        """What the chosen topic has to work with, and the best so far: how
+        many of its photographs are on this computer, or that it is about the
+        landscape you walked."""
+        from src import quiz_topics
+        topic, focus, _n = self._choice()
+        self._focus.setEnabled(topic not in ("landscape", MIXED))
+        lines = []
+        try:
+            if topic in quiz_topics.PHOTO_TOPICS:
+                from src.db.plants import get_all_plants
+                have, total = quiz_topics.photo_status(
+                    topic, focus, get_all_plants(),
+                    quiz_topics._default_image_ok)
+                lines.append(f"{have} of {total} photographs of these plants "
+                             "are on this computer."
+                             + (" The rest download while you play, when "
+                                "you are connected." if have < total else ""))
+            elif topic == "landscape":
+                lines.append(f"About {getattr(self, '_where', '') or quiz_topics.WALKED}: "
+                             "its plants, and who would lose the only plant "
+                             "there they use.")
+            score, out_of = quiz_topics.best(topic, focus)
+            if out_of:
+                lines.append(f"Your best: {score} of {out_of}.")
+        except Exception:      # noqa: BLE001 — a status line is a nicety
+            pass
+        self._status.setText(" ".join(lines))
 
     # ── flow ──────────────────────────────────────────────────────────────
 
+    def _make_quiz(self, plants) -> list:
+        topic, focus, n = self._choice()
+        seed = random.randrange(1 << 30)
+        if topic == MIXED:
+            from src.field_study import generate_quiz
+            return generate_quiz(plants, seed=seed, n=n)
+        from src.quiz_topics import WALKED, build_quiz
+        return build_quiz(topic, focus=focus, n=n, seed=seed,
+                          walk_plants=plants or [],
+                          where=getattr(self, "_where", "") or WALKED)
+
+    def _why_empty(self) -> str:
+        """Why a topic made no questions, in words, rather than another
+        topic's questions in its place."""
+        from src import quiz_topics
+        topic, _focus, _n = self._choice()
+        if topic in quiz_topics.PHOTO_TOPICS:
+            return ("No photographs of these plants are on this computer yet. "
+                    "They download in the background while you are connected; "
+                    "try again in a minute, or choose a topic without "
+                    "photographs.")
+        if topic == "landscape":
+            return ("Walk a landscape and plant in it first: these questions "
+                    "are about the plants you walked among.")
+        return ("Too few plants for this topic in the chosen plants. Try "
+                "Every plant.")
+
     def new_quiz(self):
-        from src.field_study import generate_quiz
         plants = None
         if self._provider is not None:
             try:
@@ -144,12 +264,12 @@ class FieldStudyWidget(QWidget):
             except Exception:      # noqa: BLE001
                 plants = None
         try:
-            self._quiz = generate_quiz(plants, seed=random.randrange(1 << 30), n=5)
+            self._quiz = self._make_quiz(plants)
         except Exception:      # noqa: BLE001
             self._quiz = []
-        # Identify questions only cover plants whose photo is already cached,
-        # so warm a few more catalogue photos each run — the ID pool grows
-        # with every quiz (and works offline once cached).
+        # Name-the-plant questions only cover plants whose photo is already
+        # cached, so warm the chosen topic's photos first (V3.40) — the pool
+        # grows with every quiz, and works offline once cached.
         self._warm_photo_pool()
         self._i = 0
         self._score = 0
@@ -160,9 +280,16 @@ class FieldStudyWidget(QWidget):
             # the next click indexed an empty quiz, and an IndexError escaping a
             # Qt slot aborts the process rather than raising.
             self._clear_question()
-            self._progress.setText("Quiz unavailable — the plant database "
-                                   "couldn't be read.")
+            try:
+                self._progress.setText(self._why_empty())
+            except Exception:      # noqa: BLE001
+                self._progress.setText("Quiz unavailable — the plant database "
+                                       "couldn't be read.")
             return
+        asked = self._choice()[2]
+        if len(self._quiz) < asked:
+            self._status.setText(f"Only {len(self._quiz)} questions could be "
+                                 "made on this topic from these plants.")
         self._show()
 
     def _clear_question(self):
@@ -178,8 +305,9 @@ class FieldStudyWidget(QWidget):
             b.setVisible(False)
 
     def _warm_photo_pool(self, limit: int = 8):
-        """Fetch+cache a few not-yet-cached catalogue photos in the background,
-        so the identify pool grows with every quiz.
+        """Fetch+cache a few not-yet-cached photos in the background, so the
+        identify pool grows with every quiz: the chosen topic's plants first,
+        up to 40 of them (V3.40), else a few from the whole catalogue.
 
         Sequential, via the shared :class:`~src.photo_warm.PhotoWarmer`, rather
         than the eight parallel tasks this used to start on the global pool.
@@ -189,10 +317,16 @@ class FieldStudyWidget(QWidget):
         missing photo just stays out of the pool.
         """
         try:
+            from src import quiz_topics
             from src.db.plants import get_all_plants
             from src.image_cache import get_cached_image
             from src.photo_warm import photo_rows
-            pending = [row for row in photo_rows(get_all_plants())
+            topic, focus, _n = self._choice()
+            catalogue = get_all_plants()
+            chosen = quiz_topics.photo_plants(topic, focus, catalogue)
+            if chosen:
+                limit = max(limit, 40)
+            pending = [row for row in photo_rows(chosen or catalogue)
                        if row[0] not in self._warmed
                        and not get_cached_image(row[0])]
         except Exception:      # noqa: BLE001
@@ -317,6 +451,14 @@ class FieldStudyWidget(QWidget):
         pct = round(100 * self._score / total) if total else 0
         self._prompt.setText(f"Quiz complete — {self._score} / {total} ({pct}%)")
         self._prompt.setVisible(True)
+        try:
+            from src import quiz_topics
+            topic, focus, _n = self._choice()
+            if quiz_topics.record(topic, focus, self._score, total):
+                self._prompt.setText(self._prompt.text() + "  ·  your best yet")
+            self._update_status()
+        except Exception:      # noqa: BLE001 — a best score is a nicety
+            pass
         msg = ("Field-ready! You know your natives and their relationships."
                if pct >= 80 else
                "Good start — replay to lock it in, then go check outside."

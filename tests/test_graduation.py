@@ -155,6 +155,9 @@ class TestGraduate(unittest.TestCase):
         name = out["properties"]["name"]
         self.assertIn("Aspen Parkland grove", name)
         self.assertNotIn("Reference", name)
+        # What the lists and the title read (V3.42): without it the start
+        # screen named the design by its file.
+        self.assertEqual(out["properties"]["project_name"], name)
 
     def test_no_pin_still_graduates(self):
         """Refusing would put a wall exactly where the feature is trying to

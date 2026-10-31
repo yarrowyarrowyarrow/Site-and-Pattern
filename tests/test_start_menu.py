@@ -35,7 +35,9 @@ except Exception:                                          # noqa: BLE001
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
 class TestWhatTheMenuOffers(unittest.TestCase):
     """V3.23 (ST-4, docs/homeowner/04-start-screen.md §5, Option B): one way
-    to start a yard, then the person's own designs, newest first."""
+    to start a yard, then the person's own designs, newest first. V3.42
+    (F259): those in a column of their own, Your yards, beside Learn, on the
+    owner's answers to sketches."""
 
     @classmethod
     def setUpClass(cls):
@@ -48,47 +50,70 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         return dlg
 
     def _rows(self, dlg):
-        """``[(title, note)]`` of the rows, top to bottom."""
-        out = []
-        for b in dlg.findChildren(QPushButton):
-            labels = b.findChildren(QLabel)
-            if len(labels) == 2:
-                out.append((labels[0].text(), labels[1].text()))
-        return out
+        """``[(title, line, fact)]`` of the rows outside the Learn card, top
+        to bottom."""
+        from src.start_rows import LearnCard, Row
+        card = dlg.findChild(LearnCard)
+        return [r.words for r in dlg.findChildren(Row)
+                if not card.isAncestorOf(r)]
 
     def _links(self, dlg):
-        return [b.text() for b in dlg.findChildren(QPushButton)
-                if not b.findChildren(QLabel)]
+        return [b.text() for b in dlg.findChildren(QPushButton) if b.text()]
+
+    def _at(self, dlg, widget):
+        from PyQt6.QtCore import QPoint
+        return widget.mapTo(dlg, QPoint(0, 0))
 
     @staticmethod
     def _designs(n):
         return [{"path": f"/tmp/d{i}.perma.geojson", "name": f"Design {i}",
-                 "when": f"{i + 1} days ago", "summary": "3 plants",
-                 "error": ""} for i in range(n)]
+                 "when": f"{i + 1} days ago", "line": f"{i + 3} plants",
+                 "summary": "3 plants", "error": "", "deletable": True}
+                for i in range(n)]
 
     def test_a_first_run_offers_one_way_to_start(self):
         dlg = self._screen()
-        self.assertEqual(self._rows(dlg),
-                         [("Plan a new yard", "start from your address")])
+        self.assertEqual(self._rows(dlg), [("Plan a new yard", "", "")])
         self.assertEqual(dlg.primary_row().accessibleName(), "Plan a new yard")
         texts = [l.text() for l in dlg.findChildren(QLabel)]
         self.assertIn("Designs you save will be listed here.", texts)
-        self.assertIn("Look at an example yard", self._links(dlg))
         self.assertIn("Open a file…", self._links(dlg))
+        # The owner, V3.42: Plan a new yard "does not have to say".
+        self.assertNotIn("start from your address", texts)
 
-    def test_the_learn_door_stays_as_one_quiet_link(self):
-        """S1: the Learn door is kept, below the yard rows, not as a row."""
-        dlg = self._screen()
-        self.assertIn("Learn about native plants", self._links(dlg))
-        self.assertNotIn("Learn", [t for t, _n in self._rows(dlg)])
+    def test_learn_is_a_card_beside_your_yards(self):
+        """V3.42 (the owner): the example, the walk, the lessons and the
+        quizzes grouped as Learn, beside the yards rather than a link below
+        them; the card is one of the three doors H3 outlines."""
+        from src.start_rows import OUTLINED, LearnCard
+        dlg = self._screen(designs=self._designs(2), total=2)
+        card = dlg.findChild(LearnCard)
+        self.assertEqual([r.words[0] for r in card.rows],
+                         ["Look at an example yard", "Walk a wild landscape",
+                          "Lessons", "Quizzes"])
+        self.assertIn(OUTLINED["border"], card.styleSheet())
+        self.assertNotIn("Learn about native plants", self._links(dlg))
+        dlg.adjustSize()
+        dlg.show()
+        QApplication.processEvents()
+        new, at_card = self._at(dlg, dlg.primary_row()), self._at(dlg, card)
+        self.assertGreater(at_card.x(), new.x() + dlg.primary_row().width())
+        self.assertLessEqual(abs(at_card.y() - new.y()), 4)
+        dlg.close()
 
-    def test_returning_lists_the_newest_three_and_leads_with_the_newest(self):
+    def test_returning_fills_plan_a_new_yard_and_outlines_the_last_design(self):
+        """The owner's H3: Plan a new yard is the filled row and Enter's; the
+        design worked on last is outlined (the recommendation, H4, would have
+        filled it instead)."""
+        from src.start_rows import Row
         dlg = self._screen(designs=self._designs(3), total=5)
         rows = self._rows(dlg)
-        self.assertEqual([t for t, _n in rows],
+        self.assertEqual([t for t, _l, _f in rows],
                          ["Plan a new yard", "Design 0", "Design 1", "Design 2"])
-        self.assertEqual(rows[1][1], "1 days ago")
-        self.assertEqual(dlg.primary_row().accessibleName(), "Design 0")
+        self.assertEqual(rows[1][1:], ("3 plants", "1 days ago"))
+        self.assertEqual(dlg.primary_row().accessibleName(), "Plan a new yard")
+        self.assertEqual([r.words[0] for r in dlg.findChildren(Row)
+                          if r.outlined], ["Design 0"])
         self.assertIn("All 5 designs…", self._links(dlg))
 
     def test_no_all_designs_link_when_every_design_is_listed(self):
@@ -96,22 +121,26 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         self.assertFalse(any(l.startswith("All ") for l in self._links(dlg)))
 
     def test_unsaved_work_leads_and_names_its_design(self):
+        from src.start_rows import Row
         dlg = self._screen(recover="A very long design name that goes on and on",
                            designs=self._designs(1), total=1)
-        title, note = self._rows(dlg)[0]
+        title, note, _fact = self._rows(dlg)[0]
         self.assertEqual(title, "Restore unsaved changes")
         self.assertLessEqual(len(note), 32)
         self.assertTrue(note.endswith("…"))
         self.assertEqual(dlg.primary_row().accessibleName(),
                          "Restore unsaved changes")
+        # The amber row is the one filled; the doors it outranks are outlined.
+        self.assertEqual([r.words[0] for r in dlg.findChildren(Row)
+                          if r.outlined], ["Plan a new yard", "Design 0"])
 
     def test_exactly_one_row_is_primary_and_it_is_the_default(self):
         """Two primary buttons is none; Enter activates the one there is."""
-        from src.start_screen import _Row
+        from src.start_rows import Row
         for kwargs in ({}, {"designs": self._designs(3), "total": 3},
                        {"recover": "X", "designs": self._designs(2), "total": 2}):
             dlg = self._screen(**kwargs)
-            primary = [r for r in dlg.findChildren(_Row) if r.primary]
+            primary = [r for r in dlg.findChildren(Row) if r.primary]
             self.assertEqual(len(primary), 1, kwargs)
             self.assertTrue(primary[0].isDefault(), kwargs)
 
@@ -125,10 +154,29 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         self.assertEqual(dlg.chosen_path(), "/tmp/d1.perma.geojson")
 
     def test_an_unreadable_design_says_so(self):
+        from src import saves
+        self.assertEqual(saves.card_line({"error": "not a project file"}),
+                         "Can't be opened")
         designs = self._designs(1)
-        designs[0]["error"] = "not a project file"
-        rows = self._rows(self._screen(designs=designs, total=1))
-        self.assertEqual(rows[1][1], "can't be opened")
+        designs[0].update(error="not a project file", line="Can't be opened")
+        dlg = self._screen(designs=designs, total=1, rename=lambda *a: None,
+                           delete=lambda *a: None)
+        self.assertEqual(self._rows(dlg)[1][1], "Can't be opened")
+        # It cannot be read, so it cannot be renamed; it can go to the bin.
+        self.assertNotIn("Rename", self._links(dlg))
+        self.assertIn("Delete", self._links(dlg))
+
+    def test_a_design_line_starts_with_a_capital(self):
+        """The owner, V3.42. "species" stays off it, an advanced word."""
+        from src import saves
+        self.assertEqual(saves.card_line({"plants": 0}), "No plants yet")
+        self.assertEqual(saves.card_line({"plants": 1}), "1 plant")
+        self.assertEqual(saves.card_line({"plants": 24, "species": 9}),
+                         "24 plants")
+        self.assertEqual(saves.card_line(
+            {"name": "Back yard", "plants": 2,
+             "site": "8103, 95A Street NW, Ritchie, Edmonton, Alberta"}),
+            "2 plants · 8103 95A Street NW")
 
     def test_long_names_are_cut(self):
         designs = self._designs(1)
@@ -136,6 +184,93 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         title = self._rows(self._screen(designs=designs, total=1))[1][0]
         self.assertEqual(len(title), 40)
         self.assertTrue(title.endswith("…"))
+
+    def test_a_long_name_ends_in_an_ellipsis_not_mid_letter(self):
+        """V3.42: in CI's wider DejaVu Sans a 40-character name ran under the
+        date and was cut mid-letter. The painted words fit the width each
+        label is given; the whole name stays its text and its tooltip."""
+        from src.elided_label import ElidedLabel
+        designs = self._designs(2)
+        designs[0]["name"] = "W" * 70
+        designs[1]["name"] = "8103 95A Street NW (unsaved changes from 17 Oct)"
+        dlg = self._screen(designs=designs, total=2)
+        dlg.adjustSize()
+        dlg.show()
+        QApplication.processEvents()
+        fitted = dlg.findChildren(ElidedLabel)
+        self.assertTrue(fitted)
+        for label in fitted:
+            painted = QLabel.text(label)
+            self.assertLessEqual(
+                label.fontMetrics().horizontalAdvance(painted), label.width(),
+                label.text())
+        wide = next(l for l in fitted if l.text().startswith("WWW"))
+        self.assertTrue(QLabel.text(wide).endswith("…"))
+        self.assertEqual(wide.toolTip(), wide.text())
+        dlg.close()
+
+    def test_each_design_has_rename_with_delete_under_it(self):
+        """The owner, V3.42: Delete "right underneath where the rename option
+        appears"."""
+        dlg = self._screen(designs=self._designs(2), total=2,
+                           rename=lambda *a: None, delete=lambda *a: None)
+        dlg.adjustSize()
+        dlg.show()
+        QApplication.processEvents()
+        named = {b.accessibleName(): b for b in dlg.findChildren(QPushButton)}
+        for i in range(2):
+            rename, delete = named[f"Rename Design {i}"], named[f"Delete Design {i}"]
+            r, d = self._at(dlg, rename), self._at(dlg, delete)
+            self.assertLessEqual(abs(r.x() - d.x()), 1)
+            self.assertGreaterEqual(d.y(), r.y() + rename.height())
+        dlg.close()
+
+    def test_delete_is_offered_only_where_the_flow_allows_it(self):
+        designs = self._designs(2)
+        designs[1]["deletable"] = False        # kept elsewhere, or open
+        names = [b.accessibleName() for b in self._screen(
+            designs=designs, total=2, rename=lambda *a: None,
+            delete=lambda *a: None).findChildren(QPushButton)]
+        self.assertIn("Delete Design 0", names)
+        self.assertNotIn("Delete Design 1", names)
+        self.assertIn("Rename Design 1", names)
+        without = [b.accessibleName() for b in self._screen(
+            designs=self._designs(2), total=2).findChildren(QPushButton)]
+        self.assertFalse(any(n.startswith(("Delete", "Rename"))
+                             for n in without))
+
+    def test_a_bigger_window_does_not_pull_the_screen_apart(self):
+        """V3.41, maximised: the name and the tagline 100 px apart and "Your
+        designs" adrift (the owner's screenshots). The screen is a block of
+        fixed width, centred, whatever the window."""
+        from src.branding import APP_NAME, APP_TAGLINE
+        dlg = self._screen(designs=self._designs(3), total=3, show_skip=True)
+        label = {l.text(): l for l in dlg.findChildren(QLabel)}
+
+        def measure():
+            QApplication.processEvents()
+            name, tag = (self._at(dlg, label[t]) for t in (APP_NAME, APP_TAGLINE))
+            heading = self._at(dlg, label["Your yards"])
+            new = self._at(dlg, dlg.primary_row())
+            return (tag.y() - name.y(), new.y() - heading.y(),
+                    new.x() - name.x())
+
+        dlg.adjustSize()
+        dlg.show()
+        small = measure()
+        dlg.resize(1900, 1000)
+        large = measure()
+        self.assertEqual(small, large)
+        left = self._at(dlg, label[APP_NAME]).x()
+        self.assertGreater(left, 400, "the block is not centred")
+        dlg.close()
+
+    def test_the_logo_is_large(self):
+        """The owner, V3.42: "the logo image could be larger" (48 px)."""
+        marks = [l for l in self._screen().findChildren(QLabel)
+                 if l.pixmap() is not None and not l.pixmap().isNull()]
+        self.assertTrue(marks)
+        self.assertGreaterEqual(marks[0].width(), 80)
 
     def test_it_says_what_it_is_and_has_no_emoji(self):
         from src.branding import APP_NAME, APP_TAGLINE
@@ -152,13 +287,14 @@ class TestWhatTheMenuOffers(unittest.TestCase):
                          "Site & Pattern V3.23")
         self.assertEqual(self._screen().windowTitle(), "Site & Pattern")
 
-    def test_the_flowering_line_shows_only_when_there_is_one(self):
-        line = "In flower around Edmonton in July: Harebell and 4 more."
-        with_line = [l.text() for l in self._screen(
-            flowering=line).findChildren(QLabel)]
-        self.assertIn(line, with_line)
-        without = [l.text() for l in self._screen().findChildren(QLabel)]
-        self.assertFalse(any(t.startswith("In flower") for t in without))
+    def test_there_is_no_flowering_line(self):
+        """The owner, V3.42: "can be removed" (it arrived on their word in
+        V3.23)."""
+        from src import start_flow
+        texts = [l.text() for l in self._screen(
+            designs=self._designs(2), total=2).findChildren(QLabel)]
+        self.assertFalse(any(t.startswith("In flower") for t in texts))
+        self.assertFalse(hasattr(start_flow, "flowering"))
 
     def test_every_choice_is_carried_out(self):
         """A row whose key nothing acts on is a button that does nothing."""
@@ -174,15 +310,17 @@ class TestWhatTheMenuOffers(unittest.TestCase):
                 n for n in ast.walk(tree)
                 if isinstance(n, ast.FunctionDef) and n.name == fn_name))
         for name in ("RECOVER", "NEW_YARD", "EXAMPLE", "OPEN_PATH",
-                     "ALL_DESIGNS", "OPEN_FILE", "CONTINUE", "REFERENCE"):
+                     "ALL_DESIGNS", "OPEN_FILE", "CONTINUE", "REFERENCE",
+                     "LESSONS", "QUIZZES"):
             self.assertTrue(hasattr(wd, name), name)
             self.assertIn(name, handled, f"{name} is offered but never acted on")
+        self.assertFalse(hasattr(wd, "LEARN"), "the Learn menu went in V3.42")
 
     def test_generate_is_not_a_row(self):
         from src import start_screen
         self.assertFalse(hasattr(start_screen, "GENERATE"))
         rows = self._rows(self._screen())
-        self.assertFalse(any("Generate" in t for t, _n in rows), rows)
+        self.assertFalse(any("Generate" in t for t, _l, _f in rows), rows)
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
@@ -268,9 +406,8 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         import ast
         for name in ("choose_start_action", "show_welcome"):
             dump = ast.dump(self._flow_fn(name))
-            # V2.43: both go through _menu_loop, which is the one body that
-            # calls _open_menu — and which also owns the Learn menu behind the
-            # first door, so Back has somewhere to go from either entry point.
+            # Both go through _menu_loop, the one body that calls _open_menu
+            # and answers the choices made over the screen (V3.37).
             self.assertIn("_menu_loop", dump, name)
             self.assertNotIn("StartScreen", dump,
                              f"{name} builds its own screen instead of sharing "
@@ -286,10 +423,11 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         self.assertEqual(with_last.text(),
                          "Next time, open my last design directly")
         self.assertFalse(with_last.isHidden())
-        without = StartScreen().findChildren(QCheckBox)[0]
+        screen = StartScreen()
+        without = screen.findChildren(QCheckBox)[0]
         self.assertTrue(without.isHidden())
         without.setChecked(True)
-        self.assertFalse(without.parent().suppressed())
+        self.assertFalse(screen.suppressed())
 
 
 class TestItOpensBeforeTheMap(unittest.TestCase):
@@ -437,7 +575,8 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
                 return
             seen["parent"] = dlg.parent()
             btn = next((b for b in dlg.findChildren(QPushButton)
-                        if b.text() == "Look at an example yard"), None)
+                        if b.accessibleName() == "Look at an example yard"),
+                       None)
             if btn is None:
                 dlg.reject()
                 return
@@ -521,10 +660,6 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         self.addCleanup(setattr, onboarding_flow, "_autosave_pending",
                         onboarding_flow._autosave_pending)
         onboarding_flow._autosave_pending = lambda: False
-        # The flowering line reads the plant database; this test touches none.
-        from src import start_flow
-        self.addCleanup(setattr, start_flow, "flowering", start_flow.flowering)
-        start_flow.flowering = lambda month=None: ("", "")
         return fake
 
 

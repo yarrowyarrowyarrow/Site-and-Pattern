@@ -172,13 +172,16 @@ self-evident, and to fix that instead.
 ## Where this is enforced
 
 Nowhere automatically, and that is honest: usability is not a property a test
-suite can assert. What `tests/test_start_menu.py` does hold is the parts that
-have a shape:
+suite can assert. What `tests/test_start_menu.py` and `tests/test_learn_mode.py`
+do hold is the parts that have a shape (corrected V3.42: the eight-word and
+five-word rules listed here had no test behind them since V3.23):
 
-- no prose block longer than eight words outside a control;
-- every row's note is five words or fewer;
-- at most one primary action on the screen;
-- every offered choice is acted on by the flow module.
+- exactly one filled row on the start screen, and it is the default button
+  (V3.42 adds a second weight, outlined, for the other doors: the owner's H3);
+- every offered choice is acted on by the flow module;
+- the Learn card's lines are five words or fewer, and no line under a row
+  starts with a small letter;
+- the screen keeps its shape in a bigger window.
 
 `tests/test_app_smoke.py` holds the keyboard's shape on the real window (V3.02):
 every focusable control has a name, text or a label naming it; every tool and

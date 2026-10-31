@@ -624,7 +624,12 @@ function animateWildlife(tRaw) {
     // don't pile up. Fades out with distance.
     if (c.label) {
       const d = camera.position.distanceTo(o.position);
-      if (d > 13) { c.label.visible = false; }
+      // V3.39: only the ones the open card is about, or the nearest few
+      // (25-cards.js, loaded after the loop starts, hence the guard).
+      if (d > 13 || (typeof labelWanted === 'function'
+                     && !labelWanted(o.userData.critterInfo, d))) {
+        c.label.visible = false;
+      }
       else {
         c.label.visible = true;
         const hh = 0.02 * Math.max(1.5, d);

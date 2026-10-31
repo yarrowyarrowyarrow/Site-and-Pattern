@@ -203,27 +203,7 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
     from src.citations import (                              # noqa: PLC0415
         format_sources, is_placeholder)
 
-    users = []
-    for r in sorted(edges, key=lambda r: (r.get("taxon") or "",
-                                          r.get("common_name") or "")):
-        rel = r.get("relationship") or ""
-        users.append({
-            "name": r.get("common_name") or "",
-            "scientific_name": r.get("scientific_name") or "",
-            "taxon": r.get("taxon") or "",
-            "taxon_label": _TAXON_LABEL.get(r.get("taxon"), ""),
-            "how": _REL_FROM_PLANT.get(rel, "used by"),
-            # A specialist has nowhere else to go — the single most important
-            # thing the card can tell you about an edge (P3).
-            "specialist": r.get("specificity") == "specialist",
-            # F12 (V2.53). Every one of these edges has carried a cited source
-            # since it was written, and the card dropped it here — so the most
-            # distinctive data in the app looked like it came from nowhere. The
-            # short form ("Acorn & Sheldon 2006") rides on the row; the full
-            # references go in `sources` below, once each.
-            "source": _short_source(r.get("source"), format_sources,
-                                    is_placeholder),
-        })
+    users = _users(edges, format_sources, is_placeholder)
 
     entry = {
         "kind": "plant",
@@ -251,11 +231,15 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "mature_canopy_m": plant.get("mature_canopy_m"),
         "years_to_maturity": plant.get("years_to_maturity"),
         "timeline": _timeline(plant, scene_year, plant_3d_state),
+        # What it is food for, in sentences (V3.39): the card's first lines.
+        "does": _does(users),
         "users": users,
         "only_source": sorted(only_source),
         "safety": _safety_notes(plant),
         "sourcing": _sourcing(plant),
-        "notes": plant.get("notes") or "",
+        # No free-text notes (V3.38): the plant page dropped them in V3.26
+        # (L8, P12), because about 43 seeded notes describe traditional plant
+        # use, and the card is shown in the Learn walk too now.
         "edible_parts": plant.get("edible_parts") or "",
         # The works behind the wildlife rows above, deduped and in full (F12).
         "sources": _source_block(edges),
@@ -264,6 +248,106 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
     if photo:
         entry["photo"] = photo
     return entry
+
+
+def _users(edges: list, format_sources, is_placeholder) -> list:
+    """One row per animal recorded with this plant. Until V3.39 a row per
+    record, so an animal at the nectar and the pollen of one plant was two
+    rows; the card now lists animals, each with every way it uses the plant.
+    Ordered to put first the animals a person can get to know: an English
+    name, then a specialist (it has nowhere else to go), then by group and
+    name. The viewer adds a photograph and being out now (25-cards.js)."""
+    from src.what_it_feeds import GROUPS, kind_words          # noqa: PLC0415
+    from src.yard_overview_items import english_name           # noqa: PLC0415
+    by: dict = {}
+    for r in edges:
+        name = r.get("common_name") or ""
+        if not name:
+            continue
+        u = by.setdefault(name, {
+            "name": name,
+            "scientific_name": r.get("scientific_name") or "",
+            "taxon": r.get("taxon") or "",
+            "taxon_label": _TAXON_LABEL.get(r.get("taxon"), ""),
+            "kinds": [], "specialist": False, "sources": [],
+            "english": bool(english_name(r)),
+        })
+        rel = r.get("relationship") or ""
+        if rel and rel not in u["kinds"]:
+            u["kinds"].append(rel)
+        # A specialist has nowhere else to go — the single most important
+        # thing the card can tell you about an edge (P3).
+        u["specialist"] = u["specialist"] or r.get("specificity") == "specialist"
+        # F12 (V2.53). Every one of these edges has carried a cited source
+        # since it was written; the short form ("Acorn & Sheldon 2006") rides
+        # on the row, the full references go in `sources`, once each.
+        cite = _short_source(r.get("source"), format_sources, is_placeholder)
+        if cite and cite not in u["sources"]:
+            u["sources"].append(cite)
+    order = [t for t, _one, _plural in GROUPS]
+    out = []
+    for u in by.values():
+        u["how"] = " and ".join(
+            _REL_FROM_PLANT.get(k, "used by").removesuffix(" for")
+            for k in u["kinds"]) + " for"
+        u["words"] = " and ".join(kind_words(k, u["taxon"]) for k in u["kinds"])
+        u["source"] = "; ".join(u.pop("sources"))
+        out.append(u)
+    out.sort(key=lambda u: (not u["english"], not u["specialist"],
+                            order.index(u["taxon"]) if u["taxon"] in order
+                            else len(order), u["name"].lower()))
+    return out
+
+
+#: The card's sentences, by the part of the plant an animal is recorded
+#: eating or using. "Recorded as food for", never "feeds" (V3.20, OV-5): the
+#: records say an animal was seen at it somewhere in two provinces.
+_DOES = (
+    ("flowers", "Its flowers are recorded as food for {}."),
+    ("leaves", "Its leaves are recorded as food for the caterpillars of {}."),
+    ("young", "It is recorded as a host for the young of {}."),
+    ("fruit", "Its fruit is recorded as food for {}."),
+    ("seed", "Its seeds are recorded as food for {}."),
+    ("nest", "It is recorded as a nest site for {}."),
+    ("cover", "It is recorded as cover for {}."),
+)
+
+
+def _part(kind: str, taxon: str) -> str:
+    """Which part of the plant a record is about. A bee's host record is its
+    flowers (GloBI's *hostOf*, ``what_it_feeds.kind_words``); a butterfly's or
+    moth's is its leaves."""
+    if kind in ("nectar", "pollen") or (kind == "larval_host"
+                                        and taxon == "bee"):
+        return "flowers"
+    if kind == "larval_host":
+        return "leaves" if taxon == "lepidoptera" else "young"
+    return {"fruit_food": "fruit", "seed_food": "seed", "nesting": "nest",
+            "cover": "cover"}.get(kind, "")
+
+
+def _does(users: list) -> list[str]:
+    """'Its flowers are recorded as food for 22 kinds: 18 bees, 4 butterflies
+    and moths.' One sentence per part, each animal counted once in it."""
+    from src.what_it_feeds import GROUPS, group_words          # noqa: PLC0415
+    counts: dict = {}
+    for u in users:
+        for part in {_part(k, u["taxon"]) for k in u["kinds"]} - {""}:
+            by = counts.setdefault(part, {})
+            by[u["taxon"]] = by.get(u["taxon"], 0) + 1
+    out = []
+    for part, sentence in _DOES:
+        by = counts.get(part)
+        if not by:
+            continue
+        groups = [group_words(t, by[t]) for t, _o, _p in GROUPS if by.get(t)]
+        groups += [group_words(t, n) for t, n in sorted(by.items())
+                   if t not in {g for g, _o, _p in GROUPS}]
+        total = sum(by.values())
+        words = groups[0] if len(groups) == 1 else (
+            f"{total} kinds: " + ", ".join(groups))
+        out.append(sentence.format(words))
+    return out
 
 
 def _short_source(source, format_sources, is_placeholder) -> str:
@@ -352,6 +436,22 @@ def _fruit_pair(plant: dict):
     return _bloom_months(plant.get("fruit_period"))
 
 
+#: The order an animal's uses of one plant are said in: what its young eat
+#: first, the plant it relies on (V3.39).
+_USE_ORDER = ("larval_host", "nectar", "pollen", "fruit_food", "seed_food",
+              "nesting", "cover")
+
+
+def _uses_words(kinds) -> str:
+    """'lays eggs on it and sips nectar at it': every way an animal uses one
+    plant, from the animal's side."""
+    ordered = sorted({k for k in kinds if k},
+                     key=lambda k: _USE_ORDER.index(k) if k in _USE_ORDER
+                     else len(_USE_ORDER))
+    return " and ".join(f"{_REL_FROM_ANIMAL.get(k, 'uses')} it"
+                        for k in ordered) or "uses it"
+
+
 def _fauna_entry(row: dict, uses: list, attrs: dict) -> dict:
     """One animal's card: who it is, how it lives, and which of YOUR plants it
     uses. ``uses`` are ``{plant, how}`` for the present design only."""
@@ -379,8 +479,10 @@ def _fauna_entry(row: dict, uses: list, attrs: dict) -> dict:
         if attrs.get("nectar_flower_genera") is None and attrs:
             facts.append("does not feed as an adult")
 
+    from src.yard_overview_items import english_name           # noqa: PLC0415
     entry = {
         "kind": "fauna",
+        "english": bool(english_name(row)),
         "name": row.get("common_name") or "",
         "scientific_name": row.get("scientific_name") or "",
         "taxon": taxon,
@@ -402,12 +504,24 @@ def build_dossier(scene: dict, *,
                   get_plant: Optional[Callable] = None,
                   fauna_edges: Optional[Callable] = None,
                   fauna_attrs: Optional[Callable] = None,
-                  plant_3d_state: Optional[Callable] = None) -> dict:
+                  plant_3d_state: Optional[Callable] = None,
+                  animal_plans: Optional[Callable] = None,
+                  plantable: tuple = (),
+                  province: str = "") -> dict:
     """Learning content for everything in ``scene``, ready to push to the viewer.
 
-    Returns ``{"plants": {plant_id: entry}, "fauna": {name: entry}}`` — keyed by
-    the identifiers the scene and the wildlife list already carry, so the viewer
-    can look an entry up from a click with nothing else in hand.
+    Returns ``{"plants": {plant_id: entry}, "fauna": {name: entry}, "reach":
+    {taxon: n}}`` — keyed by the identifiers the scene and the wildlife list
+    already carry, so the viewer can look an entry up from a click with nothing
+    else in hand. ``reach`` counts the animals the scene's plants are recorded
+    as food for, each once (``what_it_feeds.food_counts``' rule).
+
+    ``animal_plans`` (``what_it_feeds.animal_plans``; V3.39) adds to each
+    animal the catalogue's plants it uses that are not in the scene, native to
+    ``province`` when one is given, ``plantable`` ones (the walk's own) first
+    after food; each says whether it is ``plantable``. Opt-in: without it no
+    entry is looked up beyond the scene, which keeps this a pure function for
+    the tests.
 
     Every collaborator is injectable for tests; each is called **once for the
     whole design**, not once per plant, so a 119-plant yard costs one edge query
@@ -460,23 +574,95 @@ def build_dossier(scene: dict, *,
 
     # Fauna are keyed by common name: that is what the scene's wildlife records
     # carry (src/scene_wildlife.py), and it is what a click has to work from.
+    plans = {}
+    if animal_plans is not None and fauna_rows:
+        try:
+            plans = animal_plans(sorted(fauna_rows), pids, elsewhere=6,
+                                 prefer=tuple(plantable),
+                                 province=province) or {}
+        except Exception:                                    # noqa: BLE001
+            plans = {}
+    can_plant = {int(p) for p in plantable}
+    # Each animal's facts in two queries for the whole scene, not a connection
+    # per animal: a walk's cards cover 450 animals and are rebuilt on every
+    # edit, and the per-animal lookups were half the build (V3.41).
+    preloaded = (_attrs_for(fauna_rows) if fauna_attrs is None else {})
+    rels: dict = {}
+    for r in rows:
+        if r.get("id") is not None and r.get("plant_id") is not None:
+            rels.setdefault((r["id"], int(r["plant_id"])), []).append(
+                r.get("relationship") or "")
     fauna_entries = {}
     for fid, row in fauna_rows.items():
-        attrs = {}
         if fauna_attrs is not None:
             attrs = fauna_attrs(fid, row.get("taxon")) or {}
         else:
-            attrs = _default_attrs(fid, row.get("taxon"))
-        uses = [{"plant": names.get(pid, ""),
+            attrs = preloaded.get(fid, {})
+        uses = [{"plant": names.get(pid, ""), "plant_id": pid,
                  "how": _REL_FROM_ANIMAL.get(
-                     next((e.get("relationship") for e in by_plant.get(pid, [])
-                           if e.get("id") == fid), ""), "uses")}
+                     (rels.get((fid, pid)) or [""])[0], "uses"),
+                 "does": _uses_words(rels.get((fid, pid)) or [])}
                 for pid in sorted(supporters.get(fid, ()))]
         name = row.get("common_name") or ""
         if name:
-            fauna_entries[name] = _fauna_entry(row, uses, attrs)
+            entry = _fauna_entry(row, uses, attrs)
+            plan = plans.get(fid)
+            if plan:
+                entry["elsewhere"] = [
+                    {"plant_id": e["plant_id"], "name": e["name"],
+                     "does": _uses_words(e["kinds"]),
+                     "plantable": e["plant_id"] in can_plant}
+                    for e in plan.get("elsewhere") or []]
+                entry["elsewhere_total"] = plan.get("elsewhere_total", 0)
+            fauna_entries[name] = entry
 
-    return {"plants": plant_entries, "fauna": fauna_entries}
+    out = {"plants": plant_entries, "fauna": fauna_entries,
+           "reach": _reach(rows)}
+    if can_plant:
+        out["plantable"] = sorted(can_plant)
+    return out
+
+
+def _reach(rows: list) -> dict:
+    """``{taxon: n}``: the animals the scene's plants are recorded as food
+    for, each once; shelter alone does not count (V3.20, OV-5)."""
+    from src.what_it_feeds import FOOD_KINDS                   # noqa: PLC0415
+    taxon_of: dict = {}
+    for r in rows:
+        if (r.get("relationship") in FOOD_KINDS and r.get("id") is not None):
+            taxon_of[r["id"]] = r.get("taxon") or ""
+    out: dict = {}
+    for taxon in taxon_of.values():
+        out[taxon] = out.get(taxon, 0) + 1
+    return out
+
+
+def _attrs_for(fauna_rows: dict) -> dict:
+    """``{fauna_id: attribute row}`` for every bee and butterfly or moth among
+    ``fauna_rows`` (``{fauna_id: row}``), from the two narrow tables in one
+    connection. Best-effort: an empty dict when they cannot be read."""
+    tables = {"bee": "bee_attributes", "lepidoptera": "lepidoptera_attributes"}
+    out: dict = {}
+    try:
+        from src.db.plants import get_connection           # noqa: PLC0415
+        conn = get_connection()
+    except Exception:                                        # noqa: BLE001
+        return out
+    try:
+        for taxon, table in tables.items():
+            ids = sorted(fid for fid, r in fauna_rows.items()
+                         if r.get("taxon") == taxon)
+            if not ids:
+                continue
+            marks = ",".join("?" * len(ids))
+            for r in conn.execute(f"SELECT * FROM {table} "
+                                  f"WHERE fauna_id IN ({marks})", ids):
+                out[r["fauna_id"]] = dict(r)
+    except Exception:                                        # noqa: BLE001
+        pass
+    finally:
+        conn.close()
+    return out
 
 
 def _default_attrs(fauna_id: int, taxon: str) -> dict:

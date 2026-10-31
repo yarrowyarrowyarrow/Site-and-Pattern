@@ -596,10 +596,11 @@ class MainWindow(QMainWindow):
         # F44: the welcome shows once, so it needs a way back — both for
         # someone who dismissed it and for anyone looking for the example
         # design later.
-        # FN-11 (V3.31): the one-page guide, in the README.
+        # FN-11 (V3.31): the one-page guide; in a window of its own since
+        # V3.38 (F253), not the README on GitHub.
         act_guide = help_menu.addAction("&How to Plan Your Yard")
         act_guide.setStatusTip("Five steps from your address to a printed "
-                               "plan, in your browser")
+                               "plan")
         act_guide.triggered.connect(lambda: feedback_flow.open_guide(self))
 
         act_welcome = help_menu.addAction("&Start Screen…")

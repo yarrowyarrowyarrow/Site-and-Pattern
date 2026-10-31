@@ -1,37 +1,40 @@
 """
-start_screen.py — the page the app opens on: "Your designs" (V2.41; rebuilt
-V3.23, ST-4).
+start_screen.py — the page the app opens on (V2.41; rebuilt V3.23, ST-4; in
+two columns V3.42, F259).
 
 Design principle P13 — see docs/DESIGN_PHILOSOPHY.md.
 UI conventions: docs/UI_PRINCIPLES.md (Krug).
 
-The owner, with a screenshot of the V3.17 screen: *"This feels unfinished,
-unpolished, unprofessional. Continue, Open a design, and Design all are very
-similar."* Three doors and two resume rows said the same thing five ways. The
-rebuild is docs/homeowner/04-start-screen.md's Option B (the owner's S12): one
-way to start a yard, then the person's own designs as named things, newest
-first, with the newest the obvious row. The Learn door stays, as one quiet
-link below the yard rows (S1). At the bottom, one line of what is flowering
-around Edmonton this month (the owner, V3.23): a reason to go outside and look
-(P11), not a control.
+Two columns, the owner's choice from sketches (docs/plans/V3.42-the-start-
+screen-in-two-columns.md): **Your yards** (*Plan a new yard*, the designs
+newest first, each with Rename and Delete) and **Learn** (the example yard,
+the walk, the lessons, the quizzes). V3.42 retired the Learn menu and the line
+of what is in flower.
 
-**Exactly one row is primary**, the dialog's default button with the focus,
-so Enter does the obvious thing: unsaved work to restore, else the newest
-design, else *Plan a new yard*. No emoji: the V3.17 icons read as a toy.
+**Exactly one row is filled, and it is the default button** (Enter): unsaved
+work to restore, else *Plan a new yard*. The owner's H3 outlines the other
+two doors, the design worked on last and the Learn card. No emoji.
 
-Presentation only: no project, no database. It returns a choice, and
-:mod:`src.start_flow` / :mod:`src.onboarding_flow` act on it.
+A block of fixed width, centred, so a bigger window shows more ground around
+the same screen. Presentation only: it returns a choice for
+:mod:`src.start_flow` / :mod:`src.onboarding_flow`; its parts are
+:mod:`src.start_rows`.
 """
 
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QFrame, QHBoxLayout, QLabel, QPushButton,
+    QCheckBox, QDialog, QGridLayout, QHBoxLayout, QLabel, QSizePolicy,
     QVBoxLayout, QWidget,
 )
 
+from src import app_mode
 from src.branding import APP_NAME, APP_TAGLINE
+from src.start_rows import (
+    AMBER, FILLED, HEAD, LINK_COLUMN, OUTLINED, PLAIN, QUIET, LearnCard, Row,
+    clear_layout, column_gap, heading, link, quiet, retab, rule,
+)
 from src.ui_style import BASE_SURFACE
 
 #: Values returned by :meth:`StartScreen.choice`.
@@ -41,9 +44,10 @@ EXAMPLE = "example"
 OPEN_PATH = "open_path"        # one of the listed designs: chosen_path()
 ALL_DESIGNS = "all_designs"    # the saves list (SavesDialog)
 OPEN_FILE = "open_file"        # the system's file dialog
-LEARN = "learn"
-#: Still dispatched: the Learn menu's Walk a wild landscape returns it.
-REFERENCE = "reference"
+#: The Learn card's doors that open a window of their own (src.app_mode).
+REFERENCE = app_mode.WALK
+LESSONS = app_mode.LESSONS
+QUIZZES = app_mode.QUIZZES
 #: Help › Check for Updates is where updating lives now; the key stays so a
 #: caller that asks for it still works.
 UPDATE = "update"
@@ -55,28 +59,13 @@ CONTINUE = "continue"
 SHOWN = 3
 NAME_CHARS = 40
 RECOVER_CHARS = 32
+#: The block the screen is drawn in, and its Learn column, in pixels.
+BODY_WIDTH = 900
+LEARN_WIDTH = 310
+ICON = 80
 
-#: Rows: a dark ground; the primary green with white words (5.13 : 1); the
-#: restore row amber when it is the primary, because it is the one with a
-#: deadline.
-_ROW = ("QPushButton {{ text-align: left; padding: 6px 14px; "
-        "background: {bg}; border: 1px solid {border}; border-radius: 6px; }}"
-        "QPushButton:hover {{ background: {hover}; border-color: #a5d6a7; }}"
-        "QPushButton:focus {{ border: 2px solid #e8f5e9; }}")
-_PLAIN = dict(bg="#1c2c1c", border="#39543a", hover="#2b4526",
-              head="#e8f5e9", note="#a5c4a7")
-_PRIMARY = dict(bg="#2e7d32", border="#66bb6a", hover="#276b2b",
-                head="#ffffff", note="#ffffff")
-_AMBER = dict(bg="#7a4f00", border="#ffb74d", hover="#8d5c00",
-              head="#ffffff", note="#ffffff")
-
-#: Secondary actions look like links, because they are ones.
-_LINK = (
-    "QPushButton { background: transparent; border: none; color: #8fc98f; "
-    "font-size: 13px; text-align: left; padding: 2px 0; "
-    "text-decoration: underline; }"
-    "QPushButton:hover { color: #d7f0d7; }"
-)
+_NUMBERS = ("", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+            "Eight", "Nine", "Ten", "Eleven", "Twelve")
 
 
 def _home_short() -> str:
@@ -90,61 +79,34 @@ def cut(text: str, chars: int) -> str:
     return text if len(text) <= chars else text[:chars - 1].rstrip() + "…"
 
 
-def _clear(layout) -> None:
-    """Empty ``layout``, nested layouts and their widgets included."""
-    while layout.count():
-        item = layout.takeAt(0)
-        if item.widget() is not None:
-            item.widget().hide()
-            item.widget().deleteLater()
-        elif item.layout() is not None:
-            _clear(item.layout())
+def walk_note(places: int) -> str:
+    """The walk's line: how many wild places there are, counted."""
+    if places <= 0:
+        return "Native places, in 3D"
+    word = _NUMBERS[places] if places < len(_NUMBERS) else str(places)
+    return f"{word} native place{'s' if places != 1 else ''}, in 3D"
 
 
-def _retab(layout) -> None:
-    """Tab in the order drawn: a widget made after its window was built
-    joins the end of the window's tab chain."""
-    def walk(lay):
-        for item in (lay.itemAt(i) for i in range(lay.count())):
-            w = item.widget()
-            if w is None and item.layout() is not None:
-                yield from walk(item.layout())
-            elif w is not None and not w.isHidden() and (
-                    w.focusPolicy() & Qt.FocusPolicy.TabFocus):
-                yield w
-    chain = list(walk(layout))
-    for a, b in zip(chain, chain[1:]):
-        QWidget.setTabOrder(a, b)
-
-
-class _Row(QPushButton):
-    """One choice: what it is, and one fact about it, in two columns."""
-
-    def __init__(self, title: str, note: str, colours: dict,
-                 parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumHeight(46)
-        self.setStyleSheet(_ROW.format(**colours))
-        self.primary = colours is not _PLAIN
-        row = QHBoxLayout(self)
-        row.setContentsMargins(10, 0, 10, 0)
-        row.setSpacing(12)
-        head = QLabel(title)
-        head.setStyleSheet(f"color: {colours['head']}; font-size: 15px; "
-                           "font-weight: bold; background: transparent;")
-        row.addWidget(head)
-        row.addStretch()
-        note_label = QLabel(note)
-        note_label.setStyleSheet(f"color: {colours['note']}; font-size: 13px; "
-                                 "background: transparent;")
-        note_label.setAlignment(Qt.AlignmentFlag.AlignRight
-                                | Qt.AlignmentFlag.AlignVCenter)
-        row.addWidget(note_label)
-        # The words are child labels, so a screen reader would hear only
-        # "button" (V2.98 review, finding 17).
-        self.setAccessibleName(title)
-        self.setAccessibleDescription(note)
+def learn_rows(places: int = 0) -> tuple:
+    """The Learn card, in order: ``(key, title, line, tooltip)``. Every line
+    starts with a capital (the owner, V3.42). The lessons' and the quizzes'
+    tooltips are read from the lessons and the quiz topics, which own them."""
+    try:
+        from src.lessons import LESSONS as taught
+        from src.quiz_topics import GROUPS
+        lessons = " · ".join(t for _k, t, _s in taught)
+        quizzes = " · ".join(t for _k, t, _o in GROUPS)
+    except Exception:                                      # noqa: BLE001
+        lessons = quizzes = ""
+    return (
+        (EXAMPLE, "Look at an example yard", "A finished front yard",
+         f"A front-yard lawn conversion in central {_home_short()}. Opens "
+         "as a copy you can change."),
+        (REFERENCE, "Walk a wild landscape", walk_note(places),
+         "Walk into a wild place, plant in it and pull plants out."),
+        (LESSONS, "Lessons", "Native plants and design", lessons),
+        (QUIZZES, "Quizzes", "Plants, animals and seasons", quizzes),
+    )
 
 
 class StartScreen(QDialog):
@@ -153,137 +115,160 @@ class StartScreen(QDialog):
     ``chosen_path()`` is the design.
 
     ``designs`` are :func:`src.start_flow.screen_designs` rows (``path``,
-    ``name``, ``when``, ``summary``, ``place``, ``error``), newest first;
-    ``total`` is how many there are in all. ``flowering`` is the line of what
-    is in flower, ``""`` for none.
+    ``name``, ``when``, ``line``, ``summary``, ``place``, ``error``,
+    ``deletable``), newest first; ``total`` is how many there are in all.
+    ``places`` is how many wild places there are to walk.
 
-    With ``rename(screen, path)``, each design has a Rename beside it (V3.37,
-    the owner); it returns ``(designs, total)`` afresh, or ``None``, and the
-    screen stays open and redraws its list."""
+    With ``rename(screen, path)`` each design has a Rename beside it (V3.37),
+    and with ``delete(screen, path)`` a Delete under that where the design
+    is ``deletable`` (V3.42); each returns ``(designs, total)`` afresh, or
+    ``None``, and the screen stays open and redraws its list."""
 
     def __init__(self, parent: QWidget | None = None, *,
                  recover: str = "", designs=(), total: int = 0,
                  show_skip: bool = False, hidden: bool = False,
-                 version: str = "", flowering: str = "",
-                 flowering_tip: str = "", rename=None):
+                 version: str = "", places: int = 0, rename=None,
+                 delete=None):
         super().__init__(parent)
         self.setWindowTitle(f"{APP_NAME} {version}" if version else APP_NAME)
-        self.setMinimumWidth(600 if rename else 560)
         self._choice = ""
         self._path = ""
-        self._primary: _Row | None = None
+        self._primary: Row | None = None
         self._recover = bool(recover)
         self._rename = rename
+        self._delete = delete
         # Carried, not inherited: this opens before the MainWindow exists.
         self.setStyleSheet(BASE_SURFACE)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 16)
-        layout.setSpacing(9)
+        outer = QGridLayout(self)
+        outer.setContentsMargins(28, 24, 28, 18)
+        outer.setRowStretch(0, 1)
+        outer.setRowStretch(2, 2)               # a little above the middle
+        outer.setColumnStretch(0, 1)
+        outer.setColumnStretch(2, 1)
+        body = QWidget(self)
+        body.setFixedWidth(BODY_WIDTH)
+        body.setSizePolicy(QSizePolicy.Policy.Fixed,
+                           QSizePolicy.Policy.Maximum)
+        outer.addWidget(body, 1, 1)
+        self._body = layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
         layout.addLayout(self._masthead())
-        layout.addSpacing(4)
-
-        # ── Start ───────────────────────────────────────────────────────────
+        layout.addSpacing(6)
         if recover:
             row = self._add_row(layout, RECOVER, "Restore unsaved changes",
-                                cut(recover, RECOVER_CHARS), primary="amber")
+                                AMBER, note=cut(recover, RECOVER_CHARS))
             row.setToolTip(f"{APP_NAME} closed before these changes were saved.")
-        primary_new = not recover and not designs
-        self._add_row(layout, NEW_YARD, "Plan a new yard",
-                      "start from your address",
-                      primary="green" if primary_new else "")
-        quiet = QHBoxLayout()
-        quiet.setSpacing(18)
-        quiet.addWidget(self._link(
-            EXAMPLE, "Look at an example yard",
-            f"A front-yard lawn conversion in central {_home_short()}. Opens as a "
-            "copy you can change."))
-        quiet.addWidget(self._link(
-            LEARN, "Learn about native plants",
-            "Walk a wild landscape, or take the lessons and field study."))
-        quiet.addStretch()
-        layout.addLayout(quiet)
-        layout.addWidget(self._rule())
 
-        # ── Your designs ────────────────────────────────────────────────────
-        heading = QLabel("Your designs")
-        heading.setStyleSheet("color: #e8f5e9; font-size: 15px; "
-                              "font-weight: bold;")
-        layout.addWidget(heading)
-        self._designs = QVBoxLayout()
-        self._designs.setSpacing(9)
-        layout.addLayout(self._designs)
-        self._show_designs(designs, total)
-        layout.addWidget(self._rule())
+        columns = QHBoxLayout()
+        columns.setSpacing(36)
+        columns.addLayout(self._yards(), 1)
+        columns.addWidget(self._learn(places), 0, Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(columns)
 
-        # ── Foot ────────────────────────────────────────────────────────────
-        tail = QHBoxLayout()
+        self._rule = rule()
         self._dont_show = QCheckBox("Next time, open my last design directly")
         self._dont_show.setChecked(bool(hidden))
         self._dont_show.setToolTip("You can always reopen this from Help.")
-        self._dont_show.setStyleSheet("color: #a5c4a7; font-size: 13px;")
-        self._dont_show.setVisible(bool(show_skip))
-        tail.addWidget(self._dont_show)
-        tail.addStretch()
-        tail.addWidget(self._link(
-            OPEN_FILE, "Open a file…",
-            "Open a design saved somewhere else on this computer."))
-        layout.addLayout(tail)
-        if flowering:
-            line = QLabel(flowering)
-            line.setWordWrap(True)
-            line.setStyleSheet("color: #a5c4a7; font-size: 13px;")
-            if flowering_tip:
-                line.setToolTip(flowering_tip)
-            layout.addWidget(line)
+        self._dont_show.setStyleSheet(f"color: {QUIET}; font-size: 13px;")
+        for w in (self._rule, self._dont_show):
+            layout.addWidget(w)
+            w.setVisible(bool(show_skip))
+        self._show_designs(designs, total)
 
         if self._primary is not None:
             self._primary.setDefault(True)
             self._primary.setFocus()
 
-    # ── Your designs ────────────────────────────────────────────────────────
+    # ── Your yards ──────────────────────────────────────────────────────────
 
-    def _show_designs(self, designs, total, focus_path: str = "") -> None:
-        """Fill (or refill, after a rename) the list of designs: up to
-        :data:`SHOWN` rows, each with its Rename, and "All N designs…"."""
-        _clear(self._designs)
+    def _yards(self) -> QVBoxLayout:
+        col = QVBoxLayout()
+        col.setSpacing(10)
+        col.addWidget(heading("Your yards"))
+        line = QHBoxLayout()
+        line.setSpacing(12)
+        self._add_row(line, NEW_YARD, "Plan a new yard",
+                      OUTLINED if self._recover else FILLED, plus=True,
+                      described="Start a design for a new yard, from its "
+                                "address.", stretch=1)
+        line.addWidget(column_gap())
+        col.addLayout(line)
+        self._designs = QVBoxLayout()
+        self._designs.setSpacing(10)
+        col.addLayout(self._designs)
+        col.addStretch()
+        return col
+
+    def _show_designs(self, designs, total, *, refill: bool = False,
+                      focus_path: str = "") -> None:
+        """Fill (or refill, after a rename or a delete) the list of designs:
+        up to :data:`SHOWN` rows, the last one worked on outlined, each with
+        its Rename and Delete, then "All N designs…" and "Open a file…"."""
+        clear_layout(self._designs)
         designs = list(designs)[:SHOWN]
         total = max(int(total or 0), len(designs))
         if not designs:
-            empty = QLabel("Designs you save will be listed here.")
-            empty.setStyleSheet("color: #a5c4a7;")
-            self._designs.addWidget(empty)
+            self._designs.addWidget(
+                quiet("Designs you save will be listed here."))
         focus = None
         for i, d in enumerate(designs):
             name, path = d.get("name", ""), d.get("path", "")
-            note = "can't be opened" if d.get("error") else d.get("when", "")
             line = QHBoxLayout()
-            line.setSpacing(10)
+            line.setSpacing(12)
             row = self._add_row(
-                line, OPEN_PATH, cut(name, NAME_CHARS), note,
-                primary="green" if (i == 0 and not self._recover) else "",
-                path=path, stretch=1)
+                line, OPEN_PATH, cut(name, NAME_CHARS),
+                OUTLINED if i == 0 else PLAIN, note=d.get("line", ""),
+                fact=d.get("when", ""), path=path, stretch=1)
             tip = "\n".join(t for t in (name, d.get("summary", ""),
                                         d.get("place", "")) if t)
             if tip:
                 row.setToolTip(tip)
-            if self._rename is not None and not d.get("error"):
-                btn = self._link("", "Rename", "Give this design a new name.")
-                btn.clicked.connect(
-                    lambda _c=False, p=path: self._rename_design(p))
-                btn.setAccessibleName(f"Rename {name}")
-                line.addWidget(btn)
+            line.addWidget(self._actions(d))
             self._designs.addLayout(line)
             if path and path == focus_path:
                 focus = row
+        links = QHBoxLayout()
+        links.setSpacing(18)
         if total > len(designs):
-            self._designs.addWidget(
-                self._link(ALL_DESIGNS, f"All {total} designs…"))
-        if focus_path:                      # a refill: the rows are new
-            _retab(self.layout())
+            links.addWidget(self._choice_link(ALL_DESIGNS,
+                                              f"All {total} designs…"))
+        links.addWidget(self._choice_link(
+            OPEN_FILE, "Open a file…",
+            "Open a design saved somewhere else on this computer."))
+        links.addStretch()
+        self._designs.addLayout(links)
+        if refill:                          # the rows are new
+            retab(self._body)
             if self._primary is not None:
                 self._primary.setDefault(True)
             (focus or self._primary or self).setFocus()
+
+    def _actions(self, d: dict) -> QWidget:
+        """Rename, and Delete under it (the owner, V3.42), in a column of
+        their own so every row's right edge lines up."""
+        box = QWidget()
+        box.setFixedWidth(LINK_COLUMN)
+        lay = QVBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(2)
+        lay.addStretch()
+        name, path = d.get("name", ""), d.get("path", "")
+        if self._rename is not None and not d.get("error"):
+            btn = link(self, "Rename", "Give this design a new name.")
+            btn.clicked.connect(lambda _c=False, p=path: self._rename_design(p))
+            btn.setAccessibleName(f"Rename {name}")
+            lay.addWidget(btn)
+        if self._delete is not None and d.get("deletable"):
+            from src.plain_messages import bin_name
+            btn = link(self, "Delete", f"Move this design to the {bin_name()}.",
+                       deleting=True)
+            btn.clicked.connect(lambda _c=False, p=path: self._delete_design(p))
+            btn.setAccessibleName(f"Delete {name}")
+            lay.addWidget(btn)
+        lay.addStretch()
+        return box
 
     def _rename_design(self, path: str) -> None:
         fresh = self._rename(self, path) if self._rename else None
@@ -291,64 +276,72 @@ class StartScreen(QDialog):
             # Written afresh, the renamed design is the newest: the first row.
             designs, total = fresh
             first = designs[0].get("path", "") if designs else ""
-            self._show_designs(designs, total, focus_path=first or path)
+            self._show_designs(designs, total, refill=True,
+                               focus_path=first or path)
+
+    def _delete_design(self, path: str) -> None:
+        fresh = self._delete(self, path) if self._delete else None
+        if fresh:
+            self._show_designs(*fresh, refill=True)
+
+    # ── Learn ───────────────────────────────────────────────────────────────
+
+    def _learn(self, places: int) -> QWidget:
+        box = QWidget(self)
+        box.setFixedWidth(LEARN_WIDTH)
+        col = QVBoxLayout(box)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(10)
+        col.addWidget(heading("Learn"))
+        card = LearnCard(box)
+        for key, title, line, tip in learn_rows(places):
+            row = card.add(title, line, tip)
+            row.clicked.connect(lambda _c=False, k=key: self._pick(k))
+        col.addWidget(card)
+        col.addStretch()
+        return box
 
     # ── Construction helpers ────────────────────────────────────────────────
 
     def _masthead(self) -> QHBoxLayout:
         top = QHBoxLayout()
-        top.setSpacing(12)
+        top.setSpacing(16)
         try:
             from src import app_icon
             mark = QLabel()
-            mark.setPixmap(app_icon.icon().pixmap(48, 48))
-            mark.setFixedSize(48, 48)
+            mark.setPixmap(app_icon.icon().pixmap(ICON, ICON))
+            mark.setFixedSize(ICON, ICON)
             top.addWidget(mark)
         except Exception:                                  # noqa: BLE001
             pass                    # a missing icon must not stop the screen
         words = QVBoxLayout()
-        words.setSpacing(0)
+        words.setSpacing(2)
+        words.addStretch()
         name = QLabel(APP_NAME)
-        name.setStyleSheet("color: #e8f5e9; font-size: 24px; font-weight: bold;")
+        name.setStyleSheet(f"color: {HEAD}; font-size: 30px; font-weight: bold;")
         words.addWidget(name)
         tagline = QLabel(APP_TAGLINE)
-        tagline.setStyleSheet("color: #a5c4a7; font-size: 13px;")
+        tagline.setStyleSheet(f"color: {QUIET}; font-size: 15px;")
         words.addWidget(tagline)
+        words.addStretch()
         top.addLayout(words)
         top.addStretch()
         return top
 
-    def _add_row(self, layout, key, title, note, *, primary="", path="",
-                 stretch=0):
-        colours = {"green": _PRIMARY, "amber": _AMBER}.get(primary, _PLAIN)
-        row = _Row(title, note, colours, self)
+    def _add_row(self, layout, key, title, colours, *, note="", fact="",
+                 plus=False, described="", path="", stretch=0) -> Row:
+        row = Row(title, colours, note=note, fact=fact, plus=plus,
+                  described=described, parent=self)
         row.clicked.connect(lambda _c=False, k=key, p=path: self._pick(k, p))
         layout.addWidget(row, stretch)
-        if primary:
+        if row.primary:
             self._primary = row
         return row
 
-    def _link(self, key: str, text: str, tooltip: str = "") -> QPushButton:
-        """A link-like button; it picks ``key`` when there is one."""
-        btn = QPushButton(text, self)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setFlat(True)
-        btn.setAutoDefault(False)
-        btn.setStyleSheet(_LINK)
-        if tooltip:
-            btn.setToolTip(tooltip)
-        if key:
-            btn.clicked.connect(lambda _c=False, k=key: self._pick(k))
+    def _choice_link(self, key: str, text: str, tooltip: str = ""):
+        btn = link(self, text, tooltip)
+        btn.clicked.connect(lambda _c=False, k=key: self._pick(k))
         return btn
-
-    @staticmethod
-    def _rule() -> QFrame:
-        """A hairline that draws: ``QFrame.HLine`` ignores a stylesheet
-        ``color:``, so a 1 px frame with a background does what is meant."""
-        line = QFrame()
-        line.setFixedHeight(1)
-        line.setStyleSheet("background-color: #2f4a30; border: none;")
-        return line
 
     # ── Result ──────────────────────────────────────────────────────────────
 

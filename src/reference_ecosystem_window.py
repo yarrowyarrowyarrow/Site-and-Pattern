@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
 from src.map3d_widget import Map3DWidget
 from src import reference_edit_flow as edit_flow
 from src import scene3d_edit_flow
+from src import walk_cards
 from src.scene3d_toolbar import Scene3DToolBar
 from src.branding import APP_NAME
 
@@ -228,6 +229,9 @@ class ReferenceEcosystemWindow(QWidget):
             lambda kind, key: edit_flow.on_inspected(self, kind, key))
         bridge.species_caught.connect(
             lambda name: edit_flow.on_caught(self, name))
+        # V3.39: *Plant one* on an animal's card (src/walk_cards.py).
+        bridge.plant_chosen.connect(
+            lambda pid: walk_cards.on_plant_chosen(self, pid))
         # V2.46: the net is held now, and a held net has a reach — a miss has
         # to say so or the click looks broken.
         bridge.out_of_reach.connect(
@@ -261,8 +265,9 @@ class ReferenceEcosystemWindow(QWidget):
             self._palette = []
         self._species.clear()
         for item in self._palette:
-            self._species.addItem(
-                f"{item['common_name']}  ·  {item['layer']}", item)
+            # The glossary's words, not the layer keys (WD-1, V3.39).
+            kind = _KIND_WORDS.get(item["layer"], item["layer"])
+            self._species.addItem(f"{item['common_name']}  ·  {kind}", item)
 
         try:
             from src.db import progress
@@ -275,8 +280,9 @@ class ReferenceEcosystemWindow(QWidget):
     def _render(self):
         """Rebuild the Scene JSON from the current project and push it.
 
-        A full rebuild per edit. At ~35 plants that is a brief hitch and it is
-        bought deliberately: the alternative is an incremental scene patch,
+        A full rebuild per edit. At 60 to 130 plants (V3.39) that is a brief
+        hitch, under a tenth of a second in Python, and it is bought
+        deliberately: the alternative is an incremental scene patch,
         which would be a second definition of how a project becomes geometry
         and would drift from ``scene_contract.build_scene`` within a release.
         """
@@ -301,6 +307,9 @@ class ReferenceEcosystemWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # The cards a click opens (V3.38, F255): until now only the 3D
+        # preview sent them, so "left-click a plant" did nothing here.
+        walk_cards.push(self, scene)
         # The magnification lives in the viewer and resets to life size on a
         # fresh page, so a remembered choice has to be re-pushed (V2.46).
         # Follow the toolbar rather than forcing walk mode on. Before V2.44
@@ -362,6 +371,11 @@ class ReferenceEcosystemWindow(QWidget):
         return data if isinstance(data, dict) else None
 
     # ── Edits ───────────────────────────────────────────────────────────────
+
+
+#: What the planting list calls each layer: the glossary's words.
+_KIND_WORDS = {"canopy": "tree", "shrub": "shrub", "forb": "wildflower",
+               "grass": "grass"}
 
 
 def _project_center(project: dict) -> Optional[tuple]:

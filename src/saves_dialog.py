@@ -21,12 +21,10 @@ panels and the title bar drift out of step.
 
 from __future__ import annotations
 
-import os
-
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QMessageBox, QAbstractItemView,
+    QPushButton, QAbstractItemView,
 )
 
 from src import saves
@@ -158,11 +156,16 @@ class SavesDialog(QDialog):
         self._btn_open.setEnabled(has)
         self._btn_rename.setEnabled(has)
         # A file kept outside the saves folder is the person's to delete
-        # where they keep it, not from here.
-        self._btn_delete.setEnabled(has and not elsewhere)
+        # where they keep it, not from here; nor is the design open in the
+        # window (V3.42, one rule with the start screen: saves.deletable).
+        from src.start_flow import open_design_path
+        path = self._current_path()
+        is_open = has and not saves.deletable({"path": path},
+                                              open_design_path(self.parent()))
+        self._btn_delete.setEnabled(has and not elsewhere and not is_open)
         self._btn_delete.setToolTip(
             "This design is kept outside your saves folder." if elsewhere
-            else "")
+            else "This design is open." if is_open else "")
 
     # ── Actions ─────────────────────────────────────────────────────────────
 
@@ -195,24 +198,12 @@ class SavesDialog(QDialog):
                 break
 
     def _delete(self):
+        """To the Recycle Bin with its backup, after a question naming the
+        design (V3.42; it deleted for good before, and named the file)."""
+        from src import start_flow
         path = self._current_path()
-        if not path:
-            return
-        name = os.path.basename(path)
-        r = QMessageBox.question(
-            self, "Delete design",
-            f"Delete “{name}”?\n\nThis removes the file from your saves "
-            f"folder. A one-save-old copy stays as “{name}.bak”.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
-        if r != QMessageBox.StandardButton.Yes:
-            return
-        try:
-            os.unlink(path)
-        except OSError as exc:
-            QMessageBox.warning(self, "Could not delete", str(exc))
-            return
-        saves.clear_cache()
-        self.refresh()
+        if path and start_flow.delete_design(self, path):
+            self.refresh()
 
     def chosen(self) -> str:
         return self._chosen

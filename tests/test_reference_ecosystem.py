@@ -31,15 +31,22 @@ from src.reference_ecosystem import (  # noqa: E402
 from src.project_store import plant_record_from_feature  # noqa: E402
 
 
+_GENUS_IDS: dict = {}
+
+
 def _fake_resolver(genera):
     """Return one fake row per requested genus, typed by a lookup so layer
-    filtering has something to bite on."""
+    filtering has something to bite on. One id per genus, as the catalogue
+    has one id per species: until V3.39 the ids restarted at 1000 in every
+    call, so two layers' genera shared ids, which the builder now rightly
+    reads as one species and plants in one layer only."""
     types = {"Populus": "tree", "Picea": "tree", "Betula": "tree",
              "Rosa": "shrub", "Salix": "shrub", "Amelanchier": "shrub",
              "Solidago": "wildflower", "Carex": "grass", "Festuca": "grass"}
     out = []
-    for i, g in enumerate(genera):
-        out.append({"id": 1000 + i, "common_name": f"{g} sp",
+    for g in genera:
+        gid = _GENUS_IDS.setdefault(g, 1000 + len(_GENUS_IDS))
+        out.append({"id": gid, "common_name": f"{g} sp",
                     "scientific_name": f"{g} test",
                     "plant_type": types.get(g, "wildflower")})
     return out

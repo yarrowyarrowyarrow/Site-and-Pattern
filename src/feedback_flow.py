@@ -10,23 +10,16 @@ Qt is imported lazily so the module stays importable headless.
 
 from __future__ import annotations
 
-#: Help › How to Plan Your Yard (FN-11, V3.31): the one-page guide, which
-#: lives in the README (no website for now, decision G5). The anchor is
-#: GitHub's for the heading "Your first yard, in five steps".
-GUIDE_URL = ("https://github.com/yarrowyarrowyarrow/Site-and-Pattern"
-             "#your-first-yard-in-five-steps")
-
-
 def open_guide(main) -> None:
-    """Open the guide in the browser; say so in the status bar."""
+    """Help › How to Plan Your Yard: the guide, in a window of its own (F253,
+    V3.38). Until V3.38 it opened the README on GitHub's default branch,
+    which had no guide; :mod:`src.guide` says why it moved."""
     try:
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QDesktopServices
-        QDesktopServices.openUrl(QUrl(GUIDE_URL))
-        main.statusBar().showMessage(
-            "Opened the guide in your browser.", 4000)
+        from src.guide_window import open_guide as show
+        show(main)
     except Exception:                               # noqa: BLE001
-        pass
+        from src import slot_errors
+        slot_errors.report("The guide")
 
 
 def _app_version(main) -> str:

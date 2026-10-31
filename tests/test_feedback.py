@@ -203,19 +203,21 @@ class TestHelpMenuWiring(unittest.TestCase):
         self.assertIn("Send &Feedback…", src)
         self.assertIn("feedback_flow.send_feedback", src)
 
-    def test_help_opens_the_guide_in_the_readme(self):
-        """FN-11: Help › How to Plan Your Yard opens the README's guide; the
-        anchor is GitHub's slug of the guide's heading."""
+    def test_help_opens_the_guide_inside_the_app(self):
+        """FN-11, F253 (V3.38): Help › How to Plan Your Yard opens the guide
+        in a window, not the README on GitHub (whose default branch had no
+        guide). The README keeps its section for GitHub's front page;
+        tests/test_guide.py holds the two to the same five steps."""
         import pathlib
-        import re
         from src import feedback_flow
         root = pathlib.Path(__file__).resolve().parent.parent
         self.assertIn("feedback_flow.open_guide",
                       (root / "src" / "app.py").read_text(encoding="utf-8"))
+        flow = (root / "src" / "feedback_flow.py").read_text(encoding="utf-8")
+        self.assertNotIn("GUIDE_URL", flow)
+        self.assertIn("guide_window", flow)
+        self.assertFalse(hasattr(feedback_flow, "GUIDE_URL"))
         readme = (root / "README.md").read_text(encoding="utf-8")
-        heading = re.search(r"^### (Your first yard.*)$", readme, re.M).group(1)
-        slug = re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
-        self.assertTrue(feedback_flow.GUIDE_URL.endswith("#" + slug))
         for words in ("More info", "Run anyway", "Open Anyway",
                       "not an identification guide",
                       "What leaves your computer", "Send Feedback"):

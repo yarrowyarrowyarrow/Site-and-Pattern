@@ -37,6 +37,27 @@ REQUIRED = ("schema", "key", "name", "short", "province", "area",
             "nurseries", "nursery_note", "example", "defaults")
 OPTIONAL = ("communities", "overview", "elevation")
 SCHEMA = 1
+
+#: The worked example's fields (V3.24, ED-1; richer since V3.38, F254, written
+#: by ``scripts/make_example.py`` from a design the owner made). Everything is
+#: metres from the plot's south-west corner, and plants are names, never ids.
+#: Unknown fields are refused here as at the top.
+EXAMPLE_REQUIRED = ("centre", "name", "width_m", "depth_m", "planting")
+EXAMPLE_OPTIONAL = ("own_place", "outline", "features", "notes")
+#: What the example may draw besides plants, and the properties each kind may
+#: carry: a polygon kind has a ``ring``, a point kind an ``at``.
+EXAMPLE_POLYGONS = {
+    "custom_shape": ("label", "shape_type", "fill_color", "stroke_color",
+                     "fill_opacity", "dash_array"),
+    "canopy_footprint": ("label", "shape_type", "fill_color", "stroke_color",
+                         "fill_opacity", "dash_array", "height_m",
+                         "cast_shade", "caster_kind", "tree_foliage"),
+}
+EXAMPLE_POINTS = {
+    "existing_tree": ("label", "height_m", "canopy_radius_m", "tree_foliage"),
+    "existing_building": ("label", "height_m", "canopy_radius_m"),
+    "structure": ("struct_id", "name", "size_m"),
+}
 _KEY = re.compile(r"^[a-z_]+$")
 
 #: Kinds of :class:`Coverage`.
@@ -114,6 +135,41 @@ def validate(doc: Mapping, folder_key: str) -> list[str]:
         if not re.match(r"^\d\d-\d\d$",
                         str((doc.get("climate") or {}).get(k) or "")):
             errs.append(f"climate.{k} must be MM-DD")
+    if "example" in doc:
+        errs.extend(example_errors(doc["example"]))
+    return errs
+
+
+def example_errors(example) -> list[str]:
+    """What is wrong with a pack's ``example``, as sentences."""
+    if not isinstance(example, Mapping):
+        return ["example must be an object"]
+    errs = []
+    missing = [k for k in EXAMPLE_REQUIRED if k not in example]
+    unknown = sorted(set(example) - set(EXAMPLE_REQUIRED)
+                     - set(EXAMPLE_OPTIONAL))
+    if missing:
+        errs.append(f"example is missing {', '.join(missing)}")
+    if unknown:
+        errs.append(f"example has unknown fields {', '.join(unknown)}")
+    outline = example.get("outline")
+    if outline is not None and len(outline) < 3:
+        errs.append("example.outline needs three corners or more")
+    for feature in example.get("features") or []:
+        kind = (feature or {}).get("kind")
+        allowed = EXAMPLE_POLYGONS.get(kind) or EXAMPLE_POINTS.get(kind)
+        if allowed is None:
+            errs.append(f"example feature {kind!r} is not one of "
+                        + ", ".join(sorted({**EXAMPLE_POLYGONS,
+                                            **EXAMPLE_POINTS})))
+            continue
+        extra = sorted(set(feature.get("props") or {}) - set(allowed))
+        if extra:
+            errs.append(f"example {kind} carries unknown properties "
+                        f"{', '.join(extra)}")
+        shape = "ring" if kind in EXAMPLE_POLYGONS else "at"
+        if shape not in feature:
+            errs.append(f"example {kind} needs {shape!r}")
     return errs
 
 

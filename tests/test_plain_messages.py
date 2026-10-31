@@ -34,8 +34,9 @@ class TestTheWords(unittest.TestCase):
 
     def test_open_names_the_file_and_says_the_rest_are_fine(self):
         text = pm.open_failed_text("/home/a/Back yard.perma.geojson")
-        self.assertTrue(text.startswith(
-            "Couldn't open \"Back yard.perma.geojson\"."), text)
+        # The design's name, not its file's: ".perma.geojson" is never shown
+        # (vocabulary.NEVER; V3.42).
+        self.assertTrue(text.startswith("Couldn't open \"Back yard\"."), text)
         self.assertIn("damaged or from a newer version", text)
         self.assertIn("Your other designs are fine", text)
 

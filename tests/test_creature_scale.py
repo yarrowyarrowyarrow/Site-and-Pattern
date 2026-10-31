@@ -823,11 +823,13 @@ class TestTheRenderLoopSurvivesItself(unittest.TestCase):
     Two rules, both mechanical, so the next chunk split cannot repeat it.
     """
 
-    #: Load order, from the bootstrap in ``html/scene3d.html``.
+    #: Load order, from the chunk list the bootstrap in ``html/scene3d.html``
+    #: reads (``html/scene3d/chunks.js`` since V3.39).
     @staticmethod
     def _order():
-        html = (_ROOT / "html" / "scene3d.html").read_text(encoding="utf-8")
-        return re.findall(r"'scene3d/([\w.\-]+\.js)'", html)
+        chunks = (_ROOT / "html" / "scene3d" / "chunks.js").read_text(
+            encoding="utf-8")
+        return re.findall(r"'scene3d/([\w.\-]+\.js)'", chunks)
 
     @staticmethod
     def _loop_body():

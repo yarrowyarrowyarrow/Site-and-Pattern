@@ -231,6 +231,31 @@
   #inspect-card .gbar i { display: block; height: 7px; border-radius: 4px; background: #6f9a55; }
   #inspect-card .growrow.gnow .gbar i { background: #ffe89a; }
   #inspect-card .gv { font-size: 10.5px; color: #a9bda2; white-space: nowrap; }
+  /* The V3.39 cards (25-cards.js): what it is food for first, animals as
+     links with a photograph or their group's sign, the rest folded. */
+  #inspect-card .does p { margin: 8px 0 0; font-size: 13.5px; color: #eef5ea; }
+  #inspect-card .arow, #inspect-card .prow, #wild-roster .link { cursor: pointer; }
+  #inspect-card .arow { display: flex; gap: 8px; align-items: flex-start; }
+  #inspect-card .arow:hover b, #inspect-card .prow:hover b,
+  #wild-roster .link:hover { color: #ffe89a; text-decoration: underline; }
+  #inspect-card .athumb { flex: none; width: 34px; height: 34px; border-radius: 6px;
+    overflow: hidden; background: #223126; text-align: center; line-height: 34px;
+    font-size: 18px; }
+  #inspect-card .athumb img { width: 34px; height: 34px; object-fit: cover; }
+  #inspect-card .atext { min-width: 0; }
+  #inspect-card .asign { font-size: 40px; line-height: 1; margin: 2px 0 6px; }
+  #inspect-card details { margin-top: 10px; }
+  #inspect-card details > summary { cursor: pointer; color: #b7d8a8; font-size: 12px; }
+  #inspect-card .iback, #inspect-card .plant-one {
+    font: inherit; font-size: 12px; cursor: pointer; border-radius: 5px;
+    color: #10200f; background: #8fc47e; border: 1px solid #b6dfa6; padding: 2px 8px; }
+  #inspect-card .iback { margin: 0 24px 8px 0; color: #d7e6d2;
+    background: rgba(90,140,70,.22); border-color: #3a5a3a; }
+  #inspect-card .idesc { margin-top: 9px; color: #c9d8c2; font-size: 12px; }
+  #inspect-card .dim { color: #7d8f77; font-style: italic; }
+  #wild-roster summary { cursor: pointer; color: #b7d8ea; margin-top: 4px; }
+  /* An open card takes the right; the walk's hint steps left of it. */
+  body.card-open #bee-hint { left: calc(50% - 175px); max-width: calc(100% - 400px); }
 </style>
 </head>
 <body>
@@ -315,6 +340,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
   });
 </script>
 
+<script src="scene3d/chunks.js"></script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -333,55 +359,12 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
 // the global-scope declarations accumulate in the same order the old
 // single script evaluated them.
 (function () {
-  const FILES = [
-    'scene3d/01-core.js',
-    // Surfaces + plantMaterial: before 02-plants because everything downstream
-    // of it builds geometry that wants a material.
-    'scene3d/01b-surface.js',
-    'scene3d/01c-leaves.js',   // V2.94: leaves let light through (F186)
-    'scene3d/02-plants.js',
-    'scene3d/03-herbs.js',
-    'scene3d/03b-trees.js',   // V2.92: the procedural trees, split from 03-herbs
-    'scene3d/04-quality.js',
-    'scene3d/05-flowers.js',
-    'scene3d/06-fly.js',
-    'scene3d/07-wildlife.js',
-    'scene3d/08-modes.js',
-    'scene3d/09-models.js',
-    'scene3d/10-inspect.js',
-    'scene3d/11-fruit.js',
-    'scene3d/12-seedheads.js',
-    'scene3d/13-stylised.js',
-    'scene3d/14-layers.js',
-    'scene3d/15-florets.js',
-    // V2.43: click-to-plant in the reference sandboxes, and the QWebChannel
-    // the viewer never had. Last on purpose — its pointer handlers must
-    // register after 10-inspect.js's so both see the same click.
-    'scene3d/16-editing.js',
-    // V2.44: the tween registry and the plant / pull / catch animations.
-    // 16-editing.js only calls into these at click time, long after every
-    // chunk has loaded, so it does not need to load first.
-    'scene3d/17-anim.js',
-    'scene3d/18-flight.js',   // V2.45: real wingbeats (src/flight_model.py)
-    // V2.46: the roster / labels / spotlight, split out of 07-wildlife.js when
-    // life-size scaling and creature collision took it past its ceiling.
-    'scene3d/19-roster.js',
-    // V2.46b: the walker's body and his net, split out of 08-modes.js when the
-    // held net took it past its ceiling. Nothing here is called from the
-    // animation loop — see the load-order note in the file.
-    'scene3d/20-walker.js',
-    // V2.46d: the procedural creature bodies, split out of 07-wildlife.js when
-    // the bird flight attitude took it past its ceiling. Nothing here is called
-    // from the animation loop — see 08-modes.js:_loopFault.
-    'scene3d/21-critters.js',
-    // V2.89: vines on the tree or shrub beside them (F179). Called from
-    // buildPlants after the trees and shrubs have noted where they stand.
-    'scene3d/22-vines.js',
-    // V2.90: the pond (F175) — floating leaves on a pond's water, submerged
-    // plants showing what reaches the surface, broad leaves on stalks.
-    'scene3d/23-pond.js',
-    'scene3d/24-succulents.js',   // V2.93: cacti, yucca and roseroot (F177)
-  ];
+  // The chunks, in load order, are listed in scene3d/chunks.js (V3.39): the
+  // page was at its 400-line ceiling and the next chunk needed the room.
+  const FILES = window.SCENE3D_CHUNKS || [];
+  if (!FILES.length && window._showViewerError) {
+    window._showViewerError('failed to load scene3d/chunks.js');
+  }
   let i = 0;
   (function next() {
     if (i >= FILES.length) { window._pinglog && window._pinglog('chunks loaded'); return; }

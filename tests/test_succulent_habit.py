@@ -244,8 +244,10 @@ class TheViewerAgrees(unittest.TestCase):
         self.assertEqual(float(m.group(1)), SH.BALL_WIDTH)
 
     def test_the_chunk_loads(self):
-        html = (_ROOT / "html" / "scene3d.html").read_text(encoding="utf-8")
-        self.assertIn("'scene3d/24-succulents.js'", html)
+        # The chunk list left the page in V3.39 (html/scene3d/chunks.js).
+        chunks = (_ROOT / "html" / "scene3d" / "chunks.js").read_text(
+            encoding="utf-8")
+        self.assertIn("'scene3d/24-succulents.js'", chunks)
 
     def test_the_flowers_and_fruit_ask_where_the_body_is(self):
         for name in ("05-flowers.js", "11-fruit.js", "15-florets.js"):

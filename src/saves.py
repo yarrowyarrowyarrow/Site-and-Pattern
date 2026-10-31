@@ -99,6 +99,18 @@ def is_save_file(path: str) -> bool:
     return path.endswith(SAVE_SUFFIX) or path.endswith(".geojson")
 
 
+def file_stem(path: str) -> str:
+    """A design's file name as a person would say it: no folder and no
+    ``.perma.geojson`` (V3.42). A design with no name inside it is listed by
+    its file name, and the start screen showed "From Learn Aspen Parkland
+    grove.perma.g…": the suffix is in ``vocabulary.NEVER``."""
+    base = os.path.basename(path or "")
+    for suffix in (SAVE_SUFFIX, ".geojson"):
+        if base.endswith(suffix) and len(base) > len(suffix):
+            return base[:-len(suffix)]
+    return base
+
+
 # ── Describing a save without opening it ────────────────────────────────────
 
 _cache: dict[str, tuple[tuple[float, int], dict]] = {}
@@ -145,7 +157,7 @@ def describe(path: str) -> dict:
     out = {
         "path": path,
         "filename": os.path.basename(path),
-        "name": props.get("project_name") or os.path.basename(path),
+        "name": props.get("project_name") or file_stem(path),
         "modified": stat.st_mtime,
         "plants": len(plants),
         "species": len(species),
@@ -158,7 +170,7 @@ def describe(path: str) -> dict:
 
 def _broken(path: str, why: str, modified: float = 0.0) -> dict:
     return {"path": path, "filename": os.path.basename(path),
-            "name": os.path.basename(path), "modified": modified,
+            "name": file_stem(path), "modified": modified,
             "plants": 0, "species": 0, "site": "", "error": why}
 
 
@@ -234,6 +246,34 @@ def summary_line(entry: dict) -> str:
     if place:
         bits.append(place)
     return " · ".join(bits)
+
+
+def card_line(entry: dict) -> str:
+    """The line under a design's name on the start screen (V3.42): how many
+    plants it has and, when its name does not say it, where it is. It starts
+    with a capital (the owner) and leaves out "species", an advanced word
+    (WD-1); :func:`summary_line` is the saves list's, with both."""
+    if entry.get("error"):
+        return "Can't be opened"
+    plants = entry.get("plants", 0)
+    bits = [f"{plants} plant{'s' if plants != 1 else ''}" if plants
+            else "No plants yet"]
+    place = short_place(entry)
+    if place:
+        bits.append(place)
+    return " · ".join(bits)
+
+
+def deletable(entry: dict, open_path: str = "") -> bool:
+    """Whether Delete is offered for a design (V3.42): a file in the saves
+    folder, and not the design open in the window (``open_path``). A design
+    kept somewhere else is the person's to delete where they keep it
+    (V3.37)."""
+    path = entry.get("path") or ""
+    if not path or entry.get("elsewhere"):
+        return False
+    return not (open_path and
+                os.path.abspath(open_path) == os.path.abspath(path))
 
 
 def when(entry: dict, now: Optional[float] = None) -> str:

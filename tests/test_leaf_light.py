@@ -72,9 +72,10 @@ class LeafLightWiringTest(unittest.TestCase):
     def test_the_chunk_loads_before_any_material_is_built(self):
         """Materials are built from 02-plants.js on; the chunk must be there by
         then, or plantMaterial calls an undefined applyLeafLight."""
-        src = _read(os.path.join(_HTML, "scene3d.html"))
+        # The chunk list left the page in V3.39 (html/scene3d/chunks.js).
+        src = _read(os.path.join(_HTML, "scene3d", "chunks.js"))
         files = re.findall(r"'scene3d/([\w-]+\.js)'", src)
-        self.assertIn("01c-leaves.js", files, "scene3d.html does not load 01c-leaves.js")
+        self.assertIn("01c-leaves.js", files, "the viewer does not load 01c-leaves.js")
         self.assertLess(files.index("01c-leaves.js"), files.index("02-plants.js"))
 
     def test_the_leaves_let_light_through_and_nothing_else_does(self):

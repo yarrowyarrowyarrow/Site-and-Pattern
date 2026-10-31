@@ -231,9 +231,13 @@ class EachDesignCanBeRenamedFromTheScreen(_TempSaves):
         self.assertEqual([b.accessibleName() for b in self._renames(dlg)],
                          ["Rename Grandma's front yard",
                           "Rename 8103 95A Street NW"])
-        # The new first row is the one Enter opens.
-        self.assertEqual(dlg.primary_row().accessibleName(),
-                         "Grandma's front yard")
+        # The new first row is the last design worked on: outlined (H3,
+        # V3.42), with the focus; Plan a new yard stays the default.
+        from src.start_rows import Row
+        first = next(r for r in dlg.findChildren(Row)
+                     if r.accessibleName() == "Grandma's front yard")
+        self.assertTrue(first.outlined)
+        self.assertEqual(dlg.primary_row().accessibleName(), "Plan a new yard")
 
     def test_backing_out_changes_nothing(self):
         path = self.write("a.perma.geojson", "Test")
@@ -269,6 +273,148 @@ class EachDesignCanBeRenamedFromTheScreen(_TempSaves):
         self.assertEqual(main._project_path, target)
         self.assertEqual(main._project["properties"]["project_name"], "Front")
         self.assertIn("Front", main.windowTitle())
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class EachDesignCanBeDeletedFromTheScreen(_TempSaves):
+    """V3.42 (the owner's D4): Delete under each Rename, to the Recycle Bin
+    after a question that names the design; the saves list's Delete the
+    same. Not for the design open in the window, nor one kept elsewhere."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def setUp(self):
+        super().setUp()
+        from src import plain_messages, start_flow
+        self.binned, self.asked, self.told = [], [], []
+        self.answer = True
+        self.real_bin = start_flow._to_bin
+        for mod, name, value in (
+                (plain_messages, "ask_delete_design",
+                 lambda _p, n: self.asked.append(n) or self.answer),
+                (plain_messages, "tell_delete_failed",
+                 lambda _p, n: self.told.append(n)),
+                (start_flow, "_to_bin", self._bin)):
+            self.addCleanup(setattr, mod, name, getattr(mod, name))
+            setattr(mod, name, value)
+
+    def _bin(self, path):
+        """A bin of the test's own: the file goes, and is remembered."""
+        self.binned.append(os.path.basename(path))
+        os.remove(path)
+        return True
+
+    def _screen(self, parent=None):
+        from src import start_flow, start_screen
+        designs, total = start_flow.screen_designs(
+            open_path=start_flow.open_design_path(parent))
+        dlg = start_screen.StartScreen(
+            parent, designs=designs, total=total,
+            rename=start_flow.rename_listed, delete=start_flow.delete_listed)
+        self.addCleanup(dlg.deleteLater)
+        return dlg
+
+    def _deletes(self, dlg):
+        return {b.accessibleName(): b for b in dlg.findChildren(QPushButton)
+                if b.text() == "Delete" and not b.isHidden()}
+
+    def test_it_goes_to_the_bin_with_its_backup_and_the_list_redraws(self):
+        keep = self.write("a.perma.geojson", "Front", age=60)
+        gone = self.write("b.perma.geojson", "Test Design", age=3600)
+        with open(gone + ".bak", "w", encoding="utf-8") as f:
+            f.write("{}")
+        dlg = self._screen()
+        self._deletes(dlg)["Delete Test Design"].click()
+        self._app.processEvents()
+        self.assertEqual(self.asked, ["Test Design"], "the question names it")
+        self.assertEqual(self.binned, ["b.perma.geojson", "b.perma.geojson.bak"])
+        self.assertTrue(os.path.exists(keep))
+        self.assertEqual(dlg.choice(), "", "the screen stays open")
+        self.assertEqual(list(self._deletes(dlg)), ["Delete Front"])
+
+    def test_cancel_keeps_it(self):
+        path = self.write("a.perma.geojson", "Test Design")
+        self.answer = False
+        dlg = self._screen()
+        self._deletes(dlg)["Delete Test Design"].click()
+        self.assertTrue(os.path.exists(path))
+        self.assertEqual(self.binned, [])
+        self.assertIn("Delete Test Design", self._deletes(dlg))
+
+    def test_a_bin_that_refuses_deletes_nothing_and_says_so(self):
+        from src import start_flow
+        path = self.write("a.perma.geojson", "Test Design")
+        start_flow._to_bin = lambda _p: False
+        self.assertFalse(start_flow.delete_design(None, path))
+        self.assertTrue(os.path.exists(path))
+        self.assertEqual(self.told, ["Test Design"])
+
+    def test_not_for_the_open_design_nor_one_kept_elsewhere(self):
+        from PyQt6.QtWidgets import QWidget
+        here = self.write("a.perma.geojson", "Here", age=60)
+        self.write("b.perma.geojson", "Open", age=120)
+        outside = tempfile.mkdtemp(prefix="sp_out_")
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        far = self.write("far.perma.geojson", "Elsewhere", folder=outside)
+        saves.remember_last_design(far)
+        main = QWidget()                       # Help › Start Screen's window
+        self.addCleanup(main.deleteLater)
+        main._project_path = os.path.join(self.dir, "b.perma.geojson")
+        dlg = self._screen(main)
+        self.assertEqual(list(self._deletes(dlg)), ["Delete Here"])
+        self.assertTrue(saves.deletable({"path": here}))
+        self.assertFalse(saves.deletable({"path": far, "elsewhere": True}))
+
+    def test_the_saves_list_deletes_the_same_way(self):
+        from PyQt6.QtWidgets import QWidget
+        from src.saves_dialog import SavesDialog
+        self.write("a.perma.geojson", "Open", age=60)
+        self.write("b.perma.geojson", "Test Design", age=3600)
+        main = QWidget()
+        self.addCleanup(main.deleteLater)
+        main._project_path = os.path.join(self.dir, "a.perma.geojson")
+        dlg = SavesDialog(main)
+        self.addCleanup(dlg.deleteLater)
+        dlg._list.setCurrentRow(0)             # Open, the newest
+        self.assertFalse(dlg._btn_delete.isEnabled())
+        self.assertEqual(dlg._btn_delete.toolTip(), "This design is open.")
+        dlg._list.setCurrentRow(1)
+        self.assertTrue(dlg._btn_delete.isEnabled())
+        dlg._btn_delete.click()
+        self.assertEqual(self.asked, ["Test Design"])
+        self.assertEqual(self.binned, ["b.perma.geojson"])
+        self.assertEqual(dlg._list.count(), 1)
+
+    def test_the_question_names_the_design_and_where_it_goes(self):
+        from src import plain_messages as pm
+        text = pm.delete_text("Back yard")
+        self.assertIn("\"Back yard\"", text)
+        self.assertIn(pm.bin_name(), text)
+        self.assertIn("get it back", text)
+        self.assertNotIn(".perma.geojson", text)
+        self.assertIn(pm.bin_name(), pm.delete_failed_text("Back yard"))
+
+    @unittest.skipUnless(sys.platform.startswith("linux"),
+                         "the real bin is tried only where it can be "
+                         "redirected (the freedesktop trash)")
+    def test_the_real_bin_takes_it(self):
+        """``QFile.moveToTrash`` with the data folder pointed at the test's
+        own, so no real Trash is touched."""
+        data = os.path.join(self.dir, "data")
+        os.makedirs(data)
+        old = os.environ.get("XDG_DATA_HOME")
+        self.addCleanup(lambda: os.environ.__setitem__("XDG_DATA_HOME", old)
+                        if old is not None
+                        else os.environ.pop("XDG_DATA_HOME", None))
+        os.environ["XDG_DATA_HOME"] = data
+        path = self.write("a.perma.geojson", "Test Design")
+        if not self.real_bin(path):
+            self.skipTest("this system's bin refused a file in a temp folder")
+        self.assertFalse(os.path.exists(path))
+        self.assertTrue(os.path.exists(os.path.join(
+            data, "Trash", "files", "a.perma.geojson")))
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
@@ -333,8 +479,7 @@ class TheListOpensBeforeTheMap(_TempSaves):
         fake.setValue = lambda k, v: fake.d.__setitem__(k, v)
         for mod, name, value in (
                 (onboarding_flow, "_settings", lambda: fake),
-                (onboarding_flow, "_autosave_pending", lambda: False),
-                (start_flow, "flowering", lambda month=None: ("", ""))):
+                (onboarding_flow, "_autosave_pending", lambda: False)):
             self.addCleanup(setattr, mod, name, getattr(mod, name))
             setattr(mod, name, value)
         seen = {}

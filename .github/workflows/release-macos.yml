@@ -14,6 +14,10 @@ name: Build & publish macOS DMG
 # an x86_64 (Intel) app on the arm64 runner via Rosetta 2 + a python.org
 # universal2 Python. An x86_64 app runs natively on Intel and under Rosetta on
 # Apple Silicon. (A native arm64 build would NOT run on Intel Macs at all.)
+# None of that depends on the runner's own macOS version: Big Sur support
+# comes from the python.org "macos11" Python and the pinned wheels
+# (scripts/packaging/constraints-macos.txt), so the runner label can move
+# up as GitHub retires images without changing what the DMG runs on.
 #
 # Runs on every push to a V<major>.<minor> branch, or via "Run workflow".
 
@@ -30,7 +34,13 @@ permissions:
 jobs:
   build-macos:
     name: Build x86_64 DMG on Apple Silicon (Big Sur 11+ compatible)
-    runs-on: macos-14            # Apple Silicon (Intel runners are gone)
+    # Apple Silicon. macos-14 was retired on 2 November 2026, after
+    # "brownouts" that failed every job on it in set hours (V3.42's first
+    # build was one: the annotation says "scheduled macOS 14 runner image
+    # brownout"; actions/runner-images#13518). A job that fails within
+    # seconds with "brownout" in its annotation means: move this label up.
+    # GitHub announces each retirement as an issue in actions/runner-images.
+    runs-on: macos-15
     timeout-minutes: 45
     env:
       PY_VERSION: "3.11.9"
@@ -63,6 +73,19 @@ jobs:
         run: |
           set -eux
           arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
+          # numpy for Big Sur first (V3.42). numpy publishes two Intel Mac
+          # wheels: OpenBLAS for macOS 10.9 and newer, Accelerate for 14 and
+          # newer. pip takes the best one for the machine it runs on, which
+          # is macOS 14 or later here, so V3.41's DMG carried 13 numpy
+          # modules that cannot load on Big Sur to Ventura. Fetched for the
+          # platform the app declares, the install below finds numpy already
+          # satisfied. build_installer.sh checks every binary afterwards
+          # (scripts/packaging/check_min_macos.py).
+          arch -x86_64 "$PY_BIN" -m pip download --only-binary=:all: --no-deps \
+            --platform macosx_11_0_x86_64 --python-version 3.11 \
+            --implementation cp --abi cp311 -d "$RUNNER_TEMP/bigsur" \
+            -c scripts/packaging/constraints-macos.txt numpy
+          arch -x86_64 "$PY_BIN" -m pip install --no-deps "$RUNNER_TEMP"/bigsur/numpy-*.whl
           # At the versions of the last good build (V3.32, FN-12).
           arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller \
             -c scripts/packaging/constraints-macos.txt

@@ -3,11 +3,12 @@ start_flow.py — the glue behind "Your designs" (V3.23, ST-4 to ST-8;
 docs/homeowner/04-start-screen.md).
 
 ``onboarding_flow.py`` had the start screen's glue and sat at 571 of its 620
-lines, so the rebuilt screen's lives here: what the screen lists, the line of
-what is in flower, one way to start a new yard (ST-6), renaming the open
-design (ST-7), naming a design from its address (ST-5), and keeping a crash's
-unsaved work when Restore is passed over (ST-8). Free functions taking
-``main``, so MainWindow's method count does not grow.
+lines, so the rebuilt screen's lives here: what the screen lists, one way to
+start a new yard (ST-6), renaming (ST-7) and, since V3.42, deleting a design
+(to the Recycle Bin, F259), naming a design from its address (ST-5), and
+keeping a crash's unsaved work when Restore is passed over (ST-8). Free
+functions taking ``main``, so MainWindow's method count does not grow. The
+line of what is in flower went with V3.42 (the owner).
 """
 
 from __future__ import annotations
@@ -33,33 +34,34 @@ def split_choice(choice: str) -> tuple[str, str]:
 
 # ── What the screen shows ───────────────────────────────────────────────────
 
-def screen_designs(limit: int = screen.SHOWN, directory=None):
+def screen_designs(limit: int = screen.SHOWN, directory=None,
+                   open_path: str = ""):
     """``(rows, total)``: the saves folder plus the last design when it lives
     elsewhere (the example, a file opened with Browse), newest first. A row
-    is ``{path, name, when, summary, error}``. Never raises."""
+    is ``{path, name, when, line, summary, place, error, deletable}``:
+    ``line`` is the one under the name, ``deletable`` whether Delete is
+    offered (not for ``open_path``, the design open in the window). Never
+    raises."""
     from src import saves
     try:
         entries = saves.your_designs(directory)
     except Exception:                                      # noqa: BLE001
         return [], 0
     rows = [{"path": e["path"], "name": e.get("name") or e.get("filename", ""),
-             "when": saves.when(e), "summary": saves.summary_line(e),
-             "place": e.get("site", ""), "error": e.get("error", "")}
+             "when": saves.when(e), "line": saves.card_line(e),
+             "summary": saves.summary_line(e), "place": e.get("site", ""),
+             "error": e.get("error", ""),
+             "deletable": saves.deletable(e, open_path)}
             for e in entries[:limit]]
     return rows, len(entries)
 
 
-def flowering(month=None) -> tuple[str, str]:
-    """The start screen's last line and its tooltip (the owner, V3.23)."""
-    try:
-        from src.plant_directory_bloom import flowering_around, flowering_line
-        summary = flowering_around(month=month)
-    except Exception:                                      # noqa: BLE001
-        return "", ""
-    names = summary.get("names") or []
-    tip = ", ".join(names[:12]) + (f" and {len(names) - 12} more"
-                                   if len(names) > 12 else "")
-    return flowering_line(summary), tip
+def open_design_path(window) -> str:
+    """The design open in ``window`` (the main window, or the start screen
+    over it): none at launch, when the screen has no window under it."""
+    if window is not None and not hasattr(window, "_project_path"):
+        window = window.parent()
+    return (getattr(window, "_project_path", "") or "") if window else ""
 
 
 def open_screen(parent, *, recover: str, version: str, hidden: bool) -> str:
@@ -67,12 +69,12 @@ def open_screen(parent, *, recover: str, version: str, hidden: bool) -> str:
     :func:`path_choice`), or ``""`` if it was closed. Writes the skip
     preference on every close."""
     from src import saves
-    designs, total = screen_designs()
-    line, tip = flowering()
+    from src.learn_flow import community_count
+    designs, total = screen_designs(open_path=open_design_path(parent))
     dlg = screen.StartScreen(
         parent, recover=recover, designs=designs, total=total,
         show_skip=bool(saves.last_design()), hidden=hidden, version=version,
-        flowering=line, flowering_tip=tip, rename=rename_listed)
+        places=community_count(), rename=rename_listed, delete=delete_listed)
     accepted = bool(dlg.exec())
     from src.onboarding_flow import START_SCREEN_OFF_KEY, _settings
     _settings().setValue(START_SCREEN_OFF_KEY, dlg.suppressed())
@@ -144,7 +146,51 @@ def rename_listed(parent, path: str):
     afresh once it is renamed, or ``None`` when it was not."""
     if not rename_design(parent, path):
         return None
-    return screen_designs()
+    return screen_designs(open_path=open_design_path(parent))
+
+
+def delete_design(parent, path: str) -> bool:
+    """Move the design at ``path`` to the Recycle Bin (the Trash off
+    Windows), after a question that names it (V3.42, the owner's D4), with
+    its one-save backup. ``True`` when it went. When the bin refuses, nothing
+    is deleted and the person is told so.
+
+    The start screen's Delete and the saves list's come here. Until V3.42 the
+    list deleted for good, and its question named the file with its suffix."""
+    from src import plain_messages, saves
+    name = saves.describe(path).get("name") or saves.file_stem(path)
+    if not plain_messages.ask_delete_design(parent, name):
+        return False
+    if not _to_bin(path):
+        plain_messages.tell_delete_failed(parent, name)
+        return False
+    if os.path.exists(path + ".bak"):
+        _to_bin(path + ".bak")        # the design went; its backup follows
+    saves.clear_cache()
+    return True
+
+
+def _to_bin(path: str) -> bool:
+    """``QFile.moveToTrash`` (Qt 5.15+): the shell's own bin on Windows and
+    the Mac, the freedesktop.org trash on Linux."""
+    from PyQt6.QtCore import QFile
+    from src.log import get_logger
+    try:
+        moved, _where = QFile.moveToTrash(path)
+    except Exception:                                      # noqa: BLE001
+        get_logger("start_flow").exception("could not bin %s", path)
+        return False
+    if not moved:
+        get_logger("start_flow").warning("the bin refused %s", path)
+    return bool(moved)
+
+
+def delete_listed(parent, path: str):
+    """The start screen's Delete under a design: ``(rows, total)`` read
+    afresh once it has gone, or ``None`` when it has not."""
+    if not delete_design(parent, path):
+        return None
+    return screen_designs(open_path=open_design_path(parent))
 
 
 def keep_passed_autosave() -> str:

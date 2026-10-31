@@ -122,13 +122,27 @@ async function run() {
 
   // QF-14 (the review): a square closed by a double-click whose second press
   // lands a pixel right of and above the first. One corner there, not two.
+  //
+  // Not animated (V3.38). Closing the outline fits the map to it with an
+  // animated zoom, and Leaflet starts that zoom on the next animation frame,
+  // which headless Chromium under --virtual-time-budget can run a second
+  // later, inside the corner drag below: the map went from zoom 19.3 to
+  // 13.9, centred on this square, the whole outline under drag shrank to a
+  // few pixels, and the press landed on its area label instead of the
+  // corner (PR #11's CI run; one run in five here, traced zoom by zoom).
+  // settled() cannot see a zoom that has not started, and map.stop() does
+  // not cancel it. The app is not exposed: a real window's next frame comes
+  // within a few milliseconds.
   calls = [];
+  const zoomAnimated = w.map._zoomAnimated;
+  w.map._zoomAnimated = false;
   w.setMode('boundary');
   const sq = [{ x: 380, y: 340 }, { x: 520, y: 340 }, { x: 520, y: 200 }, { x: 380, y: 200 }];
   sq.forEach(p => click(p));
   const off = { x: sq[3].x + 1, y: sq[3].y - 1 };
   click(off);
   fire('dblclick', off);
+  w.map._zoomAnimated = zoomAnimated;
   const done = sent('onBoundaryComplete');
   out.double_click = done.length ? JSON.parse(done[0][2]) : null;
   w.setMode('none');
@@ -164,6 +178,13 @@ async function run() {
   w.map.fitBounds(b2.layer.getBounds(), { padding: [140, 140], animate: false });
   await wait(200);
   w.enterBoundaryEditMode('b2');
+  // V3.38: PR #11's CI run read 0 handles after this drag while the push run
+  // of the same commit read 4. Let the handles be laid out before aiming at
+  // one, and keep the count from before the drag, so a miss that ends edit
+  // mode reads apart from handles that were never drawn.
+  await settled();
+  await wait(100);
+  const handlesOpen = w.boundaryEditHandles.length;
   calls = [];
   // Aimed at the handle as drawn, as a person aims, not at where the corner's
   // coordinates say it is (V3.22: CI's Chromium twice pressed a bare DIV
@@ -182,6 +203,7 @@ async function run() {
   const moved = sent('onBoundaryGeomChanged');
   const r1 = n => Math.round(n);
   out.reopened_drag = { handles: w.boundaryEditHandles.length,
+                        handles_open: handlesOpen,
                         target: name(target),
                         where: 'pressed ' + r1(c0.x) + ',' + r1(c0.y) + '; corner at ' +
                                r1(want.x) + ',' + r1(want.y) + '; handle drawn ' +

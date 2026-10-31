@@ -127,6 +127,45 @@ class TestAgainstTheCatalogue(unittest.TestCase):
                       for e in plan["elsewhere"]]
         self.assertEqual(food_first, sorted(food_first, reverse=True))
 
+    def test_many_animals_at_once_give_each_one_s_answer(self):
+        """V3.39: the walk's cards ask about four hundred animals each push;
+        the batch is ``animal_plan``, not a second answer to its question."""
+        fed = [a["fauna_id"] for a in feeds.animals_fed(self.ids)][:12]
+        batch = feeds.animal_plans(fed, self.ids, elsewhere=5)
+        for fid in fed:
+            self.assertEqual(batch[fid], feeds.animal_plan(fid, self.ids,
+                                                           elsewhere=5))
+
+    def test_a_caterpillar_host_comes_first_for_a_butterfly(self):
+        fed = feeds.animals_fed([self.rows["Chokecherry"]["id"]])
+        for a in fed:
+            if a["taxon"] != "lepidoptera":
+                continue
+            plan = feeds.animal_plan(a["fauna_id"], [], elsewhere=500)
+            food = [e for e in plan["elsewhere"]
+                    if any(k in feeds.FOOD_KINDS for k in e["kinds"])]
+            hosts = ["larval_host" in e["kinds"] for e in food]
+            self.assertEqual(hosts, sorted(hosts, reverse=True), a["name"])
+
+    def test_preferred_plants_and_a_province(self):
+        fid = next(a["fauna_id"] for a in feeds.animals_fed(self.ids)
+                   if a["food"])
+        plan = feeds.animal_plans([fid], [], elsewhere=500)[fid]
+        food = [e for e in plan["elsewhere"]
+                if any(k in feeds.FOOD_KINDS for k in e["kinds"])]
+        if len(food) < 2:
+            self.skipTest("this animal has one plant")
+        last = food[-1]["plant_id"]
+        again = feeds.animal_plans([fid], [], elsewhere=500,
+                                   prefer=[last])[fid]
+        firsts = [e["plant_id"] for e in again["elsewhere"]]
+        hosts_first = plan["fauna"]["taxon"] == "lepidoptera"
+        if not hosts_first:
+            self.assertEqual(firsts[0], last)
+        nowhere = feeds.animal_plans([fid], [], elsewhere=500,
+                                     province="ZZ")[fid]
+        self.assertEqual(nowhere["elsewhere"], [])
+
     def test_an_animal_the_design_does_not_feed_is_a_shopping_list(self):
         prairie = [self.rows["Rough Fescue"]["id"]]
         fed_by_chokecherry = {a["fauna_id"] for a in
