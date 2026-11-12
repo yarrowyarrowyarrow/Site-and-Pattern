@@ -13,8 +13,10 @@ footprint(s)" over a design fully grown with a third of those plants dead.
 So this builds a yard through the real ``build_scene`` (a house, a drawn tree
 crown, a boulevard tree, plants that the timeline shades out and lives out),
 pushes it into the real viewer in headless Chromium, and reads the whole picture
-back (``html/yard_probe.html``). Against V3.42's viewer it fails eleven ways;
-``scripts/render_yard.py --viewer-root`` is how that was checked.
+back (``html/yard_probe.html``). Against V3.42's viewer 12 of the 18 checks
+fail, which is how the gate was shown to see the faults it is for::
+
+    YARD_VIEWER_ROOT=<a V3.42 checkout>/html python -m unittest tests.test_yard_render
 
 Skips with no Chromium binary or no WebGL, as the other render gates do; a
 viewer that THROWS fails (``fail_on_viewer_errors``, V3.37).
