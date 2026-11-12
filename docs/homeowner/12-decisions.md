@@ -120,7 +120,7 @@ new decisions:
 | ID | Question | Options | Recommended | By | Answer |
 |---|---|---|---|---|---|
 | M1 | How the two ways work | Simple by default with one remembered switch; ask on first run; offer it on the start screen | **One remembered switch, off by default** | 4 | **Recommended** |
-| M2 | The 3D preview | Advanced, with one plain door from the overview; simple for everyone; advanced only | **Advanced, with one door from the overview** | 10 | **Recommended** |
+| M2 | The 3D preview | Advanced, with one plain door from the overview; simple for everyone; advanced only | **Advanced, with one door from the overview** | 10 | **Recommended**. *Not built by V3.43; it is F261, with one question left (D1 of the [V3.43 plan](../plans/V3.43-the-3d-preview-reviewed.md)): whether the door turns Advanced tools on* |
 | M3 | The switch's name | *Advanced tools*; *More tools*; *Expert mode* | **Advanced tools** | 4 | **Recommended** |
 | M4 | Whether the Learn tab survives | See G2, S2, S3 | **Behind Advanced** | 5 | **Recommended** |
 
@@ -131,7 +131,7 @@ new decisions:
 | G1 | The four deletions (version picker, Import Yard Scan, the Learn door, `recipes.py`) and the AI leaving the app | Accept; accept some | **Accept all** | 1 (RM-1), 5 | **Recommended** |
 | G2 | The Learn tab (Field Study, Lessons) | Behind Advanced; retire (about 1,200 lines, 7 test modules) | **Behind Advanced** | 5 | **Recommended** |
 | G3 | Split view | Behind Advanced; delete (the 3D window follows the design since V3.08) | **Behind Advanced** | 5 | **Recommended** |
-| G4 | Freeze the 3D preview: no new features; short of a crash or a wrong plant, *won't fix* | Yes; no | **Yes** | 4 | **Recommended** |
+| G4 | Freeze the 3D preview: no new features; short of a crash or a wrong plant, *won't fix* | Yes; no | **Yes** | 4 | **Recommended**. *Lifted by the owner on 11 November 2026 (V3.43): a review of the preview and "significant improvement", in eight increments ([plan](../plans/V3.43-the-3d-preview-reviewed.md))* |
 | G5 | Freeze the website at its current build, rebuilt only when the catalogue changes | Yes; no | **Yes** | 14 | **Other:** I do not want a website at this time. Donations are not neccesary at this stage |
 | G6 | Anything in 03 §5 wanted in the simple app after all (most likely Measure, or Walk a Wild Landscape) | Name them | **None to start; revisit after the sessions (FN-9)** | 4 | **Recommended** |
 

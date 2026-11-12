@@ -70,7 +70,8 @@ Checked in the code:
 - **E9**: rename the seven "Edmonton …" communities by habitat. Not done
   (`src/db/polycultures.py`).
 - **S3**: fold the Lessons' "your design" lines into the Report card. Not found.
-- **M2**: one door from the Overview to the 3D preview. Not found.
+- **M2**: one door from the Overview to the 3D preview. Not found. *(Planned as
+  F261, V3.44.)*
 - **L3**: "too big" against the yard's measured front and back. Only the
   Overview uses those measures; the plant list does not.
 - **O4** (the familiar animals list, F249) and **L5** (the spread review, F246):
@@ -126,7 +127,8 @@ F172 wrong flower colours, F190 animal ranges, F171 the real Green Milkweed.
 colour as an analysis ("your June is all yellow") and F247. Smaller gaps under
 P1 (F23 inspectable rules), P8 (F18 remediation), P9 (F29 timeline ranges).
 
-**Frozen or declined, not proposed**: the 3D preview and website (fixes only),
+**Frozen or declined, not proposed**: the website (fixes only; the 3D preview's
+freeze was lifted in V3.43, see [its plan](../plans/V3.43-the-3d-preview-reviewed.md)),
 donations, signing, a bylaw block, a score on the Overview, other regions
 (Calgary, Regina) for now, the AI in the app, anything P12 forbids.
 

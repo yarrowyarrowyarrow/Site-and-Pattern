@@ -50,9 +50,10 @@ replays it.
 DB-free — `get_plant` injectable) producing the renderer-agnostic scene. The
 full schema lives in its module docstring; the shape:
 
-`version, year, month, origin{lat,lng}, bounds, boundary, plants[],
-buildings[] (kind: building|canopy), structures[], terrain|None, sun|None,
-is_night`. (`scan_points` and `splat` went with the yard scan in V3.22.)
+`version, year, month, origin{lat,lng}, bounds, focus|None, views{street},
+boundary, plants[], buildings[] (kind: building|canopy), structures[],
+terrain|None, sun|None, is_night`. (`scan_points` and `splat` went with the
+yard scan in V3.22; `focus`, `views` and a plant's `gone` came in V3.43.)
 
 Rules of the contract:
 
@@ -79,6 +80,34 @@ Rules of the contract:
   timeline slider.
 - Scene bounds floor at ±25 m so near-empty designs still get a stage
   (`src/sprite_gallery.py` deliberately fights this for single specimens).
+
+## The whole yard (V3.43; read `docs/plans/V3.43-the-3d-preview-reviewed.md`)
+
+The plan above is the programme for the preview (eight increments, F260–F267)
+and its guardrails. Five rules came out of its first increment, each with a
+test, and each is a mistake the viewer made for years because every audit
+rendered one plant and nobody rendered a yard:
+
+- **Frame `focus`, never `bounds`.** `bounds` is the stage, floored at ±25 m;
+  `focus` is the design's own extent (`src/scene_views.py`). In the page ask
+  `frameBox()`. A scene with no `focus` (the probes, the sprite gallery, which
+  sets it to `None` on purpose) frames `bounds` as before.
+- **Stand where `views.street` says.** A neighbour's spot at the real frontage,
+  clear of trunks and buildings, the same in every year because it is worked
+  out from the design as planted: the before/after page compares three years
+  from it. The sidewalk and walk cameras and the walker's start read it.
+- **A building is a `canopy_footprint` too.** `kind` is `canopy` only when the
+  footprint says it is a tree's crown (`caster_kind`), as `src/shade.py` reads it.
+- **`standing_plants(scene)` is what is in the yard this year.** A placed plant
+  that is `gone` (`"shade"` or `"short_lived"`) stays in `plants` at opacity 0.
+  The page's twin is `standing(p)` in `01-core.js`: use it for anything that
+  draws, picks, blocks or counts. `opacity` below 1 means declining, nothing else.
+- **Year 0 is the design fully grown.** Never caption it as planting day.
+
+`tests/test_yard_render.py` pushes a yard built by the real `build_scene` into
+the real viewer and reads the picture back (`html/yard_probe.html`).
+`python scripts/render_yard.py --out DIR` draws the contact sheets every 3D
+increment ends with; look at them, a green gate is not a picture.
 
 ## Viewer selection: built-in vs fork
 
@@ -280,6 +309,7 @@ carried untouched on save; nothing reads it (`tests/test_old_scan_designs.py`).
 | You touched | Run |
 |-------------|-----|
 | `src/scene_contract.py` / scene schema | `tests/test_scene_contract.py` |
+| `src/scene_views.py`, a camera, the walk start, what counts as standing | `tests/test_scene_views.py`, `tests/test_yard_render.py` (the real viewer on a whole yard), `tests/test_walk_walls.py`, then `scripts/render_yard.py` and look |
 | `src/scene3d.py` growth/spread math | `tests/test_scene3d.py` (and the 2D timeline still matches) |
 | `src/map3d_js.py` builders / hooks | `tests/test_map3d_js.py` + `tests/test_bridge_contract.py` |
 | `html/scene3d.html` | `tests/test_bridge_contract.py` + `tests/test_scene3d_assets.py` (no CDN, vendored files present) |
