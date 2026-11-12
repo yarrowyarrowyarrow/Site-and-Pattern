@@ -731,7 +731,10 @@ def wildlife_for_scene(scene: dict, *,
     bearberry no longer brings a ptarmigan down from the mountains.
     """
     # Each plant where it is DRAWN: a vine is on its host's crown (V2.89).
-    plants = [drawn_frame(p) for p in (scene.get("plants") or [])
+    # ... and only a plant that stands this year (V3.43): a bee had been sent
+    # to plants the same scene marked dead.
+    from src.scene_contract import standing_plants
+    plants = [drawn_frame(p) for p in standing_plants(scene)
               if p.get("plant_id")]
     if not plants:
         return []

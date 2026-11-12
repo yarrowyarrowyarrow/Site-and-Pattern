@@ -19,13 +19,29 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "month": int,                    # 1–12, drives 3D seasonal foliage colour
       "origin": {"lat": .., "lng": ..},# projection origin (WGS-84)
       "bounds": {"min_x","min_y","max_x","max_y"},   # metres, scene extent
+      "focus": {"min_x","min_y","max_x","max_y"} | None,
+                                       # the design's own extent: outline,
+                                       #   placed plants, structures, padded,
+                                       #   with no ±25 m floor. What the orbit
+                                       #   frames (src/scene_views.py, V3.43);
+                                       #   None = frame `bounds`
+      "views": {"street": {"eye": [x, y], "look": [x, y], "bearing": deg}},
+                                       # where a neighbour stands: outside the
+                                       #   edge facing the street, clear of
+                                       #   trunks. The sidewalk camera and the
+                                       #   walker start there. {} without an
+                                       #   outline
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
                   growth_curve, color, opacity, health, health_state,
                   common_name, bark_color, fall_color, leaf_size_cm,
                   leaf_shape, leaf_arrangement, growth_form,
-                  existing?, recruit?, drawn?}, ...],
+                  existing?, recruit?, drawn?, gone?}, ...],
+                                       # gone (V3.43): why a placed plant is
+                                       #   not drawn this year, "shade" or
+                                       #   "short_lived"; opacity is 0 then.
+                                       #   Read standing_plants(), not the list
                                        # drawn: where and how the plant is DRAWN
                                        #   when that is not its own x/y/height,
                                        #   decided once for the viewer and the
@@ -54,7 +70,10 @@ Scene schema (``SCENE_VERSION`` = 1)::
                                        #   — src.succession_engine, the growing
                                        #   canopy shading understory out over
                                        #   the timeline (opacity already folds
-                                       #   it in: dead → 0, declining dimmed)
+                                       #   it in: dead → 0, declining dimmed).
+                                       #   Since V3.43 opacity carries nothing
+                                       #   else: 1 standing, 0.5–1 declining,
+                                       #   0 gone
                                        # foliage_type: deciduous|evergreen|
                                        #   herbaceous|semi-evergreen (3D crown
                                        #   shape + seasonal colour)
@@ -85,6 +104,7 @@ Not yet in the scene (future versions): hedgerow lines, annotation labels.
 
 from __future__ import annotations
 
+import zlib
 from datetime import datetime, timedelta
 from typing import Callable, Optional
 
@@ -170,6 +190,27 @@ def _species_of(plant: dict) -> str:
     """
     parts = (plant.get("scientific_name") or "").replace("'", " ").split()
     return " ".join(parts[:2]).lower() if len(parts) >= 2 else ""
+
+def _still_there(plant_id, lat, lng, share: float) -> bool:
+    """Whether this one plant of a short-lived kind still stands when ``share``
+    of them do (V3.43). A fixed number per plant against a falling share, so a
+    plant gone one year is gone every year after it."""
+    if share >= 1.0:
+        return True
+    key = f"{plant_id}:{round(float(lat), 7)}:{round(float(lng), 7)}"
+    return zlib.crc32(key.encode("utf-8")) / 4294967296.0 < share
+
+
+def standing_plants(scene: dict) -> list:
+    """The scene's plants that are drawn: not shaded out, not lived out.
+
+    The one read side for "what is in this yard this year" (V3.43). The animals
+    and the cards had read every plant in the scene, so a bee was sent to a
+    plant the same scene had marked dead, and "recorded as food for N kinds"
+    counted plants no longer there."""
+    return [p for p in (scene or {}).get("plants") or []
+            if not p.get("gone") and p.get("health_state") != "dead"]
+
 
 _MONTHS = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
@@ -359,7 +400,8 @@ def build_scene(project: dict, *, year: int = 0,
         return cache[pid]
 
     def _plant_scene_dict(plant_id, common_name, plant, x, y, st, *,
-                          opacity, health, health_state, recruit=False):
+                          opacity, health, health_state, recruit=False,
+                          gone=None):
         """One plant's Scene JSON record. Shared by placed plants and the
         regeneration recruits so the two can never drift. ``st`` is a
         ``scene3d.plant_3d_state`` result; ``plant`` the DB record.
@@ -458,6 +500,11 @@ def build_scene(project: dict, *, year: int = 0,
             # out (V2.24). Additive flag — the viewer may style it, old viewers
             # just draw it as the young plant it is.
             d["recruit"] = True
+        if gone:
+            # Why a placed plant is not drawn this year (V3.43): "shade" (the
+            # succession engine's dead) or "short_lived" (a pioneer past its
+            # years). Additive; see standing_plants().
+            d["gone"] = gone
         return d
 
     # ── Temporal succession (V2.21) ──────────────────────────────────────────
@@ -511,19 +558,31 @@ def build_scene(project: dict, *, year: int = 0,
             _placed_i += 1
             health = info["health"] if info else 1.0
             health_state = info["state"] if info else "healthy"
-            presence = st["presence_opacity"]
+            # `presence_opacity` (succession.presence_factor) is one number
+            # with two meanings, and the 2D timeline's faint marker suits both.
+            # A solid cannot be 20% there, and until V3.43 the viewer blended
+            # the plant toward the sky instead: pale ghosts. So in 3D a climax
+            # species "starting faint" is drawn whole (a young oak is all there,
+            # only small, and its size already says so), and a pioneer "fading
+            # to a remnant" is fewer plants: the share still standing.
+            gone = None
             if health_state == "dead":
-                opacity = 0.0
+                opacity, gone = 0.0, "shade"
+            elif (st.get("successional_role") == "pioneer"
+                  and not _still_there(rec["plant_id"], rec["lat"], rec["lng"],
+                                       st["presence_opacity"])):
+                opacity, gone = 0.0, "short_lived"
             elif health_state == "declining":
-                opacity = round(presence * (0.5 + 0.5 * health), 3)
+                opacity = round(0.5 + 0.5 * health, 3)
             else:
-                opacity = presence
+                opacity = 1.0
             # Succession health (V2.21) folds into opacity above; the shared
             # builder emits the rest of the record (genus geometry, scale/spread
             # tier, foliage colour, seasonal flower/berry layer).
             plants.append(_plant_scene_dict(
                 rec["plant_id"], rec.get("common_name", ""), plant, x, y, st,
-                opacity=opacity, health=health, health_state=health_state))
+                opacity=opacity, health=health, health_state=health_state,
+                gone=gone))
             continue
 
         if etype == "existing_tree" and geom.get("type") == "Point":
@@ -587,11 +646,16 @@ def build_scene(project: dict, *, year: int = 0,
             if len(ring) > 1 and ring[0] == ring[-1]:
                 ring = ring[:-1]
             if len(ring) >= 3:
+                # A footprint is a tree's crown only when it says so, the
+                # way src/shade.py reads it. Every scanned or drawn building is
+                # a canopy_footprint too, and until V3.43 each was sent as a
+                # canopy: the house a see-through green box.
+                crown = (props.get("caster_kind") == "tree"
+                         or props.get("shape_type") == "Tree canopy")
                 buildings.append({
                     "ring": ring,
                     "height_m": float(props.get("height_m")),
-                    "kind": ("canopy" if etype == "canopy_footprint"
-                             else "building"),
+                    "kind": "canopy" if crown else "building",
                 })
 
         elif etype == "structure" and geom.get("type") == "Point":
@@ -617,9 +681,15 @@ def build_scene(project: dict, *, year: int = 0,
         # advances.
         st = plant_3d_state(plant, rc["lat"], rc["lng"], int(rc["age"]) + 1)
         rx, ry = proj.to_xy(rc["lat"], rc["lng"])
+        # A recruit that has lived out its years is not drawn, by the rule the
+        # placed plants follow above (V3.43).
+        if (st.get("successional_role") == "pioneer"
+                and not _still_there(rc["plant_id"], rc["lat"], rc["lng"],
+                                     st["presence_opacity"])):
+            continue
         plants.append(_plant_scene_dict(
             rc["plant_id"], plant.get("common_name", ""), plant, rx, ry, st,
-            opacity=st["presence_opacity"], health=1.0, health_state="healthy",
+            opacity=1.0, health=1.0, health_state="healthy",
             recruit=True))
 
     boundary_xy = None
@@ -665,12 +735,25 @@ def build_scene(project: dict, *, year: int = 0,
     from src.succulent_habit import apply_succulent_habits
     apply_succulent_habits(plants)
 
+    # What the camera frames and where a neighbour stands (V3.43): decided
+    # here, once, for the orbit, the stills and the walker alike.
+    from src import scene_views
+    views = {}
+    if boundary_xy:
+        street = scene_views.street_view(
+            boundary_xy, plants, buildings,
+            scene_views.street_bearing(project)[0])
+        if street:
+            views["street"] = street
+
     return {
         "version": SCENE_VERSION,
         "year": int(year),
         "month": (when or _DEFAULT_WHEN).month,
         "origin": {"lat": lat0, "lng": lng0},
         "bounds": bounds,
+        "focus": scene_views.focus_box(boundary_xy, plants, structures),
+        "views": views,
         "boundary": boundary_xy,
         "plants": plants,
         "buildings": buildings,

@@ -47,6 +47,16 @@ function hashPid(pid) {
 
 // ── seasonal color modifier ─────────────────────────────────────────────────
 const _skyCol = new THREE.Color(SKY);
+// What a declining plant fades toward: dry straw, witherColor's own colour.
+// Until V3.43 it was the sky, and a struggling plant was drawn as a pale ghost.
+const _dryCol = new THREE.Color(0x8a7a3c);
+// A plant the scene still draws (V3.43): not shaded out (`health_state`), not a
+// short-lived kind past its years (`gone`, src/scene_contract.py). Everything
+// that walks the scene's plants asks this, so nothing is an obstacle, a click
+// or a bee's flower after it has gone.
+function standing(p) {
+  return !p.gone && p.health_state !== 'dead';
+}
 
 // `fallHex` (V2.29) is the species' own autumn colour from the seed data
 // (schema v47 fall_color) — an aspen's clear yellow, a dogwood's red, a
@@ -425,7 +435,12 @@ let lastYear = 0;           // last scene year, for the legacy permaSetPlants ho
 let lastTerrain = null;     // last scene terrain, for the legacy permaSetPlants hook
 let plantsGroup = null;     // sub-group holding plant instanced meshes
 let framedOrigin = null;    // origin the camera was last auto-framed on
-let lastBounds = null;      // last scene bounds, for permaResetView()
+let lastBounds = null;      // last scene bounds: the stage, floored at ±25 m
+// The design's own extent and where to stand (scene.focus / scene.views,
+// src/scene_views.py, V3.43). Every camera was placed from `bounds` until then,
+// so an 11 x 8 m yard was about 1% of the opening picture.
+let lastFocus = null, lastViews = null;
+function frameBox() { return lastFocus || lastBounds; }
 
 function sunVector(azDeg, altDeg) {
   // azimuth CW from north; scene: north = -z, east = +x.
@@ -493,9 +508,30 @@ function keepAboveGround() {
 }
 
 function fadeToward(hex, opacity) {
-  // presence_opacity < 1 → blend the colour toward the sky tint.
+  // opacity < 1 is a declining plant since V3.43: toward dry straw, not sky.
   const c = new THREE.Color(hex || '#66bb6a');
-  return c.lerp(new THREE.Color(SKY), 1 - Math.max(0, Math.min(1, opacity ?? 1)));
+  return c.lerp(_dryCol, 1 - Math.max(0, Math.min(1, opacity ?? 1)));
+}
+
+// The line at the top left, in plain words (V3.43). It read "Year 0 · 367 plants
+// · 4 structure footprint(s)": year 0 is the design fully grown, the count
+// included the trees already there and every plant that had died, and nothing
+// said that any had.
+const _HUD_MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+function hudText(sc) {
+  const all = sc.plants || [], placed = all.filter(p => p.plant_id != null);
+  const n = (k, one, many) => k + ' ' + (k === 1 ? one : many);
+  const here = placed.filter(standing).length;
+  const shade = placed.filter(p => p.health_state === 'dead').length;
+  const lived = placed.filter(p => p.gone === 'short_lived').length;
+  const trees = all.filter(p => p.existing).length;
+  const parts = ['<b>' + (sc.year ? 'Year ' + sc.year : 'Fully grown') + '</b>',
+                 _HUD_MONTHS[sc.month] || '', n(here, 'plant', 'plants')];
+  if (trees) parts.push(n(trees, 'tree', 'trees') + ' already here');
+  if (shade) parts.push(shade + ' lost to shade');
+  if (lived) parts.push(lived + ' short-lived, gone');
+  return parts.filter(Boolean).join(' &nbsp;·&nbsp; ');
 }
 
 // Succession health (src/succession_engine.py): as the growing overstory shades

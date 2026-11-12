@@ -94,7 +94,7 @@ function scaleThreadLabel(sp) {
 function plantWorldPos(pid) {
   const sc = lastSceneObj;
   if (!sc) return null;
-  for (const p of sc.plants || []) {
+  for (const p of (sc.plants || []).filter(standing)) {
     if (p.plant_id === pid) {
       const gy = terrainHeightAt(p.x, p.y, lastTerrain);
       return new THREE.Vector3(p.x, gy + Math.max(0.3, (p.height_m || 1) * 0.6),

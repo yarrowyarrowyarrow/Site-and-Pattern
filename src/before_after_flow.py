@@ -124,13 +124,13 @@ def capture_panels(win, panels: list, on_done: Callable,
     results: dict = {}
 
     from src.before_after import (
-        KIND_PHOTO, install_day_panel, render_requests,
+        KIND_PHOTO, render_requests, without_photo,
     )
 
     # Photo panels need no viewer — decode them up front. A photo that will not
-    # decode falls back to the year-0 render **in place**, rather than being
-    # dropped: losing the before-panel would leave a two-panel page with no
-    # before, which is the whole argument gone, and silently.
+    # decode falls back to the first-summer render **in place**, rather than
+    # being dropped: losing the before-panel would leave a two-panel page with
+    # no before, which is the whole argument gone, and silently.
     for i, p in enumerate(list(panels)):
         if p.get("kind") != KIND_PHOTO:
             continue
@@ -143,8 +143,7 @@ def capture_panels(win, panels: list, on_done: Callable,
             cam = next((q.get("camera") for q in panels
                         if q.get("kind") != KIND_PHOTO and q.get("camera")),
                        None)
-            panels[i] = (install_day_panel(cam) if cam
-                         else install_day_panel())
+            without_photo(panels, cam) if cam else without_photo(panels)
 
     queue = list(render_requests(panels))
     if not queue:

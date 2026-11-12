@@ -528,7 +528,10 @@ def build_dossier(scene: dict, *,
     rather than 119. The "only source here" set falls out of that same query as
     a set operation — no habitat-score recomputation per plant.
     """
-    plants = [p for p in (scene.get("plants") or []) if p.get("plant_id")]
+    # What stands this year (V3.43), so "recorded as food for N kinds" does
+    # not count a plant the scene no longer draws.
+    from src.scene_contract import standing_plants
+    plants = [p for p in standing_plants(scene) if p.get("plant_id")]
     if not plants:
         return {"plants": {}, "fauna": {}}
     if get_plant is None:

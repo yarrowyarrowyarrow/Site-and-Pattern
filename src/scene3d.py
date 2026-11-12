@@ -208,6 +208,9 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int, *,
         "mature_canopy_m": float(plant.get("mature_canopy_m") or 0),
         "canopy_m": round(float(mature_c) * factor * spread, 3),
         "presence_opacity": round(presence_factor(role, year, ytm), 3),
+        # Which of presence_factor's two meanings that number has (V3.43): the
+        # 3D scene draws a climax species whole and a pioneer as fewer plants.
+        "successional_role": role,
     }
 
 

@@ -301,7 +301,8 @@ class ReferenceEcosystemWindow(QWidget):
         self.viewer.apply_scene(scene)
         try:
             from src.scene_wildlife import wildlife_for_scene, support_by_taxon
-            pids = [p["plant_id"] for p in scene.get("plants", [])
+            from src.scene_contract import standing_plants
+            pids = [p["plant_id"] for p in standing_plants(scene)
                     if p.get("plant_id")]
             self.viewer.set_wildlife(wildlife_for_scene(scene),
                                      support_by_taxon(pids))

@@ -28,11 +28,19 @@ the form the argument actually has to survive in.
 
 **The two 'before' cases are different arguments and are captioned differently.**
 With the user's own photograph, panel one is *your lawn as it is now* — the
-comparison that converts somebody. Without it, the honest fallback is the design
-at year 0, which is *the planting on install day*: still true, still useful, and
-a materially weaker claim. Silently letting one stand in for the other is the
-small dishonesty this codebase keeps finding in itself, so the caption always
-says which one you are looking at.
+comparison that converts somebody. Without it, the honest fallback is the
+planting in its first summer: still true, still useful, and a materially weaker
+claim. Silently letting one stand in for the other is the small dishonesty this
+codebase keeps finding in itself, so the caption always says which one you are
+looking at.
+
+**Year 0 is not planting day (V3.43).** The fallback rendered "the design at
+year 0" under the title *On planting day*, and year 0 is the growth model's
+design fully grown (``scene3d.growth_scale_factor`` returns 1.0 there, on
+purpose). So the page showed a mature yard as the day it went in, and a smaller
+one beside it as year 1: the planting shrinking. Without a photograph the page
+is now three summers, the first, one between and the last, and no panel is
+year 0.
 """
 
 from __future__ import annotations
@@ -58,8 +66,9 @@ DEFAULT_CAMERA = "sidewalk"
 #: High summer, so the planting is shown doing what it does.
 DEFAULT_MONTH = 7
 
-#: The year that stands for "just planted" in the fallback before-panel.
-INSTALL_YEAR = 0
+#: The first year the growth model draws, the summer after planting: what the
+#: fallback before-panel shows. Never 0, which is the design fully grown.
+FIRST_SUMMER = 1
 
 
 def panel_years(project: dict, *,
@@ -86,8 +95,8 @@ def panel_years(project: dict, *,
     return (1, 5)
 
 
-def install_day_panel(camera: str = DEFAULT_CAMERA) -> dict:
-    """The fallback first panel: the design at year 0.
+def first_summer_panel(camera: str = DEFAULT_CAMERA) -> dict:
+    """The fallback first panel: the planting in its first summer.
 
     Used when there is no site photograph — and also when there is one that
     cannot be decoded, which the renderer discovers and this module cannot.
@@ -103,23 +112,24 @@ def install_day_panel(camera: str = DEFAULT_CAMERA) -> dict:
     return {
         "id": BEFORE,
         "kind": KIND_RENDER,
-        "title": "On planting day",
-        "caption": ("The design as installed — no photograph of the existing "
-                    "yard has been added, so this is the planting on day one "
-                    "rather than the lawn it replaces."),
-        "year": INSTALL_YEAR,
+        "title": "The first summer",
+        "caption": ("The planting in its first summer. No photograph of the "
+                    "yard as it is now has been added, so this is not the "
+                    "lawn it replaces."),
+        "year": FIRST_SUMMER,
         "month": DEFAULT_MONTH,
         "camera": camera,
     }
 
 
 def before_panel(project: dict) -> dict:
-    """The first panel: the user's photograph if there is one, else year 0."""
+    """The first panel: the user's photograph if there is one, else the
+    planting's first summer."""
     from src import site_photo
 
     feature = site_photo.feature_from_project(project or {})
     if feature is None:
-        return install_day_panel()
+        return first_summer_panel()
     props = feature.get("properties") or {}
     return {
         "id": BEFORE,
@@ -142,28 +152,50 @@ def panel_specs(project: dict, *, camera: str = DEFAULT_CAMERA,
     cam = camera if camera in CAMERA_PRESETS else _FALLBACK
     near, far = panel_years(project, get_plant=get_plant)
 
-    panels = [before_panel(project)]
-    panels.append({
-        "id": NEAR,
-        "kind": KIND_RENDER,
-        "title": f"Year {near}",
-        "caption": (f"After {_season_count(near)} — filling in, still open "
-                    f"between the plants."),
-        "year": near,
-        "month": DEFAULT_MONTH,
-    })
-    panels.append({
-        "id": FAR,
-        "kind": KIND_RENDER,
-        "title": f"Year {far}",
-        "caption": (f"After {_season_count(far)} — closed up, and what the "
-                    f"design was actually for."),
-        "year": far,
-        "month": DEFAULT_MONTH,
-    })
+    panels = [before_panel(project), _year_panel(NEAR, near),
+              _year_panel(FAR, far)]
+    if panels[0]["kind"] == KIND_RENDER:
+        without_photo(panels, cam)
     for p in panels:
         if p["kind"] == KIND_RENDER:
             p["camera"] = cam
+    return panels
+
+
+def _year_panel(panel_id: str, year: int) -> dict:
+    what = ("filling in, still open between the plants" if panel_id == NEAR
+            else "closed up, and what the design was actually for")
+    return {
+        "id": panel_id,
+        "kind": KIND_RENDER,
+        "title": f"Year {year}",
+        "caption": f"After {_season_count(year)} — {what}.",
+        "year": year,
+        "month": DEFAULT_MONTH,
+    }
+
+
+def _between(first: int, last: int) -> Optional[int]:
+    """A year strictly between two others, nearest their middle, or ``None``
+    when they leave no room for one."""
+    mid = max(first + 1, (first + last) // 2)
+    return mid if mid < last else None
+
+
+def without_photo(panels: list, camera: str = DEFAULT_CAMERA) -> list:
+    """Make ``panels`` the page with no photograph, in place: the first summer
+    as the first panel, and the middle panel moved to a year between it and the
+    last, so the first summer is not shown twice. Also what the renderer does
+    with a photograph it cannot decode."""
+    far = next((p for p in panels if p.get("id") == FAR), None)
+    for i, p in enumerate(panels):
+        if p.get("id") == BEFORE:
+            panels[i] = first_summer_panel(camera)
+        elif p.get("id") == NEAR and far is not None:
+            year = _between(FIRST_SUMMER, int(far.get("year") or 0))
+            if year is not None and p.get("year") == FIRST_SUMMER:
+                panels[i] = dict(_year_panel(NEAR, year),
+                                 camera=p.get("camera") or camera)
     return panels
 
 
@@ -195,5 +227,8 @@ def page_caption(panels: list) -> str:
     """One line under the three panels, naming the argument being made."""
     far = next((p for p in panels or [] if p.get("id") == FAR), None)
     year = (far or {}).get("year") or 5
-    return (f"The same view, {year} years apart. A native planting is judged on "
-            f"what it becomes, not on the day it goes in.")
+    first = (panels or [{}])[0]
+    span = (f"The same view over {year} summers." if first.get("kind") == KIND_RENDER
+            else f"The same view, {year} years apart.")
+    return (f"{span} A native planting is judged on what it becomes, not on "
+            f"the day it goes in.")

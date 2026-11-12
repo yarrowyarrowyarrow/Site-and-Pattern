@@ -169,16 +169,27 @@ function makeFruitTexture(form) {
   return t;
 }
 
-// How big a fruit sprite is drawn, in metres. A cluster form is one sprite
-// carrying several fruits, so it has to be bigger than a single berry or the
-// individual fruits inside it shrink below a pixel.
-const _FRUIT_SIZE = { berry: 0.17, strig: 0.30, raceme: 0.34, cherry: 0.26,
-                      pome: 0.19, hip: 0.21, strawberry: 0.20,
-                      aggregate: 0.20, flat_cluster: 0.28 };
-// …and how many of them a plant wears. A raceme is already eight cherries, so
-// eighteen racemes is a solid purple cloud; single berries need more.
-const _FRUIT_COUNT = { strig: 0.45, raceme: 0.35, cherry: 0.5,
-                       flat_cluster: 0.45, aggregate: 0.7 };
+// How big a fruit sprite is drawn, in metres. Until V3.43 these ran 17 to 34 cm
+// whatever the plant (F117): a wild strawberry's fruit was wider than its
+// leaves, and a bed of them in June was a carpet of red hearts. Each is now the
+// form's usual size times at most 3, the trade the florets made in V2.88: a
+// drawn fruit stands in for several real ones. Estimates by form, until a
+// fruit's own size is recorded (F117); a cluster form is one sprite carrying
+// several fruits, so it is the cluster's size.
+const _FRUIT_SIZE = { berry: 0.03,          // 1 cm, x3
+                      strawberry: 0.04,     // 1.5 cm
+                      aggregate: 0.04,      // a raspberry, 1.5 cm
+                      hip: 0.05,            // 2 cm
+                      cherry: 0.07,         // two or three on their stalks
+                      pome: 0.08,           // 3 to 6 cm
+                      strig: 0.12,          // a hanging string, 6 to 8 cm
+                      flat_cluster: 0.15,   // a flat bunch, 8 to 12 cm
+                      raceme: 0.16 };       // a hanging bunch, 8 to 12 cm
+// …and how many of them a plant wears: more of the small ones, so a shrub in
+// fruit still shows its colour from across the yard.
+const _FRUIT_COUNT = { berry: 3, hip: 1.5, aggregate: 1.5, cherry: 1.5,
+                       strawberry: 0.75, strig: 0.9, raceme: 0.7,
+                       flat_cluster: 0.6 };
 
 function fruitFormOf(p) {
   const f = (p.fruit_form || '').trim();
@@ -231,7 +242,7 @@ function buildFruit(plants, month, terrain) {
     const mat = clampPointSize(new THREE.PointsMaterial({
       map: FRUIT_TEX[form], color: 0xffffff, vertexColors: true,
       transparent: true, alphaTest: 0.5, depthWrite: false,
-      sizeAttenuation: true, size: _FRUIT_SIZE[form] || 0.19,
+      sizeAttenuation: true, size: _FRUIT_SIZE[form] || 0.03,
     }), 72);
     plantsGroup.add(new THREE.Points(geo, mat));
   }

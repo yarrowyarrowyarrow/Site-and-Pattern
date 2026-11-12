@@ -56,6 +56,15 @@ _FAKE_PLANTS = {
         "mature_height_meters": 0.7, "mature_canopy_m": 0.5,
         "sun_requirement": "full_sun,partial_shade", "spread_habit": "self_seeding",
         "common_name": "Selfseeder"},
+    # What stands (V3.43): a short-lived forb, tagged as the catalogue tags
+    # fireweed, and a long-lived tree left untagged, as most trees are.
+    10: {"plant_type": "wildflower", "years_to_maturity": 2,
+         "growth_curve": "steady", "mature_height_meters": 1.5,
+         "mature_canopy_m": 0.7, "permaculture_uses": "early_successional",
+         "common_name": "Short-lived forb"},
+    11: {"plant_type": "tree", "years_to_maturity": 25, "growth_curve": "steady",
+         "mature_height_meters": 18.0, "mature_canopy_m": 12.0,
+         "deciduous_evergreen": "deciduous", "common_name": "Slow oak"},
 }
 
 
@@ -316,6 +325,109 @@ class TestSceneBasics(unittest.TestCase):
         self.assertGreaterEqual(b["max_y"], 25.0)
 
 
+class TestWhatStands(unittest.TestCase):
+    """``presence_opacity`` is one number with two meanings, and the viewer
+    drew both by blending the plant toward the sky (V3.43): a newly planted oak
+    and a fireweed patch in its twentieth year were the same pale ghost."""
+
+    def _forbs(self, n=60):
+        step = 1.0 / 111320.0
+        return _project([
+            plant_feature({"plant_id": 10, "common_name": "Short-lived forb",
+                           "lat": _LAT + (i // 10) * step,
+                           "lng": _LNG + (i % 10) * step * 1.7})
+            for i in range(n)])
+
+    def test_a_young_long_lived_tree_is_drawn_whole(self):
+        from src.scene3d import plant_3d_state
+        proj = _project([plant_feature({"plant_id": 11, "common_name": "Slow oak",
+                                        "lat": _LAT, "lng": _LNG})])
+        st = plant_3d_state(_get_plant(11), _LAT, _LNG, 1)
+        self.assertEqual(st["successional_role"], "climax")
+        self.assertLess(st["presence_opacity"], 0.5)        # the 2D marker's
+        oak = build_scene(proj, year=1, get_plant=_get_plant,
+                          wind=False)["plants"][0]
+        self.assertEqual(oak["opacity"], 1.0)
+        self.assertNotIn("gone", oak)
+        self.assertLess(oak["height_m"], 18.0 * 0.5)        # small says young
+
+    def test_a_short_lived_kind_is_fewer_plants_not_paler_ones(self):
+        proj = self._forbs()
+        early = build_scene(proj, year=3, get_plant=_get_plant,
+                            wind=False)["plants"]
+        late = build_scene(proj, year=25, get_plant=_get_plant,
+                           wind=False)["plants"]
+        self.assertTrue(all(p["opacity"] == 1.0 and "gone" not in p
+                            for p in early))
+        gone = [p for p in late if p.get("gone") == "short_lived"]
+        left = [p for p in late if not p.get("gone")]
+        # presence_factor leaves a fifth as a remnant; 60 plants make that
+        # between 5 and 25 whichever plants the hash keeps.
+        self.assertTrue(5 <= len(left) <= 25, len(left))
+        self.assertEqual(len(gone) + len(left), 60)
+        self.assertTrue(all(p["opacity"] == 0.0 for p in gone))
+        self.assertTrue(all(p["opacity"] == 1.0 for p in left))
+
+    def test_a_plant_gone_one_year_is_gone_every_year_after(self):
+        proj = self._forbs()
+        was_gone = set()
+        for year in range(1, 26):
+            plants = build_scene(proj, year=year, get_plant=_get_plant,
+                                 wind=False)["plants"]
+            now = {(p["x"], p["y"]) for p in plants if p.get("gone")}
+            self.assertTrue(was_gone <= now, f"a plant came back in year {year}")
+            was_gone = now
+        self.assertTrue(was_gone)
+
+    def test_fully_grown_shows_every_plant(self):
+        plants = build_scene(self._forbs(), year=0, get_plant=_get_plant,
+                             wind=False)["plants"]
+        self.assertTrue(all(p["opacity"] == 1.0 and "gone" not in p
+                            for p in plants))
+
+    def test_standing_plants_leaves_out_the_shaded_and_the_lived_out(self):
+        from src.scene_contract import standing_plants
+        n2 = 2.0 / 111320.0
+        proj = _project([
+            plant_feature({"plant_id": 7, "common_name": "Aspen",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 8, "common_name": "Sun forb",
+                           "lat": _LAT + n2, "lng": _LNG}),
+        ])
+        scene = build_scene(proj, year=25, get_plant=_get_plant, wind=False)
+        forb = next(p for p in scene["plants"]
+                    if p["common_name"] == "Sun forb")
+        self.assertEqual(forb["gone"], "shade")
+        names = {p["common_name"] for p in standing_plants(scene)}
+        self.assertIn("Aspen", names)
+        self.assertNotIn("Sun forb", names)
+        late = build_scene(self._forbs(), year=25, get_plant=_get_plant,
+                           wind=False)
+        self.assertEqual(len(standing_plants(late)),
+                         sum(1 for p in late["plants"] if not p.get("gone")))
+
+    def test_the_animals_are_sent_only_to_plants_that_stand(self):
+        """A bee was placed on a plant the same scene had marked dead."""
+        from src.scene_wildlife import wildlife_for_scene
+        n2 = 2.0 / 111320.0
+        proj = _project([
+            plant_feature({"plant_id": 7, "common_name": "Aspen",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 8, "common_name": "Sun forb",
+                           "lat": _LAT + n2, "lng": _LNG}),
+        ])
+        scene = build_scene(proj, year=25, get_plant=_get_plant, wind=False,
+                            when=datetime(2025, 7, 21, 13, 0))
+        asked = []
+
+        def edges(plant_ids):
+            asked.extend(plant_ids)
+            return []
+        wildlife_for_scene(scene, fauna_edges=edges, locality=lambda s: "here")
+        self.assertIn(7, asked)
+        self.assertNotIn(8, asked)
+
+
 class TestBuildingsAndStructures(unittest.TestCase):
 
     def test_existing_building_square_with_height(self):
@@ -333,7 +445,7 @@ class TestBuildingsAndStructures(unittest.TestCase):
         side = math.dist(b["ring"][0], b["ring"][1])
         self.assertAlmostEqual(side, 10.0, delta=0.1)
 
-    def test_canopy_footprint_polygon(self):
+    def _footprint(self, **props):
         d = 0.0001
         ring = [[_LNG - d, _LAT - d], [_LNG + d, _LAT - d],
                 [_LNG + d, _LAT + d], [_LNG - d, _LAT + d],
@@ -343,11 +455,49 @@ class TestBuildingsAndStructures(unittest.TestCase):
             {"type": "Feature",
              "geometry": {"type": "Polygon", "coordinates": [ring]},
              "properties": {"element_type": "canopy_footprint",
-                            "height_m": 9.0, "cast_shade": True}},
+                            "height_m": 9.0, "cast_shade": True, **props}},
         ])
-        b = build_scene(proj, get_plant=_get_plant)["buildings"][0]
-        self.assertEqual(b["kind"], "canopy")
-        self.assertEqual(len(b["ring"]), 4)   # closing vertex dropped
+        return build_scene(proj, get_plant=_get_plant)["buildings"][0]
+
+    def test_a_scanned_or_drawn_footprint_is_a_building(self):
+        """Every scanned or drawn building is a ``canopy_footprint``, and until
+        V3.43 each was sent as a canopy: the viewer drew the house as a green
+        box you could see through. The shade engine never made that mistake
+        (``shade.py`` reads ``caster_kind``); the scene now reads it the same
+        way."""
+        for props in ({}, {"shape_type": "Building (OSM)", "source": "osm"},
+                      {"shape_type": "Building footprint"},
+                      {"shape_type": "Imported footprint"}):
+            b = self._footprint(**props)
+            self.assertEqual(b["kind"], "building", props)
+            self.assertEqual(len(b["ring"]), 4)   # closing vertex dropped
+
+    def test_a_tree_canopy_footprint_stays_a_canopy(self):
+        self.assertEqual(self._footprint(caster_kind="tree")["kind"], "canopy")
+        # A canopy drawn before the marker existed still says what it is.
+        self.assertEqual(self._footprint(shape_type="Tree canopy")["kind"],
+                         "canopy")
+
+    def test_the_scene_and_the_shade_engine_agree_on_what_is_a_tree(self):
+        from src.shade import casters_from_project
+        for props, want in (({"caster_kind": "tree"}, "tree"),
+                            ({"shape_type": "Building (OSM)"}, "building")):
+            d = 0.0001
+            ring = [[_LNG - d, _LAT - d], [_LNG + d, _LAT - d],
+                    [_LNG + d, _LAT + d], [_LNG - d, _LAT + d],
+                    [_LNG - d, _LAT - d]]
+            proj = _project([{
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [ring]},
+                "properties": {"element_type": "canopy_footprint",
+                               "height_m": 9.0, "cast_shade": True,
+                               "lat": _LAT, "lng": _LNG,
+                               "canopy_radius_m": 5.0, **props}}])
+            caster = casters_from_project(proj)[0]
+            scene_kind = build_scene(proj, get_plant=_get_plant,
+                                     wind=False)["buildings"][0]["kind"]
+            self.assertEqual(caster.get("kind"), want)
+            self.assertEqual(scene_kind == "canopy", want == "tree")
 
     def test_flat_shape_is_not_a_building(self):
         d = 0.0001

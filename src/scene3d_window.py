@@ -344,7 +344,7 @@ class Scene3DWindow(QWidget):
 
     def _update_labels(self):
         y = self._year.value()
-        self._year_lbl.setText("mature" if y == 0 else f"year {y}")
+        self._year_lbl.setText("fully grown" if y == 0 else f"year {y}")
         self._month_lbl.setText(_MONTH_FULL[self._month.value() - 1])
         self._sun_lbl.setText(f"{self._hour.value()}:00")
 
@@ -365,7 +365,8 @@ class Scene3DWindow(QWidget):
         # year/season. Never let a data hiccup break the scene.
         try:
             from src.scene_wildlife import wildlife_for_scene, support_by_taxon
-            pids = [p["plant_id"] for p in scene.get("plants", [])
+            from src.scene_contract import standing_plants
+            pids = [p["plant_id"] for p in standing_plants(scene)
                     if p.get("plant_id")]
             self.viewer.set_wildlife(wildlife_for_scene(scene),
                                      support_by_taxon(pids))
@@ -619,9 +620,10 @@ class Scene3DWindow(QWidget):
             self.viewer.set_plant_spotlight([])
             return
         used = set(self._creature_plant_ids(creature))
+        from src.scene_contract import standing_plants
         items = [{"plant_id": p["plant_id"], "name": p.get("common_name", ""),
                   "x": p["x"], "y": p["y"], "h": p.get("height_m", 1.0)}
-                 for p in scene.get("plants", [])
+                 for p in standing_plants(scene)
                  if p.get("plant_id") in used]
         appearance = None
         try:
@@ -686,12 +688,18 @@ class Scene3DWindow(QWidget):
     def _flyover_storyboard() -> list:
         """A ~60 s, three-act storyboard as (year, month, hour, big, sub)
         keyframes. Act 1 grows the design at peak-summer midday; act 2 turns the
-        seasons at maturity; act 3 falls into a moonlit night."""
+        seasons at maturity; act 3 falls into a moonlit night.
+
+        No frame is year 0 (V3.43). It opened on "Year 0: the lawn, today",
+        and year 0 is the design fully grown, so the tour began on the finished
+        yard and then shrank it. It starts in the first summer; and it does not
+        end on year 0 either, which would stand every plant the timeline has
+        lost back up."""
         frames = []
-        # Act 1 — growth (year 0 → mature), July midday.
-        for y in (0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 25):
-            sub = ("the lawn, today" if y == 0 else
-                   "seedlings in" if y <= 2 else
+        # Act 1 — growth (the first summer → year 25), July midday.
+        for y in (1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 25):
+            sub = ("the first summer" if y == 1 else
+                   "settling in" if y <= 2 else
                    "filling in" if y <= 9 else
                    "a young habitat" if y <= 18 else "grown, not designed")
             frames.append((y, 7, 13, f"Year {y}", sub))

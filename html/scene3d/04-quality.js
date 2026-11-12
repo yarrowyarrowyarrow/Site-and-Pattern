@@ -743,7 +743,7 @@ function buildPlants(group, plants, month, year, terrain) {
   // ever placed. Undefined health_state (older scenes / existing trees) is kept.
   // The scene's own list is kept too: a vine names its host by index into it.
   const scenePlants = plants || [];
-  plants = scenePlants.filter(p => p.health_state !== 'dead');
+  plants = scenePlants.filter(standing);     // 01-core.js: nor `gone` (V3.43)
   if (window.vinesReset) vinesReset();
 
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],

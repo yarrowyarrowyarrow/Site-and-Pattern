@@ -290,6 +290,7 @@ def _vine_scene(plant, pid, name, i):
                      (max(ys) - min(ys)) / 2.0 + hr), 2)
     sc["bounds"] = {"min_x": cx - half, "max_x": cx + half,
                     "min_y": cy - half, "max_y": cy + half}
+    sc["focus"] = None      # frame the stage set here, not the design (V3.43)
     sc["origin"] = {"lat": LAT0 + i * 0.001, "lng": LNG0}
     sc["boundary"] = []
     return sc
@@ -339,6 +340,7 @@ def _scene_for(plant, pid, name, i):
     # guards against a degenerate box for a 5 cm plant.
     half = round(max(1.0 * h, 1.2 * c, 0.30), 2)
     sc["bounds"] = {"min_x": -half, "max_x": half, "min_y": -half, "max_y": half}
+    sc["focus"] = None      # frame the specimen's box, not the design (V3.43)
     sc["origin"] = {"lat": LAT0 + i * 0.001, "lng": LNG0}   # unique → reframe on switch
     sc["boundary"] = []
     return sc

@@ -114,15 +114,45 @@ class TestTheBeforePanelIsHonest(unittest.TestCase):
         self.assertTrue(before["image"])
         self.assertIn("today", before["caption"].lower())
 
-    def test_without_a_photo_it_is_a_year_zero_render_that_says_so(self):
+    def test_without_a_photo_it_is_the_first_summer_and_says_so(self):
         before = ba.panel_specs(_project(), get_plant=_GP)[0]
         self.assertEqual(before["kind"], ba.KIND_RENDER)
-        self.assertEqual(before["year"], ba.INSTALL_YEAR)
+        self.assertEqual(before["year"], ba.FIRST_SUMMER)
+        self.assertIn("first summer", before["title"].lower())
         cap = before["caption"].lower()
         self.assertIn("no photograph", cap,
                       "the fallback before-panel does not say it is not a "
                       "photo of the user's yard — that is the one thing it "
                       "must not imply")
+
+    def test_no_panel_is_year_zero(self):
+        """Year 0 is the growth model's design FULLY GROWN
+        (``scene3d.growth_scale_factor`` returns 1.0 there). Until V3.43 the
+        fallback rendered it under "On planting day", beside a smaller yard
+        titled "Year 1": the page showed the planting shrinking."""
+        from src.scene3d import growth_scale_factor
+        self.assertEqual(growth_scale_factor(0, 5, "steady"), 1.0)
+        for project in (_project(), _with_photo(_project())):
+            panels = ba.panel_specs(project, get_plant=_GP)
+            years = [p["year"] for p in panels if p["kind"] == ba.KIND_RENDER]
+            self.assertTrue(all(y >= ba.FIRST_SUMMER for y in years), years)
+            self.assertEqual(years, sorted(years), "time runs left to right")
+        self.assertNotIn("planting day", " ".join(
+            p["title"].lower() for p in ba.panel_specs(_project(),
+                                                       get_plant=_GP)))
+
+    def test_without_a_photo_the_page_is_three_different_summers(self):
+        panels = ba.panel_specs(_project(), get_plant=_GP)
+        near, far = ba.panel_years(_project(), get_plant=_GP)
+        years = [p["year"] for p in panels]
+        self.assertEqual(years[0], ba.FIRST_SUMMER)
+        self.assertEqual(years[2], far)
+        self.assertTrue(years[0] < years[1] < years[2], years)
+        self.assertEqual(panels[1]["title"], f"Year {years[1]}")
+        self.assertIn(f"{far} summers", ba.page_caption(panels))
+        with_photo = ba.panel_specs(_with_photo(_project()), get_plant=_GP)
+        self.assertEqual([p.get("year") for p in with_photo[1:]], [near, far])
+        self.assertIn("years apart", ba.page_caption(with_photo))
 
     def test_the_two_captions_are_not_the_same(self):
         a = ba.panel_specs(_project(), get_plant=_GP)[0]["caption"]
@@ -312,7 +342,8 @@ class TestTheCaptureChain(unittest.TestCase):
     def test_an_undecodable_photo_falls_back_instead_of_vanishing(self):
         """Found by this suite. A stored photo that will not decode used to be
         dropped, leaving a two-panel page with no 'before' at all — the whole
-        argument gone, and silently. It now renders install day in its place."""
+        argument gone, and silently. It now renders the first summer in its
+        place, and the middle panel moves off year 1 so no year shows twice."""
         from src import before_after_flow as flow
         win, _png = self._win()
         project = _with_photo(_project(), image="data:image/png;base64,AAAA")
@@ -326,6 +357,9 @@ class TestTheCaptureChain(unittest.TestCase):
                       "the fallback panel does not admit it is not a photo")
         self.assertEqual(win.viewer.snapshots, 3,
                          "the fallback was not rendered")
+        years = [p["year"] for p in panels]
+        self.assertEqual(len(set(years)), 3, f"a summer shows twice: {years}")
+        self.assertEqual(years[0], ba.FIRST_SUMMER)
 
     def test_the_fallback_keeps_the_pages_camera(self):
         """Left to render_request's own default it would come out 'overview'

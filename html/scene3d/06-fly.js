@@ -730,7 +730,7 @@ function exitBeeMode() {
   _showWalkerForScale(false);
   if (spotGroup) spotGroup.visible = true;           // spotlight returns too
   controls.enabled = true;
-  if (lastBounds) frameCamera(lastBounds);   // back to a sensible orbit
+  if (lastBounds) frameCamera(frameBox());   // back to a sensible orbit
   else controls.update();
 }
 
@@ -936,6 +936,6 @@ window.permaSetBeeTour = function (on) {
 window.permaResetView = function () {
   if (beeMode) { beeSpawn(); updateBeeHud(); return; }
   if (walkMode) { walkSpawn(); return; }
-  if (lastBounds) frameCamera(lastBounds);
+  if (lastBounds) frameCamera(frameBox());
 };
 

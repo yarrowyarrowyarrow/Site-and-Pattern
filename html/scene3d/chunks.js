@@ -57,4 +57,7 @@ window.SCENE3D_CHUNKS = [
   // 16-editing.js, whose bridge Plant one calls, and after 10-inspect.js,
   // whose showCard draws through it.
   'scene3d/25-cards.js',
+  // V3.43: the frame-rate readout (Ctrl+Shift+F). Last: it wraps the render
+  // call only while it is showing, and nothing calls into it.
+  'scene3d/26-perf.js',
 ];

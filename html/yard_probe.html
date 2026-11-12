@@ -1,0 +1,275 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#101815;color:#dfe;font:13px system-ui}
+iframe{width:948px;height:590px;border:0;display:block}
+#out{padding:8px;white-space:pre-wrap;font-family:ui-monospace,monospace}
+img{max-width:100%;display:block;margin:8px 0}</style>
+</head><body>
+<div id="out">working…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script src="probe_watch.js"></script>
+<script>
+// A whole yard in the real viewer (V3.43): the gate behind
+// tests/test_yard_render.py and the pictures scripts/render_yard.py saves.
+//
+// Six audits rendered one plant at a time, and for years nobody rendered a
+// yard. So nothing noticed that every house was a see-through green box, that
+// the camera framed a 50 m stage with the yard about 1% of it, that Walk began
+// inside the house, or that a plant the timeline had lost was drawn as a pale
+// ghost. Each of those is a fault of the WHOLE picture: the parts were all
+// built correctly. This page pushes a yard and reads the whole picture back.
+//
+//   ?job=URL    one JSON {scene, legacy}: measure, and write
+//               "MEASURED {...}" into document.title, as slope_probe.html does.
+//   ?shots=URL  one JSON {width, height, shots:[{name, scene, quality, view}],
+//               sheets:[{name, title, sub, tiles:[{shot, caption}]}]}: render
+//               each shot through the viewer's own permaSnapshot, lay the
+//               sheets out, and leave them in the page as <img data-sheet>.
+//
+// Both JSON files are served by whoever runs this (the test, the script). A
+// headless `--dump-dom` run carries everything out; nothing here needs CDP.
+
+const out = document.getElementById('out');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(test, ms) {
+  for (let t = 0; t < ms; t += 100) { if (test()) return true; await sleep(100); }
+  return false;
+}
+function viewer() { return document.getElementById('v').contentWindow; }
+
+// The viewer's chunks load one after another, and a probe that starts on
+// permaSetScene (chunk 05) starts too early: wait for the last ones. permaPerf
+// is the last chunk's (V3.43); a viewer from before it stops at 25-cards.js's
+// labelWanted, and is measured anyway, so the gate can be run against it.
+async function ready() {
+  const ok = await until(() => {
+    const w = viewer();
+    return w && typeof w.permaSetScene === 'function' && typeof w.labelWanted === 'function';
+  }, 60000);
+  if (!ok) throw new Error('the viewer never finished loading its chunks');
+  await until(() => typeof viewer().permaPerf === 'function', 3000);
+  return viewer();
+}
+async function push(w, sc, quality) {
+  if (quality != null) w.permaSetQuality(quality);
+  w.permaSetScene(sc);
+  // The baked models arrive on their own and rebuild the scene when they do.
+  await until(() => w.permaModelsReady(), 60000);
+  await sleep(400);
+}
+
+// ── measuring ───────────────────────────────────────────────────────────────
+
+// How much of the picture a ground rectangle spans, and whether all of it is in.
+function span(w, box) {
+  const cam = w.eval('camera'); cam.updateMatrixWorld();
+  let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+  for (const [x, y] of [[box.min_x, box.min_y], [box.max_x, box.min_y],
+                        [box.max_x, box.max_y], [box.min_x, box.max_y]]) {
+    const v = new w.THREE.Vector3(x, 0, -y).project(cam);
+    x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x);
+    y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+  }
+  return { inside: x0 >= -1 && x1 <= 1 && y0 >= -1 && y1 <= 1,
+           wide: +((x1 - x0) / 2).toFixed(3), tall: +((y1 - y0) / 2).toFixed(3) };
+}
+function inRing(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [ax, ay] = ring[j], [bx, by] = ring[i];
+    if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) inside = !inside;
+  }
+  return inside;
+}
+function camera(w) {
+  const c = w.eval('camera.position'), t = w.eval('controls.target');
+  const r = (v) => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)];
+  return { at: r(c), looks_at: r(t), far: +c.distanceTo(t).toFixed(2) };
+}
+
+async function measure(w, job) {
+  const sc = job.scene, res = {};
+  await push(w, sc, 1);
+
+  // 1. What the window opens on: the yard, not the stage round it.
+  res.opening = { camera: camera(w), yard: span(w, sc.focus), stage: span(w, sc.bounds) };
+
+  // 2. Buildings and drawn tree canopies, as the viewer made them.
+  res.meshes = {};
+  for (const o of w.eval('designGroup').children) {
+    if (o.name === 'buildings' || o.name === 'canopys')
+      res.meshes[o.name] = { see_through: !!o.material.transparent,
+                             colour: '#' + o.material.color.getHexString() };
+  }
+
+  // 3. Which plants were drawn, by plant id, one count per mesh they are in.
+  const drawn = {};
+  w.eval('plantsGroup').traverse((o) => {
+    if (!o.isInstancedMesh || !o.userData.pickId) return;
+    const seen = {};
+    for (const id of o.userData.pickId) seen[id] = (seen[id] || 0) + 1;
+    for (const id in seen) drawn[id] = Math.max(drawn[id] || 0, seen[id]);
+  });
+  res.drawn = drawn;
+
+  // 4. The colour of a plant that is declining: toward straw, never sky.
+  res.declining = null;
+  const want = job.declining_id;
+  w.eval('plantsGroup').traverse((o) => {
+    if (res.declining || !o.isInstancedMesh || !o.userData.pickId || !o.instanceColor) return;
+    const i = o.userData.pickId.indexOf(want);
+    if (i < 0) return;
+    const c = new w.THREE.Color(); o.getColorAt(i, c);
+    res.declining = { r: +c.r.toFixed(3), g: +c.g.toFixed(3), b: +c.b.toFixed(3) };
+  });
+
+  // 5. Fruit, as drawn: metres across, one figure per fruit form in the scene.
+  res.fruit_m = [];
+  w.eval('plantsGroup').traverse((o) => {
+    if (o.isPoints && o.material && o.material.map && o.material.vertexColors)
+      res.fruit_m.push(+o.material.size.toFixed(3));
+  });
+
+  // 6. The line at the top left.
+  res.hud = document.getElementById('v').contentDocument.getElementById('hud').innerText;
+
+  // 7. From the street: the camera the stills and the before/after page use.
+  w.permaSetCameraPreset('sidewalk');
+  res.street = camera(w);
+  w.permaSetCameraPreset('walk');
+  res.in_yard = camera(w);
+
+  // 8. Walk the garden: where he starts, which way he faces, and the walls.
+  w.permaSetWalkMode(true);
+  const a = w.eval('walkAvatar.position'), yaw = w.eval('walkYaw');
+  const rings = (sc.buildings || []).filter((b) => b.kind !== 'canopy').map((b) => b.ring);
+  res.walk = { at: [+a.x.toFixed(2), +(-a.z).toFixed(2)], yaw: +yaw.toFixed(3),
+               inside_a_building: rings.some((r) => inRing(a.x, -a.z, r)) };
+  res.walls = {};
+  for (const [name, x, y] of job.walk_points || []) {
+    const [nx, nz] = w.resolveWalkCollision(x, -y);
+    res.walls[name] = { to: [+nx.toFixed(2), +(-nz).toFixed(2)],
+                        inside: rings.some((r) => inRing(nx, -nz, r)) };
+  }
+  w.permaSetWalkMode(false);
+  res.after_walk = { yard: span(w, sc.focus) };
+
+  // 9. The frame-rate readout: off until asked for, and off again.
+  const doc = document.getElementById('v').contentDocument;
+  const key = () => w.dispatchEvent(new w.KeyboardEvent('keydown',
+    { code: 'KeyF', ctrlKey: true, shiftKey: true }));
+  res.perf = { before: !!doc.getElementById('perf-readout') };
+  key(); res.perf.shown = !!doc.getElementById('perf-readout');
+  res.perf.reads = typeof w.permaPerf === 'function' ? w.permaPerf() : {};
+  key(); res.perf.hidden = !doc.getElementById('perf-readout');
+
+  // 10. A scene from before V3.43 (no focus, no views) frames the stage, as it
+  // always did, and its year 0 is said in words.
+  if (job.legacy) {
+    await push(w, job.legacy, 1);
+    res.legacy = { camera: camera(w), stage: span(w, job.legacy.bounds),
+                   hud: doc.getElementById('hud').innerText };
+    w.permaSetCameraPreset('sidewalk');
+    res.legacy.street = camera(w);
+  }
+  return res;
+}
+
+// ── pictures ────────────────────────────────────────────────────────────────
+
+function look(w, sc, view) {
+  const E = (s) => w.eval(s), b = sc.focus || sc.bounds;
+  const cx = (b.min_x + b.max_x) / 2, cy = (b.min_y + b.max_y) / 2;
+  const big = Math.max(b.max_x - b.min_x, b.max_y - b.min_y);
+  const set = (p, t) => E('camera.position.set(' + p.join(',') + ');'
+    + 'controls.target.set(' + t.join(',') + ');controls.update();');
+  if (view === 'street') w.permaSetCameraPreset('sidewalk');
+  else if (view === 'yard') w.permaSetCameraPreset('walk');
+  else if (view === 'above') set([cx, big * 1.25, -cy + 0.5], [cx, 0, -cy]);
+  else if (view && typeof view === 'object') set(view.at, view.looks_at);
+  else w.permaResetView();                 // 'open': what the window opens on
+}
+
+function wrap(g, text, width) {
+  const lines = []; let cur = '';
+  for (const word of String(text).split(' ')) {
+    const t = cur ? cur + ' ' + word : word;
+    if (g.measureText(t).width <= width) cur = t; else { lines.push(cur); cur = word; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+async function sheet(spec, pictures, tileW, tileH) {
+  const pad = 14, cap = 62, cols = 2, head = 92;
+  const rows = Math.ceil(spec.tiles.length / cols);
+  const cv = document.createElement('canvas');
+  cv.width = pad + cols * (tileW + pad);
+  cv.height = head + rows * (tileH + cap + pad) + pad;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#16201a'; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = '#eaf1e6'; g.font = '600 28px system-ui, sans-serif';
+  g.fillText(spec.title, pad, 40);
+  g.fillStyle = '#9fb096'; g.font = '17px system-ui, sans-serif';
+  g.fillText(spec.sub || '', pad, 70);
+  for (let i = 0; i < spec.tiles.length; i++) {
+    const t = spec.tiles[i], x = pad + (i % cols) * (tileW + pad);
+    const y = head + Math.floor(i / cols) * (tileH + cap + pad);
+    const im = new Image(); im.src = pictures[t.shot] || '';
+    try { await im.decode(); g.drawImage(im, x, y, tileW, tileH); }
+    catch (e) { g.fillStyle = '#402020'; g.fillRect(x, y, tileW, tileH); }
+    g.fillStyle = '#d6e8cd'; g.font = '18px system-ui, sans-serif';
+    wrap(g, t.caption, tileW - 6).slice(0, 2).forEach((line, k) =>
+      g.fillText(line, x + 2, y + tileH + 24 + k * 24));
+  }
+  return cv.toDataURL('image/jpeg', 0.88);
+}
+
+async function shots(w, job) {
+  const scenes = {}, pictures = {};
+  for (const s of job.shots) {
+    if (!scenes[s.scene]) scenes[s.scene] = await (await fetch(s.scene)).json();
+    const sc = scenes[s.scene];
+    await push(w, sc, s.quality == null ? 1 : s.quality);
+    look(w, sc, s.view);
+    pictures[s.name] = w.permaSnapshot({ width: job.width, height: job.height,
+      pixelRatio: 1, mime: 'image/jpeg', quality: 0.9 });
+    out.textContent = 'rendered ' + Object.keys(pictures).length + ' of ' + job.shots.length;
+  }
+  for (const spec of job.sheets || []) {
+    const im = document.createElement('img');
+    im.dataset.sheet = spec.name;
+    im.src = await sheet(spec, pictures, job.tile_width || 760,
+      Math.round((job.tile_width || 760) * job.height / job.width));
+    document.body.appendChild(im);
+  }
+  if (job.keep_shots) for (const name in pictures) {
+    const im = document.createElement('img');
+    im.dataset.shot = name; im.src = pictures[name];
+    document.body.appendChild(im);
+  }
+  return Object.keys(pictures).length;
+}
+
+(async function () {
+  const q = new URLSearchParams(location.search);
+  try {
+    if (!q.get('job') && !q.get('shots')) {
+      out.textContent = 'Run this through tests/test_yard_render.py or '
+        + 'scripts/render_yard.py: it needs the yard they serve.';
+      return;
+    }
+    const w = await ready();
+    if (q.get('job')) {
+      const res = await measure(w, await (await fetch(q.get('job'))).json());
+      document.title = 'MEASURED ' + JSON.stringify(res);
+      out.textContent = JSON.stringify(res, null, 2);
+    } else {
+      const n = await shots(w, await (await fetch(q.get('shots'))).json());
+      document.title = 'SHOTS ' + n;
+    }
+  } catch (e) {
+    // probe_watch.js reads errors thrown at the window; say this one there too.
+    document.getElementById('probe-errors').textContent += 'probe: ' + (e && e.stack || e) + '\n';
+    document.title = 'FAILED';
+  }
+})();
+</script></body></html>

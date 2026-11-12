@@ -37,6 +37,7 @@ def _start(scene, x=0.0, z=6.0):
     """The z clearOfCrowns gives for a start at (x, z) in `scene`."""
     script = "\n".join([
         "var lastSceneObj = %s;" % json.dumps(scene),
+        _function("standing", "01-core.js"),     # which plants are still there
         _function("clearOfCrowns", "08-modes.js"),
         "console.log(JSON.stringify(clearOfCrowns(%r, %r)));" % (x, z),
     ])
@@ -75,6 +76,14 @@ class TheBeeStartsInTheOpen(unittest.TestCase):
 
     def test_no_scene_leaves_it_alone(self):
         self.assertEqual(_start(None), 6.0)
+
+    def test_a_shrub_that_is_gone_is_not_stepped_round(self):
+        """A plant the timeline has lost is not drawn (V3.43), so it is not in
+        the bee's way either: shaded out, or a short-lived kind past its years."""
+        for lost in ({"health_state": "dead", "gone": "shade"},
+                     {"gone": "short_lived"}):
+            shrub = dict(_plant(0, -6, 5, 4.5), **lost)
+            self.assertEqual(_start({"plants": [shrub]}), 6.0, lost)
 
 
 class TheSpawnAsksForIt(unittest.TestCase):

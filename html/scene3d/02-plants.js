@@ -291,7 +291,7 @@ function setInst2(mesh, i, x, h0, z, sx, sy, sz, rotY, color) {
 
 function fadeColor(col, opacity) {
   const o = Math.max(0, Math.min(1, opacity ?? 1));
-  return col.clone().lerp(_skyCol, 1 - o);
+  return col.clone().lerp(_dryCol, 1 - o);   // straw, not sky (V3.43)
 }
 
 // Plant materials, their GPU wind sway and their surface detail (bark grain,

@@ -581,6 +581,7 @@ window.permaSetScene = function (sc) {
   if (window.applySceneWind) applySceneWind(sc.wind);
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
+  lastFocus = sc.focus || null; lastViews = sc.views || null;   // V3.43
   const groundWas = groundKey(lastTerrain);
   lastTerrain = sc.terrain || null;
 
@@ -603,7 +604,7 @@ window.permaSetScene = function (sc) {
   if (moved) {
     // Don't yank the camera while the user is flying, walking, or in the
     // cinematic flyover — those modes own the camera.
-    if (!beeMode && !walkMode && !cinematic) frameCamera(sc.bounds);
+    if (!beeMode && !walkMode && !cinematic) frameCamera(frameBox());
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
   } else if (groundKey(lastTerrain) !== groundWas && !beeMode && !walkMode && !cinematic) {
     settleOrbitOnGround();   // the terrain came after the first push (V3.04)
@@ -617,11 +618,7 @@ window.permaSetScene = function (sc) {
   // (V2.46).
   if (typeof buildCritterObstacles === 'function') buildCritterObstacles();
 
-  const n = (sc.plants || []).length;
-  document.getElementById('hud').innerHTML =
-    `<b>Year ${sc.year}</b> &nbsp;·&nbsp; ${n} plant${n === 1 ? '' : 's'}`
-    + ((sc.buildings || []).length ? ` &nbsp;·&nbsp; ${sc.buildings.length} structure footprint(s)` : '')
-    + (sc.terrain ? ' &nbsp;·&nbsp; terrain' : '');
+  document.getElementById('hud').innerHTML = hudText(sc);   // 01-core.js
 };
 
 window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };
