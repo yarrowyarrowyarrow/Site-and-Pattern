@@ -122,7 +122,17 @@ class TestSunScrubPanel(unittest.TestCase):
         panel.sun_redraw_requested.connect(asked.append)
         placements = []
         panel.sun_path_requested.connect(placements.append)
-        panel._sun_date.setCurrentIndex(1)        # Winter Solstice
+        # A date other than the one the panel opened on. It opens on the key
+        # date nearest today (sun_shade.nearest_key_date_index), and this test
+        # always picked Winter Solstice: from 6 November to 3 February that is
+        # already the choice, so nothing changed, nothing redrew, and the test
+        # failed for 90 days a year (found by V3.43's baseline run).
+        winter, summer = 1, 0
+        self.assertIn("Winter", panel._sun_date.itemText(winter))
+        if panel._sun_date.currentIndex() == winter:
+            panel._sun_date.setCurrentIndex(summer)
+            asked.clear()
+        panel._sun_date.setCurrentIndex(winter)
         self.assertTrue(asked, "changing the date did not redraw")
         self.assertIn("Winter", asked[-1]["date_label"])
         self.assertEqual(placements, [],
