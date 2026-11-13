@@ -397,7 +397,10 @@ Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.m
 > complaint or a question about where to buy the seeds. **Until V2.94 that eye-height view drew
 > every tree crown more than half near-black** (F186): leaves now let light through
 > ([`01c-leaves.js`](../html/scene3d/01c-leaves.js)), because a crown seen from a path is
-> its undersides. **Flower colour became a filter** in
+> its undersides. **Until V3.44 a homeowner could not reach that view at all**: the 3D preview
+> was behind the Advanced tools. It opens now from the Overview's street item and from the line
+> above the map after a plan, on the fifth summer, from where a neighbour stands
+> ([`scene3d_stops.py`](../src/scene3d_stops.py), F261). **Flower colour became a filter** in
 > V2.47 ([`flower_colour.py`](../src/flower_colour.py), F108) — the hex had been in the schema
 > since v31 driving the 3D florets, and none of the thirty search parameters could ask about
 > it, which meant the catalogue could answer every ecological question and not the one a

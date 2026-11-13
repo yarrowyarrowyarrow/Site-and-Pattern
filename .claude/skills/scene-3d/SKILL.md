@@ -50,10 +50,11 @@ replays it.
 DB-free — `get_plant` injectable) producing the renderer-agnostic scene. The
 full schema lives in its module docstring; the shape:
 
-`version, year, month, origin{lat,lng}, bounds, focus|None, views{street},
-boundary, plants[], buildings[] (kind: building|canopy), structures[],
-terrain|None, sun|None, is_night`. (`scan_points` and `splat` went with the
-yard scan in V3.22; `focus`, `views` and a plant's `gone` came in V3.43.)
+`version, year, month, origin{lat,lng}, bounds, focus|None,
+views{street, house}, boundary, plants[], buildings[] (kind:
+building|canopy), structures[], terrain|None, sun|None, is_night`.
+(`scan_points` and `splat` went with the yard scan in V3.22; `focus`, `views`
+and a plant's `gone` came in V3.43, `views.house` in V3.44.)
 
 Rules of the contract:
 
@@ -108,6 +109,59 @@ rendered one plant and nobody rendered a yard:
 the real viewer and reads the picture back (`html/yard_probe.html`).
 `python scripts/render_yard.py --out DIR` draws the contact sheets every 3D
 increment ends with; look at them, a green gate is not a picture.
+
+## The window a homeowner opens (V3.44; `docs/plans/V3.44-getting-to-3d.md`)
+
+The 3D preview opens from the simple app (the plan strip's *See it in 3D*, the
+Overview's street item) without turning Advanced tools on. What that asks of
+anything you add to it:
+
+- **Two short rows by default, the rest behind the switch.** *When*, *Season*,
+  *Time of day* as lists of named stops and *View* (From the street, From the
+  house, From above, Walk, Reset view). Their words and values are one Qt-free
+  table, `src/scene3d_stops.py`; the widgets are `Scene3DToolBar`'s `WHEN` and
+  `VIEWS` groups (`src/scene3d_named_groups.py`). Everything else sits in
+  `Scene3DWindow.advanced_rows`, shown by `set_advanced_tools(on)`, which the
+  registry reaches through `main.scene3d_tools` (the window does not exist
+  until it is opened). **A new control goes in `advanced_rows` unless a
+  homeowner needs it**, and a tool the switch hides must be stopped by
+  `set_advanced_tools(False)`.
+- **The sliders are the record of the moment.** `self._year` / `_month` /
+  `_hour` are read in a dozen places; the lists set them and follow them
+  (`when_bar.set_time(..., quiet=True)` in `_update_labels`). A list never
+  names a stop the picture is not at: off a stop it gains one entry that says
+  where it is ("Seventh summer").
+- **It opens on `scene3d_stops.OPENING`** (the owner's D5: fifth summer, July,
+  15:00, from the street), once per design (`_on_new_design`, keyed on the
+  scene's origin), never while Walk, a flight or the Flyover owns the camera.
+  The view itself is `scene_views.opening_view(views)`: the street unless
+  `views.street.behind` (a building hides the planting, or it is all at the
+  back), then the house, else the whole yard.
+- **Named views are `window.permaShowView('street'|'house'|'above'|'whole')`**
+  (`html/scene3d/27-views.js`, `Map3DWidget.show_view`). Where each stands is
+  in the scene: `views.street`, `views.house` (`scene_views.house_view`: the
+  largest building inside the outline, or the one under the pin when nothing
+  is outlined; absent otherwise, and the button says what it needs), `focus`
+  for above. **A yard with no outline is still a yard**: its own extent stands
+  in for the outline (the simple app's usual design is a pin and a bed). A
+  walk through a wild community (`reference_version` in the project's
+  properties) has no views.
+- **`27-views.js` is the last chunk.** A probe that needs it waits for
+  `permaShowView`. Its two callers in earlier chunks (`hudText`, the speed
+  bar) are `typeof`-guarded.
+- **A scene push is cheap only because of two rules.** `build_scene(...,
+  memo=self._memo)` keeps the shade simulation between pushes (a year already
+  shown costs about 0.02 s, not 0.2 to 0.9 s), and `wind_scene` reads the wind
+  from the cache only. **Never let anything `build_scene` calls reach the
+  network**: it runs on the main thread on every slider tick, and the suite's
+  network guard hides the cost by failing the request at once. Slider moves
+  are coalesced (`PUSH_EVERY_MS`); a test that moves a slider twice calls
+  `win._on_push_interval()` to end the interval.
+- **The words are the simple app's.** The window's modules are in the
+  vocabulary ratchet's `SIMPLE_MODULES`; the page and its scripts are under
+  the 12 px floor (`tests/test_visual_floor.py`); the line over the picture
+  says the year in the toolbar's words (`whenWords`, held equal to
+  `scene3d_stops.when_words` by a test).
 
 ## Viewer selection: built-in vs fork
 

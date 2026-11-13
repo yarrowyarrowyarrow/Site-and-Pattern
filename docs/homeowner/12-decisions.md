@@ -120,7 +120,7 @@ new decisions:
 | ID | Question | Options | Recommended | By | Answer |
 |---|---|---|---|---|---|
 | M1 | How the two ways work | Simple by default with one remembered switch; ask on first run; offer it on the start screen | **One remembered switch, off by default** | 4 | **Recommended** |
-| M2 | The 3D preview | Advanced, with one plain door from the overview; simple for everyone; advanced only | **Advanced, with one door from the overview** | 10 | **Recommended**. *Not built by V3.43; it is F261, with one question left (D1 of the [V3.43 plan](../plans/V3.43-the-3d-preview-reviewed.md)): whether the door turns Advanced tools on* |
+| M2 | The 3D preview | Advanced, with one plain door from the overview; simple for everyone; advanced only | **Advanced, with one door from the overview** | 10 | **Recommended**. *Built in V3.44 (F261, [plan](../plans/V3.44-getting-to-3d.md)): the View menu's item stays with the Advanced tools, and the simple app has two doors, *See it in 3D* on the Overview's street item and on the line above the map after a plan. Neither turns Advanced tools on (D1 of the [V3.43 plan](../plans/V3.43-the-3d-preview-reviewed.md), answered 12 November 2026), and the window opens with two short rows of controls* |
 | M3 | The switch's name | *Advanced tools*; *More tools*; *Expert mode* | **Advanced tools** | 4 | **Recommended** |
 | M4 | Whether the Learn tab survives | See G2, S2, S3 | **Behind Advanced** | 5 | **Recommended** |
 

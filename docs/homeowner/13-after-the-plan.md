@@ -70,8 +70,9 @@ Checked in the code:
 - **E9**: rename the seven "Edmonton …" communities by habitat. Not done
   (`src/db/polycultures.py`).
 - **S3**: fold the Lessons' "your design" lines into the Report card. Not found.
-- **M2**: one door from the Overview to the 3D preview. Not found. *(Planned as
-  F261, V3.44.)*
+- **M2**: one door from the Overview to the 3D preview. Not found. *(Built in
+  V3.44, F261: the Overview's street item and the line above the map after a
+  plan, without the Advanced tools switch.)*
 - **L3**: "too big" against the yard's measured front and back. Only the
   Overview uses those measures; the plant list does not.
 - **O4** (the familiar animals list, F249) and **L5** (the spread review, F246):

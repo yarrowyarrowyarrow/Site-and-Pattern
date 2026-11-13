@@ -88,6 +88,15 @@ toolbar is the busiest window in the app. Recommendation: advanced, with one
 plain entry point in simple mode on the overview ("See it grow in 3D ▸") that
 turns the switch on and opens the preview.
 
+*Built in V3.44 (F261), with one change the owner approved (D1 of the
+[3D review](../plans/V3.43-the-3d-preview-reviewed.md)): the entry point opens
+the preview and **leaves the switch alone**, since the V3.37 use test found
+the switch turning itself on disorienting. So the window had to stop being the
+busiest in the app: it opens with two short rows (when, and where to look
+from), and the rows it had are behind the switch like everything else. The
+entry is* See it in 3D *on the overview's street item and on the line above
+the map after a plan ([plan](../plans/V3.44-getting-to-3d.md)).*
+
 ### 3.3 The plant page and the plant list
 
 Two modes of the same page and the same rows: [05-plants-that-lead.md](05-plants-that-lead.md)
