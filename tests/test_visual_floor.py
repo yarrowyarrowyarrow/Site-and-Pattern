@@ -69,6 +69,17 @@ class TestNoTextUnder12px(unittest.TestCase):
                         offenders.append(f"{path.relative_to(_ROOT)}:{n}: {size}px")
         self.assertEqual(offenders, [])
 
+    def test_the_3d_pages_own_buttons_are_24px(self):
+        """V3.44: a homeowner opens the 3D preview now, and the buttons the
+        page draws itself (a card's close and back, Plant one, the creature
+        speed steps) are outside what ``target_size`` can reach."""
+        css = (_ROOT / "html" / "scene3d.html").read_text(encoding="utf-8")
+        for selector in ("#wild-speed button {", "#inspect-close {",
+                         "#inspect-card .iback, #inspect-card .plant-one {"):
+            start = css.index(selector)
+            rule = css[start:css.index("}", start)]
+            self.assertIn("min-height: 24px", rule, selector)
+
     def test_no_font_sized_under_12px_in_code(self):
         pixel = re.compile(r"setPixelSize\(\s*(\d+)\s*\)")
         point = re.compile(r"setPointSize\(\s*(\d+)\s*\)")

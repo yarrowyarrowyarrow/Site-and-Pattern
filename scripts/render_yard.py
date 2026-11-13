@@ -301,7 +301,7 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
               f"{datetime(2025, month, 1):%B}, {hour}:00")
     yard = [
         {"shot": "lot_open", "caption": f"{lot_name}, as the window opens: "
-                                        f"{moment}, from the street."},
+                                        f"{moment}."},
         {"shot": "house", "caption": "From the house (where there is one; "
                                      "else the whole yard)."},
         {"shot": "above", "caption": "From above, north at the top."},
@@ -313,7 +313,7 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
                          "scene": "/__yard/example_open.json", "view": "open"})
         yard.insert(0, {"shot": "example_open",
                         "caption": "The example yard, as the window opens: "
-                                   f"{moment}, from the street."})
+                                   f"{moment}."})
     time = [
         {"shot": "y1", "caption": "Year 1, June, from the street."},
         {"shot": "y3", "caption": "Year 3, July."},
@@ -399,6 +399,13 @@ def main(argv=None) -> int:
         label = running_version() or "this checkout"
     spec = job(label, name, with_example, width, height)
     spec["keep_shots"] = bool(args.tiles)
+    # "As the window opens" is the view the window would choose for that
+    # scene (V3.44): the street, or the house or the whole yard where the
+    # street cannot see the planting.
+    from src.scene_views import opening_view
+    for shot in spec["shots"]:
+        if shot["view"] == "open":
+            shot["view"] = opening_view(routes[shot["scene"]].get("views"))
     routes["/__yard/shots.json"] = spec
 
     print(f"rendering {len(spec['shots'])} pictures (a few minutes)…")
