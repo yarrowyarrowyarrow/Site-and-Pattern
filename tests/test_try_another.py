@@ -299,7 +299,8 @@ class TheWidgets(unittest.TestCase):
         bar.show_plan(95, 14, "run1")
         self.assertEqual(bar.label.text(), "Your plan: 95 plants of 14 kinds.")
         self.assertEqual([b.text() for b in bar.buttons],
-                         ["Try another", "About this plan", "Undo"])
+                         ["See it in 3D", "Try another", "About this plan",
+                          "Undo"])
         bar.set_busy(True)
         self.assertEqual(bar.label.text(), "Planning another…")
         self.assertFalse(any(b.isEnabled() for b in bar.buttons))
@@ -309,6 +310,29 @@ class TheWidgets(unittest.TestCase):
         self.assertTrue(bar.isVisible())
         bar.follow({"features": []})
         self.assertFalse(bar.isVisible())
+        bar.deleteLater()
+
+    def test_see_it_in_3d_opens_the_preview_and_turns_no_switch(self):
+        """The owner's M2 and D1 (V3.44): a door to the 3D preview where a
+        person is looking when a plan has just landed, which leaves the
+        Advanced tools as they were."""
+        from unittest import mock
+        from src import advanced_tools_flow, plan_bar
+
+        class Main:
+            _generation = mock.Mock()
+
+        real = plan_bar.PlanBar
+        with mock.patch.object(plan_bar, "PlanBar", lambda _main: real()):
+            bar = plan_bar.make(Main)
+        with mock.patch("src.scene3d_window.open_3d_view") as opened, \
+                mock.patch.object(advanced_tools_flow,
+                                  "set_and_apply") as switch:
+            bar.button("See it in 3D").click()
+        opened.assert_called_once_with(Main)
+        switch.assert_not_called()
+        self.assertTrue(bar.button("See it in 3D").accessibleName()
+                        or bar.button("See it in 3D").text())
         bar.deleteLater()
 
     def test_about_is_not_modal(self):

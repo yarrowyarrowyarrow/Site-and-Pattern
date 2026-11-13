@@ -138,6 +138,26 @@ class TheOverviewPage(unittest.TestCase):
             yard_overview_flow.run_action(self.win, "advanced:food")
         on.assert_called_once_with(self.win, True)
 
+    def test_see_it_in_3d_opens_the_preview_from_the_street(self):
+        """The owner's M2 and D1 (V3.44). U21: three Overview buttons switched
+        on the whole of Advanced tools, and that was disorienting. This one
+        opens a window and leaves the mode alone."""
+        from src import advanced_tools_flow
+        link = self.win.overview_page.links["street"]
+        self.assertEqual(link.text(), "See it in 3D ▸")
+        self.assertEqual(link.accessibleName(), "See it in 3D")
+        self.assertGreaterEqual(link.height(), 24)
+        with mock.patch("src.scene3d_window.open_3d_view") as opened, \
+                mock.patch.object(advanced_tools_flow,
+                                  "set_and_apply") as switch:
+            link.click()
+            self._app.processEvents()
+        opened.assert_called_once_with(self.win, "street")
+        switch.assert_not_called()
+        # MD-4's links are still named for what they are.
+        self.assertEqual(self.win.overview_page.links["cost"].accessibleName(),
+                         "See the hours: more detail")
+
     def test_fill_the_gaps_is_one_undo_step(self):
         from src import yard_overview, yard_overview_dialogs
         before = len(self.win._placed_plants)

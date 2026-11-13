@@ -233,6 +233,60 @@ class TheSevenTasks(unittest.TestCase):
         from src import yard_overview_flow
         yard_overview_flow.fill(self.win)
         self.assertIn(street.title, self._page_text(self.win.overview_page))
+        self._see_it_in_3d()
+
+    def _see_it_in_3d(self):
+        """The same question, as a picture (V3.44; the owner's M2): the
+        Overview's link opens the 3D preview from the street, on the fifth
+        summer, with the two short rows, and the app stays simple (D1)."""
+        from PyQt6.QtWidgets import QComboBox, QPushButton, QSlider
+        from src import advanced_tools
+        win = self.win
+        self.assertIsNone(getattr(win, "_scene3d_window", None))
+        # The plan strip offers the same door.
+        self.assertTrue(win.plan_bar.button("See it in 3D").isVisible())
+        from src import scene3d_window
+        sent = []
+        real_init = scene3d_window.Scene3DWindow.__init__
+
+        def quiet(view, main):
+            # The picture itself is tests/test_yard_render.py's: here the
+            # page is not loaded, and what the window sends is kept.
+            real_init(view, main)
+            view.viewer.run_js = sent.append
+        with mock.patch.object(scene3d_window.Scene3DWindow, "__init__",
+                               quiet), \
+                mock.patch.object(scene3d_window.Scene3DWindow,
+                                  "_start_photo_warm", lambda _s: None), \
+                mock.patch.object(scene3d_window.Scene3DWindow,
+                                  "_start_terrain_fetch", lambda _s: None):
+            win.overview_page.links["street"].click()
+            self.app.processEvents()
+        view = win._scene3d_window
+        self.assertIsNotNone(view, "See it in 3D opened nothing")
+        try:
+            self.assertTrue(view.isVisible())
+            self.assertFalse(advanced_tools.is_on(),
+                             "the door turned Advanced tools on")
+            self.assertFalse(view.advanced_rows.isVisible())
+            shown = [w.accessibleName() or w.text() for w in
+                     view.findChildren((QComboBox, QPushButton, QSlider))
+                     if w.isVisible()]
+            self.assertEqual(shown, ["When", "Season", "Time of day",
+                                     "From the street", "From the house",
+                                     "From above", "Walk", "Reset view"])
+            scene = view._scene
+            self.assertEqual((scene["year"], scene["month"]), (5, 7))
+            placed = [p for p in scene["plants"] if p.get("plant_id")]
+            self.assertEqual(len(placed), len(win._placed_plants),
+                             "the picture is of this plan")
+            self.assertIn("street", scene["views"])
+            self.assertTrue([js for js in sent
+                             if 'permaShowView("street")' in js])
+        finally:
+            view.close()
+            view.deleteLater()
+            win._scene3d_window = None
 
     def _task_4_caterpillars_and_height(self) -> int:
         """*Find a plant in your plan that will feed caterpillars, and tell

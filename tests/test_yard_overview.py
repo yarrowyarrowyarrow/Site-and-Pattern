@@ -234,6 +234,34 @@ class TheSixItems(unittest.TestCase):
         self.assertIn(yi.heading(self.example).split(" · ")[-1],
                       "19 plants, 14 kinds")
 
+    def test_the_street_item_leads_to_the_3d_preview(self):
+        """The owner's M2 (V3.44): one door from the Overview to the 3D
+        preview, on the item that asks how it will look from the street,
+        whatever that item's status. It is a link beside the item's one
+        action, and its target turns no switch (D1)."""
+        street = self.by_key["street"]
+        self.assertEqual(street.more, yi.SEE_3D)
+        self.assertEqual(yi.SEE_3D, ("See it in 3D", "view3d:street"))
+        self.assertEqual(street.action, "Draw a mown strip",
+                         "the item keeps its own next step")
+        others = [it.more for it in self.items if it.key != "street"]
+        self.assertFalse([m for m in others if m and "view3d" in m[1]])
+
+    def test_a_street_item_that_looks_good_has_the_door_too(self):
+        from unittest import mock
+        from src import cues_to_care
+
+        class Cue:
+            def __init__(self, key):
+                self.key, self.present = key, True
+        cues = [Cue(k) for k in yi._CUES]
+        with mock.patch.object(cues_to_care, "assess", lambda *a, **k: cues):
+            street = next(it for it in yi.overview(self.example)
+                          if it.key == "street")
+        self.assertEqual(street.status, yi.GOOD)
+        self.assertEqual(street.action, "")
+        self.assertEqual(street.more, yi.SEE_3D)
+
     def test_no_bylaw_sentence(self):
         """O5: Edmonton's pack carries no street rule."""
         self.assertNotIn("bylaw", yi.as_text(self.items).lower())

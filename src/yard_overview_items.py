@@ -48,6 +48,10 @@ MONTHS = ("January", "February", "March", "April", "May", "June", "July",
 #: The flowering strip's months, April to October.
 STRIP = tuple(range(4, 11))
 
+#: The street item's door to the 3D preview (the owner's M2, V3.44): the
+#: picture from where a neighbour stands. It does not turn Advanced tools on.
+SEE_3D = ("See it in 3D", "view3d:street")
+
 #: The street cues: (what is there, the next step, the action, its target).
 #: Only a drawn shape has an action; the order is ``cues_to_care``'s.
 _CUES = {
@@ -67,8 +71,10 @@ _CUES = {
 @dataclass
 class Item:
     """One card: its title, status, lines and one action (``target`` is what
-    ``yard_overview_flow.run_action`` does). ``more`` is MD-4's link to the
-    advanced page that explains it; ``strip`` the flowering months' counts."""
+    ``yard_overview_flow.run_action`` does). ``more`` is a link beside it:
+    MD-4's to the advanced page that explains the item (an ``advanced:``
+    target), or the street item's door to the 3D preview (``view3d:``,
+    V3.44); ``strip`` the flowering months' counts."""
     key: str
     title: str
     status: str
@@ -326,7 +332,7 @@ def item_street(d: Design) -> Item:
         if rule:
             lines.append(rule)
         return Item("street", title, GOOD, lines or [
-            "Signs of care are in place."])
+            "Signs of care are in place."], more=SEE_3D)
     nxt = lacking[0]
     _have, step, action, target = _CUES[nxt.key]
     text = f"Most useful next: {step}"
@@ -337,7 +343,7 @@ def item_street(d: Design) -> Item:
     lines.append(text + ".")
     if rule:
         lines.append(rule)
-    return Item("street", title, LOOK, lines, action, target)
+    return Item("street", title, LOOK, lines, action, target, SEE_3D)
 
 
 # ── 6. What it will take ────────────────────────────────────────────────────

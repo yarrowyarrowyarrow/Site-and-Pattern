@@ -70,6 +70,7 @@ class OverviewPage(QScrollArea):
         self.setWidget(body)
         self.cards: dict = {}
         self.buttons: dict = {}
+        self.links: dict = {}
         self.show_items("", [])
 
     def _clear(self):
@@ -79,7 +80,7 @@ class OverviewPage(QScrollArea):
             if w is not None:
                 w.setParent(None)
                 w.deleteLater()
-        self.cards, self.buttons = {}, {}
+        self.cards, self.buttons, self.links = {}, {}, {}
 
     def show_items(self, heading: str, items: list) -> None:
         from src.yard_overview_items import TITLE
@@ -135,10 +136,15 @@ class OverviewPage(QScrollArea):
             link.setObjectName("overviewMore")
             link.setStyleSheet(_LINK)
             link.setCursor(Qt.CursorShape.PointingHandCursor)
-            link.setAccessibleName(f"{words}: more detail")
+            # MD-4's links open an advanced page; the street item's opens
+            # the 3D preview and is named for what it does.
+            link.setAccessibleName(f"{words}: more detail"
+                                   if target.startswith("advanced:")
+                                   else words)
             link.clicked.connect(lambda _c=False, t=target:
                                  self.action_requested.emit(t))
             more_row.addWidget(link)
+            self.links[item.key] = link
         if item.action:
             button = QPushButton(item.action)
             button.setObjectName("overviewAction")

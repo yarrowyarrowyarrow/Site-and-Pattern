@@ -2,10 +2,15 @@
 plan_bar.py — the line above the map after a plan lands (PY-6, PY-8, V3.29;
 docs/homeowner/07-plan-my-yard.md §4.4–§4.5).
 
-*Your plan: 95 plants of 14 kinds.* with **Try another**, **About this plan**
-and **Undo**. It replaces the modal *Design notes* box that opened after every
-plan: the notes are one press away (*About this plan*, which in the advanced
-app also lists the Design notes) instead of between the person and their map.
+*Your plan: 95 plants of 14 kinds.* with **See it in 3D**, **Try another**,
+**About this plan** and **Undo**. It replaces the modal *Design notes* box
+that opened after every plan: the notes are one press away (*About this plan*,
+which in the advanced app also lists the Design notes) instead of between the
+person and their map.
+
+*See it in 3D* (V3.44, F261) is one of the simple app's two doors to the 3D
+preview (the owner's M2; the other is the Overview's street item). It opens
+the window and leaves the Advanced tools switch alone (D1).
 
 A strip in the map's column, beside the map, never inside it: the web view's
 accessible interface reports only the page (the V2.98 rule). It goes when the
@@ -27,6 +32,7 @@ _BUTTON = ("QPushButton { background: #2e4a2e; color: #e8f5e9; border: none; "
 class PlanBar(QFrame):
     """One line: what the plan is, and three things to do with it."""
 
+    see_3d = pyqtSignal()
     try_another = pyqtSignal()
     about = pyqtSignal()
     undo = pyqtSignal()
@@ -45,6 +51,9 @@ class PlanBar(QFrame):
         row.addWidget(self.label, 1)
         self.buttons = []
         for text, signal, tip in (
+                ("See it in 3D", self.see_3d,
+                 "See this plan as a picture: a few summers on, from the "
+                 "street. It opens in its own window."),
                 ("Try another", self.try_another,
                  "Make a different plan from the same answers. "
                  "It replaces this one; Undo brings this one back."),
@@ -84,6 +93,10 @@ class PlanBar(QFrame):
         for b in self.buttons:
             b.setEnabled(not busy)
 
+    def button(self, text: str) -> QPushButton:
+        """The button with these words on it."""
+        return next(b for b in self.buttons if b.text() == text)
+
     def follow(self, project: dict) -> None:
         """Hide when the plan this line names is no longer in ``project``."""
         if not self.isVisible() or not self.run:
@@ -99,7 +112,14 @@ def make(main) -> PlanBar:
     bar = PlanBar(main)
     main.plan_bar = bar
     gen = main._generation
+    bar.see_3d.connect(lambda: _see_3d(main))
     bar.try_another.connect(gen.try_another)
     bar.about.connect(gen.show_about)
     bar.undo.connect(lambda: main._do_undo())
     return bar
+
+
+def _see_3d(main) -> None:
+    """Open the 3D preview on this design, or raise it."""
+    from src.scene3d_window import open_3d_view
+    open_3d_view(main)

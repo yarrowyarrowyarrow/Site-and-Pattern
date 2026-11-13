@@ -14,7 +14,9 @@ holds (``advanced_tools.ADVANCED_PAGES``).
 on the plant list, Draw › Shape opened on the right type, the fill and swap
 dialogs (``src/yard_overview_dialogs.py``), Export PDF, Plan My Yard. A *More
 detail* link (MD-4) turns the Advanced tools on and shows the page that
-explains the item, and says once a session how to turn them off.
+explains the item, and says once a session how to turn them off. The street
+item's *See it in 3D* (V3.44, the owner's M2) opens the 3D preview from the
+street and **leaves the switch alone** (D1; U21 found the switch disorienting).
 """
 
 from __future__ import annotations
@@ -142,7 +144,14 @@ def _fill(main, _arg: str) -> None:
     yard_overview_dialogs.fill_gaps(main)
 
 
+def _view3d(main, view: str) -> None:
+    """The 3D preview, looking from ``view`` (the street, for the item that
+    asks how it will look from there). No switch is turned."""
+    from src.scene3d_window import open_3d_view
+    open_3d_view(main, view or "")
+
+
 _HANDLERS = {"advanced": _advanced, "page": _page, "plants": _plants,
              "shape": _shape, "export": _export, "site": _site,
              "draw": _draw, "plan": _plan, "swap": _swap,
-             "fill_gaps": _fill}
+             "fill_gaps": _fill, "view3d": _view3d}
