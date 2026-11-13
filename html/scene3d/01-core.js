@@ -526,7 +526,10 @@ function hudText(sc) {
   const shade = placed.filter(p => p.health_state === 'dead').length;
   const lived = placed.filter(p => p.gone === 'short_lived').length;
   const trees = all.filter(p => p.existing).length;
-  const parts = ['<b>' + (sc.year ? 'Year ' + sc.year : 'Fully grown') + '</b>',
+  // The toolbar's own words for the year (27-views.js, V3.44).
+  const when = typeof whenWords === 'function' ? whenWords(sc.year, sc.month)
+    : (sc.year ? 'Year ' + sc.year : 'Fully grown');
+  const parts = ['<b>' + when + '</b>',
                  _HUD_MONTHS[sc.month] || '', n(here, 'plant', 'plants')];
   if (trees) parts.push(n(trees, 'tree', 'trees') + ' already here');
   if (shade) parts.push(shade + ' lost to shade');

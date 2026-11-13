@@ -44,11 +44,15 @@ def tearDownModule():
 
 def _desktop_sources():
     """The desktop app's own text: the panels and dialogs, the map page and
-    its scripts. Not the PDF export (print sizes) or the public website."""
+    its scripts, and since V3.44 the 3D preview's page and its scripts (a
+    homeowner opens it now, and its cards were 9 to 11.5 px in sixteen
+    places). Not the PDF export (print sizes) or the public website."""
     files = (sorted((_ROOT / "src").glob("*.py"))
              + sorted((_ROOT / "src" / "controllers").glob("*.py"))
              + [_ROOT / "html" / "map.html"]
-             + sorted((_ROOT / "html" / "map").glob("*.js")))
+             + sorted((_ROOT / "html" / "map").glob("*.js"))
+             + [_ROOT / "html" / "scene3d.html"]
+             + sorted((_ROOT / "html" / "scene3d").glob("*.js")))
     return [p for p in files
             if p.name != "pdf_export.py" and not p.name.startswith("static_site")]
 

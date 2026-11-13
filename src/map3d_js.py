@@ -62,6 +62,17 @@ def set_camera_preset(name: str) -> str:
             f"{json.dumps(str(name))});")
 
 
+def show_view(name: str) -> str:
+    """JS placing the camera at one of the window's named viewpoints (V3.44,
+    ``html/scene3d/27-views.js``): ``'street'`` | ``'house'`` | ``'above'``
+    (``src.scene3d_stops.VIEWS``) or ``'whole'``. Where each stands is in the
+    scene (``views``, ``focus``); a view the scene cannot give shows the whole
+    yard.
+    Guarded with ``&&``."""
+    return ("window.permaShowView && window.permaShowView("
+            f"{json.dumps(str(name))});")
+
+
 def snapshot(px: int = 320, *, height: int = 0, pixel_ratio: int = 0,
              mime: str = "", quality: float = 0.0) -> str:
     """JS to render the CURRENT scene from the CURRENT camera into a ``px``-square

@@ -126,9 +126,7 @@ def set_mode(win, mode: str) -> None:
         getattr(win, attr).setChecked(m == want)
     hint = ""
     if want == "plant":
-        pick = win._current_plant_pick()
-        hint = (f"Planting {pick['common_name']}."
-                if pick else "Pick a species in the Plants panel first.")
+        hint = _plant_hint(win)
     elif want == "pull":
         hint = "Click a plant to remove it."
     elif want == "net":
@@ -136,6 +134,38 @@ def set_mode(win, mode: str) -> None:
     win._edit_hint.setText(hint)
     pick = win._current_plant_pick() if want == "plant" else None
     win.viewer.set_edit_mode(want, pick)
+
+
+def _plant_hint(win) -> str:
+    """What the trowel plants, and when: the slider's year is the year it goes
+    in (V2.44), and since V3.44 the window opens on the fifth summer."""
+    pick = win._current_plant_pick()
+    if not pick:
+        return "Pick a species in the Plants panel first."
+    from src.scene3d_stops import when_words
+    year = int(win._year.value())
+    when = f" in the {when_words(year).lower()}" if year > 0 else ""
+    return f"Planting {pick['common_name']}{when}."
+
+
+def refresh_hint(win) -> None:
+    """The year moved while the trowel was out: say when it plants now."""
+    btn = getattr(win, "_plant_btn", None)
+    if btn is not None and btn.isChecked():
+        win._edit_hint.setText(_plant_hint(win))
+
+
+def clear_mode(win) -> None:
+    """Put every verb down (V3.44): the Advanced tools switch is hiding these
+    buttons, and a trowel left out would plant on the next click."""
+    for _m, attr, _t, _tip in _TOOLS:
+        btn = getattr(win, attr, None)
+        if btn is not None and btn.isChecked():
+            btn.setChecked(False)
+    hint = getattr(win, "_edit_hint", None)
+    if hint is not None:
+        hint.setText("")
+    win.viewer.set_edit_mode("", None)
 
 
 def _button_attr(mode: str) -> str:

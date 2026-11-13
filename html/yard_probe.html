@@ -47,6 +47,8 @@ async function ready() {
   }, 60000);
   if (!ok) throw new Error('the viewer never finished loading its chunks');
   await until(() => typeof viewer().permaPerf === 'function', 3000);
+  // permaShowView is the last chunk's since V3.44 (27-views.js).
+  await until(() => typeof viewer().permaShowView === 'function', 3000);
   return viewer();
 }
 async function push(w, sc, quality) {
@@ -162,6 +164,23 @@ async function measure(w, job) {
   res.perf.reads = typeof w.permaPerf === 'function' ? w.permaPerf() : {};
   key(); res.perf.hidden = !doc.getElementById('perf-readout');
 
+  // 11. The named viewpoints (V3.44): each drawn where the scene says, and
+  // one the scene cannot give shows the whole yard.
+  if (typeof w.permaShowView === 'function') {
+    res.views = {};
+    for (const name of ['street', 'house', 'above', 'nowhere']) {
+      w.permaShowView(name);
+      res.views[name] = Object.assign(camera(w), { yard: span(w, sc.focus) });
+    }
+    // Are the animals what is being looked at? (the speed bar's rule)
+    const subject = () => !!w.eval('animalsAreSubject()');
+    res.animals = { at_rest: subject() };
+    w.permaSetWildlifeLabels(true); res.animals.identify = subject();
+    w.permaSetWildlifeLabels(false); res.animals.after = subject();
+    w.permaSetWalkMode(true); res.animals.walking = subject();
+    w.permaSetWalkMode(false);
+  }
+
   // 10. A scene from before V3.43 (no focus, no views) frames the stage, as it
   // always did, and its year 0 is said in words.
   if (job.legacy) {
@@ -170,6 +189,10 @@ async function measure(w, job) {
                    hud: doc.getElementById('hud').innerText };
     w.permaSetCameraPreset('sidewalk');
     res.legacy.street = camera(w);
+    if (typeof w.permaShowView === 'function') {
+      w.permaShowView('house');            // no house in a scene with no views
+      res.legacy.house = camera(w);
+    }
   }
   return res;
 }
@@ -182,11 +205,17 @@ function look(w, sc, view) {
   const big = Math.max(b.max_x - b.min_x, b.max_y - b.min_y);
   const set = (p, t) => E('camera.position.set(' + p.join(',') + ');'
     + 'controls.target.set(' + t.join(',') + ');controls.update();');
+  // The viewer's own named views where it has them (V3.44), so a sheet shows
+  // what the window's buttons show; an older viewer gets the probe's own.
+  const named = typeof w.permaShowView === 'function';
   if (view === 'street') w.permaSetCameraPreset('sidewalk');
   else if (view === 'yard') w.permaSetCameraPreset('walk');
+  else if (view === 'house' && named) w.permaShowView('house');
+  else if (view === 'above' && named) w.permaShowView('above');
   else if (view === 'above') set([cx, big * 1.25, -cy + 0.5], [cx, 0, -cy]);
   else if (view && typeof view === 'object') set(view.at, view.looks_at);
-  else w.permaResetView();                 // 'open': what the window opens on
+  else if (view === 'open' && named) w.permaShowView('street');   // D5
+  else w.permaResetView();                 // 'whole', and 'open' before V3.44
 }
 
 function wrap(g, text, width) {

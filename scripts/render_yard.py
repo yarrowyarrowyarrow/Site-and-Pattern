@@ -6,10 +6,12 @@ scripts/render_yard.py — a whole yard through the real 3D viewer, as pictures
     python scripts/render_yard.py --out /tmp/yard
     python scripts/render_yard.py --out /tmp/yard --design my-yard.perma.geojson
 
-Writes two contact sheets, ``yard.jpg`` (the yard and its setting: on opening,
-from the street, from inside, from above) and ``time.jpg`` (the same street
-view through the years, the seasons and the day), each tile drawn by the app's
-own viewer from the scene the app's own ``build_scene`` makes.
+Writes two contact sheets, ``yard.jpg`` (the yard and its setting: as the
+window opens, from the house, from above, the whole yard, from inside) and
+``time.jpg`` (the same street view through the years, the seasons and the
+day), each tile drawn by the app's own viewer from the scene the app's own
+``build_scene`` makes. Since V3.44 the views are the window's own named ones
+(``src/scene3d_stops.py``), so a sheet shows what its buttons show.
 
 **Why it exists.** Six audits rendered one plant at a time, and the V3.37 use
 test could not open 3D at all, so for years nobody looked at a yard. The V3.43
@@ -257,9 +259,17 @@ def scene(project: dict, year: int, month: int, hour: int) -> dict:
 
 # ── the sheets ───────────────────────────────────────────────────────────────
 
-#: tag: (year, month, hour). Year 0 is the design fully grown.
+def _opening() -> tuple:
+    """What the window opens on (``scene3d_stops.OPENING``, the owner's D5)."""
+    from src.scene3d_stops import OPENING
+    return (OPENING["year"], OPENING["month"], OPENING["hour"])
+
+
+#: tag: (year, month, hour). Year 0 is the design fully grown. ``open`` was
+#: (0, 6, 13) until V3.44; the others are unchanged, so a time sheet can be
+#: laid beside an older one.
 MOMENTS = {
-    "open": (0, 6, 13), "y1_jun": (1, 6, 13), "y3_jul": (3, 7, 13),
+    "open": _opening(), "y1_jun": (1, 6, 13), "y3_jul": (3, 7, 13),
     "y5_jul": (5, 7, 13), "y25_jul": (25, 7, 13), "y5_apr": (5, 4, 13),
     "y5_oct": (5, 10, 13), "y5_jan": (5, 1, 13), "y5_aug_18h": (5, 8, 18),
     "y5_jul_23h": (5, 7, 23),
@@ -271,10 +281,11 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
     lot = lambda tag: f"/__yard/lot_{tag}.json"              # noqa: E731
     shots = [
         {"name": "lot_open", "scene": lot("open"), "view": "open"},
+        {"name": "house", "scene": lot("open"), "view": "house"},
+        {"name": "above", "scene": lot("open"), "view": "above"},
+        {"name": "whole", "scene": lot("open"), "view": "whole"},
+        {"name": "yard", "scene": lot("open"), "view": "yard"},
         {"name": "street", "scene": lot("y5_jul"), "view": "street"},
-        {"name": "yard", "scene": lot("y5_jul"), "view": "yard"},
-        {"name": "above", "scene": lot("y5_jul"), "view": "above"},
-        {"name": "orbit", "scene": lot("y5_jul"), "view": "open"},
         {"name": "y1", "scene": lot("y1_jun"), "view": "street"},
         {"name": "y3", "scene": lot("y3_jul"), "view": "street"},
         {"name": "y25", "scene": lot("y25_jul"), "view": "street"},
@@ -284,19 +295,25 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
         {"name": "eve", "scene": lot("y5_aug_18h"), "view": "street"},
         {"name": "night", "scene": lot("y5_jul_23h"), "view": "street"},
     ]
+    from src.scene3d_stops import when_words
+    year, month, hour = MOMENTS["open"]
+    moment = (f"{when_words(year, month).lower()}, "
+              f"{datetime(2025, month, 1):%B}, {hour}:00")
     yard = [
-        {"shot": "lot_open", "caption": f"{lot_name}, as the window opens "
-                                        "(fully grown, June, 1 pm)."},
-        {"shot": "street", "caption": "From the street: year 5, July."},
-        {"shot": "yard", "caption": "A few steps into the yard: year 5, July."},
-        {"shot": "above", "caption": "From above, north up: year 5, July."},
-        {"shot": "orbit", "caption": "The opening angle again: year 5, July."},
+        {"shot": "lot_open", "caption": f"{lot_name}, as the window opens: "
+                                        f"{moment}, from the street."},
+        {"shot": "house", "caption": "From the house (where there is one; "
+                                     "else the whole yard)."},
+        {"shot": "above", "caption": "From above, north at the top."},
+        {"shot": "whole", "caption": "Reset view: the whole yard."},
+        {"shot": "yard", "caption": "A few steps into the yard."},
     ]
     if with_example:
         shots.insert(0, {"name": "example_open",
                          "scene": "/__yard/example_open.json", "view": "open"})
         yard.insert(0, {"shot": "example_open",
-                        "caption": "The example yard, as the window opens."})
+                        "caption": "The example yard, as the window opens: "
+                                   f"{moment}, from the street."})
     time = [
         {"shot": "y1", "caption": "Year 1, June, from the street."},
         {"shot": "y3", "caption": "Year 3, July."},

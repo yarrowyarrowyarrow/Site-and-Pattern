@@ -54,7 +54,8 @@ from src import indicator_style, target_size
 from src import month_tasks, onboarding_flow, start_flow
 from src.yard_overview import bed_area_m2
 from src.elided_label import ElidedLabel
-from src.scene3d_window import open_3d_view as _open_3d_view
+from src.scene3d_window import (open_3d_view as _open_3d_view,
+                                tools_hook as _scene3d_tools_hook)
 from src.ui_style import APP_STYLE as _APP_STYLE
 from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
@@ -539,6 +540,9 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
+        # What the Advanced tools switch tells its state for the 3D window,
+        # which does not exist until it is opened (V3.44).
+        self.scene3d_tools = _scene3d_tools_hook(self)
 
         act_reference = view_menu.addAction("Walk a &Wild Landscape…")
 

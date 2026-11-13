@@ -34,6 +34,15 @@ one.
 ``groups=`` picks which sections appear, so the Learn side can be deliberately
 simpler than the Design side **without being a second implementation** — the
 distinction that matters, and the one the V2.43 mode split turns on.
+
+**V3.44 (F261): two groups a homeowner can read.** ``WHEN`` is the moment as
+three short lists (*When*, *Season*, *Time of day*) and ``VIEWS`` is where to
+look from (three named viewpoints, Walk, Reset view). Their words and values
+are ``src/scene3d_stops.py``. The bar holds the moment as three numbers and
+every control that shows it follows them, so a window that keeps sliders of
+its own (the 3D preview's fine ones) calls :meth:`set_time` and the lists
+agree; a list never names a stop the picture is not at. The two groups'
+widgets are ``src/scene3d_named_groups.py`` (this file's line ceiling).
 """
 
 from __future__ import annotations
@@ -42,6 +51,8 @@ from PyQt6.QtCore import Qt, QSettings, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QWidget,
 )
+
+from src.scene3d_named_groups import NamedGroups
 
 #: How far the growth timeline runs. Matches ``scene3d_window._MAX_YEAR`` —
 #: imported from here by that module now, so there is one number.
@@ -68,9 +79,15 @@ TIME = "time"        # year · month · hour
 DETAIL = "detail"    # geometry detail combo
 VIEW = "view"        # reset view · walk · identify
 ALL = (TIME, DETAIL, VIEW)
+#: V3.44: the same moment as named stops, and named places to look from.
+#: Not in ``ALL``: a window asks for them by name.
+from src.scene3d_named_groups import WHEN, VIEWS  # noqa: E402
+#: WHEN: When · Season · Time of day, as lists. VIEWS: From the street · From
+#: the house · From above · Walk · Reset view.
+SIMPLE = (WHEN, VIEWS)
 
 
-class Scene3DToolBar(QWidget):
+class Scene3DToolBar(NamedGroups, QWidget):
     """The when/how-it-looks controls over a 3D viewer.
 
     Signals carry values, never widgets, so a window never reaches into this
@@ -87,20 +104,28 @@ class Scene3DToolBar(QWidget):
     reset_view = pyqtSignal()
     walk_toggled = pyqtSignal(bool)
     identify_toggled = pyqtSignal(bool)
+    #: A named viewpoint was asked for: a key of ``scene3d_stops.VIEWS``.
+    view_requested = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None, *,
                  groups=ALL, year: int = 0, month: int = 6, hour: int = 13):
         super().__init__(parent)
         self._groups = tuple(groups)
+        #: The moment shown, whichever controls show it.
+        self._at = {"year": int(year), "month": int(month), "hour": int(hour)}
 
         row = QHBoxLayout(self)
         row.setContentsMargins(8, 2, 8, 2)
         row.setSpacing(6)
 
+        if WHEN in self._groups:
+            self._build_when(row)
         if TIME in self._groups:
             self._build_time(row, year, month, hour)
         if DETAIL in self._groups:
             self._build_detail(row)
+        if VIEWS in self._groups:
+            self._build_views(row)
         if VIEW in self._groups:
             self._build_view(row)
         row.addStretch()
@@ -153,7 +178,7 @@ class Scene3DToolBar(QWidget):
             "planting, and by far the fastest\n"
             "Balanced — the built-in geometry\n"
             "Lifelike — the full modelled library: real leaves, bark grain "
-            "and species silhouettes")
+            "and each plant's own shape")
         self._detail.setCurrentIndex(self.stored_detail())
         self._detail.currentIndexChanged.connect(self._on_detail)
         row.addWidget(self._label("Detail:"))
@@ -195,18 +220,39 @@ class Scene3DToolBar(QWidget):
     # ── Handlers ────────────────────────────────────────────────────────────
 
     def _on_year(self, v: int):
-        self._sync_labels()
-        self.year_changed.emit(int(v))
-        self.time_changed.emit()
+        self.set_time(year=int(v))
 
     def _on_month(self, v: int):
-        self._sync_labels()
-        self.month_changed.emit(int(v))
-        self.time_changed.emit()
+        self.set_time(month=int(v))
 
     def _on_hour(self, v: int):
+        self.set_time(hour=int(v))
+
+    def set_time(self, *, year=None, month=None, hour=None,
+                 quiet: bool = False) -> None:
+        """Move the moment: every control that shows it follows, and each
+        part that changed is announced once (never with ``quiet``, which is
+        for a window telling the bar what its own sliders already say)."""
+        changed = []
+        for key, value in (("year", year), ("month", month), ("hour", hour)):
+            if value is not None and int(value) != self._at[key]:
+                self._at[key] = int(value)
+                changed.append(key)
+        if TIME in self._groups:
+            for key, slider in (("year", self._year), ("month", self._month),
+                                ("hour", self._hour)):
+                if slider.value() != self._at[key]:
+                    blocked = slider.blockSignals(True)
+                    slider.setValue(self._at[key])
+                    slider.blockSignals(blocked)
+                    # A slider clamps: the moment is what it could take.
+                    self._at[key] = slider.value()
         self._sync_labels()
-        self.hour_changed.emit(int(v))
+        self._fill_lists()
+        if quiet or not changed:
+            return
+        for key in changed:
+            getattr(self, f"{key}_changed").emit(self._at[key])
         self.time_changed.emit()
 
     def _on_detail(self, level: int):
@@ -234,34 +280,35 @@ class Scene3DToolBar(QWidget):
 
 
     def year(self) -> int:
-        return self._year.value() if TIME in self._groups else 0
+        return self._at["year"]
 
     def month(self) -> int:
-        return self._month.value() if TIME in self._groups else 6
+        return self._at["month"]
 
     def hour(self) -> int:
-        return self._hour.value() if TIME in self._groups else 13
+        return self._at["hour"]
 
     def detail(self) -> int:
         return (self._detail.currentIndex() if DETAIL in self._groups
                 else self.stored_detail())
 
     def set_year(self, value: int) -> None:
-        if TIME in self._groups:
-            self._year.setValue(int(value))
+        self.set_time(year=value)
 
     def set_month(self, value: int) -> None:
-        if TIME in self._groups:
-            self._month.setValue(int(value))
+        self.set_time(month=value)
+
+    def _has_walk(self) -> bool:
+        return VIEW in self._groups or VIEWS in self._groups
 
     def set_walking(self, on: bool) -> None:
         """Reflect walk state without re-emitting — for a window that enters
         walk mode itself and needs the button to agree."""
-        if VIEW not in self._groups:
+        if not self._has_walk():
             return
         self._walk_btn.blockSignals(True)
         self._walk_btn.setChecked(bool(on))
         self._walk_btn.blockSignals(False)
 
     def is_walking(self) -> bool:
-        return (VIEW in self._groups) and self._walk_btn.isChecked()
+        return self._has_walk() and self._walk_btn.isChecked()

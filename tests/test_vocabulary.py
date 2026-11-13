@@ -51,6 +51,9 @@ SIMPLE_MODULES = (
     "species_page.py", "plant_filters.py", "filter_area.py",
     "placement_bar.py", "landing_check.py", "plain_messages.py",
     "month_tasks.py", "advanced_tools_flow.py", "start_flow.py",
+    # V3.44 (F261): the 3D preview opens from the simple app.
+    "plan_bar.py", "scene3d_window.py", "scene3d_toolbar.py",
+    "scene3d_named_groups.py", "scene3d_stops.py", "scene3d_creatures.py",
 )
 
 #: Today's uses, ``{(module, word): count}``: WD-2 to WD-6 take these out.

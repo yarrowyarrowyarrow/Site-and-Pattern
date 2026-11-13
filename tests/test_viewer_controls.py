@@ -150,6 +150,133 @@ class TestTheToolbarWidget(unittest.TestCase):
                              for b in tb.findChildren(QPushButton)))
 
 
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestTheNamedGroups(unittest.TestCase):
+    """V3.44 (F261): the moment as three lists of named stops (``WHEN``) and
+    named places to look from (``VIEWS``), in the one toolbar both windows
+    build from, so the walk can take them without a second implementation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication(["tests"])
+
+    def _simple(self, **kw):
+        from src.scene3d_toolbar import SIMPLE, Scene3DToolBar
+        return Scene3DToolBar(groups=SIMPLE, **kw)
+
+    def test_they_are_asked_for_by_name_and_not_part_of_all(self):
+        from src import scene3d_toolbar as tb
+        self.assertEqual(tb.SIMPLE, (tb.WHEN, tb.VIEWS))
+        self.assertNotIn(tb.WHEN, tb.ALL)
+        self.assertNotIn(tb.VIEWS, tb.ALL)
+
+    def test_every_control_says_what_it_is(self):
+        from PyQt6.QtWidgets import QComboBox, QSlider
+        bar = self._simple(year=5, month=7, hour=15)
+        self.assertEqual(bar.findChildren(QSlider), [])
+        self.assertEqual([c.accessibleName()
+                          for c in bar.findChildren(QComboBox)],
+                         ["When", "Season", "Time of day"])
+        self.assertEqual([b.text() for b in bar.findChildren(QPushButton)],
+                         ["From the street", "From the house", "From above",
+                          "Walk", "Reset view"])
+        for w in bar.findChildren((QComboBox, QPushButton)):
+            self.assertTrue(w.toolTip(), "a control with no tooltip")
+
+    def test_a_list_moves_the_moment_once(self):
+        bar = self._simple(year=5, month=7, hour=15)
+        years, ticks = [], []
+        bar.year_changed.connect(years.append)
+        bar.time_changed.connect(lambda: ticks.append(1))
+        box = bar._lists["year"][0]
+        box.setCurrentIndex(box.findText("Tenth summer"))
+        bar._on_list("year")
+        self.assertEqual((bar.year(), years, len(ticks)), (10, [10], 1))
+        bar._on_list("year")                   # the same stop again
+        self.assertEqual(len(ticks), 1, "nothing changed, nothing announced")
+
+    def test_a_window_tells_it_the_moment_without_an_echo(self):
+        """The 3D preview keeps sliders of its own; telling the bar what they
+        say must not come back as a change."""
+        bar = self._simple(year=5, month=7, hour=15)
+        heard = []
+        bar.time_changed.connect(lambda: heard.append(1))
+        bar.set_time(year=7, month=8, hour=17, quiet=True)
+        self.assertEqual(heard, [])
+        self.assertEqual([box.currentText() for box, _e in
+                          bar._lists.values()],
+                         ["Seventh summer", "August", "17:00"])
+        bar.set_time(year=5, month=7, hour=15, quiet=True)
+        self.assertEqual([box.count() for box, _e in bar._lists.values()],
+                         [6, 4, 5], "an entry off the stops goes when it "
+                                    "is no longer where the picture is")
+
+    def test_a_list_is_wide_enough_for_whatever_it_comes_to_say(self):
+        from src import scene3d_stops as stops
+        bar = self._simple(year=5, month=7, hour=15)
+        for key, (box, _entries) in bar._lists.items():
+            widest = max(box.fontMetrics().horizontalAdvance(w)
+                         for w in stops.every_word(key))
+            self.assertGreaterEqual(box.minimumWidth(), widest + 30, key)
+
+    def test_lists_and_sliders_in_one_bar_agree(self):
+        from src.scene3d_toolbar import Scene3DToolBar, TIME, WHEN
+        bar = Scene3DToolBar(groups=(WHEN, TIME), year=5, month=7, hour=15)
+        bar._year.setValue(12)
+        self.assertEqual(bar._lists["year"][0].currentText(),
+                         "Twelfth summer")
+        box = bar._lists["year"][0]
+        box.setCurrentIndex(box.findText("First summer"))
+        bar._on_list("year")
+        self.assertEqual((bar._year.value(), bar.year()), (1, 1))
+
+    def test_a_view_is_asked_for_by_its_key(self):
+        from src import scene3d_stops as stops
+        bar = self._simple()
+        asked = []
+        bar.view_requested.connect(asked.append)
+        for key, _words, _tip in stops.VIEWS:
+            bar.view_buttons[key].click()
+        self.assertEqual(asked, [k for k, _w, _t in stops.VIEWS])
+
+    def test_a_view_the_scene_cannot_give_says_what_it_needs(self):
+        bar = self._simple()
+        house = bar.view_buttons["house"]
+        tip = house.toolTip()
+        bar.set_view_available("house", False, "No house is recorded.")
+        self.assertFalse(house.isEnabled())
+        self.assertEqual(house.toolTip(), "No house is recorded.")
+        bar.set_view_available("house", True)
+        self.assertTrue(house.isEnabled())
+        self.assertEqual(house.toolTip(), tip)
+
+    def test_walk_is_in_the_views_and_can_be_left(self):
+        bar = self._simple()
+        states = []
+        bar.walk_toggled.connect(states.append)
+        bar._walk_btn.click()
+        self.assertTrue(bar.is_walking())
+        bar._walk_btn.click()
+        self.assertEqual(states, [True, False])
+        bar.set_walking(True)
+        self.assertEqual(states, [True, False], "set_walking does not emit")
+
+    def test_the_sliders_bar_is_as_it_was(self):
+        """The walk window's toolbar: nothing it had has moved."""
+        from PyQt6.QtWidgets import QComboBox, QSlider
+        from src.scene3d_toolbar import Scene3DToolBar
+        bar = Scene3DToolBar(year=12)
+        self.assertEqual(len(bar.findChildren(QSlider)), 3)
+        self.assertEqual(len(bar.findChildren(QComboBox)), 1)     # Detail
+        self.assertEqual(bar._year_lbl.text(), "yr 12")
+        bar.set_year(0)
+        self.assertEqual(bar._year_lbl.text(), "now")
+        seen = []
+        bar.hour_changed.connect(seen.append)
+        bar._hour.setValue(20)
+        self.assertEqual((seen, bar.hour()), ([20], 20))
+
+
 # ── The animations ───────────────────────────────────────────────────────────
 
 class TestTheEditAnimations(unittest.TestCase):

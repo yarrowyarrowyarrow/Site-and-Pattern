@@ -4,9 +4,17 @@ src/scene3d_window.py — the "3D Preview" window (V1.62).
 Hosts a :class:`src.map3d_widget.Map3DWidget` with the controls that make
 the 3D view useful for lawn-to-habitat persuasion:
 
-  * a growth-timeline year slider ("watch your yard at year 1 / 5 / 15"),
-  * month + hour sliders driving the shadow-casting sun (same
+  * **two short rows a homeowner can read (V3.44, F261):** *When*, *Season*
+    and *Time of day* as lists of named stops, and *View* (From the street,
+    From the house, From above, Walk, Reset view). It opens on the fifth
+    summer, in July, mid-afternoon, from the street
+    (``src/scene3d_stops.py``);
+  * with **Advanced tools** on, the rows it always had: a growth-timeline
+    year slider, month + hour sliders driving the shadow-casting sun (same
     ``src/solar`` path as the 2D shade engine, so the two always agree),
+    Detail, the Flyover, Identify, the pollinator tools, Plant and Remove,
+    and the two outputs. The sliders are the one record of the moment; the
+    lists set them and follow them;
   * since V3.08 no Refresh button: the window follows the design, rebuilding
     once edits pause (``src/follow_design.py``, F89).
 
@@ -24,7 +32,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QThread, QSettings
+from PyQt6.QtCore import Qt, QThread, QSettings, QTimer
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
@@ -35,31 +43,29 @@ from src.scene3d_workers import (PhotoWarmWorker as _PhotoWarmWorker,
 from src.scene_contract import build_scene
 from src.branding import APP_NAME
 
-# V2.44: these three now live in src/scene3d_toolbar.py, which is the module
-# the *reference* window builds its controls from. Two windows drive one viewer
-# and the author asked for their controls to match — so the numbers and labels
-# have exactly one home, and `tests/test_scene3d_toolbar.py` fails the build if
-# the two windows stop offering the same viewer controls.
-#
-# This window keeps its own hand-built bar rather than embedding the widget:
-# `self._year` / `self._month` / `self._hour` / `self._detail` are read from a
-# dozen places here (`_when`, `_push_scene`, `_update_labels`, the flyover's
-# month stepping), and swapping them for the widget is a mechanical but wide
-# change to a working 868-line file that this increment does not need to make.
-# The guard test is what stops the two drifting; the extraction is available
-# when this file next needs splitting anyway.
+# V2.44: these three live in src/scene3d_toolbar.py, which both 3D windows
+# build controls from, so the numbers and labels have one home
+# (tests/test_viewer_controls.py). V3.44: the two rows a homeowner reads are
+# that toolbar's WHEN and VIEWS groups. The fine sliders are still built
+# here, because a dozen places read `self._year` / `_month` / `_hour`
+# (`_when`, `_push_scene`, the Flyover, the stills, before_after_flow) and
+# they are the one record of the moment; the named lists set and follow them.
 from src.scene3d_toolbar import (
     MAX_YEAR as _MAX_YEAR,
     DETAIL_KEY as _DETAIL_KEY,
     DETAIL_LABELS as _DETAIL_LABELS,
-    Scene3DToolBar,
+    Scene3DToolBar, WHEN as _WHEN, VIEWS as _VIEWS,
 )
+from src import scene3d_creatures as creatures
+from src import scene3d_stops as stops
 # V2.46: plant / remove / net in the design itself. The buttons, the mode and
 # the bridge slots all live there, so this window gains one layout call.
 from src import scene3d_edit_flow as edit_flow
 
-_MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+#: While a slider moves, at most one scene push in this many milliseconds;
+#: the last value always lands (V3.44: a drag of Year was up to 25 pushes).
+PUSH_EVERY_MS = 80
+
 _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
 
@@ -100,6 +106,16 @@ class Scene3DWindow(QWidget):
         self._worker = None
         self._photo_thread = None
         self._photo_worker = None
+        #: The shade simulation, kept between pushes (build_scene's ``memo``).
+        self._memo: dict = {}
+        #: The design the opening view was last shown for (its scene origin).
+        self._shown_origin = None
+        self._creature_chosen = False     # the person picked one themselves
+        self._push_waiting = False
+        self._push_timer = QTimer(self)
+        self._push_timer.setSingleShot(True)
+        self._push_timer.setInterval(PUSH_EVERY_MS)
+        self._push_timer.timeout.connect(self._on_push_interval)
         self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
         # The app's dark surface (F209, V3.08): a top-level window inherits
@@ -111,19 +127,19 @@ class Scene3DWindow(QWidget):
 
         self._year = QSlider(Qt.Orientation.Horizontal)
         self._year.setRange(0, _MAX_YEAR)
-        self._year.setValue(0)
+        self._year.setValue(stops.OPENING["year"])
         self._year_lbl = QLabel()
         self._year.valueChanged.connect(self._on_controls_changed)
 
         self._month = QSlider(Qt.Orientation.Horizontal)
         self._month.setRange(1, 12)
-        self._month.setValue(6)
+        self._month.setValue(stops.OPENING["month"])
         self._month_lbl = QLabel()          # shows the current month name
         self._hour = QSlider(Qt.Orientation.Horizontal)
         # Full 24 h so you can drag into night — a moonlit scene with moths & bats
         # instead of the day's bees & butterflies (V2.12).
         self._hour.setRange(0, 23)
-        self._hour.setValue(13)
+        self._hour.setValue(stops.OPENING["hour"])
         self._sun_lbl = QLabel()
         self._month.valueChanged.connect(self._on_controls_changed)
         self._hour.valueChanged.connect(self._on_controls_changed)
@@ -133,6 +149,25 @@ class Scene3DWindow(QWidget):
         self._hour.setToolTip(
             "Time of day — drives the sun; drag past dusk for a moonlit night "
             "(moths, bats and glowing blooms)")
+        for slider, name in ((self._year, "Year"),
+                             (self._month, "Time of year"),
+                             (self._hour, "Time of day")):
+            slider.setAccessibleName(name)
+
+        # The two rows a homeowner reads (V3.44): the moment as named stops,
+        # and where to look from. The sliders above stay the record of the
+        # moment (a dozen places read them); these set them and follow them.
+        self.when_bar = Scene3DToolBar(
+            self, groups=(_WHEN,), year=self._year.value(),
+            month=self._month.value(), hour=self._hour.value())
+        self.when_bar.year_changed.connect(self._year.setValue)
+        self.when_bar.month_changed.connect(self._month.setValue)
+        self.when_bar.hour_changed.connect(self._hour.setValue)
+        self.view_bar = Scene3DToolBar(self, groups=(_VIEWS,))
+        self.view_bar.view_requested.connect(self._show_view)
+        self.view_bar.reset_view.connect(
+            lambda: self.viewer.run_js(
+                "window.permaResetView && window.permaResetView();"))
 
         # Detail / quality — lower it if the 3D view is sluggish on this machine
         # (drives window.permaSetQuality in the viewer). Shared with the gallery.
@@ -143,17 +178,10 @@ class Scene3DWindow(QWidget):
             "planting, and by far the fastest\n"
             "Balanced — the built-in geometry\n"
             "Lifelike — the full modelled library: real leaves, bark grain "
-            "and species silhouettes")
+            "and each plant's own shape")
         self._detail.setCurrentIndex(
             max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
         self._detail.currentIndexChanged.connect(self._on_detail)
-
-        # The camera now stays put while the sliders move; this re-centers it.
-        reset_view = QPushButton("Reset view")
-        reset_view.setToolTip("Re-center the camera on the design")
-        reset_view.clicked.connect(
-            lambda: self.viewer.run_js(
-                "window.permaResetView && window.permaResetView();"))
 
         # A render you can put in a proposal (F69). The docent's beats have
         # carried a camera, a year and a season since V2.13 and nothing read
@@ -182,8 +210,11 @@ class Scene3DWindow(QWidget):
             "Choose a native pollinator — a bee, butterfly or moth. Its nectar "
             "plants get marked in the fly view (butterflies/moths also show "
             "their caterpillar host plants).")
+        self._bee_combo.setAccessibleName("Pollinator")
         self._populate_creature_combo()
         self._bee_combo.currentIndexChanged.connect(self._on_bee_target_changed)
+        self._bee_combo.activated.connect(
+            lambda _i: setattr(self, "_creature_chosen", True))
         self._bee_btn = QPushButton("🐝 Fly as a bee")
         self._bee_btn.setCheckable(True)
         self._bee_btn.setToolTip(
@@ -205,14 +236,10 @@ class Scene3DWindow(QWidget):
         self._tour_months: list = []          # flight months of the current creature
         self._tour_timer = None
 
-        # "Walk the garden" — third-person stroll among the ambient wildlife
-        # (V2.12). Mutually exclusive with the first-person fly view.
-        self._walk_btn = QPushButton("🚶 Walk the garden")
-        self._walk_btn.setCheckable(True)
-        self._walk_btn.setToolTip(
-            "Stroll through your design in third person — WASD/arrows to walk, "
-            "drag to look around — and meet the bees, butterflies, birds and "
-            "other creatures your plants support.")
+        # Walk: a third-person stroll among the ambient wildlife (V2.12),
+        # mutually exclusive with the first-person fly view. The button is the
+        # View row's since V3.44; the handlers below still switch it off.
+        self._walk_btn = self.view_bar._walk_btn
         self._walk_btn.toggled.connect(self._on_walk)
 
         # "Show its plants" — spotlight (illuminate + a touring creature) the
@@ -251,6 +278,7 @@ class Scene3DWindow(QWidget):
 
         self._last_origin = None
 
+        # The rows below are the Advanced tools' (set_advanced_tools).
         # Row 1 — the "when / how it looks" scene controls.
         bar = QHBoxLayout()
         bar.addWidget(QLabel("Year:"))
@@ -286,11 +314,11 @@ class Scene3DWindow(QWidget):
         # stand alone, while Fly / Tour / Show its plants all read the creature
         # combo, so the combo sits with them rather than ahead of everything.
         bar2 = QHBoxLayout()
-        bar2.addWidget(QLabel("View:"))
-        bar2.addWidget(self._walk_btn)
+        bar2.addWidget(QLabel("Tour:"))
         bar2.addWidget(self._fly_btn)
-        bar2.addWidget(self._id_btn)
         bar2.addSpacing(16)
+        bar2.addWidget(QLabel("Wildlife:"))
+        bar2.addWidget(self._id_btn)
         bar2.addWidget(self._bee_btn)
         bar2.addWidget(self._bee_combo)
         bar2.addWidget(self._tour_btn)
@@ -306,18 +334,53 @@ class Scene3DWindow(QWidget):
         # it goes on the undo stack, redraws the map, and counts toward the
         # score.
         bar3 = edit_flow.build_tools(self)
-        for btn in (reset_view, self._still_btn, self._ba_btn):
+        for btn in (self._still_btn, self._ba_btn):
             bar3.addWidget(btn)
+
+        # One container for everything the Advanced tools add, so nothing else
+        # that shows or hides a control inside it is overruled (the Net button
+        # follows the walker, for one).
+        self.advanced_rows = QWidget(self)
+        self.advanced_rows.setAccessibleName("Advanced tools")
+        rows = QVBoxLayout(self.advanced_rows)
+        rows.setContentsMargins(8, 0, 8, 0)     # in line with the rows above
+        for layout in (bar, bar2, bar3):
+            rows.addLayout(layout)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
-        root.addLayout(bar)
-        root.addLayout(bar2)
-        root.addLayout(bar3)
+        root.addWidget(self.when_bar)
+        root.addWidget(self.view_bar)
+        root.addWidget(self.advanced_rows)
         root.addWidget(self.viewer, 1)
 
         self._update_labels()
         self._editable = edit_flow.connect_bridge(self)
+        from src import advanced_tools
+        self.set_advanced_tools(advanced_tools.is_on())
+
+    # ── simple by default (V3.44) ─────────────────────────────────────────
+
+    def set_advanced_tools(self, on: bool) -> None:
+        """Show the fine sliders, Detail, the Flyover, Identify, the
+        pollinator tools, Plant and Remove and the outputs, or only the two
+        short rows. A tool about to be hidden is stopped first, as the switch
+        cancels Measure on the map: nothing is left running with no button."""
+        if not on:
+            for btn in (self._fly_btn, self._tour_btn, self._bee_btn,
+                        self._spot_btn, self._id_btn):
+                if btn.isChecked():
+                    btn.setChecked(False)
+            edit_flow.clear_mode(self)
+        self.advanced_rows.setVisible(bool(on))
+
+    def _show_view(self, key: str) -> None:
+        """Look from a named viewpoint (``scene3d_stops.VIEWS``). Walking, a
+        flight and the Flyover own the camera, so each is left first."""
+        for btn in (self._walk_btn, self._bee_btn, self._fly_btn):
+            if btn.isChecked():
+                btn.setChecked(False)
+        self.viewer.show_view(key)
 
     def _current_plant_pick(self) -> dict | None:
         """What the Plants panel has selected, as ``{plant_id, common_name}``.
@@ -347,19 +410,30 @@ class Scene3DWindow(QWidget):
         self._year_lbl.setText("fully grown" if y == 0 else f"year {y}")
         self._month_lbl.setText(_MONTH_FULL[self._month.value() - 1])
         self._sun_lbl.setText(f"{self._hour.value()}:00")
+        # The named stops say what the sliders say, whoever moved them.
+        self.when_bar.set_time(year=y, month=self._month.value(),
+                               hour=self._hour.value(), quiet=True)
+        edit_flow.refresh_hint(self)
 
     def _push_scene(self):
+        self._push_waiting = False
         scene = build_scene(
             self._main._project,
             year=self._year.value(),
             elevation=self._elevation,
             when=self._when(),
+            memo=self._memo,
         )
         # Keep the origin and the built scene for the "show its plants"
         # spotlight.
         self._last_origin = scene.get("origin")
         self._scene = scene
         self.viewer.apply_scene(scene)
+        self.view_bar.set_view_available(
+            "house", "house" in (scene.get("views") or {}), stops.NO_HOUSE)
+        if scene.get("origin") != self._shown_origin:
+            self._shown_origin = scene.get("origin")
+            self._on_new_design(scene)
         # Ambient wildlife: the animals the design's plants support, placed on
         # the plants they use (V2.12). Recomputed each push so it tracks the
         # year/season. Never let a data hiccup break the scene.
@@ -384,6 +458,25 @@ class Scene3DWindow(QWidget):
         # Keep an active "show its plants" spotlight in sync with the new scene.
         if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
             self._push_spotlight()
+
+    def _on_new_design(self, scene: dict) -> None:
+        """The first scene of a design (the window just opened, or another
+        design was): the opening view (D5: from the street, or from the house
+        when the house hides the planting from the street), unless a walk, a
+        flight or the Flyover owns the camera, and the pollinator the tools
+        start on, unless the person has picked one."""
+        if not any(b.isChecked() for b in
+                   (self._walk_btn, self._bee_btn, self._fly_btn)):
+            from src.scene_views import opening_view
+            self.viewer.show_view(opening_view(scene.get("views")))
+        if self._creature_chosen:
+            return
+        from src.scene_contract import standing_plants
+        index = creatures.default_row(
+            self._creature_rows,
+            [p.get("plant_id") for p in standing_plants(scene)])
+        if index is not None and index != self._bee_combo.currentIndex():
+            self._bee_combo.setCurrentIndex(index)
 
     # ── the presentation still (F69) ────────────────────────────────────────
 
@@ -469,8 +562,26 @@ class Scene3DWindow(QWidget):
         QTimer.singleShot(450, _capture)
 
     def _on_controls_changed(self, *_):
+        """A slider moved. The labels follow at once; the scene is pushed at
+        once too unless one was pushed in the last ``PUSH_EVERY_MS``, in which
+        case that interval's end pushes whatever the sliders say by then."""
         self._update_labels()
+        if self._push_timer.isActive():
+            self._push_waiting = True
+            return
         self._push_scene()
+        self._push_timer.start()
+
+    def _on_push_interval(self):
+        """From a timer, so nothing may escape (an exception out of a Qt slot
+        ends the process: ``follow_design._rebuild``)."""
+        if not self._push_waiting:
+            return
+        try:
+            self._push_scene()
+            self._push_timer.start()
+        except Exception:                                  # noqa: BLE001
+            self._push_waiting = False
 
     def _on_detail(self, level: int):
         """Detail combo → viewer quality. The viewer re-renders the current
@@ -481,54 +592,23 @@ class Scene3DWindow(QWidget):
     # ── "Fly as a pollinator" (F37 increment 2; butterflies/moths V2.12) ──
 
     def _populate_creature_combo(self):
-        """Fill the target-creature combo: native bees grouped genus-first (as
-        the analysis panel's Bees tab), then a Butterflies & Moths section. Each
-        selectable item's userData is a dict describing the creature."""
+        """Fill the pollinator list (``scene3d_creatures.rows``): bees genus
+        by genus, then butterflies and moths. A heading cannot be chosen;
+        each other item's userData is the creature."""
         combo = self._bee_combo
         combo.blockSignals(True)
         combo.clear()
-
-        def _header(text):
-            combo.addItem(text, userData=None)
-            item = combo.model().item(combo.count() - 1)
-            if item is not None:
-                item.setEnabled(False)
-
-        try:
-            from src.bee_habitat import list_target_bees
-            bees = list_target_bees()
-        except Exception:      # noqa: BLE001 — never let a data issue break the window
-            bees = []
-        current_genus = None
-        for b in bees:
-            if b["genus"] != current_genus:
-                current_genus = b["genus"]
-                _header(f"── {current_genus} ──")
-            label = (f"    {b['common_name']} (any {b['genus']})" if b["is_group"]
-                     else f"    {b['common_name']}")
-            combo.addItem(label, userData={"taxon": "bee", "fid": b["id"],
-                                           "kind": "bee", "name": b["common_name"]})
-
-        try:
-            from src.lep_habitat import list_target_lepidoptera
-            leps = list_target_lepidoptera()
-        except Exception:      # noqa: BLE001
-            leps = []
-        if leps:
-            _header("── Butterflies & Moths ──")
-            for lp in leps:
-                # 'skipper' flies like a butterfly for our purposes.
-                kind = "moth" if lp["kind"] == "moth" else "butterfly"
-                icon = "🦋" if kind == "butterfly" else "🌙"
-                combo.addItem(f"    {icon} {lp['common_name']}",
-                              userData={"taxon": "lep", "fid": lp["id"],
-                                        "kind": kind, "name": lp["common_name"]})
-
+        self._creature_rows = creatures.rows()
+        for label, creature in self._creature_rows:
+            combo.addItem(label, userData=creature)
+            if creature is None:
+                item = combo.model().item(combo.count() - 1)
+                if item is not None:
+                    item.setEnabled(False)
         combo.blockSignals(False)
-        for i in range(combo.count()):
-            if combo.itemData(i) is not None:
-                combo.setCurrentIndex(i)
-                break
+        index = creatures.default_row(self._creature_rows, [])
+        if index is not None:
+            combo.setCurrentIndex(index)
 
     def _current_creature(self):
         """The selected creature dict, or None on a disabled header row."""
@@ -596,21 +676,6 @@ class Scene3DWindow(QWidget):
 
     # ── "Show its plants" spotlight (V2.12) ───────────────────────────────
 
-    def _creature_plant_ids(self, creature) -> list:
-        """DB plant ids the creature benefits from: a bee's forage, or a
-        butterfly/moth's nectar + larval-host plants."""
-        fid = creature["fid"]
-        try:
-            if creature["taxon"] == "bee":
-                from src.bee_habitat import target_plant_ids_for_bee
-                return target_plant_ids_for_bee(fid)
-            from src.lep_habitat import (nectar_plant_ids_for_lep,
-                                         larval_host_ids_for_lep)
-            return sorted(set(nectar_plant_ids_for_lep(fid))
-                          | set(larval_host_ids_for_lep(fid)))
-        except Exception:      # noqa: BLE001
-            return []
-
     def _push_spotlight(self):
         """Build the spotlight item list (the design's plants the selected
         creature uses) and push it, with the creature's avatar appearance."""
@@ -619,7 +684,7 @@ class Scene3DWindow(QWidget):
         if creature is None or not scene:
             self.viewer.set_plant_spotlight([])
             return
-        used = set(self._creature_plant_ids(creature))
+        used = set(creatures.plant_ids_for(creature))
         from src.scene_contract import standing_plants
         items = [{"plant_id": p["plant_id"], "name": p.get("common_name", ""),
                   "x": p["x"], "y": p["y"], "h": p.get("height_m", 1.0)}
@@ -684,36 +749,6 @@ class Scene3DWindow(QWidget):
 
     # ── Cinematic "Flyover" (V2.13) ───────────────────────────────────────
 
-    @staticmethod
-    def _flyover_storyboard() -> list:
-        """A ~60 s, three-act storyboard as (year, month, hour, big, sub)
-        keyframes. Act 1 grows the design at peak-summer midday; act 2 turns the
-        seasons at maturity; act 3 falls into a moonlit night.
-
-        No frame is year 0 (V3.43). It opened on "Year 0: the lawn, today",
-        and year 0 is the design fully grown, so the tour began on the finished
-        yard and then shrank it. It starts in the first summer; and it does not
-        end on year 0 either, which would stand every plant the timeline has
-        lost back up."""
-        frames = []
-        # Act 1 — growth (the first summer → year 25), July midday.
-        for y in (1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 25):
-            sub = ("the first summer" if y == 1 else
-                   "settling in" if y <= 2 else
-                   "filling in" if y <= 9 else
-                   "a young habitat" if y <= 18 else "grown, not designed")
-            frames.append((y, 7, 13, f"Year {y}", sub))
-        # Act 2 — the seasons turn, at maturity.
-        season = {3: "spring green", 5: "first blooms", 7: "high summer",
-                  9: "autumn seed & fruit", 11: "bare stems, standing seed"}
-        for m in (3, 5, 7, 9, 11):
-            frames.append((25, m, 13, _MONTH_FULL[m - 1], season[m]))
-        # Act 3 — into the night (moths, bats, glowing blooms).
-        frames.append((25, 7, 18, "Evening", "the day shift clocks off"))
-        frames.append((25, 7, 21, "Dusk", "hawkmoths on the wing"))
-        frames.append((25, 7, 23, "Night", "moths, bats & moonlit blooms"))
-        return frames
-
     def _on_flyover(self, on: bool):
         """Start/stop the cinematic flyover. Turns off the interactive modes,
         enables the viewer's auto-orbit, and steps the storyboard on a timer."""
@@ -723,7 +758,7 @@ class Scene3DWindow(QWidget):
                 if b.isChecked():
                     b.setChecked(False)
             self.viewer.set_cinematic(True)
-            self._fly_frames = self._flyover_storyboard()
+            self._fly_frames = stops.flyover_storyboard()
             self._fly_idx = 0
             if self._fly_timer is None:
                 self._fly_timer = QTimer(self)
@@ -837,6 +872,7 @@ class Scene3DWindow(QWidget):
         self._worker = None
 
     def closeEvent(self, event):
+        self._push_timer.stop()
         if self._tour_timer is not None:
             self._tour_timer.stop()
         if self._fly_timer is not None:
@@ -856,8 +892,12 @@ class Scene3DWindow(QWidget):
         super().closeEvent(event)
 
 
-def open_3d_view(main) -> Scene3DWindow:
-    """Show (or raise) the singleton 3D preview for ``main``'s design."""
+def open_3d_view(main, view: str = "") -> Scene3DWindow:
+    """Show (or raise) the singleton 3D preview for ``main``'s design.
+
+    ``view`` is a named viewpoint to show (``scene3d_stops.VIEWS``): the
+    Overview's street item asks for the street. Without one a window already
+    open keeps the camera where the person left it."""
     win = getattr(main, "_scene3d_window", None)
     if win is None:
         win = Scene3DWindow(main)
@@ -866,4 +906,30 @@ def open_3d_view(main) -> Scene3DWindow:
     win.raise_()
     win.activateWindow()
     win.refresh()
+    if view:
+        win._show_view(view)
     return win
+
+
+class _ToolsHook:
+    """What ``advanced_tools.ADVANCED_HOOKS`` tells the switch's state.
+
+    The main window holds one from the start: the 3D window does not exist
+    until it is opened, and the registry's test wants every entry present.
+    A window opened later reads the switch itself."""
+
+    def __init__(self, main):
+        self._main = main
+
+    def set_advanced_tools(self, on: bool) -> None:
+        win = getattr(self._main, "_scene3d_window", None)
+        if win is None:
+            return
+        try:
+            win.set_advanced_tools(on)
+        except RuntimeError:                 # the window was deleted
+            pass
+
+
+def tools_hook(main) -> _ToolsHook:
+    return _ToolsHook(main)

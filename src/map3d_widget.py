@@ -227,6 +227,10 @@ class Map3DWidget(QWebEngineView):
         'sidewalk')."""
         self.run_js(map3d_js.set_camera_preset(name))
 
+    def show_view(self, name: str):
+        """Look from a named viewpoint: 'street' | 'house' | 'above' (V3.44)."""
+        self.run_js(map3d_js.show_view(name))
+
     def models_ready(self, callback):
         """Ask whether the baked GLB archetypes have loaded (``bool`` to
         ``callback``). Snapshotting before this is true captures the procedural

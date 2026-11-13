@@ -166,6 +166,40 @@ class InTheWindow(unittest.TestCase):
                      + advanced_tools.ADVANCED_HOOKS):
             self.assertIsNotNone(self.flow.resolve(win, path), path)
 
+    def test_every_hook_can_be_told(self):
+        for path in advanced_tools.ADVANCED_HOOKS:
+            target = self.flow.resolve(self._win, path)
+            self.assertTrue(callable(getattr(target, "set_advanced_tools",
+                                             None)), path)
+
+    def test_the_3d_preview_follows_the_switch(self):
+        """V3.44 (F261): the 3D window opens from the simple app with two
+        short rows, and its other rows are the Advanced tools'. It does not
+        exist until it is opened, so the registry names a holder the main
+        window always has, which tells an open window."""
+        self.assertIn("scene3d_tools", advanced_tools.ADVANCED_HOOKS)
+
+        class Open3D:
+            def __init__(self):
+                self.told = []
+
+            def set_advanced_tools(self, on):
+                self.told.append(on)
+
+            def close(self):
+                pass
+
+        self.flow.set_and_apply(self._win, True)      # none open: no error
+        self.flow.set_and_apply(self._win, False)
+        view = Open3D()
+        self._win._scene3d_window = view
+        try:
+            self.flow.set_and_apply(self._win, True)
+            self.flow.set_and_apply(self._win, False)
+        finally:
+            self._win._scene3d_window = None
+        self.assertEqual(view.told, [True, False])
+
     def test_a_cold_start_is_simple(self):
         self.assertFalse(self._win._act_advanced.isChecked())
         self.assertEqual([n for n, shown in self._surfaces() if shown], [])

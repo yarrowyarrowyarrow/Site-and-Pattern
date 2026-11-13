@@ -57,7 +57,11 @@ window.SCENE3D_CHUNKS = [
   // 16-editing.js, whose bridge Plant one calls, and after 10-inspect.js,
   // whose showCard draws through it.
   'scene3d/25-cards.js',
-  // V3.43: the frame-rate readout (Ctrl+Shift+F). Last: it wraps the render
-  // call only while it is showing, and nothing calls into it.
+  // V3.43: the frame-rate readout (Ctrl+Shift+F). It wraps the render call
+  // only while it is showing, and nothing calls into it.
   'scene3d/26-perf.js',
+  // V3.44: the named viewpoints (from the street, the house, above) and the
+  // moment in words (F261). 08-modes.js, where the camera presets live, was
+  // at its ceiling; its two callers in earlier chunks are typeof-guarded.
+  'scene3d/27-views.js',
 ];

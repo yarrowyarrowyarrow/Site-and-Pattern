@@ -176,6 +176,7 @@ class TheWholeYard(unittest.TestCase):
         self.assertTrue(any(p["plant_id"] == 10 for p in
                             standing_plants(self.scene)))
         self.assertTrue(self.scene["views"]["street"])
+        self.assertTrue(self.scene["views"]["house"])
 
     # ── buildings ────────────────────────────────────────────────────────────
 
@@ -283,7 +284,10 @@ class TheWholeYard(unittest.TestCase):
 
     def test_the_line_at_the_top_says_what_is_there(self):
         hud = self.got["hud"]
-        self.assertIn(f"Year {YEAR}", hud)
+        # The toolbar's own words since V3.44 (src/scene3d_stops.py).
+        from src.scene3d_stops import when_words
+        self.assertIn(when_words(YEAR, 7), hud)
+        self.assertNotIn(f"Year {YEAR}", hud)
         self.assertIn("July", hud)
         self.assertIn("1 tree already here", hud)
         dead = sum(1 for p in self.scene["plants"] if p.get("gone") == "shade")
@@ -301,6 +305,74 @@ class TheWholeYard(unittest.TestCase):
         self.assertIn("Fully grown", hud)
         self.assertNotIn("Year 0", hud)
         self.assertNotIn("lost to shade", hud)
+
+    # ── the named viewpoints (V3.44) ─────────────────────────────────────────
+
+    def test_from_the_street_is_the_street_view(self):
+        self.assertEqual(self.got["views"]["street"]["at"],
+                         self.got["street"]["at"])
+        self.assertEqual(self.got["views"]["street"]["looks_at"],
+                         self.got["street"]["looks_at"])
+
+    def test_from_the_house_stands_at_the_wall_looking_out(self):
+        house = self.scene["views"]["house"]
+        (ex, ey), (lx, ly) = house["eye"], house["look"]
+        got = self.got["views"]["house"]
+        at, looks = got["at"], got["looks_at"]
+        self.assertAlmostEqual(at[0], ex, delta=0.02)
+        self.assertAlmostEqual(at[2], -ey, delta=0.02)
+        self.assertAlmostEqual(at[1], 1.65, delta=0.02)      # eye height
+        self.assertAlmostEqual(looks[0], lx, delta=0.02)
+        self.assertAlmostEqual(looks[2], -ly, delta=0.02)
+        self.assertLess(looks[1], at[1], "it looks down at the planting")
+        # A step outside the back wall (y = 2.7), not inside the house: the
+        # 30 forbs behind it outnumber the 11 plants in front.
+        self.assertTrue(2.7 < ey < 2.7 + 1.5, ey)
+        self.assertGreater(ly, ey, "it looks away from the house")
+        self.assertNotEqual(at, self.got["views"]["street"]["at"])
+
+    def test_from_above_holds_the_whole_yard_north_up(self):
+        above = self.got["views"]["above"]
+        focus = self.scene["focus"]
+        cx = (focus["min_x"] + focus["max_x"]) / 2
+        cy = (focus["min_y"] + focus["max_y"]) / 2
+        self.assertTrue(above["yard"]["inside"],
+                        f"part of the yard is out of frame: {above['yard']}")
+        self.assertGreater(max(above["yard"]["tall"], above["yard"]["wide"]),
+                           0.8, "the yard is a small part of the picture")
+        self.assertAlmostEqual(above["at"][0], cx, delta=0.05)
+        self.assertAlmostEqual(above["looks_at"][0], cx, delta=0.05)
+        self.assertAlmostEqual(above["looks_at"][2], -cy, delta=0.05)
+        self.assertGreater(above["at"][1], 20, "it is not looking down")
+        # A hair south of the centre (+z is south), so north is at the top.
+        self.assertGreater(above["at"][2], above["looks_at"][2])
+        self.assertLess(above["at"][2] - above["looks_at"][2], 1.0)
+
+    def test_a_view_the_scene_cannot_give_shows_the_whole_yard(self):
+        nowhere = self.got["views"]["nowhere"]
+        self.assertTrue(nowhere["yard"]["inside"])
+        self.assertAlmostEqual(nowhere["far"],
+                               self.got["opening"]["camera"]["far"], delta=0.1)
+        # ... and a scene with no house in it: the stage, as Reset view gives.
+        self.assertAlmostEqual(self.got["legacy"]["house"]["far"],
+                               self.got["legacy"]["camera"]["far"], delta=0.1)
+
+    def test_the_speed_bar_is_for_when_animals_are_the_subject(self):
+        """It sat over every picture. Walking among them or Identify makes
+        them the subject; a yard just being looked at does not."""
+        animals = self.got["animals"]
+        self.assertFalse(animals["at_rest"])
+        self.assertTrue(animals["identify"])
+        self.assertFalse(animals["after"])
+        self.assertTrue(animals["walking"])
+        with open(os.path.join(render_yard.HTML, "scene3d", "07-wildlife.js"),
+                  encoding="utf-8") as fh:
+            src = fh.read()
+        self.assertIn("const show = _speedBarWanted();", src)
+        self.assertIn("if (!_speedBarWanted()) return;", src,
+                      "Space pauses animals with no bar on screen to say so")
+        self.assertRegex(src, r"_wildSpeed !== 1 \|\| typeof animalsAreSubject",
+                         "a paused scene must keep its bar")
 
     # ── the frame-rate readout ───────────────────────────────────────────────
 

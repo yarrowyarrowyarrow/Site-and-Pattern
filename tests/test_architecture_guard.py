@@ -381,7 +381,15 @@ class TestStructuralCeilings(unittest.TestCase):
         # When this trips, the next seam is the bar: build_tools() is a third of
         # the file and is presentation, not handling.
         (_SRC / "reference_edit_flow.py", 320),        # 282 now
-        (_SRC / "scene3d_toolbar.py", 340),            # 259 now
+        (_SRC / "scene3d_toolbar.py", 340),            # 314 now (V3.44)
+        # V3.44 (F261): the toolbar's two plain groups (named stops, named
+        # viewpoints) took it to 398 of 340, so they are a mixin of their own,
+        # with their words in a Qt-free table and the pollinator list, moved
+        # out of the window, beside them. If one of these trips, the cause is
+        # most likely logic that belongs in scene_views or scene_contract.
+        (_SRC / "scene3d_named_groups.py", 200),       # 124 now
+        (_SRC / "scene3d_stops.py", 260),              # 174 now
+        (_SRC / "scene3d_creatures.py", 200),          # 113 now
         (_SRC / "controllers" / "split_view.py", 320),  # 253 now
         # V2.46: plant / remove / net in the *design*, not just the sandbox.
         # A separate module from reference_edit_flow on purpose — a design edit
@@ -389,12 +397,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # collapsing the two would mean one of those happening quietly in the
         # wrong place. When this trips, the seam is the widget half
         # (build_tools/set_mode) away from the bridge handlers.
-        (_SRC / "scene3d_edit_flow.py", 400),          # 312 now
+        (_SRC / "scene3d_edit_flow.py", 400),          # 398 now (V3.44): split first
         # V2.46: opted in on arrival, like learn_flow.py before it. This file
         # hand-rolls the toolbar the V2.44 extraction was meant to share (the
         # note at the import explains why that swap was deferred), so the
         # ceiling is set where it is to make the next growth pay for it.
-        (_SRC / "scene3d_window.py", 950),             # 950 now (V3.05): split before adding
+        (_SRC / "scene3d_window.py", 950),             # 932 now (V3.44): split before adding
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # 269 now (V3.11)
@@ -543,6 +551,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # creature collision took it to 852 of its 800. The line the split
         # follows: 07 is the animals, 19 is how they are explained to a person.
         (_HTML / "scene3d" / "19-roster.js", 300),     # 177 now
+        # V3.44 (F261): the named viewpoints and the moment in words.
+        # 08-modes.js, where the camera presets live, had eleven lines left.
+        # Where each view stands is src/scene_views.py's; this only draws it.
+        (_HTML / "scene3d" / "27-views.js", 200),      # 89 now
     ]
 
     def test_module_line_ceilings(self):
