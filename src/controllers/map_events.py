@@ -368,6 +368,8 @@ class MapEventRouter:
         points = _json.loads(points_json)
         # Store as GeoJSON LineString (lng, lat order)
         coords = [[pt[1], pt[0]] for pt in points]
+        # What the person set in Draw › Shape (the mode's stash, V3.45).
+        cfg = getattr(self._main, "_hedge_config", None) or {}
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "LineString", "coordinates": coords},
@@ -378,9 +380,9 @@ class MapEventRouter:
                 "style": style,
                 "length_m": length_m,
                 "num_plants": num_plants,
-                "color": "#4caf50",
-                "width_m": 1.5,
-                "spacing_m": 1.0,
+                "color": cfg.get("color") or "#4caf50",
+                "width_m": float(cfg.get("width_m") or 1.5),
+                "spacing_m": float(cfg.get("spacing_m") or 1.0),
             }
         })
         self._main._push_undo({

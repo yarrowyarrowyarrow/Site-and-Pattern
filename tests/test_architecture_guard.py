@@ -99,7 +99,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
         # in flow modules; the terrain-queue block is the natural extraction
         # when this trips again.
-        (_SRC / "controllers" / "map_events.py", 2100),# 1988 now (V3.11)
+        (_SRC / "controllers" / "map_events.py", 2100),# 2049 now (V3.45)
         # V2.22: the three biggest panels, previously unguarded — each is
         # already past the size plant_panel.py was split at (Chunk 4).
         (_SRC / "polyculture_panel.py", 2900),         # 2569 now (V3.05)

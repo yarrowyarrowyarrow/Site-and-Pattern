@@ -86,6 +86,10 @@ class ModeController:
 
     def _enter_hedgerow_mode(self, hedge_config: dict):
         self._main._current_mode = 'hedgerow'
+        # Kept for the line when it is finished (V3.45): the map's callback
+        # does not echo its width, spacing or colour, and until now every
+        # line was saved 1.5 m wide and green whatever the person had set.
+        self._main._hedge_config = dict(hedge_config or {})
         self._main.map_widget.set_hedgerow_mode(hedge_config)
         self._main.toolbar.reset_draw_buttons()
         self._set_mode_label(
