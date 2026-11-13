@@ -300,7 +300,8 @@ function buildFlowers(plants, month, terrain) {
     // to its FRUIT window's end, not its bloom's.
     const be = p.inflorescence_form
       ? Math.max(p.bloom_end || 0, p.fruit_end || 0, 12) : (p.bloom_end || 0);
-    if (!bs || month < bs || month > be) continue;     // out of season
+    // …and through the winter on its dry stems (01d-season.js, V3.46).
+    if (!bs || ((month < bs || month > be) && !holdsSeedHead(p))) continue;
     // A species that records its flower as CHARACTERS gets built rather than
     // stamped (15-florets.js, schema v53). Everything else — 4 flowering
     // species the seed data doesn't describe, every graminoid seed head, and
@@ -549,6 +550,7 @@ function disposeDesignGroup(group) {
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   if (GROUND_MAT) sharedMat.add(GROUND_MAT);   // shared meadow texture lives on
   if (GROUND_SNOW_MAT) sharedMat.add(GROUND_SNOW_MAT);   // and its winter twin
+  if (GROUND_DORMANT_MAT) sharedMat.add(GROUND_DORMANT_MAT);   // and October's
   for (const m of siteSharedMats()) sharedMat.add(m);    // 02c-site.js (V3.45)
   group.traverse(obj => {
     if (obj.isInstancedMesh) obj.dispose();             // frees instance buffers only
@@ -575,6 +577,7 @@ window.permaSetScene = function (sc) {
   lastOrigin = sc.origin || null;
   lastMonth = sc.month || 6;
   sceneMonth = sc.month || 6;         // bloom-gating + the seasonal-tour HUD
+  sceneSeason = sc.season || null;    // 01d-season.js: before anything is built
   sceneNight = !!sc.is_night;         // set before buildPlants so flowers night-glow
   // The site's real wind for this month, and the lee of its own windbreaks
   // (F68). Uniforms only, so this re-aims every plant in the yard without
@@ -621,6 +624,9 @@ window.permaSetScene = function (sc) {
   if (typeof buildCritterObstacles === 'function') buildCritterObstacles();
 
   document.getElementById('hud').innerHTML = hudText(sc);   // 01-core.js
+  // Where the losses are and which plants (25b-timeline.js, V3.46), after the
+  // line it sits under and after the scene its rings lie on.
+  if (typeof showTimeline === 'function') showTimeline();
 };
 
 window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };

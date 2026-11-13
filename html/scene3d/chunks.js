@@ -11,6 +11,9 @@ window.SCENE3D_CHUNKS = [
   // of it builds geometry that wants a material.
   'scene3d/01b-surface.js',
   'scene3d/01c-leaves.js',   // V2.94: leaves let light through (F186)
+  // V3.46: the season as the scene decided it (F263): one place colours a
+  // plant body, says whether leaves are down and whether snow lies.
+  'scene3d/01d-season.js',
   'scene3d/02-plants.js',
   // V3.45: what the ground is, the lines on it, the street and the houses
   // (F262). After 02-plants.js for terrainHeightAt and the ground's textures.
@@ -62,6 +65,9 @@ window.SCENE3D_CHUNKS = [
   'scene3d/25-cards.js',
   // V3.43: the frame-rate readout (Ctrl+Shift+F). It wraps the render call
   // only while it is showing, and nothing calls into it.
+  // V3.46: where the plan's losses are and which plants (F263), from
+  // scene.timeline_notes: a button under the line, a list, rings on the ground.
+  'scene3d/25b-timeline.js',
   'scene3d/26-perf.js',
   // V3.44: the named viewpoints (from the street, the house, above) and the
   // moment in words (F261). 08-modes.js, where the camera presets live, was

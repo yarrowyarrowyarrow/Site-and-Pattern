@@ -130,6 +130,48 @@ function site(w) {
   return out;
 }
 
+// How each mesh draws one plant (V3.46): its first instance's height scale and
+// colour, one row per mesh the plant is in (a shrub is leaves and stems).
+function bodies(w, id) {
+  const rows = [], m = new w.THREE.Matrix4(), p = new w.THREE.Vector3(),
+        q = new w.THREE.Quaternion(), s = new w.THREE.Vector3(), c = new w.THREE.Color();
+  w.eval('plantsGroup').traverse((o) => {
+    if (!o.isInstancedMesh || !o.userData.pickId || o.geometry.type === 'PlaneGeometry') return;
+    const i = o.userData.pickId.indexOf(id);
+    if (i < 0) return;
+    o.getMatrixAt(i, m); m.decompose(p, q, s);
+    if (o.instanceColor) o.getColorAt(i, c); else c.set(0xffffff);
+    rows.push({ tall: +s.y.toFixed(4), rgb: [+c.r.toFixed(3), +c.g.toFixed(3), +c.b.toFixed(3)] });
+  });
+  return rows;
+}
+function season(w, job) {
+  return { herb: bodies(w, job.herb_id), shrub: bodies(w, job.shrub_id),
+           tree: bodies(w, job.tree_id), site: site(w),
+           snowing: !!w.eval('seasonSnow(sceneMonth)') };
+}
+// The button under the line, its list and its rings (V3.46, 25b-timeline.js).
+function timeline(w) {
+  const doc = document.getElementById('v').contentDocument;
+  const chip = doc.getElementById('timeline-chip'), panel = doc.getElementById('timeline-notes');
+  const group = w.eval('designGroup').getObjectByName('timeline-rings');
+  const rings = [], m = new w.THREE.Matrix4(), p = new w.THREE.Vector3();
+  for (const o of group ? group.children : []) for (let i = 0; i < o.count; i++) {
+    o.getMatrixAt(i, m); p.setFromMatrixPosition(m);
+    rings.push([+p.x.toFixed(2), +(-p.z).toFixed(2), +p.y.toFixed(3), o.userData.note]);
+  }
+  const px = (el) => parseFloat(doc.defaultView.getComputedStyle(el).fontSize);
+  const rows = panel ? Array.from(panel.querySelectorAll('button')) : [];
+  return { chip: chip ? chip.textContent : null,
+           chip_px: chip ? [px(chip), chip.getBoundingClientRect().height] : null,
+           heading: panel ? panel.querySelector('h4').textContent : null,
+           rows: rows.map((b) => b.textContent),
+           row_px: rows.map((b) => [px(b), b.getBoundingClientRect().height]),
+           smallest_px: panel ? Math.min(...Array.from(panel.querySelectorAll('*')).map(px)) : null,
+           about: panel && panel.querySelector('p') ? panel.querySelector('p').textContent : null,
+           rings };
+}
+
 async function measure(w, job) {
   const sc = job.scene, res = {};
   await push(w, sc, 1);
@@ -178,6 +220,22 @@ async function measure(w, job) {
 
   // 6. The line at the top left.
   res.hud = document.getElementById('v').contentDocument.getElementById('hud').innerText;
+
+  // 6b. Where the losses are, and which plants (V3.46): shut until asked for,
+  // then a list and a ring at every spot; one note alone; kept through a
+  // slider move (a push of the same scene); and shut again.
+  if (typeof w.showTimeline === 'function') {
+    const idoc = document.getElementById('v').contentDocument;
+    const press = (el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const tl = res.timeline = { shut: timeline(w) };
+    press(idoc.getElementById('timeline-chip')); tl.open = timeline(w);
+    press(idoc.querySelectorAll('#timeline-notes button')[0]); tl.one = timeline(w);
+    press(idoc.querySelectorAll('#timeline-notes button')[0]); tl.all_again = timeline(w);
+    await push(w, sc, 1); tl.after_a_push = timeline(w);
+    press(idoc.getElementById('timeline-chip')); tl.shut_again = timeline(w);
+  }
+  res.july = { herb: bodies(w, job.herb_id), shrub: bodies(w, job.shrub_id),
+               tree: bodies(w, job.tree_id) };
 
   // 7. From the street: the camera the stills and the before/after page use.
   w.permaSetCameraPreset('sidewalk');
@@ -239,11 +297,26 @@ async function measure(w, job) {
       res.legacy.house = camera(w);
     }
     res.legacy.site = site(w);
+    res.legacy.chip = !!document.getElementById('v').contentDocument.getElementById('timeline-chip');
   }
   // 12. The same yard in January: snow on the soft ground and on the roofs.
   if (job.winter) {
     await push(w, job.winter, 1);
     res.winter = site(w);
+    if (typeof w.seasonSnow === 'function') res.january = season(w, job);
+  }
+  // 13. The seasons (V3.46): the same yard in April, September and October,
+  // and a meadow (a scene that names no ground) in October by the month alone.
+  if (typeof w.seasonSnow === 'function') {
+    res.seasons = {};
+    for (const name in job.seasons || {}) {
+      await push(w, job.seasons[name], 1);
+      res.seasons[name] = season(w, job);
+    }
+  }
+  if (job.meadow_october) {
+    await push(w, job.meadow_october, 1);
+    res.meadow_october = site(w).ground;
   }
   return res;
 }

@@ -163,13 +163,12 @@ function buildPond(list, month, year, terrain) {
   for (const p of list) {
     const d = p.drawn || {};
     const onWater = d.body === 'floating' || d.body === 'submerged';
-    if (onWater && _isDecid(p.foliage_type) && _bareMonth(month)) continue;
+    if (onWater && diedBack(p, month)) continue;      // 01d-season.js
     const seed = (hashPid(p.plant_id || 1) ^ Math.round(p.x * 100) * 73856093
                   ^ Math.round(p.y * 100) * 19349663) >>> 0;
     const rng = mulberry32(seed);
     const gy = terrainHeightAt(p.x, p.y, terrain);
-    const col = fadeColor(witherColor(seasonalColor(
-      p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+    const col = bodyColor(p, month);
     if (d.body === 'floating') _pondFloating(p, d, gy, rng, col, groups);
     else if (d.body === 'submerged') _pondSubmerged(p, d, gy, rng, col, groups);
     else if (d.body === 'broadleaf') _pondBroad(p, gy, rng, col, groups);

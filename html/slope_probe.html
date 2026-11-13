@@ -63,6 +63,10 @@ function scene(terrain) {
                { kind: 'bed', ring: [[1, -8], [8, -8], [8, -1], [4, 1], [1, -1]] }],
     lines: [{ kind: 'fence', points: [[-9, -9], [9, -9], [9, 2]], width_m: 0.1, height_m: 1.2 },
             { kind: 'hedge', points: [[-9, 0], [-9, 9]], width_m: 1.5, height_m: 1.2 }],
+    // V3.46: what the years took (src/scene_timeline.py), for its rings.
+    timeline_notes: { when: 'the fifth summer', about: '', notes: [
+      { kind: 'shade', text: 'Two.', spots: [[-7, -7], [7, 6]] },
+      { kind: 'short_lived', text: 'One.', spots: [[0, 8]] }] },
   };
 }
 
@@ -181,6 +185,22 @@ function measure(w) {
   }
   const gm = group.children.find(o => o.name === 'ground');
   out.ground.look = gm && gm.material.userData.look || 'meadow';
+
+  // 4c. The rings round what the years took (V3.46, 25b-timeline.js): each
+  // lies a few centimetres over the ground where it is, tilted with it.
+  out.rings = null;
+  if (typeof w.showTimeline === 'function') {
+    E('TL_OPEN = true; showTimeline()');
+    out.rings = [];
+    const rg = group.getObjectByName('timeline-rings');
+    const m4 = new THREE.Matrix4(), p3 = new THREE.Vector3(), up = new THREE.Vector3();
+    for (const o of rg ? rg.children : []) for (let i = 0; i < o.count; i++) {
+      o.getMatrixAt(i, m4); p3.setFromMatrixPosition(m4);
+      up.set(0, 1, 0).transformDirection(m4);
+      out.rings.push({ lift_m: +(p3.y - H(p3.x, -p3.z)).toFixed(3), tilt: +up.y.toFixed(4) });
+    }
+    E('TL_OPEN = false; showTimeline()');
+  }
 
   // 5. The structure drawn as a box (no model for it): its foot on the ground.
   const box = group.children.find(o => o.isMesh && o.geometry && o.geometry.type === 'BoxGeometry');

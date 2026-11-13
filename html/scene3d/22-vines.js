@@ -360,7 +360,7 @@ function buildVines(list, all, month, year, terrain) {
     const d = p.drawn || { habit: 'sprawling', canopy_m: p.canopy_m || 0.5,
                            height_m: Math.min(_VINE_SPRAWL_H, p.height_m || 0.3) };
     const herbaceous = (p.foliage_type || '') === 'herbaceous';
-    const bare = _isDecid(p.foliage_type) && _bareMonth(month);
+    const bare = leafless(p, month);                 // 01d-season.js
     if (bare && herbaceous) continue;   // died back to the ground for the winter
     const seed = (hashPid(p.plant_id || 1) ^ Math.round(p.x * 100) * 73856093
                   ^ Math.round(p.y * 100) * 19349663) >>> 0;
@@ -411,8 +411,7 @@ function buildVines(list, all, month, year, terrain) {
       }
       if (mats.length) {
         const leaves = instancedMesh(units.get(shape), mats.length, MATS.leaf);
-        const base = fadeColor(witherColor(seasonalColor(
-          p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+        const base = bodyColor(p, month);
         mats.forEach((m, i) => {
           leaves.setMatrixAt(i, m);
           leaves.setColorAt(i, col.copy(base).multiplyScalar(0.9 + 0.2 * rng()));

@@ -11,12 +11,22 @@
 // dry-grass accents and fine dark speckle, so the ground reads as meadow
 // rather than a flat colour swatch. Built once; each blob is stamped at the
 // eight wrap offsets too, so the tile repeats seamlessly.
-function makeMeadowTexture() {
+const _MEADOW_GREEN = { base: '#87a56c', seed: 20250621,
+  mottle: ['142,160,88', '112,142,86'], accent: ['158,164,92', '96,124,78'],
+  speck: 'rgba(70,96,60,0.5)' };
+// A dormant meadow: last year's thatch, before green-up and after the frost.
+// Its own painting (V3.46). Until then October multiplied the GREEN texture
+// by a straw colour, which gives dark olive, not straw.
+const _MEADOW_DORMANT = { base: '#b6a476', seed: 20251021,
+  mottle: ['198,180,126', '162,146,100'], accent: ['214,200,148', '138,124,88'],
+  speck: 'rgba(104,90,62,0.5)' };
+function makeMeadowTexture(pal) {
+  pal = pal || _MEADOW_GREEN;
   const s = 256, cv = document.createElement('canvas');
   cv.width = cv.height = s;
   const g = cv.getContext('2d');
-  g.fillStyle = '#87a56c'; g.fillRect(0, 0, s, s);
-  const rng = mulberry32(20250621);
+  g.fillStyle = pal.base; g.fillRect(0, 0, s, s);
+  const rng = mulberry32(pal.seed);
   const blob = (x, y, r, rgb, a) => {
     for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) {
       const grd = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
@@ -28,11 +38,11 @@ function makeMeadowTexture() {
   };
   for (let i = 0; i < 46; i++)              // broad warm/cool meadow mottling
     blob(rng() * s, rng() * s, 18 + rng() * 34,
-         rng() < 0.5 ? '142,160,88' : '112,142,86', 0.16 + rng() * 0.18);
+         pal.mottle[rng() < 0.5 ? 0 : 1], 0.16 + rng() * 0.18);
   for (let i = 0; i < 26; i++)              // dry-grass / clover accents
     blob(rng() * s, rng() * s, 5 + rng() * 10,
-         rng() < 0.6 ? '158,164,92' : '96,124,78', 0.12 + rng() * 0.14);
-  g.fillStyle = 'rgba(70,96,60,0.5)';       // fine soil/shadow speckle
+         pal.accent[rng() < 0.6 ? 0 : 1], 0.12 + rng() * 0.14);
+  g.fillStyle = pal.speck;                  // fine soil/shadow speckle
   for (let i = 0; i < 420; i++) {
     g.beginPath();
     g.arc(rng() * s, rng() * s, 0.5 + rng() * 0.9, 0, Math.PI * 2);
@@ -93,11 +103,10 @@ function ensureGroundMat() {
   return GROUND_MAT;
 }
 
-// A second cached material for snow, plus a seasonal picker: deep winter
-// (Nov–Mar) lays snow on the ground; the Oct / Apr shoulders tint the meadow
-// toward straw / a waking green rather than swapping it. Driven by the scene
-// month — the same signal the plants' seasonalColor uses — so ground, foliage
-// and bare branches turn together.
+// A second cached material for snow and a third for the dormant meadow, plus
+// a seasonal picker. What the ground is doing is the scene's to say
+// (seasonGround, 01d-season.js: scene.season.ground, or the month for a scene
+// that does not say), so ground, foliage and bare branches turn together.
 let GROUND_SNOW_MAT = null;
 function ensureGroundSnowMat() {
   if (!GROUND_SNOW_MAT)
@@ -105,14 +114,22 @@ function ensureGroundSnowMat() {
       map: makeSnowTexture(), roughness: 0.82 });
   return GROUND_SNOW_MAT;
 }
+let GROUND_DORMANT_MAT = null;
+function ensureGroundDormantMat() {
+  if (!GROUND_DORMANT_MAT)
+    GROUND_DORMANT_MAT = new THREE.MeshStandardMaterial({
+      map: makeMeadowTexture(_MEADOW_DORMANT), roughness: 1 });
+  return GROUND_DORMANT_MAT;
+}
+// .color multiplies the texture: white = the painting untouched. Waking is the
+// dormant painting with green coming into it; turning is the green one yellowing.
+const _MEADOW_TINT = { waking: 0xdfe8c0, turning: 0xe6dca6 };
 function groundMatFor(month) {
-  const m = month || 0;
-  if (m >= 11 || m <= 3) return ensureGroundSnowMat();   // snow on the ground
-  const mat = ensureGroundMat();
-  // .color multiplies the texture: white = untouched growing-season green.
-  if (m === 10) mat.color.setHex(0xbfa878);              // October straw
-  else if (m === 4) mat.color.setHex(0xc7cba2);          // April, still waking
-  else mat.color.setHex(0xffffff);
+  const g = seasonGround(month);
+  if (g === 'snow') return ensureGroundSnowMat();        // snow on the ground
+  const asleep = g === 'dormant' || g === 'waking';
+  const mat = asleep ? ensureGroundDormantMat() : ensureGroundMat();
+  mat.color.setHex(_MEADOW_TINT[g] || 0xffffff);
   return mat;
 }
 

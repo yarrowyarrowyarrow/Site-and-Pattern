@@ -596,7 +596,7 @@ function updatePrecip(t) {
   // Winter months only, and only once a real scene is up (sceneMonth /
   // lastSceneObj are set by permaSetScene in a later chunk — read at call time).
   const snowing = (typeof lastSceneObj !== 'undefined' && lastSceneObj)
-    && (sceneMonth >= 11 || sceneMonth <= 3);
+    && seasonSnow(sceneMonth);                 // 01d-season.js
   if (!snowing) { if (precipGroup) precipGroup.visible = false; return; }
   const p = ensurePrecip();
   p.visible = true;

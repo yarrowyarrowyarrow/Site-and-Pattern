@@ -265,7 +265,7 @@ const _BODY_H = { tree: [0.4, Infinity], shrub: [0.2, Infinity],
 // ground, no higher than vine_habit.SPRAWL_HEIGHT_M (tests/test_accuracy_render.py
 // keeps the two equal). A horsetail has no reed or grass body to floor it.
 const _VINE_SPRAWL_H = 0.30;
-function bodyHeightOf(p) {
+function fullBodyHeightOf(p) {   // bodyHeightOf (01d-season.js) is this x the season
   if (p && p.drawn) return Math.max(0.02, p.drawn.height_m);
   if (p && p.plant_type === 'vine') return Math.max(0.05, Math.min(_VINE_SPRAWL_H, p.height_m || 0));
   if (p && p.growth_form === 'jointed') return Math.max(0.05, p.height_m || 0);
@@ -470,8 +470,6 @@ const GEO = {
   shadow: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
 };
 
-const _isDecid = (ft) => ft !== 'evergreen';   // unknown ⇒ deciduous-ish
-const _bareMonth = (m) => (m >= 11 || m <= 3);
 
 // Spread visualisation (F35): a self-sowing / rhizomatous plant scatters
 // offspring around the parent that keep accumulating as the years advance — a
@@ -538,7 +536,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot,
       const [cx, sy, cz] = scaleOf(p);
       const sx = unitXZ(arch, cx), sz = unitXZ(arch, cz);
       const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+      const col = bodyColor(p, month);                 // 01d-season.js
       places[ii].forEach((pl, k) => {
         const m = pl.mul;
         const wx = p.x + pl.dx, wy = p.y + pl.dz;
@@ -647,7 +645,7 @@ function buildHerbLayer(list, month, year, terrain) {
       const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
       const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+      const col = bodyColor(p, month);                 // 01d-season.js
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);
@@ -702,8 +700,9 @@ function buildShrubLayer(list, month, year, terrain) {
       const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
       const h = bodyHeightOf(p);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+      const col = bodyColor(p, month);                 // 01d-season.js
       const scol = fadeToward(stemHex, p.opacity);
+      const lf = stems && leafless(p, month) ? 0.001 : 1;   // leaves down (V3.46)
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);
@@ -711,7 +710,7 @@ function buildShrubLayer(list, month, year, terrain) {
         if (!k && window.noteVineHost) {
           noteVineHost(p, [arch.foliageGeo, arch.stemGeo], x, gy, -wy, c * m, h * m, rotY);
         }
-        setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        setInst2(foliage, idx, x, gy, -wy, c * m * lf, h * m * lf, c * m * lf, rotY, col);
         if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
         names[idx] = p.common_name || '';
         ids[idx] = p.plant_id;
@@ -803,11 +802,11 @@ function buildPlants(group, plants, month, year, terrain) {
         const h = bodyHeightOf(p);
         const c = unitXZ(arch.foliageGeo, Math.max(0.4, p.canopy_m));
         const rotY0 = (indHash(p) % 628) / 100;
-        const bare = _isDecid(p.foliage_type) && _bareMonth(month);
+        const bare = leafless(p, month);               // 01d-season.js
         // The species' own bark colour (schema v47) if the seed data has it,
         // else the genus default the viewer has always used.
         const bcol = fadeToward(p.bark_color || prof.bark || '#5d4433', p.opacity);
-        const fcol = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
+        const fcol = bodyColor(p, month);
         places[ii].forEach((pl, k) => {
           const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
           const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);

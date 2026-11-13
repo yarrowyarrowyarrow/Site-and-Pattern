@@ -154,6 +154,17 @@ class TheGroundOnASlope(unittest.TestCase):
             self.assertGreater(ln["top_m"], 1.0)
             self.assertLess(ln["top_m"], 1.8, f"{name} stands taller than it is")
 
+    def test_the_rings_round_what_was_lost_lie_on_the_slope(self):
+        """V3.46: a ring marks each spot a note is about. On 6 m of relief a
+        ring at height 0 would be under the hill or metres over it."""
+        rings = self.m["rings"]
+        self.assertIsNotNone(rings, "the viewer has no showTimeline")
+        self.assertEqual(len(rings), 3)
+        for ring in rings:
+            self.assertAlmostEqual(ring["lift_m"], 0.05, delta=0.02)
+        self.assertTrue(any(ring["tilt"] < 0.9999 for ring in rings),
+                        "no ring is tilted with the slope it lies on")
+
     def test_a_yard_has_pale_ground_where_nothing_is_drawn(self):
         self.assertEqual(self.m["ground"]["look"], "pale")
 

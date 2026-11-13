@@ -161,9 +161,27 @@ def _scenes():
         legacy.pop(key)
     for b in legacy["buildings"]:
         b.pop("roof", None)
+    # ... and before V3.46: no season and no notes.
+    for key in ("season", "timeline_notes"):
+        legacy.pop(key)
+    for p in legacy["plants"]:
+        p.pop("season", None)
     winter = build_scene(_yard(), year=YEAR, get_plant=_PLANTS.get, wind=False,
                          when=datetime(2025, 1, 21, 13, 0))
     return scene, legacy, winter
+
+
+def _seasons():
+    """The same yard in the same year on 21 April, September and October, and
+    a meadow from before V3.46 in October, which has only its month."""
+    from datetime import datetime
+    out = {name: build_scene(_yard(), year=YEAR, get_plant=_PLANTS.get,
+                             wind=False, when=datetime(2025, month, 21, 13, 0))
+           for name, month in (("apr", 4), ("sep", 9), ("oct", 10))}
+    meadow = copy.deepcopy(_scenes()[1])
+    meadow["month"] = 10
+    meadow["origin"]["lat"] += 0.01
+    return out, meadow
 
 
 @unittest.skipIf(render_yard.find_chromium() is None,
@@ -175,8 +193,12 @@ class TheWholeYard(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.scene, legacy, winter = _scenes()
+        seasons, meadow = _seasons()
         job = {"scene": cls.scene, "legacy": legacy, "winter": winter,
                "declining_id": DECLINING,
+               # V3.46: a herb, a shrub and a tree to read through the year.
+               "herb_id": DECLINING, "shrub_id": 6, "tree_id": 7,
+               "seasons": seasons, "meadow_october": meadow,
                "walk_points": [["side_yard", -6.6, -3.0],
                                ["in_the_house", 0.5, -3.0]]}
         try:
@@ -221,6 +243,12 @@ class TheWholeYard(unittest.TestCase):
         self.assertEqual([ln["kind"] for ln in self.scene["lines"]],
                          ["fence", "hedge"])
         self.assertEqual(self.scene["street"]["how"], "told")
+        # V3.46: notes of more than one kind, and a herb that stands all year.
+        kinds = [n["kind"] for n in self.scene["timeline_notes"]["notes"]]
+        self.assertIn("shade", kinds)
+        self.assertIn("short_lived", kinds)
+        self.assertTrue(any(p["plant_id"] == DECLINING and not p.get("gone")
+                            for p in plants))
 
     # ── buildings ────────────────────────────────────────────────────────────
 
@@ -353,6 +381,172 @@ class TheWholeYard(unittest.TestCase):
         self.assertEqual(site["lines"], {})
         self.assertIsNone(site["roofs"])
         self.assertAlmostEqual(site["walls"]["top"], 6.5, delta=0.01)
+
+    # ── the seasons (V3.46) ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _tall(rows):
+        return max(r["tall"] for r in rows)
+
+    @staticmethod
+    def _body(rows):
+        """The mesh that carries the plant's own body: its tallest."""
+        return max(rows, key=lambda r: r["tall"])
+
+    def _then(self, name):
+        if "seasons" not in self.got:
+            self.fail("the viewer has no season of its own (before V3.46)")
+        return self.got["january"] if name == "jan" else self.got["seasons"][name]
+
+    def test_a_herb_is_a_hand_high_in_april_not_at_its_july_height(self):
+        """Finding 7: perennials stood at July height on 21 April."""
+        july = self._tall(self.got["july"]["herb"])
+        april = self._tall(self._then("apr")["herb"])
+        self.assertAlmostEqual(july, 0.9, delta=0.02)
+        self.assertLess(april, 0.3 * july,
+                        f"a herb stands {april} m tall on 21 April")
+        self.assertGreater(april, 0.05, "the herb is not drawn at all")
+
+    def test_a_herb_is_green_in_july_and_dry_in_october_and_in_the_snow(self):
+        """Finding 7: green through October, green in January snow."""
+        # The fixture's herb is the one marked as declining, so in July it is
+        # read off a healthy neighbour of the same kind: the lost plants' kind.
+        for name in ("oct", "jan"):
+            r, g, _b = self._body(self._then(name)["herb"])["rgb"]
+            self.assertGreaterEqual(r, g, f"a herb is green in {name}")
+        r, g, _b = self._body(self._then("apr")["herb"])["rgb"]
+        self.assertGreater(g, r, "a herb coming up in April is not green")
+
+    def test_a_shrub_drops_its_leaves_exactly_when_a_tree_does(self):
+        """Finding 7: trees went bare in winter and shrubs never did."""
+        def leaves(rows):                  # the smaller mesh of the two
+            return min(r["tall"] for r in rows)
+        for kind in ("shrub", "tree"):
+            rows = self.got["july"][kind]
+            self.assertEqual(len(rows), 2, f"a {kind} is leaves and wood")
+            self.assertGreater(leaves(rows), 0.5, f"a {kind} is bare in July")
+            self.assertGreater(leaves(self._then("sep")[kind]), 0.5,
+                               f"a {kind} is bare in September")
+            for name in ("jan", "apr", "oct"):
+                rows = self._then(name)[kind]
+                self.assertLess(leaves(rows), 0.01,
+                                f"a {kind} keeps its leaves in {name}")
+                self.assertGreater(self._tall(rows), 0.5,
+                                   f"a bare {kind} has no wood left in {name}")
+
+    def test_leaves_turn_in_september(self):
+        def green(row):
+            return row["rgb"][1] - row["rgb"][0]
+        for kind in ("shrub", "tree"):
+            july = self.got["july"][kind]
+            # A plant's meshes come in one order: its leaves are July's greener.
+            leaves = max(range(len(july)), key=lambda i: green(july[i]))
+            self.assertLess(green(self._then("sep")[kind][leaves]),
+                            green(july[leaves]) - 0.02,
+                            f"a {kind}'s leaves are July's green in September")
+
+    def test_a_dormant_meadow_is_tawny_not_olive(self):
+        """The October ground: the green texture times a straw colour came
+        out dark olive. A scene that names no ground is a meadow."""
+        r, g, b = self.got["meadow_october"]["colour"]
+        self.assertGreater(r, g, f"the October meadow is green: {(r, g, b)}")
+        self.assertGreater(r + g + b, 400,
+                           f"the October meadow is dark: {(r, g, b)}")
+
+    def test_the_lawn_wakes_tan_and_is_green_all_summer(self):
+        def lawn(site):
+            return next(s_ for s_ in site["surfaces"]
+                        if s_["name"] == "surface:lawn")["colour"]
+        r, g, _b = lawn(self.got["site"])
+        self.assertGreater(g, r + 15, "the lawn is not green in July")
+        r, g, _b = lawn(self._then("apr")["site"])
+        self.assertGreater(r, g - 8, "the lawn is summer green on 21 April")
+        r, g, _b = lawn(self._then("oct")["site"])
+        self.assertGreater(g, r, "the lawn has gone to straw by 21 October")
+
+    def test_snow_falls_only_while_snow_lies(self):
+        self.assertTrue(self._then("jan")["snowing"])
+        for name in ("apr", "sep", "oct"):
+            self.assertFalse(self._then(name)["snowing"], name)
+            self.assertFalse(any(s_["snow"] for s_ in
+                                 self._then(name)["site"]["surfaces"]), name)
+
+    def test_a_hedge_is_twigs_when_the_leaves_are_down(self):
+        def hedge(site):
+            return site["lines"]["hedges:hedge"]["colour"]
+        r, g, b = hedge(self.got["site"])
+        self.assertGreater(g, max(r, b))
+        for name in ("apr", "oct", "jan"):
+            r, g, b = hedge(self._then(name)["site"])
+            self.assertGreaterEqual(r, g, f"a hedge is in leaf in {name}")
+
+    # ── what the years took, where and which (V3.46) ─────────────────────────
+
+    def _timeline(self, state):
+        if "timeline" not in self.got:
+            self.fail("the viewer shows no notes (before V3.46)")
+        return self.got["timeline"][state]
+
+    def _notes(self):
+        return self.scene["timeline_notes"]["notes"]
+
+    def test_the_notes_are_shut_until_asked_for(self):
+        shut = self._timeline("shut")
+        self.assertEqual(shut["chip"], "Show where, and which plants")
+        self.assertEqual(shut["rows"], [])
+        self.assertEqual(shut["rings"], [])
+
+    def test_opened_they_say_where_and_which_and_ring_every_spot(self):
+        """Finding 6: "136 lost to shade" said how many and nothing else."""
+        opened = self._timeline("open")
+        self.assertEqual(opened["chip"], "Hide where")
+        self.assertEqual(opened["heading"],
+                         "By " + self.scene["timeline_notes"]["when"])
+        self.assertEqual(opened["rows"],
+                         [n["text"] + n["kinds"] for n in self._notes()])
+        self.assertEqual(opened["about"], self.scene["timeline_notes"]["about"])
+        spots = sorted([round(x, 2), round(y, 2), n["kind"]]
+                       for n in self._notes() for x, y in n["spots"])
+        self.assertEqual(sorted([x, y, kind] for x, y, _h, kind
+                                in opened["rings"]), spots)
+        self.assertTrue(spots)
+        for _x, _y, height, _kind in opened["rings"]:
+            self.assertAlmostEqual(height, 0.05, delta=0.01,
+                                   msg="a ring is not lying on the ground")
+
+    def test_one_note_rings_only_its_own_spots(self):
+        one = self._timeline("one")
+        self.assertEqual(len(one["rings"]), len(self._notes()[0]["spots"]))
+        self.assertEqual({r[3] for r in one["rings"]},
+                         {self._notes()[0]["kind"]})
+        self.assertEqual(len(self._timeline("all_again")["rings"]),
+                         len(self._timeline("open")["rings"]))
+
+    def test_they_stay_open_through_a_slider_move(self):
+        """Every slider move rebuilds the scene; the list and the rings are
+        put back, or a person reading them loses them at the first touch."""
+        after = self._timeline("after_a_push")
+        self.assertEqual(after["rows"], self._timeline("open")["rows"])
+        self.assertEqual(len(after["rings"]), len(self._timeline("open")["rings"]))
+
+    def test_they_shut(self):
+        shut = self._timeline("shut_again")
+        self.assertEqual(shut["rows"], [])
+        self.assertEqual(shut["rings"], [])
+        self.assertEqual(shut["chip"], "Show where, and which plants")
+
+    def test_their_text_is_12_px_and_their_buttons_24(self):
+        opened = self._timeline("open")
+        size, tall = opened["chip_px"]
+        self.assertGreaterEqual(size, 12)
+        self.assertGreaterEqual(tall, 24)
+        self.assertGreaterEqual(opened["smallest_px"], 12)
+        for size, tall in opened["row_px"]:
+            self.assertGreaterEqual(size, 12)
+            self.assertGreaterEqual(tall, 24)
+
+    def test_a_scene_with_nothing_lost_has_no_button(self):
+        self.assertFalse(self.got["legacy"]["chip"])
 
     # ── the camera ───────────────────────────────────────────────────────────
 

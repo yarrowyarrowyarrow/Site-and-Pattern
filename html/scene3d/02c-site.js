@@ -32,7 +32,11 @@
 const SURFACE_LOOK = {
   lawn:         { rank: 1, tile: 5, base: '#7c9c62', soft: true, turns: true,
                   blobs: [[44, 14, 30, ['134,164,104', '108,142,88'], 0.14, 0.22]],
-                  specks: [360, 'rgba(84,116,70,0.4)', 0.5, 1.0] },
+                  specks: [360, 'rgba(84,116,70,0.4)', 0.5, 1.0],
+                  // Just out from under the snow: tan, with green coming.
+                  asleep: { base: '#a9a67c',
+                    blobs: [[44, 14, 30, ['176,170,124', '140,150,100'], 0.14, 0.22]],
+                    specks: [360, 'rgba(120,112,78,0.4)', 0.5, 1.0] } },
   meadow:       { rank: 2, tile: 7, soft: true, turns: true, meadow: 0xffffff },
   young_meadow: { rank: 2, tile: 7, soft: true, turns: true, meadow: 0xe9e6c4 },
   seeded:       { rank: 3, tile: 3, base: '#b39a6e', soft: true,
@@ -108,12 +112,19 @@ function _siteTexture(look, seed) {
 // One material per look and season, kept for the session like the ground's
 // (05-flowers.js spares them from disposal through siteSharedMats).
 const SITE_MATS = {};
+const _LAWN_TINT = { dormant: 0xd9d2a2 };       // October: yellowing, still green
 function siteSharedMats() { return Object.values(SITE_MATS); }
-function _winter(month) { const m = month || 0; return m >= 11 || m <= 3; }
+function _winter(month) { return seasonSnow(month); }      // 01d-season.js
 
 function siteMat(kind, month) {
   const look = SURFACE_LOOK[kind] || SURFACE_LOOK.custom;
-  const winter = _winter(month), key = kind + (winter ? '|w' : '');
+  const ground = seasonGround(month), winter = ground === 'snow';
+  // Asleep is its own painting, not the green one tinted (V3.46): a meadow
+  // from the frost until it greens up, a lawn while it is waking in spring
+  // (it stays green through October, yellowing a little).
+  const asleep = look.meadow ? ground === 'dormant' || ground === 'waking'
+    : ground === 'waking' && !!look.asleep;
+  const key = kind + (winter ? '|w' : asleep ? '|d' : '');
   let mat = SITE_MATS[key];
   if (!mat) {
     const opts = { roughness: look.rough || 1, side: THREE.DoubleSide,
@@ -126,18 +137,18 @@ function siteMat(kind, month) {
       opts.map = ensureGroundSnowMat().map; opts.roughness = 0.82;
       if (look.hard) opts.color = 0xd9dee4;
     } else if (look.meadow) {
-      opts.map = ensureGroundMat().map;
+      opts.map = (asleep ? ensureGroundDormantMat() : ensureGroundMat()).map;
     } else {
-      opts.map = _siteTexture(look, 451 + look.rank * 17 + kind.length);
+      opts.map = _siteTexture(asleep ? Object.assign({}, look, look.asleep) : look,
+                              451 + look.rank * 17 + kind.length);
     }
     mat = SITE_MATS[key] = new THREE.MeshStandardMaterial(opts);
     mat.userData.look = kind;
   }
   // Lawn and meadow turn with the season, as the ground always has.
   if (!winter && look.turns) {
-    const base = look.meadow || 0xffffff, m = month || 0;
-    mat.color.setHex(m === 10 ? (look.meadow ? 0xbfa878 : 0xd9d2a2)
-      : m === 4 ? (look.meadow ? 0xc7cba2 : 0xd8dab6) : base);
+    const tint = look.meadow ? _MEADOW_TINT : _LAWN_TINT;
+    mat.color.setHex(tint[ground] || (asleep ? 0xffffff : look.meadow || 0xffffff));
   }
   return mat;
 }
@@ -300,8 +311,8 @@ function buildLines(group, lines, terrain, month) {
     group.add(mesh);
   };
   add(fence, 0xb9a98c, 'fences');
-  for (const key in green)        // bare and twiggy under snow
-    add(green[key], _winter(month) ? 0x6f6a55 : _LINE_GREEN[key], 'hedges:' + key);
+  for (const key in green)        // bare and twiggy with its leaves down
+    add(green[key], seasonLeavesDown(month) ? 0x6f6a55 : _LINE_GREEN[key], 'hedges:' + key);
 }
 
 // ── everything on the ground ────────────────────────────────────────────────
