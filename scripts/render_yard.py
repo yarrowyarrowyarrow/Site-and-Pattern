@@ -329,6 +329,13 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
     if with_example:
         shots.insert(0, {"name": "example_open",
                          "scene": "/__yard/example_open.json", "view": "open"})
+        # The review lot's back yard, from over the west fence (V3.45): the
+        # lawn, the patio, the beds, the fence, the hedge and the garage. A
+        # camera of its own, in the viewer's axes, so only for that lot.
+        shots.append({"name": "back", "scene": lot("open"),
+                      "view": {"at": [-10, 7, -4], "looks_at": [3, 0.5, -12]}})
+        yard.append({"shot": "back", "caption": "The back yard, from over "
+                                                "the west fence."})
         yard.insert(0, {"shot": "example_open",
                         "caption": "The example yard, as the window opens: "
                                    f"{moment}."})
