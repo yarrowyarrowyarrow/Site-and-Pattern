@@ -142,10 +142,54 @@ def shade_ceiling(sun_requirement) -> float:
 def _leaf_weight(foliage) -> float:
     """How much of an evergreen's shade a crown of this foliage casts over the
     understory's growing season. A declared-*deciduous* crown is bare for the
-    season's shoulders → :data:`_DECIDUOUS_LEAF_ON`; everything else (evergreen,
-    semi-evergreen, unknown) stays fully opaque (1.0) — unknown ≠ transparent."""
-    return _DECIDUOUS_LEAF_ON if (foliage or "").strip().lower() == "deciduous" \
-        else 1.0
+    season's shoulders → :data:`_DECIDUOUS_LEAF_ON`, and so is a declared
+    *herbaceous* plant, which is not above ground at all from October to May
+    (V3.46: until then a fireweed stalk shaded the strawberries at its foot as
+    a spruce would, all year, and tall wildflowers were a third of a plan's
+    "shade deaths"). Everything else (evergreen, semi-evergreen, unknown) stays
+    fully opaque (1.0) — unknown ≠ transparent."""
+    return (_DECIDUOUS_LEAF_ON
+            if (foliage or "").strip().lower() in ("deciduous", "herbaceous")
+            else 1.0)
+
+
+def _in_ring(x: float, y: float, ring: list) -> bool:
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        ax, ay = ring[j]
+        bx, by = ring[i]
+        if (ay > y) != (by > y) and x < (bx - ax) * (y - ay) / (by - ay) + ax:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _crosses(ax, ay, bx, by, cx, cy, dx, dy) -> bool:
+    """Whether segment a-b crosses segment c-d (touching does not count)."""
+    d1 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx)
+    d2 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx)
+    d3 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+    d4 = (bx - ax) * (dy - ay) - (by - ay) * (dx - ax)
+    return (d1 > 0) != (d2 > 0) and (d3 > 0) != (d4 > 0)
+
+
+def in_swept_ring(px: float, py: float, tx: float, ty: float,
+                  ring: list) -> bool:
+    """Whether point ``p`` lies in ``ring`` swept along ``(tx, ty)``: a
+    building's shadow on flat ground is its footprint dragged down-sun by the
+    shadow's length. True when the stretch from ``p`` back toward the sun
+    (``p`` to ``p - t``) starts or ends inside the footprint or crosses a wall."""
+    qx, qy = px - tx, py - ty
+    if _in_ring(px, py, ring) or _in_ring(qx, qy, ring):
+        return True
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        if _crosses(px, py, qx, qy, ring[j][0], ring[j][1],
+                    ring[i][0], ring[i][1]):
+            return True
+        j = i
+    return False
 
 
 def _state_for(health: float) -> str:
@@ -247,6 +291,11 @@ class SuccessionEngine:
                 # shade.casters_from_project carries foliage for declared trees;
                 # unknown stays opaque (leaf weight 1.0).
                 "foliage": c.get("foliage"),
+                # A building's own outline, (lng, lat) until the frame below is
+                # set (V3.46): its shadow is this dragged down-sun, as the shade
+                # map casts it, not a circle out to its farthest corner.
+                "ring": (list(c.get("footprint") or [])
+                         if c.get("kind") != "tree" else []),
             })
             lat_acc.append(c["lat"])
             lng_acc.append(c["lng"])
@@ -266,6 +315,11 @@ class SuccessionEngine:
                 pl["x"], pl["y"] = self._to_xy(pl["lat"], pl["lng"])
         for s in self._statics:
             s["x"], s["y"] = self._to_xy(s["lat"], s["lng"])
+            ring = [self._to_xy(pt[1], pt[0]) for pt in s["ring"]
+                    if len(pt) >= 2]
+            if len(ring) > 1 and ring[0] == ring[-1]:
+                ring = ring[:-1]
+            s["ring"] = ring if len(ring) >= 3 else None
 
         # ── Sun-moment envelope (year-independent) ────────────────────────────
         # (sin(shadow_dir), cos(shadow_dir), shadow_length_factor) per sampled
@@ -299,6 +353,9 @@ class SuccessionEngine:
         # evaluate_year() calls (e.g. a slider drag or flyover) stay cheap.
         self._grow_cache: dict = {}
         self._shade_cache: dict = {}
+        # Which sun-moments a building's shadow reaches a plant in: neither
+        # grows, so once per (receiver, building).
+        self._wall_cache: dict = {}
 
     # ── frame helpers ──────────────────────────────────────────────────────
     def _to_xy(self, lat: float, lng: float) -> tuple:
@@ -361,13 +418,31 @@ class SuccessionEngine:
                            "canopy_radius_m": round(r, 3)}
         return out
 
+    def _wall_hits(self, index: int, j: int) -> tuple:
+        """Per sun-moment, whether building ``j``'s shadow lies on plant
+        ``index``: its outline dragged down-sun by its height's shadow."""
+        key = (index, j)
+        hits = self._wall_cache.get(key)
+        if hits is None:
+            pl, s = self._plants[index], self._statics[j]
+            out = []
+            for sin_d, cos_d, lf in self._moments:
+                length = min(s["height_m"] * lf, _shade._MAX_SHADOW_M)
+                out.append(length > 1e-6 and in_swept_ring(
+                    pl["x"], pl["y"], length * sin_d, length * cos_d, s["ring"]))
+            hits = self._wall_cache[key] = tuple(out)
+        return hits
+
     # ── dynamic shade at a receiver ──────────────────────────────────────────
     def experienced_shade(self, index: int, year: int) -> float:
         """Growing-season shade fraction (0..1) at plant ``index`` at ``year``.
 
         Two mechanisms, combined by taking the stronger:
 
-          * **Overhead canopy cover** — if the plant sits *under* an overtopping
+          * **Overhead canopy cover** — a crown only (V3.46: a building has
+            no canopy to sit under, and until then a plant within a building's
+            enclosing circle, up to metres outside its walls, counted as under
+            it). If the plant sits *under* an overtopping
             caster's canopy disk (horizontal offset ≤ the caster's year-N canopy
             radius) it is in deep shade essentially all day; the crown occupies
             the sky between it and the sun for nearly every sun position. This is
@@ -402,7 +477,9 @@ class SuccessionEngine:
                 continue
             src = self._statics[j] if kind == "s" else self._plants[j]
             lw = _leaf_weight(src.get("foliage"))
-            active.append((src["x"], src["y"], ch, cr, is_tree, lw))
+            walls = (self._wall_hits(index, j)
+                     if kind == "s" and src.get("ring") else None)
+            active.append((src["x"], src["y"], ch, cr, is_tree, lw, walls))
         if not active:
             self._shade_cache[key] = 0.0
             return 0.0
@@ -413,19 +490,23 @@ class SuccessionEngine:
         # so take the strongest overhead cover among the crowns the plant sits
         # beneath — an evergreen overhead beats a deciduous one.
         under = 0.0
-        for cx, cy, ch, cr, _is_tree, lw in active:
-            if (rx - cx) ** 2 + (ry - cy) ** 2 <= cr * cr:
+        for cx, cy, ch, cr, is_tree, lw, _walls in active:
+            if is_tree and (rx - cx) ** 2 + (ry - cy) ** 2 <= cr * cr:
                 under = max(under, _UNDER_CANOPY_SHADE * lw)
 
         # Cast shadow — fraction of sampled sun-moments the point lies in a swept
         # down-sun shadow, each caster weighted by its foliage (a bare deciduous
         # crown intercepts less). Per moment, keep the strongest-weighted hit.
         wsum = 0.0
-        for sin_d, cos_d, lf in moments:
+        for mi, (sin_d, cos_d, lf) in enumerate(moments):
             best = 0.0
-            for cx, cy, ch, cr, is_tree, lw in active:
+            for cx, cy, ch, cr, is_tree, lw, walls in active:
                 if lw <= best:
                     continue          # can't beat a stronger hit already found
+                if walls is not None:            # a building with an outline
+                    if walls[mi]:
+                        best = lw
+                    continue
                 shadow_len = ch * lf
                 if shadow_len > _shade._MAX_SHADOW_M:
                     shadow_len = _shade._MAX_SHADOW_M
@@ -457,6 +538,68 @@ class SuccessionEngine:
         frac = max(under, cast)
         self._shade_cache[key] = frac
         return frac
+
+    def main_shader(self, index: int, year: int) -> Optional[dict]:
+        """The one caster that shades plant ``index`` most at ``year``, or
+        ``None`` when nothing overtops it (V3.46, F263).
+
+        :meth:`experienced_shade` answers *how much*; the 3D preview's notes
+        need *by what*, to say "under the spruce" rather than "136 lost to
+        shade". Each overtopping caster is scored alone by the same two
+        mechanisms (overhead cover, cast shadow, each times its leaf weight)
+        and the strongest wins, the nearer one on a tie. Asked only for the
+        plants a note names, so it is not memoised.
+
+        Returns ``{"kind": "static" | "plant", "index", "x", "y", "share",
+        "is_tree", "foliage", "plant_id", "common_name"}``; ``share`` is that
+        caster's own shade fraction, and the last two are a planted caster's."""
+        pl = self._plants[index] if 0 <= index < len(self._plants) else None
+        if pl is None or year <= 0 or not self._moments:
+            return None
+        rx, ry = pl["x"], pl["y"]
+        rh, _, _ = self._dims("g", index, year)
+        best = None
+        for kind, j in self._cands[index]:
+            ch, cr, is_tree = self._dims(kind, j, year)
+            if ch <= rh + _OVERTOP_MARGIN_M:
+                continue
+            src = self._statics[j] if kind == "s" else self._plants[j]
+            lw = _leaf_weight(src.get("foliage"))
+            pe, pn = rx - src["x"], ry - src["y"]
+            dist2 = pe * pe + pn * pn
+            under = (_UNDER_CANOPY_SHADE * lw
+                     if is_tree and dist2 <= cr * cr else 0.0)
+            walls = (self._wall_hits(index, j)
+                     if kind == "s" and src.get("ring") else None)
+            hits = sum(walls) if walls is not None else 0
+            for sin_d, cos_d, lf in (() if walls is not None else self._moments):
+                shadow_len = min(ch * lf, _shade._MAX_SHADOW_M)
+                if shadow_len <= 1e-6:
+                    continue
+                tip_e, tip_n = shadow_len * sin_d, shadow_len * cos_d
+                t = max(0.0, min(1.0, (pe * tip_e + pn * tip_n)
+                                 / (shadow_len * shadow_len)))
+                de, dn = pe - t * tip_e, pn - t * tip_n
+                w = _shade._tree_halfwidth(t, cr) if is_tree else cr
+                if de * de + dn * dn <= w * w:
+                    hits += 1
+            share = max(under, lw * hits / len(self._moments))
+            if share <= 0.0:
+                continue
+            if best is None or (share, -dist2) > (best[0], -best[1]):
+                best = (share, dist2, kind, j, src, is_tree)
+        if best is None:
+            return None
+        share, _d2, kind, j, src, is_tree = best
+        return {"kind": "static" if kind == "s" else "plant", "index": j,
+                "x": src["x"], "y": src["y"], "share": round(share, 3),
+                "is_tree": bool(is_tree), "foliage": src.get("foliage") or "",
+                "plant_id": src.get("plant_id"),
+                "common_name": src.get("common_name") or ""}
+
+    def death_year(self, index: int, year: int) -> Optional[int]:
+        """The first year in 1..``year`` plant ``index`` reads dead, or None."""
+        return self._death_year(index, year)
 
     # ── survival evaluator ───────────────────────────────────────────────────
     def health_at(self, index: int, year: int) -> tuple:

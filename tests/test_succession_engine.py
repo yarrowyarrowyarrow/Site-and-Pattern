@@ -364,5 +364,222 @@ class TestContract(unittest.TestCase):
         self.assertEqual(out["delta"], [])
 
 
+# ── buildings cast shade from their walls (V3.46) ────────────────────────────
+
+_KX = _M * __import__("math").cos(__import__("math").radians(_LAT))
+
+
+def _building(x0, y0, x1, y1, height, *, radius=None):
+    """A scanned building as the app stores one: a canopy_footprint whose
+    ``canopy_radius_m`` is its enclosing circle (osm_features.ring_radius_m)."""
+    import math
+    ring = [[_LNG + x / _KX, _LAT + y / _M]
+            for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0))]
+    if radius is None:
+        radius = math.hypot(x1 - x0, y1 - y0) / 2
+    return {"type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"element_type": "canopy_footprint",
+                           "shape_type": "Building (OSM)", "cast_shade": True,
+                           "height_m": height, "canopy_radius_m": radius}}
+
+
+def _forb_at(x, y, pid=20, name="Sun forb"):
+    return plant_feature({"plant_id": pid, "common_name": name,
+                          "lat": _LAT + y / _M, "lng": _LNG + x / _KX})
+
+
+class TestABuildingIsItsWallsNotACircle(unittest.TestCase):
+    """The V3.43 review found 37% of a fresh plan "lost to shade" by the fifth
+    summer. V3.46 asked the model what shaded them: 82 of the 136 were plants
+    near a 3.4 m garage, counted as *under* it because a building was a circle
+    out to its farthest corner (6 m on a garage 3.2 m to each wall)."""
+
+    #: A garage 6.4 m square, 3.4 m tall, centred on the origin.
+    GARAGE = (-3.2, -3.2, 3.2, 3.2, 3.4)
+
+    def _engine(self, *plants, building=None):
+        project = {"features": [_building(*(building or self.GARAGE))]
+                   + list(plants)}
+        from src.project_store import plant_record_from_feature
+        recs = [plant_record_from_feature(f) for f in plants]
+        return SuccessionEngine(
+            recs, get_plant=_get_plant, origin=(_LAT, _LNG),
+            static_casters=static_casters_from_project(project))
+
+    def test_the_caster_keeps_its_outline(self):
+        statics = static_casters_from_project(
+            {"features": [_building(*self.GARAGE)]})
+        self.assertEqual(statics[0]["kind"], "building")
+        self.assertTrue(statics[0]["footprint"])
+        self.assertAlmostEqual(statics[0]["radius_m"], 4.525, places=2)
+
+    def test_a_plant_beside_the_south_wall_is_in_full_sun(self):
+        """One metre south of the wall, inside the enclosing circle: nothing
+        is between it and the sun at any hour sampled."""
+        eng = self._engine(_forb_at(0.0, -4.2))
+        self.assertEqual(eng.experienced_shade(0, 10), 0.0)
+        self.assertEqual(eng.evaluate_year(25)["counts"]["dead"], 0)
+        self.assertIsNone(eng.main_shader(0, 10))
+
+    def test_a_plant_at_the_east_wall_is_shaded_part_of_the_day_only(self):
+        """Morning sun, afternoon shade: never the 0.9 of standing under a
+        crown, and a plant that takes part shade lives."""
+        eng = self._engine(_forb_at(4.0, 0.0),
+                           _forb_at(4.0, 0.0, pid=50, name="Part forb"))
+        shade = eng.experienced_shade(0, 10)
+        self.assertGreater(shade, 0.0)
+        self.assertLess(shade, 0.6)
+        self.assertEqual(eng.evaluate_year(25)["plants"][1]["state"], "healthy")
+
+    def test_a_plant_close_under_the_north_wall_is_in_its_shadow(self):
+        eng = self._engine(_forb_at(0.0, 3.8))
+        self.assertGreater(eng.experienced_shade(0, 10), 0.6)
+        shader = eng.main_shader(0, 10)
+        self.assertEqual(shader["kind"], "static")
+        self.assertFalse(shader["is_tree"])
+
+    def test_the_shadow_ends_where_the_wall_is_too_low_to_reach(self):
+        """A 3.4 m wall's noon shadow in June is under 2 m long: a plant 8 m
+        north of it is shaded only when the sun is low."""
+        eng = self._engine(_forb_at(0.0, 3.8), _forb_at(0.0, 11.2))
+        self.assertLess(eng.experienced_shade(1, 10),
+                        eng.experienced_shade(0, 10))
+
+    def test_a_building_with_no_outline_keeps_its_circle(self):
+        """A building marked as a point has only a size, so its shadow is the
+        circle's, as before: nothing to the south of it is shaded."""
+        project = {"features": [{
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [_LNG, _LAT]},
+            "properties": {"element_type": "existing_building",
+                           "height_m": 6.0, "canopy_radius_m": 4.0}}]}
+        from src.project_store import plant_record_from_feature
+        south, north = _forb_at(0.0, -5.0), _forb_at(0.0, 5.0)
+        eng = SuccessionEngine(
+            [plant_record_from_feature(south), plant_record_from_feature(north)],
+            get_plant=_get_plant, origin=(_LAT, _LNG),
+            static_casters=static_casters_from_project(project))
+        self.assertEqual(eng.experienced_shade(0, 10), 0.0)
+        self.assertGreater(eng.experienced_shade(1, 10), 0.5)
+
+    def test_a_tree_is_still_a_crown_to_stand_under(self):
+        project = {"features": [{
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [_LNG, _LAT]},
+            "properties": {"element_type": "existing_tree", "height_m": 12.0,
+                           "canopy_radius_m": 5.0, "tree_foliage": "evergreen"}}]}
+        from src.project_store import plant_record_from_feature
+        forb = _forb_at(0.0, -3.0)
+        eng = SuccessionEngine(
+            [plant_record_from_feature(forb)], get_plant=_get_plant,
+            origin=(_LAT, _LNG),
+            static_casters=static_casters_from_project(project))
+        self.assertGreaterEqual(eng.experienced_shade(0, 10), 0.9)
+        shader = eng.main_shader(0, 10)
+        self.assertTrue(shader["is_tree"])
+        self.assertEqual(shader["foliage"], "evergreen")
+
+
+class TestSweptOutline(unittest.TestCase):
+
+    SQUARE = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]
+
+    def test_inside_the_outline_and_inside_its_shadow(self):
+        from src.succession_engine import in_swept_ring
+        self.assertTrue(in_swept_ring(1.0, 1.0, 0.0, 3.0, self.SQUARE))
+        self.assertTrue(in_swept_ring(1.0, 4.0, 0.0, 3.0, self.SQUARE))
+
+    def test_past_the_shadows_end_and_beside_it(self):
+        from src.succession_engine import in_swept_ring
+        self.assertFalse(in_swept_ring(1.0, 5.5, 0.0, 3.0, self.SQUARE))
+        self.assertFalse(in_swept_ring(3.0, 3.0, 0.0, 3.0, self.SQUARE))
+        self.assertFalse(in_swept_ring(1.0, -1.0, 0.0, 3.0, self.SQUARE))
+
+    def test_a_shadow_cast_at_an_angle(self):
+        from src.succession_engine import in_swept_ring
+        self.assertTrue(in_swept_ring(4.0, 4.0, 3.0, 3.0, self.SQUARE))
+        self.assertFalse(in_swept_ring(4.0, 0.5, 3.0, 3.0, self.SQUARE))
+
+
+class TestAHerbIsNotAnEvergreen(unittest.TestCase):
+    """A herbaceous plant is not above ground from October to May. Until V3.46
+    it shaded the plants at its foot as a spruce would, all year."""
+
+    _TALL = {"plant_type": "wildflower", "years_to_maturity": 2,
+             "growth_curve": "steady", "mature_height_meters": 1.8,
+             "mature_canopy_m": 0.9, "deciduous_evergreen": "herbaceous",
+             "common_name": "Tall forb"}
+    _LOW = {"plant_type": "groundcover", "years_to_maturity": 1,
+            "growth_curve": "steady", "mature_height_meters": 0.15,
+            "mature_canopy_m": 0.45,
+            "sun_requirement": "full_sun,partial_shade",
+            "common_name": "Low mat"}
+
+    def _engine(self, tall):
+        plants = {1: tall, 2: self._LOW}
+        return SuccessionEngine(
+            [{"plant_id": 1, "lat": _LAT, "lng": _LNG},
+             {"plant_id": 2, "lat": _LAT + 0.2 / _M, "lng": _LNG}],
+            get_plant=plants.get, origin=(_LAT, _LNG))
+
+    def test_a_mat_under_a_tall_wildflower_lives(self):
+        eng = self._engine(self._TALL)
+        self.assertLess(eng.experienced_shade(1, 10), 0.7)
+        self.assertEqual(eng.evaluate_year(25)["plants"][1]["state"], "healthy")
+
+    def test_the_same_mat_under_an_evergreen_of_that_size_does_not(self):
+        eng = self._engine(dict(self._TALL, deciduous_evergreen="evergreen"))
+        self.assertGreaterEqual(eng.experienced_shade(1, 10), 0.9)
+        self.assertEqual(eng.evaluate_year(25)["plants"][1]["state"], "dead")
+
+    def test_unknown_foliage_is_still_opaque(self):
+        tall = dict(self._TALL)
+        tall.pop("deciduous_evergreen")
+        eng = self._engine(tall)
+        self.assertGreaterEqual(eng.experienced_shade(1, 10), 0.9)
+
+
+class TestWhatShadesAPlant(unittest.TestCase):
+
+    def test_the_stronger_of_two_casters_is_named(self):
+        # A spruce overhead and an aspen further off: the spruce.
+        eng = SuccessionEngine(
+            _placed((40, 0), (20, 1.0), (10, 9.0)),
+            get_plant=_get_plant, origin=(_LAT, _LNG))
+        shader = eng.main_shader(1, 15)
+        self.assertEqual((shader["kind"], shader["index"]), ("plant", 0))
+        self.assertEqual(shader["common_name"], "Spruce")
+        self.assertLessEqual(shader["share"], eng.experienced_shade(1, 15))
+
+    def test_nothing_overtops_it_and_year_zero(self):
+        eng = SuccessionEngine(_placed((20, 0), (30, 2.0)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        self.assertIsNone(eng.main_shader(0, 10))
+        eng = SuccessionEngine(_placed((40, 0), (20, 1.0)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        self.assertIsNone(eng.main_shader(1, 0))
+
+    def test_a_sole_casters_share_is_the_plants_whole_shade(self):
+        eng = SuccessionEngine(_placed((40, 0), (20, 1.0)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        for year in (3, 8, 20):
+            shader = eng.main_shader(1, year)
+            if shader is None:
+                self.assertEqual(eng.experienced_shade(1, year), 0.0)
+            else:
+                self.assertAlmostEqual(shader["share"],
+                                       eng.experienced_shade(1, year), places=3)
+
+    def test_death_year_is_the_first_dead_year(self):
+        eng = SuccessionEngine(_placed((40, 0), (20, 1.0)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        died = eng.death_year(1, 25)
+        self.assertIsNotNone(died)
+        self.assertEqual(eng.evaluate_year(died)["plants"][1]["state"], "dead")
+        self.assertNotEqual(
+            eng.evaluate_year(died - 1)["plants"][1]["state"], "dead")
+
+
 if __name__ == "__main__":
     unittest.main()
