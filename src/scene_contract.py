@@ -95,8 +95,35 @@ Scene schema (``SCENE_VERSION`` = 1)::
                                        # spread_factor: ≥1.0 colony widening
                                        # spread_rate: 0–1 aggressiveness (3D
                                        #   continuous year-by-year spread)
-      "buildings": [{ring: [[x, y], ...], height_m, kind}, ...],
+      "buildings": [{ring: [[x, y], ...], height_m, kind, roof?}, ...],
                                        # kind: "building" | "canopy"
+                                       # roof (V3.45), on a building: {"form":
+                                       #   "gable", "ridge": [[x, y], [x, y]],
+                                       #   "rise_m"} on a clean four-corner
+                                       #   footprint of house size, its ridge
+                                       #   AT height_m; else {"form": "flat"}
+      "ground": "pale" | "meadow",     # V3.45 (src/scene_site.py, the owner's
+                                       #   D3): what the ground is where nothing
+                                       #   is drawn. pale for a yard, meadow for
+                                       #   a walk through a wild community. A
+                                       #   scene without it draws meadow
+      "surfaces": [{kind, ring: [[x, y], ...], color?, label?, base?}, ...],
+                                       # the ground's surfaces, bottom first:
+                                       #   the outline's inside as lawn (base),
+                                       #   then every drawn area that lies flat.
+                                       #   kind: scene_site.KINDS; "custom"
+                                       #   carries the person's color
+      "lines": [{kind, points: [[x, y], ...], width_m, height_m}, ...],
+                                       # kind: hedge | fence | living_fence |
+                                       #   windbreak. height_m is an estimate by
+                                       #   kind: no design records one
+      "street": {bearing, how: "told" | "measured", sidewalk?: ring,
+                 road?: ring, roads?: [{points, width_m, name}]} | None,
+                                       # a pale sidewalk and road on the street
+                                       #   side, ONLY where that side is known
+                                       #   (None where it is assumed, and with
+                                       #   no outline). roads: the recorded
+                                       #   lines, where there are any
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
@@ -112,7 +139,7 @@ Plant sizing/presence comes from :mod:`src.scene3d` so the 3D scene matches
 the 2D growth timeline exactly; colours come from the shared
 ``_TYPE_COLORS`` so the 3D plants match the map's markers.
 
-Not yet in the scene (future versions): hedgerow lines, annotation labels.
+Not yet in the scene (future versions): annotation labels.
 """
 
 from __future__ import annotations
@@ -809,6 +836,11 @@ def build_scene(project: dict, *, year: int = 0,
         if house:
             views["house"] = house
 
+    # What the ground is (V3.45, the owner's D3): the drawn areas, the lines,
+    # the street where its side is known, and a roof hint on each building.
+    from src import scene_site
+    site = scene_site.site_fields(project, proj, boundary_xy, buildings)
+
     return {
         "version": SCENE_VERSION,
         "year": int(year),
@@ -821,6 +853,7 @@ def build_scene(project: dict, *, year: int = 0,
         "plants": plants,
         "buildings": buildings,
         "structures": structures,
+        **site,
         "terrain": _terrain_block(elevation, proj),
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
         # Night when the sun is down (V2.12): the 3D view renders a moonlit
