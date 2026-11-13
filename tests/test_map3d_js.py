@@ -151,6 +151,22 @@ class TestBeeMode(unittest.TestCase):
         self.assertIn("null", m3.set_bee_targets([1]))   # default appearance
 
 
+class TestShowView(unittest.TestCase):
+    """V3.44: the window's named viewpoints (html/scene3d/27-views.js)."""
+
+    def test_emits_guarded_hook_with_the_view_as_json(self):
+        for name in ("street", "house", "above", "whole"):
+            js = m3.show_view(name)
+            self.assertEqual(
+                js, f'window.permaShowView && window.permaShowView("{name}");')
+
+    def test_a_name_cannot_break_out_of_the_call(self):
+        js = m3.show_view('street"); alert("x')
+        self.assertIn('\\"', js)
+        self.assertEqual(js.count("window.permaShowView("), 1)
+        self.assertTrue(js.endswith(");"))
+
+
 class TestWildlifeAndWalk(unittest.TestCase):
     def test_set_wildlife_json(self):
         crit = [{"kind": "bee", "x": 1.0, "y": 2.0, "h": 0.5,
