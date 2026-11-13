@@ -52,9 +52,11 @@ full schema lives in its module docstring; the shape:
 
 `version, year, month, origin{lat,lng}, bounds, focus|None,
 views{street, house}, boundary, plants[], buildings[] (kind:
-building|canopy), structures[], terrain|None, sun|None, is_night`.
-(`scan_points` and `splat` went with the yard scan in V3.22; `focus`, `views`
-and a plant's `gone` came in V3.43, `views.house` in V3.44.)
+building|canopy, roof), structures[], ground, surfaces[], lines[],
+street|None, terrain|None, sun|None, is_night`. (`scan_points` and `splat`
+went with the yard scan in V3.22; `focus`, `views` and a plant's `gone` came
+in V3.43, `views.house` in V3.44, and `ground`, `surfaces`, `lines`, `street`
+and a building's `roof` in V3.45.)
 
 Rules of the contract:
 
@@ -109,6 +111,34 @@ rendered one plant and nobody rendered a yard:
 the real viewer and reads the picture back (`html/yard_probe.html`).
 `python scripts/render_yard.py --out DIR` draws the contact sheets every 3D
 increment ends with; look at them, a green gate is not a picture.
+
+## The yard itself (V3.45; `docs/plans/V3.45-your-yard-not-a-green-field.md`)
+
+`src/scene_site.py` says what the ground is and `html/scene3d/02c-site.js`
+draws it. The rules for anything you add there:
+
+- **Decide in `scene_site.py`, draw in the chunk.** A new shape type gets a
+  row in `SURFACE_KINDS` and its kind a look in `SURFACE_LOOK` (a `rank`, a
+  `tile`, a base colour); `tests/test_scene_site.py` fails on either half
+  missing. A type nobody mapped keeps the person's colour.
+- **Texture, never geometry.** A surface is a flat polygon with a quiet
+  procedural texture. No blades of grass, no chips of mulch (V2.29).
+- **What is not the design is pale.** The ground outside the outline (the
+  owner's D3), the sidewalk and the road. Houses are massing: light walls, a
+  darker roof, and no window, door or colour nobody recorded.
+- **Never draw what is only assumed.** `street` is `None` unless the street's
+  side was told or measured; a roof never makes a building taller than its
+  recorded height. A line's height, a road's width and a roof's pitch are
+  estimates stated in the module, not measurements.
+- **Use `drapedShape` for anything flat on the ground.** It follows a slope
+  (cut in four, uniformly, so no crack opens) and `tests/test_slope_render.py`
+  reads it back on 6 m of relief. Give a new look a `rank`: it orders
+  overlapping surfaces and is the depth offset that stops them flickering.
+- **Winter is part of a look.** Soft ground takes the snow texture, hard
+  ground packed snow, water ice (`siteMat`).
+- The materials are kept for the session: `siteSharedMats()` spares them from
+  `disposeDesignGroup`. A per-surface material (a custom colour) is not shared
+  and is disposed with the scene.
 
 ## The window a homeowner opens (V3.44; `docs/plans/V3.44-getting-to-3d.md`)
 
