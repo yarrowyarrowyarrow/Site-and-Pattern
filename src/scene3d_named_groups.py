@@ -57,7 +57,17 @@ class NamedGroups:
             row.addWidget(label)
             row.addWidget(box)
             self._lists[key] = (box, entries)
+            if key == "month":
+                self._season_tip = tip
         self._fill_lists()
+
+    def set_season_basis(self, words: str) -> None:
+        """Say on the Season list what its seasons are drawn from (V3.46):
+        the scene's own sentence, the region's frost dates."""
+        box = getattr(self, "_lists", {}).get("month", (None,))[0]
+        if box is not None:
+            box.setToolTip(f"{self._season_tip}\n{words}" if words
+                           else self._season_tip)
 
     def _fill_lists(self):
         """Each list: its stops, plus where the picture is when that is not a

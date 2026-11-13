@@ -248,6 +248,14 @@ class TheNotes(unittest.TestCase):
         self.assertTrue(every["notes"][0]["text"].startswith(
             "All 2 plants in the garden bed at the front are shaded out"))
 
+    def test_a_bed_keeps_its_name_whichever_beds_lost_plants(self):
+        """Two beds at the back and losses in one: it is still told apart
+        from the other, or "the garden bed at the back" would be one bed in
+        the fifth summer and another in the tenth."""
+        got = self._notes([_p("A", -5, 14, gone="shade"), _p("B", 5, 12)])
+        self.assertEqual(got["notes"][0]["where"],
+                         "the garden bed at the back (the west one)")
+
     def test_places_are_listed_most_lost_first(self):
         placed = ([_p("A", -5, 14, gone="shade")]
                   + [_p("B", 1.5, -14.0 - 0.2 * i, gone="shade")
@@ -256,7 +264,7 @@ class TheNotes(unittest.TestCase):
         wheres = [n["where"] for n in self._notes(placed)["notes"]]
         self.assertEqual(wheres, ["the garden bed at the front",
                                   "the rest of the yard",
-                                  "the garden bed at the back"])
+                                  "the garden bed at the back (the west one)"])
 
     def test_short_lived_kinds_are_said_as_how_they_grow(self):
         got = self._notes([_p("Fireweed", 0, 6, gone="short_lived")] * 2

@@ -291,9 +291,13 @@ def notes(*, year: int, when_words: str, engine, placed: Mapping,
         elif p.get("health_state") == "declining" and not p.get("gone"):
             row["weak"].append(p)
 
+    # Every drawn area is named, lost plants or not: "the garden bed at the
+    # back" must be the same bed in the fifth summer as in the tenth.
+    drawn = [i for i, s in enumerate(surfaces or [])
+             if not s.get("base") and len(s.get("ring") or []) >= 3]
     wheres = _tell_apart({
         place: place_words(place, surfaces, box, street_bearing, any_drawn)
-        for place, row in by_place.items() if row["lost"]}, surfaces)
+        for place in drawn + [None]}, surfaces)
     out = []
     for place, row in by_place.items():
         lost, total = len(row["lost"]), len(row["all"])

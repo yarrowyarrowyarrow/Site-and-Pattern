@@ -392,6 +392,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # vocabulary with the shape tool and the Overview's lists.
         (_SRC / "scene_site.py", 450),                 # 353 now
         (_SRC / "scene3d_stops.py", 260),              # 174 now
+        # V3.46 (F263): the season the 3D preview draws, and what the years
+        # took, each decided once for the viewer. If scene_season grows past
+        # its ceiling the cause is most likely a per-plant rule that wants
+        # data (a recorded leaf-out, a warm-season grass), not more code.
+        (_SRC / "scene_season.py", 340),               # 262 now
+        (_SRC / "scene_timeline.py", 420),             # 333 now
         (_SRC / "scene3d_creatures.py", 200),          # 113 now
         (_SRC / "controllers" / "split_view.py", 320),  # 253 now
         # V2.46: plant / remove / net in the *design*, not just the sandbox.
@@ -468,6 +474,9 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "chunks.js", 120),        # ~60 now (V3.39)
         # V3.39: what a card says, its links and the trail back (F255).
         (_HTML / "scene3d" / "25-cards.js", 320),      # ~280 now
+        # V3.46 (F263): the button, the list and the rings for
+        # scene.timeline_notes. It shows what src/scene_timeline.py wrote.
+        (_HTML / "scene3d" / "25b-timeline.js", 220),  # 165 now
         (_HTML / "scene3d" / "01-core.js", 700),       # 606 now (V3.04)
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
@@ -478,6 +487,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # reached 548/550 with it inline. Light through a leaf and the bake on
         # the sky; anything more about light belongs in its own chunk too.
         (_HTML / "scene3d" / "01c-leaves.js", 150),    # 74 now
+        # V3.46 (F263): the season as the scene decided it. One place colours
+        # a plant body and says whether leaves are down and snow lies; the
+        # old month rules live on here for a scene that does not say. If it
+        # grows past its ceiling the cause is most likely a decision that
+        # belongs in src/scene_season.py.
+        (_HTML / "scene3d" / "01d-season.js", 160),    # 102 now
         # 687 now (V3.04, one ground on a slope). The next ground work is a chunk
         # of its own, which needs the bootstrap's FILES list moved out first.
         (_HTML / "scene3d" / "02-plants.js", 700),     # 635 now (V3.45)

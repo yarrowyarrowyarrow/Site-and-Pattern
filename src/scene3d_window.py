@@ -431,6 +431,7 @@ class Scene3DWindow(QWidget):
         self.viewer.apply_scene(scene)
         self.view_bar.set_view_available(
             "house", "house" in (scene.get("views") or {}), stops.NO_HOUSE)
+        self.when_bar.set_season_basis((scene.get("season") or {}).get("basis", ""))
         if scene.get("origin") != self._shown_origin:
             self._shown_origin = scene.get("origin")
             self._on_new_design(scene)

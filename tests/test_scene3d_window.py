@@ -365,6 +365,19 @@ class TestScene3DWindow(unittest.TestCase):
         self.assertEqual(house.toolTip(), stops.NO_HOUSE)
         self.assertTrue(win.view_bar.view_buttons["street"].isEnabled())
 
+    def test_the_season_list_says_what_its_seasons_are_drawn_from(self):
+        """V3.46: the seasons come from the region's frost dates, a typical
+        year. The list that picks one says so, in the scene's own sentence."""
+        win, captured = self._window()
+        win.refresh()
+        box = win.when_bar._lists["month"][0]
+        basis = win._scene["season"]["basis"]
+        self.assertIn("frost", basis)
+        self.assertIn("The time of year", box.toolTip())
+        self.assertTrue(box.toolTip().endswith(basis), box.toolTip())
+        # The other window's toolbar has the same list and the same method.
+        win.view_bar.set_season_basis(basis)
+
     def test_the_shade_simulation_is_kept_between_pushes(self):
         from unittest import mock
         import src.scene3d_window as mod

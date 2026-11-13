@@ -291,6 +291,8 @@ MOMENTS = {
     "y5_jul": (5, 7, 13), "y25_jul": (25, 7, 13), "y5_apr": (5, 4, 13),
     "y5_oct": (5, 10, 13), "y5_jan": (5, 1, 13), "y5_aug_18h": (5, 8, 18),
     "y5_jul_23h": (5, 7, 23),
+    # V3.46: the window's own Spring and Fall stops (scene3d_stops.SEASON_STOPS).
+    "y5_may": (5, 5, 13), "y5_sep": (5, 9, 13),
 }
 
 
@@ -308,6 +310,8 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
         {"name": "y3", "scene": lot("y3_jul"), "view": "street"},
         {"name": "y25", "scene": lot("y25_jul"), "view": "street"},
         {"name": "apr", "scene": lot("y5_apr"), "view": "street"},
+        {"name": "may", "scene": lot("y5_may"), "view": "street"},
+        {"name": "sep", "scene": lot("y5_sep"), "view": "street"},
         {"name": "oct", "scene": lot("y5_oct"), "view": "street"},
         {"name": "jan", "scene": lot("y5_jan"), "view": "street"},
         {"name": "eve", "scene": lot("y5_aug_18h"), "view": "street"},
@@ -345,6 +349,8 @@ def job(label: str, lot_name: str, with_example: bool, width: int,
         {"shot": "street", "caption": "Year 5, July."},
         {"shot": "y25", "caption": "Year 25, July."},
         {"shot": "apr", "caption": "Year 5, 21 April."},
+        {"shot": "may", "caption": "Year 5, 21 May: the window's Spring."},
+        {"shot": "sep", "caption": "Year 5, 21 September: the window's Fall."},
         {"shot": "oct", "caption": "Year 5, 21 October."},
         {"shot": "jan", "caption": "Year 5, 21 January."},
         {"shot": "eve", "caption": "Year 5, August, 6 pm."},
@@ -437,7 +443,7 @@ def main(argv=None) -> int:
     server = Server(routes, viewer_root=args.viewer_root)
     try:
         dom = run_probe(server.url("yard_probe.html?shots=/__yard/shots.json"),
-                        budget_ms=600000, timeout=1800)
+                        budget_ms=1200000, timeout=2400)
     finally:
         server.stop()
     errors = re.search(r'<pre id="probe-errors"[^>]*>(.*?)</pre>', dom, re.S)
@@ -452,7 +458,9 @@ def main(argv=None) -> int:
     for kind, extra in (("sheet", sheets),
                         ("shot", images(dom, "shot") if args.tiles else {})):
         for key, data in extra.items():
-            path = os.path.join(args.out, f"{key}.jpg")
+            # A tile is named apart from the sheets: one of them is "yard".
+            name = key if kind == "sheet" else f"tile_{key}"
+            path = os.path.join(args.out, f"{name}.jpg")
             with open(path, "wb") as fh:
                 fh.write(data)
             if kind == "sheet":
