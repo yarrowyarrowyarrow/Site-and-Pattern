@@ -355,6 +355,15 @@ class TheSceneCarriesThem(unittest.TestCase):
                                 get_plant=self.yard._PLANTS.get, wind=False)
             self.assertIsNone(scene["timeline_notes"], year)
 
+    def test_a_walk_through_a_wild_community_has_none(self):
+        """Nothing was planned there, so nothing is said to be lost."""
+        project = self.yard._yard()
+        project["properties"]["reference_version"] = 1
+        scene = build_scene(project, year=self.yard.YEAR,
+                            get_plant=self.yard._PLANTS.get, wind=False)
+        self.assertTrue(any(p.get("gone") == "shade" for p in scene["plants"]))
+        self.assertIsNone(scene["timeline_notes"])
+
     def test_the_scene_still_serialises(self):
         import json
         json.dumps(self.scene["timeline_notes"])

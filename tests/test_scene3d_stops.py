@@ -146,6 +146,19 @@ class TheFlyover(unittest.TestCase):
         self.assertNotIn(0, [f[0] for f in frames])
         self.assertEqual(frames[0][0], 1)
 
+    def test_no_frame_says_green_over_snow(self):
+        """V3.46: the scene draws the region's seasons. The tour said "spring
+        green" on 21 March, which is under snow."""
+        from datetime import datetime
+        from src import scene_season
+        for year, month, hour, _big, sub in S.flyover_storyboard():
+            season = scene_season.apply_seasons(
+                [], datetime(2025, month, 21, hour), {})
+            if "green" in sub or "bloom" in sub or "summer" in sub:
+                self.assertFalse(season["snow"], (month, sub))
+            if "bare" in sub:
+                self.assertEqual(season["leaves"], "bare", (month, sub))
+
     def test_every_frame_is_a_moment_and_two_captions(self):
         for year, month, hour, big, sub in S.flyover_storyboard():
             self.assertTrue(1 <= year <= 25 and 1 <= month <= 12

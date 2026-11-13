@@ -165,9 +165,11 @@ def flyover_storyboard() -> list:
                "a young habitat" if y <= 18 else "grown, not designed")
         frames.append((y, 7, 13, f"Year {y}", sub))
     # Act 2 — the seasons turn, at maturity.
-    season = {3: "spring green", 5: "first blooms", 7: "high summer",
-              9: "autumn seed & fruit", 11: "bare stems, standing seed"}
-    for m in (3, 5, 7, 9, 11):
+    # April, not March (V3.46): the scene draws the region's own seasons now,
+    # and on 21 March the yard is under snow, which "spring green" was said over.
+    season = {4: "the first green", 5: "first blooms", 7: "high summer",
+              9: "autumn colour, seed & fruit", 11: "bare stems, standing seed"}
+    for m in (4, 5, 7, 9, 11):
         frames.append((25, m, 13, _MONTHS[m], season[m]))
     # Act 3 — into the night (moths, bats, glowing blooms).
     frames.append((25, 7, 18, "Evening", "the day shift clocks off"))

@@ -910,7 +910,9 @@ def build_scene(project: dict, *, year: int = 0,
 
     # What the years took, said where and which (V3.46, F263, decision D4):
     # the shade model's own results, by the drawn area the plants are in.
-    timeline = _timeline_notes(
+    # A walk through a wild community is not a plan: nothing was planned, so
+    # nothing is said to be lost.
+    timeline = None if scene_site.is_walk(project) else _timeline_notes(
         memo, engine, int(year), placed_scene, plants, site["surfaces"],
         buildings, boundary_xy, focus, scene_views.street_bearing(project),
         house_at)

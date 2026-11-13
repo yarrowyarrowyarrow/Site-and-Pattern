@@ -53,10 +53,11 @@ full schema lives in its module docstring; the shape:
 `version, year, month, origin{lat,lng}, bounds, focus|None,
 views{street, house}, boundary, plants[], buildings[] (kind:
 building|canopy, roof), structures[], ground, surfaces[], lines[],
-street|None, terrain|None, sun|None, is_night`. (`scan_points` and `splat`
-went with the yard scan in V3.22; `focus`, `views` and a plant's `gone` came
-in V3.43, `views.house` in V3.44, and `ground`, `surfaces`, `lines`, `street`
-and a building's `roof` in V3.45.)
+street|None, season, timeline_notes|None, terrain|None, sun|None, is_night`.
+(`scan_points` and `splat` went with the yard scan in V3.22; `focus`, `views`
+and a plant's `gone` came in V3.43, `views.house` in V3.44, `ground`,
+`surfaces`, `lines`, `street` and a building's `roof` in V3.45, and `season`,
+a plant's `season` and `timeline_notes` in V3.46.)
 
 Rules of the contract:
 
@@ -139,6 +140,45 @@ draws it. The rules for anything you add there:
 - The materials are kept for the session: `siteSharedMats()` spares them from
   `disposeDesignGroup`. A per-surface material (a custom colour) is not shared
   and is disposed with the scene.
+
+## The season and the years (V3.46; `docs/plans/V3.46-a-timeline-you-can-believe.md`)
+
+`src/scene_season.py` decides the season and `html/scene3d/01d-season.js` is
+the one place the viewer reads it. `src/scene_timeline.py` says what the years
+took and `html/scene3d/25b-timeline.js` shows it. The rules for anything you
+add:
+
+- **The dates are the region pack's frost dates plus stated offsets.** Never
+  type a month into a chunk: ask `seasonSnow(month)`, `seasonGround(month)`,
+  `leafless(p, month)`, `diedBack(p, month)`. `tests/test_scene_season.py`
+  fails on a month comparison outside `01d-season.js`, where the old rules
+  live on for a scene that does not say.
+- **Colour a plant body with `bodyColor(p, month)`**, never `seasonalColor`
+  directly (that is the fallback for a plant with no `season`: an evergreen,
+  an older scene). A new `look` needs a row in `scene_season.LOOKS` and in the
+  chunk's `SEASON_LOOK`; a test holds them equal.
+- **A plant's `height_m` is never changed by the season.** A herb coming up
+  carries `season.up`, and `bodyHeightOf(p)` is `fullBodyHeightOf(p)` times
+  it. Anything that sits on a plant (a bloom, a berry, a perching animal)
+  asks `bodyHeightOf`, or `scene_wildlife._drawn_height` in Python. The views
+  and the focus must not move with the month.
+- **A plant in flower is up and is not dry.** If you add a layer gated by
+  month (seed heads were), check it against the plant's `look` as well.
+- **A tint can only darken.** A dormant meadow and a just-thawed lawn are
+  their own textures (`_MEADOW_DORMANT`, a look's `asleep`), not the green
+  one multiplied, which is how October came out dark olive.
+- **The notes are the shade model's own results.** What shades a plant is
+  `SuccessionEngine.main_shader`; do not derive shade a second way. A note's
+  words are built in Python (the simple app's vocabulary: its module is in the
+  ratchet) and the chunk only shows them.
+- **The rings lie on the ground through `onGround`** and live in
+  `designGroup`, so a scene push disposes them; `showTimeline()` runs at the
+  end of `permaSetScene` and redraws them while the list is open.
+- **The shade-over-time model casts a building's real outline** (V3.46,
+  `in_swept_ring`), as the shade map does, and nothing stands *under* a
+  building; a herbaceous caster gets a deciduous crown's break. Before V3.46
+  a building was its enclosing circle, and most of a plan's "shade deaths"
+  were that circle.
 
 ## The window a homeowner opens (V3.44; `docs/plans/V3.44-getting-to-3d.md`)
 
@@ -393,6 +433,8 @@ carried untouched on save; nothing reads it (`tests/test_old_scan_designs.py`).
 | You touched | Run |
 |-------------|-----|
 | `src/scene_contract.py` / scene schema | `tests/test_scene_contract.py` |
+| `src/scene_season.py`, `01d-season.js`, anything drawn by month | `tests/test_scene_season.py`, `tests/test_yard_render.py` (herb height in April, bare shrubs, the dormant meadow), then `scripts/render_yard.py` and look at the time sheet |
+| `src/scene_timeline.py`, `25b-timeline.js`, `src/succession_engine.py` | `tests/test_scene_timeline.py`, `tests/test_succession_engine.py`, `tests/test_yard_render.py` (the button, the list, the rings), `tests/test_slope_render.py` (rings on a slope) |
 | `src/scene_views.py`, a camera, the walk start, what counts as standing | `tests/test_scene_views.py`, `tests/test_yard_render.py` (the real viewer on a whole yard), `tests/test_walk_walls.py`, then `scripts/render_yard.py` and look |
 | `src/scene3d.py` growth/spread math | `tests/test_scene3d.py` (and the 2D timeline still matches) |
 | `src/map3d_js.py` builders / hooks | `tests/test_map3d_js.py` + `tests/test_bridge_contract.py` |

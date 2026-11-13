@@ -122,7 +122,17 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > birch where it would struggle under a spruce), canopy trees are *suppressed* by crowding rather
 > than culled like a forb, and — crucially — a shaded-out gap does not stay bare: a self-seeding
 > herbaceous native already in the design **recruits into it** and grows in, so the trajectory now
-> shows *recovery*, not just loss. **State: strong.**
+> shows *recovery*, not just loss. **V3.46 took two false deaths out of that simulation and gave
+> the year its seasons** (F263): a building had shaded as a circle out to its farthest corner,
+> with every plant inside the circle standing "under" it, and a wildflower as an evergreen would,
+> all year. On the review lot 136 of 365 plants were "lost to shade" by the fifth summer and 14
+> are once a building casts its real outline and a herb gets a deciduous crown's break. What is
+> lost is now said where, which plants and by what, in the picture
+> ([`scene_timeline.py`](../src/scene_timeline.py)), and it was naming the cause that found the
+> faults. The month is drawn from the region's frost dates
+> ([`scene_season.py`](../src/scene_season.py)): herbs come up through April and May and stand
+> as dry stems from October through the snow, and a shrub drops its leaves when a tree does.
+> **State: strong.**
 
 ### 5. Perception is constructed, not received
 
