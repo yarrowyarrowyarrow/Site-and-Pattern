@@ -231,11 +231,18 @@ function _ribbonRings(points, width) {
 // ── lines: fences and hedges ────────────────────────────────────────────────
 
 // A box from (ax, ay) to (bx, by), standing `up` metres over the ground at its
-// two ends and leaning with the slope between them.
-function _boxBetween(ax, ay, bx, by, terrain, up, h, w) {
+// two ends and leaning with the slope between them. `top` narrows its top to
+// that share of its width: a clipped hedge is not a wall.
+function _boxBetween(ax, ay, bx, by, terrain, up, h, w, top) {
   const ga = terrainHeightAt(ax, ay, terrain), gb = terrainHeightAt(bx, by, terrain);
   const dx = bx - ax, dz = -(by - ay), run = Math.hypot(dx, dz) || 1e-6;
   const geo = new THREE.BoxGeometry(Math.hypot(run, gb - ga), h, w);
+  if (top) {
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++)
+      if (pos.getY(i) > 0) pos.setZ(i, pos.getZ(i) * top);
+    geo.computeVertexNormals();
+  }
   geo.translate(0, h / 2 + up, 0);
   geo.applyMatrix4(new THREE.Matrix4().makeRotationZ(Math.atan2(gb - ga, run)));
   geo.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(-dz, dx)));
@@ -281,7 +288,7 @@ function buildLines(group, lines, terrain, month) {
       const key = _LINE_GREEN[ln.kind] ? ln.kind : 'hedge';
       for (let i = 0; i + 1 < stops.length; i++)
         (green[key] = green[key] || []).push(_boxBetween(stops[i][0], stops[i][1],
-          stops[i + 1][0], stops[i + 1][1], terrain, 0, h, w));
+          stops[i + 1][0], stops[i + 1][1], terrain, 0, h, w, 0.6));
     }
   }
   const add = (geos, colour, name) => {
