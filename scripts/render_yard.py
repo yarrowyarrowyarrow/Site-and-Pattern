@@ -182,6 +182,16 @@ def _building(ring, height, label):
                 "source": "osm"}}
 
 
+def _line(style, points):
+    """A hedge or a fence, as Draw › Shape stores one."""
+    return {"type": "Feature",
+            "geometry": {"type": "LineString",
+                         "coordinates": [_ll(e, n) for e, n in points]},
+            "properties": {"element_type": "hedgerow", "style": style,
+                           "hedge_id": f"{style}_{len(points)}", "species": "",
+                           "width_m": 1.5, "spacing_m": 1.0, "color": "#4caf50"}}
+
+
 def _tree(east, north, height, radius, foliage):
     lng, lat = _ll(east, north)
     return {"type": "Feature",
@@ -211,6 +221,11 @@ BACK = [_shape("Patio / Deck", _rect(3.0, 21.2, 9.0, 25.0)),
         _shape("Lawn Area", _rect(0.6, 25.4, 7.8, 31.0)),
         _shape("Garden Bed", _rect(0.6, 31.4, 7.8, 36.0)),
         _shape("Garden Bed", _rect(9.4, 21.4, 14.6, 29.2))]
+#: V3.45: the back yard's fence along the west and north lot lines, and a
+#: hedge along the east one. Not handed to the planner, so the plan is the
+#: same plan as the sheets before it.
+LINES = [_line("fence", [(0.0, 21.0), (0.0, D), (8.0, D)]),
+         _line("hedge", [(W - 0.8, 21.6), (W - 0.8, 29.0)])]
 
 
 def use_throwaway_database() -> str:
@@ -240,13 +255,16 @@ def review_lot() -> dict:
 
     ring = [[p[1], p[0]] for p in BOUNDARY]
     project = new_project("Review lot")
-    project.setdefault("properties", {})["site_config"] = dict(SITE)
+    # The street side, as Plan My Yard stores the person's answer for a front
+    # yard (V3.29): without it the street is only assumed, and is not drawn.
+    project.setdefault("properties", {})["site_config"] = dict(
+        SITE, street_side="south")
     project["features"] = (
         [{"type": "Feature",
           "geometry": {"type": "Polygon", "coordinates": [ring + [ring[0]]]},
           "properties": {"element_type": "property_boundary",
                          "boundary_id": "b1"}}]
-        + SCANNED + FRONT + BACK + plan("front", FRONT, BACK)
+        + SCANNED + FRONT + BACK + LINES + plan("front", FRONT, BACK)
         + plan("back", BACK, FRONT))
     return project
 

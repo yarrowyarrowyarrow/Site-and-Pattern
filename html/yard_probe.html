@@ -88,6 +88,48 @@ function camera(w) {
   return { at: r(c), looks_at: r(t), far: +c.distanceTo(t).toFixed(2) };
 }
 
+// ── what the ground is (V3.45) ──────────────────────────────────────────────
+
+// A material's colour as a person sees it, [r, g, b] in 0–255: its texture's
+// average where it has one, times its own colour.
+function seen(w, mat) {
+  const tint = mat.color.getHexString(), k = [0, 2, 4].map((i) => parseInt(tint.slice(i, i + 2), 16) / 255);
+  let rgb = [255, 255, 255];
+  const img = mat.map && mat.map.image;
+  if (img && img.getContext) {
+    const d = img.getContext('2d').getImageData(0, 0, img.width, img.height).data;
+    const sum = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4 * 97) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; }
+    const n = Math.ceil(d.length / (4 * 97));
+    rgb = sum.map((v) => v / n);
+  }
+  return rgb.map((v, i) => Math.round(v * k[i]));
+}
+function box(w, o) {
+  const b = new w.THREE.Box3().setFromObject(o);
+  return { low: +b.min.y.toFixed(3), top: +b.max.y.toFixed(3) };
+}
+// Everything src/scene_site.py's fields drew, as the viewer made it.
+function site(w) {
+  const snow = typeof w.ensureGroundSnowMat === 'function' ? w.ensureGroundSnowMat().map : null;
+  const out = { surfaces: [], street: [], lines: {}, ground: null, roofs: null, walls: null };
+  for (const o of w.eval('designGroup').children) {
+    if (!o.isMesh) continue;
+    const row = () => ({ name: o.name, look: o.material.userData.look || '',
+                         colour: seen(w, o.material), order: o.renderOrder,
+                         snow: !!snow && o.material.map === snow,
+                         lift: +o.geometry.attributes.position.getY(0).toFixed(4) });
+    if (o.name === 'ground') out.ground = row();
+    else if (/^surface:/.test(o.name)) out.surfaces.push(row());
+    else if (/^street:/.test(o.name)) out.street.push(row());
+    else if (o.name === 'fences' || /^hedges:/.test(o.name))
+      out.lines[o.name] = Object.assign(box(w, o), { colour: seen(w, o.material) });
+    else if (o.name === 'roofs') out.roofs = Object.assign(box(w, o), { colour: seen(w, o.material) });
+    else if (o.name === 'buildings') out.walls = Object.assign(box(w, o), { colour: seen(w, o.material) });
+  }
+  return out;
+}
+
 async function measure(w, job) {
   const sc = job.scene, res = {};
   await push(w, sc, 1);
@@ -102,6 +144,9 @@ async function measure(w, job) {
       res.meshes[o.name] = { see_through: !!o.material.transparent,
                              colour: '#' + o.material.color.getHexString() };
   }
+
+  // 2b. The ground, the drawn areas, the lines, the street and the roofs.
+  res.site = site(w);
 
   // 3. Which plants were drawn, by plant id, one count per mesh they are in.
   const drawn = {};
@@ -193,6 +238,12 @@ async function measure(w, job) {
       w.permaShowView('house');            // no house in a scene with no views
       res.legacy.house = camera(w);
     }
+    res.legacy.site = site(w);
+  }
+  // 12. The same yard in January: snow on the soft ground and on the roofs.
+  if (job.winter) {
+    await push(w, job.winter, 1);
+    res.winter = site(w);
   }
   return res;
 }

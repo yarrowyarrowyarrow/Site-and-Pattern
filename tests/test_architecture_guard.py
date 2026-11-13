@@ -388,6 +388,9 @@ class TestStructuralCeilings(unittest.TestCase):
         # out of the window, beside them. If one of these trips, the cause is
         # most likely logic that belongs in scene_views or scene_contract.
         (_SRC / "scene3d_named_groups.py", 200),       # 124 now
+        # V3.45 (F262): what the ground is in the 3D scene. Qt-free; one
+        # vocabulary with the shape tool and the Overview's lists.
+        (_SRC / "scene_site.py", 450),                 # 353 now
         (_SRC / "scene3d_stops.py", 260),              # 174 now
         (_SRC / "scene3d_creatures.py", 200),          # 113 now
         (_SRC / "controllers" / "split_view.py", 320),  # 253 now
@@ -477,7 +480,13 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "01c-leaves.js", 150),    # 74 now
         # 687 now (V3.04, one ground on a slope). The next ground work is a chunk
         # of its own, which needs the bootstrap's FILES list moved out first.
-        (_HTML / "scene3d" / "02-plants.js", 700),
+        (_HTML / "scene3d" / "02-plants.js", 700),     # 635 now (V3.45)
+        # V3.45 (F262): what the ground is, the lines on it, the street and the
+        # houses, with the outline and the buildings moved out of 02-plants.js
+        # (687 of 700). It draws what src/scene_site.py decides; if it grows
+        # past its ceiling the cause is most likely a decision that belongs
+        # there, or a second look that wants a chunk of its own.
+        (_HTML / "scene3d" / "02c-site.js", 520),      # 463 now
         (_HTML / "scene3d" / "03-herbs.js", 700),      # ~432 now
         # V2.92 (F178): the procedural trees, split out of 03-herbs.js when the
         # Stylised half of F178 took it to 758/700 — the split the ceiling

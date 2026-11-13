@@ -153,7 +153,10 @@ function buildGround(group, sc) {
     }
   }
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, groundMatFor(sc.month));
+  // Pale where nothing is recorded (a yard, the owner's D3: 02c-site.js);
+  // meadow for a walk and for any scene that does not say.
+  const pale = typeof sitePaleGround === 'function' ? sitePaleGround(sc) : null;
+  const mesh = new THREE.Mesh(geo, pale || groundMatFor(sc.month));
   mesh.name = 'ground';
   mesh.receiveShadow = true;
   group.add(mesh);
@@ -170,64 +173,9 @@ function buildGround(group, sc) {
 // to make it look full works against the thing the view is for. Texture is the
 // right place to say "there is lawn here"; geometry is not.
 
-// Draped over the ground (V3.04): each edge cut into steps of a metre, each
-// 12 cm above the ground under it. A ring at a flat 12 cm ran under a slope.
-function buildBoundary(group, ring, terrain) {
-  if (!ring || ring.length < 3) return;
-  const pts = [], closed = ring.concat([ring[0]]);
-  for (let i = 0; i + 1 < closed.length; i++) {
-    const [x0, y0] = closed[i], [x1, y1] = closed[i + 1];
-    const n = terrain ? Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))) : 1;
-    for (let k = 0; k < n; k++) {
-      const x = x0 + (x1 - x0) * k / n, y = y0 + (y1 - y0) * k / n;
-      pts.push(new THREE.Vector3(x, terrainHeightAt(x, y, terrain) + 0.12, -y));
-    }
-  }
-  pts.push(pts[0].clone());
-  const line = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color: 0xf9a825 }));
-  line.name = 'boundary';
-  group.add(line);
-}
-
-// ── buildings / footprints ─────────────────────────────────────────────────
-
-// Static footprints (spec idea 2): extrude each ring, then merge all same-kind
-// geometries into one mesh so N buildings cost ≤2 draw calls. The −90° rotation
-// is baked into each geometry (so merged parts share orientation) rather than
-// set on the mesh: shape (x,y) → (x, −z), extrude depth → +y. On a slope
-// (V3.04) each stands on the lowest ground under its ring, so no side hangs in
-// the air, and keeps its height above the highest, so none is buried.
-function buildBuildings(group, buildings, terrain) {
-  const byKind = { building: [], canopy: [] };
-  for (const bld of buildings || []) {
-    const ring = bld.ring || [];
-    if (ring.length < 3) continue;
-    const shape = new THREE.Shape(ring.map(p => new THREE.Vector2(p[0], p[1])));
-    const hs = ring.map(p => terrainHeightAt(p[0], p[1], terrain));
-    const lo = Math.min(...hs), hi = Math.max(...hs);
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: Math.max(0.3, bld.height_m || 3) + (hi - lo), bevelEnabled: false });
-    geo.rotateX(-Math.PI / 2);
-    geo.translate(0, lo, 0);
-    byKind[bld.kind === 'canopy' ? 'canopy' : 'building'].push(geo);
-  }
-  const mats = {
-    building: new THREE.MeshStandardMaterial({ color: 0xb0a18c, roughness: 0.9 }),
-    canopy: new THREE.MeshStandardMaterial({ color: 0x4e6e52, roughness: 1,
-                                             transparent: true, opacity: 0.85 }),
-  };
-  for (const kind of ['building', 'canopy']) {
-    const geos = byKind[kind];
-    if (!geos.length) continue;
-    const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
-    const mesh = new THREE.Mesh(merged, mats[kind]);
-    mesh.name = kind + 's';
-    mesh.castShadow = mesh.receiveShadow = true;
-    group.add(mesh);
-  }
-}
+// The outline (buildBoundary), the buildings (buildBuildings) and everything
+// else that lies on the ground are in 02c-site.js since V3.45: this file was
+// at 687 of its 700 lines, and they belong with the surfaces drawn there.
 
 // ── plants (procedural instanced archetypes) ───────────────────────────────
 

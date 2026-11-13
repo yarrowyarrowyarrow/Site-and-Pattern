@@ -69,6 +69,34 @@ def _plant(pid, name, x, y):
                           "lat": lat, "lng": lng})
 
 
+def _area(kind, box, **props):
+    return {"type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [_ring(*box)]},
+            "properties": {"element_type": "custom_shape", "shape_type": kind,
+                           "fill_color": "#4caf50", **props}}
+
+
+def _line(style, points):
+    return {"type": "Feature",
+            "geometry": {"type": "LineString",
+                         "coordinates": [_ll(x, y) for x, y in points]},
+            "properties": {"element_type": "hedgerow", "style": style,
+                           "width_m": 1.5}}
+
+
+#: What a few minutes of Draw › Shape leave on the ground (V3.45).
+DRAWN = [
+    _area("Garden Bed", (-7.0, -17.5, 6.5, -10.5)),
+    _area("Pathway", (-0.6, -18.3, 0.6, -9.3)),          # across the bed
+    _area("Lawn Area", (-7.0, 4.0, 1.0, 12.0)),
+    _area("Water Feature", (3.0, 5.0, 6.0, 8.0)),
+    _area("Mulch Area", (-7.0, 13.0, 1.0, 17.5)),
+    _area("Custom", (2.5, 9.5, 6.5, 11.5), fill_color="#ff8800"),
+    _line("fence", [(-7.6, 3.0), (-7.6, 18.3), (0.0, 18.3)]),
+    _line("hedge", [(7.0, 4.0), (7.0, 12.0)]),
+]
+
+
 def _yard() -> dict:
     """A 15 x 37 m lot, street to the south, as a scan and a plan leave it."""
     feats = [
@@ -107,8 +135,10 @@ def _yard() -> dict:
     for i in range(30):                   # a short-lived kind, in the back
         feats.append(_plant(10, "Short-lived forb", -6.0 + (i % 6) * 0.9,
                             7.0 + (i // 6) * 0.9))
+    # The person's answer in Plan My Yard: the street is to the south.
     return {"type": "FeatureCollection",
-            "properties": {"site_config": {}}, "features": feats}
+            "properties": {"site_config": {"street_side": "south"}},
+            "features": feats + DRAWN}
 
 
 def _scenes():
@@ -126,7 +156,14 @@ def _scenes():
                                        wind=False, when=when))
     legacy["focus"], legacy["views"] = None, {}
     legacy["origin"]["lat"] += 0.01
-    return scene, legacy
+    # ... and before V3.45: no word on the ground, and no roof hint.
+    for key in ("ground", "surfaces", "lines", "street"):
+        legacy.pop(key)
+    for b in legacy["buildings"]:
+        b.pop("roof", None)
+    winter = build_scene(_yard(), year=YEAR, get_plant=_PLANTS.get, wind=False,
+                         when=datetime(2025, 1, 21, 13, 0))
+    return scene, legacy, winter
 
 
 @unittest.skipIf(render_yard.find_chromium() is None,
@@ -137,8 +174,9 @@ class TheWholeYard(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.scene, legacy = _scenes()
-        job = {"scene": cls.scene, "legacy": legacy, "declining_id": DECLINING,
+        cls.scene, legacy, winter = _scenes()
+        job = {"scene": cls.scene, "legacy": legacy, "winter": winter,
+               "declining_id": DECLINING,
                "walk_points": [["side_yard", -6.6, -3.0],
                                ["in_the_house", 0.5, -3.0]]}
         try:
@@ -177,6 +215,12 @@ class TheWholeYard(unittest.TestCase):
                             standing_plants(self.scene)))
         self.assertTrue(self.scene["views"]["street"])
         self.assertTrue(self.scene["views"]["house"])
+        self.assertEqual([s_["kind"] for s_ in self.scene["surfaces"]],
+                         ["lawn", "bed", "path", "lawn", "water", "mulch",
+                          "custom"])
+        self.assertEqual([ln["kind"] for ln in self.scene["lines"]],
+                         ["fence", "hedge"])
+        self.assertEqual(self.scene["street"]["how"], "told")
 
     # ── buildings ────────────────────────────────────────────────────────────
 
@@ -186,6 +230,129 @@ class TheWholeYard(unittest.TestCase):
                          "V3.42 drew every scanned building as a green canopy")
         self.assertTrue(crown["see_through"])
         self.assertNotEqual(house["colour"], crown["colour"])
+
+    # ── the yard itself (V3.45) ──────────────────────────────────────────────
+
+    @staticmethod
+    def _apart(a, b):
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+    def _surface(self, kind, which=0):
+        rows = [s_ for s_ in self.got["site"]["surfaces"]
+                if s_["name"] == f"surface:{kind}"]
+        return rows[which]
+
+    def test_every_drawn_area_reaches_the_picture_as_its_kind(self):
+        """Finding 2: nothing drawn on the ground reached 3D. A bed, mulch, a
+        lawn, a path and a pond were one meadow texture."""
+        drawn = [s_["name"] for s_ in self.got["site"]["surfaces"]]
+        self.assertEqual(drawn, ["surface:" + s_["kind"]
+                                 for s_ in self.scene["surfaces"]])
+        for row in self.got["site"]["surfaces"]:
+            self.assertEqual("surface:" + row["look"], row["name"])
+
+    def test_a_bed_is_not_lawn_coloured(self):
+        lawn, bed = self._surface("lawn")["colour"], self._surface("bed")["colour"]
+        self.assertGreater(self._apart(lawn, bed), 60,
+                           f"a bed {bed} reads as lawn {lawn}")
+        self.assertGreater(lawn[1], lawn[0], "lawn is not green")
+        self.assertGreater(bed[0], bed[1] - 1, "a bed is not soil-coloured")
+        for kind in ("path", "water", "mulch"):
+            other = self._surface(kind)["colour"]
+            self.assertGreater(self._apart(lawn, other), 40, (kind, other))
+            self.assertGreater(self._apart(bed, other), 25, (kind, other))
+        water = self._surface("water")["colour"]
+        self.assertGreater(water[2], water[0], "water is not blue")
+
+    def test_a_custom_shape_keeps_the_persons_colour(self):
+        self.assertEqual(self._surface("custom")["colour"], [255, 136, 0])
+
+    def test_lawn_inside_the_outline_and_pale_outside(self):
+        """The owner's D3: where nothing is drawn."""
+        ground = self.got["site"]["ground"]
+        self.assertEqual(ground["look"], "pale")
+        lawn = self._surface("lawn")["colour"]
+        self.assertGreater(self._apart(ground["colour"], lawn), 30,
+                           "the yard does not stand out from the ground round it")
+        r, g, b = ground["colour"]
+        self.assertLess(max(r, g, b) - min(r, g, b), 30,
+                        f"the ground outside is not neutral: {ground['colour']}")
+        self.assertGreater(min(r, g, b), 150, "the ground outside is not pale")
+
+    def test_a_path_lies_over_a_bed_and_a_bed_over_the_lawn(self):
+        """The path crosses the bed in this yard. Each kind has its place in
+        the pile, so the two do not flicker where they overlap."""
+        base, bed = self._surface("lawn", 0), self._surface("bed")
+        path = self._surface("path")
+        self.assertLess(base["order"], bed["order"])
+        self.assertLess(bed["order"], path["order"])
+        self.assertLess(base["lift"], bed["lift"])
+        self.assertLess(bed["lift"], path["lift"])
+        self.assertLess(path["lift"], 0.05, "a path floats over the ground")
+        self.assertGreater(base["lift"], self.got["site"]["ground"]["lift"])
+
+    def test_the_street_is_drawn_pale_where_its_side_is_known(self):
+        names = sorted(s_["name"] for s_ in self.got["site"]["street"])
+        self.assertEqual(names, ["street:road", "street:sidewalk"])
+        for row in self.got["site"]["street"]:
+            r, g, b = row["colour"]
+            self.assertLess(max(r, g, b) - min(r, g, b), 20,
+                            f"{row['name']} has a colour of its own")
+            self.assertGreater(min(r, g, b), 140, f"{row['name']} is not pale")
+
+    def test_a_house_has_a_roof_inside_its_recorded_height(self):
+        """Plain massing: light walls, a darker roof, and never taller than
+        the shade map's building."""
+        walls, roofs = self.got["site"]["walls"], self.got["site"]["roofs"]
+        self.assertIsNotNone(roofs, "the house has no roof")
+        self.assertAlmostEqual(roofs["top"], 6.5, delta=0.01,
+                               msg="the ridge is not at the recorded height")
+        self.assertAlmostEqual(walls["top"], 6.5, delta=0.01)   # the gable end
+        rise = next(b["roof"]["rise_m"] for b in self.scene["buildings"]
+                    if b["kind"] == "building")
+        self.assertLess(roofs["low"], 6.5 - rise, "the roof has no overhang")
+        self.assertGreater(roofs["low"], 6.5 - rise - 0.5)
+        self.assertGreater(sum(walls["colour"]), sum(roofs["colour"]) + 150,
+                           "the roof is not darker than the walls")
+        r, g, b = walls["colour"]
+        self.assertLess(max(r, g, b) - min(r, g, b), 30, "the walls are coloured")
+
+    def test_a_fence_and_a_hedge_stand_where_they_were_drawn(self):
+        lines = self.got["site"]["lines"]
+        self.assertEqual(sorted(lines), ["fences", "hedges:hedge"])
+        self.assertAlmostEqual(lines["fences"]["low"], 0.0, delta=0.02)
+        self.assertAlmostEqual(lines["fences"]["top"], 1.28, delta=0.03)
+        self.assertAlmostEqual(lines["hedges:hedge"]["top"], 1.2, delta=0.02)
+        r, g, b = lines["hedges:hedge"]["colour"]
+        self.assertGreater(g, max(r, b), "a hedge is not green")
+
+    def test_snow_lies_on_the_soft_ground_and_the_roofs(self):
+        winter = self.got["winter"]
+        by = {}
+        for row in winter["surfaces"]:
+            by.setdefault(row["look"], row)
+        for kind in ("lawn", "bed", "mulch", "path"):
+            self.assertTrue(by[kind]["snow"], f"{kind} is not under snow")
+        self.assertGreater(min(by["lawn"]["colour"]), 215)
+        self.assertLess(sum(by["path"]["colour"]), sum(by["lawn"]["colour"]),
+                        "a path under snow reads the same as a bed under snow")
+        self.assertFalse(by["water"]["snow"])
+        self.assertGreater(min(winter["roofs"]["colour"]), 215,
+                           "no snow on the roof")
+        self.assertNotEqual(winter["ground"]["look"], "pale")
+
+    def test_a_scene_from_before_keeps_its_meadow_and_its_boxes(self):
+        """The probes, the sprite gallery and any scene made before V3.45
+        carry none of these fields."""
+        site = self.got["legacy"]["site"]
+        self.assertEqual(site["ground"]["look"], "")           # the meadow
+        self.assertGreater(site["ground"]["colour"][1],
+                           site["ground"]["colour"][2] + 30)
+        self.assertEqual(site["surfaces"], [])
+        self.assertEqual(site["street"], [])
+        self.assertEqual(site["lines"], {})
+        self.assertIsNone(site["roofs"])
+        self.assertAlmostEqual(site["walls"]["top"], 6.5, delta=0.01)
 
     # ── the camera ───────────────────────────────────────────────────────────
 

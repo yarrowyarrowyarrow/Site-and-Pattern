@@ -549,6 +549,7 @@ function disposeDesignGroup(group) {
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   if (GROUND_MAT) sharedMat.add(GROUND_MAT);   // shared meadow texture lives on
   if (GROUND_SNOW_MAT) sharedMat.add(GROUND_SNOW_MAT);   // and its winter twin
+  for (const m of siteSharedMats()) sharedMat.add(m);    // 02c-site.js (V3.45)
   group.traverse(obj => {
     if (obj.isInstancedMesh) obj.dispose();             // frees instance buffers only
     if (obj.geometry && !sharedGeo.has(obj.geometry)) obj.geometry.dispose();
@@ -586,8 +587,9 @@ window.permaSetScene = function (sc) {
   lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
+  buildSite(designGroup, sc);    // V3.45: surfaces, lines, the street (02c-site.js)
   buildBoundary(designGroup, sc.boundary, sc.terrain);
-  buildBuildings(designGroup, sc.buildings, sc.terrain);
+  buildBuildings(designGroup, sc.buildings, sc.terrain, sc.month);
   buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);
   buildStructures(designGroup, sc.structures);
   if (sc.is_night) setNight();

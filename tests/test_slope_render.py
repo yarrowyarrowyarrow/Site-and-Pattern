@@ -122,6 +122,41 @@ class TheGroundOnASlope(unittest.TestCase):
         self.assertAlmostEqual(b["top_m"], b["high_ground_m"] + b["height_m"],
                                delta=0.01, msg="a building is buried on its uphill side")
 
+    # ── what lies on the ground (V3.45) ──────────────────────────────────────
+
+    def test_a_surface_follows_the_slope(self):
+        """A bed is a polygon lying on the ground. Flat, on a slope with 6 m of
+        relief, it would cut through the hill on one side and hang over it on
+        the other; so it is cut finer where there is terrain."""
+        surfaces = self.m["surfaces"]
+        self.assertEqual(sorted(surfaces), ["surface:bed", "surface:lawn"])
+        for name, s in surfaces.items():
+            self.assertGreater(s["lowest_lift_m"], 0.0, f"{name} dips under the ground")
+            self.assertLess(s["highest_lift_m"], 0.05, f"{name} floats")
+            self.assertAlmostEqual(s["lowest_lift_m"], s["highest_lift_m"],
+                                   delta=0.001, msg=f"{name} is not at one lift")
+            self.assertLessEqual(
+                s["worst_between_m"], 0.05,
+                f"between its corners {name} is {s['worst_between_m']} m off "
+                f"the ground: it cuts through the slope")
+            self.assertGreater(s["triangles"], 16, f"{name} was not cut finer")
+        self.assertGreater(surfaces["surface:bed"]["lowest_lift_m"],
+                           surfaces["surface:lawn"]["lowest_lift_m"],
+                           "a bed must lie over the lawn, not in it")
+        self.assertEqual(surfaces["surface:bed"]["look"], "bed")
+
+    def test_a_fence_and_a_hedge_stand_on_the_slope(self):
+        lines = self.m["lines"]
+        self.assertEqual(sorted(lines), ["fences", "hedges:hedge"])
+        for name, ln in lines.items():
+            self.assertGreaterEqual(ln["foot_m"], -0.25, f"{name} is sunk in the hill")
+            self.assertLessEqual(ln["foot_m"], 0.3, f"{name} hangs over the ground")
+            self.assertGreater(ln["top_m"], 1.0)
+            self.assertLess(ln["top_m"], 1.8, f"{name} stands taller than it is")
+
+    def test_a_yard_has_pale_ground_where_nothing_is_drawn(self):
+        self.assertEqual(self.m["ground"]["look"], "pale")
+
     def test_a_structure_box_stands_on_the_ground(self):
         s = self.m["structure"]
         self.assertAlmostEqual(s["foot_m"], s["ground_m"], delta=0.01)
@@ -184,9 +219,10 @@ class TheSourceAsksTheGround(unittest.TestCase):
     def test_the_boundary_and_buildings_are_given_the_terrain(self):
         src = (_JS / "05-flowers.js").read_text(encoding="utf-8")
         self.assertIn("buildBoundary(designGroup, sc.boundary, sc.terrain)", src)
-        self.assertIn("buildBuildings(designGroup, sc.buildings, sc.terrain)", src)
+        self.assertIn("buildBuildings(designGroup, sc.buildings, sc.terrain,", src)
+        # Both live in 02c-site.js since V3.45, with the surfaces.
         for name in ("buildBoundary", "buildBuildings"):
-            self.assertIn("terrainHeightAt(", _fn("02-plants.js", name), name)
+            self.assertIn("terrainHeightAt(", _fn("02c-site.js", name), name)
 
     def test_a_click_asks_the_ground(self):
         self.assertIn("terrainHeightAt(", _fn("16-editing.js", "groundPointAt"))

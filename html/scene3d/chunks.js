@@ -12,6 +12,9 @@ window.SCENE3D_CHUNKS = [
   'scene3d/01b-surface.js',
   'scene3d/01c-leaves.js',   // V2.94: leaves let light through (F186)
   'scene3d/02-plants.js',
+  // V3.45: what the ground is, the lines on it, the street and the houses
+  // (F262). After 02-plants.js for terrainHeightAt and the ground's textures.
+  'scene3d/02c-site.js',
   'scene3d/03-herbs.js',
   'scene3d/03b-trees.js',   // V2.92: the procedural trees, split from 03-herbs
   'scene3d/04-quality.js',
