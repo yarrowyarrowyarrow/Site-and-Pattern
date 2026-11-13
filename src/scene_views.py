@@ -22,6 +22,9 @@ and the walker cannot disagree (the V2.88 lesson):
   faces the street (:mod:`src.frontage`: the person's answer, else the side
   measured from the roads, else south), stepped sideways until no trunk stands in
   front of the lens, looking at the planting on that side of the yard.
+* :func:`house_view` (V3.44) is where the person stands most days: at the wall
+  of their own house, looking out at the planting. Only when a building stands
+  inside the outline; the app does not guess where a house might be (P9).
 
 Qt-free, DB-free, plain arithmetic in scene metres (+x east, +y north).
 """
@@ -56,6 +59,17 @@ _TALL_SHRUB_M = 2.0
 #: The tangent of a little more than half the picture's width (the camera sees
 #: about 37 degrees either side at the window's shape).
 _OUT_OF_FRAME = 0.8
+
+#: From the house: how far outside the wall the person stands (a doorstep),
+#: how near a corner they may stand, and the least distance looked across (a
+#: plant against the wall would otherwise be looked straight down on).
+HOUSE_STEP_M = 0.8
+_CORNER_CLEAR_M = 0.6
+HOUSE_LOOK_MIN_M = 4.0
+#: A plant that grows this tall, this near the eye, is in the way: the first
+#: build stood the person in a foundation bed with grasses against the lens.
+_CROWD_HEIGHT_M = 1.0
+_CROWD_NEAR_M = 1.5
 
 
 def _placed(plant: dict) -> bool:
@@ -163,6 +177,27 @@ def _clearance(eye, look, trunks, buildings, outside: float) -> float:
     return best
 
 
+def _trunks(plants: list) -> list:
+    """``[(x, y, radius)]`` for what hides a view like a tree does: every tree,
+    and a shrub by its grown height (so the answer is the same every year)."""
+    out = []
+    for p in plants or []:
+        kind = p.get("plant_type")
+        height = float(p.get("mature_height_m") or p.get("height_m") or 0)
+        if kind == "tree" or (kind == "shrub" and height >= _TALL_SHRUB_M):
+            # Half the drawn trunk's width, near enough: a big tree's is wide.
+            out.append((float(p["x"]), float(p["y"]),
+                        max(0.2, 0.05 * height)))
+    return out
+
+
+def _walls(buildings: list) -> list:
+    """The rings of what is a building: a drawn tree crown is not a wall."""
+    return [[(float(q[0]), float(q[1])) for q in (bld.get("ring") or [])]
+            for bld in buildings or []
+            if bld.get("kind") != "canopy" and len(bld.get("ring") or []) >= 3]
+
+
 def street_view(boundary: Optional[list], plants: list, buildings: list,
                 bearing: float, *,
                 standoff: float = STREET_STANDOFF_M) -> Optional[dict]:
@@ -211,17 +246,8 @@ def street_view(boundary: Optional[list], plants: list, buildings: list,
     look = (lx, ly)
     s_look = to_ts(lx, ly)[1]
 
-    trunks = []
-    for p in plants or []:
-        kind = p.get("plant_type")
-        height = float(p.get("mature_height_m") or p.get("height_m") or 0)
-        if kind == "tree" or (kind == "shrub" and height >= _TALL_SHRUB_M):
-            # Half the drawn trunk's width, near enough: a big tree's is wide.
-            trunks.append((float(p["x"]), float(p["y"]),
-                           max(0.2, 0.05 * height)))
-    rings = [[(float(q[0]), float(q[1])) for q in (bld.get("ring") or [])]
-             for bld in buildings or []
-             if bld.get("kind") != "canopy" and len(bld.get("ring") or []) >= 3]
+    trunks = _trunks(plants)
+    rings = _walls(buildings)
 
     centre_s = min(max(s_look, s_lo + 0.5), s_hi - 0.5) if s_hi - s_lo > 1 \
         else (s_lo + s_hi) / 2.0
@@ -239,6 +265,181 @@ def street_view(boundary: Optional[list], plants: list, buildings: list,
         if best[0] >= 0:
             break
     eye = best[1]
-    return {"eye": [round(eye[0], 2), round(eye[1], 2)],
+    view = {"eye": [round(eye[0], 2), round(eye[1], 2)],
             "look": [round(look[0], 2), round(look[1], 2)],
             "bearing": round(float(bearing) % 360.0, 1)}
+    if best[0] <= -1.0 or (placed and not street_half):
+        # The planting is not on the street's side of things: a building
+        # stands between it and every spot tried, or all of it is in the half
+        # of the yard away from the street (a back-yard plan). This is still
+        # where a neighbour stands; :func:`opening_view` does not open on it.
+        view["behind"] = True
+    return view
+
+
+def opening_view(views: Optional[dict]) -> str:
+    """Which named view a window opens on (V3.44; the owner's D5 is the
+    street): ``"street"`` when the planting can be seen from there,
+    ``"house"`` when it is behind the house or all at the back and there is a
+    house to look from, else ``"whole"`` (the whole yard, which is never
+    wrong: an empty design, a walk through a wild community)."""
+    views = views or {}
+    street = views.get("street")
+    if street and not street.get("behind"):
+        return "street"
+    if views.get("house"):
+        return "house"
+    return "whole"
+
+
+# ── from the house (V3.44) ───────────────────────────────────────────────────
+
+def _area(ring: list) -> float:
+    total = 0.0
+    for i in range(len(ring)):
+        x0, y0 = ring[i]
+        x1, y1 = ring[(i + 1) % len(ring)]
+        total += x0 * y1 - x1 * y0
+    return abs(total) / 2.0
+
+
+def _centroid(ring: list) -> tuple:
+    return (sum(p[0] for p in ring) / len(ring),
+            sum(p[1] for p in ring) / len(ring))
+
+
+def house_ring(boundary: Optional[list], buildings: list,
+               pin: Optional[tuple] = None) -> Optional[list]:
+    """The house, as ``[(x, y), ...]``, or ``None``: the largest building
+    standing inside the yard's outline (its middle inside it); with no
+    outline, the building the yard's pin stands on.
+
+    A neighbour's house is in the scene and is not this yard's. A yard
+    outlined without its house, or a pin set down on the lawn, has none here,
+    and the view is not offered: nothing says which building it would be."""
+    walls = _walls(buildings)
+    if boundary and len(boundary) >= 3:
+        outline = [(float(p[0]), float(p[1])) for p in boundary]
+        inside = [ring for ring in walls
+                  if _in_ring(*_centroid(ring), outline)]
+        return max(inside, key=_area) if inside else None
+    if pin is not None:
+        under = [ring for ring in walls
+                 if _in_ring(float(pin[0]), float(pin[1]), ring)]
+        return max(under, key=_area) if under else None
+    return None
+
+
+def extent_ring(focus: Optional[dict]) -> Optional[list]:
+    """The design's own extent (:func:`focus_box`) as a ring, to stand in for
+    the outline of a yard that has none drawn: the simple app's usual design
+    is a pin and a bed (V3.28: "a bed with no outline is enough")."""
+    if not focus:
+        return None
+    return [[focus["min_x"], focus["min_y"]], [focus["max_x"], focus["min_y"]],
+            [focus["max_x"], focus["max_y"]], [focus["min_x"], focus["max_y"]]]
+
+
+def _to_segment(px: float, py: float, a: tuple, b: tuple) -> tuple:
+    """``(distance, along)`` from a point to the segment ``a``-``b``: how far,
+    and how many metres from ``a`` the nearest point on it is."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dy)
+    if length < 1e-9:
+        return math.hypot(px - a[0], py - a[1]), 0.0
+    along = ((px - a[0]) * dx + (py - a[1]) * dy) / length
+    along = min(max(along, 0.0), length)
+    qx, qy = a[0] + dx * along / length, a[1] + dy * along / length
+    return math.hypot(px - qx, py - qy), along
+
+
+def house_view(boundary: Optional[list], plants: list,
+               buildings: list, pin: Optional[tuple] = None,
+               extent: Optional[list] = None) -> Optional[dict]:
+    """Where the person stands at their own house and what they look at:
+    ``{eye: [x, y], look: [x, y]}`` in scene metres, or ``None`` when there
+    is no house (:func:`house_ring`; ``pin`` is the yard's pin, for a yard
+    with no outline, and ``extent`` what to look at when nothing is planted).
+
+    The wall is the one most of the planting is nearest to (a front bed is
+    seen from the front of the house, a back bed from the back). The person
+    stands a step outside it, at the spot on that wall closest to that
+    planting, moved along the wall until no trunk and no other building is in
+    the way and nothing that grows tall is within arm's reach (a path or a
+    doorstep, where there is one), looking across at the planting.
+
+    **The same answer in every year**, for the reason :func:`street_view`
+    gives: it is worked out from the design as planted.
+    """
+    house = house_ring(boundary, buildings, pin)
+    if house is None:
+        return None
+    hx, hy = _centroid(house)
+    placed = [(float(p["x"]), float(p["y"])) for p in plants or []
+              if _placed(p)]
+    # With nothing planted the yard itself is the subject: its corners.
+    subject = placed or [(float(p[0]), float(p[1]))
+                         for p in (boundary or extent or [])]
+    if not subject:
+        return None
+
+    n = len(house)
+    groups: dict = {}
+    for px, py in subject:
+        best = min(range(n), key=lambda i: _to_segment(
+            px, py, house[i], house[(i + 1) % n])[0])
+        groups.setdefault(best, []).append((px, py))
+
+    def length(i):
+        a, b = house[i], house[(i + 1) % n]
+        return math.hypot(b[0] - a[0], b[1] - a[1])
+
+    wall = max(groups, key=lambda i: (len(groups[i]), length(i), -i))
+    seen = groups[wall]
+    lx = sum(p[0] for p in seen) / len(seen)
+    ly = sum(p[1] for p in seen) / len(seen)
+
+    a, b = house[wall], house[(wall + 1) % n]
+    span = length(wall)
+    ux, uy = (b[0] - a[0]) / span, (b[1] - a[1]) / span       # along the wall
+    nx, ny = uy, -ux                                           # across it
+    mid = (a[0] + ux * span / 2.0, a[1] + uy * span / 2.0)
+    if (mid[0] - hx) * nx + (mid[1] - hy) * ny < 0:            # point outward
+        nx, ny = -nx, -ny
+    _dist, along = _to_segment(lx, ly, a, b)
+    margin = min(_CORNER_CLEAR_M, span / 2.0)
+    trunks = _trunks(plants)
+    rings = _walls(buildings)
+    # By grown height, so the answer is the same in every year.
+    tall = [(float(p["x"]), float(p["y"])) for p in plants or []
+            if _placed(p) and float(p.get("mature_height_m")
+                                    or p.get("height_m") or 0) >= _CROWD_HEIGHT_M]
+
+    def look_from(eye):
+        dx, dy = lx - eye[0], ly - eye[1]
+        dist = math.hypot(dx, dy)
+        if dist >= HOUSE_LOOK_MIN_M:
+            return (lx, ly)
+        if dist < 0.5:                       # planted against the wall
+            dx, dy, dist = nx, ny, 1.0
+        return (eye[0] + dx / dist * HOUSE_LOOK_MIN_M,
+                eye[1] + dy / dist * HOUSE_LOOK_MIN_M)
+
+    best = None
+    for step in _SIDE_STEPS_M:
+        s = min(max(along + step, margin), span - margin)
+        eye = (a[0] + ux * s + nx * HOUSE_STEP_M,
+               a[1] + uy * s + ny * HOUSE_STEP_M)
+        look = look_from(eye)
+        gap = _clearance(eye, look, trunks, rings, 0.0)
+        crowd = sum(1 for x, y in tall
+                    if math.hypot(x - eye[0], y - eye[1]) < _CROWD_NEAR_M)
+        # A clear sight line first, then the fewest tall plants at the eye.
+        rank = (gap >= 0, -crowd, gap)
+        if best is None or rank > best[0]:
+            best = (rank, eye, look)
+        if gap >= 0 and not crowd:
+            break
+    _rank, eye, look = best
+    return {"eye": [round(eye[0], 2), round(eye[1], 2)],
+            "look": [round(look[0], 2), round(look[1], 2)]}

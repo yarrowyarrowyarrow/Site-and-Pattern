@@ -25,12 +25,25 @@ Scene schema (``SCENE_VERSION`` = 1)::
                                        #   with no ±25 m floor. What the orbit
                                        #   frames (src/scene_views.py, V3.43);
                                        #   None = frame `bounds`
-      "views": {"street": {"eye": [x, y], "look": [x, y], "bearing": deg}},
-                                       # where a neighbour stands: outside the
-                                       #   edge facing the street, clear of
-                                       #   trunks. The sidewalk camera and the
-                                       #   walker start there. {} without an
-                                       #   outline
+      "views": {"street": {"eye": [x, y], "look": [x, y], "bearing": deg,
+                           "behind"?: true},
+                "house": {"eye": [x, y], "look": [x, y]}},
+                                       # street: where a neighbour stands,
+                                       #   outside the edge facing the street,
+                                       #   clear of trunks. The sidewalk camera
+                                       #   and the walker start there; behind
+                                       #   when a building hides the planting
+                                       #   or all of it is at the back (a
+                                       #   back-yard plan), so a window does not
+                                       #   open on it: opening_view. house
+                                       #   (V3.44): at the wall of the building
+                                       #   inside the outline, looking out at
+                                       #   the planting; absent when no
+                                       #   building stands in it. A yard with
+                                       #   no outline uses its own extent and
+                                       #   the building under its pin. {} for an
+                                       #   empty design and for a walk through a
+                                       #   wild community
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
@@ -367,11 +380,39 @@ def _wind_block(project, when, year, bounds, proj):
         return None
 
 
+def _succession_engine(memo, placed_recs, get_plant, casters, origin):
+    """The shade simulation for these plants, from ``memo`` when it was made
+    for the same ones (V3.44).
+
+    ``SuccessionEngine`` keeps what it has worked out per plant and year, and
+    a new engine for every scene threw that away: on a 367-plant lot a scene
+    cost 0.24 s at year 0 and 0.86 s at year 25, and stepping from year 24 to
+    25 cost the same as starting at 25. The key is everything the engine is
+    built from, so an edit to the design, a moved pin or another ``get_plant``
+    makes a new one.
+    """
+    from src.succession_engine import SuccessionEngine
+    if memo is None:
+        return SuccessionEngine(placed_recs, get_plant=get_plant,
+                                static_casters=casters, origin=origin)
+    key = (tuple((r.get("plant_id"), r.get("lat"), r.get("lng"),
+                  r.get("planted_year")) for r in placed_recs),
+           repr(casters), origin)
+    held = memo.get("succession")
+    if held and held[0] == key and held[1] is get_plant:
+        return held[2]
+    engine = SuccessionEngine(placed_recs, get_plant=get_plant,
+                              static_casters=casters, origin=origin)
+    memo["succession"] = (key, get_plant, engine)
+    return engine
+
+
 def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
-                wind: Optional[bool] = True) -> dict:
+                wind: Optional[bool] = True,
+                memo: Optional[dict] = None) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
@@ -380,6 +421,11 @@ def build_scene(project: dict, *, year: int = 0,
     ``wind`` set False skips the site's wind block (:mod:`src.wind_scene`),
     which is the one part of the scene that can touch the DB cache — tests and
     headless callers that want a pure function pass False.
+    ``memo`` (V3.44) is a dict the caller keeps between calls for one design:
+    the shade simulation is kept in it and reused while the placed plants, the
+    shade casters and the origin are what they were, so a window moving its
+    year slider pays for each year once. Without it every call starts over,
+    as before.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -523,10 +569,9 @@ def build_scene(project: dict, *, year: int = 0,
                         for f in project.get("features", []))
                        if r is not None]
         if placed_recs:
-            engine = SuccessionEngine(
-                placed_recs, get_plant=get_plant,
-                static_casters=static_casters_from_project(project),
-                origin=(lat0, lng0))
+            engine = _succession_engine(
+                memo, placed_recs, get_plant,
+                static_casters_from_project(project), (lat0, lng0))
             for info in engine.evaluate_year(int(year))["plants"]:
                 health_by_index[info["index"]] = info
             # Regeneration (V2.24): self-seeders that fill the gaps left by
@@ -739,12 +784,30 @@ def build_scene(project: dict, *, year: int = 0,
     # here, once, for the orbit, the stills and the walker alike.
     from src import scene_views
     views = {}
-    if boundary_xy:
+    focus = scene_views.focus_box(boundary_xy, plants, structures)
+    props = project.get("properties") or {}
+    # A yard with no outline drawn is still a yard (V3.44): the simple app's
+    # usual design is a pin and a bed, and until now it had no street view at
+    # all. Its own extent stands in for the outline. A walk through a wild
+    # community is not a yard: no street, and its walker keeps his centre.
+    yard = boundary_xy
+    if yard is None and "reference_version" not in props:
+        yard = scene_views.extent_ring(focus)
+    if yard:
         street = scene_views.street_view(
-            boundary_xy, plants, buildings,
-            scene_views.street_bearing(project)[0])
+            yard, plants, buildings, scene_views.street_bearing(project)[0])
         if street:
             views["street"] = street
+        # From the house (V3.44): the building in the outline, or the one the
+        # yard's pin stands on when nothing is outlined.
+        site = props.get("site_config") or {}
+        pin = None
+        if site.get("latitude") is not None and site.get("longitude") is not None:
+            pin = proj.to_xy(float(site["latitude"]), float(site["longitude"]))
+        house = scene_views.house_view(boundary_xy, plants, buildings,
+                                       pin=pin, extent=yard)
+        if house:
+            views["house"] = house
 
     return {
         "version": SCENE_VERSION,
@@ -752,7 +815,7 @@ def build_scene(project: dict, *, year: int = 0,
         "month": (when or _DEFAULT_WHEN).month,
         "origin": {"lat": lat0, "lng": lng0},
         "bounds": bounds,
-        "focus": scene_views.focus_box(boundary_xy, plants, structures),
+        "focus": focus,
         "views": views,
         "boundary": boundary_xy,
         "plants": plants,

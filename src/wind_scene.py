@@ -71,6 +71,20 @@ def _site_latlng(project: dict):
         return (None, None)
 
 
+def _cached_rose(lat: float, lng: float):
+    """The site's wind rose from the cache, or ``None``. **Never the network.**
+
+    This is asked on every scene push, on the app's main thread. Until V3.44
+    it called ``wind.get_wind_summary`` as it stands, which on a cache miss
+    downloads two years of hourly wind with a 20 second timeout: once per
+    slider tick, for as long as the cache stayed empty (anyone offline, or
+    whose pin's own fetch had failed). The pin's fetch (``wind_flow``, off the
+    main thread) is what fills the cache; the scene only reads it.
+    """
+    from src.wind import get_wind_summary
+    return get_wind_summary(lat, lng, _fetcher=lambda *_a, **_k: None)
+
+
 def _rose_for(project: dict, month: int, get_rose=None):
     """(from_deg, mean_kmh, approximate) for the scene's season, or Nones.
 
@@ -85,8 +99,7 @@ def _rose_for(project: dict, month: int, get_rose=None):
     if lat is not None:
         try:
             if get_rose is None:
-                from src.wind import get_wind_summary as get_rose_default
-                get_rose = get_rose_default
+                get_rose = _cached_rose
             rose = get_rose(lat, lng)
         except Exception:                             # noqa: BLE001
             rose = None                               # offline / no cache yet

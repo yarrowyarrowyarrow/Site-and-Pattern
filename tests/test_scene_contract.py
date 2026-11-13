@@ -641,6 +641,33 @@ class TestSceneWind(unittest.TestCase):
         self.assertAlmostEqual(got["mean_kmh"], 28.0)
         self.assertEqual(got["season"], "winter")
 
+    def test_the_scene_never_asks_the_network_for_wind(self):
+        """V3.44. The scene is built on the app's main thread on every slider
+        tick. With the wind not yet cached it downloaded two years of hourly
+        wind (20 s timeout) each time; the suite's network guard, which fails
+        such a request at once, is why no test ever saw it."""
+        from unittest import mock
+        from src import wind
+        asked = []
+        with mock.patch.object(wind, "_http_get_json",
+                               lambda url, timeout=20.0: asked.append(url)), \
+                mock.patch("src.db.plants.get_cached_wind",
+                           lambda *_a, **_k: None):
+            sc = build_scene(self._project(), get_plant=lambda _i: {})
+        self.assertEqual(asked, [])
+        self.assertIsNone(sc["wind"])
+
+    def test_a_cached_rose_is_still_read(self):
+        from unittest import mock
+        rose = {"annual": {"prevailing_deg": 270.0, "mean_speed": 15.0},
+                "seasons": {"summer": {"prevailing_deg": 250.0,
+                                       "mean_speed": 12.0}}}
+        with mock.patch("src.db.plants.get_cached_wind",
+                        lambda *_a, **_k: dict(rose)):
+            sc = build_scene(self._project(), get_plant=lambda _i: {},
+                             when=datetime(2025, 7, 21, 15, 0))
+        self.assertAlmostEqual(sc["wind"]["from_deg"], 250.0)
+
     def test_viewer_reads_the_block(self):
         """A contract test, not a style one: the scene can carry wind all day
         and change nothing if the viewer never applies it."""
@@ -649,6 +676,101 @@ class TestSceneWind(unittest.TestCase):
             self.assertIn(token, src, f"01b-surface.js lost {token}")
         self.assertIn("applySceneWind(sc.wind)", _read_scene3d("05-flowers.js"),
                       "permaSetScene never applies the scene's wind block")
+
+
+class TestTheShadeSimulationIsKept(unittest.TestCase):
+    """V3.44: ``build_scene(..., memo=)``. A new ``SuccessionEngine`` for
+    every scene threw away what the last one had worked out; on a 367-plant
+    lot a scene at year 25 cost 0.86 s every time the slider touched it."""
+
+    def _shaded(self):
+        from tests.test_scene_views import _ll
+        feats = [_boundary_feature()]
+        lng, lat = _ll(0.0, 0.0)
+        feats.append(plant_feature({"plant_id": 7, "common_name": "Aspen",
+                                    "lat": lat, "lng": lng}))
+        for i in range(6):
+            lng, lat = _ll(-1.0 + i * 0.4, 1.0)
+            feats.append(plant_feature({"plant_id": 8, "lat": lat, "lng": lng,
+                                        "common_name": "Sun forb"}))
+        return _project(feats)
+
+    def _scene(self, project, year, memo=None):
+        return build_scene(project, year=year, get_plant=_get_plant,
+                           wind=False, memo=memo)
+
+    def test_the_scene_is_the_same_with_and_without_it(self):
+        project, memo = self._shaded(), {}
+        for year in (5, 0, 25, 1, 12, 25, 5):
+            self.assertEqual(self._scene(project, year, memo),
+                             self._scene(project, year), year)
+        self.assertTrue(any(p.get("gone") for p in
+                            self._scene(project, 25, memo)["plants"]),
+                        "nothing was shaded out, so this proves nothing")
+
+    def test_one_engine_serves_every_year_of_a_design(self):
+        project, memo = self._shaded(), {}
+        self._scene(project, 5, memo)
+        engine = memo["succession"][2]
+        for year in (10, 25, 3):
+            self._scene(project, year, memo)
+            self.assertIs(memo["succession"][2], engine)
+        self.assertTrue(engine._shade_cache, "it kept nothing")
+
+    def test_an_edit_to_the_design_makes_a_new_one(self):
+        from tests.test_scene_views import _ll
+        project, memo = self._shaded(), {}
+        self._scene(project, 25, memo)
+        engine = memo["succession"][2]
+        lng, lat = _ll(3.0, 3.0)
+        project["features"].append(plant_feature(
+            {"plant_id": 8, "common_name": "Sun forb",
+             "lat": lat, "lng": lng}))
+        added = self._scene(project, 25, memo)
+        self.assertIsNot(memo["succession"][2], engine)
+        self.assertEqual(added, self._scene(project, 25))
+
+    def test_a_moved_plant_or_a_new_caster_makes_a_new_one(self):
+        project, memo = self._shaded(), {}
+        self._scene(project, 25, memo)
+        first = memo["succession"][2]
+        project["features"][2]["geometry"]["coordinates"][0] += 0.00002
+        self._scene(project, 25, memo)
+        second = memo["succession"][2]
+        self.assertIsNot(second, first)
+        project["features"].append(_existing_tree())
+        moved = self._scene(project, 25, memo)
+        self.assertIsNot(memo["succession"][2], second)
+        self.assertEqual(moved, self._scene(project, 25))
+
+    def test_another_catalogue_makes_a_new_one(self):
+        """The engine holds the plants' records; a caller with another
+        ``get_plant`` must not be handed the first caller's."""
+        project, memo = self._shaded(), {}
+        self._scene(project, 25, memo)
+        engine = memo["succession"][2]
+        other = lambda pid: dict(_FAKE_PLANTS[pid])            # noqa: E731
+        build_scene(project, year=25, get_plant=other, wind=False, memo=memo)
+        self.assertIsNot(memo["succession"][2], engine)
+
+    def test_without_it_nothing_is_kept(self):
+        from unittest import mock
+        import src.succession_engine as se
+        project = self._shaded()
+        made = []
+        real = se.SuccessionEngine
+
+        def counting(*a, **k):
+            made.append(1)
+            return real(*a, **k)
+        with mock.patch.object(se, "SuccessionEngine", counting):
+            self._scene(project, 5)
+            self._scene(project, 5)
+            self.assertEqual(len(made), 2)
+            memo = {}
+            self._scene(project, 5, memo)
+            self._scene(project, 9, memo)
+            self.assertEqual(len(made), 3)
 
 
 def _read_scene3d(name):

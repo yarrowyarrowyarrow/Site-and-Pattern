@@ -165,6 +165,188 @@ class StreetViewTest(unittest.TestCase):
         view = V.street_view(LOT, [], [], 180.0)
         self.assertEqual(view["look"], [0.0, 0.0])
 
+    def test_a_back_yard_behind_its_house_is_said_to_be_hidden(self):
+        """V3.44. The window opens from the street (D5), and a back-yard plan
+        seen from there is the front of the house. The view is still where a
+        neighbour stands; it says the planting cannot be seen from it."""
+        wide = dict(HOUSE, ring=[[-7.4, -9.3], [7.4, -9.3], [7.4, 2.7],
+                                 [-7.4, 2.7]])            # wall to wall
+        hidden = V.street_view(LOT, BACK_BED, [wide], 180.0)
+        self.assertTrue(hidden.get("behind"))
+        self.assertAlmostEqual(hidden["eye"][1], -18.3 - V.STREET_STANDOFF_M,
+                               delta=6.1)
+        seen = V.street_view(LOT, FRONT_BED + BACK_BED, [wide], 180.0)
+        self.assertNotIn("behind", seen)
+        # All of it at the back is behind too, house or no house: from the
+        # street it is a strip across an empty front yard.
+        self.assertTrue(V.street_view(LOT, BACK_BED, [], 180.0).get("behind"))
+        self.assertTrue(V.street_view(LOT, BACK_BED, [HOUSE], 180.0)
+                        .get("behind"))
+        # ... which follows the street: from the north it is the front bed
+        # that is at the back.
+        self.assertNotIn("behind", V.street_view(LOT, BACK_BED, [], 0.0))
+        self.assertTrue(V.street_view(LOT, FRONT_BED, [], 0.0).get("behind"))
+        # An empty yard has nothing behind anything.
+        self.assertNotIn("behind", V.street_view(LOT, [], [HOUSE], 180.0))
+        # A trunk in the way is not a wall: it is stepped round, or lived with.
+        trunk = plant(-2.5, -19.5, kind="tree", height=14.0, pid=7)
+        self.assertNotIn("behind", V.street_view(
+            LOT, FRONT_BED + [trunk], [], 180.0))
+
+
+class OpeningViewTest(unittest.TestCase):
+    """Which view a window opens on: the street (the owner's D5) when the
+    planting can be seen from it."""
+
+    def test_the_street_when_the_planting_shows_from_it(self):
+        street = V.street_view(LOT, FRONT_BED, [HOUSE], 180.0)
+        house = V.house_view(LOT, FRONT_BED, [HOUSE])
+        self.assertEqual(V.opening_view({"street": street, "house": house}),
+                         "street")
+        self.assertEqual(V.opening_view({"street": street}), "street")
+
+    def test_the_house_when_it_hides_the_planting(self):
+        street = {"eye": [0, -22.3], "look": [0, 15], "behind": True}
+        house = {"eye": [0, 3.5], "look": [0, 15]}
+        self.assertEqual(V.opening_view({"street": street, "house": house}),
+                         "house")
+
+    def test_the_whole_yard_when_there_is_nothing_better(self):
+        behind = {"eye": [0, -22.3], "look": [0, 15], "behind": True}
+        self.assertEqual(V.opening_view({"street": behind}), "whole")
+        self.assertEqual(V.opening_view({}), "whole")
+        self.assertEqual(V.opening_view(None), "whole")
+
+
+# ── From the house (V3.44) ────────────────────────────────────────────────────
+
+GARAGE = {"kind": "building", "height_m": 3.4,
+          "ring": [[0.6, 11.3], [7.0, 11.3], [7.0, 17.7], [0.6, 17.7]]}
+NEIGHBOUR = {"kind": "building", "height_m": 6.5,
+             "ring": [[-20.6, -9.8], [-9.6, -9.8], [-9.6, 3.2], [-20.6, 3.2]]}
+
+
+class HouseViewTest(unittest.TestCase):
+    """Where the person stands at their own house: at the wall most of the
+    planting is nearest to, a step outside it, looking at that planting."""
+
+    def test_no_building_in_the_outline_means_no_such_view(self):
+        """The app does not guess where a house might be (P9)."""
+        self.assertIsNone(V.house_view(LOT, FRONT_BED, []))
+        self.assertIsNone(V.house_view(None, FRONT_BED, [HOUSE]))
+
+    def test_a_neighbours_house_is_not_this_yards(self):
+        self.assertIsNone(V.house_view(LOT, FRONT_BED, [NEIGHBOUR]))
+        self.assertEqual(V.house_view(LOT, FRONT_BED, [NEIGHBOUR, HOUSE]),
+                         V.house_view(LOT, FRONT_BED, [HOUSE]))
+
+    def test_the_house_is_the_largest_building_in_the_outline(self):
+        ring = V.house_ring(LOT, [GARAGE, HOUSE, NEIGHBOUR])
+        self.assertEqual(ring, [tuple(p) for p in HOUSE["ring"]])
+        self.assertEqual(V.house_ring(LOT, [GARAGE]),
+                         [tuple(p) for p in GARAGE["ring"]])
+
+    def test_a_drawn_tree_crown_is_not_a_house(self):
+        crown = dict(HOUSE, kind="canopy")
+        self.assertIsNone(V.house_view(LOT, FRONT_BED, [crown]))
+
+    def test_a_front_bed_is_seen_from_the_front_wall(self):
+        view = V.house_view(LOT, FRONT_BED, [HOUSE])
+        ex, ey = view["eye"]
+        self.assertAlmostEqual(ey, -9.3 - V.HOUSE_STEP_M, places=2)
+        self.assertTrue(-5.4 < ex < 5.4, "level with the wall, not past it")
+        self.assertLess(view["look"][1], ey, "it looks away from the house")
+
+    def test_a_back_bed_is_seen_from_the_back_wall(self):
+        view = V.house_view(LOT, BACK_BED, [HOUSE])
+        self.assertAlmostEqual(view["eye"][1], 2.7 + V.HOUSE_STEP_M, places=2)
+        self.assertGreater(view["look"][1], view["eye"][1])
+
+    def test_the_wall_with_more_of_the_planting_wins(self):
+        front = V.house_view(LOT, FRONT_BED, [HOUSE])
+        both = V.house_view(LOT, FRONT_BED + BACK_BED, [HOUSE])
+        self.assertEqual(both["eye"][1], front["eye"][1])      # 8 against 6
+        more_behind = BACK_BED + [plant(-4 + i, 12) for i in range(4)]
+        back = V.house_view(LOT, FRONT_BED + more_behind, [HOUSE])
+        self.assertGreater(back["eye"][1], 2.7)
+
+    def test_the_eye_is_outside_every_building(self):
+        for subject in (FRONT_BED, BACK_BED, FRONT_BED + BACK_BED, []):
+            view = V.house_view(LOT, subject, [HOUSE, GARAGE, NEIGHBOUR])
+            for b in (HOUSE, GARAGE, NEIGHBOUR):
+                self.assertFalse(V._in_ring(*view["eye"],
+                                            [tuple(p) for p in b["ring"]]),
+                                 (subject[:1], view))
+
+    def test_it_looks_at_least_a_few_metres_out(self):
+        """A plant against the wall would otherwise be looked straight down
+        on from above it."""
+        at_wall = [plant(-1.0 + i * 0.5, -9.6) for i in range(4)]
+        view = V.house_view(LOT, at_wall, [HOUSE])
+        (ex, ey), (lx, ly) = view["eye"], view["look"]
+        self.assertGreaterEqual(math.hypot(lx - ex, ly - ey),
+                                V.HOUSE_LOOK_MIN_M - 0.01)
+
+    def test_a_tree_at_the_door_is_stepped_round(self):
+        clear = V.house_view(LOT, FRONT_BED, [HOUSE])
+        ex, ey = clear["eye"]
+        trunk = plant(ex, ey - 1.0, kind="tree", height=12.0, pid=7)
+        view = V.house_view(LOT, FRONT_BED + [trunk], [HOUSE])
+        self.assertNotEqual(view["eye"], clear["eye"])
+        self.assertGreater(math.hypot(view["eye"][0] - ex,
+                                      view["eye"][1] - (ey - 1.0)), 1.2)
+
+    def test_it_does_not_stand_in_a_bed_of_tall_plants(self):
+        """The first build stood the person in a foundation bed with grasses
+        against the lens. Where the wall has clear ground in front of it (a
+        path, a doorstep) that is where they stand, and they look across."""
+        grasses = [plant(-4.0 + i * 0.5, -10.4 - (i % 2) * 0.6, kind="grass",
+                         height=0.3, pid=4, mature_height_m=1.6)
+                   for i in range(11)]                    # x from -4 to 1
+        view = V.house_view(LOT, grasses, [HOUSE])
+        ex, ey = view["eye"]
+        near = [g for g in grasses
+                if math.hypot(g["x"] - ex, g["y"] - ey) < V._CROWD_NEAR_M]
+        self.assertEqual(near, [], view)
+        self.assertAlmostEqual(ey, -9.3 - V.HOUSE_STEP_M, places=2)
+        self.assertTrue(-5.4 < ex < 5.4)
+        self.assertLess(view["look"][0], ex, "it looks across at the bed")
+        # Low plants at the foot of the wall are no reason to move.
+        low = [dict(g, mature_height_m=0.4) for g in grasses]
+        at_the_bed = V.house_view(LOT, low, [HOUSE])
+        self.assertLess(at_the_bed["eye"][0], ex)
+        # A bed along the whole wall: the least crowded spot, and still a view.
+        whole = [plant(-5.2 + i * 0.5, -10.2, kind="grass", height=0.3, pid=4,
+                       mature_height_m=1.6) for i in range(22)]
+        self.assertIsNotNone(V.house_view(LOT, whole, [HOUSE]))
+        # The same answer while the grasses are still small or after they die.
+        grown = [dict(g, height_m=1.6) for g in grasses]
+        dead = [dict(g, gone="shade") for g in grasses]
+        self.assertEqual(V.house_view(LOT, grown, [HOUSE]), view)
+        self.assertEqual(V.house_view(LOT, dead, [HOUSE]), view)
+
+    def test_it_does_not_move_as_plants_grow_or_die(self):
+        """As the street view: the before/after panels only compare from one
+        spot."""
+        young = [dict(p, height_m=0.1) for p in FRONT_BED]
+        gone = [dict(p, gone="shade", health_state="dead") for p in FRONT_BED]
+        shrub = [plant(-2.5, -11.5, kind="shrub", height=0.4, pid=3,
+                       mature_height_m=3.0)]
+        base = V.house_view(LOT, FRONT_BED + shrub, [HOUSE])
+        self.assertEqual(V.house_view(LOT, young + shrub, [HOUSE]), base)
+        self.assertEqual(V.house_view(LOT, gone + shrub, [HOUSE]), base)
+        grown = [dict(shrub[0], height_m=3.0)]
+        self.assertEqual(V.house_view(LOT, FRONT_BED + grown, [HOUSE]), base)
+        recruit = [plant(0.0, 10.0, recruit=True) for _ in range(40)]
+        self.assertEqual(V.house_view(LOT, FRONT_BED + shrub + recruit,
+                                      [HOUSE]), base)
+
+    def test_with_nothing_planted_it_looks_at_the_yard(self):
+        view = V.house_view(LOT, [], [HOUSE])
+        self.assertIsNotNone(view)
+        self.assertFalse(V._in_ring(*view["look"],
+                                    [tuple(p) for p in HOUSE["ring"]]))
+
 
 # ── Through build_scene ───────────────────────────────────────────────────────
 
@@ -212,15 +394,64 @@ class InTheSceneTest(unittest.TestCase):
         self.assertEqual(street["bearing"], 90.0)
         self.assertAlmostEqual(street["eye"][0], 11.6, places=1)
 
-    def test_a_design_with_no_outline_has_a_focus_and_no_street(self):
-        """A walk through a wild community: the orbit frames its plants, and
-        the walker starts where he always did."""
+    def test_a_walk_through_a_wild_community_has_a_focus_and_no_street(self):
+        """The orbit frames its plants, and the walker starts where he always
+        did, at the centre its layout leaves clear for him."""
         project = _project()
         project["features"] = project["features"][1:]
+        project["properties"]["reference_version"] = 3
         scene = build_scene(project, get_plant=_get_plant, wind=False)
         self.assertEqual(scene["views"], {})
         self.assertIsNotNone(scene["focus"])
         self.assertLess(scene["focus"]["max_x"] - scene["focus"]["min_x"], 20)
+
+    def test_a_yard_with_nothing_outlined_is_seen_from_its_street_side(self):
+        """V3.44. The simple app's usual design is a pin and a bed, with no
+        outline (V3.28), and it had no street view: the camera fell back to a
+        guess south of the stage. Its own extent stands in for the outline,
+        and the person's answer about the street still moves it."""
+        project = _project()
+        project["features"] = project["features"][1:]
+        scene = build_scene(project, get_plant=_get_plant, wind=False)
+        street = scene["views"]["street"]
+        focus = scene["focus"]
+        self.assertAlmostEqual(street["eye"][1],
+                               focus["min_y"] - V.STREET_STANDOFF_M, places=1)
+        self.assertGreater(street["look"][1], street["eye"][1])
+        project["properties"]["site_config"]["street_side"] = "east"
+        east = build_scene(project, get_plant=_get_plant, wind=False)
+        self.assertAlmostEqual(east["views"]["street"]["eye"][0],
+                               east["focus"]["max_x"] + V.STREET_STANDOFF_M,
+                               places=1)
+        years = {json.dumps(build_scene(project, year=y, get_plant=_get_plant,
+                                        wind=False)["views"], sort_keys=True)
+                 for y in (1, 5, 25)}
+        self.assertEqual(len(years), 1, "the same spot in every year")
+
+    def test_with_nothing_outlined_the_house_is_the_one_under_the_pin(self):
+        project = _project()
+        project["features"] = project["features"][1:]
+        ring = [_ll(x, y) for x, y in HOUSE["ring"]]
+        house = {"type": "Feature",
+                 "geometry": {"type": "Polygon",
+                              "coordinates": [ring + [ring[0]]]},
+                 "properties": {"element_type": "canopy_footprint",
+                                "shape_type": "Building (OSM)",
+                                "height_m": 6.5}}
+        project["features"].append(house)
+        no_pin = build_scene(project, get_plant=_get_plant, wind=False)
+        self.assertNotIn("house", no_pin["views"],
+                         "nothing says which building is this yard's")
+        lng, lat = _ll(0.0, -3.0)                    # on the house
+        project["properties"]["site_config"].update(latitude=lat,
+                                                    longitude=lng)
+        scene = build_scene(project, get_plant=_get_plant, wind=False)
+        self.assertIn("house", scene["views"])
+        lng, lat = _ll(0.0, -14.0)                   # on the lawn
+        project["properties"]["site_config"].update(latitude=lat,
+                                                    longitude=lng)
+        lawn = build_scene(project, get_plant=_get_plant, wind=False)
+        self.assertNotIn("house", lawn["views"])
 
     def test_every_year_is_seen_from_the_same_spot(self):
         from tests.test_scene_contract import _get_plant as fixtures
@@ -241,6 +472,25 @@ class InTheSceneTest(unittest.TestCase):
                               for sc in scenes}), 1)
         self.assertEqual(len({json.dumps(sc["focus"], sort_keys=True)
                               for sc in scenes}), 1)
+
+    def test_a_house_in_the_outline_gives_a_view_from_it(self):
+        project = _project()
+        self.assertNotIn("house", build_scene(
+            project, get_plant=_get_plant, wind=False)["views"])
+        ring = [_ll(x, y) for x, y in HOUSE["ring"]]
+        project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring + [ring[0]]]},
+            "properties": {"element_type": "canopy_footprint",
+                           "shape_type": "Building (OSM)", "height_m": 6.5}})
+        scenes = [build_scene(project, year=y, get_plant=_get_plant,
+                              wind=False) for y in (1, 5, 25)]
+        house = scenes[0]["views"]["house"]
+        self.assertAlmostEqual(house["eye"][1], -9.3 - V.HOUSE_STEP_M,
+                               places=1)
+        self.assertEqual(len({json.dumps(sc["views"], sort_keys=True)
+                              for sc in scenes}), 1,
+                         "the same spot in every year")
 
     def test_an_empty_design_frames_the_stage(self):
         scene = build_scene({"type": "FeatureCollection", "features": []},
