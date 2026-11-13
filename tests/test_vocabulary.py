@@ -54,6 +54,8 @@ SIMPLE_MODULES = (
     # V3.44 (F261): the 3D preview opens from the simple app.
     "plan_bar.py", "scene3d_window.py", "scene3d_toolbar.py",
     "scene3d_named_groups.py", "scene3d_stops.py", "scene3d_creatures.py",
+    # V3.46 (F263): what the 3D preview says about the season and the years.
+    "scene_season.py", "scene_timeline.py",
 )
 
 #: Today's uses, ``{(module, word): count}``: WD-2 to WD-6 take these out.

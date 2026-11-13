@@ -50,7 +50,14 @@ Scene schema (``SCENE_VERSION`` = 1)::
                   growth_curve, color, opacity, health, health_state,
                   common_name, bark_color, fall_color, leaf_size_cm,
                   leaf_shape, leaf_arrangement, growth_form,
-                  existing?, recruit?, drawn?, gone?}, ...],
+                  existing?, recruit?, drawn?, gone?, season?}, ...],
+                                       # season (V3.46, src/scene_season.py), on
+                                       #   every plant that is not evergreen:
+                                       #   {look: dry | young | green | turning |
+                                       #   bare | held, t?: 0-1 through young or
+                                       #   turning, up?: the share of its height
+                                       #   a herb coming up stands at}. Absent =
+                                       #   drawn by the month's number, as before
                                        # gone (V3.43): why a placed plant is
                                        #   not drawn this year, "shade" or
                                        #   "short_lived"; opacity is 0 then.
@@ -117,6 +124,19 @@ Scene schema (``SCENE_VERSION`` = 1)::
                                        # kind: hedge | fence | living_fence |
                                        #   windbreak. height_m is an estimate by
                                        #   kind: no design records one
+      "season": {snow: bool, ground: snow | dormant | waking | green |
+                 turning, leaves, herbs, known: bool, basis: str},
+                                       # V3.46: the season, decided once from
+                                       #   the region pack's frost dates. basis
+                                       #   is the sentence that says so
+      "timeline_notes": {when, about, notes: [{kind: shade | short_lived |
+                 self_seeded, text, plants: [[name, n]], kinds, spots: [[x, y]],
+                 where?, lost?, of?, struggling?, by?}]} | None,
+                                       # V3.46 (src/scene_timeline.py): what
+                                       #   the years took, by the drawn area
+                                       #   the plants are in, and what shades
+                                       #   them. None at year 0 and when
+                                       #   nothing is lost
       "street": {bearing, how: "told" | "measured", sidewalk?: ring,
                  road?: ring, roads?: [{points, width_m, name}]} | None,
                                        # a pale sidewalk and road on the street
@@ -434,6 +454,40 @@ def _succession_engine(memo, placed_recs, get_plant, casters, origin):
     return engine
 
 
+def _timeline_notes(memo, engine, year, placed, plants, surfaces, buildings,
+                    boundary, focus, street, house):
+    """``scene["timeline_notes"]`` (:mod:`src.scene_timeline`), kept in
+    ``memo`` per year while the shade simulation and the ground are what they
+    were: naming what shades each lost plant is the one part of a scene that
+    costs more with every plant lost. Best-effort, like the simulation."""
+    if int(year) <= 0 or not placed:
+        return None
+    try:
+        from src import scene3d_stops, scene_timeline
+        words = scene3d_stops.when_words(year)
+        when = ("the " if not words.startswith("Year") else "") + words.lower()
+
+        def build():
+            return scene_timeline.notes(
+                year=year, when_words=when, engine=engine, placed=placed,
+                plants=plants, surfaces=surfaces, buildings=buildings,
+                boundary=boundary, focus=focus,
+                street_bearing=street[0] if street[1] else None, house=house)
+        if memo is None or engine is None:
+            return build()
+        key = (year, repr(surfaces), repr(boundary), street,
+               tuple((p.get("gone"), p.get("health_state"))
+                     for p in placed.values()), len(plants))
+        held = memo.get("timeline")
+        if not held or held[0] is not engine:
+            held = memo["timeline"] = (engine, {})
+        if key not in held[1]:
+            held[1][key] = build()
+        return held[1][key]
+    except Exception:                                      # noqa: BLE001
+        return None
+
+
 def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
@@ -588,6 +642,8 @@ def build_scene(project: dict, *, year: int = 0,
     # withered render. Best-effort — a data hiccup must never break the scene.
     health_by_index: dict = {}
     recruit_list: list = []
+    engine = None
+    placed_scene: dict = {}      # the engine's plant index -> its scene record
     try:
         from src.succession_engine import (
             SuccessionEngine, static_casters_from_project)
@@ -607,6 +663,7 @@ def build_scene(project: dict, *, year: int = 0,
     except Exception:  # noqa: BLE001 — succession is best-effort
         health_by_index = {}
         recruit_list = []
+        engine = None
     _placed_i = 0
 
     for f in project.get("features", []):
@@ -655,6 +712,7 @@ def build_scene(project: dict, *, year: int = 0,
                 rec["plant_id"], rec.get("common_name", ""), plant, x, y, st,
                 opacity=opacity, health=health, health_state=health_state,
                 gone=gone))
+            placed_scene[_placed_i - 1] = plants[-1]
             continue
 
         if etype == "existing_tree" and geom.get("type") == "Point":
@@ -806,13 +864,21 @@ def build_scene(project: dict, *, year: int = 0,
     # (V2.93, F177). Additive; an older viewer draws the mat or bush it did.
     from src.succulent_habit import apply_succulent_habits
     apply_succulent_habits(plants)
+    # The season (V3.46, F263): how far up a herb is, whether a woody plant is
+    # in leaf, whether snow lies, from the region pack's frost dates. Last,
+    # because a body decides whether a season applies to it. Additive; a
+    # viewer that ignores it draws by the month's number, as before.
+    from src import scene_season
+    props = project.get("properties") or {}
+    season = scene_season.apply_seasons(
+        plants, when or _DEFAULT_WHEN, props.get("site_config"))
 
     # What the camera frames and where a neighbour stands (V3.43): decided
     # here, once, for the orbit, the stills and the walker alike.
     from src import scene_views
     views = {}
+    house_at = None              # the house's own outline, for the notes
     focus = scene_views.focus_box(boundary_xy, plants, structures)
-    props = project.get("properties") or {}
     # A yard with no outline drawn is still a yard (V3.44): the simple app's
     # usual design is a pin and a bed, and until now it had no street view at
     # all. Its own extent stands in for the outline. A walk through a wild
@@ -835,11 +901,19 @@ def build_scene(project: dict, *, year: int = 0,
                                        pin=pin, extent=yard)
         if house:
             views["house"] = house
+        house_at = scene_views.house_ring(boundary_xy, buildings, pin)
 
     # What the ground is (V3.45, the owner's D3): the drawn areas, the lines,
     # the street where its side is known, and a roof hint on each building.
     from src import scene_site
     site = scene_site.site_fields(project, proj, boundary_xy, buildings)
+
+    # What the years took, said where and which (V3.46, F263, decision D4):
+    # the shade model's own results, by the drawn area the plants are in.
+    timeline = _timeline_notes(
+        memo, engine, int(year), placed_scene, plants, site["surfaces"],
+        buildings, boundary_xy, focus, scene_views.street_bearing(project),
+        house_at)
 
     return {
         "version": SCENE_VERSION,
@@ -854,6 +928,8 @@ def build_scene(project: dict, *, year: int = 0,
         "buildings": buildings,
         "structures": structures,
         **site,
+        "season": season,
+        "timeline_notes": timeline,
         "terrain": _terrain_block(elevation, proj),
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
         # Night when the sun is down (V2.12): the 3D view renders a moonlit

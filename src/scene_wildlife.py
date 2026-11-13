@@ -23,7 +23,7 @@ import math
 import zlib
 from typing import Callable, Optional
 
-from src import bird_body_plan, fauna_body_plan
+from src import bird_body_plan, fauna_body_plan, scene_season
 from src.vine_habit import drawn_frame
 
 # Per-taxon caps so a diverse yard shows a balanced community, not 40 bees.
@@ -706,11 +706,12 @@ def _drawn_height(pl: dict) -> float:
     # A body the scene decided (a vine, a pond plant, a cactus) is drawn at its
     # block's height whatever its type, as the viewer's bodyHeightOf reads it:
     # the plains prickly pear is a 30 cm groundcover, not an 18 cm mat (V2.93).
+    up = scene_season.up(pl)     # the share a herb coming up stands at (V3.46)
     if pl.get("drawn"):
-        return float(pl["drawn"].get("height_m") or 0.0) or 0.5
+        return up * (float(pl["drawn"].get("height_m") or 0.0) or 0.5)
     h = float(pl.get("height_m") or 0.5)
-    return (min(h, GROUNDCOVER_DRAWN_MAX_M)
-            if pl.get("plant_type") == "groundcover" else h)
+    return up * (min(h, GROUNDCOVER_DRAWN_MAX_M)
+                 if pl.get("plant_type") == "groundcover" else h)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
