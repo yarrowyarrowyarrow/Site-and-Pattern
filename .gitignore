@@ -126,6 +126,10 @@ data/fetched/flower_colour_misses.tsv
 # V3.33: the colour review page, rebuilt from the evidence on the owner's PC
 data/fetched/colour_review.html
 data/fetched/photo_review.html
+# V3.47: reference photographs and model renders for the 3D work, rebuilt in a
+# session by scripts/model_references.py (hundreds of MB; the candidate list
+# data/fetched/photo_candidates.json IS committed, it is what rebuilds them)
+data/fetched/model_refs/
 
 # Dev artefacts written into the repo root by scripts that render a preview.
 # `plot_occurrences.py` writes an 11 MB specimens.html; `retag_releases.py`

@@ -49,7 +49,9 @@ feature, skim where it sits in that philosophy. The sources of truth:
   guardrails. It is the handover, and it lifts the V3.17 freeze on the preview (G4). 3D-1
   (V3.43), 3D-2 ([V3.44](docs/plans/V3.44-getting-to-3d.md)), 3D-3
   ([V3.45](docs/plans/V3.45-your-yard-not-a-green-field.md)) and 3D-4
-  ([V3.46](docs/plans/V3.46-a-timeline-you-can-believe.md)) are built; 3D-5 is next.
+  ([V3.46](docs/plans/V3.46-a-timeline-you-can-believe.md)) are built; 3D-5 is next, on V3.48. **For the plant models**, read
+  [V3.47](docs/plans/V3.47-reference-photos-for-the-models.md) first: `scripts/model_references.py`
+  draws each Edmonton native's model beside its iNaturalist reference photographs, one sheet a plant.
 
 **The thirteen principles, in one line each:**
 
